@@ -1,0 +1,802 @@
+settings
+{
+	main
+	{
+		Description: "Ruang Irama: manusia, menit nongkrong, genre musik, intip hero, dan kamera orang ketiga yang tahu tembok."
+	}
+}
+
+variables
+{
+	global:
+		0: DaftarGenre
+		1: NamaHalaman
+		2: PemainManusia
+		3: NomorUrut
+		4: Siap
+		5: HudJudulKiri
+		6: HudJudulKanan
+		7: HudPetunjuk
+		8: JarakKamera
+		9: GeserKamera
+		10: BantalanDinding
+		11: JarakBidik
+		12: HudKiriPemain
+		13: HudKananPemain
+		14: HudMenuPemain
+		15: HudInspeksiPemain
+		16: IndeksKeluar
+
+	player:
+		0: WaktuMasuk
+		1: WaktuTercatat
+		2: SudahDiperiksa
+		3: BotAI
+		4: Manusia
+		5: MenitLobby
+		6: IndeksGenre
+		7: UrutanHUD
+		8: HudKiri
+		9: HudKanan
+		10: MenuTerbuka
+		11: KursorGenre
+		12: HudMenu
+		13: InspeksiAktif
+		14: TargetInspeksi
+		15: HudInspeksi
+		16: ModeKamera
+		17: TargetKamera
+		18: MeleeDipakai
+}
+
+subroutines
+{
+	0: TutupMenu
+	1: MulaiKamera
+}
+
+rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == False;
+	}
+
+	actions
+	{
+		"Urutan ini sengaja bergerak dari paling tenang ke paling kacau. Jangan diacak tanpa alasan yang sangat musikal."
+		Global.DaftarGenre = Array(
+			Custom String("Lowercase"),
+			Custom String("Nature Ambient"),
+			Custom String("Meditation Ambient"),
+			Custom String("Drone Ambient"),
+			Custom String("Space Ambient"),
+			Custom String("Minimal Ambient"),
+			Custom String("Ambient Piano"),
+			Custom String("New Age"),
+			Custom String("Neoclassical Ambient"),
+			Custom String("Ethereal Ambient"),
+			Custom String("Solo Piano"),
+			Custom String("Classical Guitar"),
+			Custom String("Chamber Music"),
+			Custom String("Neoclassical"),
+			Custom String("Acoustic Folk"),
+			Custom String("Indie Folk"),
+			Custom String("Easy Listening"),
+			Custom String("Bossa Nova"),
+			Custom String("Smooth Jazz"),
+			Custom String("Cool Jazz"),
+			Custom String("Lounge"),
+			Custom String("Downtempo"),
+			Custom String("Chillout"),
+			Custom String("Lo-fi Hip-Hop"),
+			Custom String("Chillwave"),
+			Custom String("Dream Pop"),
+			Custom String("Bedroom Pop"),
+			Custom String("Slowcore"),
+			Custom String("Psybient"),
+			Custom String("Trip-Hop"),
+			Custom String("Vaporwave"),
+			Custom String("Lovers Rock"),
+			Custom String("Roots Reggae"),
+			Custom String("Dub"),
+			Custom String("Soft Rock"),
+			Custom String("Neo-Soul"),
+			Custom String("Soul"),
+			Custom String("Contemporary R&B"),
+			Custom String("Acid Jazz"),
+			Custom String("City Pop"),
+			Custom String("Jazz-Funk"),
+			Custom String("Funk"),
+			Custom String("Indie Pop"),
+			Custom String("Art Pop"),
+			Custom String("Synthpop"),
+			Custom String("Electropop"),
+			Custom String("Tropical House"),
+			Custom String("Deep House"),
+			Custom String("Nu-Disco"),
+			Custom String("Disco"),
+			Custom String("French House"),
+			Custom String("Progressive House"),
+			Custom String("UK Garage"),
+			Custom String("Eurodance"),
+			Custom String("Electro House"),
+			Custom String("Acid House"),
+			Custom String("Detroit Techno"),
+			Custom String("Tech House"),
+			Custom String("Trance"),
+			Custom String("Psytrance"),
+			Custom String("Indie Rock"),
+			Custom String("Britpop"),
+			Custom String("Shoegaze"),
+			Custom String("Alternative Rock"),
+			Custom String("Garage Rock"),
+			Custom String("Grunge"),
+			Custom String("Pop Punk"),
+			Custom String("Hard Rock"),
+			Custom String("Punk Rock"),
+			Custom String("Post-Hardcore"),
+			Custom String("Hardcore Punk"),
+			Custom String("Heavy Metal"),
+			Custom String("Power Metal"),
+			Custom String("Progressive Metal"),
+			Custom String("Groove Metal"),
+			Custom String("Nu Metal"),
+			Custom String("Industrial Metal"),
+			Custom String("Speed Metal"),
+			Custom String("Thrash Metal"),
+			Custom String("Metalcore"),
+			Custom String("Drum & Bass"),
+			Custom String("Jungle"),
+			Custom String("Dubstep"),
+			Custom String("Riddim"),
+			Custom String("Neurofunk"),
+			Custom String("Hard Techno"),
+			Custom String("Hardstyle"),
+			Custom String("Hardcore Techno"),
+			Custom String("Gabber"),
+			Custom String("Digital Hardcore"),
+			Custom String("Deathcore"),
+			Custom String("Death Metal"),
+			Custom String("Brutal Death Metal"),
+			Custom String("Black Metal"),
+			Custom String("War Metal"),
+			Custom String("Powerviolence"),
+			Custom String("Grindcore"),
+			Custom String("Breakcore"),
+			Custom String("Harsh Noise"),
+			Custom String("Extratone")
+		);
+		Global.NamaHalaman = Array(
+			Custom String("HENING TOTAL"),
+			Custom String("LEMBUT BANGET"),
+			Custom String("NGAMBANG SANTAI"),
+			Custom String("GROOVE HANGAT"),
+			Custom String("MULAI GOYANG"),
+			Custom String("LANTAI BERGETAR"),
+			Custom String("GITAR MULAI GALAK"),
+			Custom String("WAKTUNYA MOSHING"),
+			Custom String("SERVER MULAI CEMAS"),
+			Custom String("KACAU MAKSIMAL")
+		);
+		Global.PemainManusia = Empty Array;
+		Global.HudKiriPemain = Empty Array;
+		Global.HudKananPemain = Empty Array;
+		Global.HudMenuPemain = Empty Array;
+		Global.HudInspeksiPemain = Empty Array;
+		Global.NomorUrut = 0;
+		Global.JarakKamera = 4;
+		Global.GeserKamera = 0.650;
+		Global.BantalanDinding = 0.200;
+		Global.JarakBidik = 100;
+
+		Create HUD Text(Global.PemainManusia, Custom String("MANUSIA DI LOBI"), Custom String("Bot dan dummy bot tidak ikut absen."),
+			Null, Left, -100, Color(Aqua), Color(Gray), Color(White), Visible To and String, Default Visibility);
+		Global.HudJudulKiri = Last Text ID;
+		Create HUD Text(Global.PemainManusia, Custom String("GENRE PILIHAN"), Custom String("Kuping masing-masing, damai bersama."),
+			Null, Right, -100, Color(Violet), Color(Gray), Color(White), Visible To and String, Default Visibility);
+		Global.HudJudulKanan = Last Text ID;
+		Create HUD Text(Global.PemainManusia, Null, Null, Custom String(
+			"Tahan {0} 1,5 dtk: menu musik + kamera  |  Tahan {1}: intip hero",
+			Input Binding String(Button(Melee)), Input Binding String(Button(Crouch))), Bottom, -100, Color(White), Color(White),
+			Color(Gray), Visible To and String, Default Visibility);
+		Global.HudPetunjuk = Last Text ID;
+		Global.Siap = True;
+	}
+}
+
+rule("01 - Pemain Masuk: Mulai jam nongkrong")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.WaktuMasuk = Total Time Elapsed;
+		Event Player.WaktuTercatat = True;
+	}
+}
+
+rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Has Spawned(Event Player) == True;
+		Event Player.SudahDiperiksa == False;
+	}
+
+	actions
+	{
+		Event Player.SudahDiperiksa = True;
+		If(Event Player.WaktuTercatat == False);
+			Event Player.WaktuMasuk = Total Time Elapsed;
+			Event Player.WaktuTercatat = True;
+		End;
+		"Dummy bot jelas bukan manusia. Silakan duduk manis."
+		Abort If(Is Dummy Bot(Event Player));
+		"U+200B di bawah adalah nama hantu untuk mengenali bot AI bawaan lobi."
+		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
+		Wait(0.016, Ignore Condition);
+		If(Custom String("{0}", Event Player) == Custom String("​"));
+			Event Player.BotAI = True;
+			Stop Forcing Dummy Bot Name(Event Player);
+			Abort;
+		End;
+		Stop Forcing Dummy Bot Name(Event Player);
+
+		Event Player.Manusia = True;
+		Event Player.IndeksGenre = -1;
+		Event Player.MenitLobby = 0;
+		Event Player.UrutanHUD = Global.NomorUrut;
+		Global.NomorUrut += 1;
+		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
+
+		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("{0} - {1} mnt", Event Player, Event Player.MenitLobby), Left,
+			Event Player.UrutanHUD, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Event Player.HudKiri = Last Text ID;
+		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
+		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("{0} - {1}", Event Player, Event Player.IndeksGenre >= 0
+			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih")), Right, Event Player.UrutanHUD, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Event Player.HudKanan = Last Text ID;
+		Global.HudKananPemain = Append To Array(Global.HudKananPemain, Event Player.HudKanan);
+		Global.HudMenuPemain = Append To Array(Global.HudMenuPemain, 0);
+		Global.HudInspeksiPemain = Append To Array(Global.HudInspeksiPemain, 0);
+		Small Message(Event Player, Custom String("Selamat datang, manusia terverifikasi. Mesin tidak dapat stempel."));
+	}
+}
+
+rule("03 - Waktu: Hitung menit nongkrong tanpa bikin server ngos-ngosan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+	}
+
+	actions
+	{
+		Event Player.MenitLobby = Max(0, Round To Integer((Total Time Elapsed - Event Player.WaktuMasuk) / 60, Down));
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("04 - Pemain Keluar: Rapikan data, jangan tinggalkan remah HUD")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		"Player Left Match tidak menjamin variabel pemain masih tersedia, jadi ID HUD disimpan juga di daftar global yang sejajar."
+		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
+		Abort If(Global.IndeksKeluar < 0);
+		Destroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);
+		Destroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);
+		If(Global.HudMenuPemain[Global.IndeksKeluar] != 0);
+			Destroy HUD Text(Global.HudMenuPemain[Global.IndeksKeluar]);
+		End;
+		If(Global.HudInspeksiPemain[Global.IndeksKeluar] != 0);
+			Destroy HUD Text(Global.HudInspeksiPemain[Global.IndeksKeluar]);
+		End;
+		Stop Camera(Event Player);
+		Modify Global Variable(HudKiriPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(HudKananPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(HudMenuPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(HudInspeksiPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
+	}
+}
+
+rule("05 - Menu: Tahan serangan jarak dekat 1,5 detik")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.MenuTerbuka == False;
+		Event Player.MeleeDipakai == False;
+		Is Button Held(Event Player, Button(Melee)) == True;
+	}
+
+	actions
+	{
+		Wait(1.500, Abort When False);
+		Event Player.MeleeDipakai = True;
+		Event Player.MenuTerbuka = True;
+		Event Player.KursorGenre = Event Player.IndeksGenre >= 0 ? Event Player.IndeksGenre : 0;
+		Disallow Button(Event Player, Button(Melee));
+		Disallow Button(Event Player, Button(Jump));
+		Disallow Button(Event Player, Button(Crouch));
+		Disallow Button(Event Player, Button(Primary Fire));
+		Disallow Button(Event Player, Button(Secondary Fire));
+		Disallow Button(Event Player, Button(Interact));
+		Disallow Button(Event Player, Button(Reload));
+		Disallow Button(Event Player, Button(Ability 1));
+		Disallow Button(Event Player, Button(Ability 2));
+		Disallow Button(Event Player, Button(Ultimate));
+
+		Create HUD Text(Event Player, Custom String("WARUNG IRAMA | Hal. {0}/10 - {1}", Round To Integer(Event Player.KursorGenre / 10,
+			Down) + 1, Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)]), Custom String("{0}\n{1}\n{2}",
+			Custom String("  {0}. {1}", (Event Player.KursorGenre + 99) % 100 + 1, Global.DaftarGenre[(Event Player.KursorGenre + 99)
+			% 100]), Custom String("> {0}. {1}", Event Player.KursorGenre + 1, Global.DaftarGenre[Event Player.KursorGenre]), Custom String(
+			"  {0}. {1}", (Event Player.KursorGenre + 1) % 100 + 1, Global.DaftarGenre[(Event Player.KursorGenre + 1) % 100])), Custom String(
+			"{0}\n{1}\n{2}", Custom String("{0}/{1}: -/+1 | {2}", Input Binding String(Button(Jump)), Input Binding String(Button(Crouch)),
+			Custom String("{0}/{1}: -/+10", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))),
+			Custom String("{0}: simpan | {1}: tutup", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String(
+			"{0}: kamera diri | {1}: target | {2}: kamera mati", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)),
+			Input Binding String(Button(Ultimate)))), Top, -200, Color(Orange), Color(White), Color(Aqua), Visible To and String,
+			Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+		Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+		Small Message(Event Player, Custom String("Menu terbuka. Pilih suasanamu, jangan pilih keributan tetangga."));
+	}
+}
+
+rule("05b - Menu: Melee harus dilepas sebelum buka lagi")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MeleeDipakai == True;
+		Is Button Held(Event Player, Button(Melee)) == False;
+	}
+
+	actions
+	{
+		Event Player.MeleeDipakai = False;
+	}
+}
+
+rule("06 - Menu: Mundur satu genre")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 99) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Jump)) == False, 99999);
+	}
+}
+
+rule("07 - Menu: Maju satu genre")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 1) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Crouch)) == False, 99999);
+	}
+}
+
+rule("08 - Menu: Mundur sepuluh genre, kaki panjang")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Primary Fire)) == False, 99999);
+	}
+}
+
+rule("09 - Menu: Maju sepuluh genre, langsung gas")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Secondary Fire)) == False, 99999);
+	}
+}
+
+rule("10 - Menu: Simpan genre, kupingmu aturanmu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.IndeksGenre = Event Player.KursorGenre;
+		Small Message(Event Player, Custom String("Dipilih: {0}. Kupingmu, aturanmu.", Global.DaftarGenre[Event Player.IndeksGenre]));
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("11 - Menu: Tutup tanpa mengubah selera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String("Menu ditutup. Lanjutkan kekacauan dengan bertanggung jawab."));
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("12 - Menu: Kematian juga menutup warung")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+	}
+
+	actions
+	{
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("13 - Intip Hero: Mulai saat jongkok dan membidik")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.MenuTerbuka == False;
+		Event Player.ModeKamera != 2;
+		Event Player.InspeksiAktif == False;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Event Player.InspeksiAktif = True;
+		Event Player.TargetInspeksi = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
+		Create HUD Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("TARGET: belum ketemu") : Custom String("TARGET: {0}",
+			Event Player.TargetInspeksi), Event Player.TargetInspeksi == Null ? Custom String("Bidik pemain manusia - tembok tidak punya hero.")
+			: Custom String("{0}  {1}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(
+			Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Is Duplicating(Event Player.TargetInspeksi)
+			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)),
+			Custom String("Satu target sekali. Geser bidikan untuk ganti."), Top, -150, Color(Yellow), Color(White), Color(Gray),
+			Visible To and String, Default Visibility);
+		Event Player.HudInspeksi = Last Text ID;
+		Global.HudInspeksiPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudInspeksi;
+	}
+}
+
+rule("14 - Intip Hero: Perbarui garis pandang dengan sopan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InspeksiAktif == True;
+		Event Player.MenuTerbuka == False;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Event Player.TargetInspeksi = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
+		Wait(0.050, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("15 - Intip Hero: Berhenti saat berdiri atau membuka menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InspeksiAktif == True;
+		Is Button Held(Event Player, Button(Crouch)) == False || Event Player.MenuTerbuka == True;
+	}
+
+	actions
+	{
+		Destroy HUD Text(Event Player.HudInspeksi);
+		Global.HudInspeksiPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		Event Player.HudInspeksi = Null;
+		Event Player.TargetInspeksi = Null;
+		Event Player.InspeksiAktif = False;
+	}
+}
+
+rule("16 - Kamera: Orang ketiga untuk diri sendiri")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+	}
+
+	actions
+	{
+		Event Player.TargetKamera = Event Player;
+		Event Player.ModeKamera = 1;
+		Call Subroutine(MulaiKamera);
+		Small Message(Event Player, Custom String("Kamera diri aktif. Pose dulu; tembok tetap menang."));
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("17 - Kamera: Tonton manusia yang sedang dibidik")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+	}
+
+	actions
+	{
+		Event Player.TargetKamera = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
+		If(Event Player.TargetKamera == Null);
+			Small Message(Event Player, Custom String("Belum ada target manusia. Bidik dulu, ya."));
+			Wait Until(Is Button Held(Event Player, Button(Ability 2)) == False, 99999);
+			Abort;
+		End;
+		Event Player.ModeKamera = 2;
+		Call Subroutine(MulaiKamera);
+		Small Message(Event Player, Custom String("Sekarang menonton {0}. Jangan ganggu artisnya.", Event Player.TargetKamera));
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("18 - Kamera: Matikan drama dari menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+		Event Player.ModeKamera = 0;
+		Event Player.TargetKamera = Null;
+		Small Message(Event Player, Custom String("Kamera normal lagi. Drama selesai."));
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("19 - Kamera: Target pergi, pulangkan pandangan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ModeKamera == 2;
+		Array Contains(Global.PemainManusia, Event Player.TargetKamera) == False;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+		Event Player.ModeKamera = 0;
+		Event Player.TargetKamera = Null;
+		Small Message(Event Player, Custom String("Target keluar dari lobi. Kamera pulang sebelum tersesat."));
+	}
+}
+
+rule("90 - Subrutin: Tutup menu dan kembalikan semua tombol")
+{
+	event
+	{
+		Subroutine;
+		TutupMenu;
+	}
+
+	actions
+	{
+		Destroy HUD Text(Event Player.HudMenu);
+		Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		Event Player.HudMenu = Null;
+		Event Player.MenuTerbuka = False;
+		Allow Button(Event Player, Button(Melee));
+		Allow Button(Event Player, Button(Jump));
+		Allow Button(Event Player, Button(Crouch));
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
+	}
+}
+
+rule("91 - Subrutin: Mulai kamera orang ketiga yang tahu tembok")
+{
+	event
+	{
+		Subroutine;
+		MulaiKamera;
+	}
+
+	actions
+	{
+		Abort If(Event Player.TargetKamera == Null);
+		Stop Camera(Event Player);
+		"Ray cast dan posisi kamera berada langsung di Update Every Frame: satu ray per frame, dinding tidak boleh jadi dekorasi tembus pandang."
+		Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0),
+			Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0) + World Vector Of(Vector(Global.GeserKamera, 0,
+			0 - Global.JarakKamera), Event Player.TargetKamera, Rotation), Empty Array, Empty Array, False) + Direction Towards(Eye Position(
+			Event Player.TargetKamera) + Vector(0, 0.650, 0) + World Vector Of(Vector(Global.GeserKamera, 0, 0 - Global.JarakKamera),
+			Event Player.TargetKamera, Rotation), Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0)) * Global.BantalanDinding),
+			Update Every Frame(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0) + Facing Direction Of(Event Player.TargetKamera)
+			* 20), 0);
+	}
+}
