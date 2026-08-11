@@ -51,7 +51,7 @@ Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non 
 
 ## Stato del prototipo
 
-La versione `0.3.0` separa i quattro menu, aggiunge la selezione diretta dei bersagli camera, porta la palette a 20 sfumature e introduce HUD bilingui per singolo spettatore con inglese predefinito. Rafforza inoltre inizializzazione dei giocatori, aggiornamento dei bersagli e cleanup all'uscita.
+La versione `0.3.1` mantiene i quattro menu, la selezione diretta dei bersagli camera, le 20 sfumature e gli HUD bilingui della `0.3.0`. Corregge inoltre un falso positivo del filtro parole del client live: la parola indonesiana `cuma` nel nome di una regola conteneva una sottostringa censurata e causava `Invalid comment after 'rule('` durante l'incolla. Come protezione aggiuntiva, il grande renderer dei menu è stato diviso in cinque subroutine più piccole senza cambiare testi o comandi.
 
 Per eseguire i controlli locali:
 
@@ -92,4 +92,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.3.0` — quattro menu separati, camera su qualunque giocatore spawnato, 20 sfumature, HUD inglese/indonesiano per spettatore e lifecycle più robusto.
+`0.3.1` — correzione dell'import live dei commenti e renderer menu suddiviso; quattro menu separati, camera inclusiva, 20 sfumature e HUD inglese/indonesiano restano invariati.

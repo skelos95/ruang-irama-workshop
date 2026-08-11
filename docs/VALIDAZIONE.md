@@ -8,7 +8,7 @@ Esito: superati.
 
 ```text
 OK - controlli statici superati
-Generi: 100 unici | Pagine: 10 | Regole: 27
+Generi: 100 unici | Pagine: 10 | Regole: 32
 Colori: 20 | Lingue: 2 | HUD definiti nel sorgente: 9
 ```
 
@@ -16,16 +16,23 @@ Il validatore controlla anche 20 colori e relativi nomi bilingui, menu `0/1/2/3`
 
 ## Editor Workshop.codes
 
-Esito: importazione e compilazione della versione `0.3.0` superate.
+Esito: importazione e compilazione della versione `0.3.1` superate.
 
 - Il file completo è stato importato in un progetto temporaneo non autenticato.
-- L'editor ha riconosciuto correttamente variabili, sei subroutine e tutte le 27 regole.
+- L'editor ha riconosciuto correttamente variabili, undici subroutine e tutte le 32 regole.
 - Il comando Compile è terminato con conferma di copia, senza segnalazioni di errore.
 - Sono stati accettati i quattro menu separati, le 20 sfumature `Color`/`Custom Color`, la selezione camera costruita da `All Players(All Teams)`, i testi bilingui con `Player Variable(Local Player, IndeksBahasa)` e l'inizializzazione comune dei giocatori.
 - Sono stati accettati `Update Every Frame` nella camera, il raycast Crouch su umani e bot, la sentinella `U+200B`, la subroutine persistente per i bot e le azioni che azzerano danno, cura e knockback.
 - Tutte le chiamate `Create HUD Text` usano `Header = Null`; il validatore impedisce inoltre la posizione HUD non valida `Bottom`.
 - Il sorgente contiene esattamente due `U+200B`, richiesti dal rilevamento live dei normali bot AI; il validatore impedisce che vengano rimossi o trasformati in stringhe vuote.
 - Il progetto temporaneo è stato chiuso e non salvato online.
+
+## Correzione filtro commenti del client
+
+- Il client live ha rifiutato la versione `0.3.0` con `Invalid comment after 'rule(' on line 1114`.
+- La sintassi della riga era valida, ma il nome della regola conteneva la parola indonesiana `cuma`; la sottostringa inglese iniziale veniva bloccata dal filtro parole di Overwatch.
+- La versione `0.3.1` usa `Kunci bot, kaki tetap bisa bergerak` e il validatore controlla i frammenti già noti per evitare la stessa regressione nei nomi delle regole.
+- Il renderer monolitico `GambarMenu` è stato inoltre trasformato in un router verso cinque subroutine più piccole; le schermate e gli input restano identici.
 
 ## Riscontro storico dal client Overwatch
 
@@ -37,7 +44,7 @@ Esito: importazione e compilazione della versione `0.3.0` superate.
 
 ## Non ancora verificato nel client live
 
-- Incolla della versione `0.3.0` nel client Overwatch 2.
+- Incolla della versione `0.3.1` nel client Overwatch 2.
 - Comportamento della sentinella `U+200B` sulla patch live.
 - Disabilitazione attacchi su dummy e bot AI normali.
 - Presenza di umani, AI e dummy nella selezione camera e gestione del bersaglio che esce.

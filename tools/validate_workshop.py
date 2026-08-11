@@ -167,6 +167,31 @@ def main() -> None:
         fail(f"troppo poche regole: {len(rule_names)}")
     if any(name.startswith("Rule ") for name in rule_names):
         fail("trovato un nome regola generico non indonesiano")
+    blocked_comment_fragments = ("cum", "sag")
+    for name in rule_names:
+        lowered = name.casefold()
+        hit = next((fragment for fragment in blocked_comment_fragments if fragment in lowered), None)
+        if hit is not None:
+            fail(
+                "nome regola a rischio filtro parole del client "
+                f"({hit!r}): {name}"
+            )
+    menu_router = re.search(
+        r'rule\("91 - Subrutin:.*?\)(.*?)rule\("91a - Subrutin:',
+        source,
+        flags=re.DOTALL,
+    )
+    if menu_router is None or "Create HUD Text" in menu_router.group(1):
+        fail("GambarMenu deve restare un router leggero senza Create HUD Text")
+    for renderer in (
+        "GambarUtama",
+        "GambarMusik",
+        "GambarKamera",
+        "GambarWarna",
+        "GambarBahasa",
+    ):
+        if f"Call Subroutine({renderer})" not in menu_router.group(1):
+            fail(f"renderer menu non instradato: {renderer}")
 
     required = {
         "pressione Melee da 1,5 s": "Wait(1.500, Abort When False)",

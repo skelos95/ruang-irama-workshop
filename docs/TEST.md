@@ -6,7 +6,7 @@ Il validatore statico e la compilazione su Workshop.codes non sostituiscono ques
 
 - Impostare la lingua testuale del client su inglese.
 - Incollare l'intero file `workshop/ruang_irama.workshop` dalla schermata Workshop.
-- Verificare che non compaiano errori di parser e che tutte le 27 regole siano abilitate.
+- Verificare che non compaiano errori di parser e che tutte le 32 regole siano abilitate.
 - Controllare che nomi delle regole e commenti siano in indonesiano.
 - Controllare che gli HUD non usino Header: funzione nel testo principale, input nel sottotitolo.
 

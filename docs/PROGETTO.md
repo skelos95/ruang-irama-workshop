@@ -41,7 +41,7 @@ Player Variable(Local Player, IndeksBahasa)
 
 `Local Player` fa rivalutare lo stesso testo in modo diverso su ogni client. Un viewer può quindi leggere inglese e un altro indonesiano senza creare copie delle liste. I menu personali e i messaggi usano la lingua del relativo `Event Player`. Regole, nomi delle regole e commenti del sorgente restano in indonesiano.
 
-Il sorgente contiene 9 chiamate `Create HUD Text`: 2 strutturali, 2 per le righe e 5 rami mutuamente esclusivi per menu principale e quattro sottomenu. Configurazione massima normale con 12 umani:
+Il sorgente contiene 9 chiamate `Create HUD Text`: 2 strutturali, 2 per le righe e 5 schermate mutuamente esclusive per menu principale e quattro sottomenu. `GambarMenu` si limita a pulire e instradare; ogni schermata è disegnata da una subroutine separata, così nessuna singola regola menu diventa troppo complessa per il parser live. Configurazione massima normale con 12 umani:
 
 - 2 HUD globali;
 - 24 righe lista;
