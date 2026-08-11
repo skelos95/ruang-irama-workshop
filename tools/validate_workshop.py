@@ -107,6 +107,7 @@ def main() -> None:
 
     genres = strings_in(array_body(source, "Global.DaftarGenre"))
     pages = strings_in(array_body(source, "Global.NamaHalaman"))
+    color_names = strings_in(array_body(source, "Global.NamaWarna"))
     if len(genres) != 100:
         fail(f"attesi 100 generi, trovati {len(genres)}")
     if len(set(genres)) != 100:
@@ -114,6 +115,8 @@ def main() -> None:
         fail(f"generi duplicati: {duplicates}")
     if len(pages) != 10:
         fail(f"attese 10 pagine, trovate {len(pages)}")
+    if len(color_names) != 10 or len(set(color_names)) != 10:
+        fail(f"attesi 10 colori con nomi unici, trovati {len(color_names)}")
     if not GENRE_DOC.exists():
         fail(f"documentazione generi mancante: {GENRE_DOC}")
     documented_genres = re.findall(
@@ -134,15 +137,34 @@ def main() -> None:
         "workaround bot AI": "Start Forcing Dummy Bot Name",
         "raycast giocatore": "Ray Cast Hit Player",
         "icona eroe": "Hero Icon String",
+        "freccia sul giocatore": "Icon String(Arrow: Down)",
+        "testo ancorato nel mondo": "Create In-World Text",
+        "cleanup testo nel mondo": "Destroy In-World Text",
+        "colore marker rivalutato": "Visible To Position String and Color",
         "gestione Echo": "Hero Being Duplicated",
         "camera": "Start Camera",
         "camera per-frame con collisione": "Update Every Frame(Ray Cast Hit Position",
         "registro HUD globale": "Global.HudKiriPemain",
         "cleanup per indice": "Remove From Array By Index",
+        "menu numerati 0 1 3": "Global.KodeMenu = Array(0, 1, 3)",
+        "colore personale": "Event Player.WarnaNama",
+        "bot senza fuoco primario": "Set Primary Fire Enabled(Event Player, False)",
+        "bot senza fuoco secondario": "Set Secondary Fire Enabled(Event Player, False)",
+        "bot senza abilita 1": "Set Ability 1 Enabled(Event Player, False)",
+        "bot senza abilita 2": "Set Ability 2 Enabled(Event Player, False)",
+        "bot senza ultimate": "Set Ultimate Ability Enabled(Event Player, False)",
+        "bot senza melee": "Set Melee Enabled(Event Player, False)",
     }
     for label, token in required.items():
         if token not in source:
             fail(f"requisito assente ({label}): {token}")
+    if not re.search(
+        r'rule\("03b - Bot: Senjata libur, kaki tetap boleh jalan"\).*?'
+        r'Is Alive\(Event Player\) == True;',
+        source,
+        flags=re.DOTALL,
+    ):
+        fail("il blocco combattimento dei bot deve riattivarsi a ogni respawn")
 
     ai_sentinel = 'Custom String("")'
     if source.count(ai_sentinel) < 2:
@@ -153,6 +175,11 @@ def main() -> None:
         fail("Create HUD Text usa Bottom, ma le posizioni valide sono Left, Top e Right")
     if source.count("Create HUD Text(") > 8:
         fail("troppe definizioni HUD statiche: possibile regressione verso 100 righe menu")
+    titleless_hud = re.findall(r"Create HUD Text\([^,]+,\s*Null,", source)
+    if len(titleless_hud) != source.count("Create HUD Text("):
+        fail("ogni HUD deve avere Header Null: funzione in Text e input in Subheader")
+    if source.count("Call Subroutine(TutupMenu)") != 2:
+        fail("il menu deve chiudersi solo con Melee lungo o alla morte del giocatore")
 
     custom_literals = re.findall(r'Custom String\("((?:[^"\\]|\\.)*)"', source)
     too_long = [value for value in custom_literals if len(value) > 128]

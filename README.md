@@ -4,13 +4,15 @@ Prototipo di modalità/social layer per Overwatch 2. Il nome significa, più o m
 
 ## Cosa fa
 
-- A sinistra mostra soltanto i giocatori umani nelle slot di gioco e i minuti trascorsi nell'istanza della lobby.
-- A destra mostra il genere musicale scelto da ogni umano.
-- Tenendo premuto Melee per 1,5 secondi apre un menu con 100 generi e sottogeneri, ordinati da `Lowercase` a `Extratone`.
-- Tenendo premuto Crouch e mirando un umano mostra nome, nome eroe e icona eroe, un bersaglio alla volta e rispettando pareti/linea visiva.
-- Dal menu abilita la terza persona su sé stessi oppure segue l'umano sotto il mirino.
+- A sinistra mostra soltanto gli umani e i minuti trascorsi nell'istanza della lobby; a destra mostra il loro genere musicale.
+- Gli HUD non usano il campo Header: la funzione è nel testo principale e gli input sono nel sottotitolo, con spaziatura più leggibile.
+- Tenendo premuto Melee per 1,5 secondi apre o chiude il menu principale numerato: `0` musica, `1` camera, `3` colore del nome.
+- Il menu musica contiene 100 generi e sottogeneri, ordinati da `Lowercase` a `Extratone`.
+- Ogni umano sceglie uno fra 10 colori; la propria riga usa quel colore in entrambe le liste.
+- Tenendo premuto Crouch e mirando un umano mostra direttamente sopra il bersaglio il nome, l'icona eroe e una freccia verso il basso nel colore scelto dal bersaglio. Non viene creato un HUD di ispezione.
+- Il menu camera abilita la terza persona su sé stessi, segue l'umano sotto il mirino oppure ripristina la visuale normale.
 - La telecamera usa `Update Every Frame` e accorcia la distanza con un raycast quando incontra una parete.
-- Esclude dummy bot e tenta di escludere anche i normali bot AI aggiunti dalla lobby.
+- Esclude dummy bot e normali bot AI dalle liste; inoltre disabilita i loro attacchi, abilità, ultimate e melee, lasciando disponibile il movimento.
 
 Il sorgente principale è [workshop/ruang_irama.workshop](workshop/ruang_irama.workshop).
 
@@ -20,15 +22,16 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 
 | Contesto | Input | Azione |
 |---|---|---|
-| Sempre | Tieni Melee 1,5 s | Apre il menu |
-| Fuori menu | Tieni Crouch + mira | Ispeziona nome ed eroe dell'umano in linea visiva |
-| Menu | Jump / Crouch | Genere precedente / successivo |
-| Menu | Primary / Secondary Fire | Salta indietro / avanti di 10 generi |
-| Menu | Interact | Salva il genere e chiude |
-| Menu | Reload | Chiude senza cambiare genere |
-| Menu | Ability 1 | Terza persona su sé stessi |
-| Menu | Ability 2 | Segue l'umano attualmente sotto il mirino |
-| Menu | Ultimate | Disattiva la telecamera personalizzata |
+| Sempre | Tieni Melee 1,5 s | Apre il menu se chiuso; lo chiude da qualunque pagina se aperto |
+| Fuori menu | Tieni Crouch + mira | Mostra nome, freccia colorata e icona eroe direttamente sull'umano in linea visiva |
+| Menu principale | Jump / Crouch | Seleziona `0` musica, `1` camera o `3` colore |
+| Menu principale | Interact | Entra nel menu selezionato |
+| Menu `0` | Jump / Crouch | Genere precedente / successivo |
+| Menu `0` | Primary / Secondary Fire | Salta indietro / avanti di 10 generi |
+| Menu `1` | Jump / Crouch | Seleziona camera su sé, sul bersaglio o disattivata |
+| Menu `3` | Jump / Crouch | Cambia l'anteprima del colore del nome |
+| Sottomenu | Interact | Applica la scelta e torna al menu principale |
+| Sottomenu | Reload | Torna al menu principale senza chiudere tutto |
 
 ## Installazione
 
@@ -46,7 +49,7 @@ Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non 
 
 ## Stato del prototipo
 
-La struttura e i requisiti sono coperti. Il 2026-08-11 il file è stato importato e compilato con successo nell'editor di Workshop.codes: tutte le 23 regole sono state riconosciute. I controlli statici locali sono inclusi. Resta necessario il test nel client Overwatch per comportamento, carico server e compatibilità della patch corrente.
+La struttura e i requisiti della versione `0.2.0` sono coperti. Il 2026-08-11 l'editor di Workshop.codes ha importato tutte le 22 regole e ha compilato il progetto senza errori; anche i controlli statici locali sono superati. Resta necessario il test nel client Overwatch per comportamento, carico server e compatibilità della patch corrente.
 
 Per eseguire i controlli locali:
 
@@ -54,7 +57,7 @@ Per eseguire i controlli locali:
 python tools/validate_workshop.py
 ```
 
-Il controllo verifica, tra le altre cose: 100 generi unici e identici alla documentazione, 10 pagine, parentesi e graffe bilanciate, sentinella vuota del filtro AI, posizioni HUD valide, camera con `Update Every Frame`, collisione raycast, gestione Echo e registro globale per il cleanup HUD.
+Il controllo verifica, tra le altre cose: 100 generi, 10 pagine, 10 colori, menu `0/1/3`, HUD senza Header, marker nel mondo con freccia e colore dinamico, blocco degli attacchi dei bot, sentinella AI, camera per-frame e cleanup globale.
 
 ## Limiti da conoscere
 
@@ -80,9 +83,11 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 - [Create HUD Text](https://workshop.codes/wiki/articles/create-hud-text)
 - [Is Button Held](https://workshop.codes/wiki/articles/is-button-held) e [Wait](https://workshop.codes/wiki/articles/wait)
 - [Ray Cast Hit Player](https://workshop.codes/wiki/articles/ray-cast-hit-player) e [Hero Icon String](https://workshop.codes/wiki/articles/hero-icon-string)
+- [Create In-World Text](https://workshop.codes/wiki/articles/create-inworld-text), [Icon String](https://workshop.codes/wiki/articles/icon-string) e [Destroy In-World Text](https://workshop.codes/wiki/articles/destroy-inworld-text)
+- [Set Primary Fire Enabled](https://workshop.codes/wiki/articles/set-primary-fire-enabled) e [Set Ability 1 Enabled](https://workshop.codes/wiki/articles/set-ability-1-enabled)
 - [Start Camera](https://workshop.codes/wiki/articles/start-camera), [Update Every Frame](https://workshop.codes/wiki/articles/update-every-frame) e [Ray Cast Hit Position](https://workshop.codes/wiki/articles/ray-cast-hit-position)
 - [Player Left Match](https://workshop.codes/wiki/articles/player-left-match) per il motivo del registro globale degli ID HUD
 
 ## Versione
 
-`0.1.3` — corretta la condizione OR dell'ispezione eroe secondo la grammatica richiesta dal client live.
+`0.2.0` — menu `0/1/3`, colori personali, marker Crouch nel mondo, HUD più leggibili e bot senza attacchi.

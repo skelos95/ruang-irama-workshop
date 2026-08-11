@@ -8,19 +8,20 @@ Esito: superati.
 
 ```text
 OK - controlli statici superati
-Generi: 100 unici | Pagine: 10 | Regole: 23
-HUD definiti nel sorgente: 7
+Generi: 100 unici | Pagine: 10 | Regole: 22
+HUD definiti nel sorgente: 8
 ```
 
-Il validatore controlla anche la corrispondenza esatta tra l'array nel sorgente e `docs/GENERI.md`, sentinella vuota del filtro AI, posizioni HUD, gestione Echo, camera, collisione e cleanup HUD globale.
+Il validatore controlla anche 10 colori unici, menu `0/1/3`, Header nulli, marker nel mondo, freccia colorata, blocco combattimento dei bot, sentinella AI, gestione Echo, camera e cleanup globale.
 
 ## Editor Workshop.codes
 
-Esito: importazione e compilazione della versione `0.1.3` superate.
+Esito: importazione e compilazione della versione `0.2.0` superate.
 
 - Il file completo è stato importato in un progetto temporaneo non autenticato.
-- L'editor ha riconosciuto correttamente variabili, subroutine e tutte le 23 regole.
+- L'editor ha riconosciuto correttamente variabili, subroutine e tutte le 22 regole.
 - Il comando Compile è terminato con conferma di copia, senza segnalazioni di errore.
+- Sono stati accettati `Visible To String and Color`, `Create In-World Text`, `Icon String(Arrow: Down)`, `Player Variable` sul bersaglio e tutte le azioni che disabilitano il combattimento dei bot.
 - La posizione HUD non valida `Bottom` è stata sostituita con `Top`; il validatore ora impedisce che ricompaia.
 - Il sorgente da incollare è interamente ASCII e non dipende più dal carattere invisibile U+200B.
 - Il progetto temporaneo è stato chiuso e non salvato online.
@@ -33,8 +34,10 @@ Esito: importazione e compilazione della versione `0.1.3` superate.
 
 ## Non ancora verificato
 
-- Incolla della versione `0.1.3` nel client Overwatch 2.
+- Incolla della versione `0.2.0` nel client Overwatch 2.
 - Comportamento del workaround del nome vuoto sulla patch live.
+- Disabilitazione attacchi su dummy e bot AI normali.
+- Rivalutazione dei 10 colori sulle due liste e sul testo nel mondo.
 - Posizionamento HUD a diverse risoluzioni.
 - Carico con 12 giocatori e più camere attive.
 - Collisioni sulle mappe scelte.
