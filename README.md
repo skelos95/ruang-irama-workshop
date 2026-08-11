@@ -1,18 +1,21 @@
 # Ruang Irama — Overwatch Workshop
 
-Prototipo di modalità/social layer per Overwatch 2. Il nome significa, più o meno, “stanza del ritmo”. Tutti i testi visibili, i nomi delle regole e i commenti nel Workshop sono scritti in indonesiano colloquiale; le parole chiave del linguaggio Workshop restano in inglese per consentire l'importazione del sorgente.
+Prototipo di modalità/social layer per Overwatch 2. Il nome significa, più o meno, “stanza del ritmo”. Regole e commenti del Workshop restano in indonesiano colloquiale; gli HUD possono invece essere letti in inglese o indonesiano, con inglese predefinito per ogni nuovo ingresso. Le parole chiave del linguaggio Workshop restano in inglese per consentire l'importazione del sorgente.
 
 ## Cosa fa
 
 - A sinistra mostra soltanto gli umani e i minuti trascorsi nell'istanza della lobby; a destra mostra il loro genere musicale.
+- Ogni spettatore vede gli HUD nella propria lingua grazie a `Local Player`: due persone possono scegliere lingue diverse senza duplicare le righe condivise.
 - Gli HUD non usano il campo Header: la funzione è nel testo principale e gli input sono nel sottotitolo, con spaziatura più leggibile.
-- Tenendo premuto Melee per 1,5 secondi apre o chiude il menu principale numerato: `0` musica, `1` camera, `3` colore del nome.
+- Tenendo premuto Melee per 1,5 secondi apre o chiude il menu principale numerato: `0` genere musicale, `1` camera in terza persona, `2` colore del nome, `3` lingua HUD.
+- Ogni menu mostra una sola scelta alla volta. Primary Fire e Secondary Fire scorrono indietro e avanti; Interact entra nel sottomenu o applica la scelta senza chiuderlo.
 - Il menu musica contiene 100 generi e sottogeneri, ordinati da `Lowercase` a `Extratone`.
-- Ogni umano sceglie uno fra 10 colori; la propria riga usa quel colore in entrambe le liste.
+- Il menu camera può disattivare la camera, usarla su sé stessi oppure seguire un altro giocatore selezionato, compresi umani, normali bot AI e dummy bot.
+- Ogni umano sceglie una fra 20 sfumature con nome inglese e indonesiano; la propria riga usa quel colore in entrambe le liste.
 - Tenendo premuto Crouch e mirando un umano o un bot mostra direttamente sopra il bersaglio nome, icona eroe e freccia verso il basso. Gli umani usano il proprio colore scelto; i bot usano l'arancione.
-- Il menu camera abilita la terza persona su sé stessi, segue l'umano sotto il mirino oppure ripristina la visuale normale.
 - La telecamera usa `Update Every Frame` e accorcia la distanza con un raycast quando incontra una parete.
-- Esclude dummy bot e normali bot AI dalle liste; inoltre disabilita i loro attacchi, abilità, ultimate e melee, lasciando disponibile il movimento.
+- Dummy bot e normali bot AI non compaiono nelle liste; attacchi, abilità, ultimate e melee restano disabilitati, mentre possono ancora muoversi.
+- Una inizializzazione comune copre sia i nuovi ingressi sia i giocatori già presenti; all'uscita vengono rimossi HUD e testi nel mondo associati.
 
 Il sorgente principale è [workshop/ruang_irama.workshop](workshop/ruang_irama.workshop).
 
@@ -24,14 +27,13 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 |---|---|---|
 | Sempre | Tieni Melee 1,5 s | Apre il menu se chiuso; lo chiude da qualunque pagina se aperto |
 | Fuori menu | Tieni Crouch + mira | Mostra nome, freccia colorata e icona eroe sull'umano o bot in linea visiva |
-| Menu principale | Jump / Crouch | Seleziona `0` musica, `1` camera o `3` colore |
+| Menu principale | Primary / Secondary Fire | Seleziona il menu precedente / successivo fra `0`, `1`, `2`, `3` |
 | Menu principale | Interact | Entra nel menu selezionato |
-| Menu `0` | Jump / Crouch | Genere precedente / successivo |
-| Menu `0` | Primary / Secondary Fire | Salta indietro / avanti di 10 generi |
-| Menu `1` | Jump / Crouch | Seleziona camera su sé, sul bersaglio o disattivata |
-| Menu `3` | Jump / Crouch | Cambia l'anteprima del colore del nome |
-| Sottomenu | Interact | Applica la scelta e resta nello stesso sottomenu |
+| Qualunque sottomenu | Primary / Secondary Fire | Mostra la scelta precedente / successiva |
+| Menu `0` | Jump / Crouch | Salta indietro / avanti di 10 generi |
+| Qualunque sottomenu | Interact | Applica la scelta e resta nello stesso sottomenu |
 | Qualunque pagina menu | Reload | Chiude immediatamente il menu |
+| Qualunque pagina menu | Tieni Melee 1,5 s | Chiude il menu |
 
 ## Installazione
 
@@ -49,7 +51,7 @@ Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non 
 
 ## Stato del prototipo
 
-La versione `0.2.1` corregge i problemi osservati nel client live: filtro dei normali bot AI, blocco persistente del combattimento, ispezione Crouch su umani e bot e permanenza nei sottomenu dopo `Interact`. Resta necessario il test finale nel client Overwatch per comportamento e carico server.
+La versione `0.3.0` separa i quattro menu, aggiunge la selezione diretta dei bersagli camera, porta la palette a 20 sfumature e introduce HUD bilingui per singolo spettatore con inglese predefinito. Rafforza inoltre inizializzazione dei giocatori, aggiornamento dei bersagli e cleanup all'uscita.
 
 Per eseguire i controlli locali:
 
@@ -57,7 +59,7 @@ Per eseguire i controlli locali:
 python tools/validate_workshop.py
 ```
 
-Il controllo verifica, tra le altre cose: 100 generi, 10 pagine, 10 colori, menu `0/1/3`, HUD senza Header, marker nel mondo con freccia e colore dinamico, blocco degli attacchi dei bot, sentinella AI, camera per-frame e cleanup globale.
+Il controllo verifica, tra le altre cose: 100 generi, 10 fasce musicali, 20 colori, menu `0/1/2/3`, due lingue, uso di `Local Player`, HUD senza Header, marker nel mondo con freccia e colore dinamico, blocco degli attacchi dei bot, sentinella AI, camera per-frame, inizializzazione e cleanup globale.
 
 ## Limiti da conoscere
 
@@ -66,7 +68,7 @@ Il controllo verifica, tra le altre cose: 100 generi, 10 pagine, 10 colori, menu
 3. **Il timer parte quando il Workshop vede il giocatore.** Misura l'istanza corrente con `Total Time Elapsed`; non include il tempo passato nel browser delle partite o prima dell'avvio delle regole.
 4. **“Segui giocatore” non è uno slot spettatore vero.** `Start Camera` cambia la visuale, ma il corpo del viewer resta nella partita e controllabile. Non viene reso invulnerabile né immobilizzato.
 5. **La collisione è a raggio singolo.** Le pareti normali vengono rispettate; angoli molto stretti, porte sottili e geometrie irregolari possono ancora produrre un po' di clipping.
-6. **Gli spettatori neutrali non sono elencati.** Il registro usa i giocatori nelle due squadre/slot di gioco.
+6. **Gli spettatori neutrali non sono elencati.** Il registro HUD usa i giocatori nelle due squadre/slot di gioco; il menu camera seleziona i giocatori spawnati delle squadre.
 
 ## Struttura
 
@@ -80,7 +82,7 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Riferimenti tecnici
 
-- [Create HUD Text](https://workshop.codes/wiki/articles/create-hud-text)
+- [Create HUD Text](https://workshop.codes/wiki/articles/create-hud-text) e [Local Player](https://workshop.codes/wiki/articles/local-player)
 - [Is Button Held](https://workshop.codes/wiki/articles/is-button-held) e [Wait](https://workshop.codes/wiki/articles/wait)
 - [Ray Cast Hit Player](https://workshop.codes/wiki/articles/ray-cast-hit-player) e [Hero Icon String](https://workshop.codes/wiki/articles/hero-icon-string)
 - [Create In-World Text](https://workshop.codes/wiki/articles/create-inworld-text), [Icon String](https://workshop.codes/wiki/articles/icon-string) e [Destroy In-World Text](https://workshop.codes/wiki/articles/destroy-inworld-text)
@@ -90,4 +92,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.2.1` — filtro bot AI live corretto, bot resi innocui, Crouch su umani e bot e menu chiudibile con Reload o Melee.
+`0.3.0` — quattro menu separati, camera su qualunque giocatore spawnato, 20 sfumature, HUD inglese/indonesiano per spettatore e lifecycle più robusto.
