@@ -1,19 +1,20 @@
-# Ruang Irama — Overwatch Workshop
+# Server Dedikasi Ramah — Overwatch Workshop
 
-Prototipo di modalità/social layer per Overwatch 2. Il nome significa, più o meno, “stanza del ritmo”. Regole e commenti del Workshop restano in indonesiano colloquiale; gli HUD possono invece essere letti in inglese o indonesiano, con inglese predefinito per ogni nuovo ingresso. Le parole chiave del linguaggio Workshop restano in inglese per consentire l'importazione del sorgente.
+Prototipo di modalità/social layer per Overwatch 2. Il progetto e il repository GitHub usano il nome indonesiano **Server Dedikasi Ramah**, cioè “server dedicato amichevole”; nel gioco compare come **Friendly Dedicated Server**, con posizione **Indonesia**. Regole e commenti del Workshop restano in indonesiano colloquiale; gli HUD possono invece essere letti in inglese o indonesiano, con inglese predefinito per ogni nuovo ingresso. Le parole chiave del linguaggio Workshop restano in inglese per consentire l'importazione del sorgente.
 
 ## Cosa fa
 
 - A sinistra mostra soltanto gli umani e i minuti trascorsi nell'istanza della lobby; a destra mostra il loro genere musicale.
 - Ogni spettatore vede gli HUD nella propria lingua grazie a `Local Player`: due persone possono scegliere lingue diverse senza duplicare le righe condivise.
-- Gli HUD non usano il campo Header: la funzione è nel testo principale e gli input sono nel sottotitolo, con spaziatura più leggibile.
-- Tenendo premuto Melee per 1,5 secondi apre o chiude il menu principale numerato: `0` genere musicale, `1` camera in terza persona, `2` colore del nome, `3` lingua HUD.
-- Ogni menu mostra una sola scelta alla volta. Primary Fire e Secondary Fire scorrono indietro e avanti; Interact entra nel sottomenu o applica la scelta senza chiuderlo.
+- Il titolo superiore mostra `Friendly Dedicated Server` e la posizione del server nella lingua del viewer: `Server location: Indonesia` oppure `Lokasi server: Indonesia`.
+- Gli HUD non usano il campo Header: la funzione è nel testo principale e gli input sono nel sottotitolo. Le righe delle due liste usano il formato compatto `Subheader` e una palette luminosa senza grigio.
+- Tenendo premuto Melee per 1,25 secondi apre o chiude il menu principale numerato: `0` genere musicale, `1` camera in terza persona, `2` colore del nome, `3` lingua HUD.
+- Ogni menu mostra una sola scelta alla volta. Primary Fire scorre alla voce successiva e Secondary Fire alla precedente; Interact entra nel sottomenu o applica la scelta senza chiuderlo.
 - Il menu musica contiene 100 generi e sottogeneri, ordinati da `Lowercase` a `Extratone`.
 - Il menu camera può disattivare la camera, usarla su sé stessi oppure seguire un altro giocatore selezionato, compresi umani, normali bot AI e dummy bot.
 - Ogni umano sceglie una fra 20 sfumature con nome inglese e indonesiano; la propria riga usa quel colore in entrambe le liste.
-- Tenendo premuto Crouch e mirando un umano o un bot mostra direttamente sopra il bersaglio nome, icona eroe e freccia verso il basso. Gli umani usano il proprio colore scelto; i bot usano l'arancione.
-- La telecamera usa `Update Every Frame` e accorcia la distanza con un raycast quando incontra una parete.
+- Tenendo premuto Crouch, il client nasconde le nameplate native soltanto per quel viewer e mostra due testi personalizzati: il proprio nome, eroe e percentuale Ultimate in posizione relativa alla camera, più nome, eroe e Ultimate del giocatore valido più vicino al reticolo. Non viene usata alcuna freccia. Al rilascio le nameplate vengono ripristinate.
+- La telecamera è sulla spalla destra, usa `Update Every Frame`, accorcia la distanza con un raycast davanti alle pareti e scala fra 3,5 e 6 metri in base alla salute massima del bersaglio.
 - Dummy bot e normali bot AI non compaiono nelle liste; attacchi, abilità, ultimate e melee restano disabilitati, mentre possono ancora muoversi.
 - Una inizializzazione comune copre sia i nuovi ingressi sia i giocatori già presenti; all'uscita vengono rimossi HUD e testi nel mondo associati.
 
@@ -25,15 +26,16 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 
 | Contesto | Input | Azione |
 |---|---|---|
-| Sempre | Tieni Melee 1,5 s | Apre il menu se chiuso; lo chiude da qualunque pagina se aperto |
-| Fuori menu | Tieni Crouch + mira | Mostra nome, freccia colorata e icona eroe sull'umano o bot in linea visiva |
-| Menu principale | Primary / Secondary Fire | Seleziona il menu precedente / successivo fra `0`, `1`, `2`, `3` |
+| Sempre | Tieni Melee 1,25 s | Apre il menu se chiuso; lo chiude da qualunque pagina se aperto |
+| Fuori menu | Tieni Crouch + mira | Nasconde le nameplate native per il viewer e mostra nome, eroe e ULT% propri e del target più vicino al reticolo |
+| Menu principale | Primary / Secondary Fire | Seleziona il menu successivo / precedente fra `0`, `1`, `2`, `3` |
 | Menu principale | Interact | Entra nel menu selezionato |
-| Qualunque sottomenu | Primary / Secondary Fire | Mostra la scelta precedente / successiva |
+| Menu principale | Reload | Non esegue alcuna azione |
+| Qualunque sottomenu | Primary / Secondary Fire | Mostra la scelta successiva / precedente |
 | Menu `0` | Jump / Crouch | Salta indietro / avanti di 10 generi |
 | Qualunque sottomenu | Interact | Applica la scelta e resta nello stesso sottomenu |
-| Qualunque pagina menu | Reload | Chiude immediatamente il menu |
-| Qualunque pagina menu | Tieni Melee 1,5 s | Chiude il menu |
+| Qualunque sottomenu | Reload | Torna al menu principale senza chiuderlo |
+| Qualunque pagina menu | Tieni Melee 1,25 s | Chiude il menu |
 
 ## Installazione
 
@@ -51,7 +53,7 @@ Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non 
 
 ## Stato del prototipo
 
-La versione `0.3.1` mantiene i quattro menu, la selezione diretta dei bersagli camera, le 20 sfumature e gli HUD bilingui della `0.3.0`. Corregge inoltre un falso positivo del filtro parole del client live: la parola indonesiana `cuma` nel nome di una regola conteneva una sottostringa censurata e causava `Invalid comment after 'rule('` durante l'incolla. Come protezione aggiuntiva, il grande renderer dei menu è stato diviso in cinque subroutine più piccole senza cambiare testi o comandi.
+La versione `0.4.0` rinomina il progetto **Server Dedikasi Ramah** e aggiunge il titolo di modalità localizzato. Compatta e riposiziona gli HUD sotto l'Objective Description, inverte la navigazione come indicato dagli hint, porta Melee a 1,25 secondi e trasforma Reload in “indietro” soltanto nei sottomenu. L'ispezione Crouch sostituisce temporaneamente le nameplate native con due letture personalizzate dotate di nome, eroe e ULT%; la camera passa alla spalla destra e adatta la distanza alla salute massima.
 
 Per eseguire i controlli locali:
 
@@ -59,7 +61,7 @@ Per eseguire i controlli locali:
 python tools/validate_workshop.py
 ```
 
-Il controllo verifica, tra le altre cose: 100 generi, 10 fasce musicali, 20 colori, menu `0/1/2/3`, due lingue, uso di `Local Player`, HUD senza Header, marker nel mondo con freccia e colore dinamico, blocco degli attacchi dei bot, sentinella AI, camera per-frame, inizializzazione e cleanup globale.
+Il controllo verifica, tra le altre cose: 100 generi, 10 fasce musicali, 20 colori, menu `0/1/2/3`, due lingue, uso di `Local Player`, 10 HUD senza Header, 33 regole, 12 subroutine, due testi nel mondo per viewer durante Crouch, nameplate ripristinate, blocco degli attacchi dei bot, sentinella AI, camera per-frame e cleanup dei nuovi ID globali.
 
 ## Limiti da conoscere
 
@@ -67,7 +69,7 @@ Il controllo verifica, tra le altre cose: 100 generi, 10 fasce musicali, 20 colo
 2. **I bot AI richiedono un workaround.** `Is Dummy Bot` riconosce i dummy Workshop ma non i normali bot AI. Il progetto forza per due tick il carattere invisibile `U+200B` con `Start Forcing Dummy Bot Name`: il client applica il cambio soltanto ai bot AI. Il file e gli appunti devono quindi conservare quel carattere. Il metodo può comunque rompersi dopo una patch. Vedi [rilevamento AI/dummy/umani](https://workshop.codes/wiki/articles/detect-ai-dummy-and-real-players-separately).
 3. **Il timer parte quando il Workshop vede il giocatore.** Misura l'istanza corrente con `Total Time Elapsed`; non include il tempo passato nel browser delle partite o prima dell'avvio delle regole.
 4. **“Segui giocatore” non è uno slot spettatore vero.** `Start Camera` cambia la visuale, ma il corpo del viewer resta nella partita e controllabile. Non viene reso invulnerabile né immobilizzato.
-5. **La collisione è a raggio singolo.** Le pareti normali vengono rispettate; angoli molto stretti, porte sottili e geometrie irregolari possono ancora produrre un po' di clipping.
+5. **La collisione è a raggio singolo.** La distanza dinamica resta fra 3,5 e 6 metri e le pareti normali vengono rispettate; angoli molto stretti, porte sottili e geometrie irregolari possono ancora produrre un po' di clipping.
 6. **Gli spettatori neutrali non sono elencati.** Il registro HUD usa i giocatori nelle due squadre/slot di gioco; il menu camera seleziona i giocatori spawnati delle squadre.
 
 ## Struttura
@@ -84,12 +86,12 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 - [Create HUD Text](https://workshop.codes/wiki/articles/create-hud-text) e [Local Player](https://workshop.codes/wiki/articles/local-player)
 - [Is Button Held](https://workshop.codes/wiki/articles/is-button-held) e [Wait](https://workshop.codes/wiki/articles/wait)
-- [Ray Cast Hit Player](https://workshop.codes/wiki/articles/ray-cast-hit-player) e [Hero Icon String](https://workshop.codes/wiki/articles/hero-icon-string)
-- [Create In-World Text](https://workshop.codes/wiki/articles/create-inworld-text), [Icon String](https://workshop.codes/wiki/articles/icon-string) e [Destroy In-World Text](https://workshop.codes/wiki/articles/destroy-inworld-text)
+- [Player Closest To Reticle](https://workshop.codes/wiki/articles/player-closest-to-reticle), [Hero Icon String](https://workshop.codes/wiki/articles/hero-icon-string) e [Ultimate Charge Percent](https://workshop.codes/wiki/articles/ultimate-charge-percent)
+- [Create In-World Text](https://workshop.codes/wiki/articles/create-inworld-text), [Disable Nameplates](https://workshop.codes/wiki/articles/disable-nameplates), [Enable Nameplates](https://workshop.codes/wiki/articles/enable-nameplates) e [Destroy In-World Text](https://workshop.codes/wiki/articles/destroy-inworld-text)
 - [Set Primary Fire Enabled](https://workshop.codes/wiki/articles/set-primary-fire-enabled) e [Set Ability 1 Enabled](https://workshop.codes/wiki/articles/set-ability-1-enabled)
 - [Start Camera](https://workshop.codes/wiki/articles/start-camera), [Update Every Frame](https://workshop.codes/wiki/articles/update-every-frame) e [Ray Cast Hit Position](https://workshop.codes/wiki/articles/ray-cast-hit-position)
 - [Player Left Match](https://workshop.codes/wiki/articles/player-left-match) per il motivo del registro globale degli ID HUD
 
 ## Versione
 
-`0.3.1` — correzione dell'import live dei commenti e renderer menu suddiviso; quattro menu separati, camera inclusiva, 20 sfumature e HUD inglese/indonesiano restano invariati.
+`0.4.0` — Server Dedikasi Ramah / Friendly Dedicated Server; HUD compatti e localizzati, ispezione Crouch con nameplate personalizzate e ULT%, navigazione coerente e camera destra a distanza dinamica.

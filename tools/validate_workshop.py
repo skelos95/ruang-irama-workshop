@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Controlli statici minimi per il sorgente Workshop di Ruang Irama.
+"""Controlli statici minimi per Friendly Dedicated Server.
 
 Non sostituisce l'importazione nel client di Overwatch. Serve a intercettare
 regressioni facili da introdurre modificando a mano array, HUD e camera.
@@ -194,18 +194,22 @@ def main() -> None:
             fail(f"renderer menu non instradato: {renderer}")
 
     required = {
-        "pressione Melee da 1,5 s": "Wait(1.500, Abort When False)",
+        "pressione Melee da 1,25 s": "Wait(1.250, Abort When False)",
         "filtro dummy bot": "Is Dummy Bot(Event Player)",
         "workaround bot AI": "Start Forcing Dummy Bot Name",
-        "raycast giocatore": "Ray Cast Hit Player",
+        "bersaglio vicino al reticolo": "Player Closest To Reticle(Event Player, All Teams)",
         "icona eroe": "Hero Icon String",
-        "freccia sul giocatore": "Icon String(Arrow: Down)",
+        "carica ultimate nel testo": "Ultimate Charge Percent",
         "testo ancorato nel mondo": "Create In-World Text",
         "cleanup testo nel mondo": "Destroy In-World Text",
         "colore marker rivalutato": "Visible To Position String and Color",
         "gestione Echo": "Hero Being Duplicated",
+        "nascondi targhette standard": "Disable Nameplates(All Players(All Teams), Event Player)",
+        "ripristina targhette standard": "Enable Nameplates(All Players(All Teams), Event Player)",
         "camera": "Start Camera",
         "camera per-frame con collisione": "Update Every Frame(Ray Cast Hit Position",
+        "camera proporzionale alla salute massima": "Max Health(Event Player.TargetKamera)",
+        "camera sulla spalla destra": "Vector(0 - Global.GeserKamera",
         "registro HUD globale": "Global.HudKiriPemain",
         "cleanup per indice": "Remove From Array By Index",
         "menu numerati 0 1 2 3": "Global.KodeMenu = Array(0, 1, 2, 3)",
@@ -215,8 +219,8 @@ def main() -> None:
         "lista camera aggiornata": "Call Subroutine(SegarkanTargetKamera)",
         "camera include umani e bot": "Filtered Array(All Players(All Teams)",
         "controllo target camera esistente": "Entity Exists(Event Player.TargetKamera)",
-        "navigazione precedente": "06 - Menu: Tembakan utama memilih sebelumnya",
-        "navigazione successiva": "07 - Menu: Tembakan sekunder memilih berikutnya",
+        "Primary Fire avanti": "06 - Menu: Tembakan utama memilih berikutnya",
+        "Secondary Fire indietro": "07 - Menu: Tembakan sekunder memilih sebelumnya",
         "colore personale": "Event Player.WarnaNama",
         "bot senza fuoco primario": "Set Primary Fire Enabled(Event Player, False)",
         "bot senza fuoco secondario": "Set Secondary Fire Enabled(Event Player, False)",
@@ -228,7 +232,10 @@ def main() -> None:
         "bot senza cura residua": "Set Healing Dealt(Event Player, 0)",
         "bot senza knockback residuo": "Set Knockback Dealt(Event Player, 0)",
         "ispezione include umani e bot": "All Players(All Teams)",
-        "reload chiude il menu": "11 - Menu: Isi ulang menutup menu dari halaman mana pun",
+        "reload torna al menu principale": "11 - Menu: Isi ulang kembali dari submenu ke menu utama",
+        "titolo modalita": "FRIENDLY DEDICATED SERVER",
+        "ubicazione server inglese": "Server location: Indonesia",
+        "ubicazione server indonesiana": "Lokasi server: Indonesia",
     }
     for label, token in required.items():
         if token not in source:
@@ -247,18 +254,18 @@ def main() -> None:
         fail("la sentinella AI U+200B non e racchiusa nelle due Custom String previste")
     if re.search(r"Create HUD Text\([^;]*,\s*Bottom\s*,", source, flags=re.DOTALL):
         fail("Create HUD Text usa Bottom, ma le posizioni valide sono Left, Top e Right")
-    if source.count("Create HUD Text(") > 9:
+    if source.count("Create HUD Text(") > 10:
         fail("troppe definizioni HUD statiche: possibile regressione verso 100 righe menu")
     titleless_hud = re.findall(r"Create HUD Text\([^,]+,\s*Null,", source)
     if len(titleless_hud) != source.count("Create HUD Text("):
         fail("ogni HUD deve avere Header Null: funzione in Text e input in Subheader")
-    if source.count("Call Subroutine(TutupMenu)") != 3:
-        fail("il menu deve chiudersi con Melee lungo, Reload o per cleanup alla morte")
+    if source.count("Call Subroutine(TutupMenu)") != 2:
+        fail("il menu deve chiudersi soltanto con Melee lungo o per cleanup alla morte")
     if source.count("Call Subroutine(SiapkanPemain)") != 2:
         fail("SiapkanPemain deve coprire sia join sia giocatori gia presenti")
     if source.count(
         "If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);"
-    ) != 5:
+    ) != 6:
         fail("mancano guardie su una scrittura HUD/testo indicizzata")
     leave_rule = re.search(
         r'rule\("04 - Pemain Keluar:.*?\)(.*?)rule\("05 - Menu:',
@@ -273,6 +280,7 @@ def main() -> None:
         "HudKananPemain",
         "HudMenuPemain",
         "TeksDuniaPemain",
+        "TeksDiriPemain",
     )
     for name in parallel_arrays:
         if source.count(f"Modify Global Variable({name}, Remove From Array By Index") != 1:
@@ -296,6 +304,46 @@ def main() -> None:
     submenu_actions = interact_rule.group(1).split("Else If(Event Player.HalamanMenu == 0);", 1)[-1]
     if "Event Player.HalamanMenu = -1;" in submenu_actions:
         fail("Interact non deve uscire dal sottomenu dopo aver applicato una scelta")
+
+    reload_rule = re.search(
+        r'rule\("11 - Menu: Isi ulang kembali dari submenu ke menu utama"\)(.*?)'
+        r'rule\("12 - Menu:',
+        source,
+        flags=re.DOTALL,
+    )
+    if reload_rule is None:
+        fail("regola Reload non trovata")
+    if "Event Player.HalamanMenu != -1;" not in reload_rule.group(1):
+        fail("Reload deve ignorare il menu principale")
+    if "Call Subroutine(GambarMenu);" not in reload_rule.group(1):
+        fail("Reload deve ridisegnare il menu principale")
+    if "Call Subroutine(TutupMenu);" in reload_rule.group(1):
+        fail("Reload non deve chiudere completamente il menu")
+
+    if source.count("Create In-World Text(") != 2:
+        fail("Crouch deve creare un testo mondo per il bersaglio e uno per il giocatore")
+    if source.count("Ultimate Charge Percent(") != 2:
+        fail("nome proprio e bersaglio devono mostrare entrambi la carica Ultimate")
+    if source.count("Disable Nameplates(All Players(All Teams), Event Player);") != 2:
+        fail("le targhette standard devono restare nascoste per tutta la pressione di Crouch")
+    if source.count("Enable Nameplates(All Players(All Teams), Event Player);") != 1:
+        fail("le targhette standard devono essere ripristinate una volta nel cleanup Crouch")
+    if "Icon String(Arrow: Down)" in source:
+        fail("la freccia sopra i giocatori deve restare rimossa")
+    if "Color(Gray)" in source:
+        fail("gli HUD non devono tornare alla vecchia palette grigia")
+    if "\\n\\n" in source:
+        fail("i menu compatti non devono contenere righe vuote interne")
+    if len(re.findall(r"Top,\s*100\b", source)) != 5:
+        fail("i cinque menu devono restare sotto Objective Description")
+    if source.count('"\\n{0}: next | {1}: previous"') != 5:
+        fail("Primary Fire deve essere Next in tutti i menu inglesi")
+    if source.count('"\\n{0}: berikutnya | {1}: sebelumnya"') != 5:
+        fail("Primary Fire deve essere Berikutnya in tutti i menu indonesiani")
+    if source.count("Max Health(Event Player.TargetKamera)") != 2:
+        fail("entrambi i calcoli camera devono reagire alla salute massima dell'eroe")
+    if source.count("Vector(0 - Global.GeserKamera") != 2:
+        fail("entrambi i calcoli camera devono restare sulla spalla destra")
 
     custom_literals = re.findall(r'Custom String\("((?:[^"\\]|\\.)*)"', source)
     too_long = [value for value in custom_literals if len(value) > 128]
