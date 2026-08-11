@@ -308,10 +308,11 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 100;
 
-		Create HUD Text(Global.PemainManusia, Null, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"FRIENDLY DEDICATED SERVER\nServer location: Indonesia") : Custom String(
-			"FRIENDLY DEDICATED SERVER\nLokasi server: Indonesia"), Top, -100, Color(White), Color(White),
-			Custom Color(80, 235, 255, 255), Visible To and String, Default Visibility);
+		Create HUD Text(Global.PemainManusia,
+			Custom String("{0}    {1}", Custom String("FRIENDLY DEDICATED SERVER"), Custom String("{0}m {1}s",
+			Round To Integer(Total Time Elapsed / 60, Down), Round To Integer(Total Time Elapsed % 60, Down))),
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Custom String("Lokasi server: Indonesia"),
+			Null, Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect a player's name and hero", Input Binding String(Button(Crouch))) : Custom String(
 			"Tahan {0}: intip nama dan hero pemain", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
@@ -320,8 +321,8 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Visible To and String, Default Visibility);
 		Global.HudInfoKiri = Last Text ID;
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0} 1.25 sec: open the menu", Input Binding String(Button(Melee))) : Custom String(
-			"Tahan {0} 1,25 dtk: buka menu", Input Binding String(Button(Melee))), Player Variable(Local Player,
+			"Hold {0} 0.5 sec: open the menu", Input Binding String(Button(Melee))) : Custom String(
+			"Tahan {0} 0,5 dtk: buka menu", Input Binding String(Button(Melee))), Player Variable(Local Player,
 			IndeksBahasa) == 0 ? Custom String("PLAYERS AND THEIR SOUNDTRACKS\n ") : Custom String("NAMA PEMAIN DAN SELERA MUSIK\n "),
 			Right, -100, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Default Visibility);
@@ -524,7 +525,7 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 	}
 }
 
-rule("05 - Menu: Tahan serangan jarak dekat 1,25 detik untuk buka atau tutup")
+rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 {
 	event
 	{
@@ -543,7 +544,7 @@ rule("05 - Menu: Tahan serangan jarak dekat 1,25 detik untuk buka atau tutup")
 
 	actions
 	{
-		Wait(1.250, Abort When False);
+		Wait(0.500, Abort When False);
 		Event Player.MeleeDipakai = True;
 		If(Event Player.MenuTerbuka == True);
 			Call Subroutine(TutupMenu);
@@ -978,7 +979,7 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 			Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
 			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Round To Integer(Ultimate Charge Percent(
 			Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null
-			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.500, Do Not Clip,
+			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 0.750, Do Not Clip,
 			Visible To Position String and Color, Event Player.TargetInspeksi == Null ? Color(White) : Player Variable(
 			Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange),
 			Default Visibility);
@@ -986,14 +987,16 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
 		End;
-		Create In-World Text(Event Player, Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
-			Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
-			Down)), Update Every Frame(Eye Position(Event Player)
-			+ World Vector Of(Vector(0, -0.650, 3), Event Player, Rotation)), 1.250, Do Not Clip, Visible To Position String and Color,
-			Event Player.WarnaNama, Default Visibility);
-		Event Player.TeksDiri = Last Text ID;
-		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDiri;
+		Event Player.TeksDiri = Null;
+		If(Event Player.ModeKamera == 1);
+			Create In-World Text(Event Player, Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
+				Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
+				Down)), Update Every Frame(Eye Position(Event Player) + Vector(0, 0.450, 0)), 0.750, Do Not Clip,
+				Visible To Position String and Color, Event Player.WarnaNama, Default Visibility);
+			Event Player.TeksDiri = Last Text ID;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+				Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDiri;
+			End;
 		End;
 	}
 }
@@ -1198,9 +1201,9 @@ rule("91a - Subrutin: Gambar menu utama")
 	{
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-			Custom String("{0}: open | hold {1} 1.25 sec: close", Input Binding String(Button(Interact)), Input Binding String(Button(Melee))))
+			Custom String("{0}: open | hold {1} 0.5 sec: close", Input Binding String(Button(Interact)), Input Binding String(Button(Melee))))
 			: Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
-			Input Binding String(Button(Secondary Fire))), Custom String("{0}: buka | tahan {1} 1,25 dtk: tutup", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Secondary Fire))), Custom String("{0}: buka | tahan {1} 0,5 dtk: tutup", Input Binding String(Button(Interact)),
 			Input Binding String(Button(Melee)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorUtama == 0 ? Custom String(
 			"0 - MUSIC GENRE\nCURRENT: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("not picked yet"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - THIRD-PERSON CAMERA\nCURRENT: {0}", Event Player.ModeKamera == 0 ? Custom String("off")
@@ -1233,11 +1236,11 @@ rule("91b - Subrutin: Gambar menu musik")
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}: back 10 | {1}: forward 10", Input Binding String(Button(Jump)), Input Binding String(Button(Crouch)))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 			Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
 			Input Binding String(Button(Secondary Fire))), Custom String("{0}: mundur 10 | {1}: maju 10", Input Binding String(Button(Jump)),
 			Input Binding String(Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
-			Input Binding String(Button(Reload))), Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))),
 			Event Player.IndeksBahasa == 0 ? Custom String("0 - MUSIC GENRE {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1,
 			Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Custom String(
 			"0 - GENRE MUSIK {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1, Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)],
@@ -1260,10 +1263,10 @@ rule("91c - Subrutin: Gambar menu kamera")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"1 - THIRD-PERSON CAMERA {0}/{1}\n> {2}", Event Player.KursorKamera + 1, Count Of(Event Player.DaftarTargetKamera) + 2,
 			Event Player.KursorKamera == 0 ? Custom String("TURN CAMERA OFF") : Event Player.KursorKamera == 1 ? Custom String("ON YOURSELF") : Custom String(
 			"WATCH {0} {1}", Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[
@@ -1292,10 +1295,10 @@ rule("91d - Subrutin: Gambar menu warna")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"2 - NAME COLOR {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarnaEN[Event Player.KursorWarna])
 			: Custom String("2 - WARNA NAMA {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna),
 			Global.NamaWarna[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
@@ -1317,10 +1320,10 @@ rule("91e - Subrutin: Gambar menu bahasa")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"3 - HUD LANGUAGE {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]) : Custom String(
 			"3 - BAHASA HUD {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]), Top, 100,
 			Color(White), Custom Color(225, 210, 255, 255), Custom Color(190, 120, 255, 255), Visible To and String, Default Visibility);
@@ -1341,8 +1344,8 @@ rule("91f - Subrutin: Gambar menu Revenge")
 		Call Subroutine(SegarkanTargetRevenge);
 		If(Count Of(Event Player.DaftarTargetRevenge) == 0);
 			Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String(
-				"\nNo other players\n{0}: back | hold {1} 1.25 sec: close", Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))
-				: Custom String("\nTidak ada pemain lain\n{0}: kembali | tahan {1} 1,25 dtk: tutup", Input Binding String(Button(Reload)),
+				"\nNo other players\n{0}: back | hold {1} 0.5 sec: close", Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))
+				: Custom String("\nTidak ada pemain lain\n{0}: kembali | tahan {1} 0,5 dtk: tutup", Input Binding String(Button(Reload)),
 				Input Binding String(Button(Melee))), Custom String("4 - REVENGE"), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
 				Custom Color(255, 80, 80, 255), Visible To and String, Default Visibility);
 		Else;
@@ -1351,10 +1354,10 @@ rule("91f - Subrutin: Gambar menu Revenge")
 			Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 				Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 				Custom String("{0}\n{1}", Custom String("{0}: REVENGE KILL | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-				Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+				Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 				Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 				Custom String("{0}\n{1}", Custom String("{0}: KILL REVENGE | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-				Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+				Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 				"{0}\nOWED: {1}", Custom String("4 - REVENGE {0}/{1}\n> {2}", Event Player.KursorRevenge + 1,
 				Count Of(Event Player.DaftarTargetRevenge), Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]),
 				Event Player.IndeksRevenge < 0 ? 0 : Event Player.JumlahRevenge[Event Player.IndeksRevenge]) : Custom String("{0}\nHUTANG: {1}",
