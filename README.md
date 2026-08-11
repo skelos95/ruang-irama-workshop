@@ -35,14 +35,14 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 1. Fai una copia delle impostazioni della tua Partita personalizzata.
 2. Chiudi Overwatch e imposta temporaneamente la **lingua testo** del client su **English (US)**: le parole chiave del file sono quelle dell'export inglese. Su Battle.net: Overwatch 2 → ingranaggio accanto a Gioca → Impostazioni di gioco → Lingua testo.
 3. Apri [workshop/ruang_irama.workshop](workshop/ruang_irama.workshop) su GitHub e premi **Copy raw file** (icona con due quadratini). Non usare `Ctrl+A` sulla pagina GitHub e non copiare un blocco Markdown.
-4. In Overwatch vai in Partita personalizzata → Crea → **Impostazioni** e resta nella schermata principale/Summary. Il file contiene un preset completo, quindi non va incollato dentro una singola regola.
-5. Il pulsante arancione **Import Settings** compare automaticamente quando gli appunti vengono riconosciuti: premilo. Non serve `Ctrl+V`.
-6. Se il pulsante non appare, verifica in Blocco note che gli appunti inizino esattamente con `settings`, ricopia con **Copy raw file**, controlla che la lingua testo sia inglese e riapri la schermata Impostazioni. Dopo l'importazione puoi tornare all'italiano.
+4. In Overwatch vai in Partita personalizzata → Crea → Impostazioni → **Workshop**.
+5. Nella schermata Workshop compare il pulsante arancione per incollare lo script completo: premilo dalla barra superiore, non dentro una singola regola. Non serve `Ctrl+V`.
+6. Se il pulsante non appare, verifica in Blocco note che gli appunti inizino esattamente con `variables`, ricopia con **Copy raw file**, controlla che la lingua testo sia inglese e riapri la schermata Workshop. Dopo l'importazione puoi tornare all'italiano.
 7. Mantieni o modifica liberamente modalità, mappe e regole di gioco di base: questo progetto è pensato come sistema HUD/camera sovrapponibile.
 8. Prova almeno un umano, un dummy bot e un normale bot AI della lobby prima di pubblicare.
 9. Solo dopo il test nel gioco, usa il comando di condivisione di Overwatch per generare il codice breve Blizzard.
 
-GitHub conserva il sorgente copiabile, ma non può generare il codice condivisibile di Overwatch: quel codice nasce esclusivamente dal client di gioco. La [guida introduttiva ufficiale di Blizzard](https://news.blizzard.com/en-gb/article/22938941/introducing-the-overwatch-workshop) descrive il flusso Workshop; una guida comunitaria aggiornata mostra anche il comportamento dei [codici di condivisione](https://workshop.codes/wiki/articles/workshop-basics).
+Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non contiene `settings`, quindi non sovrascrive modalità, mappe o lobby. GitHub conserva il sorgente copiabile, ma non può generare il codice condivisibile di Overwatch: quel codice nasce esclusivamente dal client di gioco. La [guida introduttiva ufficiale di Blizzard](https://news.blizzard.com/en-gb/article/22938941/introducing-the-overwatch-workshop) descrive il flusso Workshop; una guida comunitaria aggiornata mostra anche il comportamento dei [codici di condivisione](https://workshop.codes/wiki/articles/workshop-basics).
 
 ## Stato del prototipo
 
@@ -85,4 +85,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.1.1` — corretto l'import testuale nel client e resa la sentinella AI compatibile con gli appunti ASCII.
+`0.1.2` — rimosso il blocco preset incompleto: ora si incolla direttamente nella schermata Workshop senza modificare modalità e mappe.

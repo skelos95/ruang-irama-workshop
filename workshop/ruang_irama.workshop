@@ -1,11 +1,3 @@
-settings
-{
-	main
-	{
-		Description: "Ruang Irama: manusia, menit nongkrong, genre musik, intip hero, dan kamera orang ketiga yang tahu tembok."
-	}
-}
-
 variables
 {
 	global:

@@ -96,6 +96,10 @@ def main() -> None:
         fail(f"file mancante: {SOURCE}")
     source = SOURCE.read_text(encoding="utf-8")
     assert_balanced(source)
+    if not source.lstrip().startswith("variables"):
+        fail("il file copy-safe deve iniziare con variables ed essere incollato nella schermata Workshop")
+    if re.search(r"^settings\s*$", source, flags=re.MULTILINE):
+        fail("trovato un blocco settings: questo progetto deve restare un overlay Workshop")
 
     genres = strings_in(array_body(source, "Global.DaftarGenre"))
     pages = strings_in(array_body(source, "Global.NamaHalaman"))
