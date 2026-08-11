@@ -307,12 +307,15 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.GeserKamera = 0;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 100;
+		Set Match Time(1800);
 
-		Create HUD Text(Global.PemainManusia,
-			Custom String("{0}    {1}", Custom String("FRIENDLY DEDICATED SERVER"), Custom String("{0}m {1}s",
-			Round To Integer(Total Time Elapsed / 60, Down), Round To Integer(Total Time Elapsed % 60, Down))),
+		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Custom String("Lokasi server: Indonesia"),
-			Null, Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Default Visibility);
+			Custom String("{0}    {1}", Custom String("FRIENDLY DEDICATED SERVER"),
+				Round To Integer(Match Time % 60, Down) < 10 ? Custom String("{0}:0{1}", Round To Integer(Match Time / 60, Down),
+					Round To Integer(Match Time % 60, Down)) : Custom String("{0}:{1}", Round To Integer(Match Time / 60, Down),
+					Round To Integer(Match Time % 60, Down))),
+			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect a player's name and hero", Input Binding String(Button(Crouch))) : Custom String(
 			"Tahan {0}: intip nama dan hero pemain", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
@@ -415,6 +418,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 
 		Event Player.Manusia = True;
+		Disable Game Mode HUD(Event Player);
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
