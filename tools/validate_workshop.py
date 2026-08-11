@@ -154,6 +154,11 @@ def main() -> None:
         "bot senza abilita 2": "Set Ability 2 Enabled(Event Player, False)",
         "bot senza ultimate": "Set Ultimate Ability Enabled(Event Player, False)",
         "bot senza melee": "Set Melee Enabled(Event Player, False)",
+        "bot senza danno residuo": "Set Damage Dealt(Event Player, 0)",
+        "bot senza cura residua": "Set Healing Dealt(Event Player, 0)",
+        "bot senza knockback residuo": "Set Knockback Dealt(Event Player, 0)",
+        "ispezione include umani e bot": "All Players(All Teams)",
+        "reload chiude il menu": "11 - Menu: Isi ulang menutup menu dari halaman mana pun",
     }
     for label, token in required.items():
         if token not in source:
@@ -166,11 +171,10 @@ def main() -> None:
     ):
         fail("il blocco combattimento dei bot deve riattivarsi a ogni respawn")
 
-    ai_sentinel = 'Custom String("")'
-    if source.count(ai_sentinel) < 2:
-        fail("la sentinella vuota del rilevamento AI è assente o danneggiata")
-    if "\u200b" in source:
-        fail("trovato U+200B: il sorgente da incollare deve restare copy-safe")
+    if source.count("\u200b") != 2:
+        fail("la sentinella AI U+200B deve comparire esattamente due volte")
+    if source.count('Custom String("\u200b")') != 2:
+        fail("la sentinella AI U+200B non e racchiusa nelle due Custom String previste")
     if re.search(r"Create HUD Text\([^;]*,\s*Bottom\s*,", source, flags=re.DOTALL):
         fail("Create HUD Text usa Bottom, ma le posizioni valide sono Left, Top e Right")
     if source.count("Create HUD Text(") > 8:
@@ -178,8 +182,19 @@ def main() -> None:
     titleless_hud = re.findall(r"Create HUD Text\([^,]+,\s*Null,", source)
     if len(titleless_hud) != source.count("Create HUD Text("):
         fail("ogni HUD deve avere Header Null: funzione in Text e input in Subheader")
-    if source.count("Call Subroutine(TutupMenu)") != 2:
-        fail("il menu deve chiudersi solo con Melee lungo o alla morte del giocatore")
+    if source.count("Call Subroutine(TutupMenu)") != 3:
+        fail("il menu deve chiudersi con Melee lungo, Reload o per cleanup alla morte")
+    interact_rule = re.search(
+        r'rule\("10 - Menu: Interaksi membuka atau menerapkan pilihan"\)(.*?)'
+        r'rule\("11 - Menu:',
+        source,
+        flags=re.DOTALL,
+    )
+    if interact_rule is None:
+        fail("dispatcher Interact non trovato")
+    submenu_actions = interact_rule.group(1).split("Else If(Event Player.HalamanMenu == 0);", 1)[-1]
+    if "Event Player.HalamanMenu = -1;" in submenu_actions:
+        fail("Interact non deve uscire dal sottomenu dopo aver applicato una scelta")
 
     custom_literals = re.findall(r'Custom String\("((?:[^"\\]|\\.)*)"', source)
     too_long = [value for value in custom_literals if len(value) > 128]

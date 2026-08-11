@@ -9,7 +9,7 @@ Prototipo di modalità/social layer per Overwatch 2. Il nome significa, più o m
 - Tenendo premuto Melee per 1,5 secondi apre o chiude il menu principale numerato: `0` musica, `1` camera, `3` colore del nome.
 - Il menu musica contiene 100 generi e sottogeneri, ordinati da `Lowercase` a `Extratone`.
 - Ogni umano sceglie uno fra 10 colori; la propria riga usa quel colore in entrambe le liste.
-- Tenendo premuto Crouch e mirando un umano mostra direttamente sopra il bersaglio il nome, l'icona eroe e una freccia verso il basso nel colore scelto dal bersaglio. Non viene creato un HUD di ispezione.
+- Tenendo premuto Crouch e mirando un umano o un bot mostra direttamente sopra il bersaglio nome, icona eroe e freccia verso il basso. Gli umani usano il proprio colore scelto; i bot usano l'arancione.
 - Il menu camera abilita la terza persona su sé stessi, segue l'umano sotto il mirino oppure ripristina la visuale normale.
 - La telecamera usa `Update Every Frame` e accorcia la distanza con un raycast quando incontra una parete.
 - Esclude dummy bot e normali bot AI dalle liste; inoltre disabilita i loro attacchi, abilità, ultimate e melee, lasciando disponibile il movimento.
@@ -23,15 +23,15 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 | Contesto | Input | Azione |
 |---|---|---|
 | Sempre | Tieni Melee 1,5 s | Apre il menu se chiuso; lo chiude da qualunque pagina se aperto |
-| Fuori menu | Tieni Crouch + mira | Mostra nome, freccia colorata e icona eroe direttamente sull'umano in linea visiva |
+| Fuori menu | Tieni Crouch + mira | Mostra nome, freccia colorata e icona eroe sull'umano o bot in linea visiva |
 | Menu principale | Jump / Crouch | Seleziona `0` musica, `1` camera o `3` colore |
 | Menu principale | Interact | Entra nel menu selezionato |
 | Menu `0` | Jump / Crouch | Genere precedente / successivo |
 | Menu `0` | Primary / Secondary Fire | Salta indietro / avanti di 10 generi |
 | Menu `1` | Jump / Crouch | Seleziona camera su sé, sul bersaglio o disattivata |
 | Menu `3` | Jump / Crouch | Cambia l'anteprima del colore del nome |
-| Sottomenu | Interact | Applica la scelta e torna al menu principale |
-| Sottomenu | Reload | Torna al menu principale senza chiudere tutto |
+| Sottomenu | Interact | Applica la scelta e resta nello stesso sottomenu |
+| Qualunque pagina menu | Reload | Chiude immediatamente il menu |
 
 ## Installazione
 
@@ -49,7 +49,7 @@ Il file è intenzionalmente un **blocco Workshop**, non un preset completo: non 
 
 ## Stato del prototipo
 
-La struttura e i requisiti della versione `0.2.0` sono coperti. Il 2026-08-11 l'editor di Workshop.codes ha importato tutte le 22 regole e ha compilato il progetto senza errori; anche i controlli statici locali sono superati. Resta necessario il test nel client Overwatch per comportamento, carico server e compatibilità della patch corrente.
+La versione `0.2.1` corregge i problemi osservati nel client live: filtro dei normali bot AI, blocco persistente del combattimento, ispezione Crouch su umani e bot e permanenza nei sottomenu dopo `Interact`. Resta necessario il test finale nel client Overwatch per comportamento e carico server.
 
 Per eseguire i controlli locali:
 
@@ -62,7 +62,7 @@ Il controllo verifica, tra le altre cose: 100 generi, 10 pagine, 10 colori, menu
 ## Limiti da conoscere
 
 1. **Il genere è un'etichetta, non audio riprodotto.** Il Workshop non può caricare brani, URL o file audio personalizzati. La scelta serve come stato sociale visibile.
-2. **I bot AI richiedono un workaround.** `Is Dummy Bot` riconosce i dummy Workshop ma non i normali bot AI. Il progetto usa il trucco comunitario del nome temporaneamente vuoto con `Start Forcing Dummy Bot Name`; può rompersi dopo una patch. Il fallback davvero affidabile è non aggiungere bot AI normali alla lobby. Vedi [rilevamento AI/dummy/umani](https://workshop.codes/wiki/articles/detect-ai-dummy-and-real-players-separately).
+2. **I bot AI richiedono un workaround.** `Is Dummy Bot` riconosce i dummy Workshop ma non i normali bot AI. Il progetto forza per due tick il carattere invisibile `U+200B` con `Start Forcing Dummy Bot Name`: il client applica il cambio soltanto ai bot AI. Il file e gli appunti devono quindi conservare quel carattere. Il metodo può comunque rompersi dopo una patch. Vedi [rilevamento AI/dummy/umani](https://workshop.codes/wiki/articles/detect-ai-dummy-and-real-players-separately).
 3. **Il timer parte quando il Workshop vede il giocatore.** Misura l'istanza corrente con `Total Time Elapsed`; non include il tempo passato nel browser delle partite o prima dell'avvio delle regole.
 4. **“Segui giocatore” non è uno slot spettatore vero.** `Start Camera` cambia la visuale, ma il corpo del viewer resta nella partita e controllabile. Non viene reso invulnerabile né immobilizzato.
 5. **La collisione è a raggio singolo.** Le pareti normali vengono rispettate; angoli molto stretti, porte sottili e geometrie irregolari possono ancora produrre un po' di clipping.
@@ -90,4 +90,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.2.0` — menu `0/1/3`, colori personali, marker Crouch nel mondo, HUD più leggibili e bot senza attacchi.
+`0.2.1` — filtro bot AI live corretto, bot resi innocui, Crouch su umani e bot e menu chiudibile con Reload o Melee.

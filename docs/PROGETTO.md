@@ -2,16 +2,16 @@
 
 ## Registro dei giocatori umani
 
-`Global.PemainManusia` è la fonte unica per entrambe le liste, per il raycast dell'ispezione e per i bersagli della camera. La classificazione avviene una sola volta dopo `Has Spawned`:
+`Global.PemainManusia` è la fonte unica per entrambe le liste e per i bersagli della camera. L'ispezione usa invece tutti i giocatori, perché deve poter mostrare anche i bot. La classificazione avviene una sola volta dopo `Has Spawned`:
 
 1. `Is Dummy Bot == True`: escluso immediatamente.
-2. Sugli altri viene tentato per un frame un nome vuoto.
-3. Se il nome visualizzato diventa vuoto, il giocatore è classificato come normale bot AI della lobby.
+2. Sugli altri viene tentato per due tick il carattere invisibile `U+200B` come nome.
+3. Se il nome visualizzato diventa `U+200B`, il giocatore è classificato come normale bot AI della lobby.
 4. Tutti gli altri vengono registrati come umani.
 
-Il punto 2 è un workaround comunitario, non un contratto API di Blizzard. Le due `Custom String("")` vuote sono intenzionali e il comportamento va ricontrollato dopo ogni patch.
+Il punto 2 è un workaround comunitario, non un contratto API di Blizzard. Le due stringhe apparentemente vuote contengono davvero `U+200B`; il validatore ne controlla il numero e il comportamento va ricontrollato dopo ogni patch.
 
-Dummy e bot AI riconosciuti non entrano mai in `PemainManusia`. Una regola separata, condizionata da `Is Alive`, disabilita fuoco primario/secondario, abilità 1/2, ultimate, melee, reload e interact a ogni respawn; movimento, salto e crouch restano disponibili.
+Dummy e bot AI riconosciuti non entrano mai in `PemainManusia`. La subroutine `KunciBot`, riaffermata ogni 0,5 secondi mentre il bot è vivo, disabilita fuoco primario/secondario, abilità 1/2, ultimate, melee, reload e interact. Danno, cure e knockback inflitti sono inoltre impostati a zero come protezione residua; movimento, salto e crouch restano disponibili.
 
 ## Vita degli HUD
 
@@ -43,7 +43,7 @@ L'aggiornamento a un secondo è sufficiente perché il HUD mostra minuti interi 
 
 La pressione lunga usa esattamente `Wait(1.500, Abort When False)`. `MeleeDipakai` impedisce un secondo toggle finché Melee non viene rilasciato. La stessa pressione apre il menu da chiuso e lo chiude da qualsiasi pagina.
 
-Lo stato interno è `-1` per il menu principale e `0`, `1`, `3` per musica, camera e colori. Il numero 2 è saltato intenzionalmente. `Reload` torna soltanto al menu principale; non chiude il sistema. `Interact` entra o applica una scelta e torna al principale. Solo Melee lungo chiude normalmente il menu.
+Lo stato interno è `-1` per il menu principale e `0`, `1`, `3` per musica, camera e colori. Il numero 2 è saltato intenzionalmente. `Interact` entra nel menu scelto oppure applica la scelta senza lasciare il sottomenu. `Reload` chiude subito da qualsiasi pagina; Melee lungo resta l'altra chiusura normale. La morte chiude soltanto come cleanup di sicurezza.
 
 Quando il menu è aperto, i tasti usati dal menu sono disabilitati come azioni dell'eroe ma restano leggibili da `Is Button Held`. Un singolo dispatcher gestisce ciascun input e aspetta il rilascio, evitando che la stessa pressione venga eseguita di nuovo dopo un cambio pagina.
 
@@ -57,15 +57,15 @@ Ogni 0,05 secondi, solo mentre Crouch è tenuto:
 Ray Cast Hit Player(
     Eye Position(viewer),
     Eye Position(viewer) + Facing Direction Of(viewer) * 100,
-    Global.PemainManusia,
+    All Players(All Teams),
     viewer,
     False
 )
 ```
 
-Il primo umano colpito è l'unico mostrato. Il raycast contro il mondo impedisce di leggere giocatori dietro le pareti. Per Echo in duplicazione viene mostrato `Hero Being Duplicated`, non semplicemente Echo.
+Il primo giocatore colpito, umano, AI o dummy, è l'unico mostrato. Il viewer viene escluso dal raycast e il mondo impedisce di leggere giocatori dietro le pareti. Per Echo in duplicazione viene mostrato `Hero Being Duplicated`, non semplicemente Echo.
 
-All'inizio dell'ispezione viene creato un unico `Create In-World Text`, visibile soltanto al viewer e ancorato al giocatore mirato. Contiene `Icon String(Arrow: Down)`, nome e `Hero Icon String`. `Visible To Position String and Color` rivaluta bersaglio, posizione, contenuto e colore; se il raycast restituisce `Null`, il testo sparisce. Al rilascio di Crouch, all'apertura del menu o alla morte viene distrutto con `Destroy In-World Text`.
+All'inizio dell'ispezione viene creato un unico `Create In-World Text` con viewer sempre uguale a `Event Player`; quando il raycast è vuoto viene rivalutata soltanto una stringa vuota. Questo evita che un testo creato inizialmente con `Visible To = Null` resti invisibile. Il testo contiene `Icon String(Arrow: Down)`, nome esplicito e `Hero Icon String`: usa il colore scelto dal bersaglio umano oppure arancione per un bot. Al rilascio di Crouch, all'apertura del menu o alla morte viene distrutto con `Destroy In-World Text`.
 
 ## Camera e collisione
 

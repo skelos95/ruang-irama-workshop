@@ -55,6 +55,7 @@ subroutines
 	0: TutupMenu
 	1: MulaiKamera
 	2: GambarMenu
+	3: KunciBot
 }
 
 rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -248,6 +249,10 @@ rule("01 - Pemain Masuk: Mulai jam nongkrong")
 	{
 		Event Player.WaktuMasuk = Total Time Elapsed;
 		Event Player.WaktuTercatat = True;
+		Event Player.SudahDiperiksa = False;
+		Event Player.BotAI = False;
+		Event Player.Manusia = False;
+		Event Player.WarnaNama = Color(White);
 	}
 }
 
@@ -270,21 +275,34 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 	actions
 	{
 		Event Player.SudahDiperiksa = True;
+		Event Player.BotAI = False;
+		Event Player.Manusia = False;
+		Event Player.WarnaNama = Color(White);
 		If(Event Player.WaktuTercatat == False);
 			Event Player.WaktuMasuk = Total Time Elapsed;
 			Event Player.WaktuTercatat = True;
 		End;
 		"Dummy bot jelas bukan manusia. Silakan duduk manis."
-		Abort If(Is Dummy Bot(Event Player));
-		"Nama kosong dipakai sebentar untuk mengenali bot AI bawaan lobi."
-		Start Forcing Dummy Bot Name(Event Player, Custom String(""));
-		Wait(0.016, Ignore Condition);
-		If(Custom String("{0}", Event Player) == Custom String(""));
-			Event Player.BotAI = True;
-			Stop Forcing Dummy Bot Name(Event Player);
+		If(Is Dummy Bot(Event Player));
+			Cancel Primary Action(Event Player);
+			Call Subroutine(KunciBot);
 			Abort;
 		End;
+		"Dua string ini berisi U+200B, bukan string kosong. Ia mengenali bot AI tanpa memamerkan nama uji."
+		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
+		Wait(0.016, Ignore Condition);
+		If(Custom String("{0}", Event Player) == Custom String("​"));
+			Event Player.BotAI = True;
+		Else;
+			Event Player.BotAI = False;
+		End;
+		Wait(0.016, Ignore Condition);
 		Stop Forcing Dummy Bot Name(Event Player);
+		If(Event Player.BotAI == True);
+			Cancel Primary Action(Event Player);
+			Call Subroutine(KunciBot);
+			Abort;
+		End;
 
 		Event Player.Manusia = True;
 		Event Player.IndeksGenre = -1;
@@ -351,15 +369,10 @@ rule("03b - Bot: Senjata libur, kaki tetap boleh jalan")
 
 	actions
 	{
-		"Dummy dan bot AI hanya boleh bergerak, melompat, dan jongkok. Hari ini senjata mereka piknik."
-		Set Primary Fire Enabled(Event Player, False);
-		Set Secondary Fire Enabled(Event Player, False);
-		Set Ability 1 Enabled(Event Player, False);
-		Set Ability 2 Enabled(Event Player, False);
-		Set Ultimate Ability Enabled(Event Player, False);
-		Set Melee Enabled(Event Player, False);
-		Disallow Button(Event Player, Button(Reload));
-		Disallow Button(Event Player, Button(Interact));
+		"Kunci diulang agar respawn dan pergantian hero tidak menghidupkan senjata lagi."
+		Call Subroutine(KunciBot);
+		Wait(0.500, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -599,16 +612,12 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Event Player.IndeksGenre = Event Player.KursorGenre;
 			Small Message(Event Player, Custom String("Musik dipilih: {0}. Kupingmu sudah punya arah.", Global.DaftarGenre[
 				Event Player.IndeksGenre]));
-			Event Player.HalamanMenu = -1;
-			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 1);
 			If(Event Player.KursorKamera == 0);
 				Event Player.TargetKamera = Event Player;
 				Event Player.ModeKamera = 1;
 				Call Subroutine(MulaiKamera);
 				Small Message(Event Player, Custom String("Kamera untuk diri sendiri aktif. Silakan bergaya."));
-				Event Player.HalamanMenu = -1;
-				Call Subroutine(GambarMenu);
 			Else If(Event Player.KursorKamera == 1);
 				Event Player.CalonTargetKamera = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
 					Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
@@ -619,30 +628,24 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Event Player.ModeKamera = 2;
 					Call Subroutine(MulaiKamera);
 					Small Message(Event Player, Custom String("Sekarang menonton {0}. Jangan ganggu bintangnya.", Event Player.TargetKamera));
-					Event Player.HalamanMenu = -1;
-					Call Subroutine(GambarMenu);
 				End;
 			Else;
 				Stop Camera(Event Player);
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
 				Small Message(Event Player, Custom String("Kamera normal lagi. Drama selesai."));
-				Event Player.HalamanMenu = -1;
-				Call Subroutine(GambarMenu);
 			End;
 		Else If(Event Player.HalamanMenu == 3);
 			Event Player.IndeksWarna = Event Player.KursorWarna;
 			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
 			Small Message(Event Player, Custom String("Warna namamu jadi {0}. Sekarang lebih kece.", Global.NamaWarna[
 				Event Player.IndeksWarna]));
-			Event Player.HalamanMenu = -1;
-			Call Subroutine(GambarMenu);
 		End;
 		Wait Until(Is Button Held(Event Player, Button(Interact)) == False, 99999);
 	}
 }
 
-rule("11 - Menu: Isi ulang kembali ke daftar 0 / 1 / 3")
+rule("11 - Menu: Isi ulang menutup menu dari halaman mana pun")
 {
 	event
 	{
@@ -654,14 +657,14 @@ rule("11 - Menu: Isi ulang kembali ke daftar 0 / 1 / 3")
 	conditions
 	{
 		Event Player.MenuTerbuka == True;
-		Event Player.HalamanMenu != -1;
 		Is Button Held(Event Player, Button(Reload)) == True;
 	}
 
 	actions
 	{
-		Event Player.HalamanMenu = -1;
-		Call Subroutine(GambarMenu);
+		Event Player.MeleeDipakai = True;
+		Small Message(Event Player, Custom String("Menu ditutup lewat isi ulang. Cepat dan rapi."));
+		Call Subroutine(TutupMenu);
 		Wait Until(Is Button Held(Event Player, Button(Reload)) == False, 99999);
 	}
 }
@@ -709,14 +712,15 @@ rule("13 - Intip Hero: Tempel nama, hero, dan panah pada target")
 	{
 		Event Player.InspeksiAktif = True;
 		Event Player.TargetInspeksi = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
-			Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
-		"Bukan HUD: tulisan ini hidup di dunia, tepat di atas satu manusia yang sedang dibidik."
-		Create In-World Text(Event Player.TargetInspeksi == Null ? Null : Event Player, Event Player.TargetInspeksi == Null ? Custom String("")
-			: Custom String("{0}\n{1}  {2}", Icon String(Arrow: Down), Event Player.TargetInspeksi, Hero Icon String(Is Duplicating(
+			Event Player) * Global.JarakBidik, All Players(All Teams), Event Player, False);
+		"Bukan HUD: viewer selalu tetap aktif; string kosong hanya menyembunyikan penanda saat bidikan kosong."
+		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Custom String("{0}\n{1}  {2}",
+			Icon String(Arrow: Down), Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(
 			Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi))),
-			Event Player.TargetInspeksi == Null ? Event Player : Event Player.TargetInspeksi, 1.250, Clip Against Surfaces,
+			Event Player.TargetInspeksi == Null ? Event Player : Event Player.TargetInspeksi, 1.500, Clip Against Surfaces,
 			Visible To Position String and Color, Event Player.TargetInspeksi == Null ? Color(White) : Player Variable(
-			Event Player.TargetInspeksi, WarnaNama), Default Visibility);
+			Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange),
+			Default Visibility);
 		Event Player.TeksDunia = Last Text ID;
 		Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
 	}
@@ -742,7 +746,7 @@ rule("14 - Intip Hero: Perbarui garis pandang dengan sopan")
 	actions
 	{
 		Event Player.TargetInspeksi = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
-			Event Player) * Global.JarakBidik, Global.PemainManusia, Event Player, False);
+			Event Player) * Global.JarakBidik, All Players(All Teams), Event Player, False);
 		Wait(0.050, Abort When False);
 		Loop If Condition Is True;
 	}
@@ -842,8 +846,8 @@ rule("91 - Subrutin: Gambar menu tanpa judul, biar lega")
 		End;
 		If(Event Player.HalamanMenu == -1);
 			Create HUD Text(Event Player, Null, Custom String("{0}/{1}: pindah  |  {2}", Input Binding String(Button(Jump)),
-				Input Binding String(Button(Crouch)), Custom String("{0}: buka\nTahan {1} 1,5 dtk: tutup", Input Binding String(
-				Button(Interact)), Input Binding String(Button(Melee)))), Custom String("{0}\n\n{1}\n\n{2}", Custom String(
+				Input Binding String(Button(Crouch)), Custom String("{0}: buka\n{1}: tutup  |  tahan {2} 1,5 dtk: tutup", Input Binding String(
+				Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))), Custom String("{0}\n\n{1}\n\n{2}", Custom String(
 				"{0} 0 - Musik: {1}", Event Player.KursorUtama == 0 ? Custom String(">") : Custom String(" "), Event Player.IndeksGenre >= 0
 				? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih")), Custom String("{0} 1 - Kamera: {1}",
 				Event Player.KursorUtama == 1 ? Custom String(">") : Custom String(" "), Event Player.ModeKamera == 0 ? Custom String("mati")
@@ -855,7 +859,7 @@ rule("91 - Subrutin: Gambar menu tanpa judul, biar lega")
 			Create HUD Text(Event Player, Null, Custom String("{0}\n{1}\n{2}", Custom String("{0}: sebelumnya  |  {1}: berikutnya",
 				Input Binding String(Button(Jump)), Input Binding String(Button(Crouch))), Custom String("{0}: mundur 10  |  {1}: maju 10",
 				Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}\n{1}", Custom String(
-				"{0}: simpan  |  {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String(
+				"{0}: simpan  |  {1}: tutup", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String(
 				"Tahan {0} 1,5 dtk: tutup", Input Binding String(Button(Melee))))), Custom String("{0}\n\n{1}\n{2}", Custom String(
 				"0 - Musik  {0}/100  |  {1}",
 				Event Player.KursorGenre + 1, Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)]), Custom String(
@@ -866,7 +870,7 @@ rule("91 - Subrutin: Gambar menu tanpa judul, biar lega")
 				Default Visibility);
 		Else If(Event Player.HalamanMenu == 1);
 			Create HUD Text(Event Player, Null, Custom String("{0}/{1}: pindah\n{2}", Input Binding String(Button(Jump)), Input Binding String(
-				Button(Crouch)), Custom String("{0}: pakai  |  {1}: kembali\nTahan {2} 1,5 dtk: tutup", Input Binding String(Button(Interact)),
+				Button(Crouch)), Custom String("{0}: pakai  |  {1}: tutup\nTahan {2} 1,5 dtk: tutup", Input Binding String(Button(Interact)),
 				Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))), Custom String("{0}\n\n{1}\n{2}", Custom String(
 				"1 - Kamera: {0}", Event Player.ModeKamera == 0 ? Custom String("mati") : Event Player.ModeKamera == 1 ? Custom String(
 				"diri sendiri") : Custom String("menonton {0}", Event Player.TargetKamera)), Event Player.KursorKamera == 0 ? Custom String(
@@ -876,7 +880,7 @@ rule("91 - Subrutin: Gambar menu tanpa judul, biar lega")
 				Visible To and String, Default Visibility);
 		Else;
 			Create HUD Text(Event Player, Null, Custom String("{0}/{1}: ganti\n{2}", Input Binding String(Button(Jump)), Input Binding String(
-				Button(Crouch)), Custom String("{0}: pakai  |  {1}: kembali\nTahan {2} 1,5 dtk: tutup", Input Binding String(Button(Interact)),
+				Button(Crouch)), Custom String("{0}: pakai  |  {1}: tutup\nTahan {2} 1,5 dtk: tutup", Input Binding String(Button(Interact)),
 				Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))), Custom String("{0}\n\n{1}\n{2}", Custom String(
 				"3 - Warna nama: {0}/{1}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna)), Custom String("  {0}",
 				Global.NamaWarna[(Event Player.KursorWarna + Count Of(Global.NamaWarna) - 1) % Count Of(Global.NamaWarna)]), Custom String(
@@ -889,7 +893,37 @@ rule("91 - Subrutin: Gambar menu tanpa judul, biar lega")
 	}
 }
 
-rule("92 - Subrutin: Mulai kamera orang ketiga yang tahu tembok")
+rule("92 - Subrutin: Kunci bot agar cuma kaki yang sibuk")
+{
+	event
+	{
+		Subroutine;
+		KunciBot;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Disallow Button(Event Player, Button(Primary Fire));
+		Disallow Button(Event Player, Button(Secondary Fire));
+		Disallow Button(Event Player, Button(Ability 1));
+		Disallow Button(Event Player, Button(Ability 2));
+		Disallow Button(Event Player, Button(Ultimate));
+		Disallow Button(Event Player, Button(Melee));
+		Disallow Button(Event Player, Button(Reload));
+		Disallow Button(Event Player, Button(Interact));
+		Set Damage Dealt(Event Player, 0);
+		Set Healing Dealt(Event Player, 0);
+		Set Knockback Dealt(Event Player, 0);
+	}
+}
+
+rule("93 - Subrutin: Mulai kamera orang ketiga yang tahu tembok")
 {
 	event
 	{

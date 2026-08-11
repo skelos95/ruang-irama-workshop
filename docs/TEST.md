@@ -23,7 +23,7 @@ Preparare una lobby con almeno due umani, un dummy bot Workshop e un normale bot
 - Uscendo e rientrando, il suo timer riparte.
 - Dopo l'uscita non resta una riga vuota e il conteggio testi non cresce a ogni ciclo join/leave.
 
-Se il bot AI compare, considerare il workaround del nome vuoto incompatibile con la patch corrente e rimuovere i bot AI normali dalle impostazioni lobby.
+Se il bot AI compare, verificare prima che le due sentinelle `U+200B` siano ancora presenti nel file copiato. Se lo sono, considerare il workaround incompatibile con la patch corrente e rimuovere i bot AI normali dalle impostazioni lobby.
 
 ## 3. Pressione lunga e menu
 
@@ -35,8 +35,8 @@ Se il bot AI compare, considerare il workaround del nome vuoto incompatibile con
 - Verificare che ogni HUD abbia funzione nel testo principale, input nel sottotitolo e nessun Header.
 - Nel menu `0`, controllare wrap 1 ↔ 100, salti ±10 e tutte le pagine.
 - Salvare `Lowercase`, una voce centrale ed `Extratone`; la lista destra deve aggiornarsi per tutti.
-- Da un sottomenu, premere Reload: deve tornare al menu principale senza chiudere tutto.
-- Nel menu principale, Reload non deve chiudere né applicare nulla.
+- In ogni sottomenu, premere Interact: la scelta si applica e il menu resta sulla stessa pagina.
+- Dal menu principale e da ciascun sottomenu, premere Reload: il menu deve chiudersi.
 - Morire con il menu aperto: il menu deve chiudersi e i comandi devono tornare disponibili al respawn.
 
 ## 4. Colore personale
@@ -50,7 +50,8 @@ Se il bot AI compare, considerare il workaround del nome vuoto incompatibile con
 ## 5. Ispezione con Crouch
 
 - Mirare un umano senza ostacoli: nome, freccia verso il basso e icona eroe compaiono direttamente sopra quel giocatore, non nel HUD.
-- Freccia, nome e icona devono usare il colore scelto dal bersaglio.
+- Ripetere su un normale bot AI e su un dummy: entrambi devono mostrare nome, freccia arancione e icona eroe pur restando fuori dalle liste.
+- Su un bersaglio umano, freccia, nome e icona devono usare il colore scelto da quel giocatore.
 - Spostare la mira su un secondo umano: deve cambiare un solo target.
 - Mettere due umani allineati: deve apparire soltanto il primo colpito.
 - Interporre una parete: non deve apparire il giocatore dietro.
