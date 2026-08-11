@@ -203,7 +203,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.HudJudulKanan = Last Text ID;
 		Create HUD Text(Global.PemainManusia, Null, Null, Custom String(
 			"Tahan {0} 1,5 dtk: menu musik + kamera  |  Tahan {1}: intip hero",
-			Input Binding String(Button(Melee)), Input Binding String(Button(Crouch))), Bottom, -100, Color(White), Color(White),
+			Input Binding String(Button(Melee)), Input Binding String(Button(Crouch))), Top, -100, Color(White), Color(White),
 			Color(Gray), Visible To and String, Default Visibility);
 		Global.HudPetunjuk = Last Text ID;
 		Global.Siap = True;
@@ -251,10 +251,10 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 		"Dummy bot jelas bukan manusia. Silakan duduk manis."
 		Abort If(Is Dummy Bot(Event Player));
-		"U+200B di bawah adalah nama hantu untuk mengenali bot AI bawaan lobi."
-		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
+		"Nama kosong dipakai sebentar untuk mengenali bot AI bawaan lobi."
+		Start Forcing Dummy Bot Name(Event Player, Custom String(""));
 		Wait(0.016, Ignore Condition);
-		If(Custom String("{0}", Event Player) == Custom String("​"));
+		If(Custom String("{0}", Event Player) == Custom String(""));
 			Event Player.BotAI = True;
 			Stop Forcing Dummy Bot Name(Event Player);
 			Abort;
@@ -790,7 +790,7 @@ rule("91 - Subrutin: Mulai kamera orang ketiga yang tahu tembok")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Ray cast dan posisi kamera berada langsung di Update Every Frame: satu ray per frame, dinding tidak boleh jadi dekorasi tembus pandang."
+		"Ray cast kamera berjalan di Update Every Frame; dinding tetap tidak boleh ditembus."
 		Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0),
 			Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0) + World Vector Of(Vector(Global.GeserKamera, 0,
 			0 - Global.JarakKamera), Event Player.TargetKamera, Rotation), Empty Array, Empty Array, False) + Direction Towards(Eye Position(

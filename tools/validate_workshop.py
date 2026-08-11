@@ -136,8 +136,13 @@ def main() -> None:
         if token not in source:
             fail(f"requisito assente ({label}): {token}")
 
-    if source.count("\u200b") < 2:
-        fail("il carattere U+200B del rilevamento AI è assente o danneggiato")
+    ai_sentinel = 'Custom String("")'
+    if source.count(ai_sentinel) < 2:
+        fail("la sentinella vuota del rilevamento AI è assente o danneggiata")
+    if "\u200b" in source:
+        fail("trovato U+200B: il sorgente da incollare deve restare copy-safe")
+    if re.search(r"Create HUD Text\([^;]*,\s*Bottom\s*,", source, flags=re.DOTALL):
+        fail("Create HUD Text usa Bottom, ma le posizioni valide sono Left, Top e Right")
     if source.count("Create HUD Text(") > 8:
         fail("troppe definizioni HUD statiche: possibile regressione verso 100 righe menu")
 

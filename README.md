@@ -33,11 +33,14 @@ Il HUD usa `Input Binding String`, quindi mostra i tasti realmente associati dal
 ## Installazione
 
 1. Fai una copia delle impostazioni della tua Partita personalizzata.
-2. Per la massima compatibilità, imposta temporaneamente la lingua testuale del client su inglese: le parole chiave del file sono quelle dell'export inglese.
-3. Copia tutto il contenuto di [workshop/ruang_irama.workshop](workshop/ruang_irama.workshop) e incollalo nell'editor Workshop della partita personalizzata.
-4. Mantieni o modifica liberamente modalità, mappe e regole di gioco di base: questo progetto è pensato come sistema HUD/camera sovrapponibile.
-5. Prova almeno un umano, un dummy bot e un normale bot AI della lobby prima di pubblicare.
-6. Solo dopo il test nel gioco, usa il comando di condivisione di Overwatch per generare il codice breve Blizzard.
+2. Chiudi Overwatch e imposta temporaneamente la **lingua testo** del client su **English (US)**: le parole chiave del file sono quelle dell'export inglese. Su Battle.net: Overwatch 2 → ingranaggio accanto a Gioca → Impostazioni di gioco → Lingua testo.
+3. Apri [workshop/ruang_irama.workshop](workshop/ruang_irama.workshop) su GitHub e premi **Copy raw file** (icona con due quadratini). Non usare `Ctrl+A` sulla pagina GitHub e non copiare un blocco Markdown.
+4. In Overwatch vai in Partita personalizzata → Crea → **Impostazioni** e resta nella schermata principale/Summary. Il file contiene un preset completo, quindi non va incollato dentro una singola regola.
+5. Il pulsante arancione **Import Settings** compare automaticamente quando gli appunti vengono riconosciuti: premilo. Non serve `Ctrl+V`.
+6. Se il pulsante non appare, verifica in Blocco note che gli appunti inizino esattamente con `settings`, ricopia con **Copy raw file**, controlla che la lingua testo sia inglese e riapri la schermata Impostazioni. Dopo l'importazione puoi tornare all'italiano.
+7. Mantieni o modifica liberamente modalità, mappe e regole di gioco di base: questo progetto è pensato come sistema HUD/camera sovrapponibile.
+8. Prova almeno un umano, un dummy bot e un normale bot AI della lobby prima di pubblicare.
+9. Solo dopo il test nel gioco, usa il comando di condivisione di Overwatch per generare il codice breve Blizzard.
 
 GitHub conserva il sorgente copiabile, ma non può generare il codice condivisibile di Overwatch: quel codice nasce esclusivamente dal client di gioco. La [guida introduttiva ufficiale di Blizzard](https://news.blizzard.com/en-gb/article/22938941/introducing-the-overwatch-workshop) descrive il flusso Workshop; una guida comunitaria aggiornata mostra anche il comportamento dei [codici di condivisione](https://workshop.codes/wiki/articles/workshop-basics).
 
@@ -51,12 +54,12 @@ Per eseguire i controlli locali:
 python tools/validate_workshop.py
 ```
 
-Il controllo verifica, tra le altre cose: 100 generi unici e identici alla documentazione, 10 pagine, parentesi e graffe bilanciate, presenza di U+200B nel filtro AI, camera con `Update Every Frame`, collisione raycast, gestione Echo e registro globale per il cleanup HUD.
+Il controllo verifica, tra le altre cose: 100 generi unici e identici alla documentazione, 10 pagine, parentesi e graffe bilanciate, sentinella vuota del filtro AI, posizioni HUD valide, camera con `Update Every Frame`, collisione raycast, gestione Echo e registro globale per il cleanup HUD.
 
 ## Limiti da conoscere
 
 1. **Il genere è un'etichetta, non audio riprodotto.** Il Workshop non può caricare brani, URL o file audio personalizzati. La scelta serve come stato sociale visibile.
-2. **I bot AI richiedono un workaround.** `Is Dummy Bot` riconosce i dummy Workshop ma non i normali bot AI. Il progetto usa il trucco comunitario del nome invisibile U+200B con `Start Forcing Dummy Bot Name`; può rompersi dopo una patch. Il fallback davvero affidabile è non aggiungere bot AI normali alla lobby. Vedi [rilevamento AI/dummy/umani](https://workshop.codes/wiki/articles/detect-ai-dummy-and-real-players-separately).
+2. **I bot AI richiedono un workaround.** `Is Dummy Bot` riconosce i dummy Workshop ma non i normali bot AI. Il progetto usa il trucco comunitario del nome temporaneamente vuoto con `Start Forcing Dummy Bot Name`; può rompersi dopo una patch. Il fallback davvero affidabile è non aggiungere bot AI normali alla lobby. Vedi [rilevamento AI/dummy/umani](https://workshop.codes/wiki/articles/detect-ai-dummy-and-real-players-separately).
 3. **Il timer parte quando il Workshop vede il giocatore.** Misura l'istanza corrente con `Total Time Elapsed`; non include il tempo passato nel browser delle partite o prima dell'avvio delle regole.
 4. **“Segui giocatore” non è uno slot spettatore vero.** `Start Camera` cambia la visuale, ma il corpo del viewer resta nella partita e controllabile. Non viene reso invulnerabile né immobilizzato.
 5. **La collisione è a raggio singolo.** Le pareti normali vengono rispettate; angoli molto stretti, porte sottili e geometrie irregolari possono ancora produrre un po' di clipping.
@@ -82,4 +85,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.1.0` — prima base giocabile da importare e collaudare.
+`0.1.1` — corretto l'import testuale nel client e resa la sentinella AI compatibile con gli appunti ASCII.

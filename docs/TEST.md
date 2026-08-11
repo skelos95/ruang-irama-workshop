@@ -20,7 +20,7 @@ Preparare una lobby con almeno due umani, un dummy bot Workshop e un normale bot
 - Uscendo e rientrando, il suo timer riparte.
 - Dopo l'uscita non resta una riga vuota e il conteggio testi non cresce a ogni ciclo join/leave.
 
-Se il bot AI compare, considerare il workaround U+200B incompatibile con la patch corrente e rimuovere i bot AI normali dalle impostazioni lobby.
+Se il bot AI compare, considerare il workaround del nome vuoto incompatibile con la patch corrente e rimuovere i bot AI normali dalle impostazioni lobby.
 
 ## 3. Pressione lunga e menu
 

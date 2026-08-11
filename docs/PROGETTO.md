@@ -5,8 +5,8 @@
 `Global.PemainManusia` è la fonte unica per entrambe le liste, per il raycast dell'ispezione e per i bersagli della camera. La classificazione avviene una sola volta dopo `Has Spawned`:
 
 1. `Is Dummy Bot == True`: escluso immediatamente.
-2. Sugli altri viene tentato per un frame il nome invisibile U+200B.
-3. Se il nome visualizzato diventa U+200B, il giocatore è classificato come normale bot AI della lobby.
+2. Sugli altri viene tentato per un frame un nome vuoto.
+3. Se il nome visualizzato diventa vuoto, il giocatore è classificato come normale bot AI della lobby.
 4. Tutti gli altri vengono registrati come umani.
 
 Il punto 2 è un workaround comunitario, non un contratto API di Blizzard. Non rimuovere o normalizzare il carattere invisibile nelle due `Custom String` coinvolte.
