@@ -100,6 +100,10 @@ def main() -> None:
         fail("il file copy-safe deve iniziare con variables ed essere incollato nella schermata Workshop")
     if re.search(r"^settings\s*$", source, flags=re.MULTILINE):
         fail("trovato un blocco settings: questo progetto deve restare un overlay Workshop")
+    for line_number, line in enumerate(source.splitlines(), start=1):
+        if ("||" in line or "&&" in line) and re.match(r"^\s*[^\"].*;\s*$", line):
+            if not re.search(r"\)\s*(==|!=)\s*(True|False)\s*;\s*$", line):
+                fail(f"espressione booleana non confrontata nella condizione alla riga {line_number}")
 
     genres = strings_in(array_body(source, "Global.DaftarGenre"))
     pages = strings_in(array_body(source, "Global.NamaHalaman"))

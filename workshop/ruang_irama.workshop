@@ -625,7 +625,7 @@ rule("15 - Intip Hero: Berhenti saat berdiri atau membuka menu")
 	conditions
 	{
 		Event Player.InspeksiAktif == True;
-		Is Button Held(Event Player, Button(Crouch)) == False || Event Player.MenuTerbuka == True;
+		(Is Button Held(Event Player, Button(Crouch)) == False || Event Player.MenuTerbuka == True) == True;
 	}
 
 	actions

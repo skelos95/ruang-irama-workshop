@@ -85,4 +85,4 @@ tools/validate_workshop.py      validatore statico senza dipendenze
 
 ## Versione
 
-`0.1.2` — rimosso il blocco preset incompleto: ora si incolla direttamente nella schermata Workshop senza modificare modalità e mappe.
+`0.1.3` — corretta la condizione OR dell'ispezione eroe secondo la grammatica richiesta dal client live.
