@@ -505,4 +505,875 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 		If(Global.HudMenuPemain[Global.IndeksKeluar] != 0);
 			Destroy HUD Text(Global.HudMenuPemain[Global.IndeksKeluar]);
 		End;
-		If(Global.TçÞ}¶‰žËkºwµç]…µ‰…Èµ•¹ÔÕÑ…µ„ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%…µ‰…ÉUÑ…µ„ì(%ô((%…Ñ¥½¹Ì(%ì($%É•…Ñ”!UQ•áÐ¡Ù•¹ÐA±…å•È°9Õ±°°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ($$$‰q¹ìÁôè¹•áÐðìÅôèÁÉ•Ù¥½ÕÌˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè½Á•¸ð¡½±ìÅô€Ä¸ÈÔÍ•Œè±½Í”ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤($$$èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè‰•É¥­ÕÑ¹å„ðìÅôèÍ•‰•±Õµ¹å„ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°($$%%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè‰Õ­„ðÑ…¡…¸ìÅô€Ä°ÈÔ‘Ñ¬èÑÕÑÕÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ($$$ˆÀ€´5UM%9Iq¹UII9PèìÁôˆ°($$%Ù•¹ÐA±…å•È¹%¹‘•­Í•¹É”€øô€À€ü±½‰…°¹…™Ñ…É•¹É•mÙ•¹ÐA±…å•È¹%¹‘•­Í•¹É•t€èÕÍÑ½´MÑÉ¥¹œ ‰¹½ÐÁ¥­•å•Ðˆ¤¤€èÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„($$$ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ˆÄ€´Q!%IµAIM=85Iq¹UII9PèìÁôˆ°Ù•¹ÐA±…å•È¹5½‘•-…µ•É„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰½™˜ˆ¤€è($$%Ù•¹ÐA±…å•È¹5½‘•-…µ•É„€ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ‰½¸å½ÕÉÍ•±˜ˆ¤€èÕÍÑ½´MÑÉ¥¹œ ‰Ý…Ñ¡¥¹œìÁôˆ°Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤¤€èÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„($$$ôô€È€üÕÍÑ½´MÑÉ¥¹œ ˆÈ€´95=1=Iq¹UII9PèìÁôˆ°±½‰…°¹9…µ…]…É¹…9mÙ•¹ÐA±…å•È¹%¹‘•­Í]…É¹…t¤€èÕÍÑ½´MÑÉ¥¹œ ($$$ˆÌ€´!U19Uq¹UII9PèìÁôˆ°±½‰…°¹9…µ…	…¡…Í…mÙ•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í…t¤€èÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ($$$ˆÀ€´9I5UM%-q¹MP%9$èìÁôˆ°Ù•¹ÐA±…å•È¹%¹‘•­Í•¹É”€øô€À€ü±½‰…°¹…™Ñ…É•¹É•mÙ•¹ÐA±…å•È¹%¹‘•­Í•¹É•t€èÕÍÑ½´MÑÉ¥¹œ ($$$‰‰•±Õ´Á¥±¥ ˆ¤¤€èÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„€ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ˆÄ€´-5I=I9-Q%q¹MP%9$èìÁôˆ°Ù•¹ÐA±…å•È¹5½‘•-…µ•É„($$$ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰µ…Ñ¤ˆ¤€èÙ•¹ÐA±…å•È¹5½‘•-…µ•É„€ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ‰‘¥É¤Í•¹‘¥É¤ˆ¤€èÕÍÑ½´MÑÉ¥¹œ ‰µ•¹½¹Ñ½¸ìÁôˆ°($$%Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤¤€èÙ•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„€ôô€È€üÕÍÑ½´MÑÉ¥¹œ ˆÈ€´]I995q¹MP%9$èìÁôˆ°±½‰…°¹9…µ…]…É¹…l($$%Ù•¹ÐA±…å•È¹%¹‘•­Í]…É¹…t¤€èÕÍÑ½´MÑÉ¥¹œ ˆÌ€´	!M!Uq¹MP%9$èìÁôˆ°±½‰…°¹9…µ…	…¡…Í…mÙ•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í…t¤°Q½À°($$$ÄÀÀ°½±½È¡]¡¥Ñ”¤°ÕÍÑ½´½±½È ÈÄÀ°€ÈÌÀ°€ÈÔÔ°€ÈÔÔ¤°ÕÍÑ½´½±½È ÈÔÔ°€ÄàÔ°€ØÔ°€ÈÔÔ¤°Y¥Í¥‰±”Q¼…¹MÑÉ¥¹œ°($$%•™…Õ±ÐY¥Í¥‰¥±¥Ñä¤ì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô1…ÍÐQ•áÐ%ì(%ô)ô()ÉÕ±” ˆäÅˆ€´MÕ‰ÉÕÑ¥¸è…µ‰…Èµ•¹ÔµÕÍ¥¬ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%…µ‰…É5ÕÍ¥¬ì(%ô((%…Ñ¥½¹Ì(%ì($%É•…Ñ”!UQ•áÐ¡Ù•¹ÐA±…å•È°9Õ±°°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°($$%ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè¹•áÐðìÅôèÁÉ•Ù¥½ÕÌˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè‰…¬€ÄÀðìÅôè™½ÉÝ…É€ÄÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡)ÕµÀ¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡É½Õ ¤¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè…ÁÁ±äðìÅôè‰…¬ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰!½±ìÁô€Ä¸ÈÔÍ•Œè±½Í”ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤€èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè‰•É¥­ÕÑ¹å„ðìÅôèÍ•‰•±Õµ¹å„ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôèµÕ¹‘ÕÈ€ÄÀðìÅôèµ…©Ô€ÄÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡)ÕµÀ¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡É½Õ ¤¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôèÁ…­…¤ðìÅôè­•µ‰…±¤ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°($$%%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰Q…¡…¸ìÁô€Ä°ÈÔ‘Ñ¬èÑÕÑÕÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤°($$%Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ˆÀ€´5UM%9IìÁô¼ÄÀÀˆ°($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É•¹É”€¬€Ä¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¸øìÅôˆ°±½‰…°¹9…µ…!…±…µ…¹9mI½Õ¹Q¼%¹Ñ••È¡Ù•¹ÐA±…å•È¹-ÕÉÍ½É•¹É”€¼€ÄÀ°($$%½Ý¸¥t°±½‰…°¹…™Ñ…É•¹É•mÙ•¹ÐA±…å•È¹-ÕÉÍ½É•¹É•t¤¤€èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ˆÀ€´9I5UM%,ìÁô¼ÄÀÀˆ°($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É•¹É”€¬€Ä¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¸øìÅôˆ°±½‰…°¹9…µ…!…±…µ…¹mI½Õ¹Q¼%¹Ñ••È¡Ù•¹ÐA±…å•È¹-ÕÉÍ½É•¹É”€¼€ÄÀ°½Ý¸¥t°($$%±½‰…°¹…™Ñ…É•¹É•mÙ•¹ÐA±…å•È¹-ÕÉÍ½É•¹É•t¤¤°Q½À°€ÄÀÀ°½±½È¡]¡¥Ñ”¤°ÕÍÑ½´½±½È ÈÀÔ°€ÈÌÔ°€ÈÔÔ°€ÈÔÔ¤°($$%ÕÍÑ½´½±½È ÔÔ°€ÈÌÔ°€ÈÐÔ°€ÈÔÔ¤°Y¥Í¥‰±”Q¼…¹MÑÉ¥¹œ°•™…Õ±ÐY¥Í¥‰¥±¥Ñä¤ì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô1…ÍÐQ•áÐ%ì(%ô)ô()ÉÕ±” ˆäÅŒ€´MÕ‰ÉÕÑ¥¸è…µ‰…Èµ•¹Ô­…µ•É„ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%…µ‰…É-…µ•É„ì(%ô((%…Ñ¥½¹Ì(%ì($%É•…Ñ”!UQ•áÐ¡Ù•¹ÐA±…å•È°9Õ±°°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ($$$‰q¹ìÁôè¹•áÐðìÅôèÁÉ•Ù¥½ÕÌˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè…ÁÁ±äðìÅôè‰…¬ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰!½±ìÁô€Ä¸ÈÔÍ•Œè±½Í”ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤€èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°($$%ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè‰•É¥­ÕÑ¹å„ðìÅôèÍ•‰•±Õµ¹å„ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸ ($$%M•½¹‘…Éä¥É”¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôèÁ…­…¤ðìÅôè­•µ‰…±¤ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°($$%%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰Q…¡…¸ìÁô€Ä°ÈÔ‘Ñ¬èÑÕÑÕÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤°($$%Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ˆÄ€´Q!%IµAIM=85IìÁô½ìÅõq¸øìÉôˆ°Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„($$$¬€Ä°½Õ¹Ð=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„¤€¬€È°Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰QUI85I=ˆ¤€è($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ‰=8e=UIM1ˆ¤€èÕÍÑ½´MÑÉ¥¹œ ‰]Q ìÁôìÅôˆ°Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…l($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét°!•É¼%½¸MÑÉ¥¹œ¡%ÌÕÁ±¥…Ñ¥¹œ¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤($$$ü!•É¼	•¥¹œÕÁ±¥…Ñ•¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤€è!•É¼=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…l($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤¤¤¤€èÕÍÑ½´MÑÉ¥¹œ ˆÄ€´-5I=I9-Q%ìÁô½ìÅõq¸øìÉôˆ°Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„($$$¬€Ä°½Õ¹Ð=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„¤€¬€È°Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰5Q%-8-5Iˆ¤€è($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ôô€Ä€üÕÍÑ½´MÑÉ¥¹œ ‰%I$M9%I$ˆ¤€èÕÍÑ½´MÑÉ¥¹œ ‰Q=9Q=8ìÁôìÅôˆ°Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…l($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét°!•É¼%½¸MÑÉ¥¹œ¡%ÌÕÁ±¥…Ñ¥¹œ¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤($$$ü!•É¼	•¥¹œÕÁ±¥…Ñ•¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤€è!•É¼=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…l($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Ét¤¤¤¤°Q½À°€ÄÀÀ°½±½È¡]¡¥Ñ”¤°ÕÍÑ½´½±½È ÈÀÔ°€ÈÌÔ°€ÈÔÔ°€ÈÔÔ¤°($$%ÕÍÑ½´½±½È äÀ°€ÄàÀ°€ÈÔÔ°€ÈÔÔ¤°Y¥Í¥‰±”Q¼…¹MÑÉ¥¹œ°•™…Õ±ÐY¥Í¥‰¥±¥Ñä¤ì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô1…ÍÐQ•áÐ%ì(%ô)ô()ÉÕ±” ˆäÅ€´MÕ‰ÉÕÑ¥¸è…µ‰…Èµ•¹ÔÝ…É¹„ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%…µ‰…É]…É¹„ì(%ô((%…Ñ¥½¹Ì(%ì($%É•…Ñ”!UQ•áÐ¡Ù•¹ÐA±…å•È°9Õ±°°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ($$$‰q¹ìÁôè¹•áÐðìÅôèÁÉ•Ù¥½ÕÌˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè…ÁÁ±äðìÅôè‰…¬ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰!½±ìÁô€Ä¸ÈÔÍ•Œè±½Í”ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤€èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°($$%ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè‰•É¥­ÕÑ¹å„ðìÅôèÍ•‰•±Õµ¹å„ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸ ($$%M•½¹‘…Éä¥É”¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôèÁ…­…¤ðìÅôè­•µ‰…±¤ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°($$%%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰Q…¡…¸ìÁô€Ä°ÈÔ‘Ñ¬èÑÕÑÕÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤°($$%Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ˆÈ€´95=1=HìÁô½ìÅõq¸øìÉôˆ°Ù•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹„€¬€Ä°($$%½Õ¹Ð=˜¡±½‰…°¹…™Ñ…É]…É¹„¤°±½‰…°¹9…µ…]…É¹…9mÙ•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹…t¤€èÕÍÑ½´MÑÉ¥¹œ ˆÈ€´]I995ìÁô½ìÅõq¸øìÉôˆ°($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹„€¬€Ä°½Õ¹Ð=˜¡±½‰…°¹…™Ñ…É]…É¹„¤°±½‰…°¹9…µ…]…É¹…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹…t¤°Q½À°€ÄÀÀ°½±½È¡]¡¥Ñ”¤°($$%ÕÍÑ½´½±½È ÈÈÀ°€ÈÌÔ°€ÈÔÔ°€ÈÔÔ¤°±½‰…°¹…™Ñ…É]…É¹…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹…t°Y¥Í¥‰±”Q¼MÑÉ¥¹œ…¹½±½È°($$%•™…Õ±ÐY¥Í¥‰¥±¥Ñä¤ì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô1…ÍÐQ•áÐ%ì(%ô)ô()ÉÕ±” ˆäÅ”€´MÕ‰ÉÕÑ¥¸è…µ‰…Èµ•¹Ô‰…¡…Í„ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%…µ‰…É	…¡…Í„ì(%ô((%…Ñ¥½¹Ì(%ì($%É•…Ñ”!UQ•áÐ¡Ù•¹ÐA±…å•È°9Õ±°°Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ($$$‰q¹ìÁôè¹•áÐðìÅôèÁÉ•Ù¥½ÕÌˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤¤°($$%ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôè…ÁÁ±äðìÅôè‰…¬ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ ($$%	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰!½±ìÁô€Ä¸ÈÔÍ•Œè±½Í”ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤€èÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°($$%ÕÍÑ½´MÑÉ¥¹œ ‰q¹ìÁôè‰•É¥­ÕÑ¹å„ðìÅôèÍ•‰•±Õµ¹å„ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸ ($$%M•½¹‘…Éä¥É”¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁõq¹ìÅôˆ°ÕÍÑ½´MÑÉ¥¹œ ‰ìÁôèÁ…­…¤ðìÅôè­•µ‰…±¤ˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤°($$%%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡I•±½…¤¤¤°ÕÍÑ½´MÑÉ¥¹œ ‰Q…¡…¸ìÁô€Ä°ÈÔ‘Ñ¬èÑÕÑÕÀˆ°%¹ÁÕÐ	¥¹‘¥¹œMÑÉ¥¹œ¡	ÕÑÑ½¸¡5•±•”¤¤¤¤¤°($$%Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ôô€À€üÕÍÑ½´MÑÉ¥¹œ ˆÌ€´!U19UìÁô¼Éq¸øìÅôˆ°Ù•¹ÐA±…å•È¹-ÕÉÍ½É	…¡…Í„€¬€Ä°($$%±½‰…°¹9…µ…	…¡…Í…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É	…¡…Í…t¤€èÕÍÑ½´MÑÉ¥¹œ ˆÌ€´	!M!UìÁô¼Éq¸øìÅôˆ°Ù•¹ÐA±…å•È¹-ÕÉÍ½É	…¡…Í„€¬€Ä°($$%±½‰…°¹9…µ…	…¡…Í…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É	…¡…Í…t¤°Q½À°€ÄÀÀ°½±½È¡]¡¥Ñ”¤°ÕÍÑ½´½±½È ÈÈÔ°€ÈÄÀ°€ÈÔÔ°€ÈÔÔ¤°($$%ÕÍÑ½´½±½È ÄäÀ°€ÄÈÀ°€ÈÔÔ°€ÈÔÔ¤°Y¥Í¥‰±”Q¼…¹MÑÉ¥¹œ°•™…Õ±ÐY¥Í¥‰¥±¥Ñä¤ì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô1…ÍÐQ•áÐ%ì(%ô)ô()ÉÕ±” ˆäÈ€´MÕ‰ÉÕÑ¥¸è-Õ¹¤‰½Ð°­…­¤Ñ•Ñ…À‰¥Í„‰•É•É…¬ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%-Õ¹¥	½Ðì(%ô((%…Ñ¥½¹Ì(%ì($%M•ÐAÉ¥µ…Éä¥É”¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%M•ÐM•½¹‘…Éä¥É”¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%M•Ð‰¥±¥Ñä€Ä¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%M•Ð‰¥±¥Ñä€È¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%M•ÐU±Ñ¥µ…Ñ”‰¥±¥Ñä¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%M•Ð5•±•”¹…‰±•¡Ù•¹ÐA±…å•È°…±Í”¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡AÉ¥µ…Éä¥É”¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡M•½¹‘…Éä¥É”¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡‰¥±¥Ñä€Ä¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡‰¥±¥Ñä€È¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡U±Ñ¥µ…Ñ”¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡5•±•”¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡I•±½…¤¤ì($%¥Í…±±½Ü	ÕÑÑ½¸¡Ù•¹ÐA±…å•È°	ÕÑÑ½¸¡%¹Ñ•É…Ð¤¤ì($%M•Ð…µ…”•…±Ð¡Ù•¹ÐA±…å•È°€À¤ì($%M•Ð!•…±¥¹œ•…±Ð¡Ù•¹ÐA±…å•È°€À¤ì($%M•Ð-¹½­‰…¬•…±Ð¡Ù•¹ÐA±…å•È°€À¤ì(%ô)ô()ÉÕ±” ˆäÌ€´MÕ‰ÉÕÑ¥¸è5Õ±…¤­…µ•É„½É…¹œ­•Ñ¥„å…¹œÑ…¡ÔÑ•µ‰½¬ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%5Õ±…¥-…µ•É„ì(%ô((%…Ñ¥½¹Ì(%ì($%‰½ÉÐ%˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„€ôô9Õ±°¤ì($%MÑ½À…µ•É„¡Ù•¹ÐA±…å•È¤ì($$‰I…ä…ÍÐ­…µ•É„‰•É©…±…¸‘¤UÁ‘…Ñ”Ù•ÉäÉ…µ”ì‘¥¹‘¥¹œÑ•Ñ…ÀÑ¥‘…¬‰½±• ‘¥Ñ•µ‰ÕÌ¸ˆ($%MÑ…ÉÐ…µ•É„¡Ù•¹ÐA±…å•È°UÁ‘…Ñ”Ù•ÉäÉ…µ”¡I…ä…ÍÐ!¥ÐA½Í¥Ñ¥½¸¡å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Y•Ñ½È À°€À¸ØÔÀ°€À¤°($$%å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Y•Ñ½È À°€À¸ØÔÀ°€À¤€¬]½É±Y•Ñ½È=˜¡Y•Ñ½È À€´±½‰…°¹•Í•É-…µ•É„°€À°($$$À€´5…à¡5¥¸¡±½‰…°¹)…É…­-…µ•É„€¬€¡5…à!•…±Ñ ¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€´€ÈÔÀ¤€¼€ÈÔÀ°€Ø¤°€Ì¸ÔÀÀ¤¤°Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„°($$%I½Ñ…Ñ¥½¸¤°µÁÑäÉÉ…ä°µÁÑäÉÉ…ä°…±Í”¤€¬¥É•Ñ¥½¸Q½Ý…É‘Ì¡å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Y•Ñ½È À°€À¸ØÔÀ°€À¤($$$¬]½É±Y•Ñ½È=˜¡Y•Ñ½È À€´±½‰…°¹•Í•É-…µ•É„°€À°€À€´5…à¡5¥¸¡±½‰…°¹)…É…­-…µ•É„€¬€¡5…à!•…±Ñ ¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤($$$´€ÈÔÀ¤€¼€ÈÔÀ°€Ø¤°€Ì¸ÔÀÀ¤¤°($$%Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„°I½Ñ…Ñ¥½¸¤°å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Y•Ñ½È À°€À¸ØÔÀ°€À¤¤€¨±½‰…°¹	…¹Ñ…±…¹¥¹‘¥¹œ¤°($$%UÁ‘…Ñ”Ù•ÉäÉ…µ”¡å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Y•Ñ½È À°€À¸ØÔÀ°€À¤€¬…¥¹œ¥É•Ñ¥½¸=˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤($$$¨€ÈÀ¤°€À¤ì(%ô)ô()ÉÕ±” ˆäÐ€´MÕ‰ÉÕÑ¥¸èM¥…Á­…¸Á•µ…¥¸‘…É¤Õ©Õ¹œÉ…µ‰ÕÐÍ…µÁ…¤Ù…É¥…‰•°ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%M¥…Á­…¹A•µ…¥¸ì(%ô((%…Ñ¥½¹Ì(%ì($%Ù•¹ÐA±…å•È¹]…­ÑÕ5…ÍÕ¬€ôQ½Ñ…°Q¥µ”±…ÁÍ•ì($%Ù•¹ÐA±…å•È¹]…­ÑÕQ•É…Ñ…Ð€ôQÉÕ”ì($%Ù•¹ÐA±…å•È¹MÕ‘…¡¥Á•É¥­Í„€ô…±Í”ì($%Ù•¹ÐA±…å•È¹	½Ñ$€ô…±Í”ì($%Ù•¹ÐA±…å•È¹5…¹ÕÍ¥„€ô…±Í”ì($%Ù•¹ÐA±…å•È¹5•¹¥Ñ1½‰‰ä€ô€Àì($%Ù•¹ÐA±…å•È¹%¹‘•­Í•¹É”€ô€´Äì($%Ù•¹ÐA±…å•È¹UÉÕÑ…¹!U€ô€´Äì($%Ù•¹ÐA±…å•È¹!Õ‘-¥É¤€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹!Õ‘-…¹…¸€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹5•¹ÕQ•É‰Õ­„€ô…±Í”ì($%Ù•¹ÐA±…å•È¹-ÕÉÍ½É•¹É”€ô€Àì($%Ù•¹ÐA±…å•È¹!Õ‘5•¹Ô€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹%¹ÍÁ•­Í¥­Ñ¥˜€ô…±Í”ì($%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹Q•­ÍÕ¹¥„€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹Q•­Í¥É¤€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹5½‘•-…µ•É„€ô€Àì($%Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹5•±••¥Á…­…¤€ô…±Í”ì($%Ù•¹ÐA±…å•È¹!…±…µ…¹5•¹Ô€ô€´Äì($%Ù•¹ÐA±…å•È¹-ÕÉÍ½ÉUÑ…µ„€ô€Àì($%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ô€Àì($%Ù•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹„€ô€Àì($%Ù•¹ÐA±…å•È¹%¹‘•­Í]…É¹„€ô€Àì($%Ù•¹ÐA±…å•È¹]…É¹…9…µ„€ô½±½È¡]¡¥Ñ”¤ì($%Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„€ô9Õ±°ì($%Ù•¹ÐA±…å•È¹%¹‘•­Í	…¡…Í„€ô€Àì($%Ù•¹ÐA±…å•È¹-ÕÉÍ½É	…¡…Í„€ô€Àì($%Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„€ôµÁÑäÉÉ…äì($%Ù•¹ÐA±…å•È¹MÕ‘…¡M¥…À€ôQÉÕ”ì(%ô)ô()ÉÕ±” ˆäÔ€´MÕ‰ÉÕÑ¥¸èM•…É­…¸‘…™Ñ…ÈÑ½¹Ñ½¹…¸°Ñ•Éµ…ÍÕ¬Á…É„‰½Ðˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%M•…É­…¹Q…É•Ñ-…µ•É„ì(%ô((%…Ñ¥½¹Ì(%ì($%%˜¡¹¡Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€øô€È°Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€È€ð½Õ¹Ð=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„¤¤¤ì($$%Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„€ôÙ•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É…mÙ•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€´€Étì($%±Í”ì($$%Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„€ô9Õ±°ì($%¹ì($%Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„€ô¥±Ñ•É•ÉÉ…ä¡±°A±…å•ÉÌ¡±°Q•…µÌ¤°¹¡ÕÉÉ•¹ÐÉÉ…ä±•µ•¹Ð€„ôÙ•¹ÐA±…å•È°!…ÌMÁ…Ý¹• ($$%ÕÉÉ•¹ÐÉÉ…ä±•µ•¹Ð¤¤¤ì($%%˜¡¹¡Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„€„ô9Õ±°°ÉÉ…ä½¹Ñ…¥¹Ì¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„°Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„¤¤¤ì($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ô%¹‘•à=˜ÉÉ…äY…±Õ”¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„°Ù•¹ÐA±…å•È¹…±½¹Q…É•Ñ-…µ•É„¤€¬€Èì($%±Í”%˜¡Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€øô½Õ¹Ð=˜¡Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ-…µ•É„¤€¬€È¤ì($$%Ù•¹ÐA±…å•È¹-ÕÉÍ½É-…µ•É„€ô€Àì($%¹ì(%ô)ô()ÉÕ±” ˆäØ€´MÕ‰ÉÕÑ¥¸è…É¤Á•µ…¥¸Ñ•É‘•­…Ð‘…É¤‰¥‘¥­…¸ˆ¤)ì(%•Ù•¹Ð(%ì($%MÕ‰É½ÕÑ¥¹”ì($%M•…É­…¹Q…É•Ñ%¹ÍÁ•­Í¤ì(%ô((%…Ñ¥½¹Ì(%ì($%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ôA±…å•È±½Í•ÍÐQ¼I•Ñ¥±”¡Ù•¹ÐA±…å•È°±°Q•…µÌ¤ì($%%˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ôôÙ•¹ÐA±…å•È¤ì($$%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ô9Õ±°ì($%¹ì($%%˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€„ô9Õ±°¤ì($$%%˜¡¹Ñ¥Ñäá¥ÍÑÌ¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤¤€ôô…±Í”¤ì($$$%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ô9Õ±°ì($$%¹ì($%¹ì($%%˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€„ô9Õ±°¤ì($$%%˜¡!…ÌMÁ…Ý¹•¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤¤€ôô…±Í”¤ì($$$%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ô9Õ±°ì($$%¹ì($%¹ì($%%˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€„ô9Õ±°¤ì($$%%˜¡%Ì±¥Ù”¡Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤¤€ôô…±Í”¤ì($$$%Ù•¹ÐA±…å•È¹Q…É•Ñ%¹ÍÁ•­Í¤€ô9Õ±°ì($$%¹ì($%¹ì(%ô)ô(
+		If(Global.TeksDuniaPemain[Global.IndeksKeluar] != 0);
+			Destroy In-World Text(Global.TeksDuniaPemain[Global.IndeksKeluar]);
+		End;
+		If(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
+			Destroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
+		End;
+		Modify Global Variable(HudKiriPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(HudKananPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(HudMenuPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(TeksDuniaPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(TeksDiriPemain, Remove From Array By Index, Global.IndeksKeluar);
+		Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
+		Global.IndeksKeluar = -1;
+	}
+}
+
+rule("05 - Menu: Tahan serangan jarak dekat 1,25 detik untuk buka atau tutup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Is Alive(Event Player) == True;
+		Event Player.MeleeDipakai == False;
+		Is Button Held(Event Player, Button(Melee)) == True;
+	}
+
+	actions
+	{
+		Wait(1.250, Abort When False);
+		Event Player.MeleeDipakai = True;
+		If(Event Player.MenuTerbuka == True);
+			Call Subroutine(TutupMenu);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Menu closed. Back to the lobby.") : Custom String(
+				"Menu ditutup. Balik nongkrong."));
+		Else;
+			Event Player.MenuTerbuka = True;
+			Event Player.HalamanMenu = -1;
+			Event Player.KursorUtama = 0;
+			Event Player.KursorGenre = Event Player.IndeksGenre >= 0 ? Event Player.IndeksGenre : 0;
+			Event Player.KursorKamera = 0;
+			Call Subroutine(SegarkanTargetKamera);
+			If(Event Player.ModeKamera == 1);
+				Event Player.KursorKamera = 1;
+			Else If(And(Event Player.ModeKamera == 2, Array Contains(Event Player.DaftarTargetKamera, Event Player.TargetKamera)));
+				Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.TargetKamera) + 2;
+			End;
+			Event Player.KursorWarna = Event Player.IndeksWarna;
+			Event Player.KursorBahasa = Event Player.IndeksBahasa;
+			Disallow Button(Event Player, Button(Melee));
+			Disallow Button(Event Player, Button(Jump));
+			Disallow Button(Event Player, Button(Crouch));
+			Disallow Button(Event Player, Button(Primary Fire));
+			Disallow Button(Event Player, Button(Secondary Fire));
+			Disallow Button(Event Player, Button(Interact));
+			Disallow Button(Event Player, Button(Reload));
+			Disallow Button(Event Player, Button(Ability 1));
+			Disallow Button(Event Player, Button(Ability 2));
+			Disallow Button(Event Player, Button(Ultimate));
+			Call Subroutine(GambarMenu);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Menu open. Four choices, zero paperwork.") : Custom String(
+				"Menu terbuka. Empat pilihan, nol formulir."));
+		End;
+	}
+}
+
+rule("05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MeleeDipakai == True;
+		Is Button Held(Event Player, Button(Melee)) == False;
+	}
+
+	actions
+	{
+		If(Event Player.MenuTerbuka == False);
+			Allow Button(Event Player, Button(Melee));
+		End;
+		Event Player.MeleeDipakai = False;
+	}
+}
+
+rule("06 - Menu: Tembakan utama memilih berikutnya")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.HalamanMenu == -1);
+			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 4;
+		Else If(Event Player.HalamanMenu == 0);
+			Event Player.KursorGenre = (Event Player.KursorGenre + 1) % 100;
+		Else If(Event Player.HalamanMenu == 1);
+			Call Subroutine(SegarkanTargetKamera);
+			Event Player.KursorKamera = (Event Player.KursorKamera + 1) % (Count Of(Event Player.DaftarTargetKamera) + 2);
+		Else If(Event Player.HalamanMenu == 2);
+			Event Player.KursorWarna = (Event Player.KursorWarna + 1) % Count Of(Global.DaftarWarna);
+		Else;
+			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
+		End;
+		Wait Until(Is Button Held(Event Player, Button(Primary Fire)) == False, 99999);
+	}
+}
+
+rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.HalamanMenu == -1);
+			Event Player.KursorUtama = (Event Player.KursorUtama + 3) % 4;
+		Else If(Event Player.HalamanMenu == 0);
+			Event Player.KursorGenre = (Event Player.KursorGenre + 99) % 100;
+		Else If(Event Player.HalamanMenu == 1);
+			Call Subroutine(SegarkanTargetKamera);
+			Event Player.KursorKamera = (Event Player.KursorKamera + Count Of(Event Player.DaftarTargetKamera) + 1) % (Count Of(
+				Event Player.DaftarTargetKamera) + 2);
+		Else If(Event Player.HalamanMenu == 2);
+			Event Player.KursorWarna = (Event Player.KursorWarna + Count Of(Global.DaftarWarna) - 1) % Count Of(Global.DaftarWarna);
+		Else;
+			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
+		End;
+		Wait Until(Is Button Held(Event Player, Button(Secondary Fire)) == False, 99999);
+	}
+}
+
+rule("07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Event Player.HalamanMenu == 1;
+	}
+
+	actions
+	{
+		Call Subroutine(SegarkanTargetKamera);
+		Wait(0.500, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("08 - Menu 0: Lompat mundur sepuluh genre")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Event Player.HalamanMenu == 0;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Jump)) == False, 99999);
+	}
+}
+
+rule("09 - Menu 0: Jongkok maju sepuluh genre")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Event Player.HalamanMenu == 0;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
+		Wait Until(Is Button Held(Event Player, Button(Crouch)) == False, 99999);
+	}
+}
+
+rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.HalamanMenu == -1);
+			Event Player.HalamanMenu = Global.KodeMenu[Event Player.KursorUtama];
+			If(Event Player.HalamanMenu == 0);
+				Event Player.KursorGenre = Event Player.IndeksGenre >= 0 ? Event Player.IndeksGenre : 0;
+			Else If(Event Player.HalamanMenu == 1);
+				Event Player.KursorKamera = 0;
+				Call Subroutine(SegarkanTargetKamera);
+				If(Event Player.ModeKamera == 1);
+					Event Player.KursorKamera = 1;
+				Else If(And(Event Player.ModeKamera == 2, Array Contains(Event Player.DaftarTargetKamera, Event Player.TargetKamera)));
+					Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.TargetKamera) + 2;
+				End;
+			Else If(Event Player.HalamanMenu == 2);
+				Event Player.KursorWarna = Event Player.IndeksWarna;
+			Else;
+				Event Player.KursorBahasa = Event Player.IndeksBahasa;
+			End;
+			Call Subroutine(GambarMenu);
+		Else If(Event Player.HalamanMenu == 0);
+			Event Player.IndeksGenre = Event Player.KursorGenre;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+				"Music picked: {0}. Your ears have a plan now.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
+				"Musik dipilih: {0}. Kupingmu sekarang punya arah.", Global.DaftarGenre[Event Player.IndeksGenre]));
+		Else If(Event Player.HalamanMenu == 1);
+			Call Subroutine(SegarkanTargetKamera);
+			Event Player.KursorKamera %= Count Of(Event Player.DaftarTargetKamera) + 2;
+			If(Event Player.KursorKamera == 0);
+				Stop Camera(Event Player);
+				Event Player.ModeKamera = 0;
+				Event Player.TargetKamera = Null;
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+					"Back to first person. Drama over.") : Custom String("Kembali ke orang pertama. Dramanya selesai."));
+			Else If(Event Player.KursorKamera == 1);
+				Event Player.TargetKamera = Event Player;
+				Event Player.ModeKamera = 1;
+				Call Subroutine(MulaiKamera);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+					"Third person is on you. Strike a pose.") : Custom String("Kamera orang ketiga aktif untukmu. Silakan bergaya."));
+			Else;
+				If(Event Player.KursorKamera - 2 < Count Of(Event Player.DaftarTargetKamera));
+					Event Player.CalonTargetKamera = Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2];
+				Else;
+					Event Player.CalonTargetKamera = Null;
+				End;
+				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
+					Event Player.TargetKamera = Event Player.CalonTargetKamera;
+					Event Player.ModeKamera = 2;
+					Call Subroutine(MulaiKamera);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"Now watching {0}. Totally professional spectating.", Event Player.TargetKamera) : Custom String(
+						"Sekarang menonton {0}. Mengintip secara profesional.", Event Player.TargetKamera));
+				Else;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"That player vanished. Pick another star.") : Custom String("Pemain itu keburu hilang. Pilih bintang lain."));
+				End;
+			End;
+		Else If(Event Player.HalamanMenu == 2);
+			Event Player.IndeksWarna = Event Player.KursorWarna;
+			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+				"Your name is now {0}. Subtlety took the day off.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Custom String(
+				"Warna namamu sekarang {0}. Kalem? Tidak kenal.", Global.NamaWarna[Event Player.IndeksWarna]));
+		Else;
+			Event Player.IndeksBahasa = Event Player.KursorBahasa;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+				"HUD language set to English. The lobby speaks fluent vibes now.") : Custom String(
+				"Bahasa HUD diubah ke Bahasa Indonesia. Lobi ini sekarang fasih nongkrong."));
+			Call Subroutine(GambarMenu);
+		End;
+		Wait Until(Is Button Held(Event Player, Button(Interact)) == False, 99999);
+	}
+}
+
+rule("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Event Player.HalamanMenu != -1;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Event Player.HalamanMenu = -1;
+		Call Subroutine(GambarMenu);
+		Wait Until(Is Button Held(Event Player, Button(Reload)) == False, 99999);
+	}
+}
+
+rule("12 - Menu: Kematian juga menutup warung")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+	}
+
+	actions
+	{
+		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Is Alive(Event Player) == True;
+		Event Player.MenuTerbuka == False;
+		Event Player.ModeKamera != 2;
+		Event Player.InspeksiAktif == False;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Event Player.InspeksiAktif = True;
+		Disable Nameplates(All Players(All Teams), Event Player);
+		Call Subroutine(SegarkanTargetInspeksi);
+		"Nama bawaan disembunyikan hanya bagi penonton yang sedang jongkok; tulisan buatan menggantikannya."
+		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Custom String("{0} {1}  ULT {2}%",
+			Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
+			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Round To Integer(Ultimate Charge Percent(
+			Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null
+			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.500, Do Not Clip,
+			Visible To Position String and Color, Event Player.TargetInspeksi == Null ? Color(White) : Player Variable(
+			Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange),
+			Default Visibility);
+		Event Player.TeksDunia = Last Text ID;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
+		End;
+		Create In-World Text(Event Player, Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
+			Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
+			Down)), Update Every Frame(Eye Position(Event Player)
+			+ World Vector Of(Vector(0, -0.650, 3), Event Player, Rotation)), 1.250, Do Not Clip, Visible To Position String and Color,
+			Event Player.WarnaNama, Default Visibility);
+		Event Player.TeksDiri = Last Text ID;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDiri;
+		End;
+	}
+}
+
+rule("14 - Intip Pahlawan: Perbarui garis pandang dengan sopan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InspeksiAktif == True;
+		Is Alive(Event Player) == True;
+		Event Player.MenuTerbuka == False;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Disable Nameplates(All Players(All Teams), Event Player);
+		Call Subroutine(SegarkanTargetInspeksi);
+		Wait(0.050, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri atau buka menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InspeksiAktif == True;
+		Or(Or(Or(Is Button Held(Event Player, Button(Crouch)) == False, Event Player.MenuTerbuka == True), Is Dead(Event Player)),
+			Event Player.ModeKamera == 2) == True;
+	}
+
+	actions
+	{
+		Enable Nameplates(All Players(All Teams), Event Player);
+		If(Event Player.TeksDunia != Null);
+			Destroy In-World Text(Event Player.TeksDunia);
+		End;
+		If(Event Player.TeksDiri != Null);
+			Destroy In-World Text(Event Player.TeksDiri);
+		End;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		End;
+		Event Player.TeksDunia = Null;
+		Event Player.TeksDiri = Null;
+		Event Player.TargetInspeksi = Null;
+		Event Player.InspeksiAktif = False;
+	}
+}
+
+rule("16 - Kamera: Target pergi, pulangkan pandangan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ModeKamera == 2;
+		Or(Event Player.TargetKamera == Null, Entity Exists(Event Player.TargetKamera) == False) == True;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+		Event Player.ModeKamera = 0;
+		Event Player.TargetKamera = Null;
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+			"Your camera target left. Returning to first person.") : Custom String(
+			"Target kameramu keluar. Kembali ke orang pertama sebelum nyasar."));
+	}
+}
+
+rule("90 - Subrutin: Tutup menu dan kembalikan semua tombol")
+{
+	event
+	{
+		Subroutine;
+		TutupMenu;
+	}
+
+	actions
+	{
+		If(Event Player.HudMenu != Null);
+			Destroy HUD Text(Event Player.HudMenu);
+		End;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		End;
+		Event Player.HudMenu = Null;
+		Event Player.MenuTerbuka = False;
+		Event Player.HalamanMenu = -1;
+		If(Is Button Held(Event Player, Button(Melee)) == False);
+			Allow Button(Event Player, Button(Melee));
+		End;
+		Allow Button(Event Player, Button(Jump));
+		Allow Button(Event Player, Button(Crouch));
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
+	}
+}
+
+rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
+{
+	event
+	{
+		Subroutine;
+		GambarMenu;
+	}
+
+	actions
+	{
+		If(Event Player.HudMenu != Null);
+			Destroy HUD Text(Event Player.HudMenu);
+		End;
+		Event Player.HudMenu = Null;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		End;
+		If(Event Player.HalamanMenu == -1);
+			Call Subroutine(GambarUtama);
+		Else If(Event Player.HalamanMenu == 0);
+			Call Subroutine(GambarMusik);
+		Else If(Event Player.HalamanMenu == 1);
+			Call Subroutine(GambarKamera);
+		Else If(Event Player.HalamanMenu == 2);
+			Call Subroutine(GambarWarna);
+		Else;
+			Call Subroutine(GambarBahasa);
+		End;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+		End;
+	}
+}
+
+rule("91a - Subrutin: Gambar menu utama")
+{
+	event
+	{
+		Subroutine;
+		GambarUtama;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String(
+			"\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}: open | hold {1} 1.25 sec: close", Input Binding String(Button(Interact)), Input Binding String(Button(Melee))))
+			: Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
+			Input Binding String(Button(Secondary Fire))), Custom String("{0}: buka | tahan {1} 1,25 dtk: tutup", Input Binding String(
+			Button(Interact)), Input Binding String(Button(Melee)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorUtama == 0 ? Custom String(
+			"0 - MUSIC GENRE\nCURRENT: {0}",
+			Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("not picked yet")) : Event Player.KursorUtama
+			== 1 ? Custom String("1 - THIRD-PERSON CAMERA\nCURRENT: {0}", Event Player.ModeKamera == 0 ? Custom String("off") :
+			Event Player.ModeKamera == 1 ? Custom String("on yourself") : Custom String("watching {0}", Event Player.TargetKamera)) : Event Player.KursorUtama
+			== 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Custom String(
+			"3 - HUD LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa]) : Event Player.KursorUtama == 0 ? Custom String(
+			"0 - GENRE MUSIK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String(
+			"belum pilih")) : Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA ORANG KETIGA\nSAAT INI: {0}", Event Player.ModeKamera
+			== 0 ? Custom String("mati") : Event Player.ModeKamera == 1 ? Custom String("diri sendiri") : Custom String("menonton {0}",
+			Event Player.TargetKamera)) : Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[
+			Event Player.IndeksWarna]) : Custom String("3 - BAHASA HUD\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa]), Top,
+			100, Color(White), Custom Color(210, 230, 255, 255), Custom Color(255, 185, 65, 255), Visible To and String,
+			Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
+rule("91b - Subrutin: Gambar menu musik")
+{
+	event
+	{
+		Subroutine;
+		GambarMusik;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}",
+			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}: back 10 | {1}: forward 10", Input Binding String(Button(Jump)), Input Binding String(Button(Crouch)))),
+			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(
+			Button(Reload))), Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(
+			Button(Secondary Fire))), Custom String("{0}: mundur 10 | {1}: maju 10", Input Binding String(Button(Jump)), Input Binding String(
+			Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))),
+			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("0 - MUSIC GENRE {0}/100",
+			Event Player.KursorGenre + 1), Custom String("{0}\n> {1}", Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10,
+			Down)], Global.DaftarGenre[Event Player.KursorGenre])) : Custom String("{0}\n{1}", Custom String("0 - GENRE MUSIK {0}/100",
+			Event Player.KursorGenre + 1), Custom String("{0}\n> {1}", Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)],
+			Global.DaftarGenre[Event Player.KursorGenre])), Top, 100, Color(White), Custom Color(205, 235, 255, 255),
+			Custom Color(55, 235, 245, 255), Visible To and String, Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
+rule("91c - Subrutin: Gambar menu kamera")
+{
+	event
+	{
+		Subroutine;
+		GambarKamera;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String(
+			"\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(
+			Button(Reload))), Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(
+			Secondary Fire))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))),
+			Event Player.IndeksBahasa == 0 ? Custom String("1 - THIRD-PERSON CAMERA {0}/{1}\n> {2}", Event Player.KursorKamera
+			+ 1, Count Of(Event Player.DaftarTargetKamera) + 2, Event Player.KursorKamera == 0 ? Custom String("TURN CAMERA OFF") :
+			Event Player.KursorKamera == 1 ? Custom String("ON YOURSELF") : Custom String("WATCH {0} {1}", Event Player.DaftarTargetKamera[
+			Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])
+			? Hero Being Duplicated(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2]) : Hero Of(Event Player.DaftarTargetKamera[
+			Event Player.KursorKamera - 2])))) : Custom String("1 - KAMERA ORANG KETIGA {0}/{1}\n> {2}", Event Player.KursorKamera
+			+ 1, Count Of(Event Player.DaftarTargetKamera) + 2, Event Player.KursorKamera == 0 ? Custom String("MATIKAN KAMERA") :
+			Event Player.KursorKamera == 1 ? Custom String("DIRI SENDIRI") : Custom String("TONTON {0} {1}", Event Player.DaftarTargetKamera[
+			Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])
+			? Hero Being Duplicated(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2]) : Hero Of(Event Player.DaftarTargetKamera[
+			Event Player.KursorKamera - 2])))), Top, 100, Color(White), Custom Color(205, 235, 255, 255),
+			Custom Color(90, 180, 255, 255), Visible To and String, Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
+rule("91d - Subrutin: Gambar menu warna")
+{
+	event
+	{
+		Subroutine;
+		GambarWarna;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String(
+			"\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(
+			Button(Reload))), Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(
+			Secondary Fire))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))),
+			Event Player.IndeksBahasa == 0 ? Custom String("2 - NAME COLOR {0}/{1}\n> {2}", Event Player.KursorWarna + 1,
+			Count Of(Global.DaftarWarna), Global.NamaWarnaEN[Event Player.KursorWarna]) : Custom String("2 - WARNA NAMA {0}/{1}\n> {2}",
+			Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarna[Event Player.KursorWarna]), Top, 100, Color(White),
+			Custom Color(220, 235, 255, 255), Global.DaftarWarna[Event Player.KursorWarna], Visible To String and Color,
+			Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
+rule("91e - Subrutin: Gambar menu bahasa")
+{
+	event
+	{
+		Subroutine;
+		GambarBahasa;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String(
+			"\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(
+			Button(Reload))), Custom String("Hold {0} 1.25 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(
+			Secondary Fire))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 1,25 dtk: tutup", Input Binding String(Button(Melee))))),
+			Event Player.IndeksBahasa == 0 ? Custom String("3 - HUD LANGUAGE {0}/2\n> {1}", Event Player.KursorBahasa + 1,
+			Global.NamaBahasa[Event Player.KursorBahasa]) : Custom String("3 - BAHASA HUD {0}/2\n> {1}", Event Player.KursorBahasa + 1,
+			Global.NamaBahasa[Event Player.KursorBahasa]), Top, 100, Color(White), Custom Color(225, 210, 255, 255),
+			Custom Color(190, 120, 255, 255), Visible To and String, Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
+rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
+{
+	event
+	{
+		Subroutine;
+		KunciBot;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Disallow Button(Event Player, Button(Primary Fire));
+		Disallow Button(Event Player, Button(Secondary Fire));
+		Disallow Button(Event Player, Button(Ability 1));
+		Disallow Button(Event Player, Button(Ability 2));
+		Disallow Button(Event Player, Button(Ultimate));
+		Disallow Button(Event Player, Button(Melee));
+		Disallow Button(Event Player, Button(Reload));
+		Disallow Button(Event Player, Button(Interact));
+		Set Damage Dealt(Event Player, 0);
+		Set Healing Dealt(Event Player, 0);
+		Set Knockback Dealt(Event Player, 0);
+	}
+}
+
+rule("93 - Subrutin: Mulai kamera orang ketiga yang tahu tembok")
+{
+	event
+	{
+		Subroutine;
+		MulaiKamera;
+	}
+
+	actions
+	{
+		Abort If(Event Player.TargetKamera == Null);
+		Stop Camera(Event Player);
+		"Ray cast kamera berjalan di Update Every Frame; dinding tetap tidak boleh ditembus."
+		Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0),
+			Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0) + World Vector Of(Vector(0 - Global.GeserKamera, 0,
+			0 - Max(Min(Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 250) / 250, 6), 3.500)), Event Player.TargetKamera,
+			Rotation), Empty Array, Empty Array, False) + Direction Towards(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0)
+			+ World Vector Of(Vector(0 - Global.GeserKamera, 0, 0 - Max(Min(Global.JarakKamera + (Max Health(Event Player.TargetKamera)
+			- 250) / 250, 6), 3.500)),
+			Event Player.TargetKamera, Rotation), Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0)) * Global.BantalanDinding),
+			Update Every Frame(Eye Position(Event Player.TargetKamera) + Vector(0, 0.650, 0) + Facing Direction Of(Event Player.TargetKamera)
+			* 20), 0);
+	}
+}
+
+rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
+{
+	event
+	{
+		Subroutine;
+		SiapkanPemain;
+	}
+
+	actions
+	{
+		Event Player.WaktuMasuk = Total Time Elapsed;
+		Event Player.WaktuTercatat = True;
+		Event Player.SudahDiperiksa = False;
+		Event Player.BotAI = False;
+		Event Player.Manusia = False;
+		Event Player.MenitLobby = 0;
+		Event Player.IndeksGenre = -1;
+		Event Player.UrutanHUD = -1;
+		Event Player.HudKiri = Null;
+		Event Player.HudKanan = Null;
+		Event Player.MenuTerbuka = False;
+		Event Player.KursorGenre = 0;
+		Event Player.HudMenu = Null;
+		Event Player.InspeksiAktif = False;
+		Event Player.TargetInspeksi = Null;
+		Event Player.TeksDunia = Null;
+		Event Player.TeksDiri = Null;
+		Event Player.ModeKamera = 0;
+		Event Player.TargetKamera = Null;
+		Event Player.MeleeDipakai = False;
+		Event Player.HalamanMenu = -1;
+		Event Player.KursorUtama = 0;
+		Event Player.KursorKamera = 0;
+		Event Player.KursorWarna = 0;
+		Event Player.IndeksWarna = 0;
+		Event Player.WarnaNama = Color(White);
+		Event Player.CalonTargetKamera = Null;
+		Event Player.IndeksBahasa = 0;
+		Event Player.KursorBahasa = 0;
+		Event Player.DaftarTargetKamera = Empty Array;
+		Event Player.SudahSiap = True;
+	}
+}
+
+rule("95 - Subrutin: Segarkan daftar tontonan, termasuk para bot")
+{
+	event
+	{
+		Subroutine;
+		SegarkanTargetKamera;
+	}
+
+	actions
+	{
+		If(And(Event Player.KursorKamera >= 2, Event Player.KursorKamera - 2 < Count Of(Event Player.DaftarTargetKamera)));
+			Event Player.CalonTargetKamera = Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2];
+		Else;
+			Event Player.CalonTargetKamera = Null;
+		End;
+		Event Player.DaftarTargetKamera = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, Has Spawned(
+			Current Array Element)));
+		If(And(Event Player.CalonTargetKamera != Null, Array Contains(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera)));
+			Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera) + 2;
+		Else If(Event Player.KursorKamera >= Count Of(Event Player.DaftarTargetKamera) + 2);
+			Event Player.KursorKamera = 0;
+		End;
+	}
+}
+
+rule("96 - Subrutin: Cari pemain terdekat dari bidikan")
+{
+	event
+	{
+		Subroutine;
+		SegarkanTargetInspeksi;
+	}
+
+	actions
+	{
+		Event Player.TargetInspeksi = Player Closest To Reticle(Event Player, All Teams);
+		If(Event Player.TargetInspeksi == Event Player);
+			Event Player.TargetInspeksi = Null;
+		End;
+		If(Event Player.TargetInspeksi != Null);
+			If(Entity Exists(Event Player.TargetInspeksi) == False);
+				Event Player.TargetInspeksi = Null;
+			End;
+		End;
+		If(Event Player.TargetInspeksi != Null);
+			If(Has Spawned(Event Player.TargetInspeksi) == False);
+				Event Player.TargetInspeksi = Null;
+			End;
+		End;
+		If(Event Player.TargetInspeksi != Null);
+			If(Is Alive(Event Player.TargetInspeksi) == False);
+				Event Player.TargetInspeksi = Null;
+			End;
+		End;
+	}
+}
