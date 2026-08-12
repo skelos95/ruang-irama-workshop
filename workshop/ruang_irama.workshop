@@ -69,9 +69,7 @@ variables
 		40: PunyaPosSpawn
 		41: CalonTargetTeleport
 		42: TinggiAnchorKamera
-		43: PosKameraHalus
-		44: HeroKameraTerakhir
-		45: DirezioneKameraHalus
+		43: HeroKameraTerakhir
 }
 
 subroutines
@@ -1265,52 +1263,9 @@ rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
 
 	actions
 	{
-		"Dopo un cambio eroe ricalibra soltanto l'altezza. Il root filtrato viene mantenuto dalla regola 16c."
-		Wait(0.032, Ignore Condition);
-		Abort If(Event Player.TargetKamera == Null);
-		Abort If(Entity Exists(Event Player.TargetKamera) == False);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
-	}
-}
-
-rule("16c - Kamera: Stabilizza solo dove serve")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Manusia == True;
-		Event Player.ModeKamera != 0;
-		Event Player.TargetKamera != Null;
-		Entity Exists(Event Player.TargetKamera) == True;
-	}
-
-	actions
-	{
-		"Self normale resta completamente diretto. Sierra filtra solo Y per togliere il bob senza ritardo avanti/indietro. I target remoti filtrano root e facing per assorbire correzioni di rete."
-		If(Event Player.ModeKamera == 2);
-			Event Player.PosKameraHalus += (Position Of(Event Player.TargetKamera) - Event Player.PosKameraHalus) * 0.600;
-			Event Player.DirezioneKameraHalus = Normalize(Event Player.DirezioneKameraHalus
-				+ (Facing Direction Of(Event Player.TargetKamera) - Event Player.DirezioneKameraHalus) * 0.650);
-		Else If(Hero Of(Event Player.TargetKamera) == Hero(Sierra));
-			Event Player.PosKameraHalus = Vector(X Component Of(Position Of(Event Player.TargetKamera)),
-				Y Component Of(Event Player.PosKameraHalus) + (Y Component Of(Position Of(Event Player.TargetKamera))
-					- Y Component Of(Event Player.PosKameraHalus)) * 0.180,
-				Z Component Of(Position Of(Event Player.TargetKamera)));
-			Event Player.DirezioneKameraHalus = Facing Direction Of(Event Player.TargetKamera);
-		Else;
-			Event Player.PosKameraHalus = Position Of(Event Player.TargetKamera);
-			Event Player.DirezioneKameraHalus = Facing Direction Of(Event Player.TargetKamera);
-		End;
-		Wait(0.016, Ignore Condition);
-		Loop If Condition Is True;
 	}
 }
 rule("17 - Revenge: Catat solo il killer diretto, bukan assist")
@@ -1677,31 +1632,40 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Orbita 3D completa: camera e look-at condividono la stessa direzione, quindi il personaggio resta in quadro anche guardando molto su o giu."
+		"Camera unica e diretta per se stessi e per gli altri: nessun smoothing, wait o loop. Position Of e Facing Direction vengono letti ogni frame."
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
-		Event Player.PosKameraHalus = Position Of(Event Player.TargetKamera);
-		Event Player.DirezioneKameraHalus = Facing Direction Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
 			Update Every Frame(
 				Ray Cast Hit Position(
-					(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-					(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- (Event Player.ModeKamera == 2 ? Event Player.DirezioneKameraHalus : Facing Direction Of(Event Player.TargetKamera)) * Min(4.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction((Event Player.ModeKamera == 2 ? Event Player.DirezioneKameraHalus : Facing Direction Of(Event Player.TargetKamera))), 0), Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
+						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
+							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
 					Empty Array, Empty Array, False)
 				+ Direction Towards(
 					Ray Cast Hit Position(
-						(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-						(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- (Event Player.ModeKamera == 2 ? Event Player.DirezioneKameraHalus : Facing Direction Of(Event Player.TargetKamera)) * Min(4.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction((Event Player.ModeKamera == 2 ? Event Player.DirezioneKameraHalus : Facing Direction Of(Event Player.TargetKamera))), 0), Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
+						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
+							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
 						Empty Array, Empty Array, False),
-					(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Global.BantalanDinding),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Global.BantalanDinding),
 			Update Every Frame(
-				(Or(Event Player.ModeKamera == 2, Hero Of(Event Player.TargetKamera) == Hero(Sierra)) ? Event Player.PosKameraHalus : Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-					+ (Event Player.ModeKamera == 2 ? Event Player.DirezioneKameraHalus : Facing Direction Of(Event Player.TargetKamera)) * Global.JarakBidik), 0);
+				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
+					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
@@ -1759,9 +1723,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PunyaPosSpawn = False;
 		Event Player.CalonTargetTeleport = Null;
 		Event Player.TinggiAnchorKamera = 1.500;
-		Event Player.PosKameraHalus = Vector(0, 0, 0);
 		Event Player.HeroKameraTerakhir = Null;
-		Event Player.DirezioneKameraHalus = Vector(0, 0, 1);
 	}
 }
 
