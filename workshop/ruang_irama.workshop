@@ -71,6 +71,7 @@ variables
 		42: TinggiAnchorKamera
 		43: PosKameraHalus
 		44: HeroKameraTerakhir
+		45: PitchKameraSierra
 }
 
 subroutines
@@ -1270,7 +1271,38 @@ rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
 		Abort If(Entity Exists(Event Player.TargetKamera) == False);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
+		If(Hero Of(Event Player.TargetKamera) == Hero(Sierra));
+			Event Player.PitchKameraSierra = Vertical Facing Angle Of(Event Player.TargetKamera);
+		End;
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
+	}
+}
+
+rule("16c - Kamera: Stabilkan arah vertikal Sierra")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.ModeKamera != 0;
+		Event Player.TargetKamera != Null;
+		Entity Exists(Event Player.TargetKamera) == True;
+		Event Player.HeroKameraTerakhir == Hero(Sierra);
+		Hero Of(Event Player.TargetKamera) == Hero(Sierra);
+	}
+
+	actions
+	{
+		"Filtra solo il pitch usato dalla camera di Sierra. Yaw e movimento del giocatore restano immediati; filtro esponenziale senza overshoot."
+		Event Player.PitchKameraSierra += (Vertical Facing Angle Of(Event Player.TargetKamera) - Event Player.PitchKameraSierra) * 0.350;
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -1638,8 +1670,9 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Rotazione diretta senza smoothing. Pitch camera 50 percento normalmente; Sierra usa 18 percento per eliminare la sua ondulazione mantenendo la mira verticale completa."
+		"Sierra: la camera usa un pitch filtrato dedicato anche per il punto di mira, non solo per la posizione. Yaw resta diretto; gli altri eroi restano invariati."
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
+		Event Player.PitchKameraSierra = Vertical Facing Angle Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
@@ -1650,9 +1683,12 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 						- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
 							* Min(4.500, Max(Global.JarakKamera,
 								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Vector(0, 0 - Y Component Of(Facing Direction Of(Event Player.TargetKamera))
+						+ Vector(0, 0 - Y Component Of(Hero Of(Event Player.TargetKamera) == Hero(Sierra)
+							? Direction From Angles(Horizontal Facing Angle Of(Event Player.TargetKamera), Event Player.PitchKameraSierra)
+							: Facing Direction Of(Event Player.TargetKamera))
 							* Min(4.500, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.180 : 0.500), 0)
+								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+							* (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.300 : 0.500), 0)
 						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
 							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
 							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
@@ -1664,9 +1700,12 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 							- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
 							* Min(4.500, Max(Global.JarakKamera,
 								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Vector(0, 0 - Y Component Of(Facing Direction Of(Event Player.TargetKamera))
+						+ Vector(0, 0 - Y Component Of(Hero Of(Event Player.TargetKamera) == Hero(Sierra)
+							? Direction From Angles(Horizontal Facing Angle Of(Event Player.TargetKamera), Event Player.PitchKameraSierra)
+							: Facing Direction Of(Event Player.TargetKamera))
 							* Min(4.500, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.180 : 0.500), 0)
+								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+							* (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.300 : 0.500), 0)
 							+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
 								Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
 								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
@@ -1674,7 +1713,9 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Global.BantalanDinding),
 			Update Every Frame(
 				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
+					+ (Hero Of(Event Player.TargetKamera) == Hero(Sierra)
+						? Direction From Angles(Horizontal Facing Angle Of(Event Player.TargetKamera), Event Player.PitchKameraSierra)
+						: Facing Direction Of(Event Player.TargetKamera)) * Global.JarakBidik), 0);
 	}
 }
 
@@ -1734,6 +1775,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TinggiAnchorKamera = 1.500;
 		Event Player.PosKameraHalus = Vector(0, 0, 0);
 		Event Player.HeroKameraTerakhir = Null;
+		Event Player.PitchKameraSierra = 0;
 	}
 }
 
