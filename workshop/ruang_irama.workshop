@@ -63,6 +63,11 @@ variables
 		34: JumlahRevenge
 		35: IndeksRevenge
 		36: MorteRevenge
+		37: KursorTeleport
+		38: DaftarTargetTeleport
+		39: PosSpawnRoom
+		40: PunyaPosSpawn
+		41: CalonTargetTeleport
 }
 
 subroutines
@@ -81,6 +86,8 @@ subroutines
 	11: SegarkanTargetInspeksi
 	12: GambarRevenge
 	13: SegarkanTargetRevenge
+	14: GambarTeleport
+	15: SegarkanTargetTeleport
 }
 
 rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -219,7 +226,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.TeksDuniaPemain = Empty Array;
 		Global.TeksDiriPemain = Empty Array;
 		Global.IndeksKeluar = -1;
-		Global.KodeMenu = Array(0, 1, 2, 3, 4);
+		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5);
 		Global.DaftarWarna = Array(
 			Color(White),
 			Custom Color(190, 210, 230, 255),
@@ -449,6 +456,30 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 	}
 }
 
+rule("02c - Spawn Room: Ricorda una posizione sicura")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Has Spawned(Event Player) == True;
+		Is In Spawn Room(Event Player) == True;
+		Event Player.PunyaPosSpawn == False;
+	}
+
+	actions
+	{
+		Event Player.PosSpawnRoom = Position Of(Event Player);
+		Event Player.PunyaPosSpawn = True;
+	}
+}
+
 rule("03 - Waktu: Hitung menit nongkrong tanpa bikin server ngos-ngosan")
 {
 	event
@@ -570,6 +601,8 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Event Player.KursorBahasa = Event Player.IndeksBahasa;
 			Event Player.KursorRevenge = 0;
 			Call Subroutine(SegarkanTargetRevenge);
+			Event Player.KursorTeleport = 0;
+			Call Subroutine(SegarkanTargetTeleport);
 			Disallow Button(Event Player, Button(Melee));
 			Disallow Button(Event Player, Button(Jump));
 			Disallow Button(Event Player, Button(Crouch));
@@ -581,8 +614,8 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Disallow Button(Event Player, Button(Ability 2));
 			Disallow Button(Event Player, Button(Ultimate));
 			Call Subroutine(GambarMenu);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Menu open. Five choices, zero paperwork.") : Custom String(
-				"Menu terbuka. Lima pilihan, nol formulir."));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Menu open. Six choices, zero paperwork.") : Custom String(
+				"Menu terbuka. Enam pilihan, nol formulir."));
 		End;
 	}
 }
@@ -629,7 +662,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 	actions
 	{
 		If(Event Player.HalamanMenu == -1);
-			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 5;
+			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 6;
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 1) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -639,10 +672,15 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 			Event Player.KursorWarna = (Event Player.KursorWarna + 1) % Count Of(Global.DaftarWarna);
 		Else If(Event Player.HalamanMenu == 3);
 			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
-		Else;
+		Else If(Event Player.HalamanMenu == 4);
 			Call Subroutine(SegarkanTargetRevenge);
 			If(Count Of(Event Player.DaftarTargetRevenge) > 0);
 				Event Player.KursorRevenge = (Event Player.KursorRevenge + 1) % Count Of(Event Player.DaftarTargetRevenge);
+			End;
+		Else;
+			Call Subroutine(SegarkanTargetTeleport);
+			If(Count Of(Event Player.DaftarTargetTeleport) > 0);
+				Event Player.KursorTeleport = (Event Player.KursorTeleport + 1) % Count Of(Event Player.DaftarTargetTeleport);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
@@ -668,7 +706,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 	actions
 	{
 		If(Event Player.HalamanMenu == -1);
-			Event Player.KursorUtama = (Event Player.KursorUtama + 4) % 5;
+			Event Player.KursorUtama = (Event Player.KursorUtama + 5) % 6;
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 99) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -679,11 +717,17 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 			Event Player.KursorWarna = (Event Player.KursorWarna + Count Of(Global.DaftarWarna) - 1) % Count Of(Global.DaftarWarna);
 		Else If(Event Player.HalamanMenu == 3);
 			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
-		Else;
+		Else If(Event Player.HalamanMenu == 4);
 			Call Subroutine(SegarkanTargetRevenge);
 			If(Count Of(Event Player.DaftarTargetRevenge) > 0);
 				Event Player.KursorRevenge = (Event Player.KursorRevenge + Count Of(Event Player.DaftarTargetRevenge) - 1) % Count Of(
 					Event Player.DaftarTargetRevenge);
+			End;
+		Else;
+			Call Subroutine(SegarkanTargetTeleport);
+			If(Count Of(Event Player.DaftarTargetTeleport) > 0);
+				Event Player.KursorTeleport = (Event Player.KursorTeleport + Count Of(Event Player.DaftarTargetTeleport) - 1) % Count Of(
+					Event Player.DaftarTargetTeleport);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
@@ -732,6 +776,30 @@ rule("07c - Menu Revenge: Segarkan daftar pemain")
 	actions
 	{
 		Call Subroutine(SegarkanTargetRevenge);
+		Call Subroutine(GambarMenu);
+		Wait(0.500, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("07d - Menu Teleport: Segarkan Spawn Room dan pemain")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MenuTerbuka == True;
+		Event Player.HalamanMenu == 5;
+	}
+
+	actions
+	{
+		Call Subroutine(SegarkanTargetTeleport);
 		Call Subroutine(GambarMenu);
 		Wait(0.500, Abort When False);
 		Loop If Condition Is True;
@@ -819,9 +887,12 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 				Event Player.KursorWarna = Event Player.IndeksWarna;
 			Else If(Event Player.HalamanMenu == 3);
 				Event Player.KursorBahasa = Event Player.IndeksBahasa;
-			Else;
+			Else If(Event Player.HalamanMenu == 4);
 				Event Player.KursorRevenge = 0;
 				Call Subroutine(SegarkanTargetRevenge);
+			Else;
+				Event Player.KursorTeleport = 0;
+				Call Subroutine(SegarkanTargetTeleport);
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
@@ -875,7 +946,7 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 				"HUD language set to English. The lobby speaks fluent vibes now.") : Custom String(
 				"Bahasa HUD diubah ke Bahasa Indonesia. Lobi ini sekarang fasih nongkrong."));
 			Call Subroutine(GambarMenu);
-		Else;
+		Else If(Event Player.HalamanMenu == 4);
 			Call Subroutine(SegarkanTargetRevenge);
 			If(Count Of(Event Player.DaftarTargetRevenge) == 0);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No other players are available for revenge.") : Custom String(
@@ -906,6 +977,32 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 					Call Subroutine(GambarMenu);
 				End;
 			End;
+		Else;
+			Call Subroutine(SegarkanTargetTeleport);
+			Event Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+			Event Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+			If(Event Player.CalonTargetTeleport == Event Player);
+				If(Is In Spawn Room(Event Player) == True);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("You are already in the Spawn Room.") : Custom String(
+						"Kamu sudah berada di Spawn Room."));
+				Else If(Event Player.PunyaPosSpawn == False);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"Spawn Room position is not registered yet.") : Custom String("Posisi Spawn Room belum tersimpan."));
+				Else;
+					Teleport(Event Player, Event Player.PosSpawnRoom);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported to the Spawn Room.") : Custom String(
+						"Teleport ke Spawn Room."));
+				End;
+			Else If(Or(Entity Exists(Event Player.CalonTargetTeleport) == False, Is Alive(Event Player.CalonTargetTeleport) == False));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("That player is not available right now.") : Custom String(
+					"Pemain itu sedang tidak tersedia."));
+			Else;
+				Teleport(Event Player, Nearest Walkable Position(Position Of(Event Player.CalonTargetTeleport)
+					- Facing Direction Of(Event Player.CalonTargetTeleport) * 1.500));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near {0}.", Event Player.CalonTargetTeleport)
+					: Custom String("Teleport dekat {0}.", Event Player.CalonTargetTeleport));
+			End;
+			Call Subroutine(GambarMenu);
 		End;
 		Wait Until(Is Button Held(Event Player, Button(Interact)) == False, 99999);
 	}
@@ -1184,8 +1281,10 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 			Call Subroutine(GambarWarna);
 		Else If(Event Player.HalamanMenu == 3);
 			Call Subroutine(GambarBahasa);
-		Else;
+		Else If(Event Player.HalamanMenu == 4);
 			Call Subroutine(GambarRevenge);
+		Else;
+			Call Subroutine(GambarTeleport);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -1214,13 +1313,15 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.ModeKamera == 1 ? Custom String("on yourself") : Custom String("watching {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - HUD LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
-			: Custom String("4 - REVENGE\nDIRECT KILLS OWED TO YOU") : Event Player.KursorUtama == 0 ? Custom String(
+			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nDIRECT KILLS OWED TO YOU") : Custom String(
+			"5 - TELEPORT\nSPAWN ROOM OR ANOTHER PLAYER") : Event Player.KursorUtama == 0 ? Custom String(
 			"0 - GENRE MUSIK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA ORANG KETIGA\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati")
 			: Event Player.ModeKamera == 1 ? Custom String("diri sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - BAHASA HUD\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
-			: Custom String("4 - REVENGE\nHUTANG KILL LANGSUNG"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
+			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nHUTANG KILL LANGSUNG") : Custom String(
+			"5 - TELEPORT\nSPAWN ROOM ATAU PEMAIN LAIN"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
 			Custom Color(255, 185, 65, 255), Visible To and String, Default Visibility);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1374,6 +1475,40 @@ rule("91f - Subrutin: Gambar menu Revenge")
 	}
 }
 
+rule("91g - Subrutin: Gambar menu Teleport")
+{
+	event
+	{
+		Subroutine;
+		GambarTeleport;
+	}
+
+	actions
+	{
+		Call Subroutine(SegarkanTargetTeleport);
+		Event Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
+			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0
+			? Event Player.DaftarTargetTeleport[Event Player.KursorTeleport] == Event Player ? Custom String("{0}\n> SPAWN ROOM\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosSpawn ? Custom String("READY")
+				: Custom String("SPAWN POSITION NOT REGISTERED")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
+				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport])
+			: Event Player.DaftarTargetTeleport[Event Player.KursorTeleport] == Event Player ? Custom String("{0}\n> SPAWN ROOM\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosSpawn ? Custom String("SIAP")
+				: Custom String("POSISI SPAWN BELUM TERSIMPAN")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
+				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport]), Top, 100,
+			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Default Visibility);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
 rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 {
 	event
@@ -1473,6 +1608,11 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.JumlahRevenge = Empty Array;
 		Event Player.IndeksRevenge = -1;
 		Event Player.MorteRevenge = False;
+		Event Player.KursorTeleport = 0;
+		Event Player.DaftarTargetTeleport = Empty Array;
+		Event Player.PosSpawnRoom = Vector(0, 0, 0);
+		Event Player.PunyaPosSpawn = False;
+		Event Player.CalonTargetTeleport = Null;
 	}
 }
 
@@ -1548,6 +1688,31 @@ rule("97 - Subrutin: Segarkan daftar target Revenge")
 			Event Player.KursorRevenge = 0;
 		Else If(Event Player.KursorRevenge >= Count Of(Event Player.DaftarTargetRevenge));
 			Event Player.KursorRevenge = 0;
+		End;
+	}
+}
+
+rule("98 - Subrutin: Segarkan Spawn Room dan target Teleport")
+{
+	event
+	{
+		Subroutine;
+		SegarkanTargetTeleport;
+	}
+
+	actions
+	{
+		If(And(Event Player.KursorTeleport >= 0, Event Player.KursorTeleport < Count Of(Event Player.DaftarTargetTeleport)));
+			Event Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+		Else;
+			Event Player.CalonTargetTeleport = Null;
+		End;
+		Event Player.DaftarTargetTeleport = Append To Array(Array(Event Player), Filtered Array(Global.PemainManusia,
+			Current Array Element != Event Player));
+		If(And(Event Player.CalonTargetTeleport != Null, Array Contains(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport)));
+			Event Player.KursorTeleport = Index Of Array Value(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport);
+		Else If(Event Player.KursorTeleport >= Count Of(Event Player.DaftarTargetTeleport));
+			Event Player.KursorTeleport = 0;
 		End;
 	}
 }
