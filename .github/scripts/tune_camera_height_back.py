@@ -25,10 +25,11 @@ if block.count('Min(4.500, Max(Global.JarakKamera,') != 2:
 height_old = 'Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0)'
 height_new = ('Vector(0, Event Player.TinggiAnchorKamera + Min(0.750, Max(0.450, 0.450 '
               '+ (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)')
-# Only camera position/collision anchors should be raised; the final look-at stays on the true eye anchor.
-if block.count(height_old) != 5:
+# There are six uses in the camera rule: raise the first five camera/collision anchors,
+# but keep the final look-at on the actual eye anchor so the reticle does not drift upward.
+if block.count(height_old) != 6:
     raise SystemExit(f'unexpected height anchor count: {block.count(height_old)}')
-block = block.replace(height_old, height_new, 4)
+block = block.replace(height_old, height_new, 5)
 block = block.replace(height_old, 'Vector(0, Event Player.TinggiAnchorKamera, 0)', 1)
 
 old_comment = '"Rotazione diretta come prima persona: nessun lerp/chase sull\'offset. Position Of e Facing Direction vengono letti ogni frame; resta solo il raycast anti-muro."'
