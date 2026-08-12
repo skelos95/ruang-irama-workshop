@@ -68,6 +68,7 @@ variables
 		39: PosSpawnRoom
 		40: PunyaPosSpawn
 		41: CalonTargetTeleport
+		42: TinggiAnchorKamera
 }
 
 subroutines
@@ -1605,35 +1606,36 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Fluida e vicina: 1,35-2,80 m dietro; 0,55-1,20 m a sinistra. Entrambi scalano con Max Health. Look stabile a 25 m, blend 12."
+		"Altezza campionata una volta per eliminare il bob della Eye Position. Posizione camera agganciata al root, yaw-only, blend 0: nessun ritardo avanti/indietro."
+		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
+			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
 			Update Every Frame(
 				Ray Cast Hit Position(
-					Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
-						0 - Min(1.200, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
-						0, 0), Event Player.TargetKamera, Rotation),
-					Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
-						0 - Min(1.200, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
-						0, 0), Event Player.TargetKamera, Rotation)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(2.800, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0019)),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
+						- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
+							* Min(2.800, Max(Global.JarakKamera, Global.JarakKamera
+								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0019))
+						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+							Vector(0, 1, 0)) * Min(1.200, Max(Global.GeserKamera, Global.GeserKamera
+							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
 					Empty Array, Empty Array, False)
 				+ Direction Towards(
 					Ray Cast Hit Position(
-						Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
-							0 - Min(1.200, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
-							0, 0), Event Player.TargetKamera, Rotation),
-						Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
-							0 - Min(1.200, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
-							0, 0), Event Player.TargetKamera, Rotation)
-							- Facing Direction Of(Event Player.TargetKamera) * Min(2.800, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0019)),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
+							- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
+								* Min(2.800, Max(Global.JarakKamera, Global.JarakKamera
+									+ (Max Health(Event Player.TargetKamera) - 200) * 0.0019))
+							+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+								Vector(0, 1, 0)) * Min(1.200, Max(Global.GeserKamera, Global.GeserKamera
+								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
 						Empty Array, Empty Array, False),
-					Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
-						0 - Min(1.200, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
-						0, 0), Event Player.TargetKamera, Rotation)) * Global.BantalanDinding),
-			Update Every Frame(Eye Position(Event Player.TargetKamera)
-				+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 12);
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)) * Global.BantalanDinding),
+			Update Every Frame(
+				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
+					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
@@ -1690,6 +1692,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PosSpawnRoom = Vector(0, 0, 0);
 		Event Player.PunyaPosSpawn = False;
 		Event Player.CalonTargetTeleport = Null;
+		Event Player.TinggiAnchorKamera = 1.500;
 	}
 }
 
