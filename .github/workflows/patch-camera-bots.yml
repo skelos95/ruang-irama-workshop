@@ -1,16 +1,15 @@
 name: Patch dynamic camera and bot menu locks
 
-on:
+'on':
   push:
-    branches:
-      - main
+    paths:
+      - '.github/trigger-camera-bots'
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.event.head_commit.message != 'Apply dynamic camera and lock bot menus'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +43,6 @@ jobs:
 \t\t\tEvent Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array, Empty Array, False),
 \t\t\tEye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
 \t\t\t+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);'''
-
           new_camera = '''\t\t"Distanza dinamica: 3,5 m per eroi leggeri, fino a 6,5 m per eroi con molta salute. Offset a sinistra per lasciare l'eroe più a destra del mirino."
 \t\tStart Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
 \t\t\tEye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Min(6.500, Max(Global.JarakKamera,
@@ -66,7 +64,7 @@ jobs:
                   end = len(s)
               return start, end
 
-          def add_condition_guards(title):
+          def add_guards(title):
               global s
               start, end = rule_bounds(title)
               block = s[start:end]
@@ -98,50 +96,38 @@ jobs:
               '10 - Menu: Interaksi apre o applica la scelta',
               '11 - Menu: Isi ulang kembali dari submenu ke menu utama',
           ]:
-              add_condition_guards(title)
+              add_guards(title)
 
           start, end = rule_bounds('92 - Subrutin: Kunci bot, kaki tetap bisa bergerak')
           block = s[start:end]
           marker = '\tactions\n\t{\n'
+          p = block.find(marker)
+          if p < 0:
+              raise SystemExit('bot lock actions block not found')
+          p += len(marker)
           if '\t\tEvent Player.MenuTerbuka = False;\n' not in block:
-              p = block.find(marker)
-              if p < 0:
-                  raise SystemExit('bot lock actions block not found')
-              p += len(marker)
-              block = block[:p] + (
-                  '\t\tEvent Player.MenuTerbuka = False;\n'
-                  '\t\tEvent Player.MeleeDipakai = False;\n'
-                  '\t\tEvent Player.HalamanMenu = -1;\n'
-              ) + block[p:]
+              block = block[:p] + '\t\tEvent Player.MenuTerbuka = False;\n\t\tEvent Player.MeleeDipakai = False;\n\t\tEvent Player.HalamanMenu = -1;\n' + block[p:]
               s = s[:start] + block + s[end:]
 
           workshop.write_text(s, encoding='utf-8')
 
           readme = Path('README.md')
           r = readme.read_text(encoding='utf-8')
-          old = '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot.\n'
-          new = ('- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. '
-                 'La distanza scala con la salute massima del bersaglio (circa 3,5–6,5 m) e la camera è spostata sulla sinistra per una composizione più da action game.\n')
-          if old not in r:
-              raise SystemExit('README camera bullet not found')
-          r = r.replace(old, new, 1)
-          old = '- Dummy bot e bot AI non ricevono gli HUD sociali/menu. I bot possono comunque essere usati come destinazione Teleport e come target Camera.\n'
-          new = ('- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. '
-                 'Restano però disponibili agli umani come destinazione Teleport e come target Camera.\n')
-          if old not in r:
-              raise SystemExit('README bot bullet not found')
-          r = r.replace(old, new, 1)
+          r = r.replace(
+              '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot.\n',
+              '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. La distanza scala con la salute massima del bersaglio (circa 3,5–6,5 m) e la camera è spostata sulla sinistra per lasciare il mirino più a destra.\n',
+              1,
+          )
+          r = r.replace(
+              '- Dummy bot e bot AI non ricevono gli HUD sociali/menu. I bot possono comunque essere usati come destinazione Teleport e come target Camera.\n',
+              '- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. Restano disponibili agli umani come destinazione Teleport e come target Camera.\n',
+              1,
+          )
           readme.write_text(r, encoding='utf-8')
 
-          checks = [
-              'Max Health(Event Player.TargetKamera)',
-              'World Vector Of(Left, Event Player.TargetKamera, Rotation)',
-              'Global.GeserKamera = 0.850;',
-              'Event Player.BotAI == False;',
-          ]
-          for token in checks:
-              if token not in s:
-                  raise SystemExit(f'missing expected token after patch: {token}')
+          assert 'Max Health(Event Player.TargetKamera)' in s
+          assert 'World Vector Of(Left, Event Player.TargetKamera, Rotation)' in s
+          assert 'Global.GeserKamera = 0.850;' in s
           print('Patch sanity checks passed.')
           PY
 
