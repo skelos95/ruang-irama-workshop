@@ -1606,7 +1606,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Altezza campionata una volta per eliminare il bob della Eye Position. Posizione camera agganciata al root, yaw-only, blend 0: nessun ritardo avanti/indietro."
+		"Root stabile senza head-bob. Il vettore indietro segue anche il pitch della mira; l'offset sinistro resta orizzontale. Tank molto piu lontani in base a Max Health. Blend 50 filtra solo la micro-vibrazione."
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
@@ -1614,28 +1614,26 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 				Ray Cast Hit Position(
 					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
 					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-						- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
-							* Min(2.800, Max(Global.JarakKamera, Global.JarakKamera
-								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0019))
+						- Facing Direction Of(Event Player.TargetKamera) * Min(3.800, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0050))
 						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.200, Max(Global.GeserKamera, Global.GeserKamera
-							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
+							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
+							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
 					Empty Array, Empty Array, False)
 				+ Direction Towards(
 					Ray Cast Hit Position(
 						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
 						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-							- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)
-								* Min(2.800, Max(Global.JarakKamera, Global.JarakKamera
-									+ (Max Health(Event Player.TargetKamera) - 200) * 0.0019))
+							- Facing Direction Of(Event Player.TargetKamera) * Min(3.800, Max(Global.JarakKamera,
+								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0050))
 							+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-								Vector(0, 1, 0)) * Min(1.200, Max(Global.GeserKamera, Global.GeserKamera
-								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0010)),
+								Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
+								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
 						Empty Array, Empty Array, False),
 					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)) * Global.BantalanDinding),
 			Update Every Frame(
 				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
+					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 50);
 	}
 }
 
