@@ -11,7 +11,7 @@ Gli HUD sono disponibili in **English** e **Bahasa Indonesia**, con testi adatta
 - Lista a destra con la soundtrack scelta da ogni giocatore umano.
 - Menu Arcade aperto/chiuso tenendo premuto Melee per 0,5 secondi.
 - Menu `0 - Soundtrack`: 100 generi ordinati dal più tranquillo al più caotico.
-- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. La distanza resta circa 1,35–2,80 m e l’offset sinistro circa 0,55–1,20 m in base alla salute massima. La camera è agganciata alla posizione base del bersaglio con altezza occhi campionata all’attivazione, rotazione orizzontale stabile e nessun blend di inseguimento, per eliminare vibrazione e ritardo avanti/indietro; il raycast evita i muri.
+- Menu `1 - Third-Person Camera`: camera sulla spalla con distanza e offset laterale scalati sulla salute massima. La posizione è più alta e più arretrata per tutti e viene filtrata con un inseguimento di circa 0,08 s per ridurre la vibrazione; il pitch della mira resta completo e il raycast anti-muro rimane immediato.
 - Menu `2 - Name Color`: 20 colori con nomi localizzati in inglese e indonesiano.
 - Menu `3 - HUD Language`: English / Bahasa Indonesia.
 - Menu `4 - Revenge`: tiene conto solo delle kill dirette ricevute dagli altri umani e permette di riscuoterle una alla volta.

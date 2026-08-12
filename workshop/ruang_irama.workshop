@@ -69,6 +69,7 @@ variables
 		40: PunyaPosSpawn
 		41: CalonTargetTeleport
 		42: TinggiAnchorKamera
+		43: PosKameraHalus
 }
 
 subroutines
@@ -311,7 +312,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("MAXIMUM CHAOS")
 		);
 		Global.NomorUrut = 0;
-		Global.JarakKamera = 1.350;
+		Global.JarakKamera = 1.750;
 		Global.GeserKamera = 0.550;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 25;
@@ -942,6 +943,7 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 			Call Subroutine(SegarkanTargetKamera);
 			Event Player.KursorKamera %= Count Of(Event Player.DaftarTargetKamera) + 2;
 			If(Event Player.KursorKamera == 0);
+				Stop Chasing Player Variable(Event Player, PosKameraHalus);
 				Stop Camera(Event Player);
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
@@ -1233,6 +1235,7 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 
 	actions
 	{
+		Stop Chasing Player Variable(Event Player, PosKameraHalus);
 		Stop Camera(Event Player);
 		Event Player.ModeKamera = 0;
 		Event Player.TargetKamera = Null;
@@ -1605,35 +1608,40 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	actions
 	{
 		Abort If(Event Player.TargetKamera == Null);
+		Stop Chasing Player Variable(Event Player, PosKameraHalus);
 		Stop Camera(Event Player);
-		"Root stabile senza head-bob. Il vettore indietro segue anche il pitch della mira; l'offset sinistro resta orizzontale. Tank molto piu lontani in base a Max Health. Blend 50 filtra solo la micro-vibrazione."
+		"Compromesso fluidita: la posizione ideale viene filtrata in 0,08 s. Root stabile, +0,35 m in altezza, pitch completo, raycast muri immediato."
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
+		Event Player.PosKameraHalus = Position Of(Event Player.TargetKamera)
+			+ Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0)
+			- Facing Direction Of(Event Player.TargetKamera) * Min(4.200, Max(Global.JarakKamera,
+				Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+			+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+				Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
+				+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016));
+		Chase Player Variable Over Time(Event Player, PosKameraHalus,
+			Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0)
+				- Facing Direction Of(Event Player.TargetKamera) * Min(4.200, Max(Global.JarakKamera,
+					Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+				+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+					Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
+					+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)), 0.080, Destination and Duration);
 		Start Camera(Event Player,
 			Update Every Frame(
 				Ray Cast Hit Position(
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(3.800, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0050))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
-							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0),
+					Event Player.PosKameraHalus,
 					Empty Array, Empty Array, False)
 				+ Direction Towards(
 					Ray Cast Hit Position(
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-							- Facing Direction Of(Event Player.TargetKamera) * Min(3.800, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0050))
-							+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-								Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
-								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0),
+						Event Player.PosKameraHalus,
 						Empty Array, Empty Array, False),
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)) * Global.BantalanDinding),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0)) * Global.BantalanDinding),
 			Update Every Frame(
-				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 50);
+				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera + 0.350, 0)
+					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
@@ -1691,6 +1699,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PunyaPosSpawn = False;
 		Event Player.CalonTargetTeleport = Null;
 		Event Player.TinggiAnchorKamera = 1.500;
+		Event Player.PosKameraHalus = Vector(0, 0, 0);
 	}
 }
 
