@@ -1,0 +1,28 @@
+name: Run hero-independent camera pitch stabilization
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Run hero-independent camera pitch stabilization'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply pitch stabilization
+        run: python .github/scripts/stabilize_camera_pitch.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop .github/scripts/stabilize_camera_pitch.py .github/workflows/run-stabilize-camera-pitch.yml
+          git diff --cached --check
+          git commit -m "Stabilize third-person pitch across heroes"
+          git push
