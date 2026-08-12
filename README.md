@@ -11,7 +11,7 @@ Gli HUD sono disponibili in **English** e **Bahasa Indonesia**, con testi adatta
 - Lista a destra con la soundtrack scelta da ogni giocatore umano.
 - Menu Arcade aperto/chiuso tenendo premuto Melee per 0,5 secondi.
 - Menu `0 - Soundtrack`: 100 generi ordinati dal più tranquillo al più caotico.
-- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot.
+- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. La distanza parte da circa 3,5 m e aumenta in base alla salute massima del bersaglio fino a circa 6,5 m; la camera è spostata verso sinistra per lasciare il mirino più a destra e dare più spazio visivo all'eroe.
 - Menu `2 - Name Color`: 20 colori con nomi localizzati in inglese e indonesiano.
 - Menu `3 - HUD Language`: English / Bahasa Indonesia.
 - Menu `4 - Revenge`: tiene conto solo delle kill dirette ricevute dagli altri umani e permette di riscuoterle una alla volta.
@@ -19,7 +19,7 @@ Gli HUD sono disponibili in **English** e **Bahasa Indonesia**, con testi adatta
 - Teleport verso un target effettuato vicino al bersaglio usando una posizione camminabile invece di sovrapporsi al suo corpo.
 - Spawn Room memorizzata quando il giocatore entra nella propria stanza di spawn; non è possibile riutilizzarla se si è già dentro.
 - Crouch mostra nome, eroe e percentuale Ultimate del target vicino al reticolo; in terza persona mostra anche il proprio nome sopra la testa.
-- Dummy bot e bot AI non ricevono gli HUD sociali/menu. I bot possono comunque essere usati come destinazione Teleport e come target Camera.
+- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. Restano però disponibili agli umani come destinazione Teleport e come target Camera.
 - Gli attacchi e le abilità dei bot restano disabilitati, mentre il movimento rimane disponibile.
 
 Il sorgente principale è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop).
@@ -55,8 +55,10 @@ Il sorgente principale è [`workshop/ruang_irama.workshop`](workshop/ruang_irama
 - `Is Dummy Bot` identifica direttamente i dummy Workshop. Per distinguere i normali bot AI dagli umani viene mantenuto il workaround già presente basato su `Start Forcing Dummy Bot Name`.
 - Gli HUD sociali vengono creati solo dopo che un giocatore è stato confermato umano.
 - Il menu Teleport usa `All Players(All Teams)` per includere umani, bot AI e dummy bot.
+- Tutte le regole di input del Menu Arcade verificano esplicitamente che il viewer sia umano, non sia un bot AI e non sia un dummy bot.
 - Il sistema Revenge riguarda solo gli umani e non considera assist.
 - Il timer centrale usa `Match Time` e viene inizializzato a 1800 secondi.
+- La camera in terza persona usa `Max Health` per adattare la distanza, con raycast anti-clipping e offset laterale sinistro.
 
 ## Struttura
 
@@ -70,4 +72,4 @@ tools/validate_workshop.py      validatore statico
 
 ## Versione attuale
 
-**AFK Dedicated Server** — lobby Arcade sociale bilingue con soundtrack, telecamera, colori, Revenge, Teleport e supporto player/bot.
+**AFK Dedicated Server** — lobby Arcade sociale bilingue con soundtrack, telecamera dinamica, colori, Revenge, Teleport e supporto player/bot.
