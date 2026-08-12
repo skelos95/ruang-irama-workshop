@@ -310,8 +310,8 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("MAXIMUM CHAOS")
 		);
 		Global.NomorUrut = 0;
-		Global.JarakKamera = 4;
-		Global.GeserKamera = 0;
+		Global.JarakKamera = 3.500;
+		Global.GeserKamera = 0.850;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 100;
 		Set Match Time(1800);
@@ -578,6 +578,8 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 	conditions
 	{
 		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Is Alive(Event Player) == True;
 		Event Player.MeleeDipakai == False;
 		Is Button Held(Event Player, Button(Melee)) == True;
@@ -639,6 +641,9 @@ rule("05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MeleeDipakai == True;
 		Is Button Held(Event Player, Button(Melee)) == False;
 	}
@@ -663,6 +668,9 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Is Button Held(Event Player, Button(Primary Fire)) == True;
 	}
@@ -707,6 +715,9 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Is Button Held(Event Player, Button(Secondary Fire)) == True;
 	}
@@ -754,6 +765,9 @@ rule("07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 1;
 	}
@@ -777,6 +791,9 @@ rule("07c - Menu Revenge: Segarkan daftar pemain")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 4;
 	}
@@ -801,6 +818,9 @@ rule("07d - Menu Teleport: Segarkan Spawn Room dan pemain")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 5;
 	}
@@ -825,6 +845,9 @@ rule("08 - Menu 0: Lompat mundur sepuluh genre")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 0;
 		Is Button Held(Event Player, Button(Jump)) == True;
@@ -849,6 +872,9 @@ rule("09 - Menu 0: Jongkok maju sepuluh genre")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 0;
 		Is Button Held(Event Player, Button(Crouch)) == True;
@@ -873,6 +899,9 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Is Button Held(Event Player, Button(Interact)) == True;
 	}
@@ -1038,6 +1067,9 @@ rule("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu != -1;
 		Is Button Held(Event Player, Button(Reload)) == True;
@@ -1538,6 +1570,9 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 
 	actions
 	{
+		Event Player.MenuTerbuka = False;
+		Event Player.MeleeDipakai = False;
+		Event Player.HalamanMenu = -1;
 		Set Primary Fire Enabled(Event Player, False);
 		Set Secondary Fire Enabled(Event Player, False);
 		Set Ability 1 Enabled(Event Player, False);
@@ -1558,7 +1593,7 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 	}
 }
 
-rule("93 - Subrutin: Kamera terza persona centrata sulla mira")
+rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 {
 	event
 	{
@@ -1570,13 +1605,16 @@ rule("93 - Subrutin: Kamera terza persona centrata sulla mira")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"La camera sta esattamente dietro la direzione di mira. Nessun offset laterale: la visuale resta parallela a quella dell'eroe."
+		"3,5 m per eroi leggeri; aumenta con Max Health fino a 6,5 m. L'offset laterale usa il vettore sinistro rispetto alla mira."
 		Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
-			Eye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array,
-			Empty Array, False) + Direction Towards(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera), Eye Position(
-			Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array, Empty Array, False),
-			Eye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
-			+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
+			Eye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Min(6.500, Max(Global.JarakKamera,
+			Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.006)) + Cross Product(Facing Direction Of(
+			Event Player.TargetKamera), Vector(0, 1, 0)) * Global.GeserKamera, Empty Array, Empty Array, False) + Direction Towards(
+			Ray Cast Hit Position(Eye Position(Event Player.TargetKamera), Eye Position(Event Player.TargetKamera) - Facing Direction Of(
+			Event Player.TargetKamera) * Min(6.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200)
+			* 0.006)) + Cross Product(Facing Direction Of(Event Player.TargetKamera), Vector(0, 1, 0)) * Global.GeserKamera, Empty Array,
+			Empty Array, False), Eye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(
+			Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
