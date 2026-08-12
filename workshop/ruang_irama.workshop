@@ -1638,7 +1638,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Rotazione diretta senza smoothing. Distanza dietro yaw-only stabile; il pitch sposta verticalmente la camera al 50 percento per ridurre recoil/bob senza perdere la visuale su-giu."
+		"Rotazione diretta senza smoothing. Pitch camera 50 percento normalmente; Sierra usa 18 percento per eliminare la sua ondulazione mantenendo la mira verticale completa."
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
@@ -1652,7 +1652,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
 						+ Vector(0, 0 - Y Component Of(Facing Direction Of(Event Player.TargetKamera))
 							* Min(4.500, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * 0.500, 0)
+								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.180 : 0.500), 0)
 						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
 							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
 							+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
@@ -1666,7 +1666,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
 						+ Vector(0, 0 - Y Component Of(Facing Direction Of(Event Player.TargetKamera))
 							* Min(4.500, Max(Global.JarakKamera,
-								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * 0.500, 0)
+								Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) * (Hero Of(Event Player.TargetKamera) == Hero(Sierra) ? 0.180 : 0.500), 0)
 							+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
 								Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera
 								+ (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
