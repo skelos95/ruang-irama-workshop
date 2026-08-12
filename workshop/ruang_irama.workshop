@@ -70,6 +70,7 @@ variables
 		41: CalonTargetTeleport
 		42: TinggiAnchorKamera
 		43: PosKameraHalus
+		44: HeroKameraTerakhir
 }
 
 subroutines
@@ -1243,6 +1244,36 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 	}
 }
 
+rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.ModeKamera != 0;
+		Event Player.TargetKamera != Null;
+		Entity Exists(Event Player.TargetKamera) == True;
+		Hero Of(Event Player.TargetKamera) != Event Player.HeroKameraTerakhir;
+	}
+
+	actions
+	{
+		"Aspetta due frame per lasciare stabilizzare il nuovo eroe, poi aggiorna solo l'altezza base. Start Camera resta attivo e fluido."
+		Wait(0.032, Ignore Condition);
+		Abort If(Event Player.TargetKamera == Null);
+		Abort If(Entity Exists(Event Player.TargetKamera) == False);
+		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
+			- Position Of(Event Player.TargetKamera))));
+		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
+	}
+}
+
 rule("17 - Revenge: Catat solo il killer diretto, bukan assist")
 {
 	event
@@ -1608,6 +1639,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
 		"Rotazione diretta invariata. Camera un po piu indietro e altezza scalata con Max Health; il punto di mira resta sulla vera altezza occhi per non spostare il mirino."
+		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
@@ -1693,6 +1725,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.CalonTargetTeleport = Null;
 		Event Player.TinggiAnchorKamera = 1.500;
 		Event Player.PosKameraHalus = Vector(0, 0, 0);
+		Event Player.HeroKameraTerakhir = Null;
 	}
 }
 
