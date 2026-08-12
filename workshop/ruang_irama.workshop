@@ -1637,23 +1637,23 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"Camera unica e diretta per se stessi e per gli altri: nessun smoothing, wait o loop. Position Of e Facing Direction vengono letti ogni frame."
+		"Camera diretta. Se un muro accorcia la distanza, abbassa progressivamente la camera fino a 0.40 m per mantenere visibile la schiena dell'eroe."
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Start Camera(Event Player,
 			Update Every Frame(
 				Ray Cast Hit Position(
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
 						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
 						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
 						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
 							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
 						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
 							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
 							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-					Empty Array, Empty Array, False)
+						Empty Array, Empty Array, False)
 				+ Direction Towards(
 					Ray Cast Hit Position(
 						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
@@ -1667,7 +1667,26 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
 						Empty Array, Empty Array, False),
 					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Global.BantalanDinding),
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Global.BantalanDinding
+				- Vector(0, Min(0.400, Distance Between(
+					Ray Cast Hit Position(
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
+						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
+						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
+							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
+						Empty Array, Empty Array, False),
+					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
+						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
+						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
+							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016))) * 0.300), 0)),
 			Update Every Frame(
 				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
 					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
