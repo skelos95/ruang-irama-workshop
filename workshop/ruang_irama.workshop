@@ -310,10 +310,10 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("MAXIMUM CHAOS")
 		);
 		Global.NomorUrut = 0;
-		Global.JarakKamera = 3.000;
-		Global.GeserKamera = 1.150;
+		Global.JarakKamera = 1.650;
+		Global.GeserKamera = 0.700;
 		Global.BantalanDinding = 0.200;
-		Global.JarakBidik = 1000;
+		Global.JarakBidik = 300;
 		Set Match Time(1800);
 
 		Create HUD Text(Global.PemainManusia, Null,
@@ -1605,17 +1605,35 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Stop Camera(Event Player);
-		"3,0 m per eroi leggeri; aumenta con Max Health fino a 5,8 m. Offset sinistro 1,15 m e mira convergente sul raycast reale dell'eroe."
-		Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
-			Eye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Min(5.800, Max(Global.JarakKamera,
-			Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) + Cross Product(Facing Direction Of(
-			Event Player.TargetKamera), Vector(0, 1, 0)) * Global.GeserKamera, Empty Array, Empty Array, False) + Direction Towards(
-			Ray Cast Hit Position(Eye Position(Event Player.TargetKamera), Eye Position(Event Player.TargetKamera) - Facing Direction Of(
-			Event Player.TargetKamera) * Min(5.800, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200)
-			* 0.0055)) + Cross Product(Facing Direction Of(Event Player.TargetKamera), Vector(0, 1, 0)) * Global.GeserKamera, Empty Array,
-			Empty Array, False), Eye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
-			Eye Position(Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik,
-			All Players(All Teams), Event Player.TargetKamera, True)), 0);
+		"Camera fluida: distanza 1,65-3,60 m e offset sinistro 0,70-1,45 m, entrambi scalati con Max Health. Blend 50 riduce gli scatti."
+		Start Camera(Event Player,
+			Ray Cast Hit Position(
+				Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
+					0 - Min(1.450, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0012)),
+					0, 0), Event Player.TargetKamera, Rotation),
+				Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
+					0 - Min(1.450, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0012)),
+					0, 0), Event Player.TargetKamera, Rotation)
+					- Facing Direction Of(Event Player.TargetKamera) * Min(3.600, Max(Global.JarakKamera,
+						Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0024)),
+				Null, All Players(All Teams), True)
+			+ Direction Towards(
+				Ray Cast Hit Position(
+					Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
+						0 - Min(1.450, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0012)),
+						0, 0), Event Player.TargetKamera, Rotation),
+					Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
+						0 - Min(1.450, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0012)),
+						0, 0), Event Player.TargetKamera, Rotation)
+						- Facing Direction Of(Event Player.TargetKamera) * Min(3.600, Max(Global.JarakKamera,
+							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0024)),
+					Null, All Players(All Teams), True),
+				Eye Position(Event Player.TargetKamera) + World Vector Of(Vector(
+					0 - Min(1.450, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0012)),
+					0, 0), Event Player.TargetKamera, Rotation)) * Global.BantalanDinding,
+			Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
+				Eye Position(Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik,
+				All Players(All Teams), Event Player.TargetKamera, True), 50);
 	}
 }
 
