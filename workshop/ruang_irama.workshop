@@ -1263,6 +1263,11 @@ rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
 
 	actions
 	{
+		"Hero Of cambia prima che Eye Position del nuovo modello sia sempre stabile. Aspetta solo durante il cambio eroe, poi ricalibra una volta."
+		Wait(0.100, Ignore Condition);
+		Abort If(Event Player.ModeKamera == 0);
+		Abort If(Event Player.TargetKamera == Null);
+		Abort If(Entity Exists(Event Player.TargetKamera) == False);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
