@@ -1,0 +1,156 @@
+name: Patch dynamic camera and bot menu locks
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Apply dynamic camera and lock bot menus'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch Workshop and README
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workshop = Path('workshop/ruang_irama.workshop')
+          s = workshop.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              '\t\tGlobal.JarakKamera = 4;\n\t\tGlobal.GeserKamera = 0;',
+              '\t\tGlobal.JarakKamera = 3.500;\n\t\tGlobal.GeserKamera = 0.850;',
+              'camera globals',
+          )
+
+          old_camera = '''\t\t"La camera sta esattamente dietro la direzione di mira. Nessun offset laterale: la visuale resta parallela a quella dell'eroe."
+\t\tStart Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
+\t\t\tEye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array,
+\t\t\tEmpty Array, False) + Direction Towards(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera), Eye Position(
+\t\t\tEvent Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array, Empty Array, False),
+\t\t\tEye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
+\t\t\t+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);'''
+
+          new_camera = '''\t\t"Distanza dinamica: 3,5 m per eroi leggeri, fino a 6,5 m per eroi con molta salute. Offset a sinistra per lasciare l'eroe più a destra del mirino."
+\t\tStart Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
+\t\t\tEye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Min(6.500, Max(Global.JarakKamera,
+\t\t\tGlobal.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.006)) + World Vector Of(Left,
+\t\t\tEvent Player.TargetKamera, Rotation) * Global.GeserKamera, Empty Array, Empty Array, False) + Direction Towards(Ray Cast Hit Position(
+\t\t\tEye Position(Event Player.TargetKamera), Eye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera)
+\t\t\t* Min(6.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.006))
+\t\t\t+ World Vector Of(Left, Event Player.TargetKamera, Rotation) * Global.GeserKamera, Empty Array, Empty Array, False),
+\t\t\tEye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
+\t\t\t+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);'''
+          replace_once(old_camera, new_camera, 'camera action')
+
+          def rule_bounds(title):
+              start = s.find(f'rule("{title}")')
+              if start < 0:
+                  raise SystemExit(f'rule not found: {title}')
+              end = s.find('\nrule("', start + 1)
+              if end < 0:
+                  end = len(s)
+              return start, end
+
+          def add_condition_guards(title):
+              global s
+              start, end = rule_bounds(title)
+              block = s[start:end]
+              marker = '\tconditions\n\t{\n'
+              pos = block.find(marker)
+              if pos < 0:
+                  raise SystemExit(f'conditions block not found: {title}')
+              guards = [
+                  '\t\tEvent Player.Manusia == True;\n',
+                  '\t\tEvent Player.BotAI == False;\n',
+                  '\t\tIs Dummy Bot(Event Player) == False;\n',
+              ]
+              insert = ''.join(g for g in guards if g.strip() not in block)
+              if insert:
+                  p = pos + len(marker)
+                  block = block[:p] + insert + block[p:]
+                  s = s[:start] + block + s[end:]
+
+          for title in [
+              '05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup',
+              '05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi',
+              '06 - Menu: Tembakan utama memilih berikutnya',
+              '07 - Menu: Tembakan sekunder memilih sebelumnya',
+              '07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton',
+              '07c - Menu Revenge: Segarkan daftar pemain',
+              '07d - Menu Teleport: Segarkan Spawn Room dan pemain',
+              '08 - Menu 0: Lompat mundur sepuluh genre',
+              '09 - Menu 0: Jongkok maju sepuluh genre',
+              '10 - Menu: Interaksi apre o applica la scelta',
+              '11 - Menu: Isi ulang kembali dari submenu ke menu utama',
+          ]:
+              add_condition_guards(title)
+
+          start, end = rule_bounds('92 - Subrutin: Kunci bot, kaki tetap bisa bergerak')
+          block = s[start:end]
+          marker = '\tactions\n\t{\n'
+          if '\t\tEvent Player.MenuTerbuka = False;\n' not in block:
+              p = block.find(marker)
+              if p < 0:
+                  raise SystemExit('bot lock actions block not found')
+              p += len(marker)
+              block = block[:p] + (
+                  '\t\tEvent Player.MenuTerbuka = False;\n'
+                  '\t\tEvent Player.MeleeDipakai = False;\n'
+                  '\t\tEvent Player.HalamanMenu = -1;\n'
+              ) + block[p:]
+              s = s[:start] + block + s[end:]
+
+          workshop.write_text(s, encoding='utf-8')
+
+          readme = Path('README.md')
+          r = readme.read_text(encoding='utf-8')
+          old = '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot.\n'
+          new = ('- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. '
+                 'La distanza scala con la salute massima del bersaglio (circa 3,5–6,5 m) e la camera è spostata sulla sinistra per una composizione più da action game.\n')
+          if old not in r:
+              raise SystemExit('README camera bullet not found')
+          r = r.replace(old, new, 1)
+          old = '- Dummy bot e bot AI non ricevono gli HUD sociali/menu. I bot possono comunque essere usati come destinazione Teleport e come target Camera.\n'
+          new = ('- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. '
+                 'Restano però disponibili agli umani come destinazione Teleport e come target Camera.\n')
+          if old not in r:
+              raise SystemExit('README bot bullet not found')
+          r = r.replace(old, new, 1)
+          readme.write_text(r, encoding='utf-8')
+
+          checks = [
+              'Max Health(Event Player.TargetKamera)',
+              'World Vector Of(Left, Event Player.TargetKamera, Rotation)',
+              'Global.GeserKamera = 0.850;',
+              'Event Player.BotAI == False;',
+          ]
+          for token in checks:
+              if token not in s:
+                  raise SystemExit(f'missing expected token after patch: {token}')
+          print('Patch sanity checks passed.')
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop README.md
+          git diff --cached --check
+          git commit -m "Apply dynamic camera and lock bot menus"
+          git push
