@@ -1,0 +1,31 @@
+name: Run smooth camera chase patch
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Run smooth camera chase patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply smooth camera patch
+        run: python .github/scripts/smooth_camera_chase.py
+
+      - name: Validate static Workshop syntax
+        run: python tools/validate_workshop.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop README.md .github/scripts/smooth_camera_chase.py .github/workflows/run-smooth-camera-chase.yml
+          git diff --cached --check
+          git commit -m "Smooth third-person camera with filtered chase"
+          git push
