@@ -950,12 +950,6 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 					"First person restored. You may pretend that never happened.") : Custom String(
 					"Kamera orang pertama kembali. Tidak ada yang melihat tadi."));
 			Else If(Event Player.KursorKamera == 1);
-				If(Event Player.ModeKamera == 0);
-					"Precarica la camera custom sulla visuale corrente per un solo frame: evita il flash del passaggio prima persona -> Start Camera."
-					Start Camera(Event Player, Eye Position(Event Player), Eye Position(Event Player)
-						+ Facing Direction Of(Event Player) * Global.JarakBidik, 0);
-					Wait(0.016, Ignore Condition);
-				End;
 				Event Player.TargetKamera = Event Player;
 				Event Player.ModeKamera = 1;
 				Call Subroutine(MulaiKamera);
@@ -969,12 +963,6 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 					Event Player.CalonTargetKamera = Null;
 				End;
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
-					If(Event Player.ModeKamera == 0);
-						"Anche quando si inizia a guardare un altro giocatore, assorbe il cambio di rendering sulla visuale corrente per un frame."
-						Start Camera(Event Player, Eye Position(Event Player), Eye Position(Event Player)
-							+ Facing Direction Of(Event Player) * Global.JarakBidik, 0);
-						Wait(0.016, Ignore Condition);
-					End;
 					Event Player.TargetKamera = Event Player.CalonTargetKamera;
 					Event Player.ModeKamera = 2;
 					Call Subroutine(MulaiKamera);
@@ -1648,6 +1636,7 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	actions
 	{
 		Abort If(Event Player.TargetKamera == Null);
+		Stop Camera(Event Player);
 		"Camera diretta. Vicino ai muri abbassa solo quanto consente lo spazio reale e riduce il padding quando il muro e troppo vicino, evitando di entrare nel modello."
 		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
 		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
