@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.5.2.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.5.3.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -256,6 +256,18 @@ def call_texts(source: str, call_name: str) -> list[str]:
         closing = find_matching(source, opening, "(", ")")
         calls.append(source[match.start() : closing + 1])
     return calls
+
+
+def whole_call_argument(expression: str, call_name: str) -> str | None:
+    """Restituisce l'argomento solo se la chiamata avvolge l'intera espressione."""
+    prefix = f"{call_name}("
+    if not expression.startswith(prefix):
+        return None
+    opening = len(call_name)
+    closing = find_matching(expression, opening, "(", ")")
+    if closing != len(expression) - 1:
+        return None
+    return expression[opening + 1 : closing]
 
 
 def rules_containing(rules: list[Rule], *tokens: str) -> list[Rule]:
@@ -723,50 +735,26 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
 def check_camera(
     checks: Checks, source: str, rules: list[Rule], player_names: set[str]
 ) -> None:
-    cache_names = (
+    legacy_cache_names = (
         "TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera",
-        "ArahMendatarKamera", "PosisiRelatifKamera",
+        "ArahMendatarKamera", "PosisiRelatifKamera", "TinggiJangkarKamera",
     )
-    for name in cache_names:
-        checks.require(name in player_names, f"cache camera non dichiarata: {name}")
-        checks.require(f"Event Player.{name}" in source, f"cache camera non usata: {name}")
+    for name in legacy_cache_names:
+        checks.require(name not in player_names, f"cache camera server legacy ancora dichiarata: {name}")
+        checks.require(f"Event Player.{name}" not in source, f"cache camera server legacy ancora usata: {name}")
     checks.equal(len(call_texts(source, "Ray Cast Hit Position")), 1, "Ray Cast Hit Position nel sorgente")
     ray_rules = rules_containing(rules, "Ray Cast Hit Position")
     checks.equal(len(ray_rules), 1, "regole che eseguono il raycast camera")
     if ray_rules:
-        camera_tick = ray_rules[0].body
         checks.require(
-            "Event Player.TitikBenturanKamera = Ray Cast Hit Position" in camera_tick,
-            "risultato raycast non salvato nella cache TitikBenturanKamera",
+            "Subroutine;" in ray_rules[0].body and "MulaiKamera;" in ray_rules[0].body,
+            "raycast camera non confinato alla subroutine MulaiKamera",
         )
-        for token in (
-            "Event Player.TitikJangkarKamera =", "Event Player.TitikIdealKamera =",
-            "Event Player.TitikAkhirKamera =", "Eye Position(Event Player.TargetKamera)",
-            "Event Player.ArahMendatarKamera = Update Every Frame(Direction From Angles(",
-            "Event Player.PosisiRelatifKamera = Event Player.TitikAkhirKamera - Update Every Frame(Position Of(Event Player.TargetKamera))",
-            "Max Health(Event Player.TargetKamera)", "Entity Exists(Event Player.TargetKamera)",
-        ):
-            checks.require(token in camera_tick, f"tick camera incompleto: {token}")
-        checks.require(
-            "Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera - Event Player.ArahMendatarKamera" in camera_tick,
-            "ofset posteriore camera non limitato al piano orizzontale",
-        )
-        checks.require(
-            "Event Player.TitikJangkarKamera) * 0.250);" in camera_tick,
-            "posizione finale camera priva del bantalan dinding",
-        )
-        checks.require(
-            re.search(
-                r"TitikAkhirKamera\s*=.*?-\s*Vector\s*\(\s*0\s*,",
-                camera_tick,
-                flags=re.DOTALL,
-            ) is None,
-            "abbassamento verticale ondulante ancora presente nella collisione camera",
-        )
-        checks.require(
-            re.search(r"Wait\s*\(\s*0\.016\s*,", camera_tick) is not None,
-            "cache camera non aggiornata a ogni tick",
-        )
+    camera_loops = [
+        rule for rule in rules
+        if "ModeKamera != 0;" in rule.body and "Loop If Condition Is True;" in rule.body
+    ]
+    checks.equal(len(camera_loops), 0, "loop server di aggiornamento camera")
     camera_starts = call_texts(source, "Start Camera")
     checks.equal(len(camera_starts), 1, "Start Camera nel sorgente")
     if camera_starts:
@@ -774,27 +762,51 @@ def check_camera(
         args = top_level_items(camera_starts[0][opening + 1 : -1])
         checks.equal(len(args), 4, "argomenti Start Camera")
         if len(args) == 4:
+            eye = args[1]
+            look = args[2]
+            eye_inner = whole_call_argument(eye, "Update Every Frame")
+            look_inner = whole_call_argument(look, "Update Every Frame")
             checks.require(
-                "Update Every Frame(Position Of(Event Player.TargetKamera) + Event Player.PosisiRelatifKamera)" in args[1],
-                "Start Camera non combina traslazione per-frame e ofset relativo in cache",
+                eye_inner is not None and eye_inner.startswith("First Of(Mapped Array(Array(Ray Cast Hit Position("),
+                "posizione camera non è un raycast monouso rivalutato interamente per frame",
+            )
+            checks.equal(len(call_texts(eye, "Ray Cast Hit Position")), 1, "raycast nell'occhio Start Camera")
+            for token in (
+                "First Of(Mapped Array(Array(Ray Cast Hit Position(",
+                "Eye Position(Event Player.TargetKamera)",
+                "Max Health(Event Player.TargetKamera)",
+                "Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)",
+                "Cross Product(", "Empty Array, Empty Array, False", "Current Array Element",
+                "Min(Global.BantalanDinding, Distance Between(", "* 0.250",
+            ):
+                checks.require(token in eye, f"espressione camera diretta incompleta: {token}")
+            checks.require(
+                eye.count("Update Every Frame(") == 1,
+                "posizione camera contiene rivalutazioni annidate o miste",
             )
             checks.require(
-                "Update Every Frame(" in args[2] and "Eye Position(Event Player.TargetKamera)" in args[2],
+                "Position Of(Event Player.TargetKamera)" not in eye,
+                "posizione camera mescola Position Of con la pipeline visuale Eye Position",
+            )
+            checks.require(
+                look_inner is not None
+                and look_inner.startswith("Eye Position(Event Player.TargetKamera)")
+                and "Facing Direction Of(Event Player.TargetKamera)" in look_inner,
                 "punto di mira camera non rivalutato per frame dall'occhio del target",
             )
-            checks.equal(args[3], "80", "blend nativo Start Camera")
-    stop_paths = [
-        rule for rule in rules
-        if "Stop Camera(Event Player);" in rule.body
-        and "Event Player.ModeKamera = 0;" in rule.body
-        and "Event Player.TargetKamera = Null;" in rule.body
-    ]
-    checks.require(len(stop_paths) >= 2, "percorsi di ritorno alla prima persona non trovati")
-    for rule in stop_paths:
-        checks.require(
-            all(f"Event Player.{name} = Vector(0, 0, 0);" in rule.body for name in cache_names),
-            f"cache camera non azzerate nel percorso {rule.name!r}",
-        )
+            eye_player_refs = set(re.findall(r"Event Player\.([A-Za-z_][A-Za-z0-9_]*)", eye))
+            eye_global_refs = set(re.findall(r"Global\.([A-Za-z_][A-Za-z0-9_]*)", eye))
+            look_player_refs = set(re.findall(r"Event Player\.([A-Za-z_][A-Za-z0-9_]*)", look))
+            look_global_refs = set(re.findall(r"Global\.([A-Za-z_][A-Za-z0-9_]*)", look))
+            checks.equal(eye_player_refs, {"TargetKamera"}, "riferimenti player nell'occhio camera")
+            checks.equal(
+                eye_global_refs,
+                {"JarakKamera", "GeserKamera", "BantalanDinding"},
+                "riferimenti globali nell'occhio camera",
+            )
+            checks.equal(look_player_refs, {"TargetKamera"}, "riferimenti player nel punto di mira")
+            checks.equal(look_global_refs, {"JarakBidik"}, "riferimenti globali nel punto di mira")
+            checks.equal(args[3], "0", "blend Start Camera per aggancio diretto tipo prima persona")
 
 
 def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
@@ -939,13 +951,6 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         )
         checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
         checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
-        checks.require(
-            all(name in leave for name in (
-                "TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera",
-                "ArahMendatarKamera", "PosisiRelatifKamera",
-            )),
-            "cleanup uscita non invalida tutte le cache camera dei viewer",
-        )
         checks.require("Stop Camera" in leave, "cleanup uscita non ferma le camere puntate all'uscente")
 
     for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
@@ -1030,7 +1035,7 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
     if VERSION.exists():
-        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.2", "versione progetto")
+        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.3", "versione progetto")
 
     checks.require(GENRE_DOC.exists(), f"documentazione generi mancante: {GENRE_DOC}")
     if GENRE_DOC.exists():
@@ -1082,7 +1087,7 @@ def main() -> None:
         checks.require(False, f"parsing interrotto: {exc}")
 
     checks.finish()
-    print("OK - controlli statici v0.5.2 superati")
+    print("OK - controlli statici v0.5.3 superati")
     print(
         f"Generi: {len(genres)} | Lingue: 3 | Regole: {len(rules)} | "
         f"Raycast camera: {len(call_texts(source, 'Ray Cast Hit Position'))}"

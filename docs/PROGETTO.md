@@ -1,10 +1,10 @@
-# Note di progetto — versione 0.5.2
+# Note di progetto — versione 0.5.3
 
 ## Identità e obiettivo
 
 Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-La release 0.5.2 migliora la fluidità della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+La release 0.5.3 sostituisce la pipeline della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 
 Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
@@ -107,18 +107,17 @@ Gli outline e i testi usano il colore personale per gli umani e arancione per i 
 
 ## Camera in terza persona
 
-La camera può seguire il viewer o un altro giocatore valido, inclusi bot. Per ogni aggiornamento calcola e conserva in cache:
+La camera può seguire il viewer o un altro giocatore valido, inclusi bot. La 0.5.2 mescolava la posizione del bersaglio rivalutata dal client con un offset assoluto calcolato da un loop server: il test live ha confermato che la differenza fra i due tempi produceva ondulazione e vibrazione del modello.
 
-1. l'anchor sopra il bersaglio;
-2. la posizione ideale dietro la spalla;
-3. l'unico risultato del raycast contro la geometria;
-4. la posizione finale con margine dalla parete;
-5. l'offset relativo rispetto alla posizione del bersaglio;
-6. il punto verso cui guardare.
+La 0.5.3 elimina il loop, il `Wait(0.016)` e tutte le cache coordinate. Un solo `Start Camera` rivaluta nello stesso fotogramma visuale:
 
-Il singolo raycast per tick sostituisce espressioni duplicate e riduce il carico con più camere simultanee. La posizione base del bersaglio viene rivalutata per fotogramma e combinata con l'offset relativo in cache; `Start Camera` usa un blend nativo pari a `80`. L'arretramento usa soltanto lo yaw, così pitch e rinculo non fanno orbitare verticalmente la camera. La collisione conserva il margine lungo il raggio ma non applica più un abbassamento verticale variabile vicino agli spigoli.
+1. l'anchor ricavato da `Eye Position` e dal modello corrente;
+2. la direzione orizzontale dietro la spalla;
+3. l'unico raycast contro la geometria;
+4. il margine dalla parete, riutilizzando il risultato del raycast senza variabili;
+5. il punto di mira con pitch completo.
 
-Altezza, distanza e offset vengono comunque ricalcolati dal modello corrente: questo è importante per D.Mon e per trasformazioni che possono cambiare ingombro senza un normale cambio eroe. La fluidità percepita, le collisioni e il minimo jitter possibile sui bersagli remoti restano verifiche live. Se il bersaglio esce o non è più valido, la camera termina e il viewer torna alla visuale normale.
+Il blend è `0`: non è uno scatto a bassa frequenza, perché l'intera espressione è già aggiornata per fotogramma; evita invece un secondo ritardo sopra la posizione visuale. L'arretramento usa soltanto lo yaw, mentre il pitch rimane nel punto osservato. Altezza, distanza e offset continuano ad adattarsi al modello corrente, incluso D.Mon. La fluidità percepita e le collisioni restano verifiche live; un target remoto può mostrare jitter di rete non presente sulla camera del proprio eroe.
 
 ## Diagnostica e prestazioni
 

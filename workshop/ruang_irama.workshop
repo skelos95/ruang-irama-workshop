@@ -80,20 +80,13 @@ variables
 		39: PosisiRuangMuncul
 		40: PunyaPosisiMuncul
 		41: CalonTargetTeleportasi
-		42: TinggiJangkarKamera
-		43: TargetBalasDendamTerkunci
-		44: TargetBalasDendamDipilih
-		45: TitikJangkarKamera
-		46: TitikIdealKamera
-		47: TitikBenturanKamera
-		48: TitikAkhirKamera
-		49: PelatNamaDinonaktifkan
-		50: KunciBotAktif
-		51: PahlawanBotTerakhir
-		52: IndeksGarisLuar
-		53: PerintahMenu
-		54: ArahMendatarKamera
-		55: PosisiRelatifKamera
+		42: TargetBalasDendamTerkunci
+		43: TargetBalasDendamDipilih
+		44: PelatNamaDinonaktifkan
+		45: KunciBotAktif
+		46: PahlawanBotTerakhir
+		47: IndeksGarisLuar
+		48: PerintahMenu
 }
 
 subroutines
@@ -798,12 +791,6 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 				Stop Camera(Global.PemainManusia[Global.IndeksPembersihan]);
 				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], ModeKamera, 0);
 				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetKamera, Null);
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikJangkarKamera, Vector(0, 0, 0));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikIdealKamera, Vector(0, 0, 0));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikBenturanKamera, Vector(0, 0, 0));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikAkhirKamera, Vector(0, 0, 0));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], ArahMendatarKamera, Vector(0, 0, 0));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PosisiRelatifKamera, Vector(0, 0, 0));
 			End;
 			If(Global.PemainManusia[Global.IndeksPembersihan].TargetInspeksi == Global.PemainPembersihan);
 				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetInspeksi, Null);
@@ -1281,12 +1268,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Stop Camera(Event Player);
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
-				Event Player.TitikJangkarKamera = Vector(0, 0, 0);
-				Event Player.TitikIdealKamera = Vector(0, 0, 0);
-				Event Player.TitikBenturanKamera = Vector(0, 0, 0);
-				Event Player.TitikAkhirKamera = Vector(0, 0, 0);
-				Event Player.ArahMendatarKamera = Vector(0, 0, 0);
-				Event Player.PosisiRelatifKamera = Vector(0, 0, 0);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 					"First person restored. You may pretend that never happened.") : Event Player.IndeksBahasa == 1 ? Custom String(
 					"Kamera orang pertama kembali. Tidak ada yang melihat tadi.") : Custom String(
@@ -1630,12 +1611,6 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 		Stop Camera(Event Player);
 		Event Player.ModeKamera = 0;
 		Event Player.TargetKamera = Null;
-		Event Player.TitikJangkarKamera = Vector(0, 0, 0);
-		Event Player.TitikIdealKamera = Vector(0, 0, 0);
-		Event Player.TitikBenturanKamera = Vector(0, 0, 0);
-		Event Player.TitikAkhirKamera = Vector(0, 0, 0);
-		Event Player.ArahMendatarKamera = Vector(0, 0, 0);
-		Event Player.PosisiRelatifKamera = Vector(0, 0, 0);
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 			"Camera target left. First person has reclaimed you.") : Event Player.IndeksBahasa == 1 ? Custom String(
 			"Target kamera keluar. Orang pertama mengambilmu kembali.") : Custom String(
@@ -1643,49 +1618,6 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 	}
 }
 
-rule("16b - Kamera: Perbarui cache dengan satu raycast per tick")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Manusia == True;
-		Event Player.ModeKamera != 0;
-		Event Player.TargetKamera != Null;
-		Entity Exists(Event Player.TargetKamera) == True;
-	}
-
-	actions
-	{
-		"Ambil input dinamis setiap frame agar cache tidak bergerak bertangga; tinggi tetap mengikuti perubahan model seperti D.Mon."
-		Event Player.TinggiJangkarKamera = Min(2.200, Max(1.000, Y Component Of(Update Every Frame(Eye Position(Event Player.TargetKamera))
-			- Update Every Frame(Position Of(Event Player.TargetKamera)))));
-		Event Player.ArahMendatarKamera = Update Every Frame(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(
-			Event Player.TargetKamera)), 0));
-		Event Player.TitikJangkarKamera = Update Every Frame(Position Of(Event Player.TargetKamera)) + Vector(0, Event Player.TinggiJangkarKamera
-			+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0);
-		"Arah belakang hanya memakai yaw supaya pitch dan recoil tidak mengayunkan posisi kamera secara vertikal."
-		Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera - Event Player.ArahMendatarKamera
-			* Min(4.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-			+ Cross Product(Event Player.ArahMendatarKamera, Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-			Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016));
-		Event Player.TitikBenturanKamera = Ray Cast Hit Position(Event Player.TitikJangkarKamera, Event Player.TitikIdealKamera,
-			Empty Array, Empty Array, False);
-		"Pertahankan bantalan dinding tanpa penurunan Y variabel yang menyebabkan gelombang di tepi geometri."
-		Event Player.TitikAkhirKamera = Event Player.TitikBenturanKamera + Direction Towards(Event Player.TitikBenturanKamera,
-			Event Player.TitikJangkarKamera) * Min(Global.BantalanDinding, Distance Between(Event Player.TitikBenturanKamera,
-			Event Player.TitikJangkarKamera) * 0.250);
-		"Pisahkan translasi target dari ofset kamera supaya pergerakan dasar mengikuti output visual setiap frame."
-		Event Player.PosisiRelatifKamera = Event Player.TitikAkhirKamera - Update Every Frame(Position Of(Event Player.TargetKamera));
-		Wait(0.016, Ignore Condition);
-		Loop If Condition Is True;
-	}
-}
 rule("17 - Balas Dendam: Catat hanya pembunuh langsung")
 {
 	event
@@ -2115,16 +2047,19 @@ rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 		Abort If(Event Player.TargetKamera == Null);
 		Abort If(Entity Exists(Event Player.TargetKamera) == False);
 		Stop Camera(Event Player);
-		Event Player.TinggiJangkarKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
-			- Position Of(Event Player.TargetKamera))));
-		Event Player.TitikJangkarKamera = Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiJangkarKamera, 0);
-		Event Player.ArahMendatarKamera = Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0);
-		Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera;
-		Event Player.TitikBenturanKamera = Event Player.TitikJangkarKamera;
-		Event Player.TitikAkhirKamera = Event Player.TitikJangkarKamera;
-		Event Player.PosisiRelatifKamera = Vector(0, Event Player.TinggiJangkarKamera, 0);
-		Start Camera(Event Player, Update Every Frame(Position Of(Event Player.TargetKamera) + Event Player.PosisiRelatifKamera), Update Every Frame(
-			Eye Position(Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 80);
+		"Satu ekspresi visual memakai satu waktu client: tanpa cache posisi server yang dapat membuat model bergetar."
+		Start Camera(Event Player, Update Every Frame(First Of(Mapped Array(Array(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera)
+			+ Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0), Eye Position(
+			Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
+			- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0) * Min(4.500, Max(
+			Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) + Cross Product(Direction From Angles(
+			Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0), Vector(0, 1, 0)) * Min(1.350, Max(
+			Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)), Empty Array, Empty Array, False)),
+			Current Array Element + Direction Towards(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(
+			0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Min(Global.BantalanDinding, Distance Between(
+			Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(
+			Event Player.TargetKamera) - 200) * 0.0006)), 0)) * 0.250)))), Update Every Frame(Eye Position(Event Player.TargetKamera)
+			+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
@@ -2181,15 +2116,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PosisiRuangMuncul = Vector(0, 0, 0);
 		Event Player.PunyaPosisiMuncul = False;
 		Event Player.CalonTargetTeleportasi = Null;
-		Event Player.TinggiJangkarKamera = 1.500;
 		Event Player.TargetBalasDendamTerkunci = Null;
 		Event Player.TargetBalasDendamDipilih = Null;
-		Event Player.TitikJangkarKamera = Vector(0, 0, 0);
-		Event Player.TitikIdealKamera = Vector(0, 0, 0);
-		Event Player.TitikBenturanKamera = Vector(0, 0, 0);
-		Event Player.TitikAkhirKamera = Vector(0, 0, 0);
-		Event Player.ArahMendatarKamera = Vector(0, 0, 0);
-		Event Player.PosisiRelatifKamera = Vector(0, 0, 0);
 		Event Player.PelatNamaDinonaktifkan = False;
 		Event Player.KunciBotAktif = False;
 		Event Player.PahlawanBotTerakhir = Null;

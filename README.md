@@ -2,7 +2,7 @@
 
 **AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Teleport e ispezione con Crouch senza imporre mappe o impostazioni lobby.
 
-La versione **0.5.2** è allineata alla Season 4: **Heroes of Busan**, iniziata l'11 agosto 2026. La matrice di compatibilità comprende D.Mon e le versioni aggiornate di Busan, Paraíso ed Eichenwalde; le prove che richiedono il client live sono elencate separatamente in [`docs/TEST.md`](docs/TEST.md).
+La versione **0.5.3** è allineata alla Season 4: **Heroes of Busan**, iniziata l'11 agosto 2026. La matrice di compatibilità comprende D.Mon e le versioni aggiornate di Busan, Paraíso ed Eichenwalde; le prove che richiedono il client live sono elencate separatamente in [`docs/TEST.md`](docs/TEST.md).
 
 ## Compatibilità 6v6
 
@@ -26,7 +26,7 @@ La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti.
 - Sei menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge` e `5 - Teleport`.
 - 100 generi musicali e 20 colori, navigabili con wrap circolare.
 - Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
-- Camera dinamica fluida: traslazione rivalutata per fotogramma, arretramento orizzontale, blend nativo e un solo raycast anti-clipping per aggiornamento.
+- Camera dinamica calcolata interamente dal renderer: posizione, arretramento orizzontale, collisione e mira condividono lo stesso fotogramma, con un solo raycast e senza loop server.
 - Ispezione Crouch con nome, eroe e carica Ultimate; gli umani usano il proprio colore e i bot un outline arancione.
 - Revenge basato sulle eliminazioni dirette ricevute dagli altri umani, con identità del bersaglio preservata anche durante cambiamenti della lobby.
 - Teleport verso l'ultima Spawn Room visitata, obiettivi disponibili e giocatori presenti, inclusi bot AI e dummy bot quando validi.
@@ -85,13 +85,18 @@ tools/validate_workshop.py      validatore statico read-only
 
 ## Versione attuale
 
-**0.5.2 — Fluidità camera in terza persona**
+**0.5.3 — Camera interamente per-frame**
+
+- Rimossi il loop camera e tutte le cache di posizione sincronizzate dal server.
+- Anchor, spalla, raycast, margine parete e punto di mira sono rivalutati nella stessa pipeline visuale del client.
+- Blend `0` per evitare un secondo inseguitore sopra coordinate già aggiornate per fotogramma.
+
+Release precedente: **0.5.2 — Primo intervento sulla fluidità camera**
 
 - Eliminata l'oscillazione verticale causata da pitch e correzione variabile vicino agli spigoli.
-- La traslazione del bersaglio è rivalutata per fotogramma, mentre il blend nativo `80` assorbe gli aggiornamenti della cache.
-- Rimangono un solo raycast per tick, distanza dinamica e adattamento al modello di D.Mon.
+- Il test live ha però mostrato che la traslazione per-frame combinata con un offset server e blend `80` poteva ancora produrre vibrazione; la 0.5.3 sostituisce quella pipeline.
 
-Release precedente: **0.5.1 — Correzione importazione Workshop**
+Release precedente stabile per l'import: **0.5.1 — Correzione importazione Workshop**
 
 - Sostituito il tipo evento inesistente `Player Spawned` con transizioni compatibili di morte/despawn e `Is Alive`.
 - Il validatore ora rifiuta tipi evento non riconosciuti dal Workshop.

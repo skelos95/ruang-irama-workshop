@@ -1,14 +1,14 @@
-# Rapporto di validazione — versione 0.5.2
+# Rapporto di validazione — versione 0.5.3
 
 Data: 2026-08-13
 
-Release: **AFK Dedicated Server 0.5.2 — Season 4: Heroes of Busan**
+Release: **AFK Dedicated Server 0.5.3 — Season 4: Heroes of Busan**
 
 Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repository da ciò che richiede il client Overwatch. Un controllo statico superato non certifica stabilità, prestazioni o compatibilità live.
 
 ## Controlli statici
 
-**Stato: superati sul sorgente finale della 0.5.2.**
+**Stato: superati sul sorgente finale della 0.5.3.**
 
 Il gate della release deve essere eseguito sul blob finale di `workshop/ruang_irama.workshop`, insieme alla documentazione e al validatore della stessa revisione. Il controllo comprende:
 
@@ -21,7 +21,7 @@ Il gate della release deve essere eseguito sul blob finale di `workshop/ruang_ir
 - due sentinelle reali `U+200B`;
 - sei menu e navigazione Soundtrack corretta;
 - singolo raycast nel percorso camera;
-- traslazione camera rivalutata per fotogramma, direzione posteriore orizzontale, nessuna correzione Y ondulante e blend nativo `80`;
+- camera interamente per-frame, nessuna cache/loop server, direzione posteriore orizzontale, un solo raycast con margine e blend `0`;
 - assenza di azioni di score, vittoria o pareggio;
 - `Restart Match` usato soltanto allo zero del timer personalizzato;
 - invarianti degli array paralleli e pool slot `0..11`;
@@ -36,12 +36,12 @@ Comando eseguito dalla radice del repository:
 Esito:
 
 ```text
-OK - controlli statici v0.5.2 superati
-Generi: 100 | Lingue: 3 | Regole: 49 | Raycast camera: 1
+OK - controlli statici v0.5.3 superati
+Generi: 100 | Lingue: 3 | Regole: 48 | Raycast camera: 1
 Nota: importazione, stress a 12 giocatori e test modalità restano prove live obbligatorie.
 ```
 
-Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue, un solo raycast camera e la nuova pipeline di fluidità. Non vengono usati come gate rigido i conteggi di subroutine o HUD perché non sono criteri stabili della release.
+Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue, un solo raycast camera e l'assenza della pipeline server che vibrava. Non vengono usati come gate rigido i conteggi di subroutine o HUD perché non sono criteri stabili della release.
 
 ## Verifiche live
 
@@ -49,7 +49,7 @@ Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue, un solo
 
 Non sono certificabili dal solo repository:
 
-- reimportazione del blob 0.5.2 nel parser del client Overwatch;
+- reimportazione del blob 0.5.3 nel parser del client Overwatch;
 - comportamento del workaround bot AI con `U+200B` sulla patch dell'11 agosto 2026;
 - riapplicazione event-driven del blocco bot dopo spawn, respawn e cambio eroe;
 - contratto no-score/no-winner e riavvio esclusivo allo zero su Control, Escort, Hybrid, Push, Flashpoint e Clash;
@@ -76,8 +76,9 @@ La release prende come riferimento le [Overwatch Retail Patch Notes — August 1
 - Il parser live può filtrare sottostringhe nei nomi delle regole anche quando la sintassi è valida; i nomi personalizzati vanno quindi ricontrollati durante l'import.
 - Una stringa realmente vuota non distingueva i normali bot AI. Le due sentinelle `U+200B` devono restare byte reali nel file e il loro comportamento va verificato a ogni patch.
 - L'import live della 0.5.0 si interrompeva con `Expected an event type after 'event {' on line 702`: `Player Spawned` non è un tipo evento Workshop valido. La 0.5.1 usa transizioni `Ongoing - Each Player` per morte/despawn e ritorno in vita, e il validatore ora rifiuta qualsiasi tipo evento fuori dall'elenco supportato.
+- Il test live della 0.5.2 ha confermato ondulazione e vibrazione: la causa era la combinazione fra traslazione client per-frame, offset/collisione aggiornati dal server e blend `80`. La 0.5.3 elimina quella pipeline; il risultato visivo resta da riprovare nel client.
 - Bot esclusi dalle liste sociali possono comunque essere target validi per camera, Crouch e Teleport; i test devono coprire entrambe le proprietà.
 
 ## Decisione di rilascio
 
-Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.2 come verificata a 12 giocatori o come visivamente fluida su ogni client. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.
+Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.3 come verificata a 12 giocatori o come visivamente fluida su ogni client. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.
