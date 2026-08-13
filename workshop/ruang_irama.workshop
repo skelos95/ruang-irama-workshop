@@ -334,8 +334,8 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60)),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0}: inspect player, hero & ultimate", Input Binding String(Button(Crouch))) : Custom String(
-			"Tahan {0}: lihat pemain, hero & ultimate", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
+			"Hold {0}: inspect player, hero, ultimate & outlines", Input Binding String(Button(Crouch))) : Custom String(
+			"Tahan {0}: lihat pemain, hero, ultimate & outline", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
 			? Custom String("LOBBY ROSTER & AFK TIME\n ") : Custom String("DAFTAR PEMAIN & WAKTU AFK\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
@@ -351,7 +351,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 	}
 }
 
-rule("00a - Global: Nessun vincitore prima della fine del timer AFK")
+rule("00a - Global: Blocca completamento quando il gameplay inizia")
 {
 	event
 	{
@@ -361,16 +361,14 @@ rule("00a - Global: Nessun vincitore prima della fine del timer AFK")
 	conditions
 	{
 		Global.Siap == True;
-		Total Time Elapsed < Global.DurataServerMinuti * 60;
+		Is Game In Progress == True;
 	}
 
 	actions
 	{
-		"Protezione leggera: la modalita non puo dichiarare vincitori o assegnare punti prima del countdown AFK."
+		"Una sola applicazione quando la modalita entra davvero in gioco."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
-		Wait(0.500, Ignore Condition);
-		Loop If Condition Is True;
 	}
 }
 
@@ -391,28 +389,6 @@ rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisc
 	{
 		"Restart Match non dichiara un vincitore: resetta semplicemente la sessione quando il countdown AFK arriva a zero."
 		Restart Match;
-	}
-}
-
-rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Game In Progress == False;
-	}
-
-	actions
-	{
-		"Avvio leggero: evita i loop aggressivi sulle singole fasi che sovraccaricavano il server."
-		Start Game Mode;
-		Wait(0.050, Ignore Condition);
-		Loop If Condition Is True;
 	}
 }
 
@@ -1218,6 +1194,28 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 	{
 		Event Player.InspeksiAktif = True;
 		Disable Nameplates(All Players(All Teams), Event Player);
+		"Outline di crouch: ogni umano usa il proprio colore scelto; tipo Always per restare visibile anche dietro la geometria."
+		Start Forcing Player Outlines(Event Player, Event Player, True, Event Player.WarnaNama, Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 0)), Event Player, True, Global.DaftarWarna[0], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 1)), Event Player, True, Global.DaftarWarna[1], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 2)), Event Player, True, Global.DaftarWarna[2], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 3)), Event Player, True, Global.DaftarWarna[3], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 4)), Event Player, True, Global.DaftarWarna[4], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 5)), Event Player, True, Global.DaftarWarna[5], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 6)), Event Player, True, Global.DaftarWarna[6], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 7)), Event Player, True, Global.DaftarWarna[7], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 8)), Event Player, True, Global.DaftarWarna[8], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 9)), Event Player, True, Global.DaftarWarna[9], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 10)), Event Player, True, Global.DaftarWarna[10], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 11)), Event Player, True, Global.DaftarWarna[11], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 12)), Event Player, True, Global.DaftarWarna[12], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 13)), Event Player, True, Global.DaftarWarna[13], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 14)), Event Player, True, Global.DaftarWarna[14], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 15)), Event Player, True, Global.DaftarWarna[15], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 16)), Event Player, True, Global.DaftarWarna[16], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 17)), Event Player, True, Global.DaftarWarna[17], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 18)), Event Player, True, Global.DaftarWarna[18], Always);
+		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 19)), Event Player, True, Global.DaftarWarna[19], Always);
 		Call Subroutine(SegarkanTargetInspeksi);
 		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Custom String("{0} {1}  ULT {2}%",
 			Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
@@ -1290,6 +1288,7 @@ rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri o apri menu")
 	actions
 	{
 		Enable Nameplates(All Players(All Teams), Event Player);
+		Stop Forcing Player Outlines(Global.PemainManusia, Event Player);
 		If(Event Player.TeksDunia != Null);
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
