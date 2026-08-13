@@ -410,4 +410,685 @@ def check_source_structure(
         hits = italian_hits(comment)
         checks.require(
             not hits,
-       Áû;∂âûÀk∫wµÁ@âÖ…ùΩµïπ—§ÅM—Ö…–ÅÖµï…Ñà§(ÄÄÄÄÄÄÄÅ•òÅ±ï∏°Ö…ùÃ§ÄÙÙÄ–Ë(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâU¡ëÖ—îÅŸï…‰Å…Öµî°AΩÕ•—•Ω∏Å=ò°Ÿïπ–ÅA±ÖÂï»πQÖ…ùï—-Öµï…Ñ§Ä¨ÅŸïπ–ÅA±ÖÂï»πAΩÕ•Õ•Iï±Ö—•ô-Öµï…Ñ§àÅ•∏ÅÖ…ùÕl≈t∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâM—Ö…–ÅÖµï…ÑÅπΩ∏ÅçΩµâ•πÑÅ—…ÖÕ±ÖÈ•ΩπîÅ¡ï»µô…ÖµîÅîÅΩôÕï–Å…ï±Ö—•ŸºÅ•∏ÅçÖç°îà∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâU¡ëÖ—îÅŸï…‰Å…Öµî†àÅ•∏ÅÖ…ùÕl…tÅÖπêÄâÂîÅAΩÕ•—•Ω∏°Ÿïπ–ÅA±ÖÂï»πQÖ…ùï—-Öµï…Ñ§àÅ•∏ÅÖ…ùÕl…t∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâ¡’π—ºÅë§Åµ•…ÑÅçÖµï…ÑÅπΩ∏Å…•ŸÖ±’—Ö—ºÅ¡ï»Åô…ÖµîÅëÖ±∞ùΩçç°•ºÅëï∞Å—Ö…ùï–à∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπï≈’Ö∞°Ö…ùÕlÕt∞Äà‡¿à∞Äââ±ïπêÅπÖ—•ŸºÅM—Ö…–ÅÖµï…Ñà§(ÄÄÄÅÕ—Ω¡}¡Ö—°ÃÄÙÅl(ÄÄÄÄÄÄÄÅ…’±îÅôΩ»Å…’±îÅ•∏Å…’±ïÃ(ÄÄÄÄÄÄÄÅ•òÄâM—Ω¿ÅÖµï…Ñ°Ÿïπ–ÅA±ÖÂï»§ÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâŸïπ–ÅA±ÖÂï»π5Ωëï-Öµï…ÑÄÙÄ¿ÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâŸïπ–ÅA±ÖÂï»πQÖ…ùï—-Öµï…ÑÄÙÅ9’±∞ÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÅt(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°±ï∏°Õ—Ω¡}¡Ö—°Ã§Ä¯ÙÄ»∞Äâ¡ï…çΩ…Õ§Åë§Å…•—Ω…πºÅÖ±±ÑÅ¡…•µÑÅ¡ï…ÕΩπÑÅπΩ∏Å—…ΩŸÖ—§à§(ÄÄÄÅôΩ»Å…’±îÅ•∏ÅÕ—Ω¡}¡Ö—°ÃË(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅÖ±∞°òâŸïπ–ÅA±ÖÂï»πÌπÖµïÙÄÙÅYïç—Ω»†¿∞Ä¿∞Ä¿§ÏàÅ•∏Å…’±îπâΩë‰ÅôΩ»ÅπÖµîÅ•∏ÅçÖç°ï}πÖµïÃ§∞(ÄÄÄÄÄÄÄÄÄÄÄÅòâçÖç°îÅçÖµï…ÑÅπΩ∏ÅÖÈÈï…Ö—îÅπï∞Å¡ï…çΩ…ÕºÅÌ…’±îππÖµîÖ…Ùà∞(ÄÄÄÄÄÄÄÄ§(()ëïòÅç°ïç≠}ç…Ω’ç†°ç°ïç≠ÃËÅ°ïç≠Ã∞ÅÕΩ’…çîËÅÕ—»∞Å…’±ïÃËÅ±•Õ—mI’±ït§Ä¥¯Å9ΩπîË(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞†(ÄÄÄÄÄÄÄÅ±ï∏°çÖ±±}—ï·—Ã°ÕΩ’…çî∞Äâ•ÕÖâ±îÅ9Öµï¡±Ö—ïÃà§§∞Äƒ∞(ÄÄÄÄÄÄÄÄâ•ÕÖâ±îÅ9Öµï¡±Ö—ïÃÄ°ëïŸîÅÖŸŸïπ•…îÅ’πÑÅÕΩ±ÑÅŸΩ±—ÑÅÖ±∞ùÖŸŸ•ºÅ…Ω’ç†§à∞(ÄÄÄÄ§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞†(ÄÄÄÄÄÄÄÅ±ï∏°çÖ±±}—ï·—Ã°ÕΩ’…çî∞ÄâπÖâ±îÅ9Öµï¡±Ö—ïÃà§§∞Ä»∞(ÄÄÄÄÄÄÄÄâπÖâ±îÅ9Öµï¡±Ö—ïÃÅπï§Åç±ïÖπ’¿Å…Ω’ç†ÅîÅA±ÖÂï»Å1ïô–à∞(ÄÄÄÄ§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°çÖ±±}—ï·—Ã°ÕΩ’…çî∞Äâ…ïÖ—îÅ%∏µ]Ω…±êÅQï·–à§§∞Ä»∞Äâ—ïÕ—§ÅµΩπëºÅ…Ω’ç†à§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°âΩΩ∞°çÖ±±}—ï·—Ã°ÕΩ’…çî∞ÄâM—Ö…–ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃà§§∞ÄâΩ’—±•πîÅ…Ω’ç†ÅÖÕÕïπ—§à§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°âΩΩ∞°çÖ±±}—ï·—Ã°ÕΩ’…çî∞ÄâM—Ω¿ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃà§§∞Äâç±ïÖπ’¿ÅΩ’—±•πîÅ…Ω’ç†ÅÖÕÕïπ—îà§((ÄÄÄÅç…Ω’ç°}Õ—Ö…–ÄÙÅl(ÄÄÄÄÄÄÄÅ…’±î(ÄÄÄÄÄÄÄÅôΩ»Å…’±îÅ•∏Å…’±ïÃ(ÄÄÄÄÄÄÄÅ•òÄâŸïπ–ÅA±ÖÂï»π%πÕ¡ï≠Õ•≠—•òÄÙÅQ…’îÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâ•ÕÖâ±îÅ9Öµï¡±Ö—ïÃàÅ•∏Å…’±îπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâM—Ö…–ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃàÅ•∏Å…’±îπâΩë‰(ÄÄÄÅt(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°ç…Ω’ç°}Õ—Ö…–§∞Äƒ∞Äâ…ïùΩ±ÑÅë§ÅÖŸŸ•ºÅΩ’—±•πîÅ…Ω’ç†à§(ÄÄÄÅ•òÅç…Ω’ç°}Õ—Ö…–Ë(ÄÄÄÄÄÄÄÅΩ’—±•πîÄÙÅç…Ω’ç°}Õ—Ö…—l¡tπâΩë‰(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄâΩ’π–Å=ò°±∞ÅA±ÖÂï…Ã°±∞ÅQïÖµÃ§§àÅ•∏ÅΩ’—±•πî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâΩ’—±•πîÅ…Ω’ç†ÅπΩ∏Å•—ï…ÖπºÅÕ’±±îÅÕΩ±îÅïπ—•”ÄÅ¡…ïÕïπ—§à∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ…îπÕïÖ…ç††(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ»âM—Ö…–ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÕqÃ©p°mxÌt©Ω±Ω…qÃ©p°qÃ©=…ÖπùïqÃ©p§à∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅΩ’—±•πî∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ…îπ=Q10∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÅ•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄââΩ–ÅÕïπÈÑÅΩ’—±•πîÅÖ…Öπç•Ωπîà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄâA±ÖÂï»ÅYÖ…•Öâ±î°qπq—q—q—q—q—±∞ÅA±ÖÂï…Ã°±∞ÅQïÖµÃ•mŸïπ–ÅA±ÖÂï»π%πëï≠ÕÖ…•Õ1’Ö…t∞Å]Ö…πÖ9ÖµÑ§àÅ•∏ÅΩ’—±•πî(ÄÄÄÄÄÄÄÄÄÄÄÅΩ»Å…îπÕïÖ…ç††(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ»âA±ÖÂï»ÅYÖ…•Öâ±ïqÃ©p°qÃ©±∞ÅA±ÖÂï…Õp°±∞ÅQïÖµÕp•qÃ©ql∏®˝quqÃ®±qÃ©]Ö…πÖ9ÖµÖqÃ©p§à∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅΩ’—±•πî∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ…îπ=Q10∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÅ•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâΩ’—±•πîÅëïù±§Å’µÖπ§ÅπΩ∏Å’ÕÑÅ•∞ÅçΩ±Ω…îÅ¡ï…ÕΩπÖ±îà∞(ÄÄÄÄÄÄÄÄ§((ÄÄÄÅç±ÖÕÕ•ô•çÖ—•Ωπ}…’±ïÃÄÙÅ…’±ïÕ}çΩπ—Ö•π•πú°…’±ïÃ∞Äâ¡¡ïπêÅQºÅ……Ö‰°±ΩâÖ∞πAïµÖ•π5Öπ’Õ•Ñ∞ÅŸïπ–ÅA±ÖÂï»§à§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÅâΩΩ∞°ç±ÖÕÕ•ô•çÖ—•Ωπ}…’±ïÃ§(ÄÄÄÄÄÄÄÅÖπêÄâM—Ö…–ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃàÅ•∏Åç±ÖÕÕ•ô•çÖ—•Ωπ}…’±ïÕl¡tπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâ%πÕ¡ï≠Õ•≠—•òàÅ•∏Åç±ÖÕÕ•ô•çÖ—•Ωπ}…’±ïÕl¡tπâΩë‰∞(ÄÄÄÄÄÄÄÄâ©Ω•∏Å’µÖπºÅπΩ∏ÅÖùù•Ω…πÑÅù±§ÅΩ’—±•πîÅëï§ÅŸ•ï›ï»ÅÖ——•Ÿ§à∞(ÄÄÄÄ§(ÄÄÄÅçΩ±Ω…}…’±ïÃÄÙÅ…’±ïÕ}çΩπ—Ö•π•πú°…’±ïÃ∞ÄâŸïπ–ÅA±ÖÂï»π%πëï≠Õ]Ö…πÑÄÙÅŸïπ–ÅA±ÖÂï»π-’…ÕΩ…]Ö…πÑÏà§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÅâΩΩ∞°çΩ±Ω…}…’±ïÃ§(ÄÄÄÄÄÄÄÅÖπêÄâM—Ö…–ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃàÅ•∏ÅçΩ±Ω…}…’±ïÕl¡tπâΩë‰(ÄÄÄÄÄÄÄÅÖπêÄâ%πÕ¡ï≠Õ•≠—•òàÅ•∏ÅçΩ±Ω…}…’±ïÕl¡tπâΩë‰∞(ÄÄÄÄÄÄÄÄâçÖµâ•ºÅçΩ±Ω…îÅπΩ∏ÅÖùù•Ω…πÑÅù±§ÅΩ’—±•πîÅëï§ÅŸ•ï›ï»ÅÖ——•Ÿ§à∞(ÄÄÄÄ§((ÄÄÄÅ…ïô…ïÕ°}…’±ïÃÄÙÅl(ÄÄÄÄÄÄÄÅ…’±îÅôΩ»Å…’±îÅ•∏Å…’±ïÃ(ÄÄÄÄÄÄÄÅ•òÄâMïùÖ…≠ÖπQÖ…ùï—%πÕ¡ï≠Õ§àÅ•∏Å…’±îπâΩë‰ÅÖπêÄâ1ΩΩ¿Å%òÅΩπë•—•Ω∏Å%ÃÅQ…’îÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÅt(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°…ïô…ïÕ°}…’±ïÃ§∞Äƒ∞Äâ±ΩΩ¿Å…ïô…ïÕ†Å—Ö…ùï–Å…Ω’ç†à§(ÄÄÄÅ•òÅ…ïô…ïÕ°}…’±ïÃË(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ…îπÕïÖ…ç†°»â]Ö•—qÃ©p°qÃ®¡p∏ƒ¿¡qÃ®∞à∞Å…ïô…ïÕ°}…’±ïÕl¡tπâΩë‰§Å•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâ—Ö…ùï–Å…Ω’ç†ÅπΩ∏ÅÖùù•Ω…πÖ—ºÅΩùπ§Ä¿∞ƒ¿ÅÕïçΩπë§à∞(ÄÄÄÄÄÄÄÄ§((ÄÄÄÅç±ïÖπ’¡}…’±ïÃÄÙÅl(ÄÄÄÄÄÄÄÅ…’±î(ÄÄÄÄÄÄÄÅôΩ»Å…’±îÅ•∏Å…’±ïÕ}çΩπ—Ö•π•πú°…’±ïÃ∞ÄâπÖâ±îÅ9Öµï¡±Ö—ïÃà∞ÄâM—Ω¿ÅΩ…ç•πúÅA±ÖÂï»Å=’—±•πïÃà§(ÄÄÄÄÄÄÄÅ•òÄâŸïπ–ÅA±ÖÂï»π%πÕ¡ï≠Õ•≠—•òÄÙÅÖ±ÕîÏàÅ•∏Å…’±îπâΩë‰(ÄÄÄÅt(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°ç±ïÖπ’¡}…’±ïÃ§∞Äƒ∞Äâç±ïÖπ’¿Å…Ω’ç†à§(ÄÄÄÅ•òÅç±ïÖπ’¡}…’±ïÃË(ÄÄÄÄÄÄÄÅç±ïÖπ’¿ÄÙÅç±ïÖπ’¡}…’±ïÕl¡tπâΩë‰(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅç±ïÖπ’¿πçΩ’π–†âïÕ—…Ω‰Å%∏µ]Ω…±êÅQï·–à§Ä¯ÙÄ»∞(ÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å…Ω’ç†ÅπΩ∏Åë•Õ—…’ùùîÅïπ—…Öµâ§Å§Å—ïÕ—§ÅµΩπëºà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄâŸïπ–ÅA±ÖÂï»πQï≠Õ’π•ÑÄÙÅ9’±∞ÏàÅ•∏Åç±ïÖπ’¿ÅÖπêÄâŸïπ–ÅA±ÖÂï»πQï≠Õ•…§ÄÙÅ9’±∞ÏàÅ•∏Åç±ïÖπ’¿∞(ÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å…Ω’ç†ÅπΩ∏ÅÖÈÈï…ÑÅïπ—…Öµâ§Å§Å…•ôï…•µïπ—§Å—ïÕ—ºà∞(ÄÄÄÄÄÄÄÄ§(()ëïòÅç°ïç≠}ç±ïÖπ’¡}Öπë}…ïŸïπùî°ç°ïç≠ÃËÅ°ïç≠Ã∞ÅÕΩ’…çîËÅÕ—»∞Å…’±ïÃËÅ±•Õ—mI’±ït§Ä¥¯Å9ΩπîË(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†â±ΩâÖ∞πM±Ω—!UQï…Õïë•ÑàÅ•∏ÅÕΩ’…çî∞Äâ¡ΩΩ∞ÅM±Ω—!UQï…Õïë•ÑÅÖÕÕïπ—îà§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†â±ΩâÖ∞πM±Ω—!UAïµÖ•∏àÅ•∏ÅÕΩ’…çî∞Äâ…ïù•Õ—…ºÅ¡Ö…Ö±±ï±ºÅM±Ω—!UAïµÖ•∏ÅÖÕÕïπ—îà§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†â±ΩâÖ∞π9ΩµΩ…U…’–àÅπΩ–Å•∏ÅÕΩ’…çî∞ÄâçΩπ—Ö—Ω…îÅ!UÅ9ΩµΩ…U…’–ÅπΩ∏É†ÅÕ—Ö—ºÅ…•µΩÕÕºà§(ÄÄÄÅ—…‰Ë(ÄÄÄÄÄÄÄÅÕ±Ω—ÃÄÙÅm…îπÕ’à°»âqÃ¨à∞Äàà∞Å•—ï¥§ÅôΩ»Å•—ï¥Å•∏Å—Ω¡}±ïŸï±}•—ïµÃ°Ö……ÖÂ}âΩë‰°ÕΩ’…çî∞Äâ±ΩâÖ∞πM±Ω—!UQï…Õïë•Ñà§•t(ÄÄÄÅï·çï¡–ÅAÖ…Õï……Ω»Ë(ÄÄÄÄÄÄÄÅÕ±Ω—ÃÄÙÅmt(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°Õ±Ω—Ã§∞Äƒ»∞ÄâÕ±Ω–Å!UÅ¡…ïÖ±±ΩçÖ—§à§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°Õ±Ω—Ã∞ÅmÕ—»°•πëï‡§ÅôΩ»Å•πëï‡Å•∏Å…Öπùî†ƒ»•t∞Äâ¡ΩΩ∞Å•π•È•Ö±îÅëïù±§ÅÕ±Ω–Å!UÄ¿∏∏ƒƒà§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄâŸïπ–ÅA±ÖÂï»πU…’—Öπ!UÄÙÅ•…Õ–Å=ò°±ΩâÖ∞πM±Ω—!UQï…Õïë•Ñ§ÏàÅ•∏ÅÕΩ’…çî(ÄÄÄÄÄÄÄÅÖπêÄâ5Ωë•ô‰Å±ΩâÖ∞ÅYÖ…•Öâ±î°M±Ω—!UQï…Õïë•Ñ∞ÅIïµΩŸîÅ…Ω¥Å……Ö‰Å	‰Å%πëï‡∞Ä¿§ÏàÅ•∏ÅÕΩ’…çî∞(ÄÄÄÄÄÄÄÄâÖ±±ΩçÖÈ•ΩπîÅëï∞Å¡…•µºÅÕ±Ω–Å!UÅ±•âï…ºÅÖÕÕïπ—îÅºÅπΩ∏ÅÖ—Ωµ•çÑà∞(ÄÄÄÄ§((ÄÄÄÅ±ïÖŸï}…’±ïÃÄÙÅm…’±îÅôΩ»Å…’±îÅ•∏Å…’±ïÃÅ•òÄâA±ÖÂï»Å1ïô–Å5Ö—ç†ÏàÅ•∏Å…’±îπâΩëÂt(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°±ïÖŸï}…’±ïÃ§∞Äƒ∞Äâ…ïùΩ±îÅA±ÖÂï»Å1ïô–Å5Ö—ç†à§(ÄÄÄÅ•òÅ±ïÖŸï}…’±ïÃË(ÄÄÄÄÄÄÄÅ±ïÖŸîÄÙÅ±ïÖŸï}…’±ïÕl¡tπâΩë‰(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ±ïÖŸîπô•πê†â±ΩâÖ∞πAïµÖ•πAïµâï…Õ•°Ö∏ÄÙÅŸïπ–ÅA±ÖÂï»Ïà§(ÄÄÄÄÄÄÄÄÄÄÄÄÅ±ïÖŸîπô•πê†â±ΩâÖ∞π%πëï≠Õ-ï±’Ö»ÄÙÅ%πëï‡Å=òÅ……Ö‰ÅYÖ±’î°±ΩâÖ∞πAïµÖ•π5Öπ’Õ•Ñ∞ÅŸïπ–ÅA±ÖÂï»§Ïà§∞(ÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏ÅçÖ——’…ÑÅÕ’â•—ºÅ∞ù•ëïπ—•”ÄÅëï∞Åù•ΩçÖ—Ω…îà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅ…ïµΩŸÖ±}Ö–ÄÙÅ±ïÖŸîπô•πê†â5Ωë•ô‰Å±ΩâÖ∞ÅYÖ…•Öâ±î°AïµÖ•π5Öπ’Õ•Ñ∞ÅIïµΩŸîÅ…Ω¥Å……Ö‰Å	‰Å%πëï‡à§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°…ïµΩŸÖ±}Ö–Ä¯ÙÄ¿∞Äâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏Å…•µ’ΩŸîÅ•∞Åù•ΩçÖ—Ω…îÅëÖ∞Å…ΩÕ—ï»à§(ÄÄÄÄÄÄÄÅ•òÅ…ïµΩŸÖ±}Ö–Ä¯ÙÄ¿Ë(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâŸïπ–ÅA±ÖÂï»∏àÅπΩ–Å•∏Å±ïÖŸïm…ïµΩŸÖ±}Ö–Èt∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å’Õç•—ÑÅ±ïùùîÅŸÖ…•Öâ•±§Åëï±∞ùïπ—•”ÄÅëΩ¡ºÅÖŸï…±ÑÅ…•µΩÕÕÑÅëÖ∞Å…ΩÕ—ï»à∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅôΩ»ÅçΩ±±ïç—•Ω∏Å•∏Ä†(ÄÄÄÄÄÄÄÄÄÄÄÄâAïµÖ•π5Öπ’Õ•Ñà∞Äâ!’ë-•…•AïµÖ•∏à∞Äâ!’ë-ÖπÖπAïµÖ•∏à∞Äâ!’ë5ïπ’AïµÖ•∏à∞(ÄÄÄÄÄÄÄÄÄÄÄÄâQï≠Õ’π•ÖAïµÖ•∏à∞ÄâQï≠Õ•…•AïµÖ•∏à∞ÄâM±Ω—!UAïµÖ•∏à∞(ÄÄÄÄÄÄÄÄ§Ë(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ…îπÕïÖ…ç††(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ…òâ5Ωë•ô‰Å±ΩâÖ∞ÅYÖ…•Öâ±ïqÃ©p°qÃ©ÌçΩ±±ïç—•ΩπıqÃ®±qÃ©IïµΩŸîÅ…Ω¥Å……Ö‰Å	‰Å%πëï‡à∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ±ïÖŸî∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅ•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅòâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏ÅÖ±±•πïÖ—ºÅ¡ï»Å±ΩâÖ∞πÌçΩ±±ïç—•ΩπÙà∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄâMΩ…—ïêÅ……Ö‰°¡¡ïπêÅQºÅ……Ö‰°±ΩâÖ∞πM±Ω—!UQï…Õïë•Ñ∞Å±ΩâÖ∞πM±Ω—!UAïµÖ•πm±ΩâÖ∞π%πëï≠Õ-ï±’Ö…t§à(ÄÄÄÄÄÄÄÄÄÄÄÅ•∏Å±ïÖŸî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏Å±•âï…ÑÅ±ºÅÕ±Ω–Å!Uà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†âΩ»Å±ΩâÖ∞ÅYÖ…•Öâ±îàÅ•∏Å±ïÖŸî∞Äâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏ÅŸ•Õ•—ÑÅ—’——§Å§ÅÕ’¡ï…Õ—•—§à§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†â	Ö±ÖÕïπëÖ¥àÅ•∏Å±ïÖŸî∞Äâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏Å…•¡’±•ÕçîÅ§Å±ïëùï»Å	Ö±ÖÕïπëÖ¥à§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅÖ±∞°πÖµîÅ•∏Å±ïÖŸîÅôΩ»ÅπÖµîÅ•∏Ä†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâQ•—•≠)Öπù≠Ö…-Öµï…Ñà∞ÄâQ•—•≠%ëïÖ±-Öµï…Ñà∞ÄâQ•—•≠	ïπ—’…Öπ-Öµï…Ñà∞ÄâQ•—•≠≠°•…-Öµï…Ñà∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâ…Ö°5ïπëÖ—Ö…-Öµï…Ñà∞ÄâAΩÕ•Õ•Iï±Ö—•ô-Öµï…Ñà∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§§∞(ÄÄÄÄÄÄÄÄÄÄÄÄâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏Å•πŸÖ±•ëÑÅ—’——îÅ±îÅçÖç°îÅçÖµï…ÑÅëï§ÅŸ•ï›ï»à∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†âM—Ω¿ÅÖµï…ÑàÅ•∏Å±ïÖŸî∞Äâç±ïÖπ’¿Å’Õç•—ÑÅπΩ∏Åôï…µÑÅ±îÅçÖµï…îÅ¡’π—Ö—îÅÖ±∞ù’Õçïπ—îà§((ÄÄÄÅôΩ»ÅπÖµîÅ•∏Ä†âQÖ…ùï—	Ö±ÖÕïπëÖµ•¡•±•†à∞ÄâQÖ…ùï—	Ö±ÖÕïπëÖµQï…≠’πç§à§Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°òâŸïπ–ÅA±ÖÂï»πÌπÖµïÙàÅ•∏ÅÕΩ’…çî∞ÅòâIïŸïπùîËÅŸÖ…•Öâ•±îÅÌπÖµïÙÅÖÕÕïπ—îà§(ÄÄÄÅç±Ö•µ}…’±ïÃÄÙÅ…’±ïÕ}çΩπ—Ö•π•πú°…’±ïÃ∞ÄâQÖ…ùï—	Ö±ÖÕïπëÖµQï…≠’πç§à∞Äâ-•±∞†à§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°ç±Ö•µ}…’±ïÃ§∞Äƒ∞Äâ…ïùΩ±îÅç±Ö•¥Å	Ö±ÖÕïπëÖ¥ÅçΩ∏Å—Ö…ùï–ÅçÖ——’…Ö—ºà§(ÄÄÄÅ•òÅç±Ö•µ}…’±ïÃË(ÄÄÄÄÄÄÄÅç±Ö•¥ÄÙÅç±Ö•µ}…’±ïÕl¡tπâΩë‰(ÄÄÄÄÄÄÄÅçÖ¡—’…ï}µÖ—ç†ÄÙÅ…îπÕïÖ…ç††(ÄÄÄÄÄÄÄÄÄÄÄÅ»âŸïπ–ÅA±ÖÂï…pπQÖ…ùï—	Ö±ÖÕïπëÖµQï…≠’πç•qÃ®ıqÃ©Ÿïπ–ÅA±ÖÂï…pπÖô—Ö…QÖ…ùï—	Ö±ÖÕïπëÖµqÃ©qmqÃ©Ÿïπ–ÅA±ÖÂï…pπ-’…ÕΩ…	Ö±ÖÕïπëÖµqÃ©quqÃ®Ïà∞(ÄÄÄÄÄÄÄÄÄÄÄÅç±Ö•¥∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅçÖ¡—’…îÄÙÄ¥ƒÅ•òÅçÖ¡—’…ï}µÖ—ç†Å•ÃÅ9ΩπîÅï±ÕîÅçÖ¡—’…ï}µÖ—ç†πÕ—Ö…–†§(ÄÄÄÄÄÄÄÅ≠•±±}Ö–ÄÙÅç±Ö•¥πô•πê†â-•±∞°Ÿïπ–ÅA±ÖÂï»πQÖ…ùï—	Ö±ÖÕïπëÖµQï…≠’πç§∞ÅŸïπ–ÅA±ÖÂï»§Ïà§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†¿ÄÙÅçÖ¡—’…îÄÅ≠•±±}Ö–∞Äâ—Ö…ùï–Å	Ö±ÖÕïπëÖ¥ÅπΩ∏ÅçÖ——’…Ö—ºÅ¡ï»Å•ëïπ—•”ÄÅ¡…•µÑÅëï∞Åç±Ö•¥à§(ÄÄÄÄÄÄÄÅ›Ö•—}Ö–ÄÙÅç±Ö•¥πô•πê†â]Ö•–†à∞ÅçÖ¡—’…îÄ¨Äƒ§(ÄÄÄÄÄÄÄÅ•òÅ›Ö•—}Ö–Ä¯ÙÄ¿Ë(ÄÄÄÄÄÄÄÄÄÄÄÅÖô—ï…}›Ö•–ÄÙÅç±Ö•µm›Ö•—}Ö–Èt(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâQÖ…ùï—	Ö±ÖÕïπëÖµQï…≠’πç§àÅ•∏ÅÖô—ï…}›Ö•–∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâç±Ö•¥Å	Ö±ÖÕïπëÖ¥ÅπΩ∏Å’ÕÑÅ•∞Å…•ôï…•µïπ—ºÅçÖ——’…Ö—ºÅëΩ¡ºÅ•∞Å]Ö•–à∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâQÖ…ùï—	Ö±ÖÕïπëÖµ•¡•±•†àÅπΩ–Å•∏ÅÖô—ï…}›Ö•–∞(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâç±Ö•¥Å	Ö±ÖÕïπëÖ¥Åë•¡ïπëîÅÖπçΩ…ÑÅëÖ±±ÑÅÕï±ïÈ•ΩπîÅµ’—ïŸΩ±îÅëΩ¡ºÅ•∞Å]Ö•–à∞(ÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÅ…ïô…ïÕ°}…’±ïÃÄÙÅ…’±ïÕ}çΩπ—Ö•π•πú†(ÄÄÄÄÄÄÄÅ…’±ïÃ∞ÄâŸïπ–ÅA±ÖÂï»πQÖ…ùï—	Ö±ÖÕïπëÖµ•¡•±•†à∞ÄâŸïπ–ÅA±ÖÂï»πÖô—Ö…QÖ…ùï—	Ö±ÖÕïπëÖ¥ÄÙÅ•±—ï…ïêÅ……Ö‰à(ÄÄÄÄ§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°…ïô…ïÕ°}…’±ïÃ§∞Äƒ∞Äâ…ïô…ïÕ†Å	Ö±ÖÕïπëÖ¥Åç°îÅ¡…ïÕï…ŸÑÅ•∞Å—Ö…ùï–Å¡ï»Å•ëïπ—•”Äà§((ÄÄÄÅëïÖ—°}…’±ïÃÄÙÅm…’±îÅôΩ»Å…’±îÅ•∏Å…’±ïÃÅ•òÄâA±ÖÂï»Å•ïêÏàÅ•∏Å…’±îπâΩëÂt(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°âΩΩ∞°ëïÖ—°}…’±ïÃ§∞Äâ…ïùΩ±ÑÅA±ÖÂï»Å•ïêÅ¡ï»Å	Ö±ÖÕïπëÖ¥ÅÖÕÕïπ—îà§(ÄÄÄÅ•òÅëïÖ—°}…’±ïÃË(ÄÄÄÄÄÄÄÅëïÖ—†ÄÙÄâq∏àπ©Ω•∏°…’±îπâΩë‰ÅôΩ»Å…’±îÅ•∏ÅëïÖ—°}…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ…îπÕïÖ…ç†°»âŸïπ–ÅA±ÖÂï…pπmµiÑµË¿¥Â}t©	Ö±ÖÕïπëÖµmµiÑµË¿¥Â}t©qÃ®ıqÃ©Ö±ÕïqÃ®Ïà∞ÅëïÖ—†§(ÄÄÄÄÄÄÄÄÄÄÄÅ•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâA±ÖÂï»Å•ïêÅπΩ∏ÅÖÈÈï…ÑÅ•∞Åô±ÖúÅëï±±ÑÅµΩ…—îÅ	Ö±ÖÕïπëÖ¥à∞(ÄÄÄÄÄÄÄÄ§(()ëïòÅç°ïç≠}ë•ÖùπΩÕ—•çÃ°ç°ïç≠ÃËÅ°ïç≠Ã∞ÅÕΩ’…çîËÅÕ—»∞Å…’±ïÃËÅ±•Õ—mI’±ït§Ä¥¯Å9ΩπîË(ÄÄÄÅ—Ωùù±îÄÙÅ…îπÕïÖ…ç††(ÄÄÄÄÄÄÄÅ»â±ΩâÖ±pπ•ÖùπΩÕ—•≠Aï…ôΩ…µÖqÃ®ıqÃ©]Ω…≠Õ°Ω¿ÅMï——•πúÅQΩùù±ïqÃ©p††∏®¸•p•qÃ®Ïà∞(ÄÄÄÄÄÄÄÅÕΩ’…çî∞(ÄÄÄÄÄÄÄÅ…îπ=Q10∞(ÄÄÄÄ§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°—Ωùù±îÅ•ÃÅπΩ–Å9Ωπî∞Äâ—Ωùù±îÅAï…ôΩ…µÖπçîÅë•ÖùπΩÕ—•çÃÅÖÕÕïπ—îà§(ÄÄÄÅ•òÅ—Ωùù±îÅ•ÃÅπΩ–Å9ΩπîË(ÄÄÄÄÄÄÄÅÖ…ù’µïπ—ÃÄÙÅ—Ω¡}±ïŸï±}•—ïµÃ°—Ωùù±îπù…Ω’¿†ƒ§§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ±ï∏°Ö…ù’µïπ—Ã§Ä¯ÙÄÃÅÖπêÅÖ…ù’µïπ—Õl…tπÕ—…•¿†§ÄÙÙÄâÖ±Õîà∞(ÄÄÄÄÄÄÄÄÄÄÄÄâAï…ôΩ…µÖπçîÅë•ÖùπΩÕ—•çÃÅëïŸîÅïÕÕï…îÅ=Å¡ï»Å•µ¡ΩÕ—ÖÈ•ΩπîÅ¡…ïëïô•π•—Ñà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÅôΩ»Åµï—…•åÅ•∏Ä†âMï…Ÿï»Å1ΩÖêà∞ÄâMï…Ÿï»Å1ΩÖêÅŸï…Öùîà∞ÄâMï…Ÿï»Å1ΩÖêÅAïÖ¨à§Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°µï—…•åÅ•∏ÅÕΩ’…çî∞Åòâë•ÖùπΩÕ—•çÑÅ¡…•ŸÑÅë§ÅÌµï—…•çÙà§(ÄÄÄÅë•ÖùπΩÕ—•ç}…’±ïÃÄÙÅl(ÄÄÄÄÄÄÄÅ…’±îÅôΩ»Å…’±îÅ•∏Å…’±ïÃ(ÄÄÄÄÄÄÄÅ•òÄâ•ÖùπΩÕ—•≠Aï…ôΩ…µÑàÅ•∏Å…’±îπâΩë‰ÅÖπêÄâMï…Ÿï»Å1ΩÖêàÅ•∏Å…’±îπâΩë‰(ÄÄÄÅt(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°âΩΩ∞°ë•ÖùπΩÕ—•ç}…’±ïÃ§∞Äâ…ïùΩ±ÑÅ!UÅë•ÖùπΩÕ—•çÑÅπΩ∏Å—…ΩŸÖ—Ñà§(ÄÄÄÅ•òÅë•ÖùπΩÕ—•ç}…’±ïÃË(ÄÄÄÄÄÄÄÅë•ÖùπΩÕ—•åÄÙÄâq∏àπ©Ω•∏°…’±îπâΩë‰ÅôΩ»Å…’±îÅ•∏Åë•ÖùπΩÕ—•ç}…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†â!ΩÕ–ÅA±ÖÂï»àÅ•∏Åë•ÖùπΩÕ—•å∞Äâë•ÖùπΩÕ—•çÑÅπΩ∏Å±•µ•—Ö—ÑÅÖ±∞ù°ΩÕ–à§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄ†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ†(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄâ!’ë-•…•AïµÖ•∏àÅ•∏Åë•ÖùπΩÕ—•å(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÖπêÄ†â!’ë-ÖπÖπAïµÖ•∏àÅ•∏Åë•ÖùπΩÕ—•åÅΩ»Å…îπÕïÖ…ç†°»âΩ’π–Å=ôp°±ΩâÖ±pπ!’ë-•…•AïµÖ•πp•qÃ©p©qÃ®»à∞Åë•ÖùπΩÕ—•å§§(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÖπêÅÖ±∞°—Ω≠ï∏Å•∏Åë•ÖùπΩÕ—•åÅôΩ»Å—Ω≠ï∏Å•∏Ä†â!’ë5ïπ’AïµÖ•∏à∞ÄâQï≠Õ’π•ÖAïµÖ•∏à∞ÄâQï≠Õ•…•AïµÖ•∏à§§(ÄÄÄÄÄÄÄÄÄÄÄÄ§∞(ÄÄÄÄÄÄÄÄÄÄÄÄâë•ÖùπΩÕ—•çÑÅ¡…•ŸÑÅëï§ÅçΩπ—ïùù§Å!UΩ%]Pà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÅ•πÕ¡ïç—Ω…}…’±ïÃÄÙÅ…’±ïÕ}çΩπ—Ö•π•πú†(ÄÄÄÄÄÄÄÅ…’±ïÃ∞Äâ±ΩâÖ∞π•ÖùπΩÕ—•≠Aï…ôΩ…µÑÄÙÙÅÖ±Õîà∞Äâ•ÕÖâ±îÅ%πÕ¡ïç—Ω»ÅIïçΩ…ë•πúÏà(ÄÄÄÄ§(ÄÄÄÅç°ïç≠Ãπï≈’Ö∞°±ï∏°•πÕ¡ïç—Ω…}…’±ïÃ§∞Äƒ∞Äâë•ÕÖâ•±•—ÖÈ•ΩπîÅ%πÕ¡ïç—Ω»Å≈’ÖπëºÅ±ÑÅë•ÖùπΩÕ—•çÑÉ†Å=à§(()ëïòÅç°ïç≠}ëΩç’µïπ—Ö—•Ωπ}Öπë}ç§°ç°ïç≠ÃËÅ°ïç≠Ã∞Åùïπ…ïÃËÅ±•Õ—mÕ—…t§Ä¥¯Å9ΩπîË(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°YIM%=8πï·•Õ—Ã†§∞Åòâô•±îÅYIM%=8ÅµÖπçÖπ—îËÅÌYIM%=9Ùà§(ÄÄÄÅ•òÅYIM%=8πï·•Õ—Ã†§Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπï≈’Ö∞°YIM%=8π…ïÖë}—ï·–°ïπçΩë•πúÙâ’—ò¥‡à§πÕ—…•¿†§∞Äà¿∏‘∏»à∞ÄâŸï…Õ•ΩπîÅ¡…Ωùï——ºà§((ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°9I}=πï·•Õ—Ã†§∞ÅòâëΩç’µïπ—ÖÈ•ΩπîÅùïπï…§ÅµÖπçÖπ—îËÅÌ9I}=Ùà§(ÄÄÄÅ•òÅ9I}=πï·•Õ—Ã†§Ë(ÄÄÄÄÄÄÄÅëΩç’µïπ—ïêÄÙÅ…îπô•πëÖ±∞†(ÄÄÄÄÄÄÄÄÄÄÄÅ»âyqê≠p∏Ä†∏¨§êà∞Å9I}=π…ïÖë}—ï·–°ïπçΩë•πúÙâ’—ò¥‡à§∞Åô±ÖùÃı…îπ5U1Q%1%9(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπï≈’Ö∞°ëΩç’µïπ—ïê∞Åùïπ…ïÃ∞ÄâëΩçÃΩ9I$πµêÅ…•Õ¡ï——ºÅÑÅÖô—Ö…ïπ…îà§((ÄÄÄÅôΩ»Å±ïùÖç‰Å•∏Å1e}UQ=5Q%=8Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°πΩ–Å±ïùÖç‰πï·•Õ—Ã†§∞ÅòâÖ’—ΩµÖÈ•ΩπîÅÖ’—ºµµΩë•ô•çÖπ—îÅ±ïùÖç‰ÅÖπçΩ…ÑÅ¡…ïÕïπ—îËÅÌ±ïùÖç‰π…ï±Ö—•Ÿï}—º°I==P•Ùà§(ÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°]=I-1=\πï·•Õ—Ã†§∞Åòâ›Ω…≠ô±Ω‹Å…ïÖêµΩπ±‰ÅµÖπçÖπ—îËÅÌ]=I-1=\π…ï±Ö—•Ÿï}—º°I==P•Ùà§(ÄÄÄÅ•òÅ]=I-1=\πï·•Õ—Ã†§Ë(ÄÄÄÄÄÄÄÅ›Ω…≠ô±Ω‹ÄÙÅ]=I-1=\π…ïÖë}—ï·–°ïπçΩë•πúÙâ’—ò¥‡à§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÅ…îπÕïÖ…ç†°»à†˝¥•y¡ï…µ•ÕÕ•ΩπÃÈqÃ©qπqÃ≠çΩπ—ïπ—ÃÈqÃ©…ïÖëqÃ®êà∞Å›Ω…≠ô±Ω‹§Å•ÃÅπΩ–Å9Ωπî∞(ÄÄÄÄÄÄÄÄÄÄÄÄâ›Ω…≠ô±Ω‹ÅÕïπÈÑÅ¡ï…µ•ÕÕ•ΩπÃπçΩπ—ïπ—ÃËÅ…ïÖêà∞(ÄÄÄÄÄÄÄÄ§(ÄÄÄÄÄÄÄÅôΩ…â•ëëï∏ÄÙÄ†âçΩπ—ïπ—ÃËÅ›…•—îà∞Äâù•–Å¡’Õ†à∞Äâù•–ÅçΩµµ•–à∞Äâ¿π›…•—ï}—ï·–à∞ÄâÖ¡¡±Â}¡Ö—ç†à§(ÄÄÄÄÄÄÄÅôΩ»Å—Ω≠ï∏Å•∏ÅôΩ…â•ëëï∏Ë(ÄÄÄÄÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°—Ω≠ï∏ÅπΩ–Å•∏Å›Ω…≠ô±Ω‹∞Åòâ›Ω…≠ô±Ω‹ÅπΩ∏Å…ïÖêµΩπ±‰ËÅ—…ΩŸÖ—ºÅÌ—Ω≠ï∏Ö…Ùà§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î†(ÄÄÄÄÄÄÄÄÄÄÄÄâ¡Â—°Ω∏Å—ΩΩ±ÃΩŸÖ±•ëÖ—ï}›Ω…≠Õ°Ω¿π¡‰àÅ•∏Å›Ω…≠ô±Ω‹∞(ÄÄÄÄÄÄÄÄÄÄÄÄâ›Ω…≠ô±Ω‹ÅπΩ∏ÅïÕïù’îÅ—ΩΩ±ÃΩŸÖ±•ëÖ—ï}›Ω…≠Õ°Ω¿π¡‰à∞(ÄÄÄÄÄÄÄÄ§(()ëïòÅµÖ•∏†§Ä¥¯Å9ΩπîË(ÄÄÄÅç°ïç≠ÃÄÙÅ°ïç≠Ã†§(ÄÄÄÅ•òÅπΩ–ÅM=UIπï·•Õ—Ã†§Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°Ö±Õî∞ÅòâÕΩ…ùïπ—îÅµÖπçÖπ—îËÅÌM=UIÙà§(ÄÄÄÄÄÄÄÅç°ïç≠Ãπô•π•Õ††§(ÄÄÄÅÕΩ’…çîÄÙÅM=UIπ…ïÖë}—ï·–°ïπçΩë•πúÙâ’—ò¥‡à§(ÄÄÄÅôΩ»Åï……Ω»Å•∏ÅâÖ±Öπçïë}ï……Ω…Ã°ÕΩ’…çî§Ë(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°Ö±Õî∞Åï……Ω»§((ÄÄÄÅ—…‰Ë(ÄÄÄÄÄÄÄÅù±ΩâÖ±}πÖµïÃ∞Å¡±ÖÂï…}πÖµïÃ∞ÅÕ’â…Ω’—•πïÃÄÙÅëïç±Ö…Ö—•Ωπ}—Öâ±ïÃ°ÕΩ’…çî§(ÄÄÄÄÄÄÄÅùïπ…ïÃ∞Å…’±ïÃÄÙÅç°ïç≠}±Öπù’Öùï}Ö……ÖÂÃ°ç°ïç≠Ã∞ÅÕΩ’…çî§(ÄÄÄÄÄÄÄÅç°ïç≠}ÕΩ’…çï}Õ—…’ç—’…î°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ∞Åù±ΩâÖ±}πÖµïÃ∞Å¡±ÖÂï…}πÖµïÃ∞ÅÕ’â…Ω’—•πïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}—•µï…}Öπë}µÖ—ç†°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}âΩ—}±•ôïçÂç±î°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}µïπ’Ã°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ∞ÅÕ’â…Ω’—•πïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}çÖµï…Ñ°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ∞Å¡±ÖÂï…}πÖµïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}ç…Ω’ç†°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}ç±ïÖπ’¡}Öπë}…ïŸïπùî°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}ë•ÖùπΩÕ—•çÃ°ç°ïç≠Ã∞ÅÕΩ’…çî∞Å…’±ïÃ§(ÄÄÄÄÄÄÄÅç°ïç≠}ëΩç’µïπ—Ö—•Ωπ}Öπë}ç§°ç°ïç≠Ã∞Åùïπ…ïÃ§(ÄÄÄÅï·çï¡–ÅAÖ…Õï……Ω»ÅÖÃÅï·åË(ÄÄÄÄÄÄÄÅç°ïç≠Ãπ…ï≈’•…î°Ö±Õî∞Åòâ¡Ö…Õ•πúÅ•π—ï……Ω——ºËÅÌï·çÙà§((ÄÄÄÅç°ïç≠Ãπô•π•Õ††§(ÄÄÄÅ¡…•π–†â=,Ä¥ÅçΩπ—…Ω±±§ÅÕ—Ö—•ç§Åÿ¿∏‘∏»ÅÕ’¡ï…Ö—§à§(ÄÄÄÅ¡…•π–†(ÄÄÄÄÄÄÄÅòâïπï…§ËÅÌ±ï∏°ùïπ…ïÃ•ÙÅÅ1•πù’îËÄÃÅÅIïùΩ±îËÅÌ±ï∏°…’±ïÃ•ÙÅÄà(ÄÄÄÄÄÄÄÅòâIÖÂçÖÕ–ÅçÖµï…ÑËÅÌ±ï∏°çÖ±±}—ï·—Ã°ÕΩ’…çî∞ÄùIÖ‰ÅÖÕ–Å!•–ÅAΩÕ•—•Ω∏ú§•Ùà(ÄÄÄÄ§(ÄÄÄÅ¡…•π–†â9Ω—ÑËÅ•µ¡Ω…—ÖÈ•Ωπî∞ÅÕ—…ïÕÃÅÑÄƒ»Åù•ΩçÖ—Ω…§ÅîÅ—ïÕ–ÅµΩëÖ±•”ÄÅ…ïÕ—ÖπºÅ¡…ΩŸîÅ±•ŸîÅΩââ±•ùÖ—Ω…•î∏à§(()•òÅ}}πÖµï}|ÄÙÙÄâ}}µÖ•π}|àË(ÄÄÄÅµÖ•∏†§(
+            f"commento non indonesiano alla riga {number}: {sorted(hits)}",
+        )
+
+    stale_identifiers = {
+        "DurataServerMinuti", "MorteRevenge", "KillerRevenge", "JumlahRevenge",
+        "DaftarTargetRevenge", "TargetRevenge", "GambarRevenge", "GambarTeleport",
+        "PosSpawnRoom", "NomorUrut",
+    }
+    declared = global_names | player_names | subroutines
+    stale = sorted(stale_identifiers & declared)
+    checks.require(not stale, f"identificatori legacy non indonesiani: {stale}")
+
+    custom_literals = custom_strings(source)
+    too_long = [value for value in custom_literals if len(value) > 128]
+    checks.require(
+        not too_long,
+        f"Custom String oltre 128 caratteri: {too_long[:3]}",
+    )
+    bad_placeholders = [
+        value
+        for value in custom_literals
+        if any(int(index) > 2 for index in re.findall(r"\{(\d+)\}", value))
+    ]
+    checks.require(
+        not bad_placeholders,
+        f"Custom String con placeholder oltre {{2}}: {bad_placeholders[:3]}",
+    )
+
+    checks.equal(source.count("\u200b"), 2, "occorrenze della sentinella U+200B")
+    checks.equal(
+        len(re.findall(r'Custom\s+String\s*\(\s*"\u200b"\s*\)', source)),
+        2,
+        "sentinelle U+200B racchiuse in Custom String",
+    )
+
+
+def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> None:
+    for name in (
+        "DurasiServerMenit", "WaktuMulaiServer", "WaktuAkhirServer", "SisaWaktuServer",
+        "TeksWaktuServer", "RestartSudahDiminta",
+    ):
+        checks.require(f"Global.{name}" in source, f"timer: variabile {name} assente")
+
+    checks.require(
+        re.search(
+            r"Global\.DurasiServerMenit\s*=\s*Workshop Setting Integer\s*\(.*?30\s*,\s*30\s*,\s*90\s*,\s*0\s*\)",
+            source,
+            re.DOTALL,
+        )
+        is not None,
+        "timer: impostazione durata non vincolata a 30..90 minuti",
+    )
+    checks.require(
+        re.search(r"Global\.WaktuMulaiServer\s*=\s*Total Time Elapsed\s*;", source) is not None,
+        "timer: baseline WaktuMulaiServer non inizializzata da Total Time Elapsed",
+    )
+    checks.require(
+        re.search(
+            r"Global\.WaktuAkhirServer\s*=\s*Global\.WaktuMulaiServer\s*\+\s*Global\.DurasiServerMenit\s*\*\s*60\s*;",
+            source,
+        )
+        is not None,
+        "timer: deadline non derivata da baseline + durata",
+    )
+    checks.require(
+        re.search(
+            r"Global\.SisaWaktuServer\s*=.*Global\.WaktuAkhirServer\s*-\s*Total Time Elapsed",
+            source,
+        )
+        is not None,
+        "timer: tempo residuo non derivato dalla deadline",
+    )
+
+    timer_rules = [
+        rule
+        for rule in rules_containing(rules, "Global.TeksWaktuServer", "Global.SisaWaktuServer")
+        if "Loop If Condition Is True;" in rule.body
+    ]
+    checks.equal(len(timer_rules), 1, "regole di aggiornamento stringa timer")
+    if timer_rules:
+        checks.require(
+            re.search(r"Wait\s*\(\s*1(?:\.0+)?\s*,", timer_rules[0].body) is not None,
+            "timer: la stringa deve aggiornarsi una volta al secondo",
+        )
+    checks.require(
+        any("Global.TeksWaktuServer" in call for call in call_texts(source, "Create HUD Text")),
+        "timer: l'HUD non usa la stringa globale precomputata",
+    )
+
+    clean = mask_strings(source)
+    forbidden_actions = (
+        "Declare Match Draw", "Declare Player Victory", "Declare Team Victory",
+        "Declare Round Victory", "Declare Round Draw", "Set Team Score", "Modify Team Score",
+        "Set Player Score", "Modify Player Score", "End Game",
+    )
+    for action in forbidden_actions:
+        checks.require(
+            re.search(rf"\b{re.escape(action)}\s*\(?", clean) is None,
+            f"azione di punteggio/vittoria vietata: {action}",
+        )
+    checks.require(
+        "Disable Built-In Game Mode Completion;" in clean,
+        "protezione completamento nativo assente",
+    )
+    checks.require(
+        "Disable Built-In Game Mode Scoring;" in clean,
+        "protezione punteggio nativo assente",
+    )
+    checks.require(
+        "Enable Built-In Game Mode Completion;" not in clean
+        and "Enable Built-In Game Mode Scoring;" not in clean,
+        "completion/scoring nativo non deve essere riattivato",
+    )
+    checks.equal(len(re.findall(r"\bRestart Match\s*;", clean)), 1, "azioni Restart Match")
+    restart_rules = rules_containing(rules, "Restart Match;")
+    checks.equal(len(restart_rules), 1, "regole che possono riavviare la partita")
+    if restart_rules:
+        restart = restart_rules[0].body
+        checks.require(
+            re.search(r"Global\.SisaWaktuServer\s*<=\s*0", restart) is not None,
+            "Restart Match non √® condizionato dal timer personalizzato a zero",
+        )
+        checks.require(
+            "Global.RestartSudahDiminta == False;" in restart,
+            "Restart Match privo di guardia one-shot",
+        )
+        set_guard = restart.find("Global.RestartSudahDiminta = True;")
+        restart_at = restart.find("Restart Match;")
+        checks.require(
+            0 <= set_guard < restart_at,
+            "la guardia RestartSudahDiminta deve essere impostata prima del riavvio",
+        )
+
+
+def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
+    classification = rules_containing(rules, "Start Forcing Dummy Bot Name", "Stop Forcing Dummy Bot Name")
+    checks.equal(len(classification), 1, "regole di classificazione umano/bot")
+    if classification:
+        body = classification[0].body
+        waits = [match.start() for match in re.finditer(r"Wait\s*\(\s*0\.016\s*,", body)]
+        entities = [match.start() for match in re.finditer(r"Entity Exists\s*\(\s*Event Player\s*\)", body)]
+        checks.equal(len(waits), 2, "Wait(0.016) nella classificazione")
+        registration = body.find("Append To Array(Global.PemainManusia, Event Player)")
+        checks.require(registration >= 0, "classificazione: registrazione umano non trovata")
+        if len(waits) == 2:
+            after_first = next((position for position in entities if waits[0] < position < waits[1]), -1)
+            after_second = next(
+                (position for position in entities if waits[1] < position < registration), -1
+            )
+            checks.require(after_first >= 0, "classificazione: Entity Exists assente dopo il primo Wait")
+            checks.require(after_second >= 0, "classificazione: Entity Exists assente dopo il secondo Wait e prima della registrazione")
+
+    bot_calls = rules_containing(rules, "Call Subroutine(KunciBot)")
+    checks.require(len(bot_calls) >= 2, "KunciBot deve essere richiamata da classificazione e riattivazione edge-triggered")
+    for rule in bot_calls:
+        is_watchdog = (
+            re.search(r"Wait\s*\(\s*0\.500\s*,", rule.body) is not None
+            and "Loop If Condition Is True;" in rule.body
+        )
+        checks.require(not is_watchdog, f"watchdog bot periodico ancora presente in {rule.name!r}")
+    checks.require("Player Spawned;" not in source, "tipo evento inesistente Player Spawned ancora presente")
+    inactive_reset = [
+        rule for rule in rules
+        if "Ongoing - Each Player;" in rule.body
+        and "Event Player.KunciBotAktif = False;" in rule.body
+        and "Is Dummy Bot(Event Player)" in rule.body
+        and "Event Player.KunciBotAktif == True;" in rule.body
+        and "Has Spawned(Event Player) == False" in rule.body
+        and "Is Alive(Event Player) == False" in rule.body
+    ]
+    checks.equal(len(inactive_reset), 1, "reset del latch bot alla morte o al despawn")
+    reactivation = [
+        rule for rule in bot_calls
+        if "Ongoing - Each Player;" in rule.body
+        and "Is Alive(Event Player) == True;" in rule.body
+        and "Event Player.KunciBotAktif == False" in rule.body
+        and "Hero Of(Event Player) != Event Player.PahlawanBotTerakhir" in rule.body
+    ]
+    checks.equal(len(reactivation), 1, "riattivazione bot dopo respawn o cambio eroe")
+
+    lock_rules = rules_containing(rules, "Subroutine;", "KunciBot;")
+    checks.require(bool(lock_rules), "subroutine KunciBot non trovata")
+    if lock_rules:
+        checks.require(
+            "Abort If(Is Alive(Event Player) == False);" in lock_rules[0].body,
+            "KunciBot non protegge la race con morte/despawn",
+        )
+        for action in (
+            "Set Primary Fire Enabled(Event Player, False)",
+            "Set Secondary Fire Enabled(Event Player, False)",
+            "Set Ability 1 Enabled(Event Player, False)",
+            "Set Ability 2 Enabled(Event Player, False)",
+            "Set Ultimate Ability Enabled(Event Player, False)",
+            "Set Melee Enabled(Event Player, False)",
+            "Set Damage Dealt(Event Player, 0)",
+            "Set Healing Dealt(Event Player, 0)",
+            "Set Knockback Dealt(Event Player, 0)",
+        ):
+            checks.require(action in lock_rules[0].body, f"KunciBot incompleta: {action}")
+
+
+def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
+    codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
+    checks.equal(codes, ["0", "1", "2", "3", "4", "5"], "codici dei sei menu")
+    checks.require(
+        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*6\s*;", source) is not None,
+        "navigazione principale non limitata a sei menu",
+    )
+    checks.require(
+        re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", source) is not None,
+        "selettore lingua non usa modulo 3",
+    )
+
+    expected_renderers = {
+        "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
+        "GambarBalasDendam", "GambarTeleportasi",
+    }
+    missing_renderers = sorted(expected_renderers - subroutines)
+    checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
+    router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
+    checks.equal(len(router_rules), 1, "router GambarMenu")
+    if router_rules:
+        router = router_rules[0].body
+        checks.require("Create HUD Text" not in router, "GambarMenu deve restare un router leggero")
+        for renderer in sorted(expected_renderers):
+            checks.require(
+                f"Call Subroutine({renderer});" in router,
+                f"GambarMenu non instrada {renderer}",
+            )
+
+    dispatcher_candidates = [
+        rule
+        for rule in rules
+        if "MenuTerbuka == True;" in rule.body
+        and all(
+            f"Button({button})" in rule.body
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+        )
+    ]
+    checks.equal(len(dispatcher_candidates), 1, "dispatcher unico degli input menu")
+    if dispatcher_candidates:
+        dispatcher = dispatcher_candidates[0].body
+        positions = [
+            dispatcher.find(f"Is Button Held(Event Player, Button({button}))")
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+        ]
+        checks.require(
+            all(position >= 0 for position in positions) and positions == sorted(positions),
+            "priorit√† dispatcher errata; attesa Interact ‚Üí Reload ‚Üí Primary ‚Üí Secondary ‚Üí Jump ‚Üí Crouch",
+        )
+
+    release_candidates = [
+        rule
+        for rule in rules
+        if "Event Player.PerintahMenu != 0;" in rule.body
+        and "Event Player.PerintahMenu = 0;" in rule.body
+        and all(
+            f"Is Button Held(Event Player, Button({button})) == False" in rule.body
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+        )
+    ]
+    checks.equal(len(release_candidates), 1, "release gate chord-safe del dispatcher")
+    if release_candidates:
+        checks.require(
+            re.search(r"Wait\s*\(\s*0\.016\s*,\s*Ignore Condition\s*\)", release_candidates[0].body)
+            is not None,
+            "release gate dispatcher privo del tick di arbitraggio prima del reset",
+        )
+    for command in range(1, 7):
+        handlers = [rule for rule in rules if f"Event Player.PerintahMenu == {command};" in rule.body]
+        checks.equal(len(handlers), 1, f"handler dispatcher comando {command}")
+        if handlers:
+            checks.require(
+                "Event Player.PerintahMenu = 0;" not in handlers[0].body,
+                f"handler {command} resetta il dispatcher prima del rilascio di tutti gli input",
+            )
+
+    melee_rules = [
+        rule for rule in rules
+        if "Button(Melee)" in rule.body and "Abort When False" in rule.body
+    ]
+    checks.equal(len(melee_rules), 1, "gestori pressione lunga Melee")
+    if melee_rules:
+        checks.require(
+            re.search(r"Wait\s*\(\s*0\.500\s*,\s*Abort When False\s*\)", melee_rules[0].body)
+            is not None,
+            "Melee deve richiedere esattamente 0,5 secondi",
+        )
+    checks.require("Wait(1.250" not in source, "durata Melee legacy da 1,25 secondi ancora presente")
+    checks.require(
+        re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*10\)\s*%\s*100", source) is not None,
+        "salto musicale +10 assente",
+    )
+    checks.require(
+        re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*90\)\s*%\s*100", source) is not None,
+        "salto musicale -10 assente",
+    )
+
+    for rule in rules:
+        refreshes_dynamic_menu = any(
+            token in rule.body
+            for token in ("SegarkanTargetBalasDendam", "SegarkanTargetTeleportasi")
+        )
+        periodic = "Loop If Condition Is True;" in rule.body
+        checks.require(
+            not (refreshes_dynamic_menu and periodic and "Call Subroutine(GambarMenu);" in rule.body),
+            f"ridisegno periodico del menu ancora presente in {rule.name!r}",
+        )
+
+
+def check_camera(
+    checks: Checks, source: str, rules: list[Rule], player_names: set[str]
+) -> None:
+    cache_names = (
+        "TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera",
+        "ArahMendatarKamera", "PosisiRelatifKamera",
+    )
+    for name in cache_names:
+        checks.require(name in player_names, f"cache camera non dichiarata: {name}")
+        checks.require(f"Event Player.{name}" in source, f"cache camera non usata: {name}")
+    checks.equal(len(call_texts(source, "Ray Cast Hit Position")), 1, "Ray Cast Hit Position nel sorgente")
+    ray_rules = rules_containing(rules, "Ray Cast Hit Position")
+    checks.equal(len(ray_rules), 1, "regole che eseguono il raycast camera")
+    if ray_rules:
+        camera_tick = ray_rules[0].body
+        checks.require(
+            "Event Player.TitikBenturanKamera = Ray Cast Hit Position" in camera_tick,
+            "risultato raycast non salvato nella cache TitikBenturanKamera",
+        )
+        for token in (
+            "Event Player.TitikJangkarKamera =", "Event Player.TitikIdealKamera =",
+            "Event Player.TitikAkhirKamera =", "Eye Position(Event Player.TargetKamera)",
+            "Event Player.ArahMendatarKamera = Update Every Frame(Direction From Angles(",
+            "Event Player.PosisiRelatifKamera = Event Player.TitikAkhirKamera - Update Every Frame(Position Of(Event Player.TargetKamera))",
+            "Max Health(Event Player.TargetKamera)", "Entity Exists(Event Player.TargetKamera)",
+        ):
+            checks.require(token in camera_tick, f"tick camera incompleto: {token}")
+        checks.require(
+            "Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera - Event Player.ArahMendatarKamera" in camera_tick,
+            "ofset posteriore camera non limitato al piano orizzontale",
+        )
+        checks.require(
+            "Event Player.TitikJangkarKamera) * 0.250);" in camera_tick,
+            "posizione finale camera priva del bantalan dinding",
+        )
+        checks.require(
+            re.search(
+                r"TitikAkhirKamera\s*=.*?-\s*Vector\s*\(\s*0\s*,",
+                camera_tick,
+                flags=re.DOTALL,
+            ) is None,
+            "abbassamento verticale ondulante ancora presente nella collisione camera",
+        )
+        checks.require(
+            re.search(r"Wait\s*\(\s*0\.016\s*,", camera_tick) is not None,
+            "cache camera non aggiornata a ogni tick",
+        )
+    camera_starts = call_texts(source, "Start Camera")
+    checks.equal(len(camera_starts), 1, "Start Camera nel sorgente")
+    if camera_starts:
+        opening = camera_starts[0].find("(")
+        args = top_level_items(camera_starts[0][opening + 1 : -1])
+        checks.equal(len(args), 4, "argomenti Start Camera")
+        if len(args) == 4:
+            checks.require(
+                "Update Every Frame(Position Of(Event Player.TargetKamera) + Event Player.PosisiRelatifKamera)" in args[1],
+                "Start Camera non combina traslazione per-frame e ofset relativo in cache",
+            )
+            checks.require(
+                "Update Every Frame(" in args[2] and "Eye Position(Event Player.TargetKamera)" in args[2],
+                "punto di mira camera non rivalutato per frame dall'occhio del target",
+            )
+            checks.equal(args[3], "80", "blend nativo Start Camera")
+    stop_paths = [
+        rule for rule in rules
+        if "Stop Camera(Event Player);" in rule.body
+        and "Event Player.ModeKamera = 0;" in rule.body
+        and "Event Player.TargetKamera = Null;" in rule.body
+    ]
+    checks.require(len(stop_paths) >= 2, "percorsi di ritorno alla prima persona non trovati")
+    for rule in stop_paths:
+        checks.require(
+            all(f"Event Player.{name} = Vector(0, 0, 0);" in rule.body for name in cache_names),
+            f"cache camera non azzerate nel percorso {rule.name!r}",
+        )
+
+
+def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
+    checks.equal(
+        len(call_texts(source, "Disable Nameplates")), 1,
+        "Disable Nameplates (deve avvenire una sola volta all'avvio Crouch)",
+    )
+    checks.equal(
+        len(call_texts(source, "Enable Nameplates")), 2,
+        "Enable Nameplates nei cleanup Crouch e Player Left",
+    )
+    checks.equal(len(call_texts(source, "Create In-World Text")), 2, "testi mondo Crouch")
+    checks.require(bool(call_texts(source, "Start Forcing Player Outlines")), "outline Crouch assenti")
+    checks.require(bool(call_texts(source, "Stop Forcing Player Outlines")), "cleanup outline Crouch assente")
+
+    crouch_start = [
+        rule
+        for rule in rules
+        if "Event Player.InspeksiAktif = True;" in rule.body
+        and "Disable Nameplates" in rule.body
+        and "Start Forcing Player Outlines" in rule.body
+    ]
+    checks.equal(len(crouch_start), 1, "regola di avvio outline Crouch")
+    if crouch_start:
+        outline = crouch_start[0].body
+        checks.require(
+            "Count Of(All Players(All Teams))" in outline,
+            "outline Crouch non iterano sulle sole entit√† presenti",
+        )
+        checks.require(
+            re.search(
+                r"Start Forcing Player Outlines\s*\([^;]*Color\s*\(\s*Orange\s*\)",
+                outline,
+                re.DOTALL,
+            )
+            is not None,
+            "bot senza outline arancione",
+        )
+        checks.require(
+            "Player Variable(\n\t\t\t\t\tAll Players(All Teams)[Event Player.IndeksGarisLuar], WarnaNama)" in outline
+            or re.search(
+                r"Player Variable\s*\(\s*All Players\(All Teams\)\s*\[.*?\]\s*,\s*WarnaNama\s*\)",
+                outline,
+                re.DOTALL,
+            )
+            is not None,
+            "outline degli umani non usa il colore personale",
+        )
+
+    classification_rules = rules_containing(rules, "Append To Array(Global.PemainManusia, Event Player)")
+    checks.require(
+        bool(classification_rules)
+        and "Start Forcing Player Outlines" in classification_rules[0].body
+        and "InspeksiAktif" in classification_rules[0].body,
+        "join umano non aggiorna gli outline dei viewer attivi",
+    )
+    color_rules = rules_containing(rules, "Event Player.IndeksWarna = Event Player.KursorWarna;")
+    checks.require(
+        bool(color_rules)
+        and "Start Forcing Player Outlines" in color_rules[0].body
+        and "InspeksiAktif" in color_rules[0].body,
+        "cambio colore non aggiorna gli outline dei viewer attivi",
+    )
+
+    refresh_rules = [
+        rule for rule in rules
+        if "SegarkanTargetInspeksi" in rule.body and "Loop If Condition Is True;" in rule.body
+    ]
+    checks.equal(len(refresh_rules), 1, "loop refresh target Crouch")
+    if refresh_rules:
+        checks.require(
+            re.search(r"Wait\s*\(\s*0\.100\s*,", refresh_rules[0].body) is not None,
+            "target Crouch non aggiornato ogni 0,10 secondi",
+        )
+
+    cleanup_rules = [
+        rule
+        for rule in rules_containing(rules, "Enable Nameplates", "Stop Forcing Player Outlines")
+        if "Event Player.InspeksiAktif = False;" in rule.body
+    ]
+    checks.equal(len(cleanup_rules), 1, "cleanup Crouch")
+    if cleanup_rules:
+        cleanup = cleanup_rules[0].body
+        checks.require(
+            cleanup.count("Destroy In-World Text") >= 2,
+            "cleanup Crouch non distrugge entrambi i testi mondo",
+        )
+        checks.require(
+            "Event Player.TeksDunia = Null;" in cleanup and "Event Player.TeksDiri = Null;" in cleanup,
+            "cleanup Crouch non azzera entrambi i riferimenti testo",
+        )
+
+
+def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) -> None:
+    checks.require("Global.SlotHUDTersedia" in source, "pool SlotHUDTersedia assente")
+    checks.require("Global.SlotHUDPemain" in source, "registro parallelo SlotHUDPemain assente")
+    checks.require("Global.NomorUrut" not in source, "contatore HUD NomorUrut non √® stato rimosso")
+    try:
+        slots = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.SlotHUDTersedia"))]
+    except ParseError:
+        slots = []
+    checks.equal(len(slots), 12, "slot HUD preallocati")
+    checks.equal(slots, [str(index) for index in range(12)], "pool iniziale degli slot HUD 0..11")
+    checks.require(
+        "Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);" in source
+        and "Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);" in source,
+        "allocazione del primo slot HUD libero assente o non atomica",
+    )
+
+    leave_rules = [rule for rule in rules if "Player Left Match;" in rule.body]
+    checks.equal(len(leave_rules), 1, "regole Player Left Match")
+    if leave_rules:
+        leave = leave_rules[0].body
+        checks.require(
+            leave.find("Global.PemainPembersihan = Event Player;")
+            < leave.find("Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);"),
+            "cleanup uscita non cattura subito l'identit√† del giocatore",
+        )
+        removal_at = leave.find("Modify Global Variable(PemainManusia, Remove From Array By Index")
+        checks.require(removal_at >= 0, "cleanup uscita non rimuove il giocatore dal roster")
+        if removal_at >= 0:
+            checks.require(
+                "Event Player." not in leave[removal_at:],
+                "cleanup uscita legge variabili dell'entit√† dopo averla rimossa dal roster",
+            )
+        for collection in (
+            "PemainManusia", "HudKiriPemain", "HudKananPemain", "HudMenuPemain",
+            "TeksDuniaPemain", "TeksDiriPemain", "SlotHUDPemain",
+        ):
+            checks.require(
+                re.search(
+                    rf"Modify Global Variable\s*\(\s*{collection}\s*,\s*Remove From Array By Index",
+                    leave,
+                )
+                is not None,
+                f"cleanup uscita non allineato per Global.{collection}",
+            )
+        checks.require(
+            "Sorted Array(Append To Array(Global.SlotHUDTersedia, Global.SlotHUDPemain[Global.IndeksKeluar])"
+            in leave,
+            "cleanup uscita non libera lo slot HUD",
+        )
+        checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
+        checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
+        checks.require(
+            all(name in leave for name in (
+                "TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera",
+                "ArahMendatarKamera", "PosisiRelatifKamera",
+            )),
+            "cleanup uscita non invalida tutte le cache camera dei viewer",
+        )
+        checks.require("Stop Camera" in leave, "cleanup uscita non ferma le camere puntate all'uscente")
+
+    for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
+        checks.require(f"Event Player.{name}" in source, f"Revenge: variabile {name} assente")
+    claim_rules = rules_containing(rules, "TargetBalasDendamTerkunci", "Kill(")
+    checks.equal(len(claim_rules), 1, "regole claim BalasDendam con target catturato")
+    if claim_rules:
+        claim = claim_rules[0].body
+        capture_match = re.search(
+            r"Event Player\.TargetBalasDendamTerkunci\s*=\s*Event Player\.DaftarTargetBalasDendam\s*\[\s*Event Player\.KursorBalasDendam\s*\]\s*;",
+            claim,
+        )
+        capture = -1 if capture_match is None else capture_match.start()
+        kill_at = claim.find("Kill(Event Player.TargetBalasDendamTerkunci, Event Player);")
+        checks.require(0 <= capture < kill_at, "target BalasDendam non catturato per identit√† prima del claim")
+        wait_at = claim.find("Wait(", capture + 1)
+        if wait_at >= 0:
+            after_wait = claim[wait_at:]
+            checks.require(
+                "TargetBalasDendamTerkunci" in after_wait,
+                "claim BalasDendam non usa il riferimento catturato dopo il Wait",
+            )
+            checks.require(
+                "TargetBalasDendamDipilih" not in after_wait,
+                "claim BalasDendam dipende ancora dalla selezione mutevole dopo il Wait",
+            )
+    refresh_rules = rules_containing(
+        rules, "Event Player.TargetBalasDendamDipilih", "Event Player.DaftarTargetBalasDendam = Filtered Array"
+    )
+    checks.equal(len(refresh_rules), 1, "refresh BalasDendam che preserva il target per identit√†")
+
+    death_rules = [rule for rule in rules if "Player Died;" in rule.body]
+    checks.require(bool(death_rules), "regola Player Died per BalasDendam assente")
+    if death_rules:
+        death = "\n".join(rule.body for rule in death_rules)
+        checks.require(
+            re.search(r"Event Player\.[A-Za-z0-9_]*BalasDendam[A-Za-z0-9_]*\s*=\s*False\s*;", death)
+            is not None,
+            "Player Died non azzera il flag della morte BalasDendam",
+        )
+
+
+def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
+    toggle = re.search(
+        r"Global\.DiagnostikPerforma\s*=\s*Workshop Setting Toggle\s*\((.*?)\)\s*;",
+        source,
+        re.DOTALL,
+    )
+    checks.require(toggle is not None, "toggle Performance diagnostics assente")
+    if toggle is not None:
+        arguments = top_level_items(toggle.group(1))
+        checks.require(
+            len(arguments) >= 3 and arguments[2].strip() == "False",
+            "Performance diagnostics deve essere OFF per impostazione predefinita",
+        )
+    for metric in ("Server Load", "Server Load Average", "Server Load Peak"):
+        checks.require(metric in source, f"diagnostica priva di {metric}")
+    diagnostic_rules = [
+        rule for rule in rules
+        if "DiagnostikPerforma" in rule.body and "Server Load" in rule.body
+    ]
+    checks.require(bool(diagnostic_rules), "regola HUD diagnostica non trovata")
+    if diagnostic_rules:
+        diagnostic = "\n".join(rule.body for rule in diagnostic_rules)
+        checks.require("Host Player" in diagnostic, "diagnostica non limitata all'host")
+        checks.require(
+            (
+                (
+                    "HudKiriPemain" in diagnostic
+                    and ("HudKananPemain" in diagnostic or re.search(r"Count Of\(Global\.HudKiriPemain\)\s*\*\s*2", diagnostic))
+                )
+                and all(token in diagnostic for token in ("HudMenuPemain", "TeksDuniaPemain", "TeksDiriPemain"))
+            ),
+            "diagnostica priva dei conteggi HUD/IWT",
+        )
+    inspector_rules = rules_containing(
+        rules, "Global.DiagnostikPerforma == False", "Disable Inspector Recording;"
+    )
+    checks.equal(len(inspector_rules), 1, "disabilitazione Inspector quando la diagnostica √® OFF")
+
+
+def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
+    checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
+    if VERSION.exists():
+        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.2", "versione progetto")
+
+    checks.require(GENRE_DOC.exists(), f"documentazione generi mancante: {GENRE_DOC}")
+    if GENRE_DOC.exists():
+        documented = re.findall(
+            r"^\d+\. (.+)$", GENRE_DOC.read_text(encoding="utf-8"), flags=re.MULTILINE
+        )
+        checks.equal(documented, genres, "docs/GENERI.md rispetto a DaftarGenre")
+
+    for legacy in LEGACY_AUTOMATION:
+        checks.require(not legacy.exists(), f"automazione auto-modificante legacy ancora presente: {legacy.relative_to(ROOT)}")
+    checks.require(WORKFLOW.exists(), f"workflow read-only mancante: {WORKFLOW.relative_to(ROOT)}")
+    if WORKFLOW.exists():
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        checks.require(
+            re.search(r"(?m)^permissions:\s*\n\s+contents:\s*read\s*$", workflow) is not None,
+            "workflow senza permissions.contents: read",
+        )
+        forbidden = ("contents: write", "git push", "git commit", "p.write_text", "apply_patch")
+        for token in forbidden:
+            checks.require(token not in workflow, f"workflow non read-only: trovato {token!r}")
+        checks.require(
+            "python tools/validate_workshop.py" in workflow,
+            "workflow non esegue tools/validate_workshop.py",
+        )
+
+
+def main() -> None:
+    checks = Checks()
+    if not SOURCE.exists():
+        checks.require(False, f"sorgente mancante: {SOURCE}")
+        checks.finish()
+    source = SOURCE.read_text(encoding="utf-8")
+    for error in balanced_errors(source):
+        checks.require(False, error)
+
+    try:
+        global_names, player_names, subroutines = declaration_tables(source)
+        genres, rules = check_language_arrays(checks, source)
+        check_source_structure(checks, source, rules, global_names, player_names, subroutines)
+        check_timer_and_match(checks, source, rules)
+        check_bot_lifecycle(checks, source, rules)
+        check_menus(checks, source, rules, subroutines)
+        check_camera(checks, source, rules, player_names)
+        check_crouch(checks, source, rules)
+        check_cleanup_and_revenge(checks, source, rules)
+        check_diagnostics(checks, source, rules)
+        check_documentation_and_ci(checks, genres)
+    except ParseError as exc:
+        checks.require(False, f"parsing interrotto: {exc}")
+
+    checks.finish()
+    print("OK - controlli statici v0.5.2 superati")
+    print(
+        f"Generi: {len(genres)} | Lingue: 3 | Regole: {len(rules)} | "
+        f"Raycast camera: {len(call_texts(source, 'Ray Cast Hit Position'))}"
+    )
+    print("Nota: importazione, stress a 12 giocatori e test modalit√† restano prove live obbligatorie.")
+
+
+if __name__ == "__main__":
+    main()
