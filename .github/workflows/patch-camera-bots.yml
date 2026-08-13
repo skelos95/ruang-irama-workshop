@@ -1,4 +1,4 @@
-name: Patch endless guard and spectator HUD
+name: Patch normal startup and crouch outlines
 
 'on':
   push:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Patch endless guard and spectator visibility
+      - name: Patch startup and crouch outlines
         shell: bash
         run: |
           python - <<'PY'
@@ -23,10 +23,13 @@ jobs:
           p = Path('workshop/ruang_irama.workshop')
           s = p.read_text(encoding='utf-8')
 
-          # Keep built-in completion/scoring disabled for the whole custom session.
-          # This is intentionally lightweight: only two actions every 0.5 s.
-          marker = 'rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisce")\n'
-          guard = '''rule("00a - Global: Nessun vincitore prima della fine del timer AFK")
+          # 1) Endless guard: apply once when gameplay actually enters Game In Progress.
+          old_guard_start = s.find('rule("00a - Global: Nessun vincitore prima della fine del timer AFK")')
+          old_guard_end = s.find('rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisce")', old_guard_start)
+          if old_guard_start < 0 or old_guard_end < 0:
+              raise SystemExit('endless guard block not found')
+
+          new_guard = '''rule("00a - Global: Blocca completamento quando il gameplay inizia")
           {
           \tevent
           \t{
@@ -36,55 +39,101 @@ jobs:
           \tconditions
           \t{
           \t\tGlobal.Siap == True;
-          \t\tTotal Time Elapsed < Global.DurataServerMinuti * 60;
+          \t\tIs Game In Progress == True;
           \t}
 
           \tactions
           \t{
-          \t\t"Protezione leggera: la modalita non puo dichiarare vincitori o assegnare punti prima del countdown AFK."
+          \t\t"Una sola applicazione quando la modalita entra davvero in gioco: niente polling, niente Wait/Loop."
           \t\tDisable Built-In Game Mode Completion;
           \t\tDisable Built-In Game Mode Scoring;
-          \t\tWait(0.500, Ignore Condition);
-          \t\tLoop If Condition Is True;
           \t}
           }
 
           '''
-          if 'rule("00a - Global: Nessun vincitore prima della fine del timer AFK")' not in s:
-              if marker not in s:
-                  raise SystemExit('restart rule marker not found')
-              s = s.replace(marker, guard + marker, 1)
+          s = s[:old_guard_start] + new_guard + s[old_guard_end:]
 
-          # Spectator Visibility: non-team spectators must never see any custom HUD/IWT.
-          count_default = s.count('Default Visibility')
-          if count_default == 0:
-              raise SystemExit('no Default Visibility entries found')
-          s = s.replace('Default Visibility', 'Visible Never')
+          # 2) Let Overwatch handle Assemble Heroes and pre-match setup normally.
+          startup_start = s.find('rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")')
+          startup_end = s.find('rule("01 - Pemain Masuk: Mulai jam nongkrong")', startup_start)
+          if startup_start < 0 or startup_end < 0:
+              raise SystemExit('forced startup rule not found')
+          s = s[:startup_start] + s[startup_end:]
 
-          # Safety checks: keep stable server/camera/teleport behavior intact.
+          # 3) HUD hint now also mentions outlines.
+          s = s.replace(
+              '"Hold {0}: inspect player, hero & ultimate"',
+              '"Hold {0}: inspect player, hero, ultimate & outlines"',
+              1,
+          )
+          s = s.replace(
+              '"Tahan {0}: lihat pemain, hero & ultimate"',
+              '"Tahan {0}: lihat pemain, hero, ultimate & outline"',
+              1,
+          )
+
+          # 4) When crouch inspection starts, outline every human in that player\'s chosen color.
+          outline_marker = '''\t\tEvent Player.InspeksiAktif = True;
+          \t\tDisable Nameplates(All Players(All Teams), Event Player);
+          \t\tCall Subroutine(SegarkanTargetInspeksi);'''
+          if outline_marker not in s:
+              raise SystemExit('inspection start marker not found')
+
+          outline_actions = [
+              '\t\t"Outline di crouch: Always e la visibilita massima del Workshop, anche dietro la geometria. Ogni umano usa il proprio colore scelto."',
+              '\t\tStart Forcing Player Outlines(Event Player, Event Player, True, Event Player.WarnaNama, Always);',
+          ]
+          for i in range(20):
+              outline_actions.append(
+                  f'\t\tStart Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == {i})), Event Player, True, Global.DaftarWarna[{i}], Always);'
+              )
+          replacement = '''\t\tEvent Player.InspeksiAktif = True;
+          \t\tDisable Nameplates(All Players(All Teams), Event Player);
+          ''' + '\n'.join(outline_actions) + '''
+          \t\tCall Subroutine(SegarkanTargetInspeksi);'''
+          s = s.replace(outline_marker, replacement, 1)
+
+          # 5) Releasing crouch / opening menu / dying / remote camera removes all forced outlines for that viewer.
+          stop_marker = '''\tactions
+          \t{
+          \t\tEnable Nameplates(All Players(All Teams), Event Player);
+          \t\tIf(Event Player.TeksDunia != Null);'''
+          stop_replacement = '''\tactions
+          \t{
+          \t\tEnable Nameplates(All Players(All Teams), Event Player);
+          \t\tStop Forcing Player Outlines(Global.PemainManusia, Event Player);
+          \t\tIf(Event Player.TeksDunia != Null);'''
+          if stop_marker not in s:
+              raise SystemExit('inspection stop marker not found')
+          s = s.replace(stop_marker, stop_replacement, 1)
+
+          # Safety: preserve the stable camera activation and spectator visibility.
           required = [
-              'Disable Built-In Game Mode Completion;',
-              'Disable Built-In Game Mode Scoring;',
-              'Restart Match;',
-              'Total Time Elapsed >= Global.DurataServerMinuti * 60;',
-              'Objective Position(Objective Index)',
               'Wait(0.016, Ignore Condition);',
               'Event Player.ModeKamera = 1;',
-              'rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")',
+              'Visible Never',
+              'Objective Position(Objective Index)',
+              'Restart Match;',
+              'Total Time Elapsed >= Global.DurataServerMinuti * 60;',
+              'Start Forcing Player Outlines(Event Player, Event Player, True, Event Player.WarnaNama, Always);',
+              'Stop Forcing Player Outlines(Global.PemainManusia, Event Player);',
           ]
           for item in required:
               if item not in s:
-                  raise SystemExit(f'missing stable behavior: {item}')
+                  raise SystemExit(f'missing required behavior: {item}')
 
-          if 'Default Visibility' in s:
-              raise SystemExit('some custom visual still uses Default Visibility')
-          if s.count('Visible Never') < count_default:
-              raise SystemExit('spectator visibility conversion incomplete')
-          if 'Wait(0.250, Ignore Condition);' in s and 'Mantieni nascosti UI' in s:
-              raise SystemExit('old aggressive UI loop unexpectedly returned')
+          if 'Start Game Mode;' in s:
+              raise SystemExit('forced game startup still exists')
+
+          # This specific endless guard must no longer poll.
+          guard_check_start = s.find('rule("00a - Global: Blocca completamento quando il gameplay inizia")')
+          guard_check_end = s.find('rule("00b - Global:', guard_check_start)
+          guard_block = s[guard_check_start:guard_check_end]
+          if 'Wait(' in guard_block or 'Loop' in guard_block:
+              raise SystemExit('endless guard still contains Wait/Loop')
 
           p.write_text(s, encoding='utf-8')
-          print(f'Converted {count_default} custom visual spectator-visibility entries to Visible Never.')
+          print('Normal startup restored; crouch outlines added for 20 selectable player colors.')
           PY
 
       - name: Commit Workshop patch
@@ -94,5 +143,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add workshop/ruang_irama.workshop
           git diff --cached --check
-          git commit -m "Keep matches endless and hide custom HUD from spectators"
+          git commit -m "Restore normal startup and add crouch player outlines"
           git push
