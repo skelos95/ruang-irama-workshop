@@ -1,145 +1,139 @@
-# Note di progetto
+# Note di progetto — versione 0.5.0
 
-## Identità della modalità
+## Identità e obiettivo
 
-Il progetto e il repository GitHub si chiamano **Server Dedikasi Ramah**. Il titolo mostrato nel gioco resta **Friendly Dedicated Server**; sotto lo stesso blocco HUD la posizione viene resa per-viewer come `Server location: Indonesia` oppure `Lokasi server: Indonesia`. Questo HUD globale usa `Header = Null`, posizione `Top` e sort order `-100`, quindi resta sopra l'Objective Description senza interferire con i menu.
+Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-## Registro e classificazione dei giocatori
+La release 0.5.0 è preparata per **Season 4: Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 
-`Global.PemainManusia` è la fonte unica per le due liste HUD. L'ispezione e la selezione camera usano invece tutti i giocatori validi, perché devono includere anche bot AI e dummy bot. La classificazione avviene una sola volta dopo `Has Spawned`:
+Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
-1. `Is Dummy Bot == True`: escluso immediatamente dalle liste e passato a `KunciBot`.
-2. Sugli altri viene tentato per due tick il carattere invisibile `U+200B` come nome.
-3. Se il nome visualizzato diventa `U+200B`, il giocatore è classificato come normale bot AI della lobby.
-4. Tutti gli altri vengono registrati come umani.
+## Contratto delle modalità 6v6
 
-Il punto 2 è un workaround comunitario, non un contratto API di Blizzard. Le due stringhe apparentemente vuote contengono davvero `U+200B`; il validatore ne controlla il numero e il comportamento va ricontrollato dopo ogni patch.
+L'overlay supporta le modalità core Control, Escort, Hybrid, Push, Flashpoint e Clash. Le loro logiche native sono diverse, ma condividono un unico contratto di sessione:
 
-Dummy e bot AI riconosciuti non entrano mai in `PemainManusia`. La subroutine `KunciBot`, riaffermata ogni 0,5 secondi mentre il bot è vivo, disabilita fuoco primario/secondario, abilità 1/2, ultimate, melee, reload e interact. Danno, cure e knockback inflitti sono inoltre impostati a zero come protezione residua; movimento, salto e crouch restano disponibili.
+- obiettivi e condizioni native non assegnano punti;
+- nessuna squadra o giocatore viene dichiarato vincitore;
+- non viene dichiarato un pareggio;
+- la partita non termina quando una modalità raggiunge la propria condizione nativa;
+- la sessione termina soltanto allo zero del countdown personalizzato;
+- allo zero viene eseguito una sola volta `Restart Match`, che resetta la sessione senza assegnare un risultato.
 
-## Inizializzazione e cleanup
+Il timer non dipende da `Match Time`. All'avvio conserva una propria origine e calcola una scadenza dalla durata configurata con `Server duration (minutes)`, compresa tra 30 e 90 minuti. Il valore visualizzato viene aggiornato una volta al secondo, sufficiente per un countdown in secondi e meno costoso di una rivalutazione per frame.
 
-Tutto lo stato per-player viene azzerato nella subroutine `SiapkanPemain`. Viene chiamata sia da `Player Joined Match`, sia da una regola fallback per i giocatori che erano già presenti quando il sorgente è stato incollato o riavviato. `SudahSiap` impedisce inizializzazioni ripetute e la classificazione aspetta che questa preparazione sia conclusa.
+## Registro, classificazione e ciclo di vita
 
-Fra i valori iniziali più importanti:
+La lista degli umani è la fonte dei due elenchi sociali. Camera, Crouch e Teleport possono invece usare tutti i giocatori presenti e validi, perché devono includere anche bot AI e dummy bot.
 
-- timer impostato a `Total Time Elapsed` e minuti a zero;
-- lingua HUD `IndeksBahasa = 0`, cioè inglese;
-- genere non ancora scelto, colore `Snow White / Putih Salju`;
-- menu chiuso, cursori azzerati, ispezione e camera disattivate;
-- riferimenti HUD, entrambi i testi nel mondo e bersagli impostati a `Null` o array vuoto.
+La classificazione segue questa sequenza:
 
-Gli ID delle due righe, del menu e dei due testi nel mondo sono copiati in cinque array globali allineati con `PemainManusia`: `HudKiriPemain`, `HudKananPemain`, `HudMenuPemain`, `TeksDuniaPemain` e il nuovo `TeksDiriPemain`. Durante `Player Left Match` le variabili dell'uscente possono diventare inaffidabili: il cleanup ricava quindi prima l'indice globale, distrugge gli oggetti ancora esistenti e usa `Remove From Array By Index` sui cinque registri ID e su `PemainManusia`. Se l'uscente non è umano, l'indice negativo interrompe il cleanup senza toccare altri giocatori.
+1. lo stato per-player viene preparato una sola volta, anche per chi era già presente quando le regole sono state avviate;
+2. un dummy bot viene riconosciuto direttamente tramite `Is Dummy Bot`;
+3. per gli altri viene applicato il workaround del nome invisibile `U+200B` per distinguere i normali bot AI;
+4. dopo ciascuno dei due `Wait(0.016)` viene verificato `Entity Exists`;
+5. prima di registrare un umano viene eseguito un ultimo controllo di esistenza e classificazione.
 
-Una regola separata controlla la camera: se un bersaglio seguito non esiste più, interrompe la terza persona e riporta il viewer alla visuale normale.
+La registrazione è quindi atomica dal punto di vista del Workshop: un giocatore che esce durante i due tick di riconoscimento non può essere aggiunto in ritardo alle liste. Il carattere `U+200B` resta un workaround comunitario e non un contratto API Blizzard; va verificato nel client dopo ogni patch.
 
-## HUD e localizzazione per spettatore
+Il blocco dei bot è event-driven. Viene applicato al termine della classificazione e riaffermato dopo spawn, respawn e cambio eroe, evitando un watchdog permanente ogni mezzo secondo. Fuoco, abilità, Ultimate e comandi sociali restano bloccati; il movimento necessario alla lobby può rimanere disponibile.
 
-Il titolo modalità e i due blocchi strutturali sono globali e hanno sempre `Header = Null`: la funzione è nel campo `Text`, gli input o le informazioni secondarie nel `Subheader`. Ogni umano crea due righe condivise nel formato compatto `Subheader` e, solo quando apre il menu, un HUD personale. Nessun HUD usa il grigio: titolo e liste adottano ciano, azzurro, viola e accenti personalizzati, mentre le righe mantengono il colore scelto dal relativo giocatore.
+### Cleanup dell'uscita
 
-Le stringhe degli HUD strutturali e delle righe leggono:
+Il cleanup usa i registri globali perché le variabili del player uscente possono non essere più affidabili. Anche lo slot riutilizzabile è conservato nel registro parallelo `SlotHUDPemain`, anziché essere letto dall'entità già uscita. Prima di rimuovere lo slot:
 
-```text
-Player Variable(Local Player, IndeksBahasa)
-```
+- distrugge HUD, menu e testi nel mondo ancora esistenti;
+- interrompe camera e ispezione e invalida le rispettive cache;
+- ripristina nameplate e outline dove ancora applicabile;
+- elimina il player da tutti i ledger Revenge dei superstiti;
+- rimuove in modo allineato gli elementi degli array paralleli;
+- restituisce lo slot HUD al pool limitato a `0..11`.
 
-`Local Player` fa rivalutare lo stesso testo in modo diverso su ogni client. Un viewer può quindi leggere inglese e un altro indonesiano senza creare copie delle liste. I menu personali e i messaggi usano la lingua del relativo `Event Player`. Regole, nomi delle regole e commenti del sorgente restano in indonesiano.
+Il riuso degli slot evita che il numero d'ordine cresca senza limite dopo molti cicli join/leave. Se l'uscente non è un umano registrato, il cleanup non altera gli array sociali.
 
-Il sorgente contiene 33 regole, 12 subroutine e 10 chiamate `Create HUD Text`: 1 titolo modalità, 2 HUD strutturali, 2 definizioni per le righe e 5 schermate mutuamente esclusive per menu principale e quattro sottomenu. `GambarMenu` si limita a pulire e instradare; ogni schermata è disegnata da una subroutine separata, così nessuna singola regola menu diventa troppo complessa per il parser live. Tutti i menu sono `Top, 100`, quindi vengono ordinati sotto l'Objective Description; una riga vuota iniziale nel `Subheader` impedisce che gli input risultino troppo compressi contro l'obiettivo. Configurazione massima normale con 12 umani:
+## HUD e localizzazione per viewer
 
-- 3 HUD globali;
-- 24 righe lista;
-- fino a 12 menu attivi, uno per umano;
-- fino a 24 testi nel mondo per l'ispezione, due per viewer;
-- massimo teorico: 39 HUD e 24 testi nel mondo, cioè 63 elementi testo simultanei.
+Ogni viewer sceglie in modo indipendente una delle tre lingue:
 
-Le righe usano `Visible To String and Color`; essendo contenute nel campo `Subheader`, il colore dinamico è assegnato a `Subheader Color`. Il colore scelto viene quindi aggiornato nelle due liste senza distruggere e ricreare gli HUD. Il Workshop colora l'intera riga, che comprende nome e dato; non supporta in modo nativo un colore diverso soltanto per una parte dello stesso `Custom String`.
+| Indice | Lingua |
+|---:|---|
+| `0` | English |
+| `1` | Bahasa Indonesia |
+| `2` | ไทย |
 
-## Tempo nella lobby
+Il cambio lingua usa modulo 3 e rivaluta immediatamente HUD, menu, nomi dei colori, messaggi e titoli musicali. I 100 nomi internazionali dei generi restano invariati. L'inglese è la lingua iniziale.
 
-`WaktuMasuk` viene salvato nell'inizializzazione, sia per i nuovi ingressi sia per chi era già presente. Ogni secondo:
+Le traduzioni sono scritte per risultare naturali nella lingua di destinazione, non come calchi parola per parola. La localizzazione thai deve inoltre essere verificata nel client per glifi, wrapping e dimensioni alle diverse risoluzioni.
 
-```text
-floor((Total Time Elapsed - WaktuMasuk) / 60)
-```
+Gli elementi condivisi leggono la lingua di `Local Player`, così due client possono vedere gli stessi dati con etichette diverse senza duplicare gli HUD globali. Le keyword e le azioni native Workshop restano obbligatoriamente in inglese; identificatori, subroutine, regole e commenti personalizzati sono in Bahasa Indonesia.
 
-L'aggiornamento a un secondo è sufficiente perché il HUD mostra minuti interi e risparmia lavoro rispetto a `Update Every Frame`.
+## Menu e dispatcher degli input
 
-## Menu
+Melee tenuto per 0,5 secondi apre o chiude il menu. Il rilascio arma il toggle successivo, impedendo ripetizioni mentre il tasto resta premuto.
 
-La pressione lunga usa esattamente `Wait(1.250, Abort When False)`. `MeleeDipakai` impedisce un secondo toggle finché Melee non viene rilasciato. La stessa pressione apre il menu da chiuso e lo chiude da qualsiasi pagina.
+Il menu principale contiene sei voci:
 
-Lo stato interno è `-1` per il menu principale e `0`, `1`, `2`, `3` per:
+| Indice | Funzione |
+|---:|---|
+| `0` | Soundtrack |
+| `1` | Third-Person Camera |
+| `2` | Name Color |
+| `3` | HUD Language |
+| `4` | Revenge |
+| `5` | Teleport |
 
-0. genere musicale;
-1. camera in terza persona;
-2. colore del nome;
-3. lingua HUD.
+Un solo dispatcher gestisce gli input con priorità deterministica `Interact → Reload → Primary → Secondary → Jump → Crouch`. Dopo aver scelto l'azione, consuma l'intero chord e si riarma soltanto quando tutti e sei gli input sono stati rilasciati: i tasti a priorità inferiore non possono quindi scattare in coda. Primary e Secondary cambiano la selezione di `+1` e `−1`; nel menu Soundtrack Jump e Crouch saltano rispettivamente `−10` e `+10`. Interact entra nel sottomenu o applica la scelta, mentre Reload ritorna al menu principale.
 
-Ogni schermata mostra una sola voce o scelta alla volta. Primary Fire seleziona la successiva e Secondary Fire la precedente, con wrap circolare. Nel menu musicale Jump e Crouch aggiungono le scorciatoie −10 e +10. `Interact` entra nel menu selezionato oppure applica la scelta senza lasciare il sottomenu. Il cambio lingua ridisegna subito il menu. `Reload` non fa nulla nel menu principale; da un sottomenu riporta al menu principale senza chiuderlo. Soltanto Melee lungo esegue la chiusura normale da qualsiasi pagina. La morte chiude come cleanup di sicurezza.
+I menu dinamici Revenge e Teleport aggiornano dati e cursore senza distruggere e ricreare periodicamente l'intero HUD. Le stringhe rivalutate leggono lo stato corrente, riducendo churn di entità e rischio di ID orfani.
 
-Quando il menu è aperto, i tasti usati dal menu sono disabilitati come azioni dell'eroe ma restano leggibili da `Is Button Held`. Ogni dispatcher aspetta il rilascio del proprio input, evitando ripetizioni involontarie dopo un cambio pagina.
+## Revenge
 
-La palette contiene 20 sfumature leggibili. I nomi sono memorizzati in due array paralleli, `NamaWarnaEN` e `NamaWarna`; `WarnaNama` è il valore scelto dal singolo umano e viene usato nelle due liste e nel marker dell'ispezione.
+Revenge registra soltanto il killer diretto umano, non assist, bot o danno ambientale. Alla morte il relativo flag viene azzerato immediatamente, poi il ledger viene aggiornato.
 
-## Ispezione eroe
+Quando un claim parte, il bersaglio viene catturato per identità prima di `Kill`. Lo stesso riferimento viene usato per flag, eliminazione e messaggio; non esiste una rilettura differita di array, cursore o claimant. La regola `Player Died` azzera il flag del bersaglio, mentre l'uscita di un giocatore lo rimuove dai ledger di tutti i superstiti, evitando voci fantasma o indici spostati.
 
-Quando un umano vivo tiene Crouch fuori dal menu e non sta seguendo un altro giocatore con la camera, il sistema chiama per quel viewer:
+## Teleport
 
-```text
-Disable Nameplates(All Players(All Teams), viewer)
-target = Player Closest To Reticle(viewer, All Teams)
-```
+Il menu Teleport comprende l'ultima Spawn Room visitata, la destinazione dell'obiettivo corrente quando disponibile e i giocatori presenti, inclusi bot AI e dummy bot validi. La posizione salvata viene aggiornata a ogni nuovo ingresso in spawn, così segue anche le spawn avanzate di Escort e Hybrid. Il viewer non compare come propria destinazione.
 
-La disattivazione delle nameplate native è per-viewer: gli altri client continuano a vedere le proprie. `SegarkanTargetInspeksi` aggiorna ogni 0,05 secondi il giocatore più vicino al reticolo, esclude il viewer e scarta entità inesistenti, non spawnate o morte. Il target può essere umano, normale bot AI o dummy bot. Per Echo in duplicazione viene mostrato `Hero Being Duplicated`, non semplicemente Echo.
+Il teletrasporto verso un giocatore cerca una posizione camminabile vicina al bersaglio invece di sovrapporre i due corpi. Prima dell'azione vengono ricontrollati esistenza e validità della destinazione; se il target è uscito, morto o non più disponibile, l'azione viene annullata con un messaggio localizzato.
 
-All'inizio dell'ispezione vengono creati due `Create In-World Text`, entrambi visibili soltanto al viewer:
+## Crouch e ispezione
 
-1. `TeksDiri`: nome, `Hero Icon String` e `ULT n%` del viewer, nel suo colore scelto e in posizione rivalutata rispetto alla camera;
-2. `TeksDunia`: nome, eroe e `ULT n%` del target più vicino al reticolo, ancorati sopra il bersaglio e colorati con la sua scelta se umano oppure arancione se bot.
+Fuori dal menu, Crouch attiva l'ispezione per quel viewer. Le nameplate native vengono disabilitate una sola volta all'ingresso e ripristinate in ogni percorso di uscita: rilascio, apertura menu, morte, cambio modalità camera o uscita dalla partita.
 
-Non viene creata alcuna freccia. `Ultimate Charge Percent` è arrotondato per difetto. Al rilascio di Crouch, all'apertura del menu, alla morte o all'avvio della camera su un altro bersaglio, entrambi i testi vengono distrutti e `Enable Nameplates` ripristina immediatamente le nameplate native per quel viewer. `TeksDiriPemain` estende il cleanup globale per evitare che il testo camera-relative resti orfano dopo un'uscita.
+Il target vicino al reticolo viene aggiornato ogni 0,10 secondi scorrendo soltanto i giocatori presenti. Viewer, entità non spawnate, morte o inesistenti vengono escluse. Nome, eroe effettivo e percentuale Ultimate restano rivalutati; durante Duplicate di Echo viene mostrato l'eroe duplicato.
 
-## Camera, bersagli e collisione
+Gli outline e i testi usano il colore personale per gli umani e arancione per i bot. Gli aggiornamenti che dipendono dal colore sono event-driven, per esempio dopo join o applicazione di un nuovo colore. Il cleanup arresta gli outline e distrugge entrambi i testi in ogni percorso, prevenendo residui IWT.
 
-`SegarkanTargetKamera` ricostruisce l'elenco con:
+## Camera in terza persona
 
-```text
-Filtered Array(
-    All Players(All Teams),
-    And(Current Array Element != viewer, Has Spawned(Current Array Element))
-)
-```
+La camera può seguire il viewer o un altro giocatore valido, inclusi bot. Per ogni aggiornamento calcola e conserva in cache:
 
-Il viewer è escluso perché dispone già dell'opzione “sé stesso”; tutti gli altri umani, normali bot AI e dummy bot spawnati sono selezionabili. Le scelte del sottomenu sono sempre: camera disattivata, camera su sé stessi e una voce per ogni elemento dell'array. Il refresh tenta di mantenere il bersaglio evidenziato; se non è più valido riporta il cursore a una posizione valida.
+1. l'anchor sopra il bersaglio;
+2. la posizione ideale dietro la spalla;
+3. l'unico risultato del raycast contro la geometria;
+4. la posizione finale con margine dalla parete;
+5. il punto verso cui guardare.
 
-Per il bersaglio `T`, la distanza è adattata alla salute massima:
+Il singolo raycast per tick sostituisce espressioni duplicate e riduce il carico con più camere simultanee. Altezza, distanza e offset vengono ricalcolati dal modello corrente: questo è importante per D.Mon e per trasformazioni che possono cambiare ingombro senza un normale cambio eroe. Se il bersaglio esce o non è più valido, la camera termina e il viewer torna alla visuale normale.
 
-```text
-distance = clamp(4 + (MaxHealth(T) - 250) / 250, 3.5, 6.0)
-anchor   = EyePosition(T) + (0, 0.65, 0)
-desired  = anchor + WorldVector((-0.65, 0, -distance), T, Rotation)
-hit     = RayCastHitPosition(anchor, desired, [], [], false)
-camera  = hit + DirectionTowards(desired, anchor) * 0.20
-lookAt  = anchor + FacingDirection(T) * 20
-```
+## Diagnostica e prestazioni
 
-L'offset laterale negativo colloca la camera sulla spalla destra. `camera` e `lookAt` sono entrambi calcolati direttamente dentro `Update Every Frame` nella chiamata a `Start Camera`. Il raycast non include giocatori o oggetti posseduti, quindi la visuale reagisce alla geometria senza saltare quando un eroe attraversa il percorso.
+`Performance diagnostics` è disattivato per impostazione predefinita. In questo stato non mantiene la registrazione Inspector dedicata. Quando l'host lo abilita, un HUD privato mostra:
 
-Valori regolabili nell'inizializzazione:
+- carico server corrente;
+- carico medio;
+- picco;
+- conteggio HUD;
+- conteggio IWT.
 
-| Variabile | Default | Effetto |
-|---|---:|---|
-| `JarakKamera` | 4,00 m | Base della distanza, poi scalata con `Max Health` e limitata a 3,5–6 m |
-| `GeserKamera` | 0,65 m | Spostamento sulla spalla destra |
-| `BantalanDinding` | 0,20 m | Margine che allontana la camera dalla parete |
+Le etichette seguono la lingua HUD scelta dall'host. Nessun altro giocatore riceve la diagnostica. Gli obiettivi live per una lobby piena sono `Server Load Average < 80%`, `Server Load Peak < 100%`, nessun warning o arresto e nessuna crescita permanente degli oggetti dopo join/leave.
 
-La camera usa un solo raggio. Un sistema multi-raggio o sphere cast ridurrebbe il clipping sugli spigoli, ma aumenterebbe sensibilmente il carico.
+Il validatore statico può controllare struttura, invarianti e assenza di azioni di scoring, ma non può simulare il runtime di Overwatch. Stabilità con 12 giocatori, rendering thai, compatibilità D.Mon/mappe e workaround bot restano prove live obbligatorie.
 
-## Estensioni naturali per una versione successiva
+## Vincoli noti
 
-- preferenze persistenti durante più round della stessa sessione;
-- indicatore di caricamento durante i 1,25 secondi di Melee;
-- camera multi-raggio opzionale per angoli stretti;
-- impostazioni Workshop per distanza, offset e portata senza modificare il sorgente;
-- stato “assente/AFK” e pronome preferito accanto al genere.
+- Il progetto non crea automaticamente il preset 6v6: modalità e mappe devono essere configurate nella lobby.
+- Le patch Blizzard possono cambiare parser, limiti Workshop, comportamento dei bot o geometrie delle mappe.
+- Una compilazione statica pulita non equivale a una sessione live stabile.
+- Il codice breve condivisibile può essere generato soltanto dal client Overwatch.

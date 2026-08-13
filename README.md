@@ -1,75 +1,90 @@
 # AFK Dedicated Server — Overwatch Workshop
 
-Modalità sociale/Arcade per Overwatch 2 pensata come una piccola lobby AFK piena di strumenti inutilmente importanti: soundtrack personale, colori, telecamera, Revenge e teletrasporto. Nel gioco il nome visibile è **AFK Dedicated Server** e la posizione mostrata è **Indonesia**.
+**AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Teleport e ispezione con Crouch senza imporre mappe o impostazioni lobby.
 
-Gli HUD sono disponibili in **English** e **Bahasa Indonesia**, con testi adattati in modo naturale e leggermente ironico invece di traduzioni letterali. Le keyword del Workshop restano in inglese per mantenere il file importabile.
+La versione **0.5.0** è allineata alla Season 4: **Heroes of Busan**, iniziata l'11 agosto 2026. La matrice di compatibilità comprende D.Mon e le versioni aggiornate di Busan, Paraíso ed Eichenwalde; le prove che richiedono il client live sono elencate separatamente in [`docs/TEST.md`](docs/TEST.md).
+
+## Compatibilità 6v6
+
+L'overlay è pensato per le modalità core 6v6:
+
+- Control
+- Escort
+- Hybrid
+- Push
+- Flashpoint
+- Clash
+
+Il sorgente non contiene un blocco `settings`, quindi non seleziona né sovrascrive modalità, mappe, roster o regole della lobby. Durante la sessione disabilita il completamento e il punteggio nativi: nessuna squadra riceve punti, vittorie o pareggi. La partita termina soltanto quando il timer personalizzato arriva a `00:00`, quindi viene eseguito un unico `Restart Match` senza dichiarare un vincitore.
+
+La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti.
 
 ## Funzioni principali
 
-- HUD centrale con `AFK Dedicated Server`, timer da 30:00 a 00:00 e posizione server.
-- Lista a sinistra con i giocatori umani e il loro tempo AFK.
-- Lista a destra con la soundtrack scelta da ogni giocatore umano.
-- Menu Arcade aperto/chiuso tenendo premuto Melee per 0,5 secondi.
-- Menu `0 - Soundtrack`: 100 generi ordinati dal più tranquillo al più caotico.
-- Menu `1 - Third-Person Camera`: camera sulla spalla con distanza e offset scalati sulla salute massima. Movimento e rotazione seguono direttamente `Position Of` e `Facing Direction` ogni frame, senza interpolazione dell’offset, per una risposta alla mira il più simile possibile alla prima persona; resta il raycast anti-muro.
-- Menu `2 - Name Color`: 20 colori con nomi localizzati in inglese e indonesiano.
-- Menu `3 - HUD Language`: English / Bahasa Indonesia.
-- Menu `4 - Revenge`: tiene conto solo delle kill dirette ricevute dagli altri umani e permette di riscuoterle una alla volta.
-- Menu `5 - Teleport`: prima voce Spawn Room, poi tutti gli altri player presenti, inclusi bot AI e dummy bot. Il proprio player non compare come destinazione.
-- Teleport verso un target effettuato vicino al bersaglio usando una posizione camminabile invece di sovrapporsi al suo corpo.
-- Spawn Room memorizzata quando il giocatore entra nella propria stanza di spawn; non è possibile riutilizzarla se si è già dentro.
-- Crouch mostra nome, eroe e percentuale Ultimate del target vicino al reticolo; in terza persona mostra anche il proprio nome sopra la testa.
-- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. Restano però disponibili agli umani come destinazione Teleport e come target Camera.
-- Gli attacchi e le abilità dei bot restano disabilitati, mentre il movimento rimane disponibile.
-
-Il sorgente principale è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop).
+- HUD centrale con nome server, posizione Indonesia e countdown personalizzato.
+- Liste sociali degli umani con tempo trascorso e soundtrack scelta.
+- Sei menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge` e `5 - Teleport`.
+- 100 generi musicali e 20 colori, navigabili con wrap circolare.
+- Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
+- Camera dinamica con distanza adattata al bersaglio e un solo raycast anti-clipping per aggiornamento.
+- Ispezione Crouch con nome, eroe e carica Ultimate; gli umani usano il proprio colore e i bot un outline arancione.
+- Revenge basato sulle eliminazioni dirette ricevute dagli altri umani, con identità del bersaglio preservata anche durante cambiamenti della lobby.
+- Teleport verso l'ultima Spawn Room visitata, obiettivi disponibili e giocatori presenti, inclusi bot AI e dummy bot quando validi.
+- Classificazione umani/bot prima della creazione degli HUD sociali e ripristino del blocco bot dopo spawn, respawn o cambio eroe.
+- Cleanup di HUD, testi nel mondo, camera, menu e riferimenti Revenge quando un giocatore esce.
+- Slot HUD riutilizzabili e registri allineati, per evitare crescita permanente dopo cicli join/leave.
+- Diagnostica prestazionale opzionale, visibile soltanto all'host e disattivata per impostazione predefinita.
 
 ## Controlli
 
 | Contesto | Input | Azione |
 |---|---|---|
-| Sempre | Tieni Melee 0,5 s | Apre o chiude il Menu Arcade |
-| Fuori menu | Tieni Crouch + mira | Mostra nome, eroe e ULT del target |
+| Sempre | Tieni Melee per 0,5 s | Apre o chiude il Menu Arcade |
+| Fuori menu | Tieni Crouch e mira | Ispeziona il target vicino al reticolo |
 | Menu principale | Primary / Secondary Fire | Voce successiva / precedente |
 | Menu principale | Interact | Entra nel menu selezionato |
-| Sottomenu | Primary / Secondary Fire | Scelta successiva / precedente |
-| Menu Soundtrack | Jump / Crouch | Salta indietro / avanti di 10 generi |
-| Sottomenu | Interact | Applica la scelta |
+| Sottomenu | Primary / Secondary Fire | Scelta successiva / precedente (`±1`) |
+| Menu Soundtrack | Jump / Crouch | Salta indietro / avanti di 10 generi (`−10` / `+10`) |
+| Sottomenu | Interact | Applica la scelta o l'azione |
 | Sottomenu | Reload | Torna al menu principale |
-| Qualunque pagina menu | Tieni Melee 0,5 s | Chiude il menu |
+| Qualunque pagina menu | Tieni Melee per 0,5 s | Chiude il menu |
+
+Quando più input vengono rilevati nello stesso ciclo, il dispatcher usa questa priorità: `Interact → Reload → Primary → Secondary → Jump → Crouch`.
 
 ## Installazione
 
-1. Fai una copia delle impostazioni della Partita personalizzata.
-2. Imposta temporaneamente la lingua testo di Overwatch su **English (US)** se il client non accetta le keyword Workshop inglesi.
-3. Apri [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop) su GitHub e usa **Copy raw file**.
-4. In Overwatch: Partita personalizzata → Crea → Impostazioni → Workshop.
-5. Usa il pulsante per incollare l'intero script Workshop.
-6. Dopo l'importazione puoi tornare alla lingua testo che preferisci.
-7. Prova almeno un umano, un dummy bot e un normale bot AI prima di pubblicare.
-8. Il codice breve Blizzard può essere generato solo dal client di Overwatch.
+1. Salva una copia delle impostazioni della Partita personalizzata.
+2. Se necessario, imposta temporaneamente la lingua testo di Overwatch su **English (US)** per importare le keyword Workshop.
+3. Apri [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop) e copia il contenuto raw.
+4. In Overwatch apri Partita personalizzata → Crea → Impostazioni → Workshop e incolla il sorgente.
+5. Configura una delle modalità core 6v6 e le mappe desiderate nelle normali impostazioni lobby.
+6. Imposta durata e diagnostica dalle opzioni Workshop.
+7. Prima di pubblicare, esegui i controlli live descritti in [`docs/TEST.md`](docs/TEST.md).
+
+Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.
 
 ## Note tecniche
 
-- Il file è un blocco Workshop e non un preset completo: non contiene `settings`, quindi non sovrascrive mappe, modalità o configurazione lobby.
-- `Is Dummy Bot` identifica direttamente i dummy Workshop. Per distinguere i normali bot AI dagli umani viene mantenuto il workaround già presente basato su `Start Forcing Dummy Bot Name`.
-- Gli HUD sociali vengono creati solo dopo che un giocatore è stato confermato umano.
-- Il menu Teleport usa `All Players(All Teams)` per includere umani, bot AI e dummy bot.
-- Tutte le regole di input del Menu Arcade verificano esplicitamente che il viewer sia umano, non sia un bot AI e non sia un dummy bot.
-- Il sistema Revenge riguarda solo gli umani e non considera assist.
-- Il timer centrale usa `Match Time` e viene inizializzato a 1800 secondi.
-- La camera in terza persona usa `Max Health` per adattare la distanza, con raycast anti-clipping e offset laterale sinistro.
+- Le keyword e le API native Workshop restano in inglese; identificatori, regole e commenti personalizzati sono in Bahasa Indonesia.
+- I dummy bot sono riconosciuti tramite `Is Dummy Bot`. Per i normali bot AI resta necessario il workaround con due sentinelle `U+200B`, da ricontrollare dopo ogni patch.
+- Bot AI e dummy bot non ricevono i menu o gli HUD sociali, ma possono restare destinazioni valide per camera, Crouch e Teleport.
+- Il timer usa una propria origine e una propria scadenza e aggiorna la stringa visualizzata una volta al secondo.
+- Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l'host vede carico corrente, medio, picco e conteggi HUD/IWT.
+- I controlli statici non possono certificare il comportamento live del parser, la sentinella bot o la stabilità a 12 giocatori. Lo stato verificato è riportato in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
 
 ## Struttura
 
 ```text
-workshop/ruang_irama.workshop  sorgente Workshop
-docs/GENERI.md                  elenco generi
-docs/PROGETTO.md                note di progetto
-docs/TEST.md                    matrice di test
-tools/validate_workshop.py      validatore statico
+workshop/ruang_irama.workshop  sorgente Workshop importabile
+docs/GENERI.md                  catalogo dei 100 generi
+docs/PROGETTO.md                architettura e scelte di progetto
+docs/TEST.md                    matrice di test statici e live
+docs/VALIDAZIONE.md             rapporto di validazione della release
+tools/validate_workshop.py      validatore statico read-only
 ```
 
 ## Versione attuale
 
-**AFK Dedicated Server** — lobby Arcade sociale bilingue con soundtrack, telecamera dinamica, colori, Revenge, Teleport e supporto player/bot.
+**0.5.0 — Season 4: Heroes of Busan**
+
+Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).

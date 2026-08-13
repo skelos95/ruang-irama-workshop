@@ -1,0 +1,37 @@
+name: Validate Workshop
+
+on:
+  push:
+    paths:
+      - 'workshop/**'
+      - 'tools/validate_workshop.py'
+      - 'docs/GENERI.md'
+      - 'VERSION'
+      - '.github/workflows/validate-workshop.yml'
+  pull_request:
+    paths:
+      - 'workshop/**'
+      - 'tools/validate_workshop.py'
+      - 'docs/GENERI.md'
+      - 'VERSION'
+      - '.github/workflows/validate-workshop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate Workshop source
+        run: python tools/validate_workshop.py

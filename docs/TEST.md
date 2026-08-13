@@ -1,126 +1,222 @@
-# Piano di test nel client Overwatch
+# Piano di test — versione 0.5.0
 
-Il validatore statico e la compilazione su Workshop.codes non sostituiscono questi test. Eseguirli dopo ogni patch importante di Overwatch, soprattutto per il rilevamento dei bot AI.
+Il validatore statico riduce il rischio di errori strutturali, ma non sostituisce il parser e il runtime di Overwatch. Ogni prova è quindi classificata come **statica** oppure **live**. Una prova live non va dichiarata superata sulla sola base del sorgente.
 
-## 1. Importazione
+## 1. Gate statico
 
-- Impostare la lingua testuale del client su inglese.
-- Incollare l'intero file `workshop/ruang_irama.workshop` dalla schermata Workshop.
-- Verificare che non compaiano errori di parser e che tutte le 33 regole e le 12 subroutine siano presenti.
-- Controllare che nomi delle regole e commenti siano in indonesiano.
-- Controllare che gli HUD non usino Header: funzione nel testo principale, input nel sottotitolo.
-- Controllare che il sorgente contenga 10 definizioni `Create HUD Text` e che nessuna palette HUD usi il grigio o una freccia.
+Eseguire il validatore read-only sul sorgente finale e verificare:
 
-## 2. Inizializzazione e lingua predefinita
+- sintassi e delimitatori bilanciati;
+- assenza di un blocco `settings`;
+- tre localizzazioni complete: English, Bahasa Indonesia e ไทย;
+- selettore lingua con tre stati e inglese predefinito;
+- 100 generi unici e raggiungibili;
+- 20 colori con nome in ciascuna lingua;
+- placeholder delle stringhe coerenti con i relativi argomenti;
+- stringhe entro i limiti gestiti dal Workshop;
+- esattamente due sentinelle reali `U+200B` per il riconoscimento dei bot AI;
+- sei menu con indici `0..5`;
+- navigazione Soundtrack `Primary/Secondary ±1` e `Jump/Crouch ±10`;
+- un solo raycast nel percorso di aggiornamento camera;
+- nessuna azione che assegni score, vittoria o pareggio;
+- `Restart Match` confinato al completamento del timer personalizzato;
+- invarianti degli array paralleli e slot HUD limitati a `0..11`;
+- CI read-only, senza commit automatici o workflow che modifichino il repository.
 
-- Entrare dopo l'avvio delle regole: liste, timer e variabili devono inizializzarsi una sola volta.
-- Avviare o incollare le regole con un umano già presente: la regola fallback deve inizializzarlo e classificarlo senza richiedere un nuovo ingresso.
-- Al primo ingresso, l'HUD deve essere in inglese e mostrare genere non ancora scelto, colore bianco e camera disattivata.
-- In alto deve comparire `FRIENDLY DEDICATED SERVER` con `Server location: Indonesia`.
-- Morire, cambiare eroe e respawnare: genere, colore e lingua scelti non devono azzerarsi.
-- Uscire e rientrare: deve iniziare una nuova sessione con inglese predefinito e timer ripartito.
+Esito e comando effettivamente eseguito vanno registrati in [`VALIDAZIONE.md`](VALIDAZIONE.md).
 
-## 3. Classificazione, liste e blocco bot
+## 2. Importazione nel client
 
-Preparare una lobby con almeno due umani, un dummy bot Workshop e un normale bot AI della lobby.
+1. Impostare temporaneamente la lingua testuale del client su English (US), se necessaria.
+2. Incollare `workshop/ruang_irama.workshop` nella schermata Workshop.
+3. Verificare che il parser non segnali errori, inclusi i nomi in Bahasa Indonesia e i glifi thai.
+4. Confermare che l'import non cambi modalità, mappe o impostazioni lobby.
+5. Salvare un preset locale per ripetere la matrice senza modificare il sorgente.
 
-- Le due persone compaiono a sinistra e a destra.
-- Le righe delle due liste devono usare il formato compatto `Subheader`, mantenere il colore personale ed essere leggibili senza grigio.
-- Nessuno dei due tipi di bot compare nelle liste.
-- Dummy e bot AI non possono usare fuoco primario/secondario, abilità, ultimate, melee, reload o interact.
-- Dummy e bot AI possono ancora camminare, saltare e usare crouch.
-- Dopo morte, respawn e cambio eroe, il blocco combattimento deve restare attivo.
-- I minuti partono da zero e aumentano a 1 dopo circa 60 secondi.
-- Un umano entrato più tardi ha un tempo inferiore.
-- Uscendo e rientrando, il suo timer riparte.
-- Dopo l'uscita non resta una riga vuota e il conteggio testi non cresce a ogni ciclo join/leave.
+Atteso: import pulito e overlay attivo sulle impostazioni già configurate.
 
-Se il bot AI compare, verificare prima che le due sentinelle `U+200B` siano ancora presenti nel file copiato. Se lo sono, considerare il workaround incompatibile con la patch corrente e rimuovere i bot AI normali dalle impostazioni lobby.
+## 3. Contratto comune delle sei modalità 6v6
 
-## 4. Pressione lunga, Objective Description e menu principale
+Ripetere la prova su Control, Escort, Hybrid, Push, Flashpoint e Clash:
 
-- Rilasciare Melee a 1,24 s: il menu non deve aprirsi.
-- Tenere Melee almeno 1,25 s: compare il menu principale sulla voce `0`.
-- Continuare a tenere Melee: il menu non deve chiudersi finché Melee non viene prima rilasciato.
-- Con Primary Fire avanzare alla voce successiva e con Secondary Fire tornare alla precedente; verificare il wrap `0 ↔ 3` e l'ordine `0` musica, `1` camera, `2` colore, `3` lingua.
-- Deve essere visibile una sola voce alla volta, non l'elenco completo dei quattro menu.
-- Premere Interact: deve entrare soltanto nel sottomenu evidenziato.
-- Dal menu principale e da ciascun sottomenu, tenere nuovamente Melee 1,25 s: il menu deve chiudersi.
-- Nel menu principale, premere Reload: non deve succedere nulla.
-- In ciascun sottomenu, premere Reload: deve tornare al menu principale sulla stessa voce senza chiudere il menu.
-- Con una Objective Description attiva, verificare l'ordine verticale: titolo modalità sopra l'obiettivo, menu sotto l'obiettivo. Il menu deve avere una riga vuota iniziale e non sovrapporsi agli altri due elementi.
-- Verificare i binding mostrati con almeno tastiera/mouse e controller.
-- Morire con il menu aperto: il cleanup di sicurezza deve chiuderlo e i comandi devono tornare disponibili al respawn.
+1. impostare una durata breve in un preset di test oppure osservare il countdown configurato;
+2. raggiungere una condizione che normalmente assegnerebbe un punto o completerebbe la mappa prima dello zero;
+3. controllare che non vengano assegnati punti, vittoria o pareggio e che la partita continui;
+4. attendere `00:00`;
+5. verificare un solo `Restart Match`, senza schermata vincitore;
+6. controllare che la nuova sessione riparta con il countdown completo.
 
-## 5. Menu `0` — genere musicale
+Ripetere almeno una volta con `Server duration (minutes) = 30` e una con `90`. Il timer deve restare indipendente da pause o variazioni del tempo nativo della modalità e aggiornare l'HUD una volta al secondo.
 
-- Con Primary Fire avanzare di un genere e con Secondary Fire tornare al precedente; verificare il wrap `1 ↔ 100`.
-- Con Jump e Crouch verificare i salti rapidi −10 e +10, compreso il wrap.
-- Deve apparire un solo genere alla volta, insieme alla corretta fascia da tranquilla a caotica.
-- Verificare almeno la prima voce `Lowercase`, una voce centrale e l'ultima `Extratone`.
-- Premere Interact: il genere si applica alla lista destra per tutti i viewer e il sottomenu resta aperto sulla stessa scelta.
+## 4. Season 4: eroe e mappe
 
-## 6. Menu `1` — camera in terza persona
+### D.Mon
 
-- Verificare le prime due scelte: camera disattivata e camera su sé stessi.
-- Verificare che ogni altro giocatore spawnato abbia una voce con nome e icona eroe.
-- La selezione deve includere un altro umano, un normale bot AI e un dummy bot; il viewer non deve essere duplicato nell'elenco perché dispone dell'opzione “sé stessi”.
-- Con Primary Fire avanzare e con Secondary Fire tornare indietro di una scelta; verificare il wrap.
-- Premere Interact su “sé stessi”: terza persona over-shoulder sul proprio eroe e menu ancora aperto.
-- Premere Interact su ciascun tipo di bersaglio: la camera deve seguirlo e il menu deve restare aperto.
-- Premere Interact su “camera disattivata”: ritorno alla prima persona senza chiusura del menu.
-- Fare entrare o uscire giocatori mentre il sottomenu è aperto: la lista deve aggiornarsi senza indice fuori intervallo.
-- Far uscire il bersaglio seguito: il viewer deve tornare automaticamente alla visuale normale.
-- Provare pareti, colonne, porte, soffitti bassi, scale, salti e cadute.
-- Con una parete dietro il target, la camera deve avanzare invece di attraversarla.
-- Verificare che la camera sia sulla spalla destra.
-- Con eroi di salute massima diversa, verificare che la distanza cresca con `Max Health` senza mai scendere sotto 3,5 m né superare 6 m.
-- Verificare consapevolmente che il corpo del viewer resta attivo: non è uno slot spectator reale.
+- Usare D.Mon come viewer e come bersaglio della camera.
+- Attivare e disattivare la camera, cambiare stato/modello e verificare che altezza e distanza vengano ricalcolate senza richiedere un cambio eroe.
+- Ispezionare D.Mon con Crouch: nome, icona e Ultimate devono essere corretti.
+- Usare D.Mon come destinazione Teleport e come bersaglio Revenge valido quando controllato da un umano.
+- Ripetere dopo morte, respawn e cambio eroe per escludere cache obsolete.
 
-## 7. Menu `2` — colore personale
+### Busan, Paraíso ed Eichenwalde
 
-- Scorrere tutte le 20 sfumature con Primary Fire verso la successiva e Secondary Fire verso la precedente; verificare il wrap prima ↔ ultima.
-- Ogni scelta deve mostrare un solo nome colore, in inglese o indonesiano secondo la lingua del viewer, con anteprima della sfumatura corretta.
-- Premere Interact: il colore si applica e il menu resta aperto.
-- La riga del giocatore deve aggiornarsi sia nella lista sinistra sia nella destra, per tutti gli umani.
-- Due umani scelgono colori diversi: ognuno conserva il proprio colore nelle due liste.
-- Cambiare colore mentre un altro umano sta ispezionando: il marker sul bersaglio deve aggiornarsi allo stesso colore.
+- Provare camera contro pareti, porte, colonne, soffitti bassi, scale, bordi e nuove geometrie.
+- Provare Teleport verso Spawn Room, target mobili e posizioni vicine agli obiettivi disponibili.
+- Verificare che Crouch non conservi target attraverso occlusioni, morte o uscita.
+- Eseguire il contratto timer della modalità core applicabile alla mappa.
 
-## 8. Menu `3` — lingua HUD
+## 5. Inizializzazione e classificazione
 
-- Al join, verificare che la scelta corrente sia `English`.
-- Selezionare `Bahasa Indonesia` con Primary/Secondary Fire e applicare con Interact: menu, HUD strutturali, righe e messaggi successivi devono cambiare subito, senza chiudere il sottomenu.
-- Il titolo resta `FRIENDLY DEDICATED SERVER`, mentre la seconda riga deve cambiare in `Lokasi server: Indonesia`; tornando a inglese deve mostrare `Server location: Indonesia`.
-- Tornare a `English`: tutti gli stessi testi devono tornare a un inglese naturale e leggibile.
-- Con due umani, lasciare uno in inglese e uno in indonesiano: ciascuno deve vedere entrambe le liste nella propria lingua, mentre nomi, valori e colori restano identici.
-- La scelta linguistica di un giocatore non deve cambiare quella dell'altro.
-- Nomi delle regole e commenti Workshop devono restare in indonesiano indipendentemente dalla lingua HUD.
+Preparare una lobby con umani, dummy bot Workshop e normali bot AI.
 
-## 9. Ispezione con Crouch
+- Un umano già presente quando si attivano le regole deve essere preparato e classificato una sola volta.
+- Un nuovo umano deve comparire nelle liste soltanto dopo la classificazione completa.
+- Dummy e bot AI non devono comparire negli HUD sociali né poter aprire i menu.
+- I bot devono restare disponibili come target per le funzioni che li supportano.
+- Far uscire un player durante ciascuno dei due intervalli di classificazione: non deve apparire in ritardo né lasciare uno slot occupato.
+- Verificare il blocco bot subito dopo classificazione, spawn, respawn e cambio eroe.
+- Confermare che non esista un'attività periodica ogni 0,5 secondi dedicata soltanto a riaffermare il blocco.
 
-- Tenere Crouch: le nameplate native di tutti i giocatori devono sparire soltanto per quel viewer; gli altri client non devono essere influenzati.
-- Deve comparire un testo personalizzato del viewer con nome, icona eroe e `ULT n%`, nel colore personale e in posizione stabile rispetto alla camera durante rotazioni e movimento.
-- Il giocatore valido più vicino al reticolo deve mostrare sopra di sé nome, icona eroe e `ULT n%`. Non deve comparire alcuna freccia.
-- Ripetere su un umano, un normale bot AI e un dummy bot: i bot restano fuori dalle liste ma sono ispezionabili; gli umani usano il proprio colore e i bot l'arancione.
-- Spostare il reticolo fra due giocatori: deve essere mostrato un solo target, quello più vicino al reticolo, e il viewer non deve auto-selezionarsi.
-- Un bersaglio morto, non spawnato o uscito deve essere rimosso dalla lettura senza errori.
-- Cambiare eroe mentre si è osservati: icona e percentuale Ultimate devono aggiornarsi.
-- Con Echo in duplicazione: mostrare l'eroe duplicato.
-- Rilasciare Crouch: entrambi i testi personalizzati devono sparire e le nameplate native devono essere ripristinate subito.
-- Ripetere l'uscita da ispezione aprendo il menu, morendo e avviando la camera su un altro giocatore: ogni percorso deve distruggere entrambi i testi e ripristinare le nameplate.
+Se un bot AI viene classificato come umano, controllare che le due sentinelle `U+200B` siano sopravvissute a copia e import. Se sono presenti, segnare il workaround come incompatibile con la patch live invece di dichiarare superato il test.
 
-## 10. Cleanup, carico e durata
+## 6. Cleanup e riuso degli slot
 
-- Ripetere almeno 20 cicli join/leave alternando umani e bot.
-- Verificare che righe, menu ed entrambi i testi nel mondo dell'umano uscito vengano distrutti e che le righe rimanenti continuino ad aggiornarsi.
-- Controllare che anche il nuovo registro globale `TeksDiriPemain` resti allineato agli altri array dopo ogni uscita.
-- Uscire mentre menu o ispezione sono attivi: non devono restare elementi orfani.
-- Riempire la lobby con 12 umani.
-- Aprire menu e ispezione su più client contemporaneamente; con 12 viewer in Crouch non devono esistere più di 24 IWT, due per viewer.
-- Attivare più camere e osservare `Server Load Average` e `Server Load Peak` durante movimento rapido.
-- Lasciare la sessione attiva almeno 30 minuti con join/leave ripetuti.
-- Se il carico è eccessivo, ridurre per prima cosa il numero di camere simultanee; non rallentare il timer, che aggiorna già solo ogni secondo.
+Eseguire almeno 50 cicli join/leave, alternando i seguenti stati al momento dell'uscita:
 
-## Criterio di uscita dalla versione 0.4
+- menu principale o sottomenu aperto;
+- camera attiva su sé stessi o su un altro target;
+- Crouch attivo con entrambi i testi visibili;
+- voce Revenge posseduta o bersaglio in un ledger altrui;
+- Teleport aperto con destinazione selezionata;
+- player ancora in classificazione;
+- player morto o in respawn.
 
-La versione può ricevere un codice Blizzard condivisibile quando: import pulito, 33 regole e 12 subroutine riconosciute, filtro umano e blocco attacchi bot verificati, nessuna perdita HUD/IWT dopo 20 join/leave, menu `0/1/2/3` stabile sotto l'Objective Description, 100 generi e 20 colori raggiungibili, inglese/indonesiano indipendenti per viewer, nameplate Crouch ripristinate correttamente e camera destra stabile su umani, AI e dummy nelle mappe scelte.
+Dopo ogni uscita verificare:
+
+- nessun HUD, IWT, outline, nameplate disabilitata o camera orfana;
+- nessuna destinazione Teleport o camera riferita all'entità uscita;
+- nessuna voce Revenge fantasma nei ledger dei superstiti;
+- registri globali ancora allineati, incluso `SlotHUDPemain`;
+- slot HUD liberato e riutilizzato nell'intervallo `0..11`;
+- conteggi HUD/IWT tornati al livello previsto, senza crescita cumulativa.
+
+## 7. Localizzazione per viewer
+
+Usare tre client contemporanei, uno per lingua.
+
+- Il join iniziale deve mostrare English.
+- Selezionare e applicare English, Bahasa Indonesia e ไทย dal menu lingua.
+- Titolo, posizione, liste, sei menu, 20 colori, messaggi, Revenge, Teleport, camera e Crouch devono usare la lingua del singolo viewer.
+- I nomi internazionali dei 100 generi devono restare invariati.
+- Il cambio deve essere immediato e non modificare la scelta degli altri client.
+- Verificare thai naturale, glifi integri, wrapping e leggibilità a più risoluzioni e rapporti d'aspetto.
+- Controllare che l'inglese e l'indonesiano siano naturali e coerenti, senza residui italiani nei testi visibili.
+- Nomi di regole, subroutine, variabili e commenti personalizzati devono risultare in Bahasa Indonesia; le sole parti inglesi ammesse sono keyword/API native e acronimi tecnici necessari.
+
+## 8. Menu e priorità input
+
+- Tenere Melee per meno di 0,5 s: il menu non deve aprirsi.
+- Tenere Melee per almeno 0,5 s: il menu deve cambiare stato una sola volta fino al rilascio.
+- Verificare ordine e wrap delle sei voci `0..5`.
+- Entrare in ciascun sottomenu con Interact, applicare una scelta e tornare con Reload.
+- Confermare che un sottomenu resti aperto dopo l'applicazione, salvo le azioni che per progetto lo chiudono.
+- Premere combinazioni simultanee e verificare la priorità `Interact → Reload → Primary → Secondary → Jump → Crouch`; mantenendo il chord, nessun input inferiore deve scattare dopo quello selezionato e il dispatcher deve riarmarsi soltanto al rilascio di tutti i sei tasti.
+- Morire o aprire un sistema incompatibile con il menu: gli input dell'eroe devono essere ripristinati.
+- Lasciare Revenge e Teleport aperti mentre giocatori entrano ed escono: dati e cursore devono aggiornarsi senza ricreazione periodica dell'HUD, sfarfallio o indice fuori intervallo.
+
+### Soundtrack
+
+- Primary e Secondary spostano di una voce (`+1` e `−1`) con wrap `1 ↔ 100`.
+- Jump e Crouch spostano di dieci (`−10` e `+10`) con wrap.
+- Verificare `Lowercase`, una voce centrale ed `Extratone`.
+- Interact applica la scelta e aggiorna la lista visibile agli altri viewer.
+
+### Camera, colore e lingua
+
+- Camera: Off, sé stessi e tutti i target validi devono essere raggiungibili.
+- Colore: tutte le 20 scelte devono avere anteprima e nome corretto per lingua.
+- Lingua: il wrap deve comprendere esattamente i tre indici `0`, `1`, `2`.
+
+### Revenge e Teleport
+
+- Revenge deve mostrare dati aggiornati e ignorare killer non validi.
+- Teleport deve aggiornare Spawn Room, obiettivi previsti e player presenti senza conservare destinazioni uscite.
+
+## 9. Revenge
+
+- Subire una kill diretta da un altro umano: viene aggiunta una singola voce al ledger.
+- Assist, suicidio, ambiente, dummy bot e bot AI non devono creare una voce.
+- Morire più volte contro lo stesso umano e riscuotere una voce alla volta.
+- Avviare un claim mentre la lista cambia: flag, `Kill` e messaggio devono usare la stessa identità catturata, senza rileggere array o cursore.
+- Far uscire il bersaglio prima di applicare il claim: nessuna azione deve trasferirsi a un altro player.
+- Far uscire un umano presente in più ledger: deve essere rimosso da tutti.
+- Verificare che il flag di morte sia azzerato dalla regola `Player Died` e non causi duplicazioni al respawn.
+
+## 10. Teleport
+
+- Memorizzare la Spawn Room entrando nella propria stanza e provarne il richiamo fuori da essa.
+- In Escort e Hybrid raggiungere una spawn avanzata: il richiamo successivo deve usare l'ultima spawn visitata, non quella iniziale.
+- Tentare il richiamo mentre si è già nella Spawn Room: non deve produrre un teletrasporto inutile.
+- Teletrasportarsi verso umano, bot AI e dummy bot.
+- Verificare una posizione camminabile vicina al target, senza sovrapposizione dei corpi.
+- Far morire o uscire la destinazione fra selezione e applicazione: l'azione deve annullarsi in modo sicuro.
+- Verificare le destinazioni obiettivo sulle sei modalità e sulle mappe Season 4 previste.
+
+## 11. Camera e Crouch
+
+### Camera
+
+- Verificare spalla, distanza dinamica, punto di mira e margine anti-muro.
+- Controllare che per ogni aggiornamento venga usato un solo risultato di raycast memorizzato.
+- Provare eroi di dimensioni e salute diverse, Echo in Duplicate e D.Mon nei suoi cambi di modello.
+- Far uscire, morire o cambiare eroe al target: nessuna cache obsoleta e ritorno sicuro alla visuale normale quando necessario.
+- Attivare 12 camere contemporaneamente per 10 minuti con movimento rapido e geometrie complesse.
+
+### Crouch
+
+- Le nameplate native devono essere disabilitate una sola volta all'ingresso e ripristinate in ogni uscita.
+- Target vicino al reticolo aggiornato ogni 0,10 s; viewer, morti e non spawnati esclusi.
+- Testi e outline: colore personale per umani, arancione per bot.
+- Cambiare colore durante l'ispezione: l'aggiornamento deve avvenire senza loop permanente.
+- Ripetere rilascio, apertura menu, morte, camera e uscita; entrambi i testi e ogni outline devono sparire.
+- Attivare Crouch contemporaneamente su 12 player e controllare correttezza e carico.
+
+## 12. Stress e diagnostica
+
+Eseguire due configurazioni minime:
+
+1. 12 umani attivi;
+2. 6 umani + 6 bot, includendo se possibile sia bot AI sia dummy bot.
+
+Per almeno 10 minuti combinare camere, Crouch, menu, Revenge, Teleport, morti, respawn e cambi eroe. Integrare i 50 cicli join/leave del test cleanup.
+
+Con `Performance diagnostics = Off`:
+
+- nessun HUD diagnostico visibile;
+- nessuna registrazione Inspector dedicata mantenuta dal sistema.
+
+Con `Performance diagnostics = On`:
+
+- dati visibili soltanto all'host;
+- etichette nella lingua HUD scelta dall'host, incluse English, Bahasa Indonesia e ไทย;
+- carico corrente, medio, picco e conteggi HUD/IWT aggiornati;
+- `Server Load Average < 80%`;
+- `Server Load Peak < 100%`;
+- nessun warning, arresto o crash;
+- nessuna crescita permanente dei conteggi dopo il cleanup.
+
+Un eventuale superamento delle soglie o crash rende la prova fallita: non va mascherato come limite del validatore.
+
+## Criterio di rilascio 0.5.0
+
+La release è pronta per un codice Blizzard condivisibile soltanto quando:
+
+- il gate statico è superato sul blob finale;
+- il client importa lo stesso blob senza errori;
+- tutte e sei le modalità rispettano il contratto timer/no-score/no-winner;
+- le tre lingue e i sei menu sono verificati dal vivo;
+- D.Mon, Busan, Paraíso ed Eichenwalde non mostrano regressioni note;
+- i test a 12 player e 50 join/leave rispettano i gate di carico e cleanup;
+- Crouch, camera, Revenge e Teleport superano i rispettivi casi di uscita.
+
+Fino ad allora [`VALIDAZIONE.md`](VALIDAZIONE.md) deve distinguere esplicitamente i controlli statici superati dalle prove live pendenti.

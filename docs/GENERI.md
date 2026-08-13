@@ -1,6 +1,6 @@
 # I 100 generi
 
-L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita, densità, distorsione, velocità e imprevedibilità. I nomi restano nelle forme internazionali più riconoscibili; le intestazioni di pagina sono in indonesiano.
+L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita, densità, distorsione, velocità e imprevedibilità. I nomi dei generi restano nelle forme internazionali più riconoscibili; nell'HUD le intestazioni di pagina sono localizzate in English, Bahasa Indonesia e ไทย. Le intestazioni riportate qui seguono la versione indonesiana.
 
 ## Hal. 1/10 — HENING TOTAL
 
@@ -134,4 +134,13 @@ L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita,
 
 ## Navigazione nel gioco
 
-Il menu mostra il genere precedente, quello evidenziato e il successivo. Jump/Crouch spostano di una voce; Primary/Secondary Fire saltano di dieci. In questo modo tutte le 100 scelte sono accessibili senza creare 100 elementi HUD e senza avvicinarsi al limite condiviso dei testi Workshop.
+Il menu mostra il genere precedente, quello evidenziato e il successivo.
+
+- `Primary Fire`: genere successivo (`+1`).
+- `Secondary Fire`: genere precedente (`−1`).
+- `Jump`: salto indietro di dieci generi (`−10`).
+- `Crouch`: salto avanti di dieci generi (`+10`).
+- `Interact`: applica il genere evidenziato.
+- `Reload`: torna al menu principale.
+
+Tutti gli spostamenti usano il wrap circolare, quindi ogni scelta resta raggiungibile senza creare un elemento HUD per ciascun genere.

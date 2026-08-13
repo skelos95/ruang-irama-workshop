@@ -4,7 +4,7 @@ variables
 		0: DaftarGenre
 		1: NamaHalaman
 		2: PemainManusia
-		3: NomorUrut
+		3: SlotHUDTersedia
 		4: Siap
 		5: HudInfoKiri
 		6: HudInfoKanan
@@ -24,8 +24,19 @@ variables
 		20: NamaBahasa
 		21: NamaHalamanEN
 		22: TeksDiriPemain
-		23: DurataServerMinuti
-
+		23: DurasiServerMenit
+		24: WaktuMulaiServer
+		25: WaktuAkhirServer
+		26: SisaWaktuServer
+		27: TeksWaktuServer
+		28: RestartSudahDiminta
+		29: DiagnostikPerforma
+		30: NamaWarnaTH
+		31: NamaHalamanTH
+		32: IndeksPembersihan
+		33: PemainPembersihan
+		34: IndeksUtangKeluar
+		35: SlotHUDPemain
 	player:
 		0: WaktuMasuk
 		1: WaktuTercatat
@@ -45,7 +56,7 @@ variables
 		15: TeksDunia
 		16: ModeKamera
 		17: TargetKamera
-		18: MeleeDipakai
+		18: SeranganDekatDipakai
 		19: HalamanMenu
 		20: KursorUtama
 		21: KursorKamera
@@ -58,19 +69,29 @@ variables
 		28: DaftarTargetKamera
 		29: SudahSiap
 		30: TeksDiri
-		31: KursorRevenge
-		32: DaftarTargetRevenge
-		33: KillerRevenge
-		34: JumlahRevenge
-		35: IndeksRevenge
-		36: MorteRevenge
-		37: KursorTeleport
-		38: DaftarTargetTeleport
-		39: PosSpawnRoom
-		40: PunyaPosSpawn
-		41: CalonTargetTeleport
-		42: TinggiAnchorKamera
-		43: HeroKameraTerakhir
+		31: KursorBalasDendam
+		32: DaftarTargetBalasDendam
+		33: PembunuhBalasDendam
+		34: JumlahBalasDendam
+		35: IndeksBalasDendam
+		36: KematianBalasDendam
+		37: KursorTeleportasi
+		38: DaftarTargetTeleportasi
+		39: PosisiRuangMuncul
+		40: PunyaPosisiMuncul
+		41: CalonTargetTeleportasi
+		42: TinggiJangkarKamera
+		43: TargetBalasDendamTerkunci
+		44: TargetBalasDendamDipilih
+		45: TitikJangkarKamera
+		46: TitikIdealKamera
+		47: TitikBenturanKamera
+		48: TitikAkhirKamera
+		49: PelatNamaDinonaktifkan
+		50: KunciBotAktif
+		51: PahlawanBotTerakhir
+		52: IndeksGarisLuar
+		53: PerintahMenu
 }
 
 subroutines
@@ -87,10 +108,10 @@ subroutines
 	9: GambarWarna
 	10: GambarBahasa
 	11: SegarkanTargetInspeksi
-	12: GambarRevenge
-	13: SegarkanTargetRevenge
-	14: GambarTeleport
-	15: SegarkanTargetTeleport
+	12: GambarBalasDendam
+	13: SegarkanTargetBalasDendam
+	14: GambarTeleportasi
+	15: SegarkanTargetTeleportasi
 }
 
 rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -228,6 +249,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.HudMenuPemain = Empty Array;
 		Global.TeksDuniaPemain = Empty Array;
 		Global.TeksDiriPemain = Empty Array;
+		Global.SlotHUDPemain = Empty Array;
 		Global.IndeksKeluar = -1;
 		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5);
 		Global.DaftarWarna = Array(
@@ -296,9 +318,32 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Emerald Green"),
 			Custom String("Lime Green")
 		);
+		Global.NamaWarnaTH = Array(
+			Custom String("ขาวหิมะ"),
+			Custom String("หมอกเงิน"),
+			Custom String("ทองแสงอาทิตย์"),
+			Custom String("เหลืองเลมอน"),
+			Custom String("ส้มอบอุ่น"),
+			Custom String("ปะการังเรืองแสง"),
+			Custom String("แดงเข้ม"),
+			Custom String("ชมพูกุหลาบ"),
+			Custom String("ชมพูนีออน"),
+			Custom String("ลาเวนเดอร์อ่อน"),
+			Custom String("ม่วงนีออน"),
+			Custom String("ม่วงไฟฟ้า"),
+			Custom String("น้ำเงินมหาสมุทร"),
+			Custom String("ฟ้าท้องฟ้า"),
+			Custom String("ฟ้าน้ำแข็ง"),
+			Custom String("อควาเย็น"),
+			Custom String("เทอร์ควอยซ์สบายตา"),
+			Custom String("มิ้นต์สดชื่น"),
+			Custom String("เขียวมรกต"),
+			Custom String("เขียวมะนาว")
+		);
 		Global.NamaBahasa = Array(
 			Custom String("English"),
-			Custom String("Bahasa Indonesia")
+			Custom String("Bahasa Indonesia"),
+			Custom String("ไทย")
 		);
 		Global.NamaHalamanEN = Array(
 			Custom String("TOTAL STILLNESS"),
@@ -312,38 +357,62 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("THE SERVER GETS NERVOUS"),
 			Custom String("MAXIMUM CHAOS")
 		);
-		Global.NomorUrut = 0;
+		Global.NamaHalamanTH = Array(
+			Custom String("เงียบสนิท"),
+			Custom String("ชิลเต็มที่"),
+			Custom String("ล่องลอยสบาย ๆ"),
+			Custom String("กรูฟอบอุ่น"),
+			Custom String("เท้าเริ่มขยับ"),
+			Custom String("ฟลอร์เริ่มคึกคัก"),
+			Custom String("กีตาร์เริ่มดุดัน"),
+			Custom String("ได้เวลามอช"),
+			Custom String("เซิร์ฟเวอร์เริ่มกังวล"),
+			Custom String("โกลาหลขั้นสุด")
+		);
+		Global.SlotHUDTersedia = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		Global.JarakKamera = 2.000;
 		Global.GeserKamera = 0.550;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 25;
-		"Timer del server indipendente dal timer nativo della modalita. Il lobby host puo scegliere da 30 a 90 minuti."
-		Global.DurataServerMinuti = Workshop Setting Integer(Custom String("AFK DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
-		"Nessuna modalita puo chiudere la partita o assegnare punteggio: Hybrid, CTF, Push, Escort, Deathmatch e tutte le altre restano endless."
+		"Timer server berdiri sendiri dari timer mode bawaan. Host lobi dapat memilih 30 sampai 90 menit."
+		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("AFK DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
+		Global.DiagnostikPerforma = Workshop Setting Toggle(Custom String("AFK DEDICATED SERVER"), Custom String("Performance diagnostics"), False, 1);
+		Global.WaktuMulaiServer = Total Time Elapsed;
+		Global.WaktuAkhirServer = Global.WaktuMulaiServer + Global.DurasiServerMenit * 60;
+		Global.SisaWaktuServer = Max(0, Round To Integer(Global.WaktuAkhirServer - Total Time Elapsed, Up));
+		Global.TeksWaktuServer = Global.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Global.SisaWaktuServer / 60, Down),
+			Global.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Global.SisaWaktuServer / 60, Down), Global.SisaWaktuServer % 60);
+		Global.RestartSudahDiminta = False;
+		"Tidak ada mode yang boleh mengakhiri pertandingan atau memberi skor; keenam mode inti 6v6 tetap berjalan sampai timer server habis."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
-		"Modalita muta e pulita: niente announcer e niente musica nativa della modalita."
+		"Mode dibuat tenang dan bersih tanpa penyiar serta musik bawaan mode."
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
+		If(Global.DiagnostikPerforma == False);
+			Disable Inspector Recording;
+		End;
 
 		Create HUD Text(Global.PemainManusia, Null,
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Custom String("Lokasi server: Indonesia"),
-			Custom String("{0}    {1}", Custom String("AFK DEDICATED SERVER"),
-				Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
-					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60) : Custom String("{0}:{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
-					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60)),
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Lokasi server: Indonesia") : Custom String("ตำแหน่งเซิร์ฟเวอร์: อินโดนีเซีย"),
+			Custom String("{0}    {1}", Custom String("AFK DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0}: inspect player, hero, ultimate & outlines", Input Binding String(Button(Crouch))) : Custom String(
-			"Tahan {0}: lihat pemain, hero, ultimate & outline", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
-			? Custom String("LOBBY ROSTER & AFK TIME\n ") : Custom String("DAFTAR PEMAIN & WAKTU AFK\n "), Left, -100,
+			"Hold {0}: inspect player, hero, ultimate & outlines", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0}: lihat pemain, hero, ultimate & outline", Input Binding String(Button(Crouch))) : Custom String(
+			"กด {0} ค้าง: ดูผู้เล่น ฮีโร่ อัลติเมต และเส้นขอบ", Input Binding String(Button(Crouch))), Player Variable(Local Player,
+			IndeksBahasa) == 0 ? Custom String("LOBBY ROSTER & AFK TIME\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"DAFTAR PEMAIN & WAKTU AFK\n ") : Custom String("รายชื่อผู้เล่นและเวลา AFK\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Global.HudInfoKiri = Last Text ID;
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0} 0.5 sec: open Arcade Menu", Input Binding String(Button(Melee))) : Custom String(
-			"Tahan {0} 0,5 dtk: buka Menu Arcade", Input Binding String(Button(Melee))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("PLAYER SOUNDTRACKS\n ") : Custom String("SOUNDTRACK PEMAIN\n "),
+			"Hold {0} 0.5 sec: open Arcade Menu", Input Binding String(Button(Melee))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5 dtk: buka Menu Arcade", Input Binding String(Button(Melee))) : Custom String(
+			"กด {0} ค้าง 0.5 วินาที: เปิดเมนูอาร์เคด", Input Binding String(Button(Melee))), Player Variable(Local Player,
+			IndeksBahasa) == 0 ? Custom String("PLAYER SOUNDTRACKS\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"SOUNDTRACK PEMAIN\n ") : Custom String("เพลงประจำผู้เล่น\n "),
 			Right, -100, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
 		Global.HudInfoKanan = Last Text ID;
@@ -351,7 +420,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 	}
 }
 
-rule("00a - Global: Blocca completamento quando il gameplay inizia")
+rule("00a - Global: Blokir penyelesaian saat permainan dimulai")
 {
 	event
 	{
@@ -366,13 +435,13 @@ rule("00a - Global: Blocca completamento quando il gameplay inizia")
 
 	actions
 	{
-		"Una sola applicazione quando la modalita entra davvero in gioco."
+		"Terapkan sekali lagi saat permainan benar-benar dimulai."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
 	}
 }
 
-rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisce")
+rule("00b - Global: Perbarui hitung mundur server")
 {
 	event
 	{
@@ -382,13 +451,68 @@ rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisc
 	conditions
 	{
 		Global.Siap == True;
-		Total Time Elapsed >= Global.DurataServerMinuti * 60;
+		Global.RestartSudahDiminta == False;
 	}
 
 	actions
 	{
-		"Restart Match non dichiara un vincitore: resetta semplicemente la sessione quando il countdown AFK arriva a zero."
+		Global.SisaWaktuServer = Max(0, Round To Integer(Global.WaktuAkhirServer - Total Time Elapsed, Up));
+		Global.TeksWaktuServer = Global.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Global.SisaWaktuServer / 60, Down),
+			Global.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Global.SisaWaktuServer / 60, Down), Global.SisaWaktuServer % 60);
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("00c - Global: Mulai ulang tepat sekali saat hitung mundur habis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Global.RestartSudahDiminta == False;
+		Global.SisaWaktuServer <= 0;
+	}
+
+	actions
+	{
+		"Kunci mencegah beberapa aksi mulai ulang pada tick yang sama; tidak ada pemenang atau skor yang diumumkan."
+		Global.RestartSudahDiminta = True;
 		Restart Match;
+	}
+}
+
+rule("00d - Global: Tampilkan diagnostik performa hanya kepada host")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Global.DiagnostikPerforma == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Null, Player Variable(Host Player, IndeksBahasa) == 2 ? Custom String("HUD {0} | ข้อความโลก {1}",
+			4 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(
+			Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain, Current Array Element != 0))) : Custom String(
+			"HUD {0} | IWT {1}", 4 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)),
+			Count Of(Filtered Array(Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain,
+			Current Array Element != 0))), Player Variable(Host Player, IndeksBahasa) == 0 ? Custom String("PERFORMANCE {0}% | AVG {1}% | PEAK {2}%",
+			Server Load, Server Load Average, Server Load Peak) : Player Variable(Host Player, IndeksBahasa) == 1 ? Custom String(
+			"PERFORMA {0}% | RATA-RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String(
+			"ประสิทธิภาพ {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak), Top, -98,
+			Color(White), Color(Orange), Color(Red), Visible To and String,
+			Visible Never);
+		Abort;
 	}
 }
 
@@ -468,12 +592,14 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
 		Wait(0.016, Ignore Condition);
+		Abort If(Entity Exists(Event Player) == False);
 		If(Custom String("{0}", Event Player) == Custom String("​"));
 			Event Player.BotAI = True;
 		Else;
 			Event Player.BotAI = False;
 		End;
 		Wait(0.016, Ignore Condition);
+		Abort If(Entity Exists(Event Player) == False);
 		Stop Forcing Dummy Bot Name(Event Player);
 		If(Event Player.BotAI == True);
 			Cancel Primary Action(Event Player);
@@ -481,41 +607,51 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			Abort;
 		End;
 
+		Abort If(Entity Exists(Event Player) == False);
+		Abort If(Count Of(Global.SlotHUDTersedia) == 0);
 		Event Player.Manusia = True;
-		"Nasconde barre, obiettivi e icone in-world della modalita, lasciando intatto l'HUD eroe e il nostro HUD custom."
+		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
 		Disable Game Mode HUD(Event Player);
 		Disable Game Mode In-World UI(Event Player);
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
 		Event Player.MenitLobby = 0;
-		Event Player.UrutanHUD = Global.NomorUrut;
-		Global.NomorUrut += 1;
+		Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);
+		Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
+		"Pembaruan berbasis peristiwa untuk penonton yang sedang menahan jongkok."
+		Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
+			InspeksiAktif) == True), True, Event Player.WarnaNama, Always);
 
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"{0} - AFK for {1} min", Event Player, Event Player.MenitLobby) : Custom String("{0} - AFK {1} mnt",
-			Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
+			"{0} - AFK for {1} min", Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"{0} - AFK {1} mnt", Event Player, Event Player.MenitLobby) : Custom String("{0} - AFK {1} นาที", Event Player,
+			Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - soundtrack: {1}",
 			Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
-			: Custom String("{0} - soundtrack: {1}", Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre]
-			: Custom String("belum pilih soundtrack")), Null, Right, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - soundtrack: {1}", Event Player, Event Player.IndeksGenre >= 0
+			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack")) : Custom String("{0} - เพลงประกอบ: {1}",
+			Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")), Null,
+			Right, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
 		Global.HudKananPemain = Append To Array(Global.HudKananPemain, Event Player.HudKanan);
 		Global.HudMenuPemain = Append To Array(Global.HudMenuPemain, 0);
 		Global.TeksDuniaPemain = Append To Array(Global.TeksDuniaPemain, 0);
 		Global.TeksDiriPemain = Append To Array(Global.TeksDiriPemain, 0);
+		Global.SlotHUDPemain = Append To Array(Global.SlotHUDPemain, Event Player.UrutanHUD);
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-			"Welcome to AFK Dedicated Server. Pick a vibe, pick a color, cause harmless trouble.") : Custom String(
-			"Selamat datang di AFK Dedicated Server. Pilih vibe, pilih warna, lalu bikin kekacauan kecil."));
+			"Welcome to AFK Dedicated Server. Pick a vibe, pick a color, cause harmless trouble.") : Event Player.IndeksBahasa == 1 ? Custom String(
+			"Selamat datang di AFK Dedicated Server. Pilih vibe, pilih warna, lalu bikin kekacauan kecil.") : Custom String(
+			"ยินดีต้อนรับสู่ AFK Dedicated Server เลือกเพลง เลือกสี แล้วสนุกกันแบบไม่ทำร้ายใคร"));
 	}
 }
 
-rule("02c - Spawn Room: Ricorda una posizione sicura")
+rule("02c - Ruang Muncul: Perbarui posisi aman setiap kali masuk")
 {
 	event
 	{
@@ -529,13 +665,12 @@ rule("02c - Spawn Room: Ricorda una posizione sicura")
 		Event Player.Manusia == True;
 		Has Spawned(Event Player) == True;
 		Is In Spawn Room(Event Player) == True;
-		Event Player.PunyaPosSpawn == False;
 	}
 
 	actions
 	{
-		Event Player.PosSpawnRoom = Position Of(Event Player);
-		Event Player.PunyaPosSpawn = True;
+		Event Player.PosisiRuangMuncul = Position Of(Event Player);
+		Event Player.PunyaPosisiMuncul = True;
 	}
 }
 
@@ -565,6 +700,27 @@ rule("03b - Bot: Senjata libur, kaki tetap boleh jalan")
 {
 	event
 	{
+		Player Spawned;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Or(Is Dummy Bot(Event Player), Event Player.BotAI) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(KunciBot);
+	}
+}
+
+rule("03c - Bot: Kunci ulang saat pahlawan berganti")
+{
+	event
+	{
 		Ongoing - Each Player;
 		All;
 		All;
@@ -573,15 +729,15 @@ rule("03b - Bot: Senjata libur, kaki tetap boleh jalan")
 	conditions
 	{
 		Global.Siap == True;
-		Is Alive(Event Player) == True;
 		Or(Is Dummy Bot(Event Player), Event Player.BotAI) == True;
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Event Player.PahlawanBotTerakhir;
+		Event Player.KunciBotAktif == True;
 	}
 
 	actions
 	{
 		Call Subroutine(KunciBot);
-		Wait(0.500, Ignore Condition);
-		Loop If Condition Is True;
 	}
 }
 
@@ -596,26 +752,88 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 
 	actions
 	{
+		Global.PemainPembersihan = Event Player;
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
-		Abort If(Global.IndeksKeluar < 0);
-		Destroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);
-		Destroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);
-		If(Global.HudMenuPemain[Global.IndeksKeluar] != 0);
-			Destroy HUD Text(Global.HudMenuPemain[Global.IndeksKeluar]);
+		If(Global.IndeksKeluar >= 0);
+			Stop Camera(Event Player);
+			Stop Forcing Player Outlines(All Players(All Teams), Event Player);
+			If(Event Player.PelatNamaDinonaktifkan == True);
+				Enable Nameplates(All Players(All Teams), Event Player);
+			End;
+			Destroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);
+			Destroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);
+			If(Global.HudMenuPemain[Global.IndeksKeluar] != 0);
+				Destroy HUD Text(Global.HudMenuPemain[Global.IndeksKeluar]);
+			End;
+			If(Global.TeksDuniaPemain[Global.IndeksKeluar] != 0);
+				Destroy In-World Text(Global.TeksDuniaPemain[Global.IndeksKeluar]);
+			End;
+			If(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
+				Destroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
+			End;
+			Global.SlotHUDTersedia = Sorted Array(Append To Array(Global.SlotHUDTersedia, Global.SlotHUDPemain[Global.IndeksKeluar]), Current Array Element);
+			Modify Global Variable(HudKiriPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(HudKananPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(HudMenuPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(TeksDuniaPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(TeksDiriPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(SlotHUDPemain, Remove From Array By Index, Global.IndeksKeluar);
+			Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
 		End;
-		If(Global.TeksDuniaPemain[Global.IndeksKeluar] != 0);
-			Destroy In-World Text(Global.TeksDuniaPemain[Global.IndeksKeluar]);
+		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
+		For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);
+			Global.IndeksUtangKeluar = Index Of Array Value(Global.PemainManusia[Global.IndeksPembersihan].PembunuhBalasDendam,
+				Global.PemainPembersihan);
+			If(Global.IndeksUtangKeluar >= 0);
+				Modify Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PembunuhBalasDendam, Remove From Array By Index,
+					Global.IndeksUtangKeluar);
+				Modify Player Variable(Global.PemainManusia[Global.IndeksPembersihan], JumlahBalasDendam, Remove From Array By Index,
+					Global.IndeksUtangKeluar);
+			End;
+			If(Global.PemainManusia[Global.IndeksPembersihan].TargetKamera == Global.PemainPembersihan);
+				Stop Camera(Global.PemainManusia[Global.IndeksPembersihan]);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], ModeKamera, 0);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetKamera, Null);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikJangkarKamera, Vector(0, 0, 0));
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikIdealKamera, Vector(0, 0, 0));
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikBenturanKamera, Vector(0, 0, 0));
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TitikAkhirKamera, Vector(0, 0, 0));
+			End;
+			If(Global.PemainManusia[Global.IndeksPembersihan].TargetInspeksi == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetInspeksi, Null);
+			End;
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetKamera, Filtered Array(Player Variable(
+				Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetKamera), Current Array Element != Global.PemainPembersihan));
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetBalasDendam, Filtered Array(Player Variable(
+				Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetBalasDendam), Current Array Element != Global.PemainPembersihan));
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetTeleportasi, Filtered Array(Player Variable(
+				Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetTeleportasi), Current Array Element != Global.PemainPembersihan));
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], KursorKamera, Min(Player Variable(Global.PemainManusia[
+				Global.IndeksPembersihan], KursorKamera), Count Of(Player Variable(Global.PemainManusia[Global.IndeksPembersihan],
+				DaftarTargetKamera)) + 1));
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], KursorBalasDendam, Count Of(Player Variable(
+				Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetBalasDendam)) == 0 ? 0 : Player Variable(Global.PemainManusia[
+				Global.IndeksPembersihan], KursorBalasDendam) % Count Of(Player Variable(Global.PemainManusia[Global.IndeksPembersihan],
+				DaftarTargetBalasDendam)));
+			Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], KursorTeleportasi, Count Of(Player Variable(
+				Global.PemainManusia[Global.IndeksPembersihan], DaftarTargetTeleportasi)) == 0 ? 0 : Player Variable(Global.PemainManusia[
+				Global.IndeksPembersihan], KursorTeleportasi) % Count Of(Player Variable(Global.PemainManusia[Global.IndeksPembersihan],
+				DaftarTargetTeleportasi)));
+			If(Global.PemainManusia[Global.IndeksPembersihan].CalonTargetKamera == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], CalonTargetKamera, Null);
+			End;
+			If(Global.PemainManusia[Global.IndeksPembersihan].CalonTargetTeleportasi == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], CalonTargetTeleportasi, Null);
+			End;
+			If(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamDipilih == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetBalasDendamDipilih, Null);
+			End;
+			If(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetBalasDendamTerkunci, Null);
+			End;
 		End;
-		If(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
-			Destroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
-		End;
-		Modify Global Variable(HudKiriPemain, Remove From Array By Index, Global.IndeksKeluar);
-		Modify Global Variable(HudKananPemain, Remove From Array By Index, Global.IndeksKeluar);
-		Modify Global Variable(HudMenuPemain, Remove From Array By Index, Global.IndeksKeluar);
-		Modify Global Variable(TeksDuniaPemain, Remove From Array By Index, Global.IndeksKeluar);
-		Modify Global Variable(TeksDiriPemain, Remove From Array By Index, Global.IndeksKeluar);
-		Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
 		Global.IndeksKeluar = -1;
+		Global.PemainPembersihan = Null;
 	}
 }
 
@@ -634,19 +852,20 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Event Player.BotAI == False;
 		Is Dummy Bot(Event Player) == False;
 		Is Alive(Event Player) == True;
-		Event Player.MeleeDipakai == False;
+		Event Player.SeranganDekatDipakai == False;
 		Is Button Held(Event Player, Button(Melee)) == True;
 	}
 
 	actions
 	{
 		Wait(0.500, Abort When False);
-		Event Player.MeleeDipakai = True;
+		Event Player.SeranganDekatDipakai = True;
 		If(Event Player.MenuTerbuka == True);
 			Call Subroutine(TutupMenu);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Arcade Menu closed. Back to professionally doing nothing.") : Custom String(
-				"Menu Arcade ditutup. Kembali AFK dengan penuh tanggung jawab."));
+				"Arcade Menu closed. Back to professionally doing nothing.") : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Menu Arcade ditutup. Kembali AFK dengan penuh tanggung jawab.") : Custom String(
+				"ปิดเมนูอาร์เคดแล้ว กลับไป AFK อย่างมืออาชีพได้"));
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
@@ -661,10 +880,10 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			End;
 			Event Player.KursorWarna = Event Player.IndeksWarna;
 			Event Player.KursorBahasa = Event Player.IndeksBahasa;
-			Event Player.KursorRevenge = 0;
-			Call Subroutine(SegarkanTargetRevenge);
-			Event Player.KursorTeleport = 0;
-			Call Subroutine(SegarkanTargetTeleport);
+			Event Player.KursorBalasDendam = 0;
+			Call Subroutine(SegarkanTargetBalasDendam);
+			Event Player.KursorTeleportasi = 0;
+			Call Subroutine(SegarkanTargetTeleportasi);
 			Disallow Button(Event Player, Button(Melee));
 			Disallow Button(Event Player, Button(Jump));
 			Disallow Button(Event Player, Button(Crouch));
@@ -677,8 +896,9 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Disallow Button(Event Player, Button(Ultimate));
 			Call Subroutine(GambarMenu);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Arcade Menu online. Six extremely important decisions await.") : Custom String(
-				"Menu Arcade online. Enam keputusan yang sangat penting menunggu."));
+				"Arcade Menu online. Six extremely important decisions await.") : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Menu Arcade online. Enam keputusan yang sangat penting menunggu.") : Custom String(
+				"เปิดเมนูอาร์เคดแล้ว มีหกตัวเลือกสำคัญรอคุณอยู่"));
 		End;
 	}
 }
@@ -697,7 +917,7 @@ rule("05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi")
 		Event Player.Manusia == True;
 		Event Player.BotAI == False;
 		Is Dummy Bot(Event Player) == False;
-		Event Player.MeleeDipakai == True;
+		Event Player.SeranganDekatDipakai == True;
 		Is Button Held(Event Player, Button(Melee)) == False;
 	}
 
@@ -706,7 +926,70 @@ rule("05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi")
 		If(Event Player.MenuTerbuka == False);
 			Allow Button(Event Player, Button(Melee));
 		End;
-		Event Player.MeleeDipakai = False;
+		Event Player.SeranganDekatDipakai = False;
+	}
+}
+
+rule("05c - Menu: Dispatcher input dengan prioritas tetap")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.MenuTerbuka == True;
+		Event Player.PerintahMenu == 0;
+		Or(Or(Is Button Held(Event Player, Button(Interact)), And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu
+			!= -1)), Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), And(
+			Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Jump)), Is Button Held(Event Player, Button(Crouch)))))) == True;
+	}
+
+	actions
+	{
+		If(Is Button Held(Event Player, Button(Interact)));
+			Event Player.PerintahMenu = 1;
+		Else If(And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu != -1));
+			Event Player.PerintahMenu = 2;
+		Else If(Is Button Held(Event Player, Button(Primary Fire)));
+			Event Player.PerintahMenu = 3;
+		Else If(Is Button Held(Event Player, Button(Secondary Fire)));
+			Event Player.PerintahMenu = 4;
+		Else If(And(Is Button Held(Event Player, Button(Jump)), Event Player.HalamanMenu == 0));
+			Event Player.PerintahMenu = 5;
+		Else If(And(Is Button Held(Event Player, Button(Crouch)), Event Player.HalamanMenu == 0));
+			Event Player.PerintahMenu = 6;
+		End;
+	}
+}
+
+rule("05d - Menu: Lepaskan dispatcher setelah semua input dilepas")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.PerintahMenu != 0;
+		And(And(Is Button Held(Event Player, Button(Interact)) == False, Is Button Held(Event Player, Button(Reload)) == False), And(And(
+			Is Button Held(Event Player, Button(Primary Fire)) == False, Is Button Held(Event Player, Button(Secondary Fire)) == False), And(
+			Is Button Held(Event Player, Button(Jump)) == False, Is Button Held(Event Player, Button(Crouch)) == False))) == True;
+	}
+
+	actions
+	{
+		"Tunda satu frame agar handler menyelesaikan perintah sebelum dispatcher diaktifkan kembali."
+		Wait(0.016, Ignore Condition);
+		Event Player.PerintahMenu = 0;
 	}
 }
 
@@ -725,7 +1008,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 		Event Player.BotAI == False;
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
-		Is Button Held(Event Player, Button(Primary Fire)) == True;
+		Event Player.PerintahMenu == 3;
 	}
 
 	actions
@@ -740,20 +1023,19 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 		Else If(Event Player.HalamanMenu == 2);
 			Event Player.KursorWarna = (Event Player.KursorWarna + 1) % Count Of(Global.DaftarWarna);
 		Else If(Event Player.HalamanMenu == 3);
-			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
+			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 3;
 		Else If(Event Player.HalamanMenu == 4);
-			Call Subroutine(SegarkanTargetRevenge);
-			If(Count Of(Event Player.DaftarTargetRevenge) > 0);
-				Event Player.KursorRevenge = (Event Player.KursorRevenge + 1) % Count Of(Event Player.DaftarTargetRevenge);
+			Call Subroutine(SegarkanTargetBalasDendam);
+			If(Count Of(Event Player.DaftarTargetBalasDendam) > 0);
+				Event Player.KursorBalasDendam = (Event Player.KursorBalasDendam + 1) % Count Of(Event Player.DaftarTargetBalasDendam);
 			End;
 		Else;
-			Call Subroutine(SegarkanTargetTeleport);
-			If(Count Of(Event Player.DaftarTargetTeleport) > 0);
-				Event Player.KursorTeleport = (Event Player.KursorTeleport + 1) % Count Of(Event Player.DaftarTargetTeleport);
+			Call Subroutine(SegarkanTargetTeleportasi);
+			If(Count Of(Event Player.DaftarTargetTeleportasi) > 0);
+				Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % Count Of(Event Player.DaftarTargetTeleportasi);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
-		Wait Until(Is Button Held(Event Player, Button(Primary Fire)) == False, 99999);
 	}
 }
 
@@ -772,7 +1054,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 		Event Player.BotAI == False;
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
-		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+		Event Player.PerintahMenu == 4;
 	}
 
 	actions
@@ -788,22 +1070,21 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 		Else If(Event Player.HalamanMenu == 2);
 			Event Player.KursorWarna = (Event Player.KursorWarna + Count Of(Global.DaftarWarna) - 1) % Count Of(Global.DaftarWarna);
 		Else If(Event Player.HalamanMenu == 3);
-			Event Player.KursorBahasa = (Event Player.KursorBahasa + 1) % 2;
+			Event Player.KursorBahasa = (Event Player.KursorBahasa + 2) % 3;
 		Else If(Event Player.HalamanMenu == 4);
-			Call Subroutine(SegarkanTargetRevenge);
-			If(Count Of(Event Player.DaftarTargetRevenge) > 0);
-				Event Player.KursorRevenge = (Event Player.KursorRevenge + Count Of(Event Player.DaftarTargetRevenge) - 1) % Count Of(
-					Event Player.DaftarTargetRevenge);
+			Call Subroutine(SegarkanTargetBalasDendam);
+			If(Count Of(Event Player.DaftarTargetBalasDendam) > 0);
+				Event Player.KursorBalasDendam = (Event Player.KursorBalasDendam + Count Of(Event Player.DaftarTargetBalasDendam) - 1) % Count Of(
+					Event Player.DaftarTargetBalasDendam);
 			End;
 		Else;
-			Call Subroutine(SegarkanTargetTeleport);
-			If(Count Of(Event Player.DaftarTargetTeleport) > 0);
-				Event Player.KursorTeleport = (Event Player.KursorTeleport + Count Of(Event Player.DaftarTargetTeleport) - 1) % Count Of(
-					Event Player.DaftarTargetTeleport);
+			Call Subroutine(SegarkanTargetTeleportasi);
+			If(Count Of(Event Player.DaftarTargetTeleportasi) > 0);
+				Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + Count Of(Event Player.DaftarTargetTeleportasi) - 1) % Count Of(
+					Event Player.DaftarTargetTeleportasi);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
-		Wait Until(Is Button Held(Event Player, Button(Secondary Fire)) == False, 99999);
 	}
 }
 
@@ -833,7 +1114,7 @@ rule("07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton")
 	}
 }
 
-rule("07c - Menu Revenge: Segarkan daftar pemain")
+rule("07c - Menu Balas Dendam: Segarkan data tanpa menggambar ulang")
 {
 	event
 	{
@@ -853,14 +1134,13 @@ rule("07c - Menu Revenge: Segarkan daftar pemain")
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetRevenge);
-		Call Subroutine(GambarMenu);
+		Call Subroutine(SegarkanTargetBalasDendam);
 		Wait(0.500, Abort When False);
 		Loop If Condition Is True;
 	}
 }
 
-rule("07d - Menu Teleport: Segarkan Spawn Room dan pemain")
+rule("07d - Menu Teleportasi: Segarkan data tanpa menggambar ulang")
 {
 	event
 	{
@@ -880,8 +1160,7 @@ rule("07d - Menu Teleport: Segarkan Spawn Room dan pemain")
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetTeleport);
-		Call Subroutine(GambarMenu);
+		Call Subroutine(SegarkanTargetTeleportasi);
 		Wait(0.500, Abort When False);
 		Loop If Condition Is True;
 	}
@@ -903,14 +1182,13 @@ rule("08 - Menu 0: Lompat mundur sepuluh genre")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 0;
-		Is Button Held(Event Player, Button(Jump)) == True;
+		Event Player.PerintahMenu == 5;
 	}
 
 	actions
 	{
 		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
 		Call Subroutine(GambarMenu);
-		Wait Until(Is Button Held(Event Player, Button(Jump)) == False, 99999);
 	}
 }
 
@@ -930,18 +1208,17 @@ rule("09 - Menu 0: Jongkok maju sepuluh genre")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu == 0;
-		Is Button Held(Event Player, Button(Crouch)) == True;
+		Event Player.PerintahMenu == 6;
 	}
 
 	actions
 	{
 		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
 		Call Subroutine(GambarMenu);
-		Wait Until(Is Button Held(Event Player, Button(Crouch)) == False, 99999);
 	}
 }
 
-rule("10 - Menu: Interaksi apre o applica la scelta")
+rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 {
 	event
 	{
@@ -956,7 +1233,7 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 		Event Player.BotAI == False;
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
-		Is Button Held(Event Player, Button(Interact)) == True;
+		Event Player.PerintahMenu == 1;
 	}
 
 	actions
@@ -978,18 +1255,19 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 			Else If(Event Player.HalamanMenu == 3);
 				Event Player.KursorBahasa = Event Player.IndeksBahasa;
 			Else If(Event Player.HalamanMenu == 4);
-				Event Player.KursorRevenge = 0;
-				Call Subroutine(SegarkanTargetRevenge);
+				Event Player.KursorBalasDendam = 0;
+				Call Subroutine(SegarkanTargetBalasDendam);
 			Else;
-				Event Player.KursorTeleport = 0;
-				Call Subroutine(SegarkanTargetTeleport);
+				Event Player.KursorTeleportasi = 0;
+				Call Subroutine(SegarkanTargetTeleportasi);
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.IndeksGenre = Event Player.KursorGenre;
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Soundtrack locked: {0}. Excellent taste, probably.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
-				"Soundtrack dipilih: {0}. Selera bagus. Mungkin.", Global.DaftarGenre[Event Player.IndeksGenre]));
+				"Soundtrack locked: {0}. Excellent taste, probably.", Global.DaftarGenre[Event Player.IndeksGenre]) : Event Player.IndeksBahasa == 1
+				? Custom String("Soundtrack dipilih: {0}. Selera bagus. Mungkin.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
+				"เลือกเพลงประกอบแล้ว: {0} รสนิยมดี...น่าจะนะ", Global.DaftarGenre[Event Player.IndeksGenre]));
 		Else If(Event Player.HalamanMenu == 1);
 			Call Subroutine(SegarkanTargetKamera);
 			Event Player.KursorKamera %= Count Of(Event Player.DaftarTargetKamera) + 2;
@@ -998,17 +1276,19 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"First person restored. You may pretend that never happened.") : Custom String(
-					"Kamera orang pertama kembali. Tidak ada yang melihat tadi."));
+					"First person restored. You may pretend that never happened.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Kamera orang pertama kembali. Tidak ada yang melihat tadi.") : Custom String(
+					"กลับสู่มุมมองบุคคลที่หนึ่งแล้ว ทำเป็นว่าเมื่อกี้ไม่เกิดขึ้นก็ได้"));
 			Else If(Event Player.KursorKamera == 1);
 				Event Player.TargetKamera = Event Player;
-				"Lascia terminare il frame di Interact prima di cambiare rendering della camera."
+				"Biarkan frame Interact selesai sebelum mengganti render kamera."
 				Wait(0.016, Ignore Condition);
 				Event Player.ModeKamera = 1;
 				Call Subroutine(MulaiKamera);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"Third person enabled. Admire responsibly.") : Custom String(
-					"Orang ketiga aktif. Silakan mengagumi diri secukupnya."));
+					"Third person enabled. Admire responsibly.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Orang ketiga aktif. Silakan mengagumi diri secukupnya.") : Custom String(
+					"เปิดมุมมองบุคคลที่สามแล้ว ชื่นชมตัวเองแต่พอดี"));
 			Else;
 				If(Event Player.KursorKamera - 2 < Count Of(Event Player.DaftarTargetKamera));
 					Event Player.CalonTargetKamera = Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2];
@@ -1017,110 +1297,127 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 				End;
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
 					Event Player.TargetKamera = Event Player.CalonTargetKamera;
-					"Stesso ritardo di un frame quando si entra nello spectating dalla prima persona."
+					"Gunakan jeda satu frame yang sama saat mulai menonton dari orang pertama."
 					Wait(0.016, Ignore Condition);
 					Event Player.ModeKamera = 2;
 					Call Subroutine(MulaiKamera);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Now spectating {0}. Definitely not stalking.", Event Player.TargetKamera) : Custom String(
-						"Sekarang menonton {0}. Sama sekali bukan menguntit.", Event Player.TargetKamera));
+						"Now spectating {0}. Definitely not stalking.", Event Player.TargetKamera) : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Sekarang menonton {0}. Sama sekali bukan menguntit.", Event Player.TargetKamera) : Custom String(
+						"กำลังชม {0} อยู่ นี่ไม่ใช่การสะกดรอยแน่นอน", Event Player.TargetKamera));
 				Else;
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"That player disappeared. Very on-brand for AFK.") : Custom String(
-						"Pemainnya menghilang. Sangat sesuai tema AFK."));
+						"That player disappeared. Very on-brand for AFK.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Pemainnya menghilang. Sangat sesuai tema AFK.") : Custom String(
+						"ผู้เล่นคนนั้นหายไปแล้ว สมกับเป็นห้อง AFK จริง ๆ"));
 				End;
 			End;
 		Else If(Event Player.HalamanMenu == 2);
 			Event Player.IndeksWarna = Event Player.KursorWarna;
 			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
+			Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
+				InspeksiAktif) == True), True, Event Player.WarnaNama, Always);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Custom String(
-				"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]));
+				"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
+				"ตั้งสีชื่อเป็น {0} แล้ว จะเด่นแค่ไหนก็ได้", Global.NamaWarnaTH[Event Player.IndeksWarna]));
 		Else If(Event Player.HalamanMenu == 3);
 			Event Player.IndeksBahasa = Event Player.KursorBahasa;
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"HUD language: English. Localization complete. Probably.") : Custom String(
-				"Bahasa HUD: Bahasa Indonesia. Lokalisasi selesai. Sepertinya."));
+				"HUD language: English.") : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Bahasa HUD: Bahasa Indonesia.") : Custom String("ภาษา HUD: ไทย"));
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 4);
-			Call Subroutine(SegarkanTargetRevenge);
-			If(Count Of(Event Player.DaftarTargetRevenge) == 0);
+			Call Subroutine(SegarkanTargetBalasDendam);
+			If(Count Of(Event Player.DaftarTargetBalasDendam) == 0);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"No revenge targets. Peace has won, temporarily.") : Custom String(
-					"Tidak ada target revenge. Damai menang... sementara."));
+					"No revenge targets. Peace has won, temporarily.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Tidak ada target balas dendam. Damai menang... sementara.") : Custom String(
+					"ไม่มีเป้าหมายล้างแค้น ความสงบชนะแล้ว...ชั่วคราว"));
 			Else;
-				Event Player.KursorRevenge %= Count Of(Event Player.DaftarTargetRevenge);
-				Event Player.IndeksRevenge = Index Of Array Value(Event Player.KillerRevenge, Event Player.DaftarTargetRevenge[
-					Event Player.KursorRevenge]);
-				If(Event Player.IndeksRevenge < 0);
+				Event Player.KursorBalasDendam %= Count Of(Event Player.DaftarTargetBalasDendam);
+				Event Player.TargetBalasDendamTerkunci = Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam];
+				Event Player.IndeksBalasDendam = Index Of Array Value(Event Player.PembunuhBalasDendam,
+					Event Player.TargetBalasDendamTerkunci);
+				If(Event Player.IndeksBalasDendam < 0);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"That player owes you nothing. Suspiciously peaceful.") : Custom String(
-						"Pemain itu tidak punya hutang. Mencurigakan sekali damainya."));
-				Else If(Event Player.JumlahRevenge[Event Player.IndeksRevenge] <= 0);
+						"That player owes you nothing. Suspiciously peaceful.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Pemain itu tidak punya utang. Damainya mencurigakan sekali.") : Custom String(
+						"ผู้เล่นคนนั้นไม่ได้ติดหนี้คุณ สงบเกินจนน่าสงสัย"));
+				Else If(Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam] <= 0);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Revenge debt cleared. Case closed.") : Custom String(
-						"Hutang revenge lunas. Kasus ditutup."));
-				Else If(Is Alive(Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]) == False);
+						"Revenge debt cleared. Case closed.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Utang balas dendam lunas. Kasus ditutup.") : Custom String(
+						"ชำระหนี้ล้างแค้นหมดแล้ว ปิดคดี"));
+				Else If(Or(Entity Exists(Event Player.TargetBalasDendamTerkunci) == False,
+					Is Alive(Event Player.TargetBalasDendamTerkunci) == False));
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Target is already down. Revenge has office hours.") : Custom String(
-						"Target sudah tumbang. Revenge juga punya jam kerja."));
+						"Target is already down. Revenge has office hours.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Target sudah tumbang. Balas dendam juga punya jam kerja.") : Custom String(
+						"เป้าหมายล้มอยู่แล้ว การล้างแค้นก็มีเวลาทำการนะ"));
 				Else;
-					Set Player Variable(Event Player.DaftarTargetRevenge[Event Player.KursorRevenge], MorteRevenge, True);
-					Kill(Event Player.DaftarTargetRevenge[Event Player.KursorRevenge], Event Player);
-					Modify Player Variable At Index(Event Player, JumlahRevenge, Event Player.IndeksRevenge, Subtract, 1);
+					Set Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam, True);
+					Kill(Event Player.TargetBalasDendamTerkunci, Event Player);
+					Modify Player Variable At Index(Event Player, JumlahBalasDendam, Event Player.IndeksBalasDendam, Subtract, 1);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge claimed on {0}. Remaining: {1}.",
-						Event Player.DaftarTargetRevenge[Event Player.KursorRevenge], Event Player.JumlahRevenge[Event Player.IndeksRevenge]) : Custom String(
-						"Revenge dibayar pada {0}. Sisa: {1}.", Event Player.DaftarTargetRevenge[Event Player.KursorRevenge],
-						Event Player.JumlahRevenge[Event Player.IndeksRevenge]));
-					Wait(0.016, Ignore Condition);
-					Set Player Variable(Event Player.DaftarTargetRevenge[Event Player.KursorRevenge], MorteRevenge, False);
+						Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]) : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Balas dendam dibayar pada {0}. Sisa: {1}.", Event Player.TargetBalasDendamTerkunci,
+						Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]) : Custom String("ล้างแค้น {0} สำเร็จ เหลือ: {1}",
+						Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]));
+					Event Player.TargetBalasDendamTerkunci = Null;
 					Call Subroutine(GambarMenu);
 				End;
 			End;
 		Else;
-			Call Subroutine(SegarkanTargetTeleport);
-			Event Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
-			Event Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
-			If(Event Player.KursorTeleport == 0);
+			Call Subroutine(SegarkanTargetTeleportasi);
+			Event Player.KursorTeleportasi %= Count Of(Event Player.DaftarTargetTeleportasi);
+			Event Player.CalonTargetTeleportasi = Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi];
+			If(Event Player.KursorTeleportasi == 0);
 				If(Is In Spawn Room(Event Player) == True);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"You are already in the Spawn Room. Mission accomplished.") : Custom String(
-						"Kamu sudah di Ruang Spawn. Misi selesai."));
-				Else If(Event Player.PunyaPosSpawn == False);
+						"You are already in the Spawn Room. Mission accomplished.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Kamu sudah di ruang muncul. Misi selesai.") : Custom String(
+						"คุณอยู่ในห้องเกิดแล้ว ภารกิจสำเร็จ"));
+				Else If(Event Player.PunyaPosisiMuncul == False);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Spawn Room not registered yet. Visit spawn first.") : Custom String(
-						"Posisi Ruang Spawn belum tersimpan. Masuk ke spawn dulu."));
+						"Spawn Room not registered yet. Visit spawn first.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Posisi ruang muncul belum tersimpan. Masuk ke sana dulu.") : Custom String(
+						"ยังไม่ได้บันทึกห้องเกิด กรุณาไปที่ห้องเกิดก่อน"));
 				Else;
-					Teleport(Event Player, Event Player.PosSpawnRoom);
+					Teleport(Event Player, Event Player.PosisiRuangMuncul);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Back to the Spawn Room. Tactical retreat complete.") : Custom String(
-						"Kembali ke Ruang Spawn. Mundur taktis selesai."));
+						"Back to the Spawn Room. Tactical retreat complete.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Kembali ke ruang muncul. Mundur taktis selesai.") : Custom String(
+						"กลับสู่ห้องเกิดแล้ว การถอยเชิงกลยุทธ์เสร็จสิ้น"));
 				End;
-			Else If(Event Player.KursorTeleport == 1);
+			Else If(Event Player.KursorTeleportasi == 1);
 				If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Objective position unavailable in this mode. The objective is being mysterious.") : Custom String(
-						"Posisi objektif tidak tersedia di mode ini. Objektifnya sedang misterius."));
+						"Objective position unavailable in this mode. The objective is being mysterious.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Posisi objektif tidak tersedia di mode ini. Objektifnya sedang misterius.") : Custom String(
+						"ตำแหน่งเป้าหมายใช้ไม่ได้ในโหมดนี้ เป้าหมายกำลังเล่นซ่อนหา"));
 				Else;
 					Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Teleported near the current objective. Heroic entrance not included.") : Custom String(
-						"Teleport dekat objektif saat ini. Pose heroik tidak termasuk."));
+						"Teleported near the current objective. Heroic entrance not included.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Teleport dekat objektif saat ini. Pose heroik tidak termasuk.") : Custom String(
+						"เทเลพอร์ตใกล้เป้าหมายปัจจุบันแล้ว ไม่มีท่าเปิดตัวฮีโร่แถมให้"));
 				End;
-			Else If(Or(Entity Exists(Event Player.CalonTargetTeleport) == False, Is Alive(Event Player.CalonTargetTeleport) == False));
+			Else If(Or(Entity Exists(Event Player.CalonTargetTeleportasi) == False, Is Alive(Event Player.CalonTargetTeleportasi) == False));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"Target unavailable. Even teleportation has standards.") : Custom String(
-					"Target sedang tidak tersedia. Teleport juga punya standar."));
+					"Target unavailable. Even teleportation has standards.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Target sedang tidak tersedia. Teleportasi juga punya standar.") : Custom String(
+					"เป้าหมายไม่พร้อมใช้งาน แม้แต่เทเลพอร์ตก็มีมาตรฐาน"));
 			Else;
-				Teleport(Event Player, Nearest Walkable Position(Position Of(Event Player.CalonTargetTeleport)
-					- Facing Direction Of(Event Player.CalonTargetTeleport) * 1.500));
+				Teleport(Event Player, Nearest Walkable Position(Position Of(Event Player.CalonTargetTeleportasi)
+					- Facing Direction Of(Event Player.CalonTargetTeleportasi) * 1.500));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"Teleported near {0}. Personal space sold separately.", Event Player.CalonTargetTeleport) : Custom String(
-					"Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.CalonTargetTeleport));
+					"Teleported near {0}. Personal space sold separately.", Event Player.CalonTargetTeleportasi) : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.CalonTargetTeleportasi) : Custom String(
+					"เทเลพอร์ตไปใกล้ {0} แล้ว พื้นที่ส่วนตัวไม่ได้รวมในแพ็กเกจ", Event Player.CalonTargetTeleportasi));
 			End;
 			Call Subroutine(GambarMenu);
 		End;
-		Wait Until(Is Button Held(Event Player, Button(Interact)) == False, 99999);
 	}
 }
 
@@ -1140,14 +1437,13 @@ rule("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == True;
 		Event Player.HalamanMenu != -1;
-		Is Button Held(Event Player, Button(Reload)) == True;
+		Event Player.PerintahMenu == 2;
 	}
 
 	actions
 	{
 		Event Player.HalamanMenu = -1;
 		Call Subroutine(GambarMenu);
-		Wait Until(Is Button Held(Event Player, Button(Reload)) == False, 99999);
 	}
 }
 
@@ -1194,30 +1490,22 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 	{
 		Event Player.InspeksiAktif = True;
 		Disable Nameplates(All Players(All Teams), Event Player);
-		"Outline di crouch: ogni umano usa il proprio colore scelto; tipo Always per restare visibile anche dietro la geometria."
-		Start Forcing Player Outlines(Event Player, Event Player, True, Event Player.WarnaNama, Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 0)), Event Player, True, Global.DaftarWarna[0], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 1)), Event Player, True, Global.DaftarWarna[1], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 2)), Event Player, True, Global.DaftarWarna[2], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 3)), Event Player, True, Global.DaftarWarna[3], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 4)), Event Player, True, Global.DaftarWarna[4], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 5)), Event Player, True, Global.DaftarWarna[5], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 6)), Event Player, True, Global.DaftarWarna[6], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 7)), Event Player, True, Global.DaftarWarna[7], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 8)), Event Player, True, Global.DaftarWarna[8], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 9)), Event Player, True, Global.DaftarWarna[9], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 10)), Event Player, True, Global.DaftarWarna[10], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 11)), Event Player, True, Global.DaftarWarna[11], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 12)), Event Player, True, Global.DaftarWarna[12], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 13)), Event Player, True, Global.DaftarWarna[13], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 14)), Event Player, True, Global.DaftarWarna[14], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 15)), Event Player, True, Global.DaftarWarna[15], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 16)), Event Player, True, Global.DaftarWarna[16], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 17)), Event Player, True, Global.DaftarWarna[17], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 18)), Event Player, True, Global.DaftarWarna[18], Always);
-		Start Forcing Player Outlines(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, Player Variable(Current Array Element, IndeksWarna) == 19)), Event Player, True, Global.DaftarWarna[19], Always);
+		Event Player.PelatNamaDinonaktifkan = True;
+		"Saat jongkok, iterasikan hanya entitas yang hadir: manusia memakai warna pilihannya dan bot memakai jingga."
+		For Player Variable(Event Player, IndeksGarisLuar, 0, Count Of(All Players(All Teams)), 1);
+			If(Or(Is Dummy Bot(All Players(All Teams)[Event Player.IndeksGarisLuar]), Player Variable(All Players(All Teams)[
+				Event Player.IndeksGarisLuar], BotAI)));
+				Start Forcing Player Outlines(All Players(All Teams)[Event Player.IndeksGarisLuar], Event Player, True, Color(Orange), Always);
+			Else;
+				Start Forcing Player Outlines(All Players(All Teams)[Event Player.IndeksGarisLuar], Event Player, True, Player Variable(
+					All Players(All Teams)[Event Player.IndeksGarisLuar], WarnaNama), Always);
+			End;
+		End;
 		Call Subroutine(SegarkanTargetInspeksi);
-		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Custom String("{0} {1}  ULT {2}%",
+		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Event Player.IndeksBahasa == 2 ? Custom String(
+			"{0} {1}  อัลติ {2}%", Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
+			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Round To Integer(Ultimate Charge Percent(
+			Event Player.TargetInspeksi), Down)) : Custom String("{0} {1}  ULT {2}%",
 			Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
 			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Round To Integer(Ultimate Charge Percent(
 			Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null
@@ -1231,7 +1519,9 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 		End;
 		Event Player.TeksDiri = Null;
 		If(Event Player.ModeKamera == 1);
-			Create In-World Text(Event Player, Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
+			Create In-World Text(Event Player, Event Player.IndeksBahasa == 2 ? Custom String("{0} {1}  อัลติ {2}%", Custom String("{0}", Event Player),
+				Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(
+				Ultimate Charge Percent(Event Player), Down)) : Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
 				Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
 				Down)), Update Every Frame(Eye Position(Event Player) + Vector(0, 0.450, 0)), 0.750, Do Not Clip,
 				Visible To Position String and Color, Event Player.WarnaNama, Visible Never);
@@ -1262,14 +1552,13 @@ rule("14 - Intip Pahlawan: Perbarui garis pandang dengan sopan")
 
 	actions
 	{
-		Disable Nameplates(All Players(All Teams), Event Player);
 		Call Subroutine(SegarkanTargetInspeksi);
-		Wait(0.050, Abort When False);
+		Wait(0.100, Abort When False);
 		Loop If Condition Is True;
 	}
 }
 
-rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri o apri menu")
+rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri atau membuka menu")
 {
 	event
 	{
@@ -1287,8 +1576,11 @@ rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri o apri menu")
 
 	actions
 	{
-		Enable Nameplates(All Players(All Teams), Event Player);
-		Stop Forcing Player Outlines(Global.PemainManusia, Event Player);
+		If(Event Player.PelatNamaDinonaktifkan == True);
+			Enable Nameplates(All Players(All Teams), Event Player);
+			Event Player.PelatNamaDinonaktifkan = False;
+		End;
+		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 		If(Event Player.TeksDunia != Null);
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
@@ -1327,12 +1619,13 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 		Event Player.ModeKamera = 0;
 		Event Player.TargetKamera = Null;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-			"Camera target left. First person has reclaimed you.") : Custom String(
-			"Target kamera keluar. Orang pertama mengambilmu kembali."));
+			"Camera target left. First person has reclaimed you.") : Event Player.IndeksBahasa == 1 ? Custom String(
+			"Target kamera keluar. Orang pertama mengambilmu kembali.") : Custom String(
+			"เป้าหมายกล้องออกไปแล้ว กลับสู่มุมมองบุคคลที่หนึ่ง"));
 	}
 }
 
-rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
+rule("16b - Kamera: Perbarui cache dengan satu raycast per tick")
 {
 	event
 	{
@@ -1347,22 +1640,31 @@ rule("16b - Kamera: Kalibrasi ulang saat target ganti hero")
 		Event Player.ModeKamera != 0;
 		Event Player.TargetKamera != Null;
 		Entity Exists(Event Player.TargetKamera) == True;
-		Hero Of(Event Player.TargetKamera) != Event Player.HeroKameraTerakhir;
 	}
 
 	actions
 	{
-		"Hero Of cambia prima che Eye Position del nuovo modello sia sempre stabile. Aspetta solo durante il cambio eroe, poi ricalibra una volta."
-		Wait(0.100, Ignore Condition);
-		Abort If(Event Player.ModeKamera == 0);
-		Abort If(Event Player.TargetKamera == Null);
-		Abort If(Entity Exists(Event Player.TargetKamera) == False);
-		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
+		"Hitung ulang tinggi setiap tick agar perubahan model, termasuk D.Mon, tidak memerlukan perubahan identitas pahlawan."
+		Event Player.TinggiJangkarKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
-		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
+		Event Player.TitikJangkarKamera = Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiJangkarKamera
+			+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0);
+		Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera - Facing Direction Of(Event Player.TargetKamera)
+			* Min(4.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
+			+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
+			Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016));
+		Event Player.TitikBenturanKamera = Ray Cast Hit Position(Event Player.TitikJangkarKamera, Event Player.TitikIdealKamera,
+			Empty Array, Empty Array, False);
+		Event Player.TitikAkhirKamera = Event Player.TitikBenturanKamera + Direction Towards(Event Player.TitikBenturanKamera,
+			Event Player.TitikJangkarKamera) * Min(Global.BantalanDinding, Distance Between(Event Player.TitikBenturanKamera,
+			Event Player.TitikJangkarKamera) * 0.250) - Vector(0, Min(0.240, Distance Between(Event Player.TitikBenturanKamera,
+			Event Player.TitikIdealKamera) * 0.180) * Min(1, Distance Between(Event Player.TitikBenturanKamera,
+			Event Player.TitikJangkarKamera) / 1.200), 0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
-rule("17 - Revenge: Catat solo il killer diretto, bukan assist")
+rule("17 - Balas Dendam: Catat hanya pembunuh langsung")
 {
 	event
 	{
@@ -1374,20 +1676,23 @@ rule("17 - Revenge: Catat solo il killer diretto, bukan assist")
 	conditions
 	{
 		Event Player.Manusia == True;
-		Event Player.MorteRevenge == False;
-		Attacker != Null;
-		Attacker != Event Player;
-		Player Variable(Attacker, Manusia) == True;
 	}
 
 	actions
 	{
-		Event Player.IndeksRevenge = Index Of Array Value(Event Player.KillerRevenge, Attacker);
-		If(Event Player.IndeksRevenge < 0);
-			Event Player.KillerRevenge = Append To Array(Event Player.KillerRevenge, Attacker);
-			Event Player.JumlahRevenge = Append To Array(Event Player.JumlahRevenge, 1);
+		If(Event Player.KematianBalasDendam == True);
+			Event Player.KematianBalasDendam = False;
+			Abort;
+		End;
+		Abort If(Attacker == Null);
+		Abort If(Attacker == Event Player);
+		Abort If(Player Variable(Attacker, Manusia) == False);
+		Event Player.IndeksBalasDendam = Index Of Array Value(Event Player.PembunuhBalasDendam, Attacker);
+		If(Event Player.IndeksBalasDendam < 0);
+			Event Player.PembunuhBalasDendam = Append To Array(Event Player.PembunuhBalasDendam, Attacker);
+			Event Player.JumlahBalasDendam = Append To Array(Event Player.JumlahBalasDendam, 1);
 		Else;
-			Modify Player Variable At Index(Event Player, JumlahRevenge, Event Player.IndeksRevenge, Add, 1);
+			Modify Player Variable At Index(Event Player, JumlahBalasDendam, Event Player.IndeksBalasDendam, Add, 1);
 		End;
 	}
 }
@@ -1410,6 +1715,7 @@ rule("90 - Subrutin: Tutup menu dan kembalikan semua tombol")
 		End;
 		Event Player.HudMenu = Null;
 		Event Player.MenuTerbuka = False;
+		Event Player.PerintahMenu = 0;
 		Event Player.HalamanMenu = -1;
 		If(Is Button Held(Event Player, Button(Melee)) == False);
 			Allow Button(Event Player, Button(Melee));
@@ -1454,9 +1760,9 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 		Else If(Event Player.HalamanMenu == 3);
 			Call Subroutine(GambarBahasa);
 		Else If(Event Player.HalamanMenu == 4);
-			Call Subroutine(GambarRevenge);
+			Call Subroutine(GambarBalasDendam);
 		Else;
-			Call Subroutine(GambarTeleport);
+			Call Subroutine(GambarTeleportasi);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -1477,23 +1783,32 @@ rule("91a - Subrutin: Gambar menu utama")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}: open | hold {1} 0.5 sec: close", Input Binding String(Button(Interact)), Input Binding String(Button(Melee))))
-			: Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
+			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
 			Input Binding String(Button(Secondary Fire))), Custom String("{0}: buka | tahan {1} 0,5 dtk: tutup", Input Binding String(Button(Interact)),
-			Input Binding String(Button(Melee)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorUtama == 0 ? Custom String(
+			Input Binding String(Button(Melee)))) : Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า",
+			Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: เปิด | กด {1} ค้างเพื่อปิด",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Melee)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorUtama == 0 ? Custom String(
 			"0 - SOUNDTRACK\nCURRENT: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - THIRD-PERSON CAMERA\nCURRENT: {0}", Event Player.ModeKamera == 0 ? Custom String("off")
 			: Event Player.ModeKamera == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - HUD LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nDIRECT KILLS OWED TO YOU") : Custom String(
-			"5 - TELEPORT\nSPAWN ROOM, OBJECTIVE, PLAYERS & BOTS") : Event Player.KursorUtama == 0 ? Custom String(
+			"5 - TELEPORT\nSPAWN ROOM, OBJECTIVE, PLAYERS & BOTS") : Event Player.IndeksBahasa == 1 ? Event Player.KursorUtama == 0 ? Custom String(
 			"0 - SOUNDTRACK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA ORANG KETIGA\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati")
 			: Event Player.ModeKamera == 1 ? Custom String("hero sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - BAHASA HUD\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
-			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nHUTANG KILL LANGSUNG") : Custom String(
-			"5 - TELEPORT\nRUANG SPAWN, OBJEKTIF, PEMAIN & BOT"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
+			: Event Player.KursorUtama == 4 ? Custom String("4 - BALAS DENDAM\nUTANG KILL LANGSUNG") : Custom String(
+			"5 - TELEPORTASI\nRUANG MUNCUL, OBJEKTIF, PEMAIN & BOT") : Event Player.KursorUtama == 0 ? Custom String(
+			"0 - เพลงประกอบ\nปัจจุบัน: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง"))
+			: Event Player.KursorUtama == 1 ? Custom String("1 - กล้องบุคคลที่สาม\nสถานะ: {0}", Event Player.ModeKamera == 0 ? Custom String("ปิด")
+			: Event Player.ModeKamera == 1 ? Custom String("ฮีโร่ของคุณ") : Custom String("กำลังดู {0}", Event Player.TargetKamera))
+			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaTH[Event Player.IndeksWarna])
+			: Event Player.KursorUtama == 3 ? Custom String("3 - ภาษา HUD\nปัจจุบัน: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
+			: Event Player.KursorUtama == 4 ? Custom String("4 - ล้างแค้น\nศัตรูที่ติดหนี้คุณ") : Custom String(
+			"5 - เทเลพอร์ต\nห้องเกิด เป้าหมาย ผู้เล่น และบอต"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
 			Custom Color(255, 185, 65, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1513,15 +1828,21 @@ rule("91b - Subrutin: Gambar menu musik")
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}: back 10 | {1}: forward 10", Input Binding String(Button(Jump)), Input Binding String(Button(Crouch)))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
 			Input Binding String(Button(Secondary Fire))), Custom String("{0}: mundur 10 | {1}: maju 10", Input Binding String(Button(Jump)),
 			Input Binding String(Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
-			Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))),
+			Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)),
+			Input Binding String(Button(Secondary Fire))), Custom String("{0}: ย้อน 10 | {1}: เดินหน้า 10", Input Binding String(Button(Jump)),
+			Input Binding String(Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Reload))), Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))),
 			Event Player.IndeksBahasa == 0 ? Custom String("0 - SOUNDTRACK {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1,
-			Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Custom String(
+			Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Event Player.IndeksBahasa == 1 ? Custom String(
 			"0 - SOUNDTRACK {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1, Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)],
-			Global.DaftarGenre[Event Player.KursorGenre]), Top, 100, Color(White), Custom Color(205, 235, 255, 255), Custom Color(55, 235, 245, 255),
+			Global.DaftarGenre[Event Player.KursorGenre]) : Custom String("0 - เพลงประกอบ {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1,
+			Global.NamaHalamanTH[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]), Top, 100,
+			Color(White), Custom Color(205, 235, 255, 255), Custom Color(55, 235, 245, 255),
 			Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1540,20 +1861,26 @@ rule("91c - Subrutin: Gambar menu kamera")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"1 - THIRD-PERSON CAMERA {0}/{1}\n> {2}", Event Player.KursorKamera + 1, Count Of(Event Player.DaftarTargetKamera) + 2,
 			Event Player.KursorKamera == 0 ? Custom String("CAMERA OFF") : Event Player.KursorKamera == 1 ? Custom String("YOUR HERO") : Custom String(
 			"WATCH {0} {1}", Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[
 			Event Player.KursorKamera - 2]) ? Hero Being Duplicated(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2]) : Hero Of(
-			Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])))) : Custom String("1 - KAMERA ORANG KETIGA {0}/{1}\n> {2}",
+			Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])))) : Event Player.IndeksBahasa == 1 ? Custom String("1 - KAMERA ORANG KETIGA {0}/{1}\n> {2}",
 			Event Player.KursorKamera + 1, Count Of(Event Player.DaftarTargetKamera) + 2, Event Player.KursorKamera == 0 ? Custom String("KAMERA MATI")
 			: Event Player.KursorKamera == 1 ? Custom String("HERO SENDIRI") : Custom String("TONTON {0} {1}", Event Player.DaftarTargetKamera[
 			Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])
 			? Hero Being Duplicated(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2]) : Hero Of(Event Player.DaftarTargetKamera[
-			Event Player.KursorKamera - 2])))), Top, 100, Color(White), Custom Color(205, 235, 255, 255), Custom Color(90, 180, 255, 255),
+			Event Player.KursorKamera - 2])))) : Custom String("1 - กล้องบุคคลที่สาม {0}/{1}\n> {2}", Event Player.KursorKamera + 1,
+			Count Of(Event Player.DaftarTargetKamera) + 2, Event Player.KursorKamera == 0 ? Custom String("ปิดกล้อง") : Event Player.KursorKamera == 1
+			? Custom String("ฮีโร่ของคุณ") : Custom String("ดู {0}", Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])), Top, 100,
+			Color(White), Custom Color(205, 235, 255, 255), Custom Color(90, 180, 255, 255),
 			Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1572,13 +1899,17 @@ rule("91d - Subrutin: Gambar menu warna")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"2 - NAME COLOR {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarnaEN[Event Player.KursorWarna])
-			: Custom String("2 - WARNA NAMA {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna),
-			Global.NamaWarna[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
+			: Event Player.IndeksBahasa == 1 ? Custom String("2 - WARNA NAMA {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna),
+			Global.NamaWarna[Event Player.KursorWarna]) : Custom String("2 - สีชื่อ {0}/{1}\n> {2}", Event Player.KursorWarna + 1,
+			Count Of(Global.DaftarWarna), Global.NamaWarnaTH[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
 			Global.DaftarWarna[Event Player.KursorWarna], Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1597,91 +1928,114 @@ rule("91e - Subrutin: Gambar menu bahasa")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
-			"3 - HUD LANGUAGE {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]) : Custom String(
-			"3 - BAHASA HUD {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]), Top, 100,
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
+			"3 - HUD LANGUAGE {0}/3\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"3 - BAHASA HUD {0}/3\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]) : Custom String(
+			"3 - ภาษา HUD {0}/3\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]), Top, 100,
 			Color(White), Custom Color(225, 210, 255, 255), Custom Color(190, 120, 255, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
 
-rule("91f - Subrutin: Gambar menu Revenge")
+rule("91f - Subrutin: Gambar menu balas dendam")
 {
 	event
 	{
 		Subroutine;
-		GambarRevenge;
+		GambarBalasDendam;
 	}
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetRevenge);
-		If(Count Of(Event Player.DaftarTargetRevenge) == 0);
-			Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String(
-				"\nNo revenge targets. Peace is suspicious.\n{0}: back | hold {1} 0.5 sec: close", Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))
-				: Custom String("\nTidak ada target revenge. Damai itu mencurigakan.\n{0}: kembali | tahan {1} 0,5 dtk: tutup", Input Binding String(Button(Reload)),
-				Input Binding String(Button(Melee))), Custom String("4 - REVENGE"), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
-				Custom Color(255, 80, 80, 255), Visible To and String, Visible Never);
-		Else;
-			Event Player.KursorRevenge %= Count Of(Event Player.DaftarTargetRevenge);
-			Event Player.IndeksRevenge = Index Of Array Value(Event Player.KillerRevenge, Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]);
-			Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
-				Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-				Custom String("{0}\n{1}", Custom String("{0}: claim revenge | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-				Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
-				Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-				Custom String("{0}\n{1}", Custom String("{0}: balas sekarang | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-				Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
-				"{0}\nOWED: {1}", Custom String("4 - REVENGE {0}/{1}\n> {2}", Event Player.KursorRevenge + 1,
-				Count Of(Event Player.DaftarTargetRevenge), Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]),
-				Event Player.IndeksRevenge < 0 ? 0 : Event Player.JumlahRevenge[Event Player.IndeksRevenge]) : Custom String("{0}\nHUTANG: {1}",
-				Custom String("4 - REVENGE {0}/{1}\n> {2}", Event Player.KursorRevenge + 1, Count Of(Event Player.DaftarTargetRevenge),
-				Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]), Event Player.IndeksRevenge < 0 ? 0
-				: Event Player.JumlahRevenge[Event Player.IndeksRevenge]), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
-				Custom Color(255, 80, 80, 255), Visible To and String, Visible Never);
-		End;
+		Call Subroutine(SegarkanTargetBalasDendam);
+		Create HUD Text(Event Player, Null, Count Of(Event Player.DaftarTargetBalasDendam) == 0
+			? Event Player.IndeksBahasa == 0 ? Custom String("\nNo revenge targets. Peace is suspicious.\n{0}: back | hold {1} 0.5 sec: close",
+			Input Binding String(Button(Reload)), Input Binding String(Button(Melee))) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"\nTidak ada target balas dendam. Damai itu mencurigakan.\n{0}: kembali | tahan {1} 0,5 dtk: tutup",
+			Input Binding String(Button(Reload)), Input Binding String(Button(Melee))) : Custom String(
+			"\nไม่มีเป้าหมายล้างแค้น ความสงบช่างน่าสงสัย\n{0}: กลับ | กด {1} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Reload)),
+			Input Binding String(Button(Melee))) : Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String(
+			"\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String(
+			"{0}\n{1}", Custom String("{0}: claim revenge | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
+			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("{0}\n{1}", Custom String("{0}: balas sekarang | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+			Custom String("tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}", Custom String(
+			"\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}\n{1}",
+			Custom String("{0}: ล้างแค้น | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String(
+			"กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Count Of(Event Player.DaftarTargetBalasDendam) == 0 ? Custom String("4 - REVENGE")
+			: Event Player.IndeksBahasa == 0 ? Custom String("{0}\nOWED: {1}", Custom String("4 - REVENGE {0}/{1}\n> {2}",
+			Event Player.KursorBalasDendam + 1, Count Of(Event Player.DaftarTargetBalasDendam), Event Player.DaftarTargetBalasDendam[
+			Event Player.KursorBalasDendam]), Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.DaftarTargetBalasDendam[
+			Event Player.KursorBalasDendam]) < 0 ? 0 : Event Player.JumlahBalasDendam[Index Of Array Value(Event Player.PembunuhBalasDendam,
+			Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam])]) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"{0}\nUTANG: {1}", Custom String("4 - BALAS DENDAM {0}/{1}\n> {2}", Event Player.KursorBalasDendam + 1,
+			Count Of(Event Player.DaftarTargetBalasDendam), Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam]),
+			Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam]) < 0
+			? 0 : Event Player.JumlahBalasDendam[Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.DaftarTargetBalasDendam[
+			Event Player.KursorBalasDendam])]) : Custom String("{0}\nหนี้: {1}", Custom String("4 - ล้างแค้น {0}/{1}\n> {2}",
+			Event Player.KursorBalasDendam + 1, Count Of(Event Player.DaftarTargetBalasDendam), Event Player.DaftarTargetBalasDendam[
+			Event Player.KursorBalasDendam]), Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.DaftarTargetBalasDendam[
+			Event Player.KursorBalasDendam]) < 0 ? 0 : Event Player.JumlahBalasDendam[Index Of Array Value(Event Player.PembunuhBalasDendam,
+			Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam])]), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
+			Custom Color(255, 80, 80, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
 
-rule("91g - Subrutin: Gambar menu Teleport")
+rule("91g - Subrutin: Gambar menu teleportasi")
 {
 	event
 	{
 		Subroutine;
-		GambarTeleport;
+		GambarTeleportasi;
 	}
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetTeleport);
-		Event Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+		Call Subroutine(SegarkanTargetTeleportasi);
+		Event Player.KursorTeleportasi %= Count Of(Event Player.DaftarTargetTeleportasi);
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
+			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
-			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0
-			? Event Player.KursorTeleport == 0 ? Custom String("{0}\n> SPAWN ROOM\n{1}",
-				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
-				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosSpawn ? Custom String("READY FOR TACTICAL RETREAT")
-				: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\n> CURRENT OBJECTIVE\n{1}",
-				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}", Custom String(
+			"\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}\n{1}",
+			Custom String("{0}: เทเลพอร์ต | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String(
+			"กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0
+			? Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> SPAWN ROOM\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
+				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY FOR TACTICAL RETREAT")
+				: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> CURRENT OBJECTIVE\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
 				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("UNAVAILABLE IN THIS MODE")
-				: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
-				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport])
-			: Event Player.KursorTeleport == 0 ? Custom String("{0}\n> RUANG SPAWN\n{1}",
-				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
-				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosSpawn ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
-				: Custom String("MASUK KE SPAWN UNTUK MENYIMPANNYA")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\n> OBJEKTIF SAAT INI\n{1}",
-				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+				: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
+				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
+			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> RUANG MUNCUL\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
+				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
+				: Custom String("MASUK KE RUANG MUNCUL UNTUK MENYIMPANNYA")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> OBJEKTIF SAAT INI\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
 				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("TIDAK TERSEDIA DI MODE INI")
-				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
-				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport]), Top, 100,
+				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
+				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
+			: Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> ห้องเกิด\n{1}", Custom String("5 - เทเลพอร์ต {0}/{1}",
+				Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)), Is In Spawn Room(Event Player) ? Custom String(
+				"คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อมถอยอย่างมีกลยุทธ์") : Custom String(
+				"ไปห้องเกิดเพื่อบันทึกตำแหน่ง")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> เป้าหมายปัจจุบัน\n{1}",
+				Custom String("5 - เทเลพอร์ต {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
+				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("ใช้ไม่ได้ในโหมดนี้")
+				: Custom String("พร้อม - ตำแหน่งที่เดินถึงใกล้ที่สุด")) : Custom String("5 - เทเลพอร์ต {0}/{1}\n> {2}",
+				Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[
+				Event Player.KursorTeleportasi]), Top, 100,
 			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1697,8 +2051,9 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 
 	actions
 	{
+		Abort If(Entity Exists(Event Player) == False);
 		Event Player.MenuTerbuka = False;
-		Event Player.MeleeDipakai = False;
+		Event Player.SeranganDekatDipakai = False;
 		Event Player.HalamanMenu = -1;
 		Set Primary Fire Enabled(Event Player, False);
 		Set Secondary Fire Enabled(Event Player, False);
@@ -1717,10 +2072,14 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 		Set Damage Dealt(Event Player, 0);
 		Set Healing Dealt(Event Player, 0);
 		Set Knockback Dealt(Event Player, 0);
+		Event Player.PahlawanBotTerakhir = Hero Of(Event Player);
+		Event Player.KunciBotAktif = True;
+		Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
+			InspeksiAktif) == True), True, Color(Orange), Always);
 	}
 }
 
-rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
+rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 {
 	event
 	{
@@ -1731,88 +2090,16 @@ rule("93 - Subrutin: Kamera terza persona dinamica sulla spalla sinistra")
 	actions
 	{
 		Abort If(Event Player.TargetKamera == Null);
+		Abort If(Entity Exists(Event Player.TargetKamera) == False);
 		Stop Camera(Event Player);
-		"Camera diretta. Vicino ai muri abbassa solo quanto consente lo spazio reale e riduce il padding quando il muro e troppo vicino, evitando di entrare nel modello."
-		Event Player.HeroKameraTerakhir = Hero Of(Event Player.TargetKamera);
-		Event Player.TinggiAnchorKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
+		Event Player.TinggiJangkarKamera = Min(2.200, Max(1.000, Y Component Of(Eye Position(Event Player.TargetKamera)
 			- Position Of(Event Player.TargetKamera))));
-		Start Camera(Event Player,
-			Update Every Frame(
-				Ray Cast Hit Position(
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-						Empty Array, Empty Array, False)
-				+ Direction Towards(
-					Ray Cast Hit Position(
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-						Empty Array, Empty Array, False),
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0))
-					* Min(Global.BantalanDinding, Distance Between(
-						Ray Cast Hit Position(
-							Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-								+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-							Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-								+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-								- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-									Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-								+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-									Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-									Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-							Empty Array, Empty Array, False),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-							+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * 0.250)
-				- Vector(0, Min(0.240, Distance Between(
-					Ray Cast Hit Position(
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-						Empty Array, Empty Array, False),
-					Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-						+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-						- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-							Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-						+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-							Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-							Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016))) * 0.180)
-					* Min(1, Distance Between(
-						Ray Cast Hit Position(
-							Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-								+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0),
-							Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-								+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-								- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Global.JarakKamera,
-									Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055))
-								+ Cross Product(Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0),
-									Vector(0, 1, 0)) * Min(1.350, Max(Global.GeserKamera,
-									Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)),
-							Empty Array, Empty Array, False),
-						Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera
-							+ Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) / 1.200), 0)),
-			Update Every Frame(
-				Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiAnchorKamera, 0)
-					+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
+		Event Player.TitikJangkarKamera = Position Of(Event Player.TargetKamera) + Vector(0, Event Player.TinggiJangkarKamera, 0);
+		Event Player.TitikIdealKamera = Event Player.TitikJangkarKamera;
+		Event Player.TitikBenturanKamera = Event Player.TitikJangkarKamera;
+		Event Player.TitikAkhirKamera = Event Player.TitikJangkarKamera;
+		Start Camera(Event Player, Update Every Frame(Event Player.TitikAkhirKamera), Update Every Frame(Position Of(Event Player.TargetKamera)
+			+ Vector(0, Event Player.TinggiJangkarKamera, 0) + Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);
 	}
 }
 
@@ -1846,7 +2133,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TeksDiri = Null;
 		Event Player.ModeKamera = 0;
 		Event Player.TargetKamera = Null;
-		Event Player.MeleeDipakai = False;
+		Event Player.SeranganDekatDipakai = False;
 		Event Player.HalamanMenu = -1;
 		Event Player.KursorUtama = 0;
 		Event Player.KursorKamera = 0;
@@ -1858,19 +2145,29 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorBahasa = 0;
 		Event Player.DaftarTargetKamera = Empty Array;
 		Event Player.SudahSiap = True;
-		Event Player.KursorRevenge = 0;
-		Event Player.DaftarTargetRevenge = Empty Array;
-		Event Player.KillerRevenge = Empty Array;
-		Event Player.JumlahRevenge = Empty Array;
-		Event Player.IndeksRevenge = -1;
-		Event Player.MorteRevenge = False;
-		Event Player.KursorTeleport = 0;
-		Event Player.DaftarTargetTeleport = Empty Array;
-		Event Player.PosSpawnRoom = Vector(0, 0, 0);
-		Event Player.PunyaPosSpawn = False;
-		Event Player.CalonTargetTeleport = Null;
-		Event Player.TinggiAnchorKamera = 1.500;
-		Event Player.HeroKameraTerakhir = Null;
+		Event Player.KursorBalasDendam = 0;
+		Event Player.DaftarTargetBalasDendam = Empty Array;
+		Event Player.PembunuhBalasDendam = Empty Array;
+		Event Player.JumlahBalasDendam = Empty Array;
+		Event Player.IndeksBalasDendam = -1;
+		Event Player.KematianBalasDendam = False;
+		Event Player.KursorTeleportasi = 0;
+		Event Player.DaftarTargetTeleportasi = Empty Array;
+		Event Player.PosisiRuangMuncul = Vector(0, 0, 0);
+		Event Player.PunyaPosisiMuncul = False;
+		Event Player.CalonTargetTeleportasi = Null;
+		Event Player.TinggiJangkarKamera = 1.500;
+		Event Player.TargetBalasDendamTerkunci = Null;
+		Event Player.TargetBalasDendamDipilih = Null;
+		Event Player.TitikJangkarKamera = Vector(0, 0, 0);
+		Event Player.TitikIdealKamera = Vector(0, 0, 0);
+		Event Player.TitikBenturanKamera = Vector(0, 0, 0);
+		Event Player.TitikAkhirKamera = Vector(0, 0, 0);
+		Event Player.PelatNamaDinonaktifkan = False;
+		Event Player.KunciBotAktif = False;
+		Event Player.PahlawanBotTerakhir = Null;
+		Event Player.IndeksGarisLuar = 0;
+		Event Player.PerintahMenu = 0;
 	}
 }
 
@@ -1931,49 +2228,58 @@ rule("96 - Subrutin: Cari pemain terdekat dari bidikan")
 	}
 }
 
-rule("97 - Subrutin: Segarkan daftar target Revenge")
+rule("97 - Subrutin: Segarkan daftar target balas dendam")
 {
 	event
 	{
 		Subroutine;
-		SegarkanTargetRevenge;
+		SegarkanTargetBalasDendam;
 	}
 
 	actions
 	{
-		Event Player.DaftarTargetRevenge = Filtered Array(Global.PemainManusia, Current Array Element != Event Player);
-		If(Count Of(Event Player.DaftarTargetRevenge) == 0);
-			Event Player.KursorRevenge = 0;
-		Else If(Event Player.KursorRevenge >= Count Of(Event Player.DaftarTargetRevenge));
-			Event Player.KursorRevenge = 0;
+		If(Event Player.KursorBalasDendam < Count Of(Event Player.DaftarTargetBalasDendam));
+			Event Player.TargetBalasDendamDipilih = Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam];
+		Else;
+			Event Player.TargetBalasDendamDipilih = Null;
+		End;
+		Event Player.DaftarTargetBalasDendam = Filtered Array(Global.PemainManusia, Current Array Element != Event Player);
+		If(Count Of(Event Player.DaftarTargetBalasDendam) == 0);
+			Event Player.KursorBalasDendam = 0;
+		Else If(And(Event Player.TargetBalasDendamDipilih != Null, Array Contains(Event Player.DaftarTargetBalasDendam,
+			Event Player.TargetBalasDendamDipilih)));
+			Event Player.KursorBalasDendam = Index Of Array Value(Event Player.DaftarTargetBalasDendam,
+				Event Player.TargetBalasDendamDipilih);
+		Else If(Event Player.KursorBalasDendam >= Count Of(Event Player.DaftarTargetBalasDendam));
+			Event Player.KursorBalasDendam = 0;
 		End;
 	}
 }
 
-rule("98 - Subrutin: Segarkan Spawn Room, Objective dan target Teleport")
+rule("98 - Subrutin: Segarkan ruang muncul, objektif, dan target teleportasi")
 {
 	event
 	{
 		Subroutine;
-		SegarkanTargetTeleport;
+		SegarkanTargetTeleportasi;
 	}
 
 	actions
 	{
-		If(And(Event Player.KursorTeleport >= 0, Event Player.KursorTeleport < Count Of(Event Player.DaftarTargetTeleport)));
-			Event Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+		If(And(Event Player.KursorTeleportasi >= 0, Event Player.KursorTeleportasi < Count Of(Event Player.DaftarTargetTeleportasi)));
+			Event Player.CalonTargetTeleportasi = Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi];
 		Else;
-			Event Player.CalonTargetTeleport = Null;
+			Event Player.CalonTargetTeleportasi = Null;
 		End;
-		"Index 0 = Spawn Room, index 1 = Objective, poi All Players per umani, bot AI e dummy bot. Null e solo la sentinella dell'obiettivo."
-		Event Player.DaftarTargetTeleport = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
+		"Indeks 0 adalah ruang muncul, indeks 1 adalah objektif, lalu semua manusia dan bot. Null hanya penanda objektif."
+		Event Player.DaftarTargetTeleportasi = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
 			And(Current Array Element != Event Player, Has Spawned(Current Array Element))));
-		If(Event Player.KursorTeleport == 1);
-			"Mantieni Objective selezionato: la sua sentinella Null non va cercata nell'array."
-		Else If(And(Event Player.CalonTargetTeleport != Null, Array Contains(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport)));
-			Event Player.KursorTeleport = Index Of Array Value(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport);
-		Else If(Event Player.KursorTeleport >= Count Of(Event Player.DaftarTargetTeleport));
-			Event Player.KursorTeleport = 0;
+		If(Event Player.KursorTeleportasi == 1);
+			"Pertahankan objektif yang dipilih; penanda Null tidak perlu dicari di dalam array."
+		Else If(And(Event Player.CalonTargetTeleportasi != Null, Array Contains(Event Player.DaftarTargetTeleportasi, Event Player.CalonTargetTeleportasi)));
+			Event Player.KursorTeleportasi = Index Of Array Value(Event Player.DaftarTargetTeleportasi, Event Player.CalonTargetTeleportasi);
+		Else If(Event Player.KursorTeleportasi >= Count Of(Event Player.DaftarTargetTeleportasi));
+			Event Player.KursorTeleportasi = 0;
 		End;
 	}
 }
