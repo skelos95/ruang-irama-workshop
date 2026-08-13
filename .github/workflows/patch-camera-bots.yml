@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Patch Workshop startup and mode UI
         shell: bash
@@ -175,7 +177,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout HEAD^ -- .github/workflows/patch-camera-bots.yml .github/trigger-camera-bots
+          git checkout 378b20081c71724e24081ff6435a0bec1a753d01 -- .github/workflows/patch-camera-bots.yml .github/trigger-camera-bots
           git add workshop/ruang_irama.workshop .github/workflows/patch-camera-bots.yml .github/trigger-camera-bots
           git diff --cached --check
           git commit -m "Fix startup phases and persistent mode UI"
