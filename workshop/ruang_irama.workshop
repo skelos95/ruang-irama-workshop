@@ -332,22 +332,45 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 				Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
 					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60) : Custom String("{0}:{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
 					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60)),
-			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Default Visibility);
+			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect player, hero & ultimate", Input Binding String(Button(Crouch))) : Custom String(
 			"Tahan {0}: lihat pemain, hero & ultimate", Input Binding String(Button(Crouch))), Player Variable(Local Player, IndeksBahasa) == 0
 			? Custom String("LOBBY ROSTER & AFK TIME\n ") : Custom String("DAFTAR PEMAIN & WAKTU AFK\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
-			Visible To and String, Default Visibility);
+			Visible To and String, Visible Never);
 		Global.HudInfoKiri = Last Text ID;
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0} 0.5 sec: open Arcade Menu", Input Binding String(Button(Melee))) : Custom String(
 			"Tahan {0} 0,5 dtk: buka Menu Arcade", Input Binding String(Button(Melee))), Player Variable(Local Player,
 			IndeksBahasa) == 0 ? Custom String("PLAYER SOUNDTRACKS\n ") : Custom String("SOUNDTRACK PEMAIN\n "),
 			Right, -100, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
-			Visible To and String, Default Visibility);
+			Visible To and String, Visible Never);
 		Global.HudInfoKanan = Last Text ID;
 		Global.Siap = True;
+	}
+}
+
+rule("00a - Global: Nessun vincitore prima della fine del timer AFK")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Total Time Elapsed < Global.DurataServerMinuti * 60;
+	}
+
+	actions
+	{
+		"Protezione leggera: la modalita non puo dichiarare vincitori o assegnare punti prima del countdown AFK."
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Scoring;
+		Wait(0.500, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -497,14 +520,14 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"{0} - AFK for {1} min", Event Player, Event Player.MenitLobby) : Custom String("{0} - AFK {1} mnt",
 			Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
-			Visible To String and Color, Default Visibility);
+			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - soundtrack: {1}",
 			Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
 			: Custom String("{0} - soundtrack: {1}", Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre]
 			: Custom String("belum pilih soundtrack")), Null, Right, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
-			Visible To String and Color, Default Visibility);
+			Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
 		Global.HudKananPemain = Append To Array(Global.HudKananPemain, Event Player.HudKanan);
 		Global.HudMenuPemain = Append To Array(Global.HudMenuPemain, 0);
@@ -1203,7 +1226,7 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 0.750, Do Not Clip,
 			Visible To Position String and Color, Event Player.TargetInspeksi == Null ? Color(White) : Player Variable(
 			Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange),
-			Default Visibility);
+			Visible Never);
 		Event Player.TeksDunia = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
@@ -1213,7 +1236,7 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 			Create In-World Text(Event Player, Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
 				Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
 				Down)), Update Every Frame(Eye Position(Event Player) + Vector(0, 0.450, 0)), 0.750, Do Not Clip,
-				Visible To Position String and Color, Event Player.WarnaNama, Default Visibility);
+				Visible To Position String and Color, Event Player.WarnaNama, Visible Never);
 			Event Player.TeksDiri = Last Text ID;
 			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 				Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDiri;
@@ -1472,7 +1495,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 3 ? Custom String("3 - BAHASA HUD\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nHUTANG KILL LANGSUNG") : Custom String(
 			"5 - TELEPORT\nRUANG SPAWN, OBJEKTIF, PEMAIN & BOT"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
-			Custom Color(255, 185, 65, 255), Visible To and String, Default Visibility);
+			Custom Color(255, 185, 65, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -1500,7 +1523,7 @@ rule("91b - Subrutin: Gambar menu musik")
 			Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Custom String(
 			"0 - SOUNDTRACK {0}/100\n{1}\n> {2}", Event Player.KursorGenre + 1, Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)],
 			Global.DaftarGenre[Event Player.KursorGenre]), Top, 100, Color(White), Custom Color(205, 235, 255, 255), Custom Color(55, 235, 245, 255),
-			Visible To and String, Default Visibility);
+			Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -1532,7 +1555,7 @@ rule("91c - Subrutin: Gambar menu kamera")
 			Event Player.KursorKamera - 2], Hero Icon String(Is Duplicating(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2])
 			? Hero Being Duplicated(Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2]) : Hero Of(Event Player.DaftarTargetKamera[
 			Event Player.KursorKamera - 2])))), Top, 100, Color(White), Custom Color(205, 235, 255, 255), Custom Color(90, 180, 255, 255),
-			Visible To and String, Default Visibility);
+			Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -1557,7 +1580,7 @@ rule("91d - Subrutin: Gambar menu warna")
 			"2 - NAME COLOR {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarnaEN[Event Player.KursorWarna])
 			: Custom String("2 - WARNA NAMA {0}/{1}\n> {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna),
 			Global.NamaWarna[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
-			Global.DaftarWarna[Event Player.KursorWarna], Visible To String and Color, Default Visibility);
+			Global.DaftarWarna[Event Player.KursorWarna], Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -1581,7 +1604,7 @@ rule("91e - Subrutin: Gambar menu bahasa")
 			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String(
 			"3 - HUD LANGUAGE {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]) : Custom String(
 			"3 - BAHASA HUD {0}/2\n> {1}", Event Player.KursorBahasa + 1, Global.NamaBahasa[Event Player.KursorBahasa]), Top, 100,
-			Color(White), Custom Color(225, 210, 255, 255), Custom Color(190, 120, 255, 255), Visible To and String, Default Visibility);
+			Color(White), Custom Color(225, 210, 255, 255), Custom Color(190, 120, 255, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -1602,7 +1625,7 @@ rule("91f - Subrutin: Gambar menu Revenge")
 				"\nNo revenge targets. Peace is suspicious.\n{0}: back | hold {1} 0.5 sec: close", Input Binding String(Button(Reload)), Input Binding String(Button(Melee)))
 				: Custom String("\nTidak ada target revenge. Damai itu mencurigakan.\n{0}: kembali | tahan {1} 0,5 dtk: tutup", Input Binding String(Button(Reload)),
 				Input Binding String(Button(Melee))), Custom String("4 - REVENGE"), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
-				Custom Color(255, 80, 80, 255), Visible To and String, Default Visibility);
+				Custom Color(255, 80, 80, 255), Visible To and String, Visible Never);
 		Else;
 			Event Player.KursorRevenge %= Count Of(Event Player.DaftarTargetRevenge);
 			Event Player.IndeksRevenge = Index Of Array Value(Event Player.KillerRevenge, Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]);
@@ -1619,7 +1642,7 @@ rule("91f - Subrutin: Gambar menu Revenge")
 				Custom String("4 - REVENGE {0}/{1}\n> {2}", Event Player.KursorRevenge + 1, Count Of(Event Player.DaftarTargetRevenge),
 				Event Player.DaftarTargetRevenge[Event Player.KursorRevenge]), Event Player.IndeksRevenge < 0 ? 0
 				: Event Player.JumlahRevenge[Event Player.IndeksRevenge]), Top, 100, Color(White), Custom Color(255, 220, 220, 255),
-				Custom Color(255, 80, 80, 255), Visible To and String, Default Visibility);
+				Custom Color(255, 80, 80, 255), Visible To and String, Visible Never);
 		End;
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1660,7 +1683,7 @@ rule("91g - Subrutin: Gambar menu Teleport")
 				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("TIDAK TERSEDIA DI MODE INI")
 				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
 				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport]), Top, 100,
-			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Default Visibility);
+			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
