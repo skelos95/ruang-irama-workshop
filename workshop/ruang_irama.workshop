@@ -371,7 +371,7 @@ rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisc
 	}
 }
 
-rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
+rule("00c - Global: Esci subito da Waiting For Players")
 {
 	event
 	{
@@ -381,15 +381,95 @@ rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
 	conditions
 	{
 		Global.Siap == True;
-		Is Game In Progress == False;
+		Is Waiting For Players == True;
 	}
 
 	actions
 	{
-		"Forza tutte le modalita oltre Waiting/Assemble Heroes/setup finche il gameplay e realmente iniziato."
+		"Usa Start Game Mode solo per lasciare Waiting For Players."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Music;
+		Disable Game Mode HUD(All Players(All Teams));
+		Disable Game Mode In-World UI(All Players(All Teams));
 		Start Game Mode;
-		Wait(0.050, Ignore Condition);
+		Wait(0.016, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+rule("00d - Global: Salta Assemble Heroes")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		"Azzera direttamente Assemble Heroes."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Music;
+		Disable Game Mode HUD(All Players(All Teams));
+		Disable Game Mode In-World UI(All Players(All Teams));
+		Set Match Time(0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("00e - Global: Salta il pre-inizio Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		"Azzera il countdown di setup/pre-inizio."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Music;
+		Disable Game Mode HUD(All Players(All Teams));
+		Disable Game Mode In-World UI(All Players(All Teams));
+		Set Match Time(0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("00f - Global: Mantieni nascosti UI, icone e announcer della modalita")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+	}
+
+	actions
+	{
+		"Le transizioni possono ricreare UI/audio nativi: disattivali di nuovo."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Music;
+		Disable Game Mode HUD(All Players(All Teams));
+		Disable Game Mode In-World UI(All Players(All Teams));
+		Wait(0.250, Ignore Condition);
+		Loop;
 	}
 }
 
