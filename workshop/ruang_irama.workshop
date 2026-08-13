@@ -371,7 +371,7 @@ rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisc
 	}
 }
 
-rule("00c - Global: Esci subito da Waiting For Players")
+rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
 {
 	event
 	{
@@ -381,95 +381,15 @@ rule("00c - Global: Esci subito da Waiting For Players")
 	conditions
 	{
 		Global.Siap == True;
-		Is Waiting For Players == True;
+		Is Game In Progress == False;
 	}
 
 	actions
 	{
-		"Usa Start Game Mode solo per lasciare Waiting For Players."
-		Disable Built-In Game Mode Announcer;
-		Disable Built-In Game Mode Music;
-		Disable Game Mode HUD(All Players(All Teams));
-		Disable Game Mode In-World UI(All Players(All Teams));
+		"Avvio leggero: evita i loop aggressivi sulle singole fasi che sovraccaricavano il server."
 		Start Game Mode;
-		Wait(0.016, Ignore Condition);
+		Wait(0.050, Ignore Condition);
 		Loop If Condition Is True;
-	}
-}
-
-rule("00d - Global: Salta Assemble Heroes")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Assembling Heroes == True;
-	}
-
-	actions
-	{
-		"Azzera direttamente Assemble Heroes."
-		Disable Built-In Game Mode Announcer;
-		Disable Built-In Game Mode Music;
-		Disable Game Mode HUD(All Players(All Teams));
-		Disable Game Mode In-World UI(All Players(All Teams));
-		Set Match Time(0);
-		Wait(0.016, Ignore Condition);
-		Loop If Condition Is True;
-	}
-}
-
-rule("00e - Global: Salta il pre-inizio Setup")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is In Setup == True;
-	}
-
-	actions
-	{
-		"Azzera il countdown di setup/pre-inizio."
-		Disable Built-In Game Mode Announcer;
-		Disable Built-In Game Mode Music;
-		Disable Game Mode HUD(All Players(All Teams));
-		Disable Game Mode In-World UI(All Players(All Teams));
-		Set Match Time(0);
-		Wait(0.016, Ignore Condition);
-		Loop If Condition Is True;
-	}
-}
-
-rule("00f - Global: Mantieni nascosti UI, icone e announcer della modalita")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-	}
-
-	actions
-	{
-		"Le transizioni possono ricreare UI/audio nativi: disattivali di nuovo."
-		Disable Built-In Game Mode Announcer;
-		Disable Built-In Game Mode Music;
-		Disable Game Mode HUD(All Players(All Teams));
-		Disable Game Mode In-World UI(All Players(All Teams));
-		Wait(0.250, Ignore Condition);
-		Loop;
 	}
 }
 
@@ -1162,7 +1082,7 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 			Call Subroutine(SegarkanTargetTeleport);
 			Event Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
 			Event Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
-			If(Event Player.CalonTargetTeleport == Event Player);
+			If(Event Player.KursorTeleport == 0);
 				If(Is In Spawn Room(Event Player) == True);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 						"You are already in the Spawn Room. Mission accomplished.") : Custom String(
@@ -1176,6 +1096,17 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 						"Back to the Spawn Room. Tactical retreat complete.") : Custom String(
 						"Kembali ke Ruang Spawn. Mundur taktis selesai."));
+				End;
+			Else If(Event Player.KursorTeleport == 1);
+				If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"Objective position unavailable in this mode. The objective is being mysterious.") : Custom String(
+						"Posisi objektif tidak tersedia di mode ini. Objektifnya sedang misterius."));
+				Else;
+					Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"Teleported near the current objective. Heroic entrance not included.") : Custom String(
+						"Teleport dekat objektif saat ini. Pose heroik tidak termasuk."));
 				End;
 			Else If(Or(Entity Exists(Event Player.CalonTargetTeleport) == False, Is Alive(Event Player.CalonTargetTeleport) == False));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
@@ -1533,14 +1464,14 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - HUD LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nDIRECT KILLS OWED TO YOU") : Custom String(
-			"5 - TELEPORT\nSPAWN ROOM, PLAYERS & BOTS") : Event Player.KursorUtama == 0 ? Custom String(
+			"5 - TELEPORT\nSPAWN ROOM, OBJECTIVE, PLAYERS & BOTS") : Event Player.KursorUtama == 0 ? Custom String(
 			"0 - SOUNDTRACK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA ORANG KETIGA\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati")
 			: Event Player.ModeKamera == 1 ? Custom String("hero sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - BAHASA HUD\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nHUTANG KILL LANGSUNG") : Custom String(
-			"5 - TELEPORT\nRUANG SPAWN, PEMAIN & BOT"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
+			"5 - TELEPORT\nRUANG SPAWN, OBJEKTIF, PEMAIN & BOT"), Top, 100, Color(White), Custom Color(210, 230, 255, 255),
 			Custom Color(255, 185, 65, 255), Visible To and String, Default Visibility);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -1713,15 +1644,21 @@ rule("91g - Subrutin: Gambar menu Teleport")
 			Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
 			Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0
-			? Event Player.DaftarTargetTeleport[Event Player.KursorTeleport] == Event Player ? Custom String("{0}\n> SPAWN ROOM\n{1}",
+			? Event Player.KursorTeleport == 0 ? Custom String("{0}\n> SPAWN ROOM\n{1}",
 				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
 				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosSpawn ? Custom String("READY FOR TACTICAL RETREAT")
-				: Custom String("VISIT SPAWN TO REGISTER IT")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
+				: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\n> CURRENT OBJECTIVE\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("UNAVAILABLE IN THIS MODE")
+				: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
 				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport])
-			: Event Player.DaftarTargetTeleport[Event Player.KursorTeleport] == Event Player ? Custom String("{0}\n> RUANG SPAWN\n{1}",
+			: Event Player.KursorTeleport == 0 ? Custom String("{0}\n> RUANG SPAWN\n{1}",
 				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
 				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosSpawn ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
-				: Custom String("MASUK KE SPAWN UNTUK MENYIMPANNYA")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
+				: Custom String("MASUK KE SPAWN UNTUK MENYIMPANNYA")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\n> OBJEKTIF SAAT INI\n{1}",
+				Custom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("TIDAK TERSEDIA DI MODE INI")
+				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("5 - TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleport + 1,
 				Count Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport]), Top, 100,
 			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Default Visibility);
 		Event Player.HudMenu = Last Text ID;
@@ -1991,7 +1928,7 @@ rule("97 - Subrutin: Segarkan daftar target Revenge")
 	}
 }
 
-rule("98 - Subrutin: Segarkan Spawn Room dan target Teleport")
+rule("98 - Subrutin: Segarkan Spawn Room, Objective dan target Teleport")
 {
 	event
 	{
@@ -2006,10 +1943,12 @@ rule("98 - Subrutin: Segarkan Spawn Room dan target Teleport")
 		Else;
 			Event Player.CalonTargetTeleport = Null;
 		End;
-		"La prima voce usa Event Player come sentinella per la Spawn Room. Il resto viene da All Players, quindi include umani, bot AI e dummy bot."
-		Event Player.DaftarTargetTeleport = Append To Array(Array(Event Player), Filtered Array(All Players(All Teams),
+		"Index 0 = Spawn Room, index 1 = Objective, poi All Players per umani, bot AI e dummy bot. Null e solo la sentinella dell'obiettivo."
+		Event Player.DaftarTargetTeleport = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
 			And(Current Array Element != Event Player, Has Spawned(Current Array Element))));
-		If(And(Event Player.CalonTargetTeleport != Null, Array Contains(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport)));
+		If(Event Player.KursorTeleport == 1);
+			"Mantieni Objective selezionato: la sua sentinella Null non va cercata nell'array."
+		Else If(And(Event Player.CalonTargetTeleport != Null, Array Contains(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport)));
 			Event Player.KursorTeleport = Index Of Array Value(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport);
 		Else If(Event Player.KursorTeleport >= Count Of(Event Player.DaftarTargetTeleport));
 			Event Player.KursorTeleport = 0;
