@@ -1,4 +1,4 @@
-name: Patch dynamic camera and bot menu locks
+name: Patch stability and objective teleport
 
 'on':
   push:
@@ -14,129 +14,251 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Patch Workshop and README
+      - name: Patch Workshop stability and objective teleport
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          workshop = Path('workshop/ruang_irama.workshop')
-          s = workshop.read_text(encoding='utf-8')
+          p = Path('workshop/ruang_irama.workshop')
+          s = p.read_text(encoding='utf-8')
 
-          def replace_once(old, new, label):
-              global s
-              count = s.count(old)
-              if count != 1:
-                  raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
-              s = s.replace(old, new, 1)
+          # 1) Revert only the aggressive startup-phase workaround that caused instability.
+          start = s.find('rule("00c - Global: Esci subito da Waiting For Players")')
+          end = s.find('rule("01 - Pemain Masuk: Mulai jam nongkrong")', start)
+          if start < 0 or end < 0:
+              raise SystemExit('startup phase block not found')
 
-          replace_once(
-              '\t\tGlobal.JarakKamera = 4;\n\t\tGlobal.GeserKamera = 0;',
-              '\t\tGlobal.JarakKamera = 3.500;\n\t\tGlobal.GeserKamera = 0.850;',
-              'camera globals',
-          )
+          stable_startup = '''rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
+          {
+          \tevent
+          \t{
+          \t\tOngoing - Global;
+          \t}
 
-          old_camera = '''\t\t"La camera sta esattamente dietro la direzione di mira. Nessun offset laterale: la visuale resta parallela a quella dell'eroe."
-\t\tStart Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
-\t\t\tEye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array,
-\t\t\tEmpty Array, False) + Direction Towards(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera), Eye Position(
-\t\t\tEvent Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Global.JarakKamera, Empty Array, Empty Array, False),
-\t\t\tEye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
-\t\t\t+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);'''
-          new_camera = '''\t\t"Distanza dinamica: 3,5 m per eroi leggeri, fino a 6,5 m per eroi con molta salute. Offset a sinistra per lasciare l'eroe più a destra del mirino."
-\t\tStart Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera),
-\t\t\tEye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera) * Min(6.500, Max(Global.JarakKamera,
-\t\t\tGlobal.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.006)) + World Vector Of(Left,
-\t\t\tEvent Player.TargetKamera, Rotation) * Global.GeserKamera, Empty Array, Empty Array, False) + Direction Towards(Ray Cast Hit Position(
-\t\t\tEye Position(Event Player.TargetKamera), Eye Position(Event Player.TargetKamera) - Facing Direction Of(Event Player.TargetKamera)
-\t\t\t* Min(6.500, Max(Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.006))
-\t\t\t+ World Vector Of(Left, Event Player.TargetKamera, Rotation) * Global.GeserKamera, Empty Array, Empty Array, False),
-\t\t\tEye Position(Event Player.TargetKamera)) * Global.BantalanDinding), Update Every Frame(Eye Position(Event Player.TargetKamera)
-\t\t\t+ Facing Direction Of(Event Player.TargetKamera) * Global.JarakBidik), 0);'''
-          replace_once(old_camera, new_camera, 'camera action')
+          \tconditions
+          \t{
+          \t\tGlobal.Siap == True;
+          \t\tIs Game In Progress == False;
+          \t}
 
-          def rule_bounds(title):
-              start = s.find(f'rule("{title}")')
-              if start < 0:
-                  raise SystemExit(f'rule not found: {title}')
-              end = s.find('\nrule("', start + 1)
-              if end < 0:
-                  end = len(s)
-              return start, end
+          \tactions
+          \t{
+          \t\t"Avvio leggero: evita i loop aggressivi sulle singole fasi che sovraccaricavano il server."
+          \t\tStart Game Mode;
+          \t\tWait(0.050, Ignore Condition);
+          \t\tLoop If Condition Is True;
+          \t}
+          }
 
-          def add_guards(title):
-              global s
-              start, end = rule_bounds(title)
-              block = s[start:end]
-              marker = '\tconditions\n\t{\n'
-              pos = block.find(marker)
-              if pos < 0:
-                  raise SystemExit(f'conditions block not found: {title}')
-              guards = [
-                  '\t\tEvent Player.Manusia == True;\n',
-                  '\t\tEvent Player.BotAI == False;\n',
-                  '\t\tIs Dummy Bot(Event Player) == False;\n',
-              ]
-              insert = ''.join(g for g in guards if g.strip() not in block)
-              if insert:
-                  p = pos + len(marker)
-                  block = block[:p] + insert + block[p:]
-                  s = s[:start] + block + s[end:]
+          '''
+          s = s[:start] + stable_startup + s[end:]
 
-          for title in [
-              '05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup',
-              '05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi',
-              '06 - Menu: Tembakan utama memilih berikutnya',
-              '07 - Menu: Tembakan sekunder memilih sebelumnya',
-              '07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton',
-              '07c - Menu Revenge: Segarkan daftar pemain',
-              '07d - Menu Teleport: Segarkan Spawn Room dan pemain',
-              '08 - Menu 0: Lompat mundur sepuluh genre',
-              '09 - Menu 0: Jongkok maju sepuluh genre',
-              '10 - Menu: Interaksi apre o applica la scelta',
-              '11 - Menu: Isi ulang kembali dari submenu ke menu utama',
-          ]:
-              add_guards(title)
-
-          start, end = rule_bounds('92 - Subrutin: Kunci bot, kaki tetap bisa bergerak')
-          block = s[start:end]
-          marker = '\tactions\n\t{\n'
-          p = block.find(marker)
-          if p < 0:
-              raise SystemExit('bot lock actions block not found')
-          p += len(marker)
-          if '\t\tEvent Player.MenuTerbuka = False;\n' not in block:
-              block = block[:p] + '\t\tEvent Player.MenuTerbuka = False;\n\t\tEvent Player.MeleeDipakai = False;\n\t\tEvent Player.HalamanMenu = -1;\n' + block[p:]
-              s = s[:start] + block + s[end:]
-
-          workshop.write_text(s, encoding='utf-8')
-
-          readme = Path('README.md')
-          r = readme.read_text(encoding='utf-8')
-          r = r.replace(
-              '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot.\n',
-              '- Menu `1 - Third-Person Camera`: prima persona, terza persona sul proprio eroe o visuale di un altro player/bot. La distanza scala con la salute massima del bersaglio (circa 3,5–6,5 m) e la camera è spostata sulla sinistra per lasciare il mirino più a destra.\n',
+          # 2) Main menu description now mentions the objective destination.
+          s = s.replace(
+              '"5 - TELEPORT\\nSPAWN ROOM, PLAYERS & BOTS"',
+              '"5 - TELEPORT\\nSPAWN ROOM, OBJECTIVE, PLAYERS & BOTS"',
               1,
           )
-          r = r.replace(
-              '- Dummy bot e bot AI non ricevono gli HUD sociali/menu. I bot possono comunque essere usati come destinazione Teleport e come target Camera.\n',
-              '- Dummy bot e bot AI non ricevono gli HUD sociali e non possono aprire, navigare o usare il Menu Arcade. Restano disponibili agli umani come destinazione Teleport e come target Camera.\n',
+          s = s.replace(
+              '"5 - TELEPORT\\nRUANG SPAWN, PEMAIN & BOT"',
+              '"5 - TELEPORT\\nRUANG SPAWN, OBJEKTIF, PEMAIN & BOT"',
               1,
           )
-          readme.write_text(r, encoding='utf-8')
 
-          assert 'Max Health(Event Player.TargetKamera)' in s
-          assert 'World Vector Of(Left, Event Player.TargetKamera, Rotation)' in s
-          assert 'Global.GeserKamera = 0.850;' in s
-          print('Patch sanity checks passed.')
+          # 3) Teleport action: index 0 = spawn, index 1 = current objective, remaining entries = players/bots.
+          old_tp = '''\t\tElse;
+          \t\t\tCall Subroutine(SegarkanTargetTeleport);
+          \t\t\tEvent Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+          \t\t\tEvent Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+          \t\t\tIf(Event Player.CalonTargetTeleport == Event Player);
+          \t\t\t\tIf(Is In Spawn Room(Event Player) == True);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"You are already in the Spawn Room. Mission accomplished.") : Custom String(
+          \t\t\t\t\t\t"Kamu sudah di Ruang Spawn. Misi selesai."));
+          \t\t\t\tElse If(Event Player.PunyaPosSpawn == False);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Spawn Room not registered yet. Visit spawn first.") : Custom String(
+          \t\t\t\t\t\t"Posisi Ruang Spawn belum tersimpan. Masuk ke spawn dulu."));
+          \t\t\t\tElse;
+          \t\t\t\t\tTeleport(Event Player, Event Player.PosSpawnRoom);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Back to the Spawn Room. Tactical retreat complete.") : Custom String(
+          \t\t\t\t\t\t"Kembali ke Ruang Spawn. Mundur taktis selesai."));
+          \t\t\t\tEnd;
+          \t\t\tElse If(Or(Entity Exists(Event Player.CalonTargetTeleport) == False, Is Alive(Event Player.CalonTargetTeleport) == False));
+          \t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t"Target unavailable. Even teleportation has standards.") : Custom String(
+          \t\t\t\t\t"Target sedang tidak tersedia. Teleport juga punya standar."));
+          \t\t\tElse;
+          \t\t\t\tTeleport(Event Player, Nearest Walkable Position(Position Of(Event Player.CalonTargetTeleport)
+          \t\t\t\t\t- Facing Direction Of(Event Player.CalonTargetTeleport) * 1.500));
+          \t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t"Teleported near {0}. Personal space sold separately.", Event Player.CalonTargetTeleport) : Custom String(
+          \t\t\t\t\t"Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.CalonTargetTeleport));
+          \t\t\tEnd;
+          \t\t\tCall Subroutine(GambarMenu);
+          \t\tEnd;'''
+
+          new_tp = '''\t\tElse;
+          \t\t\tCall Subroutine(SegarkanTargetTeleport);
+          \t\t\tEvent Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+          \t\t\tEvent Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+          \t\t\tIf(Event Player.KursorTeleport == 0);
+          \t\t\t\tIf(Is In Spawn Room(Event Player) == True);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"You are already in the Spawn Room. Mission accomplished.") : Custom String(
+          \t\t\t\t\t\t"Kamu sudah di Ruang Spawn. Misi selesai."));
+          \t\t\t\tElse If(Event Player.PunyaPosSpawn == False);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Spawn Room not registered yet. Visit spawn first.") : Custom String(
+          \t\t\t\t\t\t"Posisi Ruang Spawn belum tersimpan. Masuk ke spawn dulu."));
+          \t\t\t\tElse;
+          \t\t\t\t\tTeleport(Event Player, Event Player.PosSpawnRoom);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Back to the Spawn Room. Tactical retreat complete.") : Custom String(
+          \t\t\t\t\t\t"Kembali ke Ruang Spawn. Mundur taktis selesai."));
+          \t\t\t\tEnd;
+          \t\t\tElse If(Event Player.KursorTeleport == 1);
+          \t\t\t\tIf(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100);
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Objective position unavailable in this mode. The objective is being mysterious.") : Custom String(
+          \t\t\t\t\t\t"Posisi objektif tidak tersedia di mode ini. Objektifnya sedang misterius."));
+          \t\t\t\tElse;
+          \t\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+          \t\t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t\t"Teleported near the current objective. Heroic entrance not included.") : Custom String(
+          \t\t\t\t\t\t"Teleport dekat objektif saat ini. Pose heroik tidak termasuk."));
+          \t\t\t\tEnd;
+          \t\t\tElse If(Or(Entity Exists(Event Player.CalonTargetTeleport) == False, Is Alive(Event Player.CalonTargetTeleport) == False));
+          \t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t"Target unavailable. Even teleportation has standards.") : Custom String(
+          \t\t\t\t\t"Target sedang tidak tersedia. Teleport juga punya standar."));
+          \t\t\tElse;
+          \t\t\t\tTeleport(Event Player, Nearest Walkable Position(Position Of(Event Player.CalonTargetTeleport)
+          \t\t\t\t\t- Facing Direction Of(Event Player.CalonTargetTeleport) * 1.500));
+          \t\t\t\tSmall Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+          \t\t\t\t\t"Teleported near {0}. Personal space sold separately.", Event Player.CalonTargetTeleport) : Custom String(
+          \t\t\t\t\t"Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.CalonTargetTeleport));
+          \t\t\tEnd;
+          \t\t\tCall Subroutine(GambarMenu);
+          \t\tEnd;'''
+
+          if old_tp not in s:
+              raise SystemExit('teleport action block not found')
+          s = s.replace(old_tp, new_tp, 1)
+
+          # 4) Teleport menu renderer.
+          r91_start = s.find('rule("91g - Subrutin: Gambar menu Teleport")')
+          r91_end = s.find('rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")', r91_start)
+          if r91_start < 0 or r91_end < 0:
+              raise SystemExit('teleport renderer rule not found')
+
+          new_91g = '''rule("91g - Subrutin: Gambar menu Teleport")
+          {
+          \tevent
+          \t{
+          \t\tSubroutine;
+          \t\tGambarTeleport;
+          \t}
+
+          \tactions
+          \t{
+          \t\tCall Subroutine(SegarkanTargetTeleport);
+          \t\tEvent Player.KursorTeleport %= Count Of(Event Player.DaftarTargetTeleport);
+          \t\tCreate HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\\n{1}",
+          \t\t\tCustom String("\\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+          \t\t\tCustom String("{0}\\n{1}", Custom String("{0}: teleport | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+          \t\t\tCustom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Custom String("{0}\\n{1}",
+          \t\t\tCustom String("\\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+          \t\t\tCustom String("{0}\\n{1}", Custom String("{0}: teleport | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
+          \t\t\tCustom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0
+          \t\t\t? Event Player.KursorTeleport == 0 ? Custom String("{0}\\n> SPAWN ROOM\\n{1}",
+          \t\t\t\tCustom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+          \t\t\t\tIs In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosSpawn ? Custom String("READY FOR TACTICAL RETREAT")
+          \t\t\t\t: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\\n> CURRENT OBJECTIVE\\n{1}",
+          \t\t\t\tCustom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+          \t\t\t\tDistance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("UNAVAILABLE IN THIS MODE")
+          \t\t\t\t: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("5 - TELEPORT {0}/{1}\\n> {2}", Event Player.KursorTeleport + 1,
+          \t\t\t\tCount Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport])
+          \t\t\t: Event Player.KursorTeleport == 0 ? Custom String("{0}\\n> RUANG SPAWN\\n{1}",
+          \t\t\t\tCustom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+          \t\t\t\tIs In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosSpawn ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
+          \t\t\t\t: Custom String("MASUK KE SPAWN UNTUK MENYIMPANNYA")) : Event Player.KursorTeleport == 1 ? Custom String("{0}\\n> OBJEKTIF SAAT INI\\n{1}",
+          \t\t\t\tCustom String("5 - TELEPORT {0}/{1}", Event Player.KursorTeleport + 1, Count Of(Event Player.DaftarTargetTeleport)),
+          \t\t\t\tDistance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("TIDAK TERSEDIA DI MODE INI")
+          \t\t\t\t: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("5 - TELEPORT {0}/{1}\\n> {2}", Event Player.KursorTeleport + 1,
+          \t\t\t\tCount Of(Event Player.DaftarTargetTeleport), Event Player.DaftarTargetTeleport[Event Player.KursorTeleport]), Top, 100,
+          \t\t\tColor(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Default Visibility);
+          \t\tEvent Player.HudMenu = Last Text ID;
+          \t}
+          }
+
+          '''
+          s = s[:r91_start] + new_91g + s[r91_end:]
+
+          # 5) Teleport target list: Spawn Room sentinel, Objective sentinel, then players/bots.
+          r98_start = s.find('rule("98 - Subrutin: Segarkan Spawn Room dan target Teleport")')
+          if r98_start < 0:
+              raise SystemExit('teleport refresh rule not found')
+
+          new_98 = '''rule("98 - Subrutin: Segarkan Spawn Room, Objective dan target Teleport")
+          {
+          \tevent
+          \t{
+          \t\tSubroutine;
+          \t\tSegarkanTargetTeleport;
+          \t}
+
+          \tactions
+          \t{
+          \t\tIf(And(Event Player.KursorTeleport >= 0, Event Player.KursorTeleport < Count Of(Event Player.DaftarTargetTeleport)));
+          \t\t\tEvent Player.CalonTargetTeleport = Event Player.DaftarTargetTeleport[Event Player.KursorTeleport];
+          \t\tElse;
+          \t\t\tEvent Player.CalonTargetTeleport = Null;
+          \t\tEnd;
+          \t\t"Index 0 = Spawn Room, index 1 = Objective, poi All Players per umani, bot AI e dummy bot. Null e solo la sentinella dell'obiettivo."
+          \t\tEvent Player.DaftarTargetTeleport = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
+          \t\t\tAnd(Current Array Element != Event Player, Has Spawned(Current Array Element))));
+          \t\tIf(Event Player.KursorTeleport == 1);
+          \t\t\t"Mantieni Objective selezionato: la sua sentinella Null non va cercata nell'array."
+          \t\tElse If(And(Event Player.CalonTargetTeleport != Null, Array Contains(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport)));
+          \t\t\tEvent Player.KursorTeleport = Index Of Array Value(Event Player.DaftarTargetTeleport, Event Player.CalonTargetTeleport);
+          \t\tElse If(Event Player.KursorTeleport >= Count Of(Event Player.DaftarTargetTeleport));
+          \t\t\tEvent Player.KursorTeleport = 0;
+          \t\tEnd;
+          \t}
+          }
+          '''
+          s = s[:r98_start] + new_98
+
+          checks = [
+              'rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")',
+              'Objective Position(Objective Index)',
+              'Array(Event Player, Null)',
+              'CURRENT OBJECTIVE',
+              'OBJEKTIF SAAT INI',
+              'SPAWN ROOM, OBJECTIVE, PLAYERS & BOTS',
+              'Event Player.TargetKamera = Event Player;',
+              'Restart Match;',
+          ]
+          for item in checks:
+              if item not in s:
+                  raise SystemExit(f'missing expected content: {item}')
+          if 'rule("00f - Global: Mantieni nascosti UI, icone e announcer della modalita")' in s:
+              raise SystemExit('aggressive persistent mode UI loop still present')
+          if 'Is Assembling Heroes == True;' in s or 'Is In Setup == True;' in s:
+              raise SystemExit('aggressive startup phase loops still present')
+
+          p.write_text(s, encoding='utf-8')
           PY
 
-      - name: Commit patch
+      - name: Commit Workshop patch
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add workshop/ruang_irama.workshop README.md
+          git add workshop/ruang_irama.workshop
           git diff --cached --check
-          git commit -m "Apply dynamic camera and lock bot menus"
+          git commit -m "Stabilize server and add objective teleport"
           git push
