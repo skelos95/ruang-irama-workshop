@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.5.1.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.5.2.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -410,638 +410,4 @@ def check_source_structure(
         hits = italian_hits(comment)
         checks.require(
             not hits,
-            f"commento non indonesiano alla riga {number}: {sorted(hits)}",
-        )
-
-    stale_identifiers = {
-        "DurataServerMinuti", "MorteRevenge", "KillerRevenge", "JumlahRevenge",
-        "DaftarTargetRevenge", "TargetRevenge", "GambarRevenge", "GambarTeleport",
-        "PosSpawnRoom", "NomorUrut",
-    }
-    declared = global_names | player_names | subroutines
-    stale = sorted(stale_identifiers & declared)
-    checks.require(not stale, f"identificatori legacy non indonesiani: {stale}")
-
-    custom_literals = custom_strings(source)
-    too_long = [value for value in custom_literals if len(value) > 128]
-    checks.require(
-        not too_long,
-        f"Custom String oltre 128 caratteri: {too_long[:3]}",
-    )
-    bad_placeholders = [
-        value
-        for value in custom_literals
-        if any(int(index) > 2 for index in re.findall(r"\{(\d+)\}", value))
-    ]
-    checks.require(
-        not bad_placeholders,
-        f"Custom String con placeholder oltre {{2}}: {bad_placeholders[:3]}",
-    )
-
-    checks.equal(source.count("\u200b"), 2, "occorrenze della sentinella U+200B")
-    checks.equal(
-        len(re.findall(r'Custom\s+String\s*\(\s*"\u200b"\s*\)', source)),
-        2,
-        "sentinelle U+200B racchiuse in Custom String",
-    )
-
-
-def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> None:
-    for name in (
-        "DurasiServerMenit", "WaktuMulaiServer", "WaktuAkhirServer", "SisaWaktuServer",
-        "TeksWaktuServer", "RestartSudahDiminta",
-    ):
-        checks.require(f"Global.{name}" in source, f"timer: variabile {name} assente")
-
-    checks.require(
-        re.search(
-            r"Global\.DurasiServerMenit\s*=\s*Workshop Setting Integer\s*\(.*?30\s*,\s*30\s*,\s*90\s*,\s*0\s*\)",
-            source,
-            re.DOTALL,
-        )
-        is not None,
-        "timer: impostazione durata non vincolata a 30..90 minuti",
-    )
-    checks.require(
-        re.search(r"Global\.WaktuMulaiServer\s*=\s*Total Time Elapsed\s*;", source) is not None,
-        "timer: baseline WaktuMulaiServer non inizializzata da Total Time Elapsed",
-    )
-    checks.require(
-        re.search(
-            r"Global\.WaktuAkhirServer\s*=\s*Global\.WaktuMulaiServer\s*\+\s*Global\.DurasiServerMenit\s*\*\s*60\s*;",
-            source,
-        )
-        is not None,
-        "timer: deadline non derivata da baseline + durata",
-    )
-    checks.require(
-        re.search(
-            r"Global\.SisaWaktuServer\s*=.*Global\.WaktuAkhirServer\s*-\s*Total Time Elapsed",
-            source,
-        )
-        is not None,
-        "timer: tempo residuo non derivato dalla deadline",
-    )
-
-    timer_rules = [
-        rule
-        for rule in rules_containing(rules, "Global.TeksWaktuServer", "Global.SisaWaktuServer")
-        if "Loop If Condition Is True;" in rule.body
-    ]
-    checks.equal(len(timer_rules), 1, "regole di aggiornamento stringa timer")
-    if timer_rules:
-        checks.require(
-            re.search(r"Wait\s*\(\s*1(?:\.0+)?\s*,", timer_rules[0].body) is not None,
-            "timer: la stringa deve aggiornarsi una volta al secondo",
-        )
-    checks.require(
-        any("Global.TeksWaktuServer" in call for call in call_texts(source, "Create HUD Text")),
-        "timer: l'HUD non usa la stringa globale precomputata",
-    )
-
-    clean = mask_strings(source)
-    forbidden_actions = (
-        "Declare Match Draw", "Declare Player Victory", "Declare Team Victory",
-        "Declare Round Victory", "Declare Round Draw", "Set Team Score", "Modify Team Score",
-        "Set Player Score", "Modify Player Score", "End Game",
-    )
-    for action in forbidden_actions:
-        checks.require(
-            re.search(rf"\b{re.escape(action)}\s*\(?", clean) is None,
-            f"azione di punteggio/vittoria vietata: {action}",
-        )
-    checks.require(
-        "Disable Built-In Game Mode Completion;" in clean,
-        "protezione completamento nativo assente",
-    )
-    checks.require(
-        "Disable Built-In Game Mode Scoring;" in clean,
-        "protezione punteggio nativo assente",
-    )
-    checks.require(
-        "Enable Built-In Game Mode Completion;" not in clean
-        and "Enable Built-In Game Mode Scoring;" not in clean,
-        "completion/scoring nativo non deve essere riattivato",
-    )
-    checks.equal(len(re.findall(r"\bRestart Match\s*;", clean)), 1, "azioni Restart Match")
-    restart_rules = rules_containing(rules, "Restart Match;")
-    checks.equal(len(restart_rules), 1, "regole che possono riavviare la partita")
-    if restart_rules:
-        restart = restart_rules[0].body
-        checks.require(
-            re.search(r"Global\.SisaWaktuServer\s*<=\s*0", restart) is not None,
-            "Restart Match non Ã¨ condizionato dal timer personalizzato a zero",
-        )
-        checks.require(
-            "Global.RestartSudahDiminta == False;" in restart,
-            "Restart Match privo di guardia one-shot",
-        )
-        set_guard = restart.find("Global.RestartSudahDiminta = True;")
-        restart_at = restart.find("Restart Match;")
-        checks.require(
-            0 <= set_guard < restart_at,
-            "la guardia RestartSudahDiminta deve essere impostata prima del riavvio",
-        )
-
-
-def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
-    classification = rules_containing(rules, "Start Forcing Dummy Bot Name", "Stop Forcing Dummy Bot Name")
-    checks.equal(len(classification), 1, "regole di classificazione umano/bot")
-    if classification:
-        body = classification[0].body
-        waits = [match.start() for match in re.finditer(r"Wait\s*\(\s*0\.016\s*,", body)]
-        entities = [match.start() for match in re.finditer(r"Entity Exists\s*\(\s*Event Player\s*\)", body)]
-        checks.equal(len(waits), 2, "Wait(0.016) nella classificazione")
-        registration = body.find("Append To Array(Global.PemainManusia, Event Player)")
-        checks.require(registration >= 0, "classificazione: registrazione umano non trovata")
-        if len(waits) == 2:
-            after_first = next((position for position in entities if waits[0] < position < waits[1]), -1)
-            after_second = next(
-                (position for position in entities if waits[1] < position < registration), -1
-            )
-            checks.require(after_first >= 0, "classificazione: Entity Exists assente dopo il primo Wait")
-            checks.require(after_second >= 0, "classificazione: Entity Exists assente dopo il secondo Wait e prima della registrazione")
-
-    bot_calls = rules_containing(rules, "Call Subroutine(KunciBot)")
-    checks.require(len(bot_calls) >= 2, "KunciBot deve essere richiamata da classificazione e riattivazione edge-triggered")
-    for rule in bot_calls:
-        is_watchdog = (
-            re.search(r"Wait\s*\(\s*0\.500\s*,", rule.body) is not None
-            and "Loop If Condition Is True;" in rule.body
-        )
-        checks.require(not is_watchdog, f"watchdog bot periodico ancora presente in {rule.name!r}")
-    checks.require("Player Spawned;" not in source, "tipo evento inesistente Player Spawned ancora presente")
-    inactive_reset = [
-        rule for rule in rules
-        if "Ongoing - Each Player;" in rule.body
-        and "Event Player.KunciBotAktif = False;" in rule.body
-        and "Is Dummy Bot(Event Player)" in rule.body
-        and "Event Player.KunciBotAktif == True;" in rule.body
-        and "Has Spawned(Event Player) == False" in rule.body
-        and "Is Alive(Event Player) == False" in rule.body
-    ]
-    checks.equal(len(inactive_reset), 1, "reset del latch bot alla morte o al despawn")
-    reactivation = [
-        rule for rule in bot_calls
-        if "Ongoing - Each Player;" in rule.body
-        and "Is Alive(Event Player) == True;" in rule.body
-        and "Event Player.KunciBotAktif == False" in rule.body
-        and "Hero Of(Event Player) != Event Player.PahlawanBotTerakhir" in rule.body
-    ]
-    checks.equal(len(reactivation), 1, "riattivazione bot dopo respawn o cambio eroe")
-
-    lock_rules = rules_containing(rules, "Subroutine;", "KunciBot;")
-    checks.require(bool(lock_rules), "subroutine KunciBot non trovata")
-    if lock_rules:
-        checks.require(
-            "Abort If(Is Alive(Event Player) == False);" in lock_rules[0].body,
-            "KunciBot non protegge la race con morte/despawn",
-        )
-        for action in (
-            "Set Primary Fire Enabled(Event Player, False)",
-            "Set Secondary Fire Enabled(Event Player, False)",
-            "Set Ability 1 Enabled(Event Player, False)",
-            "Set Ability 2 Enabled(Event Player, False)",
-            "Set Ultimate Ability Enabled(Event Player, False)",
-            "Set Melee Enabled(Event Player, False)",
-            "Set Damage Dealt(Event Player, 0)",
-            "Set Healing Dealt(Event Player, 0)",
-            "Set Knockback Dealt(Event Player, 0)",
-        ):
-            checks.require(action in lock_rules[0].body, f"KunciBot incompleta: {action}")
-
-
-def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
-    codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
-    checks.equal(codes, ["0", "1", "2", "3", "4", "5"], "codici dei sei menu")
-    checks.require(
-        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*6\s*;", source) is not None,
-        "navigazione principale non limitata a sei menu",
-    )
-    checks.require(
-        re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", source) is not None,
-        "selettore lingua non usa modulo 3",
-    )
-
-    expected_renderers = {
-        "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
-        "GambarBalasDendam", "GambarTeleportasi",
-    }
-    missing_renderers = sorted(expected_renderers - subroutines)
-    checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
-    router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
-    checks.equal(len(router_rules), 1, "router GambarMenu")
-    if router_rules:
-        router = router_rules[0].body
-        checks.require("Create HUD Text" not in router, "GambarMenu deve restare un router leggero")
-        for renderer in sorted(expected_renderers):
-            checks.require(
-                f"Call Subroutine({renderer});" in router,
-                f"GambarMenu non instrada {renderer}",
-            )
-
-    dispatcher_candidates = [
-        rule
-        for rule in rules
-        if "MenuTerbuka == True;" in rule.body
-        and all(
-            f"Button({button})" in rule.body
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
-        )
-    ]
-    checks.equal(len(dispatcher_candidates), 1, "dispatcher unico degli input menu")
-    if dispatcher_candidates:
-        dispatcher = dispatcher_candidates[0].body
-        positions = [
-            dispatcher.find(f"Is Button Held(Event Player, Button({button}))")
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
-        ]
-        checks.require(
-            all(position >= 0 for position in positions) and positions == sorted(positions),
-            "prioritÃ  dispatcher errata; attesa Interact â†’ Reload â†’ Primary â†’ Secondary â†’ Jump â†’ Crouch",
-        )
-
-    release_candidates = [
-        rule
-        for rule in rules
-        if "Event Player.PerintahMenu != 0;" in rule.body
-        and "Event Player.PerintahMenu = 0;" in rule.body
-        and all(
-            f"Is Button Held(Event Player, Button({button})) == False" in rule.body
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
-        )
-    ]
-    checks.equal(len(release_candidates), 1, "release gate chord-safe del dispatcher")
-    if release_candidates:
-        checks.require(
-            re.search(r"Wait\s*\(\s*0\.016\s*,\s*Ignore Condition\s*\)", release_candidates[0].body)
-            is not None,
-            "release gate dispatcher privo del tick di arbitraggio prima del reset",
-        )
-    for command in range(1, 7):
-        handlers = [rule for rule in rules if f"Event Player.PerintahMenu == {command};" in rule.body]
-        checks.equal(len(handlers), 1, f"handler dispatcher comando {command}")
-        if handlers:
-            checks.require(
-                "Event Player.PerintahMenu = 0;" not in handlers[0].body,
-                f"handler {command} resetta il dispatcher prima del rilascio di tutti gli input",
-            )
-
-    melee_rules = [
-        rule for rule in rules
-        if "Button(Melee)" in rule.body and "Abort When False" in rule.body
-    ]
-    checks.equal(len(melee_rules), 1, "gestori pressione lunga Melee")
-    if melee_rules:
-        checks.require(
-            re.search(r"Wait\s*\(\s*0\.500\s*,\s*Abort When False\s*\)", melee_rules[0].body)
-            is not None,
-            "Melee deve richiedere esattamente 0,5 secondi",
-        )
-    checks.require("Wait(1.250" not in source, "durata Melee legacy da 1,25 secondi ancora presente")
-    checks.require(
-        re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*10\)\s*%\s*100", source) is not None,
-        "salto musicale +10 assente",
-    )
-    checks.require(
-        re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*90\)\s*%\s*100", source) is not None,
-        "salto musicale -10 assente",
-    )
-
-    for rule in rules:
-        refreshes_dynamic_menu = any(
-            token in rule.body
-            for token in ("SegarkanTargetBalasDendam", "SegarkanTargetTeleportasi")
-        )
-        periodic = "Loop If Condition Is True;" in rule.body
-        checks.require(
-            not (refreshes_dynamic_menu and periodic and "Call Subroutine(GambarMenu);" in rule.body),
-            f"ridisegno periodico del menu ancora presente in {rule.name!r}",
-        )
-
-
-def check_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
-    cache_names = (
-        "TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera",
-    )
-    for name in cache_names:
-        checks.require(f"Event Player.{name}" in source, f"cache camera assente: {name}")
-    checks.equal(len(call_texts(source, "Ray Cast Hit Position")), 1, "Ray Cast Hit Position nel sorgente")
-    ray_rules = rules_containing(rules, "Ray Cast Hit Position")
-    checks.equal(len(ray_rules), 1, "regole che eseguono il raycast camera")
-    if ray_rules:
-        camera_tick = ray_rules[0].body
-        checks.require(
-            "Event Player.TitikBenturanKamera = Ray Cast Hit Position" in camera_tick,
-            "risultato raycast non salvato nella cache TitikBenturanKamera",
-        )
-        for token in (
-            "Event Player.TitikJangkarKamera =", "Event Player.TitikIdealKamera =",
-            "Event Player.TitikAkhirKamera =", "Eye Position(Event Player.TargetKamera)",
-            "Max Health(Event Player.TargetKamera)", "Entity Exists(Event Player.TargetKamera)",
-        ):
-            checks.require(token in camera_tick, f"tick camera incompleto: {token}")
-        checks.require(
-            re.search(r"Wait\s*\(\s*0\.016\s*,", camera_tick) is not None,
-            "cache camera non aggiornata a ogni tick",
-        )
-    camera_starts = call_texts(source, "Start Camera")
-    checks.require(bool(camera_starts), "Start Camera assente")
-    checks.require(
-        any("Update Every Frame(Event Player.TitikAkhirKamera)" in call for call in camera_starts),
-        "Start Camera non usa la posizione finale in cache",
-    )
-
-
-def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
-    checks.equal(
-        len(call_texts(source, "Disable Nameplates")), 1,
-        "Disable Nameplates (deve avvenire una sola volta all'avvio Crouch)",
-    )
-    checks.equal(
-        len(call_texts(source, "Enable Nameplates")), 2,
-        "Enable Nameplates nei cleanup Crouch e Player Left",
-    )
-    checks.equal(len(call_texts(source, "Create In-World Text")), 2, "testi mondo Crouch")
-    checks.require(bool(call_texts(source, "Start Forcing Player Outlines")), "outline Crouch assenti")
-    checks.require(bool(call_texts(source, "Stop Forcing Player Outlines")), "cleanup outline Crouch assente")
-
-    crouch_start = [
-        rule
-        for rule in rules
-        if "Event Player.InspeksiAktif = True;" in rule.body
-        and "Disable Nameplates" in rule.body
-        and "Start Forcing Player Outlines" in rule.body
-    ]
-    checks.equal(len(crouch_start), 1, "regola di avvio outline Crouch")
-    if crouch_start:
-        outline = crouch_start[0].body
-        checks.require(
-            "Count Of(All Players(All Teams))" in outline,
-            "outline Crouch non iterano sulle sole entitÃ  presenti",
-        )
-        checks.require(
-            re.search(
-                r"Start Forcing Player Outlines\s*\([^;]*Color\s*\(\s*Orange\s*\)",
-                outline,
-                re.DOTALL,
-            )
-            is not None,
-            "bot senza outline arancione",
-        )
-        checks.require(
-            "Player Variable(\n\t\t\t\t\tAll Players(All Teams)[Event Player.IndeksGarisLuar], WarnaNama)" in outline
-            or re.search(
-                r"Player Variable\s*\(\s*All Players\(All Teams\)\s*\[.*?\]\s*,\s*WarnaNama\s*\)",
-                outline,
-                re.DOTALL,
-            )
-            is not None,
-            "outline degli umani non usa il colore personale",
-        )
-
-    classification_rules = rules_containing(rules, "Append To Array(Global.PemainManusia, Event Player)")
-    checks.require(
-        bool(classification_rules)
-        and "Start Forcing Player Outlines" in classification_rules[0].body
-        and "InspeksiAktif" in classification_rules[0].body,
-        "join umano non aggiorna gli outline dei viewer attivi",
-    )
-    color_rules = rules_containing(rules, "Event Player.IndeksWarna = Event Player.KursorWarna;")
-    checks.require(
-        bool(color_rules)
-        and "Start Forcing Player Outlines" in color_rules[0].body
-        and "InspeksiAktif" in color_rules[0].body,
-        "cambio colore non aggiorna gli outline dei viewer attivi",
-    )
-
-    refresh_rules = [
-        rule for rule in rules
-        if "SegarkanTargetInspeksi" in rule.body and "Loop If Condition Is True;" in rule.body
-    ]
-    checks.equal(len(refresh_rules), 1, "loop refresh target Crouch")
-    if refresh_rules:
-        checks.require(
-            re.search(r"Wait\s*\(\s*0\.100\s*,", refresh_rules[0].body) is not None,
-            "target Crouch non aggiornato ogni 0,10 secondi",
-        )
-
-    cleanup_rules = [
-        rule
-        for rule in rules_containing(rules, "Enable Nameplates", "Stop Forcing Player Outlines")
-        if "Event Player.InspeksiAktif = False;" in rule.body
-    ]
-    checks.equal(len(cleanup_rules), 1, "cleanup Crouch")
-    if cleanup_rules:
-        cleanup = cleanup_rules[0].body
-        checks.require(
-            cleanup.count("Destroy In-World Text") >= 2,
-            "cleanup Crouch non distrugge entrambi i testi mondo",
-        )
-        checks.require(
-            "Event Player.TeksDunia = Null;" in cleanup and "Event Player.TeksDiri = Null;" in cleanup,
-            "cleanup Crouch non azzera entrambi i riferimenti testo",
-        )
-
-
-def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) -> None:
-    checks.require("Global.SlotHUDTersedia" in source, "pool SlotHUDTersedia assente")
-    checks.require("Global.SlotHUDPemain" in source, "registro parallelo SlotHUDPemain assente")
-    checks.require("Global.NomorUrut" not in source, "contatore HUD NomorUrut non Ã¨ stato rimosso")
-    try:
-        slots = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.SlotHUDTersedia"))]
-    except ParseError:
-        slots = []
-    checks.equal(len(slots), 12, "slot HUD preallocati")
-    checks.equal(slots, [str(index) for index in range(12)], "pool iniziale degli slot HUD 0..11")
-    checks.require(
-        "Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);" in source
-        and "Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);" in source,
-        "allocazione del primo slot HUD libero assente o non atomica",
-    )
-
-    leave_rules = [rule for rule in rules if "Player Left Match;" in rule.body]
-    checks.equal(len(leave_rules), 1, "regole Player Left Match")
-    if leave_rules:
-        leave = leave_rules[0].body
-        checks.require(
-            leave.find("Global.PemainPembersihan = Event Player;")
-            < leave.find("Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);"),
-            "cleanup uscita non cattura subito l'identitÃ  del giocatore",
-        )
-        removal_at = leave.find("Modify Global Variable(PemainManusia, Remove From Array By Index")
-        checks.require(removal_at >= 0, "cleanup uscita non rimuove il giocatore dal roster")
-        if removal_at >= 0:
-            checks.require(
-                "Event Player." not in leave[removal_at:],
-                "cleanup uscita legge variabili dell'entitÃ  dopo averla rimossa dal roster",
-            )
-        for collection in (
-            "PemainManusia", "HudKiriPemain", "HudKananPemain", "HudMenuPemain",
-            "TeksDuniaPemain", "TeksDiriPemain", "SlotHUDPemain",
-        ):
-            checks.require(
-                re.search(
-                    rf"Modify Global Variable\s*\(\s*{collection}\s*,\s*Remove From Array By Index",
-                    leave,
-                )
-                is not None,
-                f"cleanup uscita non allineato per Global.{collection}",
-            )
-        checks.require(
-            "Sorted Array(Append To Array(Global.SlotHUDTersedia, Global.SlotHUDPemain[Global.IndeksKeluar])"
-            in leave,
-            "cleanup uscita non libera lo slot HUD",
-        )
-        checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
-        checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
-        checks.require(
-            all(name in leave for name in ("TitikJangkarKamera", "TitikIdealKamera", "TitikBenturanKamera", "TitikAkhirKamera")),
-            "cleanup uscita non invalida tutte le cache camera dei viewer",
-        )
-        checks.require("Stop Camera" in leave, "cleanup uscita non ferma le camere puntate all'uscente")
-
-    for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
-        checks.require(f"Event Player.{name}" in source, f"Revenge: variabile {name} assente")
-    claim_rules = rules_containing(rules, "TargetBalasDendamTerkunci", "Kill(")
-    checks.equal(len(claim_rules), 1, "regole claim BalasDendam con target catturato")
-    if claim_rules:
-        claim = claim_rules[0].body
-        capture_match = re.search(
-            r"Event Player\.TargetBalasDendamTerkunci\s*=\s*Event Player\.DaftarTargetBalasDendam\s*\[\s*Event Player\.KursorBalasDendam\s*\]\s*;",
-            claim,
-        )
-        capture = -1 if capture_match is None else capture_match.start()
-        kill_at = claim.find("Kill(Event Player.TargetBalasDendamTerkunci, Event Player);")
-        checks.require(0 <= capture < kill_at, "target BalasDendam non catturato per identitÃ  prima del claim")
-        wait_at = claim.find("Wait(", capture + 1)
-        if wait_at >= 0:
-            after_wait = claim[wait_at:]
-            checks.require(
-                "TargetBalasDendamTerkunci" in after_wait,
-                "claim BalasDendam non usa il riferimento catturato dopo il Wait",
-            )
-            checks.require(
-                "TargetBalasDendamDipilih" not in after_wait,
-                "claim BalasDendam dipende ancora dalla selezione mutevole dopo il Wait",
-            )
-    refresh_rules = rules_containing(
-        rules, "Event Player.TargetBalasDendamDipilih", "Event Player.DaftarTargetBalasDendam = Filtered Array"
-    )
-    checks.equal(len(refresh_rules), 1, "refresh BalasDendam che preserva il target per identitÃ ")
-
-    death_rules = [rule for rule in rules if "Player Died;" in rule.body]
-    checks.require(bool(death_rules), "regola Player Died per BalasDendam assente")
-    if death_rules:
-        death = "\n".join(rule.body for rule in death_rules)
-        checks.require(
-            re.search(r"Event Player\.[A-Za-z0-9_]*BalasDendam[A-Za-z0-9_]*\s*=\s*False\s*;", death)
-            is not None,
-            "Player Died non azzera il flag della morte BalasDendam",
-        )
-
-
-def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
-    toggle = re.search(
-        r"Global\.DiagnostikPerforma\s*=\s*Workshop Setting Toggle\s*\((.*?)\)\s*;",
-        source,
-        re.DOTALL,
-    )
-    checks.require(toggle is not None, "toggle Performance diagnostics assente")
-    if toggle is not None:
-        arguments = top_level_items(toggle.group(1))
-        checks.require(
-            len(arguments) >= 3 and arguments[2].strip() == "False",
-            "Performance diagnostics deve essere OFF per impostazione predefinita",
-        )
-    for metric in ("Server Load", "Server Load Average", "Server Load Peak"):
-        checks.require(metric in source, f"diagnostica priva di {metric}")
-    diagnostic_rules = [
-        rule for rule in rules
-        if "DiagnostikPerforma" in rule.body and "Server Load" in rule.body
-    ]
-    checks.require(bool(diagnostic_rules), "regola HUD diagnostica non trovata")
-    if diagnostic_rules:
-        diagnostic = "\n".join(rule.body for rule in diagnostic_rules)
-        checks.require("Host Player" in diagnostic, "diagnostica non limitata all'host")
-        checks.require(
-            (
-                (
-                    "HudKiriPemain" in diagnostic
-                    and ("HudKananPemain" in diagnostic or re.search(r"Count Of\(Global\.HudKiriPemain\)\s*\*\s*2", diagnostic))
-                )
-                and all(token in diagnostic for token in ("HudMenuPemain", "TeksDuniaPemain", "TeksDiriPemain"))
-            ),
-            "diagnostica priva dei conteggi HUD/IWT",
-        )
-    inspector_rules = rules_containing(
-        rules, "Global.DiagnostikPerforma == False", "Disable Inspector Recording;"
-    )
-    checks.equal(len(inspector_rules), 1, "disabilitazione Inspector quando la diagnostica Ã¨ OFF")
-
-
-def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
-    checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
-    if VERSION.exists():
-        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.1", "versione progetto")
-
-    checks.require(GENRE_DOC.exists(), f"documentazione generi mancante: {GENRE_DOC}")
-    if GENRE_DOC.exists():
-        documented = re.findall(
-            r"^\d+\. (.+)$", GENRE_DOC.read_text(encoding="utf-8"), flags=re.MULTILINE
-        )
-        checks.equal(documented, genres, "docs/GENERI.md rispetto a DaftarGenre")
-
-    for legacy in LEGACY_AUTOMATION:
-        checks.require(not legacy.exists(), f"automazione auto-modificante legacy ancora presente: {legacy.relative_to(ROOT)}")
-    checks.require(WORKFLOW.exists(), f"workflow read-only mancante: {WORKFLOW.relative_to(ROOT)}")
-    if WORKFLOW.exists():
-        workflow = WORKFLOW.read_text(encoding="utf-8")
-        checks.require(
-            re.search(r"(?m)^permissions:\s*\n\s+contents:\s*read\s*$", workflow) is not None,
-            "workflow senza permissions.contents: read",
-        )
-        forbidden = ("contents: write", "git push", "git commit", "p.write_text", "apply_patch")
-        for token in forbidden:
-            checks.require(token not in workflow, f"workflow non read-only: trovato {token!r}")
-        checks.require(
-            "python tools/validate_workshop.py" in workflow,
-            "workflow non esegue tools/validate_workshop.py",
-        )
-
-
-def main() -> None:
-    checks = Checks()
-    if not SOURCE.exists():
-        checks.require(False, f"sorgente mancante: {SOURCE}")
-        checks.finish()
-    source = SOURCE.read_text(encoding="utf-8")
-    for error in balanced_errors(source):
-        checks.require(False, error)
-
-    try:
-        global_names, player_names, subroutines = declaration_tables(source)
-        genres, rules = check_language_arrays(checks, source)
-        check_source_structure(checks, source, rules, global_names, player_names, subroutines)
-        check_timer_and_match(checks, source, rules)
-        check_bot_lifecycle(checks, source, rules)
-        check_menus(checks, source, rules, subroutines)
-        check_camera(checks, source, rules)
-        check_crouch(checks, source, rules)
-        check_cleanup_and_revenge(checks, source, rules)
-        check_diagnostics(checks, source, rules)
-        check_documentation_and_ci(checks, genres)
-    except ParseError as exc:
-        checks.require(False, f"parsing interrotto: {exc}")
-
-    checks.finish()
-    print("OK - controlli statici v0.5.1 superati")
-    print(
-        f"Generi: {len(genres)} | Lingue: 3 | Regole: {len(rules)} | "
-        f"Raycast camera: {len(call_texts(source, 'Ray Cast Hit Position'))}"
-    )
-    print("Nota: importazione, stress a 12 giocatori e test modalitÃ  restano prove live obbligatorie.")
-
-
-if __name__ == "__main__":
-    main()
+       çž;¶‰žËkºwµç@‰…É½µ•¹Ñ¤MÑ…ÉÐ…µ•É„ˆ¤(€€€€€€€¥˜±•¸¡…ÉÌ¤€ôô€Ðè(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€€‰UÁ‘…Ñ”Ù•ÉäÉ…µ”¡A½Í¥Ñ¥½¸=˜¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤€¬Ù•¹ÐA±…å•È¹A½Í¥Í¥I•±…Ñ¥™-…µ•É„¤ˆ¥¸…ÉÍlÅt°(€€€€€€€€€€€€€€€€‰MÑ…ÉÐ…µ•É„¹½¸½µ‰¥¹„ÑÉ…Í±…é¥½¹”Á•Èµ™É…µ””½™Í•ÐÉ•±…Ñ¥Ù¼¥¸…¡”ˆ°(€€€€€€€€€€€€¤(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€€‰UÁ‘…Ñ”Ù•ÉäÉ…µ” ˆ¥¸…ÉÍlÉt…¹€‰å”A½Í¥Ñ¥½¸¡Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„¤ˆ¥¸…ÉÍlÉt°(€€€€€€€€€€€€€€€€‰ÁÕ¹Ñ¼‘¤µ¥É„…µ•É„¹½¸É¥Ù…±ÕÑ…Ñ¼Á•È™É…µ”‘…±°½¡¥¼‘•°Ñ…É•Ðˆ°(€€€€€€€€€€€€¤(€€€€€€€€€€€¡•­Ì¹•ÅÕ…°¡…ÉÍlÍt°€ˆàÀˆ°€‰‰±•¹¹…Ñ¥Ù¼MÑ…ÉÐ…µ•É„ˆ¤(€€€ÍÑ½Á}Á…Ñ¡Ì€ôl(€€€€€€€ÉÕ±”™½ÈÉÕ±”¥¸ÉÕ±•Ì(€€€€€€€¥˜€‰MÑ½À…µ•É„¡Ù•¹ÐA±…å•È¤ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€€€€€…¹€‰Ù•¹ÐA±…å•È¹5½‘•-…µ•É„€ô€Àìˆ¥¸ÉÕ±”¹‰½‘ä(€€€€€€€…¹€‰Ù•¹ÐA±…å•È¹Q…É•Ñ-…µ•É„€ô9Õ±°ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€t(€€€¡•­Ì¹É•ÅÕ¥É”¡±•¸¡ÍÑ½Á}Á…Ñ¡Ì¤€øô€È°€‰Á•É½ÉÍ¤‘¤É¥Ñ½É¹¼…±±„ÁÉ¥µ„Á•ÉÍ½¹„¹½¸ÑÉ½Ù…Ñ¤ˆ¤(€€€™½ÈÉÕ±”¥¸ÍÑ½Á}Á…Ñ¡Ìè(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€…±°¡˜‰Ù•¹ÐA±…å•È¹í¹…µ•ô€ôY•Ñ½È À°€À°€À¤ìˆ¥¸ÉÕ±”¹‰½‘ä™½È¹…µ”¥¸…¡•}¹…µ•Ì¤°(€€€€€€€€€€€˜‰…¡”…µ•É„¹½¸…éé•É…Ñ”¹•°Á•É½ÉÍ¼íÉÕ±”¹¹…µ”…Éôˆ°(€€€€€€€€¤(()‘•˜¡•­}É½Õ ¡¡•­Ìè¡•­Ì°Í½ÕÉ”èÍÑÈ°ÉÕ±•Ìè±¥ÍÑmIÕ±•t¤€´ø9½¹”è(€€€¡•­Ì¹•ÅÕ…° (€€€€€€€±•¸¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€‰¥Í…‰±”9…µ•Á±…Ñ•Ìˆ¤¤°€Ä°(€€€€€€€€‰¥Í…‰±”9…µ•Á±…Ñ•Ì€¡‘•Ù”…ÙÙ•¹¥É”Õ¹„Í½±„Ù½±Ñ„…±°…ÙÙ¥¼É½Õ ¤ˆ°(€€€€¤(€€€¡•­Ì¹•ÅÕ…° (€€€€€€€±•¸¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€‰¹…‰±”9…µ•Á±…Ñ•Ìˆ¤¤°€È°(€€€€€€€€‰¹…‰±”9…µ•Á±…Ñ•Ì¹•¤±•…¹ÕÀÉ½Õ ”A±…å•È1•™Ðˆ°(€€€€¤(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€‰É•…Ñ”%¸µ]½É±Q•áÐˆ¤¤°€È°€‰Ñ•ÍÑ¤µ½¹‘¼É½Õ ˆ¤(€€€¡•­Ì¹É•ÅÕ¥É”¡‰½½°¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€‰MÑ…ÉÐ½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¤¤°€‰½ÕÑ±¥¹”É½Õ …ÍÍ•¹Ñ¤ˆ¤(€€€¡•­Ì¹É•ÅÕ¥É”¡‰½½°¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€‰MÑ½À½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¤¤°€‰±•…¹ÕÀ½ÕÑ±¥¹”É½Õ …ÍÍ•¹Ñ”ˆ¤((€€€É½Õ¡}ÍÑ…ÉÐ€ôl(€€€€€€€ÉÕ±”(€€€€€€€™½ÈÉÕ±”¥¸ÉÕ±•Ì(€€€€€€€¥˜€‰Ù•¹ÐA±…å•È¹%¹ÍÁ•­Í¥­Ñ¥˜€ôQÉÕ”ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€€€€€…¹€‰¥Í…‰±”9…µ•Á±…Ñ•Ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€€€€€…¹€‰MÑ…ÉÐ½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€t(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡É½Õ¡}ÍÑ…ÉÐ¤°€Ä°€‰É•½±„‘¤…ÙÙ¥¼½ÕÑ±¥¹”É½Õ ˆ¤(€€€¥˜É½Õ¡}ÍÑ…ÉÐè(€€€€€€€½ÕÑ±¥¹”€ôÉ½Õ¡}ÍÑ…ÉÑlÁt¹‰½‘ä(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€‰½Õ¹Ð=˜¡±°A±…å•ÉÌ¡±°Q•…µÌ¤¤ˆ¥¸½ÕÑ±¥¹”°(€€€€€€€€€€€€‰½ÕÑ±¥¹”É½Õ ¹½¸¥Ñ•É…¹¼ÍÕ±±”Í½±”•¹Ñ¥Ó€ÁÉ•Í•¹Ñ¤ˆ°(€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€É”¹Í•…É  (€€€€€€€€€€€€€€€È‰MÑ…ÉÐ½É¥¹œA±…å•È=ÕÑ±¥¹•ÍqÌ©p¡mxít©½±½ÉqÌ©p¡qÌ©=É…¹•qÌ©p¤ˆ°(€€€€€€€€€€€€€€€½ÕÑ±¥¹”°(€€€€€€€€€€€€€€€É”¹=Q10°(€€€€€€€€€€€€¤(€€€€€€€€€€€¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€‰‰½ÐÍ•¹é„½ÕÑ±¥¹”…É…¹¥½¹”ˆ°(€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€‰A±…å•ÈY…É¥…‰±”¡q¹qÑqÑqÑqÑqÑ±°A±…å•ÉÌ¡±°Q•…µÌ¥mÙ•¹ÐA±…å•È¹%¹‘•­Í…É¥Í1Õ…Ét°]…É¹…9…µ„¤ˆ¥¸½ÕÑ±¥¹”(€€€€€€€€€€€½ÈÉ”¹Í•…É  (€€€€€€€€€€€€€€€È‰A±…å•ÈY…É¥…‰±•qÌ©p¡qÌ©±°A±…å•ÉÍp¡±°Q•…µÍp¥qÌ©ql¸¨ýquqÌ¨±qÌ©]…É¹…9…µ…qÌ©p¤ˆ°(€€€€€€€€€€€€€€€½ÕÑ±¥¹”°(€€€€€€€€€€€€€€€É”¹=Q10°(€€€€€€€€€€€€¤(€€€€€€€€€€€¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€‰½ÕÑ±¥¹”‘•±¤Õµ…¹¤¹½¸ÕÍ„¥°½±½É”Á•ÉÍ½¹…±”ˆ°(€€€€€€€€¤((€€€±…ÍÍ¥™¥…Ñ¥½¹}ÉÕ±•Ì€ôÉÕ±•Í}½¹Ñ…¥¹¥¹œ¡ÉÕ±•Ì°€‰ÁÁ•¹Q¼ÉÉ…ä¡±½‰…°¹A•µ…¥¹5…¹ÕÍ¥„°Ù•¹ÐA±…å•È¤ˆ¤(€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€‰½½°¡±…ÍÍ¥™¥…Ñ¥½¹}ÉÕ±•Ì¤(€€€€€€€…¹€‰MÑ…ÉÐ½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¥¸±…ÍÍ¥™¥…Ñ¥½¹}ÉÕ±•ÍlÁt¹‰½‘ä(€€€€€€€…¹€‰%¹ÍÁ•­Í¥­Ñ¥˜ˆ¥¸±…ÍÍ¥™¥…Ñ¥½¹}ÉÕ±•ÍlÁt¹‰½‘ä°(€€€€€€€€‰©½¥¸Õµ…¹¼¹½¸…¥½É¹„±¤½ÕÑ±¥¹”‘•¤Ù¥•Ý•È…ÑÑ¥Ù¤ˆ°(€€€€¤(€€€½±½É}ÉÕ±•Ì€ôÉÕ±•Í}½¹Ñ…¥¹¥¹œ¡ÉÕ±•Ì°€‰Ù•¹ÐA±…å•È¹%¹‘•­Í]…É¹„€ôÙ•¹ÐA±…å•È¹-ÕÉÍ½É]…É¹„ìˆ¤(€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€‰½½°¡½±½É}ÉÕ±•Ì¤(€€€€€€€…¹€‰MÑ…ÉÐ½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¥¸½±½É}ÉÕ±•ÍlÁt¹‰½‘ä(€€€€€€€…¹€‰%¹ÍÁ•­Í¥­Ñ¥˜ˆ¥¸½±½É}ÉÕ±•ÍlÁt¹‰½‘ä°(€€€€€€€€‰…µ‰¥¼½±½É”¹½¸…¥½É¹„±¤½ÕÑ±¥¹”‘•¤Ù¥•Ý•È…ÑÑ¥Ù¤ˆ°(€€€€¤((€€€É•™É•Í¡}ÉÕ±•Ì€ôl(€€€€€€€ÉÕ±”™½ÈÉÕ±”¥¸ÉÕ±•Ì(€€€€€€€¥˜€‰M•…É­…¹Q…É•Ñ%¹ÍÁ•­Í¤ˆ¥¸ÉÕ±”¹‰½‘ä…¹€‰1½½À%˜½¹‘¥Ñ¥½¸%ÌQÉÕ”ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€t(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡É•™É•Í¡}ÉÕ±•Ì¤°€Ä°€‰±½½ÀÉ•™É•Í Ñ…É•ÐÉ½Õ ˆ¤(€€€¥˜É•™É•Í¡}ÉÕ±•Ìè(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€É”¹Í•…É ¡È‰]…¥ÑqÌ©p¡qÌ¨Áp¸ÄÀÁqÌ¨°ˆ°É•™É•Í¡}ÉÕ±•ÍlÁt¹‰½‘ä¤¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€‰Ñ…É•ÐÉ½Õ ¹½¸…¥½É¹…Ñ¼½¹¤€À°ÄÀÍ•½¹‘¤ˆ°(€€€€€€€€¤((€€€±•…¹ÕÁ}ÉÕ±•Ì€ôl(€€€€€€€ÉÕ±”(€€€€€€€™½ÈÉÕ±”¥¸ÉÕ±•Í}½¹Ñ…¥¹¥¹œ¡ÉÕ±•Ì°€‰¹…‰±”9…µ•Á±…Ñ•Ìˆ°€‰MÑ½À½É¥¹œA±…å•È=ÕÑ±¥¹•Ìˆ¤(€€€€€€€¥˜€‰Ù•¹ÐA±…å•È¹%¹ÍÁ•­Í¥­Ñ¥˜€ô…±Í”ìˆ¥¸ÉÕ±”¹‰½‘ä(€€€t(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡±•…¹ÕÁ}ÉÕ±•Ì¤°€Ä°€‰±•…¹ÕÀÉ½Õ ˆ¤(€€€¥˜±•…¹ÕÁ}ÉÕ±•Ìè(€€€€€€€±•…¹ÕÀ€ô±•…¹ÕÁ}ÉÕ±•ÍlÁt¹‰½‘ä(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€±•…¹ÕÀ¹½Õ¹Ð ‰•ÍÑÉ½ä%¸µ]½É±Q•áÐˆ¤€øô€È°(€€€€€€€€€€€€‰±•…¹ÕÀÉ½Õ ¹½¸‘¥ÍÑÉÕ”•¹ÑÉ…µ‰¤¤Ñ•ÍÑ¤µ½¹‘¼ˆ°(€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€‰Ù•¹ÐA±…å•È¹Q•­ÍÕ¹¥„€ô9Õ±°ìˆ¥¸±•…¹ÕÀ…¹€‰Ù•¹ÐA±…å•È¹Q•­Í¥É¤€ô9Õ±°ìˆ¥¸±•…¹ÕÀ°(€€€€€€€€€€€€‰±•…¹ÕÀÉ½Õ ¹½¸…éé•É„•¹ÑÉ…µ‰¤¤É¥™•É¥µ•¹Ñ¤Ñ•ÍÑ¼ˆ°(€€€€€€€€¤(()‘•˜¡•­}±•…¹ÕÁ}…¹‘}É•Ù•¹”¡¡•­Ìè¡•­Ì°Í½ÕÉ”èÍÑÈ°ÉÕ±•Ìè±¥ÍÑmIÕ±•t¤€´ø9½¹”è(€€€¡•­Ì¹É•ÅÕ¥É” ‰±½‰…°¹M±½Ñ!UQ•ÉÍ•‘¥„ˆ¥¸Í½ÕÉ”°€‰Á½½°M±½Ñ!UQ•ÉÍ•‘¥„…ÍÍ•¹Ñ”ˆ¤(€€€¡•­Ì¹É•ÅÕ¥É” ‰±½‰…°¹M±½Ñ!UA•µ…¥¸ˆ¥¸Í½ÕÉ”°€‰É•¥ÍÑÉ¼Á…É…±±•±¼M±½Ñ!UA•µ…¥¸…ÍÍ•¹Ñ”ˆ¤(€€€¡•­Ì¹É•ÅÕ¥É” ‰±½‰…°¹9½µ½ÉUÉÕÐˆ¹½Ð¥¸Í½ÕÉ”°€‰½¹Ñ…Ñ½É”!U9½µ½ÉUÉÕÐ¹½¸ƒ ÍÑ…Ñ¼É¥µ½ÍÍ¼ˆ¤(€€€ÑÉäè(€€€€€€€Í±½ÑÌ€ômÉ”¹ÍÕˆ¡È‰qÌ¬ˆ°€ˆˆ°¥Ñ•´¤™½È¥Ñ•´¥¸Ñ½Á}±•Ù•±}¥Ñ•µÌ¡…ÉÉ…å}‰½‘ä¡Í½ÕÉ”°€‰±½‰…°¹M±½Ñ!UQ•ÉÍ•‘¥„ˆ¤¥t(€€€•á•ÁÐA…ÉÍ•ÉÉ½Èè(€€€€€€€Í±½ÑÌ€ômt(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡Í±½ÑÌ¤°€ÄÈ°€‰Í±½Ð!UÁÉ•…±±½…Ñ¤ˆ¤(€€€¡•­Ì¹•ÅÕ…°¡Í±½ÑÌ°mÍÑÈ¡¥¹‘•à¤™½È¥¹‘•à¥¸É…¹” ÄÈ¥t°€‰Á½½°¥¹¥é¥…±”‘•±¤Í±½Ð!U€À¸¸ÄÄˆ¤(€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€‰Ù•¹ÐA±…å•È¹UÉÕÑ…¹!U€ô¥ÉÍÐ=˜¡±½‰…°¹M±½Ñ!UQ•ÉÍ•‘¥„¤ìˆ¥¸Í½ÕÉ”(€€€€€€€…¹€‰5½‘¥™ä±½‰…°Y…É¥…‰±”¡M±½Ñ!UQ•ÉÍ•‘¥„°I•µ½Ù”É½´ÉÉ…ä	ä%¹‘•à°€À¤ìˆ¥¸Í½ÕÉ”°(€€€€€€€€‰…±±½…é¥½¹”‘•°ÁÉ¥µ¼Í±½Ð!U±¥‰•É¼…ÍÍ•¹Ñ”¼¹½¸…Ñ½µ¥„ˆ°(€€€€¤((€€€±•…Ù•}ÉÕ±•Ì€ômÉÕ±”™½ÈÉÕ±”¥¸ÉÕ±•Ì¥˜€‰A±…å•È1•™Ð5…Ñ ìˆ¥¸ÉÕ±”¹‰½‘åt(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡±•…Ù•}ÉÕ±•Ì¤°€Ä°€‰É•½±”A±…å•È1•™Ð5…Ñ ˆ¤(€€€¥˜±•…Ù•}ÉÕ±•Ìè(€€€€€€€±•…Ù”€ô±•…Ù•}ÉÕ±•ÍlÁt¹‰½‘ä(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€±•…Ù”¹™¥¹ ‰±½‰…°¹A•µ…¥¹A•µ‰•ÉÍ¥¡…¸€ôÙ•¹ÐA±…å•Èìˆ¤(€€€€€€€€€€€€ð±•…Ù”¹™¥¹ ‰±½‰…°¹%¹‘•­Í-•±Õ…È€ô%¹‘•à=˜ÉÉ…äY…±Õ”¡±½‰…°¹A•µ…¥¹5…¹ÕÍ¥„°Ù•¹ÐA±…å•È¤ìˆ¤°(€€€€€€€€€€€€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸…ÑÑÕÉ„ÍÕ‰¥Ñ¼°¥‘•¹Ñ¥Ó€‘•°¥½…Ñ½É”ˆ°(€€€€€€€€¤(€€€€€€€É•µ½Ù…±}…Ð€ô±•…Ù”¹™¥¹ ‰5½‘¥™ä±½‰…°Y…É¥…‰±”¡A•µ…¥¹5…¹ÕÍ¥„°I•µ½Ù”É½´ÉÉ…ä	ä%¹‘•àˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡É•µ½Ù…±}…Ð€øô€À°€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸É¥µÕ½Ù”¥°¥½…Ñ½É”‘…°É½ÍÑ•Èˆ¤(€€€€€€€¥˜É•µ½Ù…±}…Ð€øô€Àè(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€€‰Ù•¹ÐA±…å•È¸ˆ¹½Ð¥¸±•…Ù•mÉ•µ½Ù…±}…Ðét°(€€€€€€€€€€€€€€€€‰±•…¹ÕÀÕÍ¥Ñ„±•”Ù…É¥…‰¥±¤‘•±°•¹Ñ¥Ó€‘½Á¼…Ù•É±„É¥µ½ÍÍ„‘…°É½ÍÑ•Èˆ°(€€€€€€€€€€€€¤(€€€€€€€™½È½±±•Ñ¥½¸¥¸€ (€€€€€€€€€€€€‰A•µ…¥¹5…¹ÕÍ¥„ˆ°€‰!Õ‘-¥É¥A•µ…¥¸ˆ°€‰!Õ‘-…¹…¹A•µ…¥¸ˆ°€‰!Õ‘5•¹ÕA•µ…¥¸ˆ°(€€€€€€€€€€€€‰Q•­ÍÕ¹¥…A•µ…¥¸ˆ°€‰Q•­Í¥É¥A•µ…¥¸ˆ°€‰M±½Ñ!UA•µ…¥¸ˆ°(€€€€€€€€¤è(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€É”¹Í•…É  (€€€€€€€€€€€€€€€€€€€É˜‰5½‘¥™ä±½‰…°Y…É¥…‰±•qÌ©p¡qÌ©í½±±•Ñ¥½¹õqÌ¨±qÌ©I•µ½Ù”É½´ÉÉ…ä	ä%¹‘•àˆ°(€€€€€€€€€€€€€€€€€€€±•…Ù”°(€€€€€€€€€€€€€€€€¤(€€€€€€€€€€€€€€€¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€€€€˜‰±•…¹ÕÀÕÍ¥Ñ„¹½¸…±±¥¹•…Ñ¼Á•È±½‰…°¹í½±±•Ñ¥½¹ôˆ°(€€€€€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€‰M½ÉÑ•ÉÉ…ä¡ÁÁ•¹Q¼ÉÉ…ä¡±½‰…°¹M±½Ñ!UQ•ÉÍ•‘¥„°±½‰…°¹M±½Ñ!UA•µ…¥¹m±½‰…°¹%¹‘•­Í-•±Õ…Ét¤ˆ(€€€€€€€€€€€¥¸±•…Ù”°(€€€€€€€€€€€€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸±¥‰•É„±¼Í±½Ð!Uˆ°(€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” ‰½È±½‰…°Y…É¥…‰±”ˆ¥¸±•…Ù”°€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸Ù¥Í¥Ñ„ÑÕÑÑ¤¤ÍÕÁ•ÉÍÑ¥Ñ¤ˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” ‰	…±…Í•¹‘…´ˆ¥¸±•…Ù”°€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸É¥ÁÕ±¥Í”¤±•‘•È	…±…Í•¹‘…´ˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€…±°¡¹…µ”¥¸±•…Ù”™½È¹…µ”¥¸€ (€€€€€€€€€€€€€€€€‰Q¥Ñ¥­)…¹­…É-…µ•É„ˆ°€‰Q¥Ñ¥­%‘•…±-…µ•É„ˆ°€‰Q¥Ñ¥­	•¹ÑÕÉ…¹-…µ•É„ˆ°€‰Q¥Ñ¥­­¡¥É-…µ•É„ˆ°(€€€€€€€€€€€€€€€€‰É…¡5•¹‘…Ñ…É-…µ•É„ˆ°€‰A½Í¥Í¥I•±…Ñ¥™-…µ•É„ˆ°(€€€€€€€€€€€€¤¤°(€€€€€€€€€€€€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸¥¹Ù…±¥‘„ÑÕÑÑ”±”…¡”…µ•É„‘•¤Ù¥•Ý•Èˆ°(€€€€€€€€¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” ‰MÑ½À…µ•É„ˆ¥¸±•…Ù”°€‰±•…¹ÕÀÕÍ¥Ñ„¹½¸™•Éµ„±”…µ•É”ÁÕ¹Ñ…Ñ”…±°ÕÍ•¹Ñ”ˆ¤((€€€™½È¹…µ”¥¸€ ‰Q…É•Ñ	…±…Í•¹‘…µ¥Á¥±¥ ˆ°€‰Q…É•Ñ	…±…Í•¹‘…µQ•É­Õ¹¤ˆ¤è(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡˜‰Ù•¹ÐA±…å•È¹í¹…µ•ôˆ¥¸Í½ÕÉ”°˜‰I•Ù•¹”èÙ…É¥…‰¥±”í¹…µ•ô…ÍÍ•¹Ñ”ˆ¤(€€€±…¥µ}ÉÕ±•Ì€ôÉÕ±•Í}½¹Ñ…¥¹¥¹œ¡ÉÕ±•Ì°€‰Q…É•Ñ	…±…Í•¹‘…µQ•É­Õ¹¤ˆ°€‰-¥±° ˆ¤(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡±…¥µ}ÉÕ±•Ì¤°€Ä°€‰É•½±”±…¥´	…±…Í•¹‘…´½¸Ñ…É•Ð…ÑÑÕÉ…Ñ¼ˆ¤(€€€¥˜±…¥µ}ÉÕ±•Ìè(€€€€€€€±…¥´€ô±…¥µ}ÉÕ±•ÍlÁt¹‰½‘ä(€€€€€€€…ÁÑÕÉ•}µ…Ñ €ôÉ”¹Í•…É  (€€€€€€€€€€€È‰Ù•¹ÐA±…å•Ép¹Q…É•Ñ	…±…Í•¹‘…µQ•É­Õ¹¥qÌ¨õqÌ©Ù•¹ÐA±…å•Ép¹…™Ñ…ÉQ…É•Ñ	…±…Í•¹‘…µqÌ©qmqÌ©Ù•¹ÐA±…å•Ép¹-ÕÉÍ½É	…±…Í•¹‘…µqÌ©quqÌ¨ìˆ°(€€€€€€€€€€€±…¥´°(€€€€€€€€¤(€€€€€€€…ÁÑÕÉ”€ô€´Ä¥˜…ÁÑÕÉ•}µ…Ñ ¥Ì9½¹”•±Í”…ÁÑÕÉ•}µ…Ñ ¹ÍÑ…ÉÐ ¤(€€€€€€€­¥±±}…Ð€ô±…¥´¹™¥¹ ‰-¥±°¡Ù•¹ÐA±…å•È¹Q…É•Ñ	…±…Í•¹‘…µQ•É­Õ¹¤°Ù•¹ÐA±…å•È¤ìˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” À€ðô…ÁÑÕÉ”€ð­¥±±}…Ð°€‰Ñ…É•Ð	…±…Í•¹‘…´¹½¸…ÑÑÕÉ…Ñ¼Á•È¥‘•¹Ñ¥Ó€ÁÉ¥µ„‘•°±…¥´ˆ¤(€€€€€€€Ý…¥Ñ}…Ð€ô±…¥´¹™¥¹ ‰]…¥Ð ˆ°…ÁÑÕÉ”€¬€Ä¤(€€€€€€€¥˜Ý…¥Ñ}…Ð€øô€Àè(€€€€€€€€€€€…™Ñ•É}Ý…¥Ð€ô±…¥µmÝ…¥Ñ}…Ðét(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€€‰Q…É•Ñ	…±…Í•¹‘…µQ•É­Õ¹¤ˆ¥¸…™Ñ•É}Ý…¥Ð°(€€€€€€€€€€€€€€€€‰±…¥´	…±…Í•¹‘…´¹½¸ÕÍ„¥°É¥™•É¥µ•¹Ñ¼…ÑÑÕÉ…Ñ¼‘½Á¼¥°]…¥Ðˆ°(€€€€€€€€€€€€¤(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€€€€€‰Q…É•Ñ	…±…Í•¹‘…µ¥Á¥±¥ ˆ¹½Ð¥¸…™Ñ•É}Ý…¥Ð°(€€€€€€€€€€€€€€€€‰±…¥´	…±…Í•¹‘…´‘¥Á•¹‘”…¹½É„‘…±±„Í•±•é¥½¹”µÕÑ•Ù½±”‘½Á¼¥°]…¥Ðˆ°(€€€€€€€€€€€€¤(€€€É•™É•Í¡}ÉÕ±•Ì€ôÉÕ±•Í}½¹Ñ…¥¹¥¹œ (€€€€€€€ÉÕ±•Ì°€‰Ù•¹ÐA±…å•È¹Q…É•Ñ	…±…Í•¹‘…µ¥Á¥±¥ ˆ°€‰Ù•¹ÐA±…å•È¹…™Ñ…ÉQ…É•Ñ	…±…Í•¹‘…´€ô¥±Ñ•É•ÉÉ…äˆ(€€€€¤(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡É•™É•Í¡}ÉÕ±•Ì¤°€Ä°€‰É•™É•Í 	…±…Í•¹‘…´¡”ÁÉ•Í•ÉÙ„¥°Ñ…É•ÐÁ•È¥‘•¹Ñ¥Ó€ˆ¤((€€€‘•…Ñ¡}ÉÕ±•Ì€ômÉÕ±”™½ÈÉÕ±”¥¸ÉÕ±•Ì¥˜€‰A±…å•È¥•ìˆ¥¸ÉÕ±”¹‰½‘åt(€€€¡•­Ì¹É•ÅÕ¥É”¡‰½½°¡‘•…Ñ¡}ÉÕ±•Ì¤°€‰É•½±„A±…å•È¥•Á•È	…±…Í•¹‘…´…ÍÍ•¹Ñ”ˆ¤(€€€¥˜‘•…Ñ¡}ÉÕ±•Ìè(€€€€€€€‘•…Ñ €ô€‰q¸ˆ¹©½¥¸¡ÉÕ±”¹‰½‘ä™½ÈÉÕ±”¥¸‘•…Ñ¡}ÉÕ±•Ì¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€É”¹Í•…É ¡È‰Ù•¹ÐA±…å•Ép¹mµi„µèÀ´å}t©	…±…Í•¹‘…µmµi„µèÀ´å}t©qÌ¨õqÌ©…±Í•qÌ¨ìˆ°‘•…Ñ ¤(€€€€€€€€€€€¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€‰A±…å•È¥•¹½¸…éé•É„¥°™±…œ‘•±±„µ½ÉÑ”	…±…Í•¹‘…´ˆ°(€€€€€€€€¤(()‘•˜¡•­}‘¥…¹½ÍÑ¥Ì¡¡•­Ìè¡•­Ì°Í½ÕÉ”èÍÑÈ°ÉÕ±•Ìè±¥ÍÑmIÕ±•t¤€´ø9½¹”è(€€€Ñ½±”€ôÉ”¹Í•…É  (€€€€€€€È‰±½‰…±p¹¥…¹½ÍÑ¥­A•É™½Éµ…qÌ¨õqÌ©]½É­Í¡½ÀM•ÑÑ¥¹œQ½±•qÌ©p  ¸¨ü¥p¥qÌ¨ìˆ°(€€€€€€€Í½ÕÉ”°(€€€€€€€É”¹=Q10°(€€€€¤(€€€¡•­Ì¹É•ÅÕ¥É”¡Ñ½±”¥Ì¹½Ð9½¹”°€‰Ñ½±”A•É™½Éµ…¹”‘¥…¹½ÍÑ¥Ì…ÍÍ•¹Ñ”ˆ¤(€€€¥˜Ñ½±”¥Ì¹½Ð9½¹”è(€€€€€€€…ÉÕµ•¹ÑÌ€ôÑ½Á}±•Ù•±}¥Ñ•µÌ¡Ñ½±”¹É½ÕÀ Ä¤¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€±•¸¡…ÉÕµ•¹ÑÌ¤€øô€Ì…¹…ÉÕµ•¹ÑÍlÉt¹ÍÑÉ¥À ¤€ôô€‰…±Í”ˆ°(€€€€€€€€€€€€‰A•É™½Éµ…¹”‘¥…¹½ÍÑ¥Ì‘•Ù”•ÍÍ•É”=Á•È¥µÁ½ÍÑ…é¥½¹”ÁÉ•‘•™¥¹¥Ñ„ˆ°(€€€€€€€€¤(€€€™½Èµ•ÑÉ¥Œ¥¸€ ‰M•ÉÙ•È1½…ˆ°€‰M•ÉÙ•È1½…Ù•É…”ˆ°€‰M•ÉÙ•È1½…A•…¬ˆ¤è(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡µ•ÑÉ¥Œ¥¸Í½ÕÉ”°˜‰‘¥…¹½ÍÑ¥„ÁÉ¥Ù„‘¤íµ•ÑÉ¥ôˆ¤(€€€‘¥…¹½ÍÑ¥}ÉÕ±•Ì€ôl(€€€€€€€ÉÕ±”™½ÈÉÕ±”¥¸ÉÕ±•Ì(€€€€€€€¥˜€‰¥…¹½ÍÑ¥­A•É™½Éµ„ˆ¥¸ÉÕ±”¹‰½‘ä…¹€‰M•ÉÙ•È1½…ˆ¥¸ÉÕ±”¹‰½‘ä(€€€t(€€€¡•­Ì¹É•ÅÕ¥É”¡‰½½°¡‘¥…¹½ÍÑ¥}ÉÕ±•Ì¤°€‰É•½±„!U‘¥…¹½ÍÑ¥„¹½¸ÑÉ½Ù…Ñ„ˆ¤(€€€¥˜‘¥…¹½ÍÑ¥}ÉÕ±•Ìè(€€€€€€€‘¥…¹½ÍÑ¥Œ€ô€‰q¸ˆ¹©½¥¸¡ÉÕ±”¹‰½‘ä™½ÈÉÕ±”¥¸‘¥…¹½ÍÑ¥}ÉÕ±•Ì¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” ‰!½ÍÐA±…å•Èˆ¥¸‘¥…¹½ÍÑ¥Œ°€‰‘¥…¹½ÍÑ¥„¹½¸±¥µ¥Ñ…Ñ„…±°¡½ÍÐˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€ (€€€€€€€€€€€€€€€€ (€€€€€€€€€€€€€€€€€€€€‰!Õ‘-¥É¥A•µ…¥¸ˆ¥¸‘¥…¹½ÍÑ¥Œ(€€€€€€€€€€€€€€€€€€€…¹€ ‰!Õ‘-…¹…¹A•µ…¥¸ˆ¥¸‘¥…¹½ÍÑ¥Œ½ÈÉ”¹Í•…É ¡È‰½Õ¹Ð=™p¡±½‰…±p¹!Õ‘-¥É¥A•µ…¥¹p¥qÌ©p©qÌ¨Èˆ°‘¥…¹½ÍÑ¥Œ¤¤(€€€€€€€€€€€€€€€€¤(€€€€€€€€€€€€€€€…¹…±°¡Ñ½­•¸¥¸‘¥…¹½ÍÑ¥Œ™½ÈÑ½­•¸¥¸€ ‰!Õ‘5•¹ÕA•µ…¥¸ˆ°€‰Q•­ÍÕ¹¥…A•µ…¥¸ˆ°€‰Q•­Í¥É¥A•µ…¥¸ˆ¤¤(€€€€€€€€€€€€¤°(€€€€€€€€€€€€‰‘¥…¹½ÍÑ¥„ÁÉ¥Ù„‘•¤½¹Ñ•¤!U½%]Pˆ°(€€€€€€€€¤(€€€¥¹ÍÁ•Ñ½É}ÉÕ±•Ì€ôÉÕ±•Í}½¹Ñ…¥¹¥¹œ (€€€€€€€ÉÕ±•Ì°€‰±½‰…°¹¥…¹½ÍÑ¥­A•É™½Éµ„€ôô…±Í”ˆ°€‰¥Í…‰±”%¹ÍÁ•Ñ½ÈI•½É‘¥¹œìˆ(€€€€¤(€€€¡•­Ì¹•ÅÕ…°¡±•¸¡¥¹ÍÁ•Ñ½É}ÉÕ±•Ì¤°€Ä°€‰‘¥Í…‰¥±¥Ñ…é¥½¹”%¹ÍÁ•Ñ½ÈÅÕ…¹‘¼±„‘¥…¹½ÍÑ¥„ƒ =ˆ¤(()‘•˜¡•­}‘½Õµ•¹Ñ…Ñ¥½¹}…¹‘}¤¡¡•­Ìè¡•­Ì°•¹É•Ìè±¥ÍÑmÍÑÉt¤€´ø9½¹”è(€€€¡•­Ì¹É•ÅÕ¥É”¡YIM%=8¹•á¥ÍÑÌ ¤°˜‰™¥±”YIM%=8µ…¹…¹Ñ”èíYIM%=9ôˆ¤(€€€¥˜YIM%=8¹•á¥ÍÑÌ ¤è(€€€€€€€¡•­Ì¹•ÅÕ…°¡YIM%=8¹É•…‘}Ñ•áÐ¡•¹½‘¥¹œô‰ÕÑ˜´àˆ¤¹ÍÑÉ¥À ¤°€ˆÀ¸Ô¸Èˆ°€‰Ù•ÉÍ¥½¹”ÁÉ½•ÑÑ¼ˆ¤((€€€¡•­Ì¹É•ÅÕ¥É”¡9I}=¹•á¥ÍÑÌ ¤°˜‰‘½Õµ•¹Ñ…é¥½¹”•¹•É¤µ…¹…¹Ñ”èí9I}=ôˆ¤(€€€¥˜9I}=¹•á¥ÍÑÌ ¤è(€€€€€€€‘½Õµ•¹Ñ•€ôÉ”¹™¥¹‘…±° (€€€€€€€€€€€È‰yq­p¸€ ¸¬¤ˆ°9I}=¹É•…‘}Ñ•áÐ¡•¹½‘¥¹œô‰ÕÑ˜´àˆ¤°™±…ÌõÉ”¹5U1Q%1%9(€€€€€€€€¤(€€€€€€€¡•­Ì¹•ÅÕ…°¡‘½Õµ•¹Ñ•°•¹É•Ì°€‰‘½Ì½9I$¹µÉ¥ÍÁ•ÑÑ¼„…™Ñ…É•¹É”ˆ¤((€€€™½È±•…ä¥¸1e}UQ=5Q%=8è(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡¹½Ð±•…ä¹•á¥ÍÑÌ ¤°˜‰…ÕÑ½µ…é¥½¹”…ÕÑ¼µµ½‘¥™¥…¹Ñ”±•…ä…¹½É„ÁÉ•Í•¹Ñ”èí±•…ä¹É•±…Ñ¥Ù•}Ñ¼¡I==P¥ôˆ¤(€€€¡•­Ì¹É•ÅÕ¥É”¡]=I-1=\¹•á¥ÍÑÌ ¤°˜‰Ý½É­™±½ÜÉ•…µ½¹±äµ…¹…¹Ñ”èí]=I-1=\¹É•±…Ñ¥Ù•}Ñ¼¡I==P¥ôˆ¤(€€€¥˜]=I-1=\¹•á¥ÍÑÌ ¤è(€€€€€€€Ý½É­™±½Ü€ô]=I-1=\¹É•…‘}Ñ•áÐ¡•¹½‘¥¹œô‰ÕÑ˜´àˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€É”¹Í•…É ¡Èˆ ý´¥yÁ•Éµ¥ÍÍ¥½¹ÌéqÌ©q¹qÌ­½¹Ñ•¹ÑÌéqÌ©É•…‘qÌ¨ˆ°Ý½É­™±½Ü¤¥Ì¹½Ð9½¹”°(€€€€€€€€€€€€‰Ý½É­™±½ÜÍ•¹é„Á•Éµ¥ÍÍ¥½¹Ì¹½¹Ñ•¹ÑÌèÉ•…ˆ°(€€€€€€€€¤(€€€€€€€™½É‰¥‘‘•¸€ô€ ‰½¹Ñ•¹ÑÌèÝÉ¥Ñ”ˆ°€‰¥ÐÁÕÍ ˆ°€‰¥Ð½µµ¥Ðˆ°€‰À¹ÝÉ¥Ñ•}Ñ•áÐˆ°€‰…ÁÁ±å}Á…Ñ ˆ¤(€€€€€€€™½ÈÑ½­•¸¥¸™½É‰¥‘‘•¸è(€€€€€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡Ñ½­•¸¹½Ð¥¸Ý½É­™±½Ü°˜‰Ý½É­™±½Ü¹½¸É•…µ½¹±äèÑÉ½Ù…Ñ¼íÑ½­•¸…Éôˆ¤(€€€€€€€¡•­Ì¹É•ÅÕ¥É” (€€€€€€€€€€€€‰ÁåÑ¡½¸Ñ½½±Ì½Ù…±¥‘…Ñ•}Ý½É­Í¡½À¹Áäˆ¥¸Ý½É­™±½Ü°(€€€€€€€€€€€€‰Ý½É­™±½Ü¹½¸•Í•Õ”Ñ½½±Ì½Ù…±¥‘…Ñ•}Ý½É­Í¡½À¹Áäˆ°(€€€€€€€€¤(()‘•˜µ…¥¸ ¤€´ø9½¹”è(€€€¡•­Ì€ô¡•­Ì ¤(€€€¥˜¹½ÐM=UI¹•á¥ÍÑÌ ¤è(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡…±Í”°˜‰Í½É•¹Ñ”µ…¹…¹Ñ”èíM=UIôˆ¤(€€€€€€€¡•­Ì¹™¥¹¥Í  ¤(€€€Í½ÕÉ”€ôM=UI¹É•…‘}Ñ•áÐ¡•¹½‘¥¹œô‰ÕÑ˜´àˆ¤(€€€™½È•ÉÉ½È¥¸‰…±…¹•‘}•ÉÉ½ÉÌ¡Í½ÕÉ”¤è(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡…±Í”°•ÉÉ½È¤((€€€ÑÉäè(€€€€€€€±½‰…±}¹…µ•Ì°Á±…å•É}¹…µ•Ì°ÍÕ‰É½ÕÑ¥¹•Ì€ô‘•±…É…Ñ¥½¹}Ñ…‰±•Ì¡Í½ÕÉ”¤(€€€€€€€•¹É•Ì°ÉÕ±•Ì€ô¡•­}±…¹Õ…•}…ÉÉ…åÌ¡¡•­Ì°Í½ÕÉ”¤(€€€€€€€¡•­}Í½ÕÉ•}ÍÑÉÕÑÕÉ”¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì°±½‰…±}¹…µ•Ì°Á±…å•É}¹…µ•Ì°ÍÕ‰É½ÕÑ¥¹•Ì¤(€€€€€€€¡•­}Ñ¥µ•É}…¹‘}µ…Ñ ¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì¤(€€€€€€€¡•­}‰½Ñ}±¥™•å±”¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì¤(€€€€€€€¡•­}µ•¹ÕÌ¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì°ÍÕ‰É½ÕÑ¥¹•Ì¤(€€€€€€€¡•­}…µ•É„¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì°Á±…å•É}¹…µ•Ì¤(€€€€€€€¡•­}É½Õ ¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì¤(€€€€€€€¡•­}±•…¹ÕÁ}…¹‘}É•Ù•¹”¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì¤(€€€€€€€¡•­}‘¥…¹½ÍÑ¥Ì¡¡•­Ì°Í½ÕÉ”°ÉÕ±•Ì¤(€€€€€€€¡•­}‘½Õµ•¹Ñ…Ñ¥½¹}…¹‘}¤¡¡•­Ì°•¹É•Ì¤(€€€•á•ÁÐA…ÉÍ•ÉÉ½È…Ì•áŒè(€€€€€€€¡•­Ì¹É•ÅÕ¥É”¡…±Í”°˜‰Á…ÉÍ¥¹œ¥¹Ñ•ÉÉ½ÑÑ¼èí•áôˆ¤((€€€¡•­Ì¹™¥¹¥Í  ¤(€€€ÁÉ¥¹Ð ‰=,€´½¹ÑÉ½±±¤ÍÑ…Ñ¥¤ØÀ¸Ô¸ÈÍÕÁ•É…Ñ¤ˆ¤(€€€ÁÉ¥¹Ð (€€€€€€€˜‰•¹•É¤èí±•¸¡•¹É•Ì¥ôð1¥¹Õ”è€ÌðI•½±”èí±•¸¡ÉÕ±•Ì¥ôð€ˆ(€€€€€€€˜‰I…å…ÍÐ…µ•É„èí±•¸¡…±±}Ñ•áÑÌ¡Í½ÕÉ”°€I…ä…ÍÐ!¥ÐA½Í¥Ñ¥½¸œ¤¥ôˆ(€€€€¤(€€€ÁÉ¥¹Ð ‰9½Ñ„è¥µÁ½ÉÑ…é¥½¹”°ÍÑÉ•ÍÌ„€ÄÈ¥½…Ñ½É¤”Ñ•ÍÐµ½‘…±¥Ó€É•ÍÑ…¹¼ÁÉ½Ù”±¥Ù”½‰‰±¥…Ñ½É¥”¸ˆ¤(()¥˜}}¹…µ•}|€ôô€‰}}µ…¥¹}|ˆè(€€€µ…¥¸ ¤(

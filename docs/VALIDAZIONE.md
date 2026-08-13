@@ -1,14 +1,14 @@
-# Rapporto di validazione — versione 0.5.1
+# Rapporto di validazione — versione 0.5.2
 
 Data: 2026-08-13
 
-Release: **AFK Dedicated Server 0.5.1 — Season 4: Heroes of Busan**
+Release: **AFK Dedicated Server 0.5.2 — Season 4: Heroes of Busan**
 
 Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repository da ciò che richiede il client Overwatch. Un controllo statico superato non certifica stabilità, prestazioni o compatibilità live.
 
 ## Controlli statici
 
-**Stato: superati sul sorgente finale della 0.5.1.**
+**Stato: superati sul sorgente finale della 0.5.2.**
 
 Il gate della release deve essere eseguito sul blob finale di `workshop/ruang_irama.workshop`, insieme alla documentazione e al validatore della stessa revisione. Il controllo comprende:
 
@@ -21,6 +21,7 @@ Il gate della release deve essere eseguito sul blob finale di `workshop/ruang_ir
 - due sentinelle reali `U+200B`;
 - sei menu e navigazione Soundtrack corretta;
 - singolo raycast nel percorso camera;
+- traslazione camera rivalutata per fotogramma, direzione posteriore orizzontale, nessuna correzione Y ondulante e blend nativo `80`;
 - assenza di azioni di score, vittoria o pareggio;
 - `Restart Match` usato soltanto allo zero del timer personalizzato;
 - invarianti degli array paralleli e pool slot `0..11`;
@@ -35,11 +36,12 @@ Comando eseguito dalla radice del repository:
 Esito:
 
 ```text
-OK - controlli statici v0.5.1 superati
+OK - controlli statici v0.5.2 superati
+Generi: 100 | Lingue: 3 | Regole: 49 | Raycast camera: 1
 Nota: importazione, stress a 12 giocatori e test modalità restano prove live obbligatorie.
 ```
 
-Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue e un solo raycast camera. Non vengono riportati i vecchi conteggi di regole, subroutine o HUD perché non sono criteri stabili della release.
+Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue, un solo raycast camera e la nuova pipeline di fluidità. Non vengono usati come gate rigido i conteggi di subroutine o HUD perché non sono criteri stabili della release.
 
 ## Verifiche live
 
@@ -47,7 +49,7 @@ Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue e un sol
 
 Non sono certificabili dal solo repository:
 
-- reimportazione del blob 0.5.1 nel parser del client Overwatch;
+- reimportazione del blob 0.5.2 nel parser del client Overwatch;
 - comportamento del workaround bot AI con `U+200B` sulla patch dell'11 agosto 2026;
 - riapplicazione event-driven del blocco bot dopo spawn, respawn e cambio eroe;
 - contratto no-score/no-winner e riavvio esclusivo allo zero su Control, Escort, Hybrid, Push, Flashpoint e Clash;
@@ -58,6 +60,7 @@ Non sono certificabili dal solo repository:
 - cleanup completo dopo almeno 50 cicli join/leave;
 - stabilità con 12 umani e con 6 umani + 6 bot;
 - 12 camere per 10 minuti e 12 ispezioni Crouch simultanee;
+- fluidità della camera propria durante movimento, pitch e collisioni, oltre al comportamento su bersagli remoti;
 - `Server Load Average < 80%`, `Server Load Peak < 100%`, assenza di warning/crash e nessuna crescita permanente di HUD/IWT;
 - diagnostica visibile soltanto all'host quando attiva e completamente inattiva quando disabilitata.
 
@@ -77,4 +80,4 @@ La release prende come riferimento le [Overwatch Retail Patch Notes — August 1
 
 ## Decisione di rilascio
 
-Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.1 come verificata a 12 giocatori. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.
+Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.2 come verificata a 12 giocatori o come visivamente fluida su ogni client. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.

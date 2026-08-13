@@ -1,4 +1,4 @@
-# Piano di test — versione 0.5.1
+# Piano di test — versione 0.5.2
 
 Il validatore statico riduce il rischio di errori strutturali, ma non sostituisce il parser e il runtime di Overwatch. Ogni prova è quindi classificata come **statica** oppure **live**. Una prova live non va dichiarata superata sulla sola base del sorgente.
 
@@ -19,6 +19,7 @@ Eseguire il validatore read-only sul sorgente finale e verificare:
 - sei menu con indici `0..5`;
 - navigazione Soundtrack `Primary/Secondary ±1` e `Jump/Crouch ±10`;
 - un solo raycast nel percorso di aggiornamento camera;
+- blend camera nativo `80`, offset posteriore orizzontale e assenza dell'abbassamento verticale variabile legacy;
 - nessuna azione che assegni score, vittoria o pareggio;
 - `Restart Match` confinato al completamento del timer personalizzato;
 - invarianti degli array paralleli e slot HUD limitati a `0..11`;
@@ -168,6 +169,10 @@ Usare tre client contemporanei, uno per lingua.
 ### Camera
 
 - Verificare spalla, distanza dinamica, punto di mira e margine anti-muro.
+- Con camera sul proprio eroe, provare idle, corsa, strafe, salto, atterraggio, Crouch, scale e rotazioni rapide: non devono comparire onde verticali o movimento a scalini percepibile.
+- Muovere ripetutamente la mira dal basso verso l'alto: il pitch deve cambiare il punto osservato senza alzare e abbassare la posizione dietro la spalla.
+- Attraversare porte e costeggiare muri, colonne e spigoli: la camera deve rientrare senza clipping e tornare alla distanza normale senza pompaggio verticale.
+- Ripetere su un bersaglio remoto; un eventuale residuo di rete va distinto da un'oscillazione riproducibile sulla camera del proprio eroe.
 - Controllare che per ogni aggiornamento venga usato un solo risultato di raycast memorizzato.
 - Provare eroi di dimensioni e salute diverse, Echo in Duplicate e D.Mon nei suoi cambi di modello.
 - Far uscire, morire o cambiare eroe al target: nessuna cache obsoleta e ritorno sicuro alla visuale normale quando necessario.
@@ -208,7 +213,7 @@ Con `Performance diagnostics = On`:
 
 Un eventuale superamento delle soglie o crash rende la prova fallita: non va mascherato come limite del validatore.
 
-## Criterio di rilascio 0.5.1
+## Criterio di rilascio 0.5.2
 
 La release è pronta per un codice Blizzard condivisibile soltanto quando:
 

@@ -1,10 +1,10 @@
-# Note di progetto — versione 0.5.1
+# Note di progetto — versione 0.5.2
 
 ## Identità e obiettivo
 
 Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-La release 0.5.1 corregge l'importazione della base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+La release 0.5.2 migliora la fluidità della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 
 Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
@@ -113,9 +113,12 @@ La camera può seguire il viewer o un altro giocatore valido, inclusi bot. Per o
 2. la posizione ideale dietro la spalla;
 3. l'unico risultato del raycast contro la geometria;
 4. la posizione finale con margine dalla parete;
-5. il punto verso cui guardare.
+5. l'offset relativo rispetto alla posizione del bersaglio;
+6. il punto verso cui guardare.
 
-Il singolo raycast per tick sostituisce espressioni duplicate e riduce il carico con più camere simultanee. Altezza, distanza e offset vengono ricalcolati dal modello corrente: questo è importante per D.Mon e per trasformazioni che possono cambiare ingombro senza un normale cambio eroe. Se il bersaglio esce o non è più valido, la camera termina e il viewer torna alla visuale normale.
+Il singolo raycast per tick sostituisce espressioni duplicate e riduce il carico con più camere simultanee. La posizione base del bersaglio viene rivalutata per fotogramma e combinata con l'offset relativo in cache; `Start Camera` usa un blend nativo pari a `80`. L'arretramento usa soltanto lo yaw, così pitch e rinculo non fanno orbitare verticalmente la camera. La collisione conserva il margine lungo il raggio ma non applica più un abbassamento verticale variabile vicino agli spigoli.
+
+Altezza, distanza e offset vengono comunque ricalcolati dal modello corrente: questo è importante per D.Mon e per trasformazioni che possono cambiare ingombro senza un normale cambio eroe. La fluidità percepita, le collisioni e il minimo jitter possibile sui bersagli remoti restano verifiche live. Se il bersaglio esce o non è più valido, la camera termina e il viewer torna alla visuale normale.
 
 ## Diagnostica e prestazioni
 
