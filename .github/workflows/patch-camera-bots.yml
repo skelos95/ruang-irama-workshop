@@ -23,7 +23,6 @@ jobs:
           p = Path('workshop/ruang_irama.workshop')
           s = p.read_text(encoding='utf-8')
 
-          # 1) Endless guard: apply once when gameplay actually enters Game In Progress.
           old_guard_start = s.find('rule("00a - Global: Nessun vincitore prima della fine del timer AFK")')
           old_guard_end = s.find('rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisce")', old_guard_start)
           if old_guard_start < 0 or old_guard_end < 0:
@@ -44,7 +43,7 @@ jobs:
 
           \tactions
           \t{
-          \t\t"Una sola applicazione quando la modalita entra davvero in gioco: niente polling, niente Wait/Loop."
+          \t\t"Una sola applicazione quando la modalita entra davvero in gioco."
           \t\tDisable Built-In Game Mode Completion;
           \t\tDisable Built-In Game Mode Scoring;
           \t}
@@ -53,26 +52,15 @@ jobs:
           '''
           s = s[:old_guard_start] + new_guard + s[old_guard_end:]
 
-          # 2) Let Overwatch handle Assemble Heroes and pre-match setup normally.
           startup_start = s.find('rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")')
           startup_end = s.find('rule("01 - Pemain Masuk: Mulai jam nongkrong")', startup_start)
           if startup_start < 0 or startup_end < 0:
               raise SystemExit('forced startup rule not found')
           s = s[:startup_start] + s[startup_end:]
 
-          # 3) HUD hint now also mentions outlines.
-          s = s.replace(
-              '"Hold {0}: inspect player, hero & ultimate"',
-              '"Hold {0}: inspect player, hero, ultimate & outlines"',
-              1,
-          )
-          s = s.replace(
-              '"Tahan {0}: lihat pemain, hero & ultimate"',
-              '"Tahan {0}: lihat pemain, hero, ultimate & outline"',
-              1,
-          )
+          s = s.replace('"Hold {0}: inspect player, hero & ultimate"', '"Hold {0}: inspect player, hero, ultimate & outlines"', 1)
+          s = s.replace('"Tahan {0}: lihat pemain, hero & ultimate"', '"Tahan {0}: lihat pemain, hero, ultimate & outline"', 1)
 
-          # 4) When crouch inspection starts, outline every human in that player\'s chosen color.
           outline_marker = '''\t\tEvent Player.InspeksiAktif = True;
           \t\tDisable Nameplates(All Players(All Teams), Event Player);
           \t\tCall Subroutine(SegarkanTargetInspeksi);'''
@@ -80,7 +68,7 @@ jobs:
               raise SystemExit('inspection start marker not found')
 
           outline_actions = [
-              '\t\t"Outline di crouch: Always e la visibilita massima del Workshop, anche dietro la geometria. Ogni umano usa il proprio colore scelto."',
+              '\t\t"Outline di crouch: ogni umano usa il proprio colore scelto; tipo Always per restare visibile anche dietro la geometria."',
               '\t\tStart Forcing Player Outlines(Event Player, Event Player, True, Event Player.WarnaNama, Always);',
           ]
           for i in range(20):
@@ -93,7 +81,6 @@ jobs:
           \t\tCall Subroutine(SegarkanTargetInspeksi);'''
           s = s.replace(outline_marker, replacement, 1)
 
-          # 5) Releasing crouch / opening menu / dying / remote camera removes all forced outlines for that viewer.
           stop_marker = '''\tactions
           \t{
           \t\tEnable Nameplates(All Players(All Teams), Event Player);
@@ -107,7 +94,6 @@ jobs:
               raise SystemExit('inspection stop marker not found')
           s = s.replace(stop_marker, stop_replacement, 1)
 
-          # Safety: preserve the stable camera activation and spectator visibility.
           required = [
               'Wait(0.016, Ignore Condition);',
               'Event Player.ModeKamera = 1;',
@@ -125,12 +111,11 @@ jobs:
           if 'Start Game Mode;' in s:
               raise SystemExit('forced game startup still exists')
 
-          # This specific endless guard must no longer poll.
           guard_check_start = s.find('rule("00a - Global: Blocca completamento quando il gameplay inizia")')
           guard_check_end = s.find('rule("00b - Global:', guard_check_start)
           guard_block = s[guard_check_start:guard_check_end]
-          if 'Wait(' in guard_block or 'Loop' in guard_block:
-              raise SystemExit('endless guard still contains Wait/Loop')
+          if '\t\tWait(' in guard_block or '\t\tLoop' in guard_block:
+              raise SystemExit('endless guard still contains executable Wait/Loop')
 
           p.write_text(s, encoding='utf-8')
           print('Normal startup restored; crouch outlines added for 20 selectable player colors.')
