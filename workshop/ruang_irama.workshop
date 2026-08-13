@@ -322,6 +322,9 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		"Nessuna modalita puo chiudere la partita o assegnare punteggio: Hybrid, CTF, Push, Escort, Deathmatch e tutte le altre restano endless."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
+		"Modalita muta e pulita: niente announcer e niente musica nativa della modalita."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Music;
 
 		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Custom String("Lokasi server: Indonesia"),
@@ -480,7 +483,9 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 
 		Event Player.Manusia = True;
+		"Nasconde barre, obiettivi e icone in-world della modalita, lasciando intatto l'HUD eroe e il nostro HUD custom."
 		Disable Game Mode HUD(Event Player);
+		Disable Game Mode In-World UI(Event Player);
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
