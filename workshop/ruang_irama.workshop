@@ -85,7 +85,6 @@ variables
 		44: PelatNamaDinonaktifkan
 		45: KunciBotAktif
 		46: PahlawanBotTerakhir
-		47: IndeksGarisLuar
 		48: PerintahMenu
 }
 
@@ -394,9 +393,9 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("{0}    {1}", Custom String("AFK DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0}: inspect player, hero, ultimate & outlines", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
-			IndeksBahasa) == 1 ? Custom String("Tahan {0}: lihat pemain, hero, ultimate & outline", Input Binding String(Button(Crouch))) : Custom String(
-			"กด {0} ค้าง: ดูผู้เล่น ฮีโร่ อัลติเมต และเส้นขอบ", Input Binding String(Button(Crouch))), Player Variable(Local Player,
+			"Hold {0}: inspect player, hero & ultimate", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0}: lihat pemain, hero & ultimate", Input Binding String(Button(Crouch))) : Custom String(
+			"กด {0} ค้าง: ดูผู้เล่น ฮีโร่ และอัลติเมต", Input Binding String(Button(Crouch))), Player Variable(Local Player,
 			IndeksBahasa) == 0 ? Custom String("LOBBY ROSTER & AFK TIME\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
 			"DAFTAR PEMAIN & WAKTU AFK\n ") : Custom String("รายชื่อผู้เล่นและเวลา AFK\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
@@ -615,22 +614,16 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);
 		Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
-		"Pembaruan berbasis peristiwa untuk penonton yang sedang menahan jongkok."
-		Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
-			InspeksiAktif) == True), True, Event Player.WarnaNama, Always);
 
-		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"{0} - AFK for {1} min", Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"{0} - AFK {1} mnt", Event Player, Event Player.MenitLobby) : Custom String("{0} - AFK {1} นาที", Event Player,
-			Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
+		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - AFK for {2} min", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - AFK {2} mnt", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Custom String("{0} {1} - AFK {2} นาที", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
-		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - soundtrack: {1}",
-			Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - soundtrack: {1}", Event Player, Event Player.IndeksGenre >= 0
-			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack")) : Custom String("{0} - เพลงประกอบ: {1}",
-			Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")), Null,
+		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - soundtrack: {2}",
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - soundtrack: {2}", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0
+			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack")) : Custom String("{0} {1} - เพลงประกอบ: {2}",
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")), Null,
 			Right, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
@@ -753,7 +746,6 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
 		If(Global.IndeksKeluar >= 0);
 			Stop Camera(Event Player);
-			Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 			If(Event Player.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Event Player);
 			End;
@@ -1308,8 +1300,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 		Else If(Event Player.HalamanMenu == 2);
 			Event Player.IndeksWarna = Event Player.KursorWarna;
 			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
-			Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
-				InspeksiAktif) == True), True, Event Player.WarnaNama, Always);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 				"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
 				"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
@@ -1484,16 +1474,6 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 		Event Player.InspeksiAktif = True;
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
-		"Saat jongkok, iterasikan hanya entitas yang hadir: manusia memakai warna pilihannya dan bot memakai jingga."
-		For Player Variable(Event Player, IndeksGarisLuar, 0, Count Of(All Players(All Teams)), 1);
-			If(Or(Is Dummy Bot(All Players(All Teams)[Event Player.IndeksGarisLuar]), Player Variable(All Players(All Teams)[
-				Event Player.IndeksGarisLuar], BotAI)));
-				Start Forcing Player Outlines(All Players(All Teams)[Event Player.IndeksGarisLuar], Event Player, True, Color(Orange), Always);
-			Else;
-				Start Forcing Player Outlines(All Players(All Teams)[Event Player.IndeksGarisLuar], Event Player, True, Player Variable(
-					All Players(All Teams)[Event Player.IndeksGarisLuar], WarnaNama), Always);
-			End;
-		End;
 		Call Subroutine(SegarkanTargetInspeksi);
 		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Event Player.IndeksBahasa == 2 ? Custom String(
 			"{0} {1}  อัลติ {2}%", Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
@@ -1502,7 +1482,7 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 			Custom String("{0}", Event Player.TargetInspeksi), Hero Icon String(Is Duplicating(Event Player.TargetInspeksi)
 			? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Round To Integer(Ultimate Charge Percent(
 			Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null
-			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 0.750, Do Not Clip,
+			? Eye Position(Event Player) : Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 0.900, Do Not Clip,
 			Visible To Position String and Color, Event Player.TargetInspeksi == Null ? Color(White) : Player Variable(
 			Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange),
 			Visible Never);
@@ -1516,7 +1496,7 @@ rule("13 - Intip Pahlawan: Tampilkan nama, ikon, dan daya ultimate")
 				Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(
 				Ultimate Charge Percent(Event Player), Down)) : Custom String("{0} {1}  ULT {2}%", Custom String("{0}", Event Player), Hero Icon String(Is Duplicating(
 				Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Round To Integer(Ultimate Charge Percent(Event Player),
-				Down)), Update Every Frame(Eye Position(Event Player) + Vector(0, 0.450, 0)), 0.750, Do Not Clip,
+				Down)), Update Every Frame(Eye Position(Event Player) + Vector(0, 0.450, 0)), 0.900, Do Not Clip,
 				Visible To Position String and Color, Event Player.WarnaNama, Visible Never);
 			Event Player.TeksDiri = Last Text ID;
 			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
@@ -1573,7 +1553,6 @@ rule("15 - Intip Pahlawan: Hapus tulisan saat berdiri atau membuka menu")
 			Enable Nameplates(All Players(All Teams), Event Player);
 			Event Player.PelatNamaDinonaktifkan = False;
 		End;
-		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 		If(Event Player.TeksDunia != Null);
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
@@ -2029,8 +2008,6 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 		Set Knockback Dealt(Event Player, 0);
 		Event Player.PahlawanBotTerakhir = Hero Of(Event Player);
 		Event Player.KunciBotAktif = True;
-		Start Forcing Player Outlines(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element,
-			InspeksiAktif) == True), True, Color(Orange), Always);
 	}
 }
 
@@ -2121,7 +2098,6 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PelatNamaDinonaktifkan = False;
 		Event Player.KunciBotAktif = False;
 		Event Player.PahlawanBotTerakhir = Null;
-		Event Player.IndeksGarisLuar = 0;
 		Event Player.PerintahMenu = 0;
 	}
 }

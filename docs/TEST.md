@@ -73,7 +73,7 @@ Ripetere almeno una volta con `Server duration (minutes) = 30` e una con `90`. I
 Preparare una lobby con umani, dummy bot Workshop e normali bot AI.
 
 - Un umano già presente quando si attivano le regole deve essere preparato e classificato una sola volta.
-- Un nuovo umano deve comparire nelle liste soltanto dopo la classificazione completa.
+- Un nuovo umano deve comparire nelle liste soltanto dopo la classificazione completa, con l'icona dell'eroe in entrambe le liste.
 - Dummy e bot AI non devono comparire negli HUD sociali né poter aprire i menu.
 - I bot devono restare disponibili come target per le funzioni che li supportano.
 - Far uscire un player durante ciascuno dei due intervalli di classificazione: non deve apparire in ritardo né lasciare uno slot occupato.
@@ -96,7 +96,7 @@ Eseguire almeno 50 cicli join/leave, alternando i seguenti stati al momento dell
 
 Dopo ogni uscita verificare:
 
-- nessun HUD, IWT, outline, nameplate disabilitata o camera orfana;
+- nessun HUD, IWT, nameplate disabilitata o camera orfana;
 - nessuna destinazione Teleport o camera riferita all'entità uscita;
 - nessuna voce Revenge fantasma nei ledger dei superstiti;
 - registri globali ancora allineati, incluso `SlotHUDPemain`;
@@ -186,9 +186,9 @@ Usare tre client contemporanei, uno per lingua.
 
 - Le nameplate native devono essere disabilitate una sola volta all'ingresso e ripristinate in ogni uscita.
 - Target vicino al reticolo aggiornato ogni 0,10 s; viewer, morti e non spawnati esclusi.
-- Testi e outline: colore personale per umani, arancione per bot.
+- Testi: colore personale per umani, arancione per bot e scala `0.900` per una leggibilità leggermente maggiore.
 - Cambiare colore durante l'ispezione: l'aggiornamento deve avvenire senza loop permanente.
-- Ripetere rilascio, apertura menu, morte, camera e uscita; entrambi i testi e ogni outline devono sparire.
+- Ripetere rilascio, apertura menu, morte, camera e uscita; entrambi i testi devono sparire.
 - Attivare Crouch contemporaneamente su 12 player e controllare correttezza e carico.
 
 ## 12. Stress e diagnostica

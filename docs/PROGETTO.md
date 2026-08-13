@@ -43,7 +43,7 @@ Il cleanup usa i registri globali perché le variabili del player uscente posson
 
 - distrugge HUD, menu e testi nel mondo ancora esistenti;
 - interrompe camera e ispezione e invalida i rispettivi riferimenti;
-- ripristina nameplate e outline dove ancora applicabile;
+- ripristina le nameplate dove ancora applicabile;
 - elimina il player da tutti i ledger Revenge dei superstiti;
 - rimuove in modo allineato gli elementi degli array paralleli;
 - restituisce lo slot HUD al pool limitato a `0..11`.
@@ -103,7 +103,7 @@ Fuori dal menu, Crouch attiva l'ispezione per quel viewer. Le nameplate native v
 
 Il target vicino al reticolo viene aggiornato ogni 0,10 secondi scorrendo soltanto i giocatori presenti. Viewer, entità non spawnate, morte o inesistenti vengono escluse. Nome, eroe effettivo e percentuale Ultimate restano rivalutati; durante Duplicate di Echo viene mostrato l'eroe duplicato.
 
-Gli outline e i testi usano il colore personale per gli umani e arancione per i bot. Gli aggiornamenti che dipendono dal colore sono event-driven, per esempio dopo join o applicazione di un nuovo colore. Il cleanup arresta gli outline e distrugge entrambi i testi in ogni percorso, prevenendo residui IWT.
+I due testi di ispezione usano il colore personale per gli umani e arancione per i bot e sono mostrati a scala 0,90 per una leggibilità leggermente maggiore. Il cleanup distrugge entrambi i testi in ogni percorso, prevenendo residui IWT. Il sistema non usa più `Start/Stop Forcing Player Outlines`.
 
 ## Camera in terza persona
 

@@ -22,12 +22,12 @@ La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti.
 ## Funzioni principali
 
 - HUD centrale con nome server, posizione Indonesia e countdown personalizzato.
-- Liste sociali degli umani con tempo trascorso e soundtrack scelta.
+- Liste sociali degli umani con icona dell'eroe, tempo trascorso e soundtrack scelta.
 - Sei menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge` e `5 - Teleport`.
 - 100 generi musicali e 20 colori, navigabili con wrap circolare.
 - Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
 - Camera dinamica calcolata interamente dal renderer: arretramento sensibile al pitch, spalla orizzontale, collisione e mira condividono lo stesso fotogramma, con un solo raycast e senza loop server.
-- Ispezione Crouch con nome, eroe e carica Ultimate; gli umani usano il proprio colore e i bot un outline arancione.
+- Ispezione Crouch con nome più leggibile, icona eroe e carica Ultimate; gli umani usano il proprio colore e i bot l'arancione.
 - Revenge basato sulle eliminazioni dirette ricevute dagli altri umani, con identità del bersaglio preservata anche durante cambiamenti della lobby.
 - Teleport verso l'ultima Spawn Room visitata, obiettivi disponibili e giocatori presenti, inclusi bot AI e dummy bot quando validi.
 - Classificazione umani/bot prima della creazione degli HUD sociali e ripristino del blocco bot dopo spawn, respawn o cambio eroe.

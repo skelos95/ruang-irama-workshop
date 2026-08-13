@@ -830,91 +830,124 @@ def check_camera(
 def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
     checks.equal(
         len(call_texts(source, "Disable Nameplates")), 1,
-        "Disable Nameplates (deve avvenire una sola volta all'avvio Crouch)",
+        "Disable Nameplates Crouch",
     )
     checks.equal(
         len(call_texts(source, "Enable Nameplates")), 2,
-        "Enable Nameplates nei cleanup Crouch e Player Left",
+        "Enable Nameplates cleanup",
     )
-    checks.equal(len(call_texts(source, "Create In-World Text")), 2, "testi mondo Crouch")
-    checks.require(bool(call_texts(source, "Start Forcing Player Outlines")), "outline Crouch assenti")
-    checks.require(bool(call_texts(source, "Stop Forcing Player Outlines")), "cleanup outline Crouch assente")
+    checks.equal(
+        len(call_texts(source, "Create In-World Text")), 2,
+        "testi mondo Crouch",
+    )
+    checks.equal(
+        len(call_texts(source, "Start Forcing Player Outlines")), 0,
+        "Start Forcing Player Outlines",
+    )
+    checks.equal(
+        len(call_texts(source, "Stop Forcing Player Outlines")), 0,
+        "Stop Forcing Player Outlines",
+    )
+    checks.require(
+        "IndeksGarisLuar" not in source,
+        "variabile outline ancora presente",
+    )
 
-    crouch_start = [
-        rule
-        for rule in rules
-        if "Event Player.InspeksiAktif = True;" in rule.body
-        and "Disable Nameplates" in rule.body
-        and "Start Forcing Player Outlines" in rule.body
-    ]
-    checks.equal(len(crouch_start), 1, "regola di avvio outline Crouch")
-    if crouch_start:
-        outline = crouch_start[0].body
-        checks.require(
-            "Count Of(All Players(All Teams))" in outline,
-            "outline Crouch non iterano sulle sole entità presenti",
+    registration = rules_containing(
+        rules,
+        "Append To Array(Global.PemainManusia, Event Player)",
+    )
+    checks.equal(
+        len(registration), 1,
+        "regola registrazione HUD sociali",
+    )
+
+    if registration:
+        huds = call_texts(
+            registration[0].body,
+            "Create HUD Text",
         )
+        checks.equal(
+            len(huds), 2,
+            "HUD sociali per giocatore",
+        )
+
+        for i, call in enumerate(huds, 1):
+            checks.require(
+                "Hero Icon String" in call,
+                f"HUD sociale #{i} privo di icona eroe",
+            )
+
+    starts = [
+        r for r in rules
+        if "Event Player.InspeksiAktif = True;" in r.body
+        and "Disable Nameplates" in r.body
+        and "Create In-World Text" in r.body
+    ]
+
+    checks.equal(
+        len(starts), 1,
+        "regola avvio Crouch",
+    )
+
+    if starts:
+        checks.equal(
+            len(re.findall(
+                r",\s*0\.900\s*,\s*Do Not Clip",
+                starts[0].body,
+            )),
+            2,
+            "dimensione testi Crouch",
+        )
+
+        checks.require(
+            "Color(Orange)" in starts[0].body,
+            "testo bot Crouch non arancione",
+        )
+
+    refresh = [
+        r for r in rules
+        if "SegarkanTargetInspeksi" in r.body
+        and "Loop If Condition Is True;" in r.body
+    ]
+
+    checks.equal(
+        len(refresh), 1,
+        "loop refresh target Crouch",
+    )
+
+    if refresh:
         checks.require(
             re.search(
-                r"Start Forcing Player Outlines\s*\([^;]*Color\s*\(\s*Orange\s*\)",
-                outline,
-                re.DOTALL,
-            )
-            is not None,
-            "bot senza outline arancione",
-        )
-        checks.require(
-            "Player Variable(\n\t\t\t\t\tAll Players(All Teams)[Event Player.IndeksGarisLuar], WarnaNama)" in outline
-            or re.search(
-                r"Player Variable\s*\(\s*All Players\(All Teams\)\s*\[.*?\]\s*,\s*WarnaNama\s*\)",
-                outline,
-                re.DOTALL,
-            )
-            is not None,
-            "outline degli umani non usa il colore personale",
+                r"Wait\s*\(\s*0\.100\s*,",
+                refresh[0].body,
+            ) is not None,
+            "refresh Crouch non a 0,10 s",
         )
 
-    classification_rules = rules_containing(rules, "Append To Array(Global.PemainManusia, Event Player)")
-    checks.require(
-        bool(classification_rules)
-        and "Start Forcing Player Outlines" in classification_rules[0].body
-        and "InspeksiAktif" in classification_rules[0].body,
-        "join umano non aggiorna gli outline dei viewer attivi",
-    )
-    color_rules = rules_containing(rules, "Event Player.IndeksWarna = Event Player.KursorWarna;")
-    checks.require(
-        bool(color_rules)
-        and "Start Forcing Player Outlines" in color_rules[0].body
-        and "InspeksiAktif" in color_rules[0].body,
-        "cambio colore non aggiorna gli outline dei viewer attivi",
+    cleanup = [
+        r for r in rules_containing(
+            rules,
+            "Enable Nameplates",
+        )
+        if "Event Player.InspeksiAktif = False;" in r.body
+    ]
+
+    checks.equal(
+        len(cleanup), 1,
+        "cleanup Crouch",
     )
 
-    refresh_rules = [
-        rule for rule in rules
-        if "SegarkanTargetInspeksi" in rule.body and "Loop If Condition Is True;" in rule.body
-    ]
-    checks.equal(len(refresh_rules), 1, "loop refresh target Crouch")
-    if refresh_rules:
+    if cleanup:
         checks.require(
-            re.search(r"Wait\s*\(\s*0\.100\s*,", refresh_rules[0].body) is not None,
-            "target Crouch non aggiornato ogni 0,10 secondi",
+            cleanup[0].body.count("Destroy In-World Text") >= 2,
+            "cleanup non distrugge entrambi i testi",
         )
 
-    cleanup_rules = [
-        rule
-        for rule in rules_containing(rules, "Enable Nameplates", "Stop Forcing Player Outlines")
-        if "Event Player.InspeksiAktif = False;" in rule.body
-    ]
-    checks.equal(len(cleanup_rules), 1, "cleanup Crouch")
-    if cleanup_rules:
-        cleanup = cleanup_rules[0].body
         checks.require(
-            cleanup.count("Destroy In-World Text") >= 2,
-            "cleanup Crouch non distrugge entrambi i testi mondo",
-        )
-        checks.require(
-            "Event Player.TeksDunia = Null;" in cleanup and "Event Player.TeksDiri = Null;" in cleanup,
-            "cleanup Crouch non azzera entrambi i riferimenti testo",
+            "Event Player.TeksDunia = Null;" in cleanup[0].body
+            and "Event Player.TeksDiri = Null;" in cleanup[0].body,
+            "cleanup non azzera i testi",
         )
 
 
