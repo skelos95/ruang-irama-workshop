@@ -368,6 +368,28 @@ rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisc
 	}
 }
 
+rule("00c - Global: Avvia subito la partita senza Assemble Heroes o countdown")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Game In Progress == False;
+	}
+
+	actions
+	{
+		"Forza tutte le modalita oltre Waiting/Assemble Heroes/setup finche il gameplay e realmente iniziato."
+		Start Game Mode;
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
 rule("01 - Pemain Masuk: Mulai jam nongkrong")
 {
 	event
