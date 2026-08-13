@@ -951,6 +951,8 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 					"Kamera orang pertama kembali. Tidak ada yang melihat tadi."));
 			Else If(Event Player.KursorKamera == 1);
 				Event Player.TargetKamera = Event Player;
+				"Lascia terminare il frame di Interact prima di cambiare rendering della camera."
+				Wait(0.016, Ignore Condition);
 				Event Player.ModeKamera = 1;
 				Call Subroutine(MulaiKamera);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
@@ -964,6 +966,8 @@ rule("10 - Menu: Interaksi apre o applica la scelta")
 				End;
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
 					Event Player.TargetKamera = Event Player.CalonTargetKamera;
+					"Stesso ritardo di un frame quando si entra nello spectating dalla prima persona."
+					Wait(0.016, Ignore Condition);
 					Event Player.ModeKamera = 2;
 					Call Subroutine(MulaiKamera);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
