@@ -24,6 +24,7 @@ variables
 		20: NamaBahasa
 		21: NamaHalamanEN
 		22: TeksDiriPemain
+		23: DurataServerMinuti
 
 	player:
 		0: WaktuMasuk
@@ -316,14 +317,18 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.GeserKamera = 0.550;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 25;
-		Set Match Time(1800);
+		"Timer del server indipendente dal timer nativo della modalita. Il lobby host puo scegliere da 30 a 90 minuti."
+		Global.DurataServerMinuti = Workshop Setting Integer(Custom String("AFK DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
+		"Nessuna modalita puo chiudere la partita o assegnare punteggio: Hybrid, CTF, Push, Escort, Deathmatch e tutte le altre restano endless."
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Scoring;
 
 		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Server location: Indonesia") : Custom String("Lokasi server: Indonesia"),
 			Custom String("{0}    {1}", Custom String("AFK DEDICATED SERVER"),
-				Round To Integer(Match Time % 60, Down) < 10 ? Custom String("{0}:0{1}", Round To Integer(Match Time / 60, Down),
-					Round To Integer(Match Time % 60, Down)) : Custom String("{0}:{1}", Round To Integer(Match Time / 60, Down),
-					Round To Integer(Match Time % 60, Down))),
+				Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
+					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60) : Custom String("{0}:{1}", Round To Integer(Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) / 60, Down),
+					Max(0, Global.DurataServerMinuti * 60 - Round To Integer(Total Time Elapsed, Down)) % 60)),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect player, hero & ultimate", Input Binding String(Button(Crouch))) : Custom String(
@@ -340,6 +345,26 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Visible To and String, Default Visibility);
 		Global.HudInfoKanan = Last Text ID;
 		Global.Siap = True;
+	}
+}
+
+rule("00b - Global: Riavvia il server solo quando il timer personalizzato finisce")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Total Time Elapsed >= Global.DurataServerMinuti * 60;
+	}
+
+	actions
+	{
+		"Restart Match non dichiara un vincitore: resetta semplicemente la sessione quando il countdown AFK arriva a zero."
+		Restart Match;
 	}
 }
 
