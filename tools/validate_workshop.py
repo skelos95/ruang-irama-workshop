@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.5.3.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.5.4.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CURRENT_VERSION = "0.5.4"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -775,11 +776,28 @@ def check_camera(
                 "First Of(Mapped Array(Array(Ray Cast Hit Position(",
                 "Eye Position(Event Player.TargetKamera)",
                 "Max Health(Event Player.TargetKamera)",
-                "Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0)",
+                "- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(",
                 "Cross Product(", "Empty Array, Empty Array, False", "Current Array Element",
                 "Min(Global.BantalanDinding, Distance Between(", "* 0.250",
             ):
                 checks.require(token in eye, f"espressione camera diretta incompleta: {token}")
+            compact_eye = re.sub(r"\s+", "", eye)
+            full_facing = "FacingDirectionOf(EventPlayer.TargetKamera)"
+            horizontal_facing = "HorizontalFacingAngleOf(EventPlayer.TargetKamera)"
+            checks.equal(compact_eye.count(full_facing), 1, "Facing Direction pitch-aware nell'occhio camera")
+            checks.equal(compact_eye.count(horizontal_facing), 1, "yaw stabile nell'offset laterale camera")
+            checks.require(
+                f"-{full_facing}*Min(4.500,Max(" in compact_eye,
+                "braccio posteriore camera non segue il pitch completo",
+            )
+            checks.require(
+                f"CrossProduct(DirectionFromAngles({horizontal_facing},0),Vector(0,1,0))*Min(1.350,Max(" in compact_eye,
+                "offset laterale camera non è confinato allo yaw",
+            )
+            checks.require(
+                "HorizontalAngleFromDirection(" not in compact_eye,
+                "proiezione yaw legacy instabile ancora presente nella camera",
+            )
             checks.require(
                 eye.count("Update Every Frame(") == 1,
                 "posizione camera contiene rivalutazioni annidate o miste",
@@ -1035,7 +1053,30 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
     if VERSION.exists():
-        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.3", "versione progetto")
+        checks.equal(VERSION.read_text(encoding="utf-8").strip(), CURRENT_VERSION, "versione progetto")
+
+    documentation_markers = {
+        ROOT / "README.md": f"La versione **{CURRENT_VERSION}**",
+        ROOT / "docs" / "PROGETTO.md": f"# Note di progetto — versione {CURRENT_VERSION}",
+        ROOT / "docs" / "TEST.md": f"# Piano di test — versione {CURRENT_VERSION}",
+        ROOT / "docs" / "VALIDAZIONE.md": f"# Rapporto di validazione — versione {CURRENT_VERSION}",
+    }
+    for path, marker in documentation_markers.items():
+        checks.require(path.exists(), f"documentazione mancante: {path.relative_to(ROOT)}")
+        if path.exists():
+            checks.require(
+                marker in path.read_text(encoding="utf-8"),
+                f"versione documentazione non allineata: {path.relative_to(ROOT)}",
+            )
+
+    validation_report = ROOT / "docs" / "VALIDAZIONE.md"
+    if validation_report.exists():
+        report = validation_report.read_text(encoding="utf-8")
+        checks.equal(
+            report.count(f"OK - controlli statici v{CURRENT_VERSION} superati"),
+            1,
+            "esito registrato in docs/VALIDAZIONE.md",
+        )
 
     checks.require(GENRE_DOC.exists(), f"documentazione generi mancante: {GENRE_DOC}")
     if GENRE_DOC.exists():
@@ -1087,7 +1128,7 @@ def main() -> None:
         checks.require(False, f"parsing interrotto: {exc}")
 
     checks.finish()
-    print("OK - controlli statici v0.5.3 superati")
+    print(f"OK - controlli statici v{CURRENT_VERSION} superati")
     print(
         f"Generi: {len(genres)} | Lingue: 3 | Regole: {len(rules)} | "
         f"Raycast camera: {len(call_texts(source, 'Ray Cast Hit Position'))}"

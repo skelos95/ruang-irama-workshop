@@ -1,10 +1,10 @@
-# Note di progetto — versione 0.5.3
+# Note di progetto — versione 0.5.4
 
 ## Identità e obiettivo
 
 Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-La release 0.5.3 sostituisce la pipeline della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+La release 0.5.4 corregge l'inquadratura verticale della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 
 Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
@@ -42,7 +42,7 @@ Il blocco dei bot è edge-triggered. Viene applicato al termine della classifica
 Il cleanup usa i registri globali perché le variabili del player uscente possono non essere più affidabili. Anche lo slot riutilizzabile è conservato nel registro parallelo `SlotHUDPemain`, anziché essere letto dall'entità già uscita. Prima di rimuovere lo slot:
 
 - distrugge HUD, menu e testi nel mondo ancora esistenti;
-- interrompe camera e ispezione e invalida le rispettive cache;
+- interrompe camera e ispezione e invalida i rispettivi riferimenti;
 - ripristina nameplate e outline dove ancora applicabile;
 - elimina il player da tutti i ledger Revenge dei superstiti;
 - rimuove in modo allineato gli elementi degli array paralleli;
@@ -112,12 +112,16 @@ La camera può seguire il viewer o un altro giocatore valido, inclusi bot. La 0.
 La 0.5.3 elimina il loop, il `Wait(0.016)` e tutte le cache coordinate. Un solo `Start Camera` rivaluta nello stesso fotogramma visuale:
 
 1. l'anchor ricavato da `Eye Position` e dal modello corrente;
-2. la direzione orizzontale dietro la spalla;
+2. la direzione dietro l'eroe e l'offset laterale della spalla;
 3. l'unico raycast contro la geometria;
 4. il margine dalla parete, riutilizzando il risultato del raycast senza variabili;
 5. il punto di mira con pitch completo.
 
-Il blend è `0`: non è uno scatto a bassa frequenza, perché l'intera espressione è già aggiornata per fotogramma; evita invece un secondo ritardo sopra la posizione visuale. L'arretramento usa soltanto lo yaw, mentre il pitch rimane nel punto osservato. Altezza, distanza e offset continuano ad adattarsi al modello corrente, incluso D.Mon. La fluidità percepita e le collisioni restano verifiche live; un target remoto può mostrare jitter di rete non presente sulla camera del proprio eroe.
+Il test live della 0.5.3 ha confermato la fluidità, ma ha evidenziato un disallineamento geometrico: il punto osservato seguiva il pitch completo mentre l'arretramento restava sul piano orizzontale, facendo uscire l'eroe dall'inquadratura guardando molto in alto o in basso.
+
+La 0.5.4 usa quindi due vettori distinti. Il braccio posteriore segue la `Facing Direction` completa, così camera, occhio dell'eroe e punto di mira restano quasi collineari durante il pitch. Soltanto l'offset laterale usa `Horizontal Facing Angle Of`, mantenendo la spalla stabile anche vicino a ±90°. Il raycast comprime la distanza vicino a pavimenti e soffitti senza introdurre un secondo controllo collisione.
+
+Il blend resta `0`: non è uno scatto a bassa frequenza, perché l'intera espressione è già aggiornata per fotogramma; evita invece un secondo ritardo sopra la posizione visuale. Altezza, distanza e offset continuano ad adattarsi al modello corrente, incluso D.Mon. Inquadratura agli estremi, fluidità percepita e collisioni restano verifiche live; un target remoto può mostrare jitter di rete non presente sulla camera del proprio eroe.
 
 ## Diagnostica e prestazioni
 

@@ -2051,9 +2051,9 @@ rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 		Start Camera(Event Player, Update Every Frame(First Of(Mapped Array(Array(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera)
 			+ Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0), Eye Position(
 			Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
-			- Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0) * Min(4.500, Max(
+			- Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(
 			Global.JarakKamera, Global.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) + Cross Product(Direction From Angles(
-			Horizontal Angle From Direction(Facing Direction Of(Event Player.TargetKamera)), 0), Vector(0, 1, 0)) * Min(1.350, Max(
+			Horizontal Facing Angle Of(Event Player.TargetKamera), 0), Vector(0, 1, 0)) * Min(1.350, Max(
 			Global.GeserKamera, Global.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)), Empty Array, Empty Array, False)),
 			Current Array Element + Direction Towards(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(
 			0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Min(Global.BantalanDinding, Distance Between(
