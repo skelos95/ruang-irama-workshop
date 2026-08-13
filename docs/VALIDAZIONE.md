@@ -1,18 +1,19 @@
-# Rapporto di validazione — versione 0.5.0
+# Rapporto di validazione — versione 0.5.1
 
 Data: 2026-08-13
 
-Release: **AFK Dedicated Server 0.5.0 — Season 4: Heroes of Busan**
+Release: **AFK Dedicated Server 0.5.1 — Season 4: Heroes of Busan**
 
 Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repository da ciò che richiede il client Overwatch. Un controllo statico superato non certifica stabilità, prestazioni o compatibilità live.
 
 ## Controlli statici
 
-**Stato: superati sul sorgente finale della 0.5.0.**
+**Stato: superati sul sorgente finale della 0.5.1.**
 
 Il gate della release deve essere eseguito sul blob finale di `workshop/ruang_irama.workshop`, insieme alla documentazione e al validatore della stessa revisione. Il controllo comprende:
 
 - struttura sintattica e delimitatori bilanciati;
+- tipi evento limitati all'elenco riconosciuto dal Workshop;
 - overlay privo di blocco `settings`;
 - tre lingue complete e selettore modulo 3;
 - 100 generi e 20 colori per lingua;
@@ -34,7 +35,7 @@ Comando eseguito dalla radice del repository:
 Esito:
 
 ```text
-OK - controlli statici v0.5.0 superati
+OK - controlli statici v0.5.1 superati
 Nota: importazione, stress a 12 giocatori e test modalità restano prove live obbligatorie.
 ```
 
@@ -46,7 +47,7 @@ Il gate ha confermato, fra gli altri invarianti, 100 generi, tre lingue e un sol
 
 Non sono certificabili dal solo repository:
 
-- importazione del blob 0.5.0 nel parser del client Overwatch;
+- reimportazione del blob 0.5.1 nel parser del client Overwatch;
 - comportamento del workaround bot AI con `U+200B` sulla patch dell'11 agosto 2026;
 - riapplicazione event-driven del blocco bot dopo spawn, respawn e cambio eroe;
 - contratto no-score/no-winner e riavvio esclusivo allo zero su Control, Escort, Hybrid, Push, Flashpoint e Clash;
@@ -71,8 +72,9 @@ La release prende come riferimento le [Overwatch Retail Patch Notes — August 1
 - Un blocco `settings` minimale era stato rifiutato dal client; il progetto resta intenzionalmente un overlay Workshop senza quel blocco.
 - Il parser live può filtrare sottostringhe nei nomi delle regole anche quando la sintassi è valida; i nomi personalizzati vanno quindi ricontrollati durante l'import.
 - Una stringa realmente vuota non distingueva i normali bot AI. Le due sentinelle `U+200B` devono restare byte reali nel file e il loro comportamento va verificato a ogni patch.
+- L'import live della 0.5.0 si interrompeva con `Expected an event type after 'event {' on line 702`: `Player Spawned` non è un tipo evento Workshop valido. La 0.5.1 usa transizioni `Ongoing - Each Player` per morte/despawn e ritorno in vita, e il validatore ora rifiuta qualsiasi tipo evento fuori dall'elenco supportato.
 - Bot esclusi dalle liste sociali possono comunque essere target validi per camera, Crouch e Teleport; i test devono coprire entrambe le proprietà.
 
 ## Decisione di rilascio
 
-Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.0 come verificata a 12 giocatori. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.
+Il repository può superare il gate statico prima delle prove live, ma ciò non autorizza a descrivere la 0.5.1 come verificata a 12 giocatori. Un codice Blizzard condivisibile richiede il completamento della matrice live con lo stesso sorgente validato staticamente.

@@ -2,7 +2,7 @@
 
 **AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Teleport e ispezione con Crouch senza imporre mappe o impostazioni lobby.
 
-La versione **0.5.0** è allineata alla Season 4: **Heroes of Busan**, iniziata l'11 agosto 2026. La matrice di compatibilità comprende D.Mon e le versioni aggiornate di Busan, Paraíso ed Eichenwalde; le prove che richiedono il client live sono elencate separatamente in [`docs/TEST.md`](docs/TEST.md).
+La versione **0.5.1** è allineata alla Season 4: **Heroes of Busan**, iniziata l'11 agosto 2026. La matrice di compatibilità comprende D.Mon e le versioni aggiornate di Busan, Paraíso ed Eichenwalde; le prove che richiedono il client live sono elencate separatamente in [`docs/TEST.md`](docs/TEST.md).
 
 ## Compatibilità 6v6
 
@@ -85,6 +85,11 @@ tools/validate_workshop.py      validatore statico read-only
 
 ## Versione attuale
 
-**0.5.0 — Season 4: Heroes of Busan**
+**0.5.1 — Correzione importazione Workshop**
+
+- Sostituito il tipo evento inesistente `Player Spawned` con transizioni compatibili di morte/despawn e `Is Alive`.
+- Il validatore ora rifiuta tipi evento non riconosciuti dal Workshop.
+
+Base funzionale: **0.5.0 — Season 4: Heroes of Busan**.
 
 Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).

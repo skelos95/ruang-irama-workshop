@@ -696,11 +696,11 @@ rule("03 - Waktu: Hitung menit nongkrong tanpa bikin server ngos-ngosan")
 	}
 }
 
-rule("03b - Bot: Senjata libur, kaki tetap boleh jalan")
+rule("03b - Bot: Tandai kunci untuk dipasang ulang setelah mati atau hilang")
 {
 	event
 	{
-		Player Spawned;
+		Ongoing - Each Player;
 		All;
 		All;
 	}
@@ -709,15 +709,17 @@ rule("03b - Bot: Senjata libur, kaki tetap boleh jalan")
 	{
 		Global.Siap == True;
 		Or(Is Dummy Bot(Event Player), Event Player.BotAI) == True;
+		Event Player.KunciBotAktif == True;
+		Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False) == True;
 	}
 
 	actions
 	{
-		Call Subroutine(KunciBot);
+		Event Player.KunciBotAktif = False;
 	}
 }
 
-rule("03c - Bot: Kunci ulang saat pahlawan berganti")
+rule("03c - Bot: Kunci saat hidup kembali atau pahlawan berganti")
 {
 	event
 	{
@@ -731,8 +733,8 @@ rule("03c - Bot: Kunci ulang saat pahlawan berganti")
 		Global.Siap == True;
 		Or(Is Dummy Bot(Event Player), Event Player.BotAI) == True;
 		Has Spawned(Event Player) == True;
-		Hero Of(Event Player) != Event Player.PahlawanBotTerakhir;
-		Event Player.KunciBotAktif == True;
+		Is Alive(Event Player) == True;
+		Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanBotTerakhir) == True;
 	}
 
 	actions
@@ -2052,6 +2054,7 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 	actions
 	{
 		Abort If(Entity Exists(Event Player) == False);
+		Abort If(Is Alive(Event Player) == False);
 		Event Player.MenuTerbuka = False;
 		Event Player.SeranganDekatDipakai = False;
 		Event Player.HalamanMenu = -1;

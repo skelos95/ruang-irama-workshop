@@ -1,4 +1,4 @@
-# Piano di test — versione 0.5.0
+# Piano di test — versione 0.5.1
 
 Il validatore statico riduce il rischio di errori strutturali, ma non sostituisce il parser e il runtime di Overwatch. Ogni prova è quindi classificata come **statica** oppure **live**. Una prova live non va dichiarata superata sulla sola base del sorgente.
 
@@ -7,6 +7,7 @@ Il validatore statico riduce il rischio di errori strutturali, ma non sostituisc
 Eseguire il validatore read-only sul sorgente finale e verificare:
 
 - sintassi e delimitatori bilanciati;
+- tipi evento limitati all'elenco riconosciuto dal Workshop;
 - assenza di un blocco `settings`;
 - tre localizzazioni complete: English, Bahasa Indonesia e ไทย;
 - selettore lingua con tre stati e inglese predefinito;
@@ -207,7 +208,7 @@ Con `Performance diagnostics = On`:
 
 Un eventuale superamento delle soglie o crash rende la prova fallita: non va mascherato come limite del validatore.
 
-## Criterio di rilascio 0.5.0
+## Criterio di rilascio 0.5.1
 
 La release è pronta per un codice Blizzard condivisibile soltanto quando:
 

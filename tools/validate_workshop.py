@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.5.0.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.5.1.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -27,6 +27,22 @@ THAI_RE = re.compile(r"[\u0e00-\u0e7f]")
 CUSTOM_STRING_RE = re.compile(
     r'Custom\s+String\s*\(\s*"((?:[^"\\]|\\.)*)"', re.DOTALL
 )
+VALID_EVENT_TYPES = {
+    "Ongoing - Global",
+    "Ongoing - Each Player",
+    "Player Dealt Damage",
+    "Player Dealt Final Blow",
+    "Player Dealt Healing",
+    "Player Dealt Knockback",
+    "Player Died",
+    "Player Earned Elimination",
+    "Player Joined Match",
+    "Player Left Match",
+    "Player Received Healing",
+    "Player Received Knockback",
+    "Player Took Damage",
+    "Subroutine",
+}
 
 
 class ParseError(ValueError):
@@ -363,6 +379,16 @@ def check_source_structure(
     checks.require(len(rules) >= 20, f"numero di regole troppo basso: {len(rules)}")
     checks.equal(len({rule.name for rule in rules}), len(rules), "nomi regola unici")
 
+    for rule in rules:
+        event_match = re.search(r"(?ms)^\s*event\s*\{\s*([^;\n]+)\s*;", rule.body)
+        checks.require(event_match is not None, f"blocco event non riconosciuto in {rule.name!r}")
+        if event_match is not None:
+            event_type = event_match.group(1).strip()
+            checks.require(
+                event_type in VALID_EVENT_TYPES,
+                f"tipo evento Workshop non valido {event_type!r} in {rule.name!r}",
+            )
+
     for table_name, names in (
         ("global", global_names), ("player", player_names), ("subroutine", subroutines)
     ):
@@ -537,28 +563,40 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
             checks.require(after_second >= 0, "classificazione: Entity Exists assente dopo il secondo Wait e prima della registrazione")
 
     bot_calls = rules_containing(rules, "Call Subroutine(KunciBot)")
-    checks.require(len(bot_calls) >= 3, "KunciBot deve essere richiamata da classificazione, respawn e cambio eroe")
+    checks.require(len(bot_calls) >= 2, "KunciBot deve essere richiamata da classificazione e riattivazione edge-triggered")
     for rule in bot_calls:
         is_watchdog = (
             re.search(r"Wait\s*\(\s*0\.500\s*,", rule.body) is not None
             and "Loop If Condition Is True;" in rule.body
         )
         checks.require(not is_watchdog, f"watchdog bot periodico ancora presente in {rule.name!r}")
-    checks.require(
-        any("Player Spawned;" in rule.body and "Call Subroutine(KunciBot)" in rule.body for rule in rules),
-        "blocco bot event-driven al respawn assente",
-    )
-    checks.require(
-        any(
-            "Hero Of(Event Player)" in rule.body and "Call Subroutine(KunciBot)" in rule.body
-            for rule in rules
-        ),
-        "blocco bot event-driven al cambio eroe assente",
-    )
+    checks.require("Player Spawned;" not in source, "tipo evento inesistente Player Spawned ancora presente")
+    inactive_reset = [
+        rule for rule in rules
+        if "Ongoing - Each Player;" in rule.body
+        and "Event Player.KunciBotAktif = False;" in rule.body
+        and "Is Dummy Bot(Event Player)" in rule.body
+        and "Event Player.KunciBotAktif == True;" in rule.body
+        and "Has Spawned(Event Player) == False" in rule.body
+        and "Is Alive(Event Player) == False" in rule.body
+    ]
+    checks.equal(len(inactive_reset), 1, "reset del latch bot alla morte o al despawn")
+    reactivation = [
+        rule for rule in bot_calls
+        if "Ongoing - Each Player;" in rule.body
+        and "Is Alive(Event Player) == True;" in rule.body
+        and "Event Player.KunciBotAktif == False" in rule.body
+        and "Hero Of(Event Player) != Event Player.PahlawanBotTerakhir" in rule.body
+    ]
+    checks.equal(len(reactivation), 1, "riattivazione bot dopo respawn o cambio eroe")
 
     lock_rules = rules_containing(rules, "Subroutine;", "KunciBot;")
     checks.require(bool(lock_rules), "subroutine KunciBot non trovata")
     if lock_rules:
+        checks.require(
+            "Abort If(Is Alive(Event Player) == False);" in lock_rules[0].body,
+            "KunciBot non protegge la race con morte/despawn",
+        )
         for action in (
             "Set Primary Fire Enabled(Event Player, False)",
             "Set Secondary Fire Enabled(Event Player, False)",
@@ -945,7 +983,7 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
     if VERSION.exists():
-        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.0", "versione progetto")
+        checks.equal(VERSION.read_text(encoding="utf-8").strip(), "0.5.1", "versione progetto")
 
     checks.require(GENRE_DOC.exists(), f"documentazione generi mancante: {GENRE_DOC}")
     if GENRE_DOC.exists():
@@ -997,7 +1035,7 @@ def main() -> None:
         checks.require(False, f"parsing interrotto: {exc}")
 
     checks.finish()
-    print("OK - controlli statici v0.5.0 superati")
+    print("OK - controlli statici v0.5.1 superati")
     print(
         f"Generi: {len(genres)} | Lingue: 3 | Regole: {len(rules)} | "
         f"Raycast camera: {len(call_texts(source, 'Ray Cast Hit Position'))}"

@@ -1,10 +1,10 @@
-# Note di progetto — versione 0.5.0
+# Note di progetto — versione 0.5.1
 
 ## Identità e obiettivo
 
 Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-La release 0.5.0 è preparata per **Season 4: Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+La release 0.5.1 corregge l'importazione della base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 
 Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
@@ -35,7 +35,7 @@ La classificazione segue questa sequenza:
 
 La registrazione è quindi atomica dal punto di vista del Workshop: un giocatore che esce durante i due tick di riconoscimento non può essere aggiunto in ritardo alle liste. Il carattere `U+200B` resta un workaround comunitario e non un contratto API Blizzard; va verificato nel client dopo ogni patch.
 
-Il blocco dei bot è event-driven. Viene applicato al termine della classificazione e riaffermato dopo spawn, respawn e cambio eroe, evitando un watchdog permanente ogni mezzo secondo. Fuoco, abilità, Ultimate e comandi sociali restano bloccati; il movimento necessario alla lobby può rimanere disponibile.
+Il blocco dei bot è edge-triggered. Viene applicato al termine della classificazione; la transizione a morto o non spawnato abbassa il latch e una seconda regola `Ongoing - Each Player` lo riafferma soltanto quando il bot torna vivo oppure cambia eroe. Questo copre anche despawn e passaggi di round, usa esclusivamente tipi evento riconosciuti dal parser ed evita un watchdog permanente ogni mezzo secondo. Fuoco, abilità, Ultimate e comandi sociali restano bloccati; il movimento necessario alla lobby può rimanere disponibile.
 
 ### Cleanup dell'uscita
 
