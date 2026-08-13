@@ -1,0 +1,24 @@
+name: Run one-frame camera start delay
+
+on:
+  push:
+    paths:
+      - '.github/workflows/run-delay-camera-start-one-frame.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply one-frame camera start delay
+        run: python .github/scripts/delay_camera_start_one_frame.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Delay third-person camera start one frame"
+          git push
