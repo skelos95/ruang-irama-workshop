@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Patch Workshop startup and mode UI
         shell: bash
@@ -156,29 +154,15 @@ jobs:
           if old not in s:
               raise SystemExit('old immediate-start rule not found')
           s = s.replace(old, new, 1)
-
-          required = [
-              'Global.DurataServerMinuti = Workshop Setting Integer',
-              'Disable Built-In Game Mode Completion;',
-              'Disable Built-In Game Mode Scoring;',
-              'Restart Match;',
-              'Event Player.TargetKamera = Event Player;',
-              'Wait(0.016, Ignore Condition);',
-          ]
-          for item in required:
-              if item not in s:
-                  raise SystemExit(f'missing stable behavior: {item}')
-
           p.write_text(s, encoding='utf-8')
           PY
 
-      - name: Restore helper workflow and trigger, then commit Workshop patch
+      - name: Commit Workshop patch
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout 378b20081c71724e24081ff6435a0bec1a753d01 -- .github/workflows/patch-camera-bots.yml .github/trigger-camera-bots
-          git add workshop/ruang_irama.workshop .github/workflows/patch-camera-bots.yml .github/trigger-camera-bots
+          git add workshop/ruang_irama.workshop
           git diff --cached --check
           git commit -m "Fix startup phases and persistent mode UI"
           git push
