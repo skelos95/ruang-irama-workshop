@@ -23,7 +23,7 @@ La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il
 
 - HUD centrale con nome server, `SERVER VPN` configurabile e countdown personalizzato.
 - Liste sociali degli umani con icona dell'eroe, tempo trascorso e soundtrack scelta.
-- Sette menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge`, `5 - Unkillable + 1 HP` e `6 - Voice Modifier`.
+- Sette menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge`, `5 - Unkillable + 1 HP` e `6 - Voice Modifier`. Il menu Unkillable è bloccato nelle Spawn Room e la funzione si disattiva automaticamente quando il player vi rientra.
 - 100 generi musicali e 20 colori, navigabili con wrap circolare.
 - Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
 - Camera dinamica calcolata interamente dal renderer: arretramento sensibile al pitch, spalla orizzontale, collisione e mira condividono lo stesso fotogramma, con un solo raycast e senza loop server.

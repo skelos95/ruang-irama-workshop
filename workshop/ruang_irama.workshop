@@ -1287,7 +1287,13 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.KursorBalasDendam = 0;
 				Call Subroutine(SegarkanTargetBalasDendam);
 			Else If(Event Player.HalamanMenu == 5);
-				Event Player.KursorUnkillable = Event Player.UnkillableAktif ? 1 : 0;
+				If(Is In Spawn Room(Event Player) == True);
+					Event Player.HalamanMenu = -1;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP is unavailable in the Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Unkillable + 1 HP tidak tersedia di ruang muncul.") : Custom String("ไม่สามารถใช้ Unkillable + 1 HP ในห้องเกิดได้"));
+				Else;
+					Event Player.KursorUnkillable = Event Player.UnkillableAktif ? 1 : 0;
+				End;
 			Else;
 				Event Player.KursorSuara = Event Player.IndeksSuara;
 			End;
@@ -1400,7 +1406,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				End;
 			End;
 		Else If(Event Player.HalamanMenu == 5);
-			Event Player.UnkillableAktif = Event Player.KursorUnkillable == 1;
+			Event Player.UnkillableAktif = And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False);
 			If(Event Player.UnkillableAktif == True);
 				Set Status(Event Player, Null, Unkillable, 9999);
 				If(Is Alive(Event Player) == True);
@@ -1692,6 +1698,7 @@ rule("18 - Unkillable: Pasang kembali status setelah respawn")
 	{
 		Event Player.Manusia == True;
 		Event Player.UnkillableAktif == True;
+		Is In Spawn Room(Event Player) == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
 		Has Status(Event Player, Unkillable) == False;
@@ -1716,6 +1723,7 @@ rule("18b - Unkillable: Saat kesehatan penuh kembali ke satu HP")
 	{
 		Event Player.Manusia == True;
 		Event Player.UnkillableAktif == True;
+		Is In Spawn Room(Event Player) == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
 		Health(Event Player) >= Max Health(Event Player);
@@ -1724,6 +1732,42 @@ rule("18b - Unkillable: Saat kesehatan penuh kembali ke satu HP")
 	actions
 	{
 		Set Player Health(Event Player, 1);
+	}
+}
+
+rule("18c - Unkillable: Nonaktifkan otomatis di Spawn Room")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Is In Spawn Room(Event Player) == True;
+		Or(Event Player.UnkillableAktif == True, And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 5)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.UnkillableAktif == True);
+			Event Player.UnkillableAktif = False;
+			Event Player.KursorUnkillable = 0;
+			Clear Status(Event Player, Unkillable);
+			If(Is Alive(Event Player) == True);
+				Set Player Health(Event Player, Max Health(Event Player));
+			End;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP disabled: you entered the Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Unkillable + 1 HP dinonaktifkan: kamu masuk ruang muncul.") : Custom String("ปิด Unkillable + 1 HP แล้ว: คุณเข้าไปในห้องเกิด"));
+		End;
+		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 5));
+			Event Player.HalamanMenu = -1;
+			Event Player.KursorUtama = 5;
+			Call Subroutine(GambarMenu);
+		End;
 	}
 }
 

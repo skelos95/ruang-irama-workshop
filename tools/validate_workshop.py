@@ -1576,6 +1576,35 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         not any(code_contains(rule.body, "Event Player.HalamanMenu == 5;", "SegarkanTargetTeleportasi") for rule in rules),
         "menu 5 non deve più eseguire il refresh Teleport",
     )
+    checks.require(
+        "Else If(Event Player.HalamanMenu == 5);" in source
+        and "If(Is In Spawn Room(Event Player) == True);" in source
+        and "Event Player.HalamanMenu = -1;" in source
+        and "Unkillable + 1 HP is unavailable in the Spawn Room." in source,
+        "Unkillable: menu 5 non bloccato nella Spawn Room",
+    )
+    spawn_disable = [
+        rule
+        for rule in rules
+        if code_contains(
+            rule.body,
+            "Is In Spawn Room(Event Player) == True;",
+            "Event Player.UnkillableAktif = False;",
+            "Clear Status(Event Player, Unkillable);",
+            "Set Player Health(Event Player, Max Health(Event Player));",
+            "Event Player.HalamanMenu = -1;",
+        )
+    ]
+    checks.equal(len(spawn_disable), 1, "regola auto-disattivazione Unkillable in Spawn Room")
+    for title in ("18 - Unkillable:", "18b - Unkillable:"):
+        matching = [rule for rule in rules if rule.name.startswith(title)]
+        checks.equal(len(matching), 1, f"regola {title} per guard Spawn Room")
+        if matching:
+            checks.require(
+                code_contains(matching[0].body, "Is In Spawn Room(Event Player) == False;"),
+                f"{title} non esclude la Spawn Room",
+            )
+
 
 
 def check_vpn_country_setting(checks: Checks, source: str) -> None:
