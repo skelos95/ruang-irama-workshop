@@ -626,11 +626,14 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
-		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - soundtrack: {2}",
-			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - soundtrack: {2}", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0
-			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack")) : Custom String("{0} {1} - เพลงประกอบ: {2}",
-			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")), Null,
+		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0}{1}", Custom String("{0} {1} - soundtrack: {2}",
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet")),
+			Event Player == Last Of(Sorted Array(Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD))) ? Custom String("\n ") : Custom String(""))
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0}{1}", Custom String("{0} {1} - soundtrack: {2}", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0
+			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih soundtrack")), Event Player == Last Of(Sorted Array(Global.PemainManusia,
+			Player Variable(Current Array Element, UrutanHUD))) ? Custom String("\n ") : Custom String("")) : Custom String("{0}{1}", Custom String("{0} {1} - เพลงประกอบ: {2}",
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")),
+			Event Player == Last Of(Sorted Array(Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD))) ? Custom String("\n ") : Custom String("")), Null,
 			Right, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
@@ -2369,6 +2372,7 @@ rule("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 		Set Damage Dealt(Event Player, 0);
 		Set Healing Dealt(Event Player, 0);
 		Set Knockback Dealt(Event Player, 0);
+		Set Move Speed(Event Player, 10);
 		Event Player.PahlawanBotTerakhir = Hero Of(Event Player);
 		Event Player.KunciBotAktif = True;
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
