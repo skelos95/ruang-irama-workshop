@@ -39,6 +39,11 @@ jobs:
           if broken not in script:
               raise SystemExit('broken loop marker not found in extracted patch')
           script = script.replace(broken, fixed, 1)
+          script = script.replace(
+              "src = replace_exact(src, old_tp_init, new_feature_init, expected=2, label='menu open feature init')",
+              "src = replace_exact(src, old_tp_init, new_feature_init, expected=1, label='menu open feature init')",
+              1,
+          )
           Path('/tmp/apply_patch.py').write_text(script, encoding='utf-8')
           PY
           python /tmp/apply_patch.py
