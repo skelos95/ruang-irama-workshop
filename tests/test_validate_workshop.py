@@ -327,17 +327,16 @@ subroutines
         self.assertTrue(any("Stop Modifying Hero Voice Lines" in error for error in checks.errors), checks.errors)
 
     def test_diagnostics_toggle_condition_cannot_be_a_comment(self) -> None:
-        mutated, replacements = re.subn(
-            r"(?m)^(\s*)Global\.DiagnostikPerforma == True;\s*$",
-            r'\1"Global.DiagnostikPerforma == True;"',
-            self.source,
-            count=1,
+        mutated = self.source.replace(
+            "Global.DiagnostikPerforma == True",
+            'Custom String("Global.DiagnostikPerforma == True") == Custom String("Global.DiagnostikPerforma == True")',
+            1,
         )
-        self.assertEqual(replacements, 1)
+        self.assertNotEqual(mutated, self.source)
         checks = validator.Checks()
         validator.check_diagnostics(checks, mutated, self.rules(mutated))
         self.assertTrue(
-            any("regola HUD diagnostica non trovata" in error for error in checks.errors),
+            any("diagnostica integrata nella lista sinistra" in error for error in checks.errors),
             checks.errors,
         )
 

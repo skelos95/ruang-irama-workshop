@@ -34,7 +34,7 @@ La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il
 - Cleanup di HUD, testi nel mondo, camera e riferimenti Revenge in uscita, più ripristino di menu e Crouch durante morte, despawn, hero-select o passaggio a spettatore.
 - Sincronizzazione delle nameplate quando un umano viene registrato o un bot viene bloccato/spawnato mentre altri viewer stanno già ispezionando.
 - Slot HUD riutilizzabili e registri allineati, per evitare crescita permanente dopo cicli join/leave.
-- Diagnostica prestazionale opzionale, visibile soltanto all'host e disattivata per impostazione predefinita.
+- Diagnostica prestazionale opzionale, visibile soltanto all'host e disattivata per impostazione predefinita; quando attiva compare in forma compatta sotto l’ultimo player della lista sinistra.
 
 ## Controlli
 
@@ -70,7 +70,7 @@ Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.
 - I dummy bot bypassano la classificazione degli umani e sono gestiti dal lifecycle edge-triggered tramite `Is Dummy Bot`. Per i normali bot AI resta necessario il workaround con due sentinelle `U+200B`, da ricontrollare dopo ogni patch.
 - Bot AI e dummy bot non ricevono i menu o gli HUD sociali, ma possono restare destinazioni valide per camera e Crouch.
 - Il timer usa una propria origine e una propria scadenza e aggiorna la stringa visualizzata una volta al secondo.
-- Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l'host vede carico corrente, medio, picco e conteggi HUD/IWT.
+- Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l’host vede sotto la lista sinistra `LOAD / AVG / MAX` e i conteggi `HUD / IWT`.
 - I controlli statici non possono certificare il comportamento live del parser, la sentinella bot o la stabilità a 12 giocatori. Lo stato verificato è riportato in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
 
 ## Struttura

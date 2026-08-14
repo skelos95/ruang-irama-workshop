@@ -548,36 +548,6 @@ rule("00c - Global: Mulai ulang tepat sekali saat hitung mundur habis")
 	}
 }
 
-rule("00d - Global: Tampilkan diagnostik performa hanya kepada host")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Global.DiagnostikPerforma == True;
-	}
-
-	actions
-	{
-		Create HUD Text(Host Player, Null, Player Variable(Host Player, IndeksBahasa) == 2 ? Custom String("HUD {0} | ข้อความโลก {1}",
-			4 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(
-			Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain, Current Array Element != 0))) : Custom String(
-			"HUD {0} | IWT {1}", 4 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)),
-			Count Of(Filtered Array(Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain,
-			Current Array Element != 0))), Player Variable(Host Player, IndeksBahasa) == 0 ? Custom String("PERFORMANCE {0}% | AVG {1}% | PEAK {2}%",
-			Server Load, Server Load Average, Server Load Peak) : Player Variable(Host Player, IndeksBahasa) == 1 ? Custom String(
-			"PERFORMA {0}% | RATA-RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String(
-			"ประสิทธิภาพ {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak), Top, -98,
-			Color(White), Color(Orange), Color(Red), Visible To and String,
-			Visible Never);
-		Abort;
-	}
-}
-
 rule("01 - Pemain Masuk: Mulai jam nongkrong")
 {
 	event
@@ -679,7 +649,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 
-		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - CHILL for {2} min", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - CHILL {2} mnt", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Custom String("{0} {1} - CHILL {2} นาที", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
+		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - CHILL for {2} min", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - CHILL {2} mnt", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Custom String("{0} {1} - CHILL {2} นาที", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby), And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player == Last Of(Sorted Array(Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD))))) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 3 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain, Current Array Element != 0)))) : Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);

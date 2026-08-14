@@ -1651,8 +1651,11 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Global.DiagnostikPerforma = Workshop Setting Toggle" in clean_source,
         "toggle Performance diagnostics non assegnato a Global.DiagnostikPerforma",
     )
-    toggles = call_texts(source, "Workshop Setting Toggle")
-    checks.equal(len(toggles), 1, "toggle Performance diagnostics")
+    toggles = [
+        call for call in call_texts(source, "Workshop Setting Toggle")
+        if "Performance diagnostics" in call
+    ]
+    checks.equal(len(toggles), 1, "Workshop Setting Toggle Performance diagnostics")
     if toggles:
         opening = toggles[0].find("(")
         arguments = top_level_items(toggles[0][opening + 1 : -1])
@@ -1662,34 +1665,50 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
         )
     for metric in ("Server Load", "Server Load Average", "Server Load Peak"):
         checks.require(metric in clean_source, f"diagnostica priva di {metric}")
-    diagnostic_rules = [
+
+    left_hud_rules = [
         rule for rule in rules
         if code_contains(
             rule.body,
-            "Global.DiagnostikPerforma == True;",
+            "Global.HudKiriPemain = Append To Array",
+            "Global.DiagnostikPerforma == True",
+            "Local Player == Host Player",
             "Server Load",
             "Server Load Average",
             "Server Load Peak",
         )
     ]
-    checks.require(bool(diagnostic_rules), "regola HUD diagnostica non trovata")
-    if diagnostic_rules:
-        diagnostic = "\n".join(mask_strings(rule.body) for rule in diagnostic_rules)
-        checks.require("Host Player" in diagnostic, "diagnostica non limitata all'host")
+    checks.equal(len(left_hud_rules), 1, "diagnostica integrata nella lista sinistra")
+    if left_hud_rules:
+        diagnostic = mask_strings(left_hud_rules[0].body)
         checks.require(
-            (
-                (
-                    "HudKiriPemain" in diagnostic
-                    and ("HudKananPemain" in diagnostic or re.search(r"Count Of\(Global\.HudKiriPemain\)\s*\*\s*2", diagnostic))
-                )
-                and all(token in diagnostic for token in ("HudMenuPemain", "TeksDuniaPemain", "TeksDiriPemain"))
-            ),
+            all(token in diagnostic for token in (
+                "Last Of", "Sorted Array", "Global.PemainManusia", "UrutanHUD",
+            )),
+            "diagnostica non ancorata all'ultimo player della lista sinistra",
+        )
+        checks.require(
+            all(token in diagnostic for token in (
+                "HudKiriPemain", "HudMenuPemain", "TeksDuniaPemain", "TeksDiriPemain",
+            )),
             "diagnostica priva dei conteggi HUD/IWT",
         )
+    checks.require(
+        'LOAD {0}% | AVG {1}% | MAX {2}%' in source,
+        "diagnostica priva della riga LOAD compatta",
+    )
+    checks.require(
+        'Custom String("HUD {0} | IWT {1}"' in source,
+        "diagnostica priva della riga HUD/IWT compatta",
+    )
+    checks.require(
+        'rule("00d - Global: Tampilkan diagnostik performa hanya kepada host")' not in source,
+        "vecchio HUD diagnostica separato ancora presente",
+    )
     inspector_rules = rules_containing(
         rules, "Global.DiagnostikPerforma == False", "Disable Inspector Recording;"
     )
-    checks.equal(len(inspector_rules), 1, "disabilitazione Inspector quando la diagnostica è OFF")
+    checks.require(bool(inspector_rules), "Inspector Recording non disattivato con diagnostica OFF")
 
 
 def strip_yaml_comments(text: str) -> str:
