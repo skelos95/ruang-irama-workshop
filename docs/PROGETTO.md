@@ -2,7 +2,7 @@
 
 ## Identità e obiettivo
 
-Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
+Il nome mostrato nel gioco è **AFK Dedicated Server** e l’HUD superiore mostra **SERVER VPN** con un paese configurabile dalle Workshop Settings; il valore predefinito è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
 La release 0.5.5 stabilizza i percorsi non-camera di menu, Crouch, nameplate, Teleport e lifecycle sulla base Season 4 **Heroes of Busan**. La camera in terza persona conserva byte-per-byte logica, valori, raycast e menu della 0.5.4. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
 

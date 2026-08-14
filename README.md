@@ -17,11 +17,11 @@ L'overlay è pensato per le modalità core 6v6:
 
 Il sorgente non contiene un blocco `settings`, quindi non seleziona né sovrascrive modalità, mappe, roster o regole della lobby. Durante la sessione disabilita il completamento e il punteggio nativi: nessuna squadra riceve punti, vittorie o pareggi. La partita termina soltanto quando il timer personalizzato arriva a `00:00`, quindi viene eseguito un unico `Restart Match` senza dichiarare un vincitore.
 
-La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti.
+La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il paese mostrato nell’HUD `SERVER VPN` è selezionabile con `VPN country (NordVPN)`; il default resta Indonesia.
 
 ## Funzioni principali
 
-- HUD centrale con nome server, posizione Indonesia e countdown personalizzato.
+- HUD centrale con nome server, `SERVER VPN` configurabile e countdown personalizzato.
 - Liste sociali degli umani con icona dell'eroe, tempo trascorso e soundtrack scelta.
 - Sette menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge`, `5 - Unkillable + 1 HP` e `6 - Voice Modifier`.
 - 100 generi musicali e 20 colori, navigabili con wrap circolare.
@@ -59,7 +59,7 @@ Quando più input vengono rilevati nello stesso ciclo, il dispatcher usa questa 
 3. Apri [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop) e copia il contenuto raw.
 4. In Overwatch apri Partita personalizzata → Crea → Impostazioni → Workshop e incolla il sorgente.
 5. Configura una delle modalità core 6v6 e le mappe desiderate nelle normali impostazioni lobby.
-6. Imposta durata e diagnostica dalle opzioni Workshop.
+6. Imposta durata, paese `SERVER VPN` e diagnostica dalle opzioni Workshop.
 7. Prima di pubblicare, esegui i controlli live descritti in [`docs/TEST.md`](docs/TEST.md).
 
 Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.

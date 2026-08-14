@@ -1577,6 +1577,37 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "menu 5 non deve più eseguire il refresh Teleport",
     )
 
+
+def check_vpn_country_setting(checks: Checks, source: str) -> None:
+    try:
+        countries = custom_strings(array_body(source, "Global.DaftarNegaraVPN"))
+    except ParseError as exc:
+        checks.require(False, f"VPN countries: {exc}")
+        return
+    checks.equal(len(countries), 149, "paesi VPN configurabili")
+    checks.equal(len(set(countries)), 149, "paesi VPN unici")
+    checks.require("Indonesia" in countries, "VPN: Indonesia assente dalla lista")
+    if "Indonesia" in countries:
+        checks.equal(countries.index("Indonesia"), 62, "indice VPN predefinito Indonesia")
+    checks.require(
+        'Global.IndeksNegaraVPN = Workshop Setting Combo' in mask_strings(source),
+        "VPN: Workshop Setting Combo non assegnato a Global.IndeksNegaraVPN",
+    )
+    combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'VPN country (NordVPN)' in call]
+    checks.equal(len(combos), 1, "Workshop Setting Combo VPN")
+    if combos:
+        opening = combos[0].find("(")
+        args = top_level_items(combos[0][opening + 1 : -1])
+        checks.equal(len(args), 5, "argomenti Workshop Setting Combo VPN")
+        if len(args) == 5:
+            checks.equal(args[2].strip(), "62", "default Workshop Setting Combo VPN")
+            checks.equal(len(custom_strings(args[3])), 149, "opzioni Workshop Setting Combo VPN")
+            checks.equal(args[4].strip(), "1", "ordine Workshop Setting Combo VPN")
+    checks.require(
+        'Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source and 'Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
+        "HUD SERVER VPN non usa il paese configurato",
+    )
+
 def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
     clean_source = mask_strings(source)
     checks.require(
@@ -1838,6 +1869,7 @@ def main() -> None:
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)
         check_arcade_features(checks, source, rules)
+        check_vpn_country_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)
     except ParseError as exc:
