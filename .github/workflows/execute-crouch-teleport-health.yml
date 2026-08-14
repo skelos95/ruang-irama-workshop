@@ -28,6 +28,8 @@ jobs:
           end = wf.index("          PY\n", start)
           lines = wf[start:end].splitlines()
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          script = script.replace("actions = '\\t\\tactions\\n\\t{\\n'", "actions = '\\tactions\\n\\t{\\n'", 1)
+          script = script.replace("opening = '''\\t\\tactions\\n\\t{\\n", "opening = '''\\tactions\\n\\t{\\n", 1)
           Path('/tmp/apply_patch.py').write_text(script, encoding='utf-8')
           PY
           python /tmp/apply_patch.py
