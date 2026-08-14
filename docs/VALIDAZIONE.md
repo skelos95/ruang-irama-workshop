@@ -13,7 +13,7 @@ Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repo
 Il gate deve riferirsi all'esatto blob Git di `workshop/ruang_irama.workshop` usato dalla release:
 
 ```text
-1dd9023ddd644f31d5c390b4987df1e1dcaee81f
+461a9dd9e42dfc12810e3314445cc24625c23ce0
 ```
 
 Il valore sopra è l'oggetto staged restituito da `git rev-parse :workshop/ruang_irama.workshop` dopo l'ultima modifica. Dopo il commit deve coincidere con `git rev-parse HEAD:workshop/ruang_irama.workshop`; la CI va eseguita su quell'esatto commit.
@@ -64,7 +64,7 @@ Esito del validatore:
 
 ```text
 OK - controlli statici v0.5.5 superati
-Generi: 100 | Lingue: 3 | Regole: 52 | Raycast camera: 1
+Generi: 100 | Lingue: 3 | Regole: 60 | Raycast camera: 1
 Nota: importazione, stress a 12 giocatori e test modalità restano prove live obbligatorie.
 ```
 
