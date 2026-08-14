@@ -1590,23 +1590,27 @@ def check_vpn_country_setting(checks: Checks, source: str) -> None:
     if "Indonesia" in countries:
         checks.equal(countries.index("Indonesia"), 62, "indice VPN predefinito Indonesia")
     checks.require(
-        'Global.IndeksNegaraVPN = Workshop Setting Combo' in mask_strings(source),
-        "VPN: Workshop Setting Combo non assegnato a Global.IndeksNegaraVPN",
+        'Global.IndeksNegaraVPN = Workshop Setting Integer' in mask_strings(source),
+        "VPN: Workshop Setting Integer non assegnato a Global.IndeksNegaraVPN",
     )
-    combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'VPN country (NordVPN)' in call]
-    checks.equal(len(combos), 1, "Workshop Setting Combo VPN")
-    if combos:
-        opening = combos[0].find("(")
-        args = top_level_items(combos[0][opening + 1 : -1])
-        checks.equal(len(args), 5, "argomenti Workshop Setting Combo VPN")
-        if len(args) == 5:
-            checks.equal(args[2].strip(), "62", "default Workshop Setting Combo VPN")
-            checks.equal(len(custom_strings(args[3])), 149, "opzioni Workshop Setting Combo VPN")
-            checks.equal(args[4].strip(), "1", "ordine Workshop Setting Combo VPN")
     checks.require(
-        'Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source and 'Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
-        "HUD SERVER VPN non usa il paese configurato",
+        'Custom String("VPN country ID (0-148)")' in source,
+        "VPN: nome dell'impostazione numerica non trovato",
     )
+    checks.require(
+        'Custom String("VPN country ID (0-148)"), 62, 0, 148, 1)' in source,
+        "VPN: default/range/ordine del Country ID non corretti",
+    )
+    checks.require(
+        'Global.IndeksNegaraVPN = Workshop Setting Combo' not in mask_strings(source),
+        "VPN: la combo con troppe opzioni non deve essere presente",
+    )
+    checks.require(
+        'Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
+        and 'Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
+        "HUD SERVER VPN non usa il Country ID configurato",
+    )
+
 
 def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
     clean_source = mask_strings(source)
