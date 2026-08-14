@@ -1,6 +1,6 @@
-# AFK Dedicated Server — Overwatch Workshop
+# CHILL Dedicated Server — Overwatch Workshop
 
-**AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Unkillable + 1 HP, modifica voce e ispezione con Crouch senza imporre mappe o impostazioni lobby.
+**CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Unkillable + 1 HP, modifica voce e ispezione con Crouch senza imporre mappe o impostazioni lobby.
 
 La versione **0.5.5** stabilizza i percorsi non-camera di menu, Crouch, nameplate, Teleport e lifecycle sulla base Season 4: **Heroes of Busan**. La camera in terza persona, i suoi parametri e i suoi menu restano invariati rispetto alla 0.5.4. Lo stato della release è **static-ready, live-pending**: il gate statico e le prove che richiedono il client Overwatch sono distinti in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
 

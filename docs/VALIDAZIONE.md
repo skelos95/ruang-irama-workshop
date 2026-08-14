@@ -2,7 +2,7 @@
 
 Data: 2026-08-14
 
-Release: **AFK Dedicated Server 0.5.5 — Stabilizzazione non-camera**
+Release: **CHILL Dedicated Server 0.5.5 — Stabilizzazione non-camera**
 
 Stato release: **static-ready, live-pending**.
 
@@ -13,7 +13,7 @@ Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repo
 Il gate deve riferirsi all'esatto blob Git di `workshop/ruang_irama.workshop` usato dalla release:
 
 ```text
-44a0d7fda54871bd31a0ebe92a1b6efe9a9778d0
+e69da7efc8885c59b389082069aa5d00453bce88
 ```
 
 Il valore sopra è l'oggetto staged restituito da `git rev-parse :workshop/ruang_irama.workshop` dopo l'ultima modifica. Dopo il commit deve coincidere con `git rev-parse HEAD:workshop/ruang_irama.workshop`; la CI va eseguita su quell'esatto commit.

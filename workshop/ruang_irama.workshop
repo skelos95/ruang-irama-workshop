@@ -533,9 +533,9 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 25;
 		"Timer server berdiri sendiri dari timer mode bawaan. Host lobi dapat memilih 30 sampai 90 menit."
-		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("AFK DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
-		Global.IndeksNegaraVPN = Workshop Setting Integer(Custom String("AFK DEDICATED SERVER"), Custom String("VPN country ID (0-148)"), 62, 0, 148, 1);
-		Global.DiagnostikPerforma = Workshop Setting Toggle(Custom String("AFK DEDICATED SERVER"), Custom String("Performance diagnostics"), False, 2);
+		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("CHILL DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
+		Global.IndeksNegaraVPN = Workshop Setting Integer(Custom String("CHILL DEDICATED SERVER"), Custom String("VPN country ID (0-148)"), 62, 0, 148, 1);
+		Global.DiagnostikPerforma = Workshop Setting Toggle(Custom String("CHILL DEDICATED SERVER"), Custom String("Performance diagnostics"), False, 2);
 		Global.WaktuMulaiServer = Total Time Elapsed;
 		Global.WaktuAkhirServer = Global.WaktuMulaiServer + Global.DurasiServerMenit * 60;
 		Global.SisaWaktuServer = Max(0, Round To Integer(Global.WaktuAkhirServer - Total Time Elapsed, Up));
@@ -554,14 +554,14 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 
 		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]),
-			Custom String("{0}    {1}", Custom String("AFK DEDICATED SERVER"), Global.TeksWaktuServer),
+			Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect player, hero & health", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0}: lihat pemain, hero & kesehatan", Input Binding String(Button(Crouch))) : Custom String(
 			"กด {0} ค้าง: ดูผู้เล่น ฮีโร่ และพลังชีวิต", Input Binding String(Button(Crouch))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("LOBBY ROSTER & AFK TIME\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"DAFTAR PEMAIN & WAKTU AFK\n ") : Custom String("รายชื่อผู้เล่นและเวลา AFK\n "), Left, -100,
+			IndeksBahasa) == 0 ? Custom String("LOBBY ROSTER & CHILL TIME\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"DAFTAR PEMAIN & WAKTU CHILL\n ") : Custom String("รายชื่อผู้เล่นและเวลา CHILL\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Global.HudInfoKiri = Last Text ID;
@@ -775,7 +775,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 
-		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - AFK for {2} min", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - AFK {2} mnt", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Custom String("{0} {1} - AFK {2} นาที", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
+		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} {1} - CHILL for {2} min", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} {1} - CHILL {2} mnt", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby) : Custom String("{0} {1} - CHILL {2} นาที", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Event Player, Event Player.MenitLobby), Null, Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
@@ -796,9 +796,9 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Global.TeksDiriPemain = Append To Array(Global.TeksDiriPemain, 0);
 		Global.SlotHUDPemain = Append To Array(Global.SlotHUDPemain, Event Player.UrutanHUD);
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-			"Welcome to AFK Dedicated Server. Pick a vibe, pick a color, cause harmless trouble.") : Event Player.IndeksBahasa == 1 ? Custom String(
-			"Selamat datang di AFK Dedicated Server. Pilih vibe, pilih warna, lalu bikin kekacauan kecil.") : Custom String(
-			"ยินดีต้อนรับสู่ AFK Dedicated Server เลือกเพลง เลือกสี แล้วสนุกกันแบบไม่ทำร้ายใคร"));
+			"Welcome to CHILL Dedicated Server. Pick a vibe, pick a color, cause harmless trouble.") : Event Player.IndeksBahasa == 1 ? Custom String(
+			"Selamat datang di CHILL Dedicated Server. Pilih vibe, pilih warna, lalu bikin kekacauan kecil.") : Custom String(
+			"ยินดีต้อนรับสู่ CHILL Dedicated Server เลือกเพลง เลือกสี แล้วสนุกกันแบบไม่ทำร้ายใคร"));
 	}
 }
 
@@ -1018,8 +1018,8 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Call Subroutine(TutupMenu);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 				"Arcade Menu closed. Back to professionally doing nothing.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Menu Arcade ditutup. Kembali AFK dengan penuh tanggung jawab.") : Custom String(
-				"ปิดเมนูอาร์เคดแล้ว กลับไป AFK อย่างมืออาชีพได้"));
+				"Menu Arcade ditutup. Kembali CHILL dengan penuh tanggung jawab.") : Custom String(
+				"ปิดเมนูอาร์เคดแล้ว กลับไป CHILL อย่างมืออาชีพได้"));
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
@@ -1434,9 +1434,9 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 						"กำลังชม {0} อยู่ นี่ไม่ใช่การสะกดรอยแน่นอน", Event Player.TargetKamera));
 				Else;
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"That player disappeared. Very on-brand for AFK.") : Event Player.IndeksBahasa == 1 ? Custom String(
-						"Pemainnya menghilang. Sangat sesuai tema AFK.") : Custom String(
-						"ผู้เล่นคนนั้นหายไปแล้ว สมกับเป็นห้อง AFK จริง ๆ"));
+						"That player disappeared. Very on-brand for CHILL.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Pemainnya menghilang. Sangat sesuai tema CHILL.") : Custom String(
+						"ผู้เล่นคนนั้นหายไปแล้ว สมกับเป็นห้อง CHILL จริง ๆ"));
 				End;
 			End;
 			Call Subroutine(GambarMenu);
