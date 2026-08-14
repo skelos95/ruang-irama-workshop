@@ -17,7 +17,7 @@ L'overlay è pensato per le modalità core 6v6:
 
 Il sorgente non contiene un blocco `settings`, quindi non seleziona né sovrascrive modalità, mappe, roster o regole della lobby. Durante la sessione disabilita il completamento e il punteggio nativi: nessuna squadra riceve punti, vittorie o pareggi. La partita termina soltanto quando il timer personalizzato arriva a `00:00`, quindi viene eseguito un unico `Restart Match` senza dichiarare un vincitore.
 
-La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il paese mostrato nell’HUD `SERVER VPN` è selezionabile con `VPN country ID (0-148)`; il default resta `62 = Indonesia`. La tabella completa è in [`docs/VPN_COUNTRIES.md`](docs/VPN_COUNTRIES.md).
+La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il paese mostrato nell’HUD `SERVER VPN` è selezionabile direttamente per nome con `VPN country (Asia)`; la lista contiene 26 località asiatiche NordVPN e il default resta Indonesia.
 
 ## Funzioni principali
 
@@ -59,7 +59,7 @@ Quando più input vengono rilevati nello stesso ciclo, il dispatcher usa questa 
 3. Apri [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop) e copia il contenuto raw.
 4. In Overwatch apri Partita personalizzata → Crea → Impostazioni → Workshop e incolla il sorgente.
 5. Configura una delle modalità core 6v6 e le mappe desiderate nelle normali impostazioni lobby.
-6. Imposta durata, `VPN country ID (0-148)` e diagnostica dalle opzioni Workshop; per gli ID consulta [`docs/VPN_COUNTRIES.md`](docs/VPN_COUNTRIES.md).
+6. Imposta durata, `VPN country (Asia)` e diagnostica dalle opzioni Workshop; per la lista consulta [`docs/VPN_COUNTRIES.md`](docs/VPN_COUNTRIES.md).
 7. Prima di pubblicare, esegui i controlli live descritti in [`docs/TEST.md`](docs/TEST.md).
 
 Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.

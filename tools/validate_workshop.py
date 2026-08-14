@@ -1579,36 +1579,40 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
 
 
 def check_vpn_country_setting(checks: Checks, source: str) -> None:
+    expected = ['Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'Hong Kong', 'India', 'Indonesia', 'Japan', 'Kazakhstan', 'Kyrgyzstan', 'Laos', 'Malaysia', 'Maldives', 'Myanmar', 'Mongolia', 'Nepal', 'Pakistan', 'Philippines', 'Singapore', 'South Korea', 'Sri Lanka', 'Tajikistan', 'Taiwan', 'Thailand', 'Uzbekistan', 'Vietnam']
     try:
         countries = custom_strings(array_body(source, "Global.DaftarNegaraVPN"))
     except ParseError as exc:
         checks.require(False, f"VPN countries: {exc}")
         return
-    checks.equal(len(countries), 149, "paesi VPN configurabili")
-    checks.equal(len(set(countries)), 149, "paesi VPN unici")
-    checks.require("Indonesia" in countries, "VPN: Indonesia assente dalla lista")
-    if "Indonesia" in countries:
-        checks.equal(countries.index("Indonesia"), 62, "indice VPN predefinito Indonesia")
+    checks.equal(countries, expected, "lista VPN Asia")
+    checks.equal(len(countries), 26, "paesi VPN Asia")
+    checks.equal(countries.index("Indonesia") if "Indonesia" in countries else -1, 6, "indice VPN predefinito Indonesia")
     checks.require(
-        'Global.IndeksNegaraVPN = Workshop Setting Integer' in mask_strings(source),
-        "VPN: Workshop Setting Integer non assegnato a Global.IndeksNegaraVPN",
+        'Global.IndeksNegaraVPN = Workshop Setting Combo' in mask_strings(source),
+        "VPN: Workshop Setting Combo non assegnato a Global.IndeksNegaraVPN",
     )
     checks.require(
-        'Custom String("VPN country ID (0-148)")' in source,
-        "VPN: nome dell'impostazione numerica non trovato",
+        'Custom String("VPN country (Asia)")' in source,
+        "VPN: nome della combo Asia non trovato",
     )
     checks.require(
-        'Custom String("VPN country ID (0-148)"), 62, 0, 148, 1)' in source,
-        "VPN: default/range/ordine del Country ID non corretti",
+        'Global.IndeksNegaraVPN = Workshop Setting Integer' not in mask_strings(source),
+        "VPN: la vecchia impostazione numerica non deve essere presente",
     )
-    checks.require(
-        'Global.IndeksNegaraVPN = Workshop Setting Combo' not in mask_strings(source),
-        "VPN: la combo con troppe opzioni non deve essere presente",
-    )
+    combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'VPN country (Asia)' in call]
+    checks.equal(len(combos), 1, "Workshop Setting Combo VPN Asia")
+    if combos:
+        opening = combos[0].find("(")
+        args = top_level_items(combos[0][opening + 1 : -1])
+        checks.equal(len(args), 5, "argomenti Workshop Setting Combo VPN Asia")
+        if len(args) == 5:
+            checks.equal(args[2].strip(), "6", "default Workshop Setting Combo VPN Asia")
+            checks.equal(custom_strings(args[3]), expected, "opzioni Workshop Setting Combo VPN Asia")
     checks.require(
         'Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
         and 'Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
-        "HUD SERVER VPN non usa il Country ID configurato",
+        "HUD SERVER VPN non usa il paese configurato",
     )
 
 
