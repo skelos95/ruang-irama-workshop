@@ -1,0 +1,56 @@
+name: Execute menu text and current selection fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/execute-menu-text-current-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Execute patch and refresh validation hash
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import re
+
+          wf = Path('.github/workflows/fix-menu-text-current.yml').read_text(encoding='utf-8')
+          start = wf.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
+          end = wf.index("          PY\n", start)
+          lines = wf[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/menu_patch.py').write_text(script, encoding='utf-8')
+          PY
+          python /tmp/menu_patch.py
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import re
+          source = Path('workshop/ruang_irama.workshop')
+          report = Path('docs/VALIDAZIONE.md')
+          data = source.read_bytes().replace(b'\r\n', b'\n')
+          blob = hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
+          text = report.read_text(encoding='utf-8')
+          text, n = re.subn(r'```text\n[0-9a-f]{40}\n```', f'```text\n{blob}\n```', text, count=1)
+          if n != 1:
+              raise SystemExit('Workshop blob marker not found in validation report')
+          report.write_text(text, encoding='utf-8')
+          PY
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop docs/VALIDAZIONE.md
+          git commit -m "Fix menu newlines and show current selections"
+          git push origin HEAD:main
