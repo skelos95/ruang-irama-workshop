@@ -44,6 +44,15 @@ jobs:
               "src = replace_exact(src, old_tp_init, new_feature_init, expected=1, label='menu open feature init')",
               1,
           )
+          script = script.replace(
+              "r'KursorUtama\\\\s*=\\\\s*\\\\([^;]+\\\\)\\\\s*%\\\\s*6\\\\s*;'",
+              "r'KursorUtama\\s*=\\s*\\([^;]+\\)\\s*%\\s*6\\s*;'",
+              1,
+          ).replace(
+              "r'KursorUtama\\\\s*=\\\\s*\\\\([^;]+\\\\)\\\\s*%\\\\s*7\\\\s*;'",
+              "r'KursorUtama\\s*=\\s*\\([^;]+\\)\\s*%\\s*7\\s*;'",
+              1,
+          )
           Path('/tmp/apply_patch.py').write_text(script, encoding='utf-8')
           PY
           python /tmp/apply_patch.py
