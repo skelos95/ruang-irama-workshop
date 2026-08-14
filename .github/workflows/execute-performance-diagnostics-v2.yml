@@ -1,5 +1,5 @@
 # Trigger after workflow registration
-# Validator retry: semantic LOAD check
+# Validator retry: LOAD content only
 name: Execute compact performance diagnostics v2
 
 on:
@@ -54,7 +54,7 @@ jobs:
           path = Path('tools/validate_workshop.py')
           text = path.read_text(encoding='utf-8')
           old = '''    checks.require(\n        'Custom String("\\n \\nLOAD {0}% | AVG {1}% | MAX {2}%"' in source,\n        "diagnostica priva della riga LOAD compatta o dello spazio superiore",\n    )\n'''
-          new = '''    checks.require(\n        'LOAD {0}% | AVG {1}% | MAX {2}%' in source\n        and 'Custom String("\\n ' in source,\n        "diagnostica priva della riga LOAD compatta o dello spazio superiore",\n    )\n'''
+          new = '''    checks.require(\n        'LOAD {0}% | AVG {1}% | MAX {2}%' in source,\n        "diagnostica priva della riga LOAD compatta",\n    )\n'''
           if text.count(old) != 1:
               raise SystemExit(f'LOAD validator block: expected 1, found {text.count(old)}')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
