@@ -1,3 +1,4 @@
+# Triggered after workflow registration
 name: Fix VPN Workshop option limit
 
 on:
@@ -58,7 +59,6 @@ jobs:
                           return i
               raise SystemExit('Unclosed parenthesis')
 
-          # Extract canonical country list from the runtime array, which remains unchanged.
           marker = 'Global.DaftarNegaraVPN = Array('
           m = src.index(marker)
           open_array = src.index('(', m)
@@ -67,8 +67,6 @@ jobs:
           if len(countries) != 149 or len(set(countries)) != 149 or countries[62] != 'Indonesia':
               raise SystemExit('VPN country array invariant failed')
 
-          # Replace only the oversized Workshop Setting Combo call. The 149-country
-          # runtime array stays available for HUD lookup, but no longer counts as settings options.
           assign = 'Global.IndeksNegaraVPN = Workshop Setting Combo('
           start = src.index(assign)
           opening = src.index('(', start)
@@ -82,7 +80,6 @@ jobs:
               raise SystemExit('Oversized VPN combo still present')
           source_path.write_text(src, encoding='utf-8')
 
-          # Replace the validator's VPN check with the numeric-setting contract.
           val = validator_path.read_text(encoding='utf-8')
           a = val.index('def check_vpn_country_setting(')
           b = val.index('def check_diagnostics(', a)
@@ -90,7 +87,6 @@ jobs:
           val = val[:a] + new_check + val[b:]
           validator_path.write_text(val, encoding='utf-8')
 
-          # Generate a human-readable ID table so all 149 choices remain practical.
           lines = [
               '# VPN Country IDs',
               '',
