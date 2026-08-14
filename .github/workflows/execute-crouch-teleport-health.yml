@@ -1,0 +1,40 @@
+name: Execute crouch teleport and health patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/execute-crouch-teleport-health.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Execute patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          wf = Path('.github/workflows/apply-crouch-teleport-health.yml').read_text(encoding='utf-8')
+          marker = "          python - <<'PY'\n"
+          start = wf.index(marker) + len(marker)
+          end = wf.index("          PY\n", start)
+          lines = wf[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/apply_patch.py').write_text(script, encoding='utf-8')
+          PY
+          python /tmp/apply_patch.py
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop README.md docs/VALIDAZIONE.md
+          git commit -m "Show current HP and restore hold-Crouch teleport"
+          git push origin HEAD:main
