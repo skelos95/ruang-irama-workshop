@@ -15,7 +15,7 @@ L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita,
 9. Neoclassical Ambient
 10. Ethereal Ambient
 
-## Hal. 2/10 — LEMBUT BANGET
+## Hal. 2/10 — SANTAI TOTAL
 
 11. Solo Piano
 12. Classical Guitar
@@ -54,7 +54,7 @@ L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita,
 39. Acid Jazz
 40. City Pop
 
-## Hal. 5/10 — MULAI GOYANG
+## Hal. 5/10 — KAKI MULAI GOYANG
 
 41. Jazz-Funk
 42. Funk
@@ -67,7 +67,7 @@ L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita,
 49. Nu-Disco
 50. Disco
 
-## Hal. 6/10 — LANTAI BERGETAR
+## Hal. 6/10 — LANTAI MULAI HIDUP
 
 51. French House
 52. Progressive House

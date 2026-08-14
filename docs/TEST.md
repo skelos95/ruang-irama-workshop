@@ -1,4 +1,4 @@
-# Piano di test — versione 0.5.4
+# Piano di test — versione 0.5.5
 
 Il validatore statico riduce il rischio di errori strutturali, ma non sostituisce il parser e il runtime di Overwatch. Ogni prova è quindi classificata come **statica** oppure **live**. Una prova live non va dichiarata superata sulla sola base del sorgente.
 
@@ -6,14 +6,15 @@ Il validatore statico riduce il rischio di errori strutturali, ma non sostituisc
 
 Eseguire il validatore read-only sul sorgente finale e verificare:
 
-- sintassi e delimitatori bilanciati;
+- sintassi, `[]` e nesting dei delimitatori bilanciati;
+- regole e dichiarazioni ben formate, senza nomi o slot duplicati;
 - tipi evento limitati all'elenco riconosciuto dal Workshop;
 - assenza di un blocco `settings`;
 - tre localizzazioni complete: English, Bahasa Indonesia e ไทย;
 - selettore lingua con tre stati e inglese predefinito;
 - 100 generi unici e raggiungibili;
 - 20 colori con nome in ciascuna lingua;
-- placeholder delle stringhe coerenti con i relativi argomenti;
+- placeholder delle stringhe coerenti per indice e arità con i relativi argomenti;
 - stringhe entro i limiti gestiti dal Workshop;
 - esattamente due sentinelle reali `U+200B` per il riconoscimento dei bot AI;
 - sei menu con indici `0..5`;
@@ -24,9 +25,18 @@ Eseguire il validatore read-only sul sorgente finale e verificare:
 - nessuna azione che assegni score, vittoria o pareggio;
 - `Restart Match` confinato al completamento del timer personalizzato;
 - invarianti degli array paralleli e slot HUD limitati a `0..11`;
-- CI read-only, senza commit automatici o workflow che modifichino il repository.
+- invarianti non-camera della chiusura Melee, selezione Crouch e identità Teleport;
+- controlli semantici immuni ad azioni simulate dentro stringhe o commenti;
+- CI read-only eseguita per ogni modifica alla repository, senza commit automatici o workflow che la modifichino.
 
-Esito e comando effettivamente eseguito vanno registrati in [`VALIDAZIONE.md`](VALIDAZIONE.md).
+Prima del validatore eseguire anche i test negativi:
+
+```powershell
+python -m unittest discover -s tests -p 'test_*.py'
+python tools/validate_workshop.py
+```
+
+I test devono rifiutare almeno commenti/stringhe che simulano azioni, cattura cleanup mancante, delimitatori malformati, duplicati, localizzazione incompleta, placeholder con arità errata e regressioni negli invarianti Crouch/Teleport. Esito, versione Python e blob effettivamente validato vanno registrati in [`VALIDAZIONE.md`](VALIDAZIONE.md).
 
 ## 2. Importazione nel client
 
@@ -76,8 +86,10 @@ Preparare una lobby con umani, dummy bot Workshop e normali bot AI.
 - Un nuovo umano deve comparire nelle liste soltanto dopo la classificazione completa, con l'icona dell'eroe in entrambe le liste.
 - Dummy e bot AI non devono comparire negli HUD sociali né poter aprire i menu.
 - I bot devono restare disponibili come target per le funzioni che li supportano.
+- Un dummy deve bypassare preparazione e classificazione degli umani ed essere bloccato dal lifecycle edge-triggered dedicato.
 - Far uscire un player durante ciascuno dei due intervalli di classificazione: non deve apparire in ritardo né lasciare uno slot occupato.
 - Verificare il blocco bot subito dopo classificazione, spawn, respawn e cambio eroe.
+- Con dodici viewer che tengono Crouch, registrare un umano e spawnare/bloccare bot AI e dummy: le nuove nameplate devono risultare subito disabilitate per tutti i viewer attivi.
 - Confermare che non esista un'attività periodica ogni 0,5 secondi dedicata soltanto a riaffermare il blocco.
 
 Se un bot AI viene classificato come umano, controllare che le due sentinelle `U+200B` siano sopravvissute a copia e import. Se sono presenti, segnare il workaround come incompatibile con la patch live invece di dichiarare superato il test.
@@ -92,7 +104,8 @@ Eseguire almeno 50 cicli join/leave, alternando i seguenti stati al momento dell
 - voce Revenge posseduta o bersaglio in un ledger altrui;
 - Teleport aperto con destinazione selezionata;
 - player ancora in classificazione;
-- player morto o in respawn.
+- player morto o in respawn;
+- player in hero-select oppure in transizione team ↔ spettatore.
 
 Dopo ogni uscita verificare:
 
@@ -103,6 +116,8 @@ Dopo ogni uscita verificare:
 - slot HUD liberato e riutilizzato nell'intervallo `0..11`;
 - conteggi HUD/IWT tornati al livello previsto, senza crescita cumulativa.
 
+Ripetere l'apertura di menu e Crouch durante cambio round, morte, despawn, hero-select e transizione team ↔ spettatore. In ogni caso pulsanti e nameplate devono essere ripristinati e HUD/IWT distrutti senza attendere un'uscita dalla lobby.
+
 ## 7. Localizzazione per viewer
 
 Usare tre client contemporanei, uno per lingua.
@@ -110,6 +125,7 @@ Usare tre client contemporanei, uno per lingua.
 - Il join iniziale deve mostrare English.
 - Selezionare e applicare English, Bahasa Indonesia e ไทย dal menu lingua.
 - Titolo, posizione, liste, sei menu, 20 colori, messaggi, Revenge, Teleport, camera e Crouch devono usare la lingua del singolo viewer.
+- Aprire Revenge senza altri umani e verificare lo stato vuoto in English, Bahasa Indonesia e ไทย.
 - I nomi internazionali dei 100 generi devono restare invariati.
 - Il cambio deve essere immediato e non modificare la scelta degli altri client.
 - Verificare thai naturale, glifi integri, wrapping e leggibilità a più risoluzioni e rapporti d'aspetto.
@@ -120,6 +136,7 @@ Usare tre client contemporanei, uno per lingua.
 
 - Tenere Melee per meno di 0,5 s: il menu non deve aprirsi.
 - Tenere Melee per almeno 0,5 s: il menu deve cambiare stato una sola volta fino al rilascio.
+- Con il menu in chiusura e Melee ancora premuto, provocare la morte a `0,10`, `0,25` e `0,49` secondi; dopo il rilascio Melee deve essere riabilitato e il latch deve consentire una nuova apertura.
 - Verificare ordine e wrap delle sei voci `0..5`.
 - Entrare in ciascun sottomenu con Interact, applicare una scelta e tornare con Reload.
 - Confermare che un sottomenu resti aperto dopo l'applicazione, salvo le azioni che per progetto lo chiudono.
@@ -143,6 +160,7 @@ Usare tre client contemporanei, uno per lingua.
 ### Revenge e Teleport
 
 - Revenge deve mostrare dati aggiornati e ignorare killer non validi.
+- Revenge deve mostrare anche gli altri umani con debito `0`, ma rifiutare il claim senza modificare il ledger.
 - Teleport deve aggiornare Spawn Room, obiettivi previsti e player presenti senza conservare destinazioni uscite.
 
 ## 9. Revenge
@@ -150,6 +168,7 @@ Usare tre client contemporanei, uno per lingua.
 - Subire una kill diretta da un altro umano: viene aggiunta una singola voce al ledger.
 - Assist, suicidio, ambiente, dummy bot e bot AI non devono creare una voce.
 - Morire più volte contro lo stesso umano e riscuotere una voce alla volta.
+- Con debito `0`, verificare che l'umano resti visibile nel menu ma che il claim sia bloccato; senza altri umani, verificare lo stato vuoto localizzato in tutte e tre le lingue.
 - Avviare un claim mentre la lista cambia: flag, `Kill` e messaggio devono usare la stessa identità catturata, senza rileggere array o cursore.
 - Far uscire il bersaglio prima di applicare il claim: nessuna azione deve trasferirsi a un altro player.
 - Far uscire un umano presente in più ledger: deve essere rimosso da tutti.
@@ -163,6 +182,7 @@ Usare tre client contemporanei, uno per lingua.
 - Teletrasportarsi verso umano, bot AI e dummy bot.
 - Verificare una posizione camminabile vicina al target, senza sovrapposizione dei corpi.
 - Far morire o uscire la destinazione fra selezione e applicazione: l'azione deve annullarsi in modo sicuro.
+- Far uscire la destinazione nello stesso ciclo dell'applicazione mentre un altro player prende lo stesso indice dopo il refresh: l'azione deve annullarsi, senza retarget sul nuovo elemento.
 - Verificare le destinazioni obiettivo sulle sei modalità e sulle mappe Season 4 previste.
 
 ## 11. Camera e Crouch
@@ -185,11 +205,13 @@ Usare tre client contemporanei, uno per lingua.
 ### Crouch
 
 - Le nameplate native devono essere disabilitate una sola volta all'ingresso e ripristinate in ogni uscita.
-- Target vicino al reticolo aggiornato ogni 0,10 s; viewer, morti e non spawnati esclusi.
+- Target vicino al reticolo aggiornato ogni 0,10 s; viewer, morti, non spawnati, inesistenti e target senza line-of-sight esclusi prima dell'ordinamento angolare.
+- Mirare un target morto, uno dietro una parete e uno non spawnato con un secondo target valido: deve essere scelto il target valido col minore angolo, senza soglia aggiuntiva di distanza o angolo.
 - Testi: colore personale per umani, arancione per bot e scala `0.900` per una leggibilità leggermente maggiore.
 - Cambiare colore durante l'ispezione: l'aggiornamento deve avvenire senza loop permanente.
-- Ripetere rilascio, apertura menu, morte, camera e uscita; entrambi i testi devono sparire.
+- Ripetere rilascio, apertura menu, morte, despawn, hero-select, team ↔ spettatore, camera e uscita; entrambi i testi devono sparire e le nameplate devono tornare visibili.
 - Attivare Crouch contemporaneamente su 12 player e controllare correttezza e carico.
+- Mentre i 12 player tengono Crouch, aggiungere umani e spawnare bot: nessuna nuova nameplate deve apparire ai viewer già in ispezione.
 
 ## 12. Stress e diagnostica
 
@@ -217,7 +239,7 @@ Con `Performance diagnostics = On`:
 
 Un eventuale superamento delle soglie o crash rende la prova fallita: non va mascherato come limite del validatore.
 
-## Criterio di rilascio 0.5.4
+## Criterio di rilascio 0.5.5
 
 La release è pronta per un codice Blizzard condivisibile soltanto quando:
 
@@ -229,4 +251,4 @@ La release è pronta per un codice Blizzard condivisibile soltanto quando:
 - i test a 12 player e 50 join/leave rispettano i gate di carico e cleanup;
 - Crouch, camera, Revenge e Teleport superano i rispettivi casi di uscita.
 
-Fino ad allora [`VALIDAZIONE.md`](VALIDAZIONE.md) deve distinguere esplicitamente i controlli statici superati dalle prove live pendenti.
+Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`](VALIDAZIONE.md) deve distinguere esplicitamente i controlli statici superati dalle prove live pendenti.

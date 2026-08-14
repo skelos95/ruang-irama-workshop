@@ -1,10 +1,12 @@
-# Note di progetto — versione 0.5.4
+# Note di progetto — versione 0.5.5
 
 ## Identità e obiettivo
 
 Il nome mostrato nel gioco è **AFK Dedicated Server** e la posizione visualizzata è **Indonesia**. Il progetto è un overlay Workshop sociale per lobby personalizzate: aggiunge strumenti AFK e Arcade senza diventare un preset completo.
 
-La release 0.5.4 corregge l'inquadratura verticale della camera sulla base Season 4 **Heroes of Busan**, iniziata l'11 agosto 2026. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+La release 0.5.5 stabilizza i percorsi non-camera di menu, Crouch, nameplate, Teleport e lifecycle sulla base Season 4 **Heroes of Busan**. La camera in terza persona conserva byte-per-byte logica, valori, raycast e menu della 0.5.4. La compatibilità da verificare nel client comprende D.Mon e gli aggiornamenti di Busan, Paraíso ed Eichenwalde indicati nelle [note ufficiali della patch](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+
+Lo stato di release è **static-ready, live-pending**: un gate statico superato non equivale al completamento delle prove nel client.
 
 Il sorgente non contiene `settings`. L'importazione non cambia modalità, mappe, roster, slot, composizione delle squadre o altre opzioni della lobby.
 
@@ -25,17 +27,18 @@ Il timer non dipende da `Match Time`. All'avvio conserva una propria origine e c
 
 La lista degli umani è la fonte dei due elenchi sociali. Camera, Crouch e Teleport possono invece usare tutti i giocatori presenti e validi, perché devono includere anche bot AI e dummy bot.
 
-La classificazione segue questa sequenza:
+Gli umani e i normali bot AI seguono questa sequenza di preparazione e classificazione:
 
 1. lo stato per-player viene preparato una sola volta, anche per chi era già presente quando le regole sono state avviate;
-2. un dummy bot viene riconosciuto direttamente tramite `Is Dummy Bot`;
-3. per gli altri viene applicato il workaround del nome invisibile `U+200B` per distinguere i normali bot AI;
-4. dopo ciascuno dei due `Wait(0.016)` viene verificato `Entity Exists`;
-5. prima di registrare un umano viene eseguito un ultimo controllo di esistenza e classificazione.
+2. viene applicato il workaround del nome invisibile `U+200B` per distinguere i normali bot AI;
+3. dopo ciascuno dei due `Wait(0.016)` viene verificato `Entity Exists`;
+4. prima di registrare un umano viene eseguito un ultimo controllo di esistenza e classificazione.
 
 La registrazione è quindi atomica dal punto di vista del Workshop: un giocatore che esce durante i due tick di riconoscimento non può essere aggiunto in ritardo alle liste. Il carattere `U+200B` resta un workaround comunitario e non un contratto API Blizzard; va verificato nel client dopo ogni patch.
 
-Il blocco dei bot è edge-triggered. Viene applicato al termine della classificazione; la transizione a morto o non spawnato abbassa il latch e una seconda regola `Ongoing - Each Player` lo riafferma soltanto quando il bot torna vivo oppure cambia eroe. Questo copre anche despawn e passaggi di round, usa esclusivamente tipi evento riconosciuti dal parser ed evita un watchdog permanente ogni mezzo secondo. Fuoco, abilità, Ultimate e comandi sociali restano bloccati; il movimento necessario alla lobby può rimanere disponibile.
+I dummy bot non entrano in questa pipeline e non attraversano il ramo di classificazione: il lifecycle edge-triggered li riconosce direttamente con `Is Dummy Bot` e richiama `KunciBot` quando diventano entità valide e spawnate. Per i normali bot AI il blocco viene applicato al termine della classificazione. In entrambi i casi la transizione a morto o non spawnato abbassa il latch e la regola lifecycle lo riafferma soltanto quando il bot torna vivo oppure cambia eroe. Questo copre anche despawn e passaggi di round, usa esclusivamente tipi evento riconosciuti dal parser ed evita un watchdog permanente ogni mezzo secondo. Fuoco, abilità, Ultimate e comandi sociali restano bloccati; il movimento necessario alla lobby può rimanere disponibile.
+
+Quando un umano viene registrato oppure un bot viene bloccato/spawnato, la sua nameplate viene disabilitata per tutti i viewer che stanno già ispezionando. In questo modo l'insieme nascosto non resta congelato alla fotografia iniziale del Crouch.
 
 ### Cleanup dell'uscita
 
@@ -49,6 +52,8 @@ Il cleanup usa i registri globali perché le variabili del player uscente posson
 - restituisce lo slot HUD al pool limitato a `0..11`.
 
 Il riuso degli slot evita che il numero d'ordine cresca senza limite dopo molti cicli join/leave. Se l'uscente non è un umano registrato, il cleanup non altera gli array sociali.
+
+Menu e ispezione hanno inoltre cleanup per-player sui passaggi di stato in cui l'entità resta nel server ma non è più giocabile: morte, despawn, hero-select e passaggio a spettatore. I percorsi ripristinano pulsanti e nameplate e distruggono HUD e testi prima di azzerare i latch.
 
 ## HUD e localizzazione per viewer
 
@@ -68,7 +73,7 @@ Gli elementi condivisi leggono la lingua di `Local Player`, così due client pos
 
 ## Menu e dispatcher degli input
 
-Melee tenuto per 0,5 secondi apre o chiude il menu. Il rilascio arma il toggle successivo, impedendo ripetizioni mentre il tasto resta premuto.
+Melee tenuto per 0,5 secondi apre o chiude il menu. Alla chiusura, se Melee è ancora premuto il latch resta armato fino al rilascio; altrimenti il pulsante viene riabilitato immediatamente e il latch azzerato. Questo evita che morte o despawn durante i 0,5 secondi lascino Melee bloccato.
 
 Il menu principale contiene sei voci:
 
@@ -87,7 +92,7 @@ I menu dinamici Revenge e Teleport aggiornano dati e cursore senza distruggere e
 
 ## Revenge
 
-Revenge registra soltanto il killer diretto umano, non assist, bot o danno ambientale. Alla morte il relativo flag viene azzerato immediatamente, poi il ledger viene aggiornato.
+Revenge registra soltanto il killer diretto umano, non assist, bot o danno ambientale. Alla morte il relativo flag viene azzerato immediatamente, poi il ledger viene aggiornato. Il menu mostra intenzionalmente tutti gli altri umani, compresi quelli con debito `0`; il claim resta però vietato finché il debito non è positivo. Anche lo stato vuoto è localizzato in English, Bahasa Indonesia e ไทย.
 
 Quando un claim parte, il bersaglio viene catturato per identità prima di `Kill`. Lo stesso riferimento viene usato per flag, eliminazione e messaggio; non esiste una rilettura differita di array, cursore o claimant. La regola `Player Died` azzera il flag del bersaglio, mentre l'uscita di un giocatore lo rimuove dai ledger di tutti i superstiti, evitando voci fantasma o indici spostati.
 
@@ -95,13 +100,13 @@ Quando un claim parte, il bersaglio viene catturato per identità prima di `Kill
 
 Il menu Teleport comprende l'ultima Spawn Room visitata, la destinazione dell'obiettivo corrente quando disponibile e i giocatori presenti, inclusi bot AI e dummy bot validi. La posizione salvata viene aggiornata a ogni nuovo ingresso in spawn, così segue anche le spawn avanzate di Escort e Hybrid. Il viewer non compare come propria destinazione.
 
-Il teletrasporto verso un giocatore cerca una posizione camminabile vicina al bersaglio invece di sovrapporre i due corpi. Prima dell'azione vengono ricontrollati esistenza e validità della destinazione; se il target è uscito, morto o non più disponibile, l'azione viene annullata con un messaggio localizzato.
+Il teletrasporto verso un giocatore cerca una posizione camminabile vicina al bersaglio invece di sovrapporre i due corpi. Tipo e identità della destinazione vengono catturati prima di aggiornare la lista. Dopo il refresh il riferimento bloccato viene ricontrollato per esistenza, vita e appartenenza all'elenco: se il target è uscito, morto o non più disponibile, l'azione viene annullata con un messaggio localizzato invece di trasferirsi al nuovo elemento dello stesso indice.
 
 ## Crouch e ispezione
 
-Fuori dal menu, Crouch attiva l'ispezione per quel viewer. Le nameplate native vengono disabilitate una sola volta all'ingresso e ripristinate in ogni percorso di uscita: rilascio, apertura menu, morte, cambio modalità camera o uscita dalla partita.
+Fuori dal menu, Crouch attiva l'ispezione per quel viewer. Le nameplate native vengono disabilitate una sola volta all'ingresso e ripristinate in ogni percorso di uscita: rilascio, apertura menu, morte, despawn, hero-select, passaggio a spettatore, cambio modalità camera o uscita dalla partita.
 
-Il target vicino al reticolo viene aggiornato ogni 0,10 secondi scorrendo soltanto i giocatori presenti. Viewer, entità non spawnate, morte o inesistenti vengono escluse. Nome, eroe effettivo e percentuale Ultimate restano rivalutati; durante Duplicate di Echo viene mostrato l'eroe duplicato.
+Il target vicino al reticolo viene aggiornato ogni 0,10 secondi. Lo slot player libero `47` conserva l'array di candidati, che esclude viewer, entità inesistenti, non spawnate, morte o senza line-of-sight, considerando geometria e barriere come occludenti. Solo dopo il filtro viene scelto il candidato col minore angolo rispetto al reticolo. Non sono introdotte soglie massime di distanza o angolo. Nome, eroe effettivo e percentuale Ultimate restano rivalutati; durante Duplicate di Echo viene mostrato l'eroe duplicato.
 
 I due testi di ispezione usano il colore personale per gli umani e arancione per i bot e sono mostrati a scala 0,90 per una leggibilità leggermente maggiore. Il cleanup distrugge entrambi i testi in ogni percorso, prevenendo residui IWT. Il sistema non usa più `Start/Stop Forcing Player Outlines`.
 
@@ -119,7 +124,7 @@ La 0.5.3 elimina il loop, il `Wait(0.016)` e tutte le cache coordinate. Un solo 
 
 Il test live della 0.5.3 ha confermato la fluidità, ma ha evidenziato un disallineamento geometrico: il punto osservato seguiva il pitch completo mentre l'arretramento restava sul piano orizzontale, facendo uscire l'eroe dall'inquadratura guardando molto in alto o in basso.
 
-La 0.5.4 usa quindi due vettori distinti. Il braccio posteriore segue la `Facing Direction` completa, così camera, occhio dell'eroe e punto di mira restano quasi collineari durante il pitch. Soltanto l'offset laterale usa `Horizontal Facing Angle Of`, mantenendo la spalla stabile anche vicino a ±90°. Il raycast comprime la distanza vicino a pavimenti e soffitti senza introdurre un secondo controllo collisione.
+La 0.5.4 usa quindi due vettori distinti. Il braccio posteriore segue la `Facing Direction` completa, così camera, occhio dell'eroe e punto di mira restano quasi collineari durante il pitch. Soltanto l'offset laterale usa `Horizontal Facing Angle Of`, mantenendo la spalla stabile anche vicino a ±90°. Il raycast comprime la distanza vicino a pavimenti e soffitti senza introdurre un secondo controllo collisione. La stabilizzazione non-camera 0.5.5 non modifica questo percorso.
 
 Il blend resta `0`: non è uno scatto a bassa frequenza, perché l'intera espressione è già aggiornata per fotogramma; evita invece un secondo ritardo sopra la posizione visuale. Altezza, distanza e offset continuano ad adattarsi al modello corrente, incluso D.Mon. Inquadratura agli estremi, fluidità percepita e collisioni restano verifiche live; un target remoto può mostrare jitter di rete non presente sulla camera del proprio eroe.
 
