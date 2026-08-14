@@ -13,7 +13,7 @@ Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repo
 Il gate deve riferirsi all'esatto blob Git di `workshop/ruang_irama.workshop` usato dalla release:
 
 ```text
-6650e06bb8a735fb93c04944a38c04fa348085f0
+cc13c0653ef9e9486fdcb0c8c7db37e92df2e7f8
 ```
 
 Il valore sopra è l'oggetto staged restituito da `git rev-parse :workshop/ruang_irama.workshop` dopo l'ultima modifica. Dopo il commit deve coincidere con `git rev-parse HEAD:workshop/ruang_irama.workshop`; la CI va eseguita su quell'esatto commit.
@@ -31,18 +31,18 @@ Il gate comprende:
 - tre lingue complete, selettore modulo 3 e stato vuoto Revenge localizzato;
 - 100 generi, 20 colori per lingua e placeholder con arità coerente;
 - due sentinelle reali `U+200B` per i normali bot AI;
-- sei menu e navigazione Soundtrack corretta;
+- sette menu e navigazione Soundtrack corretta;
 - invarianti di chiusura Melee e cleanup su morte, despawn, hero-select e spettatore;
-- selezione Crouch candidate-first con line-of-sight e ordinamento angolare;
+- selezione Crouch candidate-first senza line-of-sight, quindi valida anche attraverso i muri;
 - sincronizzazione nameplate per umani e bot aggiunti durante un'ispezione attiva;
-- cattura per identità della destinazione Teleport prima del refresh;
+- menu 5 Unkillable + 1 HP e menu 6 Voice Modifier con preset di pitch;
 - invarianti degli array paralleli e pool slot HUD `0..11`;
 - assenza di azioni di score, vittoria o pareggio e `Restart Match` confinato allo zero del timer;
 - camera invariata rispetto a `main@02bcedc`, con un solo raycast nel percorso per-frame;
 - controlli semantici eseguiti sul codice, senza accettare token simulati dentro stringhe o commenti;
 - workflow read-only eseguito per ogni modifica alla repository.
 
-I test negativi `unittest` coprono commenti/stringhe che simulano azioni, cattura cleanup mancante, delimitatori e regole malformati, duplicati, localizzazione incompleta, placeholder con arità errata e regressioni Crouch/Teleport.
+I test negativi `unittest` coprono commenti/stringhe che simulano azioni, cattura cleanup mancante, delimitatori e regole malformati, duplicati, localizzazione incompleta, placeholder con arità errata e regressioni Crouch/Unkillable/Voice Modifier.
 
 Comandi da eseguire dalla radice del repository con Python 3.12:
 
@@ -64,7 +64,7 @@ Esito del validatore:
 
 ```text
 OK - controlli statici v0.5.5 superati
-Generi: 100 | Lingue: 3 | Regole: 49 | Raycast camera: 1
+Generi: 100 | Lingue: 3 | Regole: 52 | Raycast camera: 1
 Nota: importazione, stress a 12 giocatori e test modalità restano prove live obbligatorie.
 ```
 
@@ -86,7 +86,6 @@ La release 0.5.5 non modifica logica, parametri, raycast, comportamento o menu d
 - Crouch con target morto, dietro parete e non spawnato mentre esiste un secondo target valido;
 - registrazione/spawn di umani e bot mentre dodici viewer tengono Crouch;
 - menu e Crouch durante cambio round, hero-select, despawn e passaggio team ↔ spettatore;
-- uscita simultanea della destinazione Teleport senza retarget sul nuovo elemento dello stesso indice;
 - comportamento del workaround bot AI `U+200B` e del lifecycle edge-triggered dei dummy;
 - indipendenza per viewer di English, Bahasa Indonesia e ไทย, incluso lo stato vuoto Revenge;
 - contratto no-score/no-winner su Control, Escort, Hybrid, Push, Flashpoint e Clash;

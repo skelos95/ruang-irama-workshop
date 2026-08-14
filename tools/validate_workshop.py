@@ -814,10 +814,10 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
     codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
-    checks.equal(codes, ["0", "1", "2", "3", "4", "5"], "codici dei sei menu")
+    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6"], "codici dei sette menu")
     checks.require(
-        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*6\s*;", clean) is not None,
-        "navigazione principale non limitata a sei menu",
+        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*7\s*;", clean) is not None,
+        "navigazione principale non limitata a sette menu",
     )
     checks.require(
         re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", clean) is not None,
@@ -826,7 +826,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
 
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
-        "GambarBalasDendam", "GambarTeleportasi",
+        "GambarBalasDendam", "GambarUnkillable", "GambarSuara",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -1168,7 +1168,7 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         start_code = mask_strings(starts[0].body)
         checks.equal(
             len(re.findall(
-                r",\s*0\.900\s*,\s*Do Not Clip",
+                r",\s*1\.100\s*,\s*Do Not Clip",
                 start_code,
             )),
             2,
@@ -1294,14 +1294,16 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
             "And(CurrentArrayElement!=EventPlayer,"
             "And(EntityExists(CurrentArrayElement),"
             "And(HasSpawned(CurrentArrayElement),"
-            "And(IsAlive(CurrentArrayElement),"
-            "IsInLineofSight(EyePosition(EventPlayer),EyePosition(CurrentArrayElement),"
-            "AllBarriersBlockLOS)))))"
+            "IsAlive(CurrentArrayElement))))"
         )
         checks.equal(
             predicate_compact,
             expected_predicate,
             "predicate positivo Filtered Array Crouch",
+        )
+        checks.require(
+            "IsInLineofSight(" not in predicate_compact,
+            "Crouch: il filtro non deve richiedere linea di vista; i muri non bloccano l'ispezione",
         )
         ordered = (
             "FirstOf(SortedArray(EventPlayer.DaftarTargetInspeksi,"
@@ -1533,6 +1535,47 @@ def check_teleport(checks: Checks, source: str, rules: list[Rule]) -> None:
             "Teleport: uscita del target non annulla l'identità bloccata",
         )
 
+
+
+def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> None:
+    clean = mask_strings(source)
+    player_table = re.search(
+        r"(?ms)^\s*player\s*:\s*(.*)\Z",
+        section_body(source, "variables"),
+    )
+    for slot, name in (
+        (51, "UnkillableAktif"),
+        (52, "KursorUnkillable"),
+        (53, "IndeksSuara"),
+        (54, "KursorSuara"),
+    ):
+        checks.require(
+            player_table is not None
+            and re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", player_table.group(1)) is not None,
+            f"fitur arcade: slot player {slot} deve essere {name}",
+        )
+    for token in (
+        "Set Status(Event Player, Null, Unkillable, 9999);",
+        "Clear Status(Event Player, Unkillable);",
+        "Set Player Health(Event Player, 1);",
+        "Health(Event Player) >= Max Health(Event Player);",
+        "Stop Modifying Hero Voice Lines(Event Player);",
+        "Start Modifying Hero Voice Lines(Event Player, 0.500, False);",
+        "Start Modifying Hero Voice Lines(Event Player, 0.750, False);",
+        "Start Modifying Hero Voice Lines(Event Player, 1.250, False);",
+        "Start Modifying Hero Voice Lines(Event Player, 1.500, False);",
+    ):
+        checks.require(token in clean, f"fitur arcade mancante: {token}")
+    router = rules_containing(rules, "Subroutine;", "GambarMenu;")
+    if router:
+        checks.require(
+            "Call Subroutine(GambarTeleportasi);" not in mask_strings(router[0].body),
+            "Teleport non deve più essere instradato dal menu principale",
+        )
+    checks.require(
+        not any(code_contains(rule.body, "Event Player.HalamanMenu == 5;", "SegarkanTargetTeleportasi") for rule in rules),
+        "menu 5 non deve più eseguire il refresh Teleport",
+    )
 
 def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
     clean_source = mask_strings(source)
@@ -1794,7 +1837,7 @@ def main() -> None:
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)
-        check_teleport(checks, source, rules)
+        check_arcade_features(checks, source, rules)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)
     except ParseError as exc:

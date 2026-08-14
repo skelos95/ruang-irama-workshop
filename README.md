@@ -1,6 +1,6 @@
 # AFK Dedicated Server — Overwatch Workshop
 
-**AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Teleport e ispezione con Crouch senza imporre mappe o impostazioni lobby.
+**AFK Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Unkillable + 1 HP, modifica voce e ispezione con Crouch senza imporre mappe o impostazioni lobby.
 
 La versione **0.5.5** stabilizza i percorsi non-camera di menu, Crouch, nameplate, Teleport e lifecycle sulla base Season 4: **Heroes of Busan**. La camera in terza persona, i suoi parametri e i suoi menu restano invariati rispetto alla 0.5.4. Lo stato della release è **static-ready, live-pending**: il gate statico e le prove che richiedono il client Overwatch sono distinti in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
 
@@ -23,7 +23,7 @@ La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti.
 
 - HUD centrale con nome server, posizione Indonesia e countdown personalizzato.
 - Liste sociali degli umani con icona dell'eroe, tempo trascorso e soundtrack scelta.
-- Sei menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge` e `5 - Teleport`.
+- Sette menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge`, `5 - Unkillable + 1 HP` e `6 - Voice Modifier`.
 - 100 generi musicali e 20 colori, navigabili con wrap circolare.
 - Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
 - Camera dinamica calcolata interamente dal renderer: arretramento sensibile al pitch, spalla orizzontale, collisione e mira condividono lo stesso fotogramma, con un solo raycast e senza loop server.
@@ -68,7 +68,7 @@ Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.
 
 - Le keyword e le API native Workshop restano in inglese; identificatori, regole e commenti personalizzati sono in Bahasa Indonesia.
 - I dummy bot bypassano la classificazione degli umani e sono gestiti dal lifecycle edge-triggered tramite `Is Dummy Bot`. Per i normali bot AI resta necessario il workaround con due sentinelle `U+200B`, da ricontrollare dopo ogni patch.
-- Bot AI e dummy bot non ricevono i menu o gli HUD sociali, ma possono restare destinazioni valide per camera, Crouch e Teleport.
+- Bot AI e dummy bot non ricevono i menu o gli HUD sociali, ma possono restare destinazioni valide per camera e Crouch.
 - Il timer usa una propria origine e una propria scadenza e aggiorna la stringa visualizzata una volta al secondo.
 - Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l'host vede carico corrente, medio, picco e conteggi HUD/IWT.
 - I controlli statici non possono certificare il comportamento live del parser, la sentinella bot o la stabilità a 12 giocatori. Lo stato verificato è riportato in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).

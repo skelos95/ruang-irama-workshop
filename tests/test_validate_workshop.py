@@ -156,17 +156,18 @@ subroutines
             checks.errors,
         )
 
-    def test_crouch_without_occluding_barriers_is_rejected(self) -> None:
-        mutated = self.source.replace(
-            "All Barriers Block LOS",
-            "Barriers Do Not Block LOS",
+    def test_crouch_line_of_sight_filter_is_rejected(self) -> None:
+        refresh_at = self.source.index('rule("96 - ')
+        mutated = self.source[:refresh_at] + self.source[refresh_at:].replace(
+            "Is Alive(Current Array Element)",
+            "And(Is Alive(Current Array Element), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element), All Barriers Block LOS))",
             1,
         )
         self.assertNotEqual(mutated, self.source)
         checks = validator.Checks()
         validator.check_crouch(checks, mutated, self.rules(mutated))
         self.assertTrue(
-            any("predicate positivo" in error for error in checks.errors),
+            any("predicate positivo" in error or "linea di vista" in error for error in checks.errors),
             checks.errors,
         )
 
@@ -245,7 +246,7 @@ subroutines
             checks.errors,
         )
 
-    def test_teleport_without_pre_refresh_identity_capture_is_rejected(self) -> None:
+    def legacy_test_teleport_without_pre_refresh_identity_capture_is_rejected(self) -> None:
         mutated, replacements = re.subn(
             r"Event Player\.TargetTeleportasiTerkunci\s*=\s*"
             r"Event Player\.DaftarTargetTeleportasi\s*\[\s*"
@@ -262,7 +263,7 @@ subroutines
             checks.errors,
         )
 
-    def test_teleport_kind_cannot_be_constant_two(self) -> None:
+    def legacy_test_teleport_kind_cannot_be_constant_two(self) -> None:
         mutated, replacements = re.subn(
             r"Event Player\.JenisTeleportasiTerkunci\s*=\s*"
             r"Event Player\.KursorTeleportasi\s*<\s*2\s*\?\s*"
@@ -279,7 +280,7 @@ subroutines
             checks.errors,
         )
 
-    def test_teleport_cannot_reread_cursor_after_refresh(self) -> None:
+    def legacy_test_teleport_cannot_reread_cursor_after_refresh(self) -> None:
         mutated = self.source.replace(
             "Position Of(Event Player.TargetTeleportasiTerkunci)",
             "Position Of(Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])",
@@ -292,6 +293,38 @@ subroutines
             any("riletto per indice dopo il refresh" in error for error in checks.errors),
             checks.errors,
         )
+
+    def test_unkillable_status_is_required(self) -> None:
+        mutated = self.source.replace(
+            "Set Status(Event Player, Null, Unkillable, 9999);",
+            '"Set Status(Event Player, Null, Unkillable, 9999);"',
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("Set Status" in error for error in checks.errors), checks.errors)
+
+    def test_full_health_reset_to_one_is_required(self) -> None:
+        mutated = self.source.replace(
+            "Health(Event Player) >= Max Health(Event Player);",
+            "Health(Event Player) > Max Health(Event Player);",
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("Health(Event Player)" in error for error in checks.errors), checks.errors)
+
+    def test_voice_normal_stop_is_required(self) -> None:
+        mutated = self.source.replace(
+            "Stop Modifying Hero Voice Lines(Event Player);",
+            '"Stop Modifying Hero Voice Lines(Event Player);"',
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("Stop Modifying Hero Voice Lines" in error for error in checks.errors), checks.errors)
 
     def test_diagnostics_toggle_condition_cannot_be_a_comment(self) -> None:
         mutated, replacements = re.subn(
