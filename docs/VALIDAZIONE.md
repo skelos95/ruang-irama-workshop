@@ -13,7 +13,7 @@ Questo rapporto separa intenzionalmente ciò che può essere dimostrato sul repo
 Il gate deve riferirsi all'esatto blob Git di `workshop/ruang_irama.workshop` usato dalla release:
 
 ```text
-ebf54e916e1982f1312fd510ff1281bb0f4b30b0
+cf3545438ee46ef610344413eab7368f207e49a8
 ```
 
 Il valore sopra è l'oggetto staged restituito da `git rev-parse :workshop/ruang_irama.workshop` dopo l'ultima modifica. Dopo il commit deve coincidere con `git rev-parse HEAD:workshop/ruang_irama.workshop`; la CI va eseguita su quell'esatto commit.

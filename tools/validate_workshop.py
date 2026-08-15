@@ -1330,12 +1330,9 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
 
     if refresh:
         checks.require(
-            re.search(
-                r"Wait\s*\(\s*0\.100\s*,",
-                mask_strings(refresh[0].body),
-            ) is not None,
-            "refresh Crouch non a 0,10 s",
-        )
+        "Wait(0.200, Abort When False);" in source,
+        "refresh Crouch non a 0,20 s",
+    )
 
     cleanup = [
         r for r in rules_containing(
@@ -1833,11 +1830,9 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
     if left_hud_rules:
         diagnostic = mask_strings(left_hud_rules[0].body)
         checks.require(
-            all(token in diagnostic for token in (
-                "Last Of", "Sorted Array", "Global.PemainManusia", "UrutanHUD",
-            )),
-            "diagnostica non ancorata all'ultimo player della lista sinistra",
-        )
+        "Event Player.UrutanHUD == Global.SlotHUDTerakhir" in source,
+        "diagnostica non ancorata alla cache dell'ultimo player della lista sinistra",
+    )
         checks.require(
             all(token in diagnostic for token in (
                 "HudKiriPemain", "HudMenuPemain", "TeksDuniaPemain", "TeksDiriPemain",
@@ -2432,6 +2427,48 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
     ):
         checks.require(token in main, f"Main Menu non corrisponde al sottomenu: {token}")
 
+
+def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule]) -> None:
+    clean = mask_strings(source)
+    variables = section_body(source, "variables")
+    checks.require(re.search(r"(?m)^\s*42\s*:\s*SlotHUDTerakhir\s*$", variables) is not None, "audit: SlotHUDTerakhir assente")
+    checks.require("Global.SlotHUDTerakhir = -1;" in clean, "audit: cache ultima riga non inizializzata")
+    checks.require("Global.SlotHUDTerakhir = Max(Global.SlotHUDTerakhir, Event Player.UrutanHUD);" in clean, "audit: cache ultima riga non aggiornata al join")
+    checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean, "audit: roster non usa cache ultima riga")
+    checks.require("Last Of(Sorted Array(Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD)))" not in clean, "audit: sort roster rivalutato ancora presente")
+    checks.require("Global.SlotHUDTerakhir = Count Of(Global.SlotHUDPemain) == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));" in clean, "audit: cache ultima riga non ricalcolata al leave")
+
+    menu_open = [rule for rule in rules if code_contains(rule.body, "Event Player.MenuTerbuka = True;", "Event Player.HalamanMenu = -1;")]
+    checks.equal(len(menu_open), 1, "audit: apertura Arcade Menu")
+    if menu_open:
+        body = mask_strings(menu_open[0].body)
+        checks.require("Call Subroutine(SegarkanTargetKamera);" not in body, "audit: refresh camera inutile nel main menu")
+        checks.require("Call Subroutine(SegarkanTargetBalasDendam);" not in body, "audit: refresh revenge inutile nel main menu")
+
+    expected = (
+        ("02c - Ruang Muncul:", "Wait(1, Abort When False);", "spawn cache 1Hz"),
+        ("03 - Waktu:", "Wait(5, Ignore Condition);", "minuti 0,2Hz"),
+        ("07b - Menu kamera:", "Wait(1, Abort When False);", "camera passive 1Hz"),
+        ("07c - Menu Balas Dendam:", "Wait(1, Abort When False);", "revenge passive 1Hz"),
+        ("14 - Intip Pahlawan:", "Wait(0.200, Abort When False);", "inspection 5Hz"),
+        ("19f - Teleport Crouch:", "Wait(1, Abort When False);", "teleport passive 1Hz"),
+    )
+    for prefix, token, label in expected:
+        matches = [rule for rule in rules if rule.name.startswith(prefix)]
+        checks.equal(len(matches), 1, f"audit: {label}")
+        if matches:
+            body = mask_strings(matches[0].body)
+            checks.require(token in body, f"audit: frequenza errata {label}")
+            if prefix.startswith("02c"):
+                checks.require("Loop If Condition Is True;" in body, "audit: spawn cache senza loop bounded")
+
+    checks.equal(len(call_texts(source, "Ray Cast Hit Position")), 1, "audit: raycast camera")
+    inspection_sorts = [rule for rule in rules if code_contains(rule.body, "Subroutine;", "SegarkanTargetInspeksi;", "Sorted Array(Event Player.DaftarTargetInspeksi")]
+    checks.equal(len(inspection_sorts), 1, "audit: sort inspection")
+
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarUnkillable", "GambarSuara", "GambarIkon"):
+        checks.equal(len(rules_containing(rules, "Subroutine;", f"{sub};")), 1, f"audit: definizione unica {sub}")
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2450,6 +2487,7 @@ def main() -> None:
         check_bot_lifecycle(checks, source, rules)
         check_menus(checks, source, rules, subroutines)
         check_menu_palette_and_name_colors(checks, source, rules)
+        check_runtime_efficiency_audit(checks, source, rules)
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)

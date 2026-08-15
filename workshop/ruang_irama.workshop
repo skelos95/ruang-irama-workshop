@@ -43,6 +43,7 @@ variables
 		39: RGBFase
 		40: DaftarIkon
 		41: NamaIkon
+		42: SlotHUDTerakhir
 	player:
 		0: WaktuMasuk
 		1: WaktuTercatat
@@ -271,6 +272,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.TeksDiriPemain = Empty Array;
 		Global.SlotHUDPemain = Empty Array;
 		Global.IndeksKeluar = -1;
+		Global.SlotHUDTerakhir = -1;
 		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7);
 		Global.DaftarWarna = Array(
 			Color(White),
@@ -868,14 +870,14 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
 		Event Player.MenitLobby = 0;
 		Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);
+		Global.SlotHUDTerakhir = Max(Global.SlotHUDTerakhir, Event Player.UrutanHUD);
 		Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobby)), And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player == Last Of(Sorted Array(
-			Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD))))) ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("{0}\n{1}",
+			Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobby)), And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player.UrutanHUD == Global.SlotHUDTerakhir)) ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("{0}\n{1}",
 			Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}",
 			3 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(
 			Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain, Current Array Element != 0)))) : Custom String("{0}\n{1}",
@@ -888,8 +890,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}", Global.DaftarIkon[Event Player.IndeksIkon],
 			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player,
 			Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih soundtrack") : Custom String("ยังไม่ได้เลือกเพลง"))), Event Player == Last Of(Sorted Array(
-			Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD))) ? Custom String("\n ") : Custom String("")), Null, Right, -99 + Event Player.UrutanHUD,
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih soundtrack") : Custom String("ยังไม่ได้เลือกเพลง"))), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Custom String("\n ") : Custom String("")), Null, Right, -99 + Event Player.UrutanHUD,
 			Color(White), Event Player.WarnaNama, Color(White), Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
 		Global.HudKananPemain = Append To Array(Global.HudKananPemain, Event Player.HudKanan);
@@ -924,6 +925,8 @@ rule("02c - Ruang Muncul: Perbarui posisi aman setiap kali masuk")
 	{
 		Event Player.PosisiRuangMuncul = Position Of(Event Player);
 		Event Player.PunyaPosisiMuncul = True;
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
 	}
 }
 
@@ -944,7 +947,7 @@ rule("03 - Waktu: Hitung menit nongkrong tanpa bikin server ngos-ngosan")
 	actions
 	{
 		Event Player.MenitLobby = Max(0, Round To Integer((Total Time Elapsed - Event Player.WaktuMasuk) / 60, Down));
-		Wait(1, Ignore Condition);
+		Wait(5, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -1033,6 +1036,7 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 			Modify Global Variable(TeksDiriPemain, Remove From Array By Index, Global.IndeksKeluar);
 			Modify Global Variable(SlotHUDPemain, Remove From Array By Index, Global.IndeksKeluar);
 			Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
+			Global.SlotHUDTerakhir = Count Of(Global.SlotHUDPemain) == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));
 		End;
 		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
 		For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);
@@ -1125,8 +1129,6 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
-			Call Subroutine(SegarkanTargetKamera);
-			Call Subroutine(SegarkanTargetBalasDendam);
 			Disallow Button(Event Player, Button(Melee));
 			Disallow Button(Event Player, Button(Jump));
 			Disallow Button(Event Player, Button(Crouch));
@@ -1353,7 +1355,7 @@ rule("07b - Menu kamera: Segarkan pemain dan bot yang bisa ditonton")
 	actions
 	{
 		Call Subroutine(SegarkanTargetKamera);
-		Wait(0.500, Abort When False);
+		Wait(1, Abort When False);
 		Loop If Condition Is True;
 	}
 }
@@ -1379,7 +1381,7 @@ rule("07c - Menu Balas Dendam: Segarkan data tanpa menggambar ulang")
 	actions
 	{
 		Call Subroutine(SegarkanTargetBalasDendam);
-		Wait(0.500, Abort When False);
+		Wait(1, Abort When False);
 		Loop If Condition Is True;
 	}
 }
@@ -1932,7 +1934,7 @@ rule("14 - Intip Pahlawan: Perbarui target meski terhalang dinding")
 	actions
 	{
 		Call Subroutine(SegarkanTargetInspeksi);
-		Wait(0.100, Abort When False);
+		Wait(0.200, Abort When False);
 		Loop If Condition Is True;
 	}
 }
@@ -2354,7 +2356,7 @@ rule("19f - Teleport Crouch: Segarkan lista target senza ridisegno periodico")
 	actions
 	{
 		Call Subroutine(SegarkanTargetTeleportasi);
-		Wait(0.500, Abort When False);
+		Wait(1, Abort When False);
 		Loop If Condition Is True;
 	}
 }

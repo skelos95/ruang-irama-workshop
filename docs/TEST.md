@@ -280,3 +280,9 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Palette menu live:** scorrere le 8 voci del Main Menu e aprire ogni sottomenu; il colore principale della voce deve coincidere con quello del sottomenu, mentre il colore degli input deve restare quello precedente.
 
 - **Name Color 32 live:** scorrere tutte le 32 tonalità, incluse le nuove da Peach Glow a Neon Chartreuse, applicarne diverse e verificare persistenza cursore e colore nome.
+
+- **Stress 12 player:** con 12 umani attivi aprire/chiudere menu in parallelo, cambiare sottomenu e usare Camera/Revenge/Teleport/Crouch inspection verificando input e HUD reattivi.
+
+- **Join/leave stress:** con lobby quasi piena far entrare/uscire ripetutamente player e verificare ordine roster, diagnostics sull’ultima riga, riuso slot HUD e cleanup di Camera/Revenge/Teleport/Inspection.
+
+- **Audit frequenze live:** Crouch inspection a 5 Hz deve restare fluido; menu dinamici devono riflettere join/leave entro circa 1 s; MIN può aggiornarsi con massimo ~5 s di ritardo; Spawn Room deve registrare subito la posizione e aggiornarla poi ogni secondo.

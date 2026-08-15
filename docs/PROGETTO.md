@@ -198,3 +198,10 @@ Il dispatcher `Interact` dei menu è idempotente: Soundtrack, Camera, Name Color
 ### Palette menu coordinata
 
 Il Main Menu ora eredita visivamente il colore principale del sottomenu evidenziato: Soundtrack aqua, Camera blu elettrico, Name Color usa la preview del colore evidenziato, HUD Language viola, Revenge rosso corallo, Unkillable ambra, Voice Modifier mint e Player Icon fucsia-lavanda. I colori chiari degli input/comandi non sono stati modificati. `DaftarWarna` è stato esteso da 20 a 32 voci mantenendo invariati i primi 20 indici e aggiungendo 12 tonalità pastel/neon con nomi EN/ID/TH allineati.
+
+
+### Audit runtime 12 player
+
+Audit completo eseguito su inizializzazione, classificazione umano/bot, join/leave, HUD roster, dispatcher e renderer menu, Camera, Revenge, Teleport, Crouch inspection, Unkillable, Jump respawn, RGB, timer ed effetti. Non risultano regole funzionalmente duplicate o renderer/subroutine menu morti; le regole simili rimaste coprono bootstrap, edge detection, cleanup o fasi diverse e sono intenzionali.
+
+Ottimizzazioni conservative: `SlotHUDTerakhir` sostituisce due sort del roster dentro HUD rivalutati; il Main Menu non scansiona più Camera/Revenge inutilmente; refresh passivi Camera/Revenge/Teleport da 0,5 s a 1 s con refresh immediato conservato sugli input; `MenitLobby` da 1 s a 5 s; posizione Spawn Room salvata subito e poi a 1 Hz invece che continuamente; Crouch inspection da 10 Hz a 5 Hz. Restano invariati il RGB globale a 10 Hz, il timer server a 1 Hz e il singolo raycast camera, già bounded.
