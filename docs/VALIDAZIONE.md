@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-6f8484bc6f72bc3279487fde1988ef58bb467c9e
+3feaa6c12613264bed84edeb8b30d56036fc038e
 ```
 
 ## Controlli statici correnti
@@ -24,7 +24,7 @@ Il gate verifica:
 - dichiarazioni e regole senza duplicati invalidi;
 - 100 generi;
 - 3 lingue EN / ID / TH;
-- **8 menu Arcade** (`0..7`);
+- **10 menu Arcade** (`0..9`);
 - **32 Name Color** con array nomi allineati;
 - **37 Player Icon** (`Nothing` + 36 icone);
 - Menu 5 Unkillable/Kebal 1 HP;

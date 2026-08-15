@@ -45,6 +45,8 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 5 | Unkillable: 1 HP / Kebal | ON / OFF |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
+| 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
+| 9 | Name Privacy | mostra/nasconde il proprio nome agli altri, default OFF |
 
 Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
 
@@ -222,3 +224,10 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 - stress con 12 player attivi;
 - rendering Thai;
 - Server Load reale.
+
+
+## Menu 8 e 9 — controlli Crouch personali
+
+`Menu 8 - Crouch Teleport` usa `TeleportasiJongkokDiaktifkan`: OFF di default. Solo quando è ON la pressione di Crouch può aprire `GambarTeleportasi`; l'ispezione eroe/salute resta indipendente. `TeleportasiJongkokAktif` continua a rappresentare soltanto l'overlay attualmente aperto.
+
+`Menu 9 - Name Privacy` usa `NamaInspeksiTerlihat`: OFF di default. Quando è OFF, gli altri viewer che ispezionano quel player con Crouch vedono ancora icona eroe e salute ma ricevono una stringa nome vuota; quando è ON vedono anche il nome. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.

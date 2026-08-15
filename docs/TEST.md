@@ -236,3 +236,9 @@ Obiettivi live consigliati:
 ## Stato finale
 
 Il repository può essere classificato **static-ready** quando unit test e validatore passano. La dicitura **live-ready** richiede invece il completamento della matrice sopra nel client Overwatch con 12 player reali/simulati.
+
+- **Menu 8 Crouch Teleport:** nuovo player = OFF; Crouch non deve aprire Teleport. Attivare dal menu 8, chiudere il menu e tenere Crouch: HUD Teleport visibile. Disattivare: torna a non aprirsi.
+
+- **Menu 9 Name Privacy:** nuovo player = OFF; un secondo player in Crouch inspection deve vedere eroe + salute ma non il nome. Attivare Menu 9: il nome deve comparire live; disattivare: deve sparire senza rimuovere eroe/salute.
+
+- **10 menu:** scorrere Main Menu avanti/indietro e verificare wrap `0..9`, cursori persistenti e sfumatura colore anche tra menu 7/8/9.
