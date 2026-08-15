@@ -26,8 +26,6 @@ def git_blob_sha(path: Path) -> str:
 
 source = SOURCE.read_text(encoding="utf-8")
 
-# Native Create Icon is used for Heart/Skull because the Workshop font does not
-# render the Unicode skull reliably. The brackets remain a separate, small IWT.
 source = replace_once(
     source,
     "\t\t75: JedaKartuNasib\n",
@@ -46,8 +44,6 @@ old_card = '''\t\t\t\tCreate In-World Text(All Players(All Teams), Event Player.
 new_card = '''\t\t\t\tCreate In-World Text(All Players(All Teams), Custom String("[     ]"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.200, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);\n\t\t\t\tEvent Player.TeksKartuNasib = Last Text ID;\n\t\t\t\tIf(Event Player.KartuNasibMerah == True);\n\t\t\t\t\tCreate Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);\n\t\t\t\tElse;\n\t\t\t\t\tCreate Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);\n\t\t\t\tEnd;\n\t\t\t\tEvent Player.IkonKartuNasib = Last Created Entity;'''
 source = replace_once(source, old_card, new_card, "native luck icon creation")
 
-# Recreate the native icon whenever the roulette changes color/icon. This makes
-# both the glyph and its color deterministic instead of depending on reevaluation.
 source = replace_once(
     source,
     "\t\tEvent Player.KartuNasibMerah = Event Player.KartuNasibMerah == False;\n\t\tModify Player Variable(Event Player, PutaranKartuNasib, Subtract, 1);\n\t\tModify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);",
@@ -55,15 +51,19 @@ source = replace_once(
     "roulette native icon refresh",
 )
 
-# Normal resolution cleanup.
-source = replace_once(
-    source,
+# Scope normal cleanup strictly to rule 18e so the identical death cleanup is untouched here.
+roulette_start = source.index('rule("18e - Nasib: Roulette merah hijau makin lambat")')
+roulette_end = source.index('rule("18f - Nasib: Hapus kartu saat pemilik mati")', roulette_start)
+roulette = source[roulette_start:roulette_end]
+roulette = replace_once(
+    roulette,
     "\t\tIf(Event Player.TeksKartuNasib != Null);\n\t\t\tDestroy In-World Text(Event Player.TeksKartuNasib);\n\t\tEnd;\n\t\tEvent Player.TeksKartuNasib = Null;\n\t\tEvent Player.KartuNasibAktif = False;",
     "\t\tIf(Event Player.TeksKartuNasib != Null);\n\t\t\tDestroy In-World Text(Event Player.TeksKartuNasib);\n\t\tEnd;\n\t\tIf(Event Player.IkonKartuNasib != Null);\n\t\t\tDestroy Icon(Event Player.IkonKartuNasib);\n\t\tEnd;\n\t\tEvent Player.TeksKartuNasib = Null;\n\t\tEvent Player.IkonKartuNasib = Null;\n\t\tEvent Player.KartuNasibAktif = False;",
     "normal luck cleanup",
 )
+source = source[:roulette_start] + roulette + source[roulette_end:]
 
-# Death cleanup, scoped by the rule name to avoid replacing the normal cleanup twice.
+# Death cleanup.
 death_start = source.index('rule("18f - Nasib: Hapus kartu saat pemilik mati")')
 death_end = source.index('rule("19 - Teleportasi Jongkok:', death_start)
 death = source[death_start:death_end]
@@ -86,8 +86,6 @@ source = replace_once(
 SOURCE.write_text(source, encoding="utf-8")
 
 validator = VALIDATOR.read_text(encoding="utf-8")
-
-# New dedicated variable.
 validator = replace_once(
     validator,
     '        (54, "KursorSuara"),\n    ):',
@@ -95,16 +93,14 @@ validator = replace_once(
     "validator luck icon slot",
 )
 
-# Card IWT is brackets only, while native Create Icon owns the visible glyph/color.
 old_card_check = '''        checks.require(\n            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.500, Do Not Clip" in card_texts[0],\n            "Nasib: la carta pubblica deve restare agganciata al mirino a 4 m e usare dimensione 2,5",\n        )\n        checks.require(\n            "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],\n            "Nasib: il testo mondo non cambia dinamicamente rosso/verde",\n        )\n        checks.require(\n            "Custom String(\\\"[ ☠ ]\\\")" in card_texts[0]\n            and "Custom String(\\\"[ ♥ ]\\\")" in card_texts[0]\n            and "Icon String(" not in card_texts[0]\n            and "TRY YOUR LUCK" not in card_texts[0]\n            and "COBA NASIB" not in card_texts[0],\n            "Nasib: la carta deve usare simboli testuali centrati [ ☠ ] / [ ♥ ] colorabili, senza Icon String",\n        )'''
 new_card_check = '''        checks.require(\n            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.200, Do Not Clip" in card_texts[0],\n            "Nasib: le parentesi della carta devono restare agganciate al mirino a 4 m e usare dimensione 2,2",\n        )\n        checks.require(\n            "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],\n            "Nasib: le parentesi non cambiano dinamicamente rosso/verde",\n        )\n        checks.require(\n            "Custom String(\\\"[     ]\\\")" in card_texts[0]\n            and "Icon String(" not in card_texts[0]\n            and "☠" not in card_texts[0]\n            and "♥" not in card_texts[0]\n            and "TRY YOUR LUCK" not in card_texts[0]\n            and "COBA NASIB" not in card_texts[0],\n            "Nasib: le parentesi devono essere testo semplice; il simbolo è un Create Icon nativo",\n        )'''
 validator = replace_once(validator, old_card_check, new_card_check, "validator native icon card")
 
 marker = '''    checks.require(\n        "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),\n        "Nasib: cache effetto non segue il mirino del proprietario",\n    )'''
-native_checks = '''    luck_icons = [call for call in call_texts(source, "Create Icon") if "KartuNasib" not in call and (", Skull," in call or ", Heart," in call)]\n    checks.equal(len(luck_icons), 4, "Nasib: due Create Icon iniziali più due per i cambi roulette")\n    if luck_icons:\n        checks.equal(len([call for call in luck_icons if ", Skull," in call]), 2, "Nasib: due rami Skull nativi")\n        checks.equal(len([call for call in luck_icons if ", Heart," in call]), 2, "Nasib: due rami Heart nativi")\n        for call in luck_icons:\n            checks.require(\n                "All Players(All Teams)" in call\n                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4" in call\n                and "Visible To and Position" in call,\n                "Nasib: icona nativa non è pubblica o non segue il mirino",\n            )\n        for call in [call for call in luck_icons if ", Skull," in call]:\n            checks.require("Custom Color(255, 70, 70, 255)" in call, "Nasib: Skull non rosso")\n        for call in [call for call in luck_icons if ", Heart," in call]:\n            checks.require("Custom Color(70, 255, 110, 255)" in call, "Nasib: Heart non verde")\n    checks.require(\n        "Destroy Icon(Event Player.IkonKartuNasib);" in clean,\n        "Nasib: cleanup icona nativa assente",\n    )\n\n''' + marker
+native_checks = '''    luck_icons = [call for call in call_texts(source, "Create Icon") if ", Skull," in call or ", Heart," in call]\n    checks.equal(len(luck_icons), 4, "Nasib: due Create Icon iniziali più due per i cambi roulette")\n    if luck_icons:\n        checks.equal(len([call for call in luck_icons if ", Skull," in call]), 2, "Nasib: due rami Skull nativi")\n        checks.equal(len([call for call in luck_icons if ", Heart," in call]), 2, "Nasib: due rami Heart nativi")\n        for call in luck_icons:\n            checks.require(\n                "All Players(All Teams)" in call\n                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4" in call\n                and "Visible To and Position" in call,\n                "Nasib: icona nativa non è pubblica o non segue il mirino",\n            )\n        for call in [call for call in luck_icons if ", Skull," in call]:\n            checks.require("Custom Color(255, 70, 70, 255)" in call, "Nasib: Skull non rosso")\n        for call in [call for call in luck_icons if ", Heart," in call]:\n            checks.require("Custom Color(70, 255, 110, 255)" in call, "Nasib: Heart non verde")\n    checks.require(\n        "Destroy Icon(Event Player.IkonKartuNasib);" in clean,\n        "Nasib: cleanup icona nativa assente",\n    )\n\n''' + marker
 validator = replace_once(validator, marker, native_checks, "validator native icon behavior")
 
-# Death reset must destroy and null both text and native icon.
 validator = replace_once(
     validator,
     '                "Destroy In-World Text(Event Player.TeksKartuNasib);",\n            ),',
