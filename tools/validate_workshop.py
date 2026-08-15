@@ -2127,9 +2127,9 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     for token in (
         "58: PosisiMati", "59: PosisiRespawnAman", "60: RespawnJumpDipakai",
         "18: EfekTerapkan", "19: EfekPulihkan",
-        "Play Effect(All Players(All Teams), Good Explosion, Custom Color(80, 220, 255, 255)",
+        "Play Effect(All Players(All Teams), Good Explosion, Global.RGB",
         "Play Effect(Event Player, Buff Impact Sound",
-        "Play Effect(All Players(All Teams), Ring Explosion, Custom Color(205, 160, 255, 255)",
+        "Play Effect(All Players(All Teams), Ring Explosion, Global.RGB",
         "Play Effect(Event Player, Ring Explosion Sound",
         "Event Player.PosisiMati = Position Of(Event Player);",
         "Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)))",
@@ -2157,6 +2157,37 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
             "Jump respawn: ordine posizione sicura -> respawn -> teleport errato",
         )
 
+
+def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
+    globals_body = section_body(source, "variables")
+    for slot, name in ((38, "RGB"), (39, "RGBFase")):
+        checks.require(
+            re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", globals_body) is not None,
+            f"RGB: slot global {slot} deve essere {name}",
+        )
+    clean = mask_strings(source)
+    checks.require("Global.RGBFase = 0;" in clean, "RGB: fase iniziale assente")
+    checks.require("Global.RGB = Custom Color(255, 0, 0, 255);" in clean, "RGB: colore iniziale assente")
+    rgb_rules = [rule for rule in rules if code_contains(
+        rule.body,
+        "Ongoing - Global;",
+        "Global.RGB = Custom Color(",
+        "Wait(0.100, Ignore Condition);",
+        "Global.RGBFase = (Global.RGBFase + 12) % 1530;",
+        "Loop If Condition Is True;",
+    )]
+    checks.equal(len(rgb_rules), 1, "loop RGB globale")
+    hud = [call for call in call_texts(source, "Create HUD Text") if "CHILL DEDICATED SERVER" in call and "Global.TeksWaktuServer" in call]
+    checks.equal(len(hud), 1, "HUD principale RGB")
+    if hud:
+        checks.require("Global.RGB" in hud[0] and "Visible To String and Color" in hud[0], "titolo/timer non rivalutano Global.RGB")
+    apply = rules_containing(rules, "Subroutine;", "EfekTerapkan;")
+    restore = rules_containing(rules, "Subroutine;", "EfekPulihkan;")
+    if apply:
+        checks.require(code_contains(apply[0].body, "Good Explosion, Global.RGB"), "effetto applicazione non usa RGB")
+    if restore:
+        checks.require(code_contains(restore[0].body, "Ring Explosion, Global.RGB"), "effetto ripristino non usa RGB")
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2179,6 +2210,7 @@ def main() -> None:
         check_cleanup_and_revenge(checks, source, rules)
         check_arcade_features(checks, source, rules)
         check_feedback_and_jump_respawn(checks, source, rules)
+        check_rgb_system(checks, source, rules)
         check_vpn_country_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)

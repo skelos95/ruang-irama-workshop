@@ -39,6 +39,8 @@ variables
 		35: SlotHUDPemain
 		36: DaftarNegaraVPN
 		37: IndeksNegaraVPN
+		38: RGB
+		39: RGBFase
 	player:
 		0: WaktuMasuk
 		1: WaktuTercatat
@@ -452,6 +454,8 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.TeksWaktuServer = Global.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Global.SisaWaktuServer / 60, Down),
 			Global.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Global.SisaWaktuServer / 60, Down), Global.SisaWaktuServer % 60);
 		Global.RestartSudahDiminta = False;
+		Global.RGBFase = 0;
+		Global.RGB = Custom Color(255, 0, 0, 255);
 		"Tidak ada mode yang boleh mengakhiri pertandingan atau memberi skor; keenam mode inti 6v6 tetap berjalan sampai timer server habis."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
@@ -465,7 +469,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("SERVER LOCATION: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOKASI SERVER: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]),
 			Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
-			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
+			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect player, hero & health", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0}: lihat pemain, hero & kesehatan", Input Binding String(Button(Crouch))) : Custom String(
@@ -506,6 +510,31 @@ rule("00a - Global: Blokir penyelesaian saat permainan dimulai")
 		"Terapkan sekali lagi saat permainan benar-benar dimulai."
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("00r - Global: RGB pelangi untuk judul, timer, dan efek")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+	}
+
+	actions
+	{
+		Global.RGB = Custom Color(
+			Global.RGBFase < 255 ? 255 : Global.RGBFase < 510 ? 510 - Global.RGBFase : Global.RGBFase < 1020 ? 0 : Global.RGBFase < 1275 ? Global.RGBFase - 1020 : 255,
+			Global.RGBFase < 255 ? Global.RGBFase : Global.RGBFase < 765 ? 255 : Global.RGBFase < 1020 ? 1020 - Global.RGBFase : 0,
+			Global.RGBFase < 510 ? 0 : Global.RGBFase < 765 ? Global.RGBFase - 510 : Global.RGBFase < 1275 ? 255 : 1530 - Global.RGBFase,
+			255);
+		Wait(0.100, Ignore Condition);
+		Global.RGBFase = (Global.RGBFase + 12) % 1530;
+		Loop If Condition Is True;
 	}
 }
 
@@ -2697,7 +2726,7 @@ rule("93a - Subrutin: Efek perubahan diterapkan")
 
 	actions
 	{
-		Play Effect(All Players(All Teams), Good Explosion, Custom Color(80, 220, 255, 255), Position Of(Event Player) + Vector(0, 1, 0), 2.500);
+		Play Effect(All Players(All Teams), Good Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 2.500);
 		Play Effect(Event Player, Buff Impact Sound, Color(White), Position Of(Event Player), 35);
 	}
 }
@@ -2712,7 +2741,7 @@ rule("93b - Subrutin: Efek pengaturan dipulihkan")
 
 	actions
 	{
-		Play Effect(All Players(All Teams), Ring Explosion, Custom Color(205, 160, 255, 255), Position Of(Event Player) + Vector(0, 1, 0), 3);
+		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 3);
 		Play Effect(Event Player, Ring Explosion Sound, Color(White), Position Of(Event Player), 35);
 	}
 }

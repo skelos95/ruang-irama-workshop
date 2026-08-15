@@ -130,3 +130,5 @@ Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us
 
 - Le modifiche e i ripristini hanno feedback audiovisivo: visuale visibile a tutti, audio solo per chi esegue l’azione.
 - Da morto, con menu chiuso, `Jump` forza il respawn vicino al punto di morte su una posizione corretta da `Nearest Walkable Position`.
+
+- Sistema RGB globale animato: il titolo `CHILL DEDICATED SERVER`, il timer centrale e gli effetti visivi condividono lo stesso ciclo rainbow in tempo reale.

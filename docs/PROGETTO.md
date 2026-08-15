@@ -175,3 +175,8 @@ I cursori di Main Menu, Soundtrack, Camera, Name Color, HUD Language, Revenge, U
 Le modifiche applicate usano un `Good Explosion` azzurro-turchese visibile a tutti e `Buff Impact Sound` solo per il player che agisce. I ripristini usano un `Ring Explosion` violetto chiaro visibile a tutti e `Ring Explosion Sound` soltanto per il player interessato.
 
 Alla morte viene salvata la posizione. Premendo `Jump` a menu chiuso viene scelto un punto casuale entro ±6 m, corretto con `Nearest Walkable Position`, poi il player viene respawnato e teletrasportato al punto sicuro.
+
+
+### Sistema RGB globale
+
+`Global.RGBFase` percorre 1530 step; `Global.RGB` viene aggiornato ogni 0,100 s e attraversa rosso → giallo → verde → ciano → blu → viola → rosso. Il passo è 12, quindi un giro dura circa 12,75 secondi. Titolo `CHILL DEDICATED SERVER` e timer rivalutano il colore in tempo reale; gli effetti visivi usano il colore RGB del momento, mentre i suoni restano personali.

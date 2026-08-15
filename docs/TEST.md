@@ -266,3 +266,5 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Feedback live:** con due player applicare/ripristinare Camera, colore, Unkillable e Voice Modifier; entrambi vedono il visuale ma soltanto chi agisce sente il suono.
 
 - **Jump respawn live:** morire vicino a muri, scale e bordi; premere Jump e verificare il respawn vicino senza finire dentro la geometria.
+
+- **RGB live:** osservare per almeno 15 secondi titolo+timer e verificare rosso→giallo→verde→ciano→blu→viola→rosso; eseguire anche una modifica/ripristino e controllare che il visuale usi il colore RGB corrente.
