@@ -188,3 +188,8 @@ Il menu 7 contiene 37 voci: `Niente` all’indice 0 più le 36 icone standard di
 
 
 Nota live: `Icon String` mantiene il colore nativo del glifo e non accetta il colore del campo HUD. Per questo il Menu 7 usa colori fissi e il nome player conserva il colore scelto; non viene dichiarato un falso RGB sul glifo nativo.
+
+
+### Feedback solo su cambi reali
+
+Il dispatcher `Interact` dei menu è idempotente: Soundtrack, Camera, Name Color, HUD Language, Unkillable, Voice Modifier e Player Icon confrontano prima la selezione con lo stato già applicato. Se coincidono, non vengono rieseguite azioni di modifica e non partono `Small Message`, `EfekTerapkan`/`EfekPulihkan` né i relativi suoni. Gli avvisi di errore o indisponibilità restano separati perché descrivono un'azione non eseguibile, non una conferma di modifica.

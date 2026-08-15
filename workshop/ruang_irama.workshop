@@ -1436,36 +1436,42 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
-			Event Player.IndeksGenre = Event Player.KursorGenre;
-			Call Subroutine(EfekTerapkan);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Soundtrack locked: {0}. Excellent taste, probably.", Global.DaftarGenre[Event Player.IndeksGenre]) : Event Player.IndeksBahasa == 1
-				? Custom String("Soundtrack dipilih: {0}. Selera bagus. Mungkin.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
-				"เลือกเพลงประกอบแล้ว: {0} รสนิยมดี...น่าจะนะ", Global.DaftarGenre[Event Player.IndeksGenre]));
+			If(Event Player.IndeksGenre != Event Player.KursorGenre);
+				Event Player.IndeksGenre = Event Player.KursorGenre;
+				Call Subroutine(EfekTerapkan);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+					"Soundtrack locked: {0}. Excellent taste, probably.", Global.DaftarGenre[Event Player.IndeksGenre]) : Event Player.IndeksBahasa == 1
+					? Custom String("Soundtrack dipilih: {0}. Selera bagus. Mungkin.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
+					"เลือกเพลงประกอบแล้ว: {0} รสนิยมดี...น่าจะนะ", Global.DaftarGenre[Event Player.IndeksGenre]));
+			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 1);
 			Call Subroutine(SegarkanTargetKamera);
 			Event Player.KursorKamera %= Count Of(Event Player.DaftarTargetKamera) + 2;
 			If(Event Player.KursorKamera == 0);
-				Stop Camera(Event Player);
-				Event Player.ModeKamera = 0;
-				Event Player.TargetKamera = Null;
-				Call Subroutine(EfekPulihkan);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"First person restored. You may pretend that never happened.") : Event Player.IndeksBahasa == 1 ? Custom String(
-					"Kamera orang pertama kembali. Tidak ada yang melihat tadi.") : Custom String(
-					"กลับสู่มุมมองบุคคลที่หนึ่งแล้ว ทำเป็นว่าเมื่อกี้ไม่เกิดขึ้นก็ได้"));
+				If(Event Player.ModeKamera != 0);
+					Stop Camera(Event Player);
+					Event Player.ModeKamera = 0;
+					Event Player.TargetKamera = Null;
+					Call Subroutine(EfekPulihkan);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"First person restored. You may pretend that never happened.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Kamera orang pertama kembali. Tidak ada yang melihat tadi.") : Custom String(
+						"กลับสู่มุมมองบุคคลที่หนึ่งแล้ว ทำเป็นว่าเมื่อกี้ไม่เกิดขึ้นก็ได้"));
+				End;
 			Else If(Event Player.KursorKamera == 1);
-				Event Player.TargetKamera = Event Player;
-				"Biarkan frame Interact selesai sebelum mengganti render kamera."
-				Wait(0.016, Ignore Condition);
-				Event Player.ModeKamera = 1;
-				Call Subroutine(MulaiKamera);
-				Call Subroutine(EfekTerapkan);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"Third person enabled. Admire responsibly.") : Event Player.IndeksBahasa == 1 ? Custom String(
-					"Orang ketiga aktif. Silakan mengagumi diri secukupnya.") : Custom String(
-					"เปิดมุมมองบุคคลที่สามแล้ว ชื่นชมตัวเองแต่พอดี"));
+				If(Or(Event Player.ModeKamera != 1, Event Player.TargetKamera != Event Player));
+					Event Player.TargetKamera = Event Player;
+					"Biarkan frame Interact selesai sebelum mengganti render kamera."
+					Wait(0.016, Ignore Condition);
+					Event Player.ModeKamera = 1;
+					Call Subroutine(MulaiKamera);
+					Call Subroutine(EfekTerapkan);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+						"Third person enabled. Admire responsibly.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Orang ketiga aktif. Silakan mengagumi diri secukupnya.") : Custom String(
+						"เปิดมุมมองบุคคลที่สามแล้ว ชื่นชมตัวเองแต่พอดี"));
+				End;
 			Else;
 				If(Event Player.KursorKamera - 2 < Count Of(Event Player.DaftarTargetKamera));
 					Event Player.CalonTargetKamera = Event Player.DaftarTargetKamera[Event Player.KursorKamera - 2];
@@ -1473,16 +1479,18 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Event Player.CalonTargetKamera = Null;
 				End;
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
-					Event Player.TargetKamera = Event Player.CalonTargetKamera;
-					"Gunakan jeda satu frame yang sama saat mulai menonton dari orang pertama."
-					Wait(0.016, Ignore Condition);
-					Event Player.ModeKamera = 2;
-					Call Subroutine(MulaiKamera);
-					Call Subroutine(EfekTerapkan);
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-						"Now spectating {0}. Definitely not stalking.", Event Player.TargetKamera) : Event Player.IndeksBahasa == 1 ? Custom String(
-						"Sekarang menonton {0}. Sama sekali bukan menguntit.", Event Player.TargetKamera) : Custom String(
-						"กำลังชม {0} อยู่ นี่ไม่ใช่การสะกดรอยแน่นอน", Event Player.TargetKamera));
+					If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));
+						Event Player.TargetKamera = Event Player.CalonTargetKamera;
+						"Gunakan jeda satu frame yang sama saat mulai menonton dari orang pertama."
+						Wait(0.016, Ignore Condition);
+						Event Player.ModeKamera = 2;
+						Call Subroutine(MulaiKamera);
+						Call Subroutine(EfekTerapkan);
+						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+							"Now spectating {0}. Definitely not stalking.", Event Player.TargetKamera) : Event Player.IndeksBahasa == 1 ? Custom String(
+							"Sekarang menonton {0}. Sama sekali bukan menguntit.", Event Player.TargetKamera) : Custom String(
+							"กำลังชม {0} อยู่ นี่ไม่ใช่การสะกดรอยแน่นอน", Event Player.TargetKamera));
+					End;
 				Else;
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 						"That player disappeared. Very on-brand for CHILL.") : Event Player.IndeksBahasa == 1 ? Custom String(
@@ -1492,24 +1500,28 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 2);
-			Event Player.IndeksWarna = Event Player.KursorWarna;
-			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
-			If(Event Player.IndeksWarna == 0);
-				Call Subroutine(EfekPulihkan);
-			Else;
-				Call Subroutine(EfekTerapkan);
+			If(Event Player.IndeksWarna != Event Player.KursorWarna);
+				Event Player.IndeksWarna = Event Player.KursorWarna;
+				Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
+				If(Event Player.IndeksWarna == 0);
+					Call Subroutine(EfekPulihkan);
+				Else;
+					Call Subroutine(EfekTerapkan);
+				End;
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+					"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
+					"ตั้งสีชื่อเป็น {0} แล้ว จะเด่นแค่ไหนก็ได้", Global.NamaWarnaTH[Event Player.IndeksWarna]));
 			End;
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
-				"ตั้งสีชื่อเป็น {0} แล้ว จะเด่นแค่ไหนก็ได้", Global.NamaWarnaTH[Event Player.IndeksWarna]));
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 3);
-			Event Player.IndeksBahasa = Event Player.KursorBahasa;
-			Call Subroutine(EfekTerapkan);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"HUD language: English.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Bahasa HUD: Bahasa Indonesia.") : Custom String("ภาษา HUD: ไทย"));
+			If(Event Player.IndeksBahasa != Event Player.KursorBahasa);
+				Event Player.IndeksBahasa = Event Player.KursorBahasa;
+				Call Subroutine(EfekTerapkan);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
+					"HUD language: English.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Bahasa HUD: Bahasa Indonesia.") : Custom String("ภาษา HUD: ไทย"));
+			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 4);
 			Call Subroutine(SegarkanTargetBalasDendam);
@@ -1554,52 +1566,58 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				End;
 			End;
 		Else If(Event Player.HalamanMenu == 5);
-			Event Player.UnkillableAktif = And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False);
-			If(Event Player.UnkillableAktif == True);
-				Call Subroutine(EfekTerapkan);
-				Set Status(Event Player, Null, Unkillable, 9999);
-				If(Is Alive(Event Player) == True);
-					Set Player Health(Event Player, 1);
+			If(Event Player.UnkillableAktif != And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False));
+				Event Player.UnkillableAktif = And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False);
+				If(Event Player.UnkillableAktif == True);
+					Call Subroutine(EfekTerapkan);
+					Set Status(Event Player, Null, Unkillable, 9999);
+					If(Is Alive(Event Player) == True);
+						Set Player Health(Event Player, 1);
+					End;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Unkillable + 1 HP aktif.") : Custom String("เปิด Unkillable + 1 HP แล้ว"));
+				Else;
+					Call Subroutine(EfekPulihkan);
+					Clear Status(Event Player, Unkillable);
+					If(Is Alive(Event Player) == True);
+						Set Player Health(Event Player, Max Health(Event Player));
+					End;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP disabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
+						"Unkillable + 1 HP nonaktif.") : Custom String("ปิด Unkillable + 1 HP แล้ว"));
 				End;
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
-					"Unkillable + 1 HP aktif.") : Custom String("เปิด Unkillable + 1 HP แล้ว"));
-			Else;
-				Call Subroutine(EfekPulihkan);
-				Clear Status(Event Player, Unkillable);
-				If(Is Alive(Event Player) == True);
-					Set Player Health(Event Player, Max Health(Event Player));
-				End;
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP disabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
-					"Unkillable + 1 HP nonaktif.") : Custom String("ปิด Unkillable + 1 HP แล้ว"));
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 6);
-			Event Player.IndeksSuara = Event Player.KursorSuara;
-			If(Event Player.IndeksSuara == 0);
-				Call Subroutine(EfekPulihkan);
-			Else;
-				Call Subroutine(EfekTerapkan);
+			If(Event Player.IndeksSuara != Event Player.KursorSuara);
+				Event Player.IndeksSuara = Event Player.KursorSuara;
+				If(Event Player.IndeksSuara == 0);
+					Call Subroutine(EfekPulihkan);
+				Else;
+					Call Subroutine(EfekTerapkan);
+				End;
+				If(Event Player.IndeksSuara == 0);
+					Stop Modifying Hero Voice Lines(Event Player);
+				Else If(Event Player.IndeksSuara == 1);
+					Start Modifying Hero Voice Lines(Event Player, 0.500, False);
+				Else If(Event Player.IndeksSuara == 2);
+					Start Modifying Hero Voice Lines(Event Player, 0.750, False);
+				Else If(Event Player.IndeksSuara == 3);
+					Start Modifying Hero Voice Lines(Event Player, 1.250, False);
+				Else;
+					Start Modifying Hero Voice Lines(Event Player, 1.500, False);
+				End;
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Hero voice modifier applied.") : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Pengubah suara hero diterapkan.") : Custom String("ใช้ตัวปรับเสียงฮีโร่แล้ว"));
 			End;
-			If(Event Player.IndeksSuara == 0);
-				Stop Modifying Hero Voice Lines(Event Player);
-			Else If(Event Player.IndeksSuara == 1);
-				Start Modifying Hero Voice Lines(Event Player, 0.500, False);
-			Else If(Event Player.IndeksSuara == 2);
-				Start Modifying Hero Voice Lines(Event Player, 0.750, False);
-			Else If(Event Player.IndeksSuara == 3);
-				Start Modifying Hero Voice Lines(Event Player, 1.250, False);
-			Else;
-				Start Modifying Hero Voice Lines(Event Player, 1.500, False);
-			End;
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Hero voice modifier applied.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Pengubah suara hero diterapkan.") : Custom String("ใช้ตัวปรับเสียงฮีโร่แล้ว"));
 			Call Subroutine(GambarMenu);
 		Else;
-			Event Player.IndeksIkon = Event Player.KursorIkon;
-			Call Subroutine(EfekTerapkan);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Player icon applied: {0}.", Event Player.IndeksIkon == 0 ? Custom String("NOTHING") : Global.NamaIkon[Event Player.IndeksIkon])
-				: Event Player.IndeksBahasa == 1 ? Custom String("Ikon pemain diterapkan: {0}.", Event Player.IndeksIkon == 0 ? Custom String("TIDAK ADA") : Global.NamaIkon[Event Player.IndeksIkon])
-				: Custom String("ใช้ไอคอนผู้เล่นแล้ว: {0}", Event Player.IndeksIkon == 0 ? Custom String("ไม่มี") : Global.NamaIkon[Event Player.IndeksIkon]));
+			If(Event Player.IndeksIkon != Event Player.KursorIkon);
+				Event Player.IndeksIkon = Event Player.KursorIkon;
+				Call Subroutine(EfekTerapkan);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Player icon applied: {0}.", Event Player.IndeksIkon == 0 ? Custom String("NOTHING") : Global.NamaIkon[Event Player.IndeksIkon])
+					: Event Player.IndeksBahasa == 1 ? Custom String("Ikon pemain diterapkan: {0}.", Event Player.IndeksIkon == 0 ? Custom String("TIDAK ADA") : Global.NamaIkon[Event Player.IndeksIkon])
+					: Custom String("ใช้ไอคอนผู้เล่นแล้ว: {0}", Event Player.IndeksIkon == 0 ? Custom String("ไม่มี") : Global.NamaIkon[Event Player.IndeksIkon]));
+			End;
 			Call Subroutine(GambarMenu);
 		End;
 	}

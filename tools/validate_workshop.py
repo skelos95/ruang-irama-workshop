@@ -2311,6 +2311,40 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
         checks.require("NOTHING" in renderers[0].body and "TIDAK ADA" in renderers[0].body and "ไม่มี" in renderers[0].body, "menu 7: voce niente non localizzata")
 
 
+
+def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule]) -> None:
+    handlers = [
+        rule for rule in rules
+        if code_contains(rule.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu")
+    ]
+    checks.equal(len(handlers), 1, "handler Interact idempotente")
+    if not handlers:
+        return
+    body = mask_strings(handlers[0].body)
+    for token in (
+        "If(Event Player.IndeksGenre != Event Player.KursorGenre);",
+        "If(Event Player.ModeKamera != 0);",
+        "If(Or(Event Player.ModeKamera != 1, Event Player.TargetKamera != Event Player));",
+        "If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));",
+        "If(Event Player.IndeksWarna != Event Player.KursorWarna);",
+        "If(Event Player.IndeksBahasa != Event Player.KursorBahasa);",
+        "If(Event Player.UnkillableAktif != And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False));",
+        "If(Event Player.IndeksSuara != Event Player.KursorSuara);",
+        "If(Event Player.IndeksIkon != Event Player.KursorIkon);",
+    ):
+        checks.require(token in body, f"feedback menu non protetto da cambio reale: {token}")
+
+    # Each state assignment must occur after its corresponding inequality guard.
+    ordered_pairs = (
+        ("If(Event Player.IndeksGenre != Event Player.KursorGenre);", "Event Player.IndeksGenre = Event Player.KursorGenre;"),
+        ("If(Event Player.IndeksWarna != Event Player.KursorWarna);", "Event Player.IndeksWarna = Event Player.KursorWarna;"),
+        ("If(Event Player.IndeksBahasa != Event Player.KursorBahasa);", "Event Player.IndeksBahasa = Event Player.KursorBahasa;"),
+        ("If(Event Player.IndeksSuara != Event Player.KursorSuara);", "Event Player.IndeksSuara = Event Player.KursorSuara;"),
+        ("If(Event Player.IndeksIkon != Event Player.KursorIkon);", "Event Player.IndeksIkon = Event Player.KursorIkon;"),
+    )
+    for guard, assignment in ordered_pairs:
+        checks.require(0 <= body.find(guard) < body.find(assignment), f"assegnazione menu fuori dalla guardia: {assignment}")
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2335,6 +2369,7 @@ def main() -> None:
         check_feedback_and_jump_respawn(checks, source, rules)
         check_rgb_system(checks, source, rules)
         check_player_icon_menu(checks, source, rules, subroutines)
+        check_idempotent_menu_feedback(checks, source, rules)
         check_vpn_country_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)

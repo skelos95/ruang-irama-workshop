@@ -274,3 +274,5 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Player Icon live:** aprire menu 7, verificare 37 voci con `Niente` predefinito e scorrere le 36 icone reali, applicarne varie e verificare che compaiano nelle due liste prima dell’icona eroe, senza alcuna icona sopra al personaggio.
 
 - **Liste compatte live:** a sinistra verificare `icona + eroe + nome + N MIN` senza `CHILL for`; a destra `icona + eroe + nome + genere` senza il prefisso `soundtrack`.
+
+- **Feedback idempotente live:** in Soundtrack, Camera, Name Color, HUD Language, Unkillable, Voice Modifier e Player Icon applicare una scelta, poi premere `Interact` più volte senza cambiare cursore; dopo la prima applicazione non devono comparire altri Small Message, effetti visivi o suoni. Cambiando voce, il feedback deve partire una sola volta.
