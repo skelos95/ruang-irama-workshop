@@ -131,4 +131,7 @@ Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us
 - Le modifiche e i ripristini hanno feedback audiovisivo: visuale visibile a tutti, audio solo per chi esegue l’azione.
 - Da morto, con menu chiuso, `Jump` forza il respawn vicino al punto di morte su una posizione corretta da `Nearest Walkable Position`.
 
-- Sistema RGB globale animato: il titolo `CHILL DEDICATED SERVER`, il timer centrale e gli effetti visivi condividono lo stesso ciclo rainbow in tempo reale.
+- Sistema RGB globale animato: il titolo `CHILL DEDICATED SERVER`, il timer centrale e gli effetti visivi condividono lo stesso ciclo rainbow pastel/neon lento in tempo reale.
+
+- Menu 7 `Player Icon`: 36 icone Workshop selezionabili, con cursore persistente e feedback di applicazione.
+- Nelle liste player l’icona scelta precede l’icona eroe; la riga sinistra mostra soltanto il tempo e la riga destra soltanto il genere scelto, senza i prefissi `CHILL for` / `soundtrack`.

@@ -268,3 +268,9 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Jump respawn live:** morire vicino a muri, scale e bordi; premere Jump e verificare il respawn vicino senza finire dentro la geometria.
 
 - **RGB live:** osservare per almeno 15 secondi titolo+timer e verificare rosso→giallo→verde→ciano→blu→viola→rosso; eseguire anche una modifica/ripristino e controllare che il visuale usi il colore RGB corrente.
+
+- **RGB pastel/neon live:** osservare il titolo per almeno 55 secondi; il ciclo deve essere più lento, luminoso e senza passare per canali scuri sotto circa 80.
+
+- **Player Icon live:** aprire menu 7, scorrere tutte le 36 icone, applicarne varie e verificare che compaiano nelle due liste prima dell’icona eroe, senza alcuna icona sopra al personaggio.
+
+- **Liste compatte live:** a sinistra verificare `icona + eroe + nome + N MIN` senza `CHILL for`; a destra `icona + eroe + nome + genere` senza il prefisso `soundtrack`.

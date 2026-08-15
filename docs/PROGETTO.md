@@ -180,3 +180,8 @@ Alla morte viene salvata la posizione. Premendo `Jump` a menu chiuso viene scelt
 ### Sistema RGB globale
 
 `Global.RGBFase` percorre 1530 step; `Global.RGB` viene aggiornato ogni 0,100 s e attraversa rosso → giallo → verde → ciano → blu → viola → rosso. Il passo è 12, quindi un giro dura circa 12,75 secondi. Titolo `CHILL DEDICATED SERVER` e timer rivalutano il colore in tempo reale; gli effetti visivi usano il colore RGB del momento, mentre i suoni restano personali.
+
+
+### Menu 7 — Player Icon
+
+Il menu 7 contiene le 36 icone standard disponibili tramite `Icon String`, da `Arrow: Down` a `X`. La scelta è memorizzata in `IndeksIkon` e il cursore in `KursorIkon`; il default è `Heart`. L’icona viene inserita direttamente nelle due righe HUD prima della `Hero Icon String`, quindi non viene creato alcun `Create Icon` sopra al personaggio. Le righe del roster sono state compattate: a sinistra resta il numero di minuti, a destra il genere scelto (o il placeholder se non è stato ancora scelto).

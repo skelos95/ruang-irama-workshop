@@ -859,10 +859,10 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
     codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
-    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6"], "codici dei sette menu")
+    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7"], "codici degli otto menu")
     checks.require(
-        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*7\s*;", clean) is not None,
-        "navigazione principale non limitata a sette menu",
+        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*8\s*;", clean) is not None,
+        "navigazione principale non limitata a otto menu",
     )
     checks.require(
         re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", clean) is not None,
@@ -871,7 +871,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
 
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
-        "GambarBalasDendam", "GambarUnkillable", "GambarSuara",
+        "GambarBalasDendam", "GambarUnkillable", "GambarSuara", "GambarIkon",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -2167,13 +2167,14 @@ def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
         )
     clean = mask_strings(source)
     checks.require("Global.RGBFase = 0;" in clean, "RGB: fase iniziale assente")
-    checks.require("Global.RGB = Custom Color(255, 0, 0, 255);" in clean, "RGB: colore iniziale assente")
+    checks.require("80 + (Global.RGBFase" in clean and "* 0.686" in clean, "RGB: floor pastel/neon 80..255 assente")
+    checks.require("Global.RGB = Custom Color(255, 80, 80, 255);" in clean, "RGB: colore iniziale pastel-neon assente")
     rgb_rules = [rule for rule in rules if code_contains(
         rule.body,
         "Ongoing - Global;",
         "Global.RGB = Custom Color(",
         "Wait(0.100, Ignore Condition);",
-        "Global.RGBFase = (Global.RGBFase + 12) % 1530;",
+        "Global.RGBFase = (Global.RGBFase + 3) % 1530;",
         "Loop If Condition Is True;",
     )]
     checks.equal(len(rgb_rules), 1, "loop RGB globale")
@@ -2187,6 +2188,122 @@ def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
         checks.require(code_contains(apply[0].body, "Good Explosion, Global.RGB"), "effetto applicazione non usa RGB")
     if restore:
         checks.require(code_contains(restore[0].body, "Ring Explosion, Global.RGB"), "effetto ripristino non usa RGB")
+
+
+def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
+    expected_icons = [
+        "Icon String(Arrow: Down)",
+        "Icon String(Arrow: Left)",
+        "Icon String(Arrow: Right)",
+        "Icon String(Arrow: Up)",
+        "Icon String(Asterisk)",
+        "Icon String(Bolt)",
+        "Icon String(Checkmark)",
+        "Icon String(Circle)",
+        "Icon String(Club)",
+        "Icon String(Diamond)",
+        "Icon String(Dizzy)",
+        "Icon String(Exclamation Mark)",
+        "Icon String(Eye)",
+        "Icon String(Fire)",
+        "Icon String(Flag)",
+        "Icon String(Halo)",
+        "Icon String(Happy)",
+        "Icon String(Heart)",
+        "Icon String(Moon)",
+        "Icon String(No)",
+        "Icon String(Plus)",
+        "Icon String(Poison)",
+        "Icon String(Poison 2)",
+        "Icon String(Question Mark)",
+        "Icon String(Radioactive)",
+        "Icon String(Recycle)",
+        "Icon String(Ring Thick)",
+        "Icon String(Ring Thin)",
+        "Icon String(Sad)",
+        "Icon String(Skull)",
+        "Icon String(Spade)",
+        "Icon String(Spiral)",
+        "Icon String(Stop)",
+        "Icon String(Trashcan)",
+        "Icon String(Warning)",
+        "Icon String(X)",
+    ]
+    expected_names = [
+        "ARROW: DOWN",
+        "ARROW: LEFT",
+        "ARROW: RIGHT",
+        "ARROW: UP",
+        "ASTERISK",
+        "BOLT",
+        "CHECKMARK",
+        "CIRCLE",
+        "CLUB",
+        "DIAMOND",
+        "DIZZY",
+        "EXCLAMATION MARK",
+        "EYE",
+        "FIRE",
+        "FLAG",
+        "HALO",
+        "HAPPY",
+        "HEART",
+        "MOON",
+        "NO",
+        "PLUS",
+        "POISON",
+        "POISON 2",
+        "QUESTION MARK",
+        "RADIOACTIVE",
+        "RECYCLE",
+        "RING THICK",
+        "RING THIN",
+        "SAD",
+        "SKULL",
+        "SPADE",
+        "SPIRAL",
+        "STOP",
+        "TRASHCAN",
+        "WARNING",
+        "X",
+    ]
+    actual_icons = [re.sub(r"\s+", " ", item).strip() for item in top_level_items(array_body(source, "Global.DaftarIkon"))]
+    checks.equal(actual_icons, expected_icons, "36 icone Workshop del menu 7")
+    checks.equal(custom_strings(array_body(source, "Global.NamaIkon")), expected_names, "nomi delle 36 icone")
+
+    variables = section_body(source, "variables")
+    for slot, name in ((40, "DaftarIkon"), (41, "NamaIkon")):
+        checks.require(re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", variables) is not None, f"icone: slot global {slot} deve essere {name}")
+    for slot, name in ((61, "IndeksIkon"), (62, "KursorIkon")):
+        checks.require(re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", variables) is not None, f"icone: slot player {slot} deve essere {name}")
+    checks.require("GambarIkon" in subroutines, "icone: subroutine GambarIkon assente")
+    checks.require("Event Player.IndeksIkon = 17;" in source and "Event Player.KursorIkon = 17;" in source, "icone: default Heart non inizializzato")
+
+    classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
+    checks.equal(len(classification), 1, "regola roster per icona player")
+    if classification:
+        body = classification[0].body
+        checks.require(body.count("Global.DaftarIkon[Event Player.IndeksIkon]") >= 2, "icona player non presente in entrambe le liste")
+        for segment in re.findall(r'Custom String\(\"\{0\} \{1\} \{2\}[^;]+', body):
+            icon_at = segment.find("Global.DaftarIkon[Event Player.IndeksIkon]")
+            hero_at = segment.find("Hero Icon String")
+            checks.require(0 <= icon_at < hero_at, "icona player deve precedere l'icona eroe")
+        checks.require("CHILL for" not in body and " - CHILL " not in body, "roster sinistro contiene ancora CHILL for")
+        checks.require(" - soundtrack:" not in body and " - เพลงประกอบ:" not in body, "roster destro contiene ancora il prefisso soundtrack")
+        checks.require(body.count("Global.RGB") >= 2, "le due liste non usano il colore RGB per le icone")
+
+    next_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 3;", "Event Player.KursorIkon = (Event Player.KursorIkon + 1) % Count Of(Global.DaftarIkon);")]
+    prev_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 4;", "Event Player.KursorIkon = (Event Player.KursorIkon + Count Of(Global.DaftarIkon) - 1) % Count Of(Global.DaftarIkon);")]
+    checks.equal(len(next_rules), 1, "menu 7: navigazione icona successiva")
+    checks.equal(len(prev_rules), 1, "menu 7: navigazione icona precedente")
+
+    interact = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 1;", "Event Player.IndeksIkon = Event Player.KursorIkon;", "Call Subroutine(EfekTerapkan);")]
+    checks.equal(len(interact), 1, "menu 7: applicazione icona")
+    renderers = rules_containing(rules, "Subroutine;", "GambarIkon;")
+    checks.equal(len(renderers), 1, "renderer menu 7")
+    if renderers:
+        checks.require("/36" in renderers[0].body and "Global.RGB" in renderers[0].body, "menu 7 non mostra 36 icone con colore RGB")
+
 
 def main() -> None:
     checks = Checks()
@@ -2211,6 +2328,7 @@ def main() -> None:
         check_arcade_features(checks, source, rules)
         check_feedback_and_jump_respawn(checks, source, rules)
         check_rgb_system(checks, source, rules)
+        check_player_icon_menu(checks, source, rules, subroutines)
         check_vpn_country_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)
