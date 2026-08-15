@@ -2416,14 +2416,14 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
         checks.require("Visible To String and Color" in body, f"rivalutazione colore assente per {label}")
 
     for token in (
-        "Custom Color(55, 235, 245, 255)",
-        "Custom Color(90, 180, 255, 255)",
-        "Global.DaftarWarna[Event Player.KursorWarna]",
-        "Custom Color(190, 120, 255, 255)",
-        "Custom Color(255, 80, 80, 255)",
-        "Custom Color(255, 185, 90, 255)",
-        "Custom Color(115, 235, 170, 255)",
-        "Custom Color(235, 135, 255, 255)",
+        "Vector(55, 235, 245)",
+        "Vector(90, 180, 255)",
+        "Global.DaftarWarnaRGB[Event Player.KursorWarna]",
+        "Vector(190, 120, 255)",
+        "Vector(255, 80, 80)",
+        "Vector(255, 185, 90)",
+        "Vector(115, 235, 170)",
+        "Vector(235, 135, 255)",
     ):
         checks.require(token in transition, f"palette transizione incompleta: {token}")
 
@@ -2471,60 +2471,52 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
 
 
 
+
 def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
     variables = section_body(source, "variables")
-    checks.require(
-        re.search(r"(?m)^\s*63\s*:\s*WarnaMenu\s*$", variables) is not None,
-        "menu smooth: player variable WarnaMenu assente",
-    )
+    checks.require(re.search(r"(?m)^\s*43\s*:\s*DaftarWarnaRGB\s*$", variables) is not None, "menu smooth: global DaftarWarnaRGB assente")
+    checks.require(re.search(r"(?m)^\s*63\s*:\s*WarnaMenu\s*$", variables) is not None, "menu smooth: player WarnaMenu assente")
+    rgb_vectors = [re.sub(r"\s+", " ", item).strip() for item in top_level_items(array_body(source, "Global.DaftarWarnaRGB"))]
+    checks.equal(len(rgb_vectors), 32, "menu smooth: 32 vettori RGB name-color")
+    checks.require("Event Player.WarnaMenu = Vector(55, 235, 245);" in clean, "menu smooth: WarnaMenu deve iniziare come Vector")
     checks.require("TransisiWarnaMenu" in subroutines, "menu smooth: subroutine TransisiWarnaMenu assente")
-    checks.require(
-        "Event Player.KursorWarna = Event Player.KursorWarna;" in clean,
-        "menu smooth: Name Color deve conservare l'ultimo cursore",
-    )
-    checks.require(
-        "Event Player.KursorWarna = Event Player.IndeksWarna;" not in clean,
-        "menu smooth: Name Color non deve essere risincronizzato all'apertura",
-    )
+    checks.require("Event Player.KursorWarna = Event Player.KursorWarna;" in clean, "menu smooth: Name Color deve conservare il cursore")
 
     transition = rules_containing(rules, "Subroutine;", "TransisiWarnaMenu;")
     checks.equal(len(transition), 1, "menu smooth: renderer transizione")
     if transition:
         body = mask_strings(transition[0].body)
-        checks.require(
-            "Chase Player Variable Over Time(Event Player, WarnaMenu," in body
-            and "0.350, Destination and Duration);" in body,
-            "menu smooth: chase WarnaMenu 0,35 s assente",
-        )
+        checks.require("Chase Player Variable Over Time(Event Player, WarnaMenu," in body and "0.350, Destination and Duration);" in body, "menu smooth: chase 0,35 s assente")
         for token in (
-            "Custom Color(55, 235, 245, 255)",
-            "Custom Color(90, 180, 255, 255)",
-            "Global.DaftarWarna[Event Player.KursorWarna]",
-            "Custom Color(190, 120, 255, 255)",
-            "Custom Color(255, 80, 80, 255)",
-            "Custom Color(255, 185, 90, 255)",
-            "Custom Color(115, 235, 170, 255)",
-            "Custom Color(235, 135, 255, 255)",
+            "Vector(55, 235, 245)",
+            "Vector(90, 180, 255)",
+            "Global.DaftarWarnaRGB[Event Player.KursorWarna]",
+            "Vector(190, 120, 255)",
+            "Vector(255, 80, 80)",
+            "Vector(255, 185, 90)",
+            "Vector(115, 235, 170)",
+            "Vector(235, 135, 255)",
         ):
-            checks.require(token in body, f"menu smooth: destinazione palette assente {token}")
+            checks.require(token in body, f"menu smooth: destinazione vector assente {token}")
+        checks.require("Custom Color(" not in body, "menu smooth: Chase non deve ricevere Color")
+        checks.require("Global.DaftarWarna[Event Player.KursorWarna]" not in body, "menu smooth: Chase non deve ricevere un Color da DaftarWarna")
         checks.require("Loop If Condition Is True;" not in body, "menu smooth: transizione non deve usare loop")
 
     router = rules_containing(rules, "Subroutine;", "GambarMenu;")
     checks.equal(len(router), 1, "menu smooth: router GambarMenu")
     if router:
-        checks.require(
-            "Call Subroutine(TransisiWarnaMenu);" in mask_strings(router[0].body),
-            "menu smooth: GambarMenu non aggiorna la destinazione colore",
-        )
+        checks.require("Call Subroutine(TransisiWarnaMenu);" in mask_strings(router[0].body), "menu smooth: GambarMenu non aggiorna destinazione")
 
+    converted = "Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255)"
     for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarUnkillable", "GambarSuara", "GambarIkon"):
         matches = rules_containing(rules, "Subroutine;", f"{sub};")
         checks.equal(len(matches), 1, f"menu smooth: renderer {sub}")
         if matches:
             body = mask_strings(matches[0].body)
-            checks.require("Event Player.WarnaMenu" in body, f"menu smooth: {sub} non usa WarnaMenu")
+            checks.require(converted in body, f"menu smooth: {sub} non converte WarnaMenu Vector in Custom Color")
             checks.require("Visible To String and Color" in body, f"menu smooth: {sub} non rivaluta il colore")
+    checks.require("Event Player.WarnaMenu, Visible To" not in clean, "menu smooth: Color raw non valido ancora passato agli HUD")
 
 def main() -> None:
     checks = Checks()

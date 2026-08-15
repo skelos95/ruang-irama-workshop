@@ -290,3 +290,5 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Menu colore live:** applicare un colore, navigare su un altro senza applicarlo, tornare indietro e riaprire NAME COLOR; il cursore deve partire dal colore applicato e la tinta del Main Menu deve rappresentare subito CURRENT, senza essere un input/colpo indietro.
 
 - **Transizione colori menu live:** scorrere rapidamente avanti/indietro tra tutte le 8 voci del Main Menu e aprire/chiudere i relativi submenu; il colore principale deve sfumare in circa 0,35 s senza scatti. Name Color deve continuare a riaprire sull’ultimo cursore salvato.
+
+- **HUD menu + sfumatura live:** aprire il Main Menu e tutti gli 8 submenu: input e contenuto principale devono essere sempre visibili. Scorrere rapidamente tra le voci e verificare la sfumatura ~0,35 s; in Name Color la tonalità di preview deve seguire le 32 scelte senza far sparire il testo.

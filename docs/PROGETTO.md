@@ -210,3 +210,8 @@ Ottimizzazioni conservative: `SlotHUDTerakhir` sostituisce due sort del roster d
 ### Transizioni colore menu
 
 Il colore principale dei menu non cambia più istantaneamente tra una voce e l'altra. `Event Player.WarnaMenu` viene portato al colore destinazione con `Chase Player Variable Over Time` in 0,35 s dalla subroutine `TransisiWarnaMenu`. Tutti i renderer del Main Menu e dei submenu rivalutano soltanto il colore e condividono `WarnaMenu`; i colori degli input restano fissi. La transizione è event-driven su `GambarMenu` e non introduce loop periodici per player. Il cursore di Name Color resta persistente come gli altri submenu.
+
+
+### Fix HUD menu invisibili — Vector RGB
+
+La prima implementazione della sfumatura inseguiva direttamente un valore `Color` con `Chase Player Variable Over Time`; nel client il campo principale dei menu risultava invisibile mentre gli input a colore fisso restavano visibili. `WarnaMenu` è ora una `Vector(R,G,B)`, cioè un tipo supportato dal chase, e ciascun renderer la converte con `Custom Color(X Component Of(...), Y Component Of(...), Z Component Of(...), 255)`. `DaftarWarnaRGB` contiene 32 vettori paralleli a `DaftarWarna`, inclusi i valori RGB reali delle costanti Workshop, così Name Color mantiene una preview coerente durante la transizione. Nessun loop per-player è stato aggiunto.
