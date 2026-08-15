@@ -5,9 +5,10 @@ import subprocess
 
 VALIDATOR = Path("tools/validate_workshop.py")
 
-# The old Menu 5 assertion encoded the exact two-state implementation. Replace
-# it with the stable part of the contract; the replayed patch adds a dedicated
-# checker for OFF / 1 HP / FULL HP, damage handling and the public Halo.
+# The old Menu 5 assertion encoded the exact two-state implementation. Keep
+# here only the stable dispatcher contract. The replayed comprehensive patch
+# adds dedicated checks for Spawn Room cleanup, OFF / 1 HP / FULL HP, damage
+# handling and the public Halo.
 text = VALIDATOR.read_text(encoding="utf-8")
 old = '''    checks.require(
         "Else If(Event Player.HalamanMenu == 5);" in source
@@ -17,9 +18,8 @@ old = '''    checks.require(
         "Kebal: menu 5 non bloccato nella Spawn Room",
     )'''
 new = '''    checks.require(
-        "Else If(Event Player.HalamanMenu == 5);" in source
-        and "Unkillable modes are unavailable in Spawn Room." in source,
-        "Kebal: menu 5 non bloccato nella Spawn Room",
+        "Else If(Event Player.HalamanMenu == 5);" in source,
+        "Kebal: pagina menu 5 assente dal dispatcher",
     )'''
 if old not in text:
     raise SystemExit("legacy composite Spawn Room validator assertion not found")
