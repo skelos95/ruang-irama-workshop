@@ -1794,6 +1794,14 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
         "diagnostica priva della riga HUD/IWT compatta",
     )
     checks.require(
+        ')) : Custom String(" "), Left, -99 + Event Player.UrutanHUD' in source,
+        "diagnostica OFF deve usare testo vuoto esplicito e non Null/0",
+    )
+    checks.require(
+        ')) : Null, Left, -99 + Event Player.UrutanHUD' not in source,
+        "diagnostica OFF usa ancora Null e può renderizzare 0 nel roster",
+    )
+    checks.require(
         'rule("00d - Global: Tampilkan diagnostik performa hanya kepada host")' not in source,
         "vecchio HUD diagnostica separato ancora presente",
     )

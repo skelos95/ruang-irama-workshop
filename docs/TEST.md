@@ -254,3 +254,5 @@ La release è pronta per un codice Blizzard condivisibile soltanto quando:
 Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`](VALIDAZIONE.md) deve distinguere esplicitamente i controlli statici superati dalle prove live pendenti.
 
 - **Avvio rapido live:** verificare nel client che Waiting for Players avvii subito il mode, Assemble Heroes venga saltato e Setup/prepare-to-attack non introduca attese visibili nei mode core 6v6.
+
+- **Diagnostics OFF live:** verificare che sotto l’ultimo player del roster sinistro non compaia più `0`; il campo deve restare visivamente vuoto.
