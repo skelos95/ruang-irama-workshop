@@ -164,9 +164,9 @@ Il target player viene bloccato per identità prima del refresh per evitare reta
 
 ## Menu 10 — Try Your Luck
 
-Interact crea 2,5 m davanti al giocatore una carta virtuale che emerge dal terreno con un `Ring Explosion`. La posizione è calcolata direttamente dal piano dei piedi del proprietario, senza `Nearest Walkable Position`, per evitare agganci a piani superiori. Il testo sale da 0,45 m sotto il suolo fino a circa 0,55 m sopra e usa dimensione 3,5. La carta usa `Create In-World Text`, è visibile a tutti e non occupa slot bot. Ogni giocatore può avere una sola carta attiva.
+Interact crea 2,5 m davanti al giocatore una carta virtuale che emerge dal terreno con un `Ring Explosion`. La posizione resta calcolata dal piano dei piedi del proprietario e il testo usa dimensione 3,5. Appena compare, la carta avvia automaticamente una roulette rosso/verde: il colore iniziale è casuale, esegue 12..16 cambi e parte con intervallo 0,08 s aggiungendo 0,055 s a ogni passaggio, quindi rallenta progressivamente. La carta è visibile a tutti e non occupa slot bot.
 
-L'attivazione è proprietario-only: la regola legge esclusivamente `KartuNasibAktif` e `PosisiKartuNasib` dell'`Event Player`, richiede `Is Firing Primary`, una hitbox virtuale di 1,25 m attorno al punto attraversato dal reticolo alla distanza della carta e linea di vista libera. Il vecchio limite angolare fisso da 7° è stato rimosso. Al colpo estrae `Random Integer(0, 1)`: un esito ripristina la salute massima, l'altro forza la morte del proprietario. Testo e stato vengono ripuliti anche alla morte o all'uscita del giocatore.
+Non serve più sparare. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene la carta rossa e mostra un countdown di 3 secondi, poi rimuove `Unkillable` e uccide il proprietario. Poiché colore iniziale e numero di cambi sono indipendenti, l'esito finale resta 50/50. Testo e stato vengono ripuliti anche alla morte o all'uscita del giocatore.
 
 ## Jump respawn
 

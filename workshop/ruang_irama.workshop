@@ -119,6 +119,9 @@ variables
 		70: KartuNasibAktif
 		71: PosisiKartuNasib
 		72: TeksKartuNasib
+		73: KartuNasibMerah
+		74: PutaranKartuNasib
+		75: JedaKartuNasib
 }
 
 subroutines
@@ -1787,15 +1790,18 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else;
 			If(Event Player.KartuNasibAktif == True);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("A luck card is already active. Close the menu and shoot it first.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib masih aktif. Tutup menu lalu tembak dulu.") : Custom String("การ์ดเสี่ยงโชคยังทำงานอยู่ ปิดเมนูแล้วค่อยยิงมันก่อน"));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("The luck card is already rolling. Wait for the result.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib sedang berputar. Tunggu hasilnya.") : Custom String("การ์ดเสี่ยงโชคกำลังสุ่มอยู่ รอผลก่อน"));
 			Else;
 				Event Player.KartuNasibAktif = True;
+				Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;
+				Event Player.PutaranKartuNasib = Random Integer(12, 16);
+				Event Player.JedaKartuNasib = 0.080;
 				Event Player.PosisiKartuNasib = Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 2.500 - Vector(0, 0.450, 0);
-				Create In-World Text(All Players(All Teams), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("[ ? ]\nTRY YOUR LUCK\nSHOOT ME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("[ ? ]\nCOBA NASIB\nTEMBAK") : Custom String("[ ? ]\nเสี่ยงโชค\nยิงเลย"), Event Player.PosisiKartuNasib, 3.500, Do Not Clip, Visible To Position String and Color, Global.RGB, Visible Never);
+				Create In-World Text(All Players(All Teams), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("[ ? ]\nTRY YOUR LUCK") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("[ ? ]\nCOBA NASIB") : Custom String("[ ? ]\nเสี่ยงโชค"), Event Player.PosisiKartuNasib, 3.500, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
-				Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib + Vector(0, 0.450, 0), 3);
+				Play Effect(All Players(All Teams), Ring Explosion, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Event Player.PosisiKartuNasib + Vector(0, 0.450, 0), 3);
 				Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 1.000, 0), 0.600, Destination and Duration);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck card created. Close the menu and shoot it to reveal your fate.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib dibuat. Tutup menu lalu tembak untuk melihat nasibmu.") : Custom String("สร้างการ์ดเสี่ยงโชคแล้ว ปิดเมนูแล้วยิงเพื่อดูชะตาของคุณ"));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
 			End;
 			Call Subroutine(GambarMenu);
 		End;
@@ -2294,7 +2300,7 @@ rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Spawn Room")
 
 
 
-rule("18e - Nasib: Pemilik menembak kartu sendiri")
+rule("18e - Nasib: Roulette merah hijau makin lambat")
 {
 	event
 	{
@@ -2307,31 +2313,41 @@ rule("18e - Nasib: Pemilik menembak kartu sendiri")
 	{
 		Event Player.Manusia == True;
 		Event Player.KartuNasibAktif == True;
-		Event Player.MenuTerbuka == False;
+		Event Player.PutaranKartuNasib > 0;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Is Firing Primary(Event Player) == True;
-		Distance Between(Event Player.PosisiKartuNasib, Eye Position(Event Player) + Facing Direction Of(Event Player) * Distance Between(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 1.250;
-		Is In Line of Sight(Eye Position(Event Player), Event Player.PosisiKartuNasib, All Barriers Block LOS) == True;
 	}
 
 	actions
 	{
+		Wait(Event Player.JedaKartuNasib, Abort When False);
+		Event Player.KartuNasibMerah = Event Player.KartuNasibMerah == False;
+		Modify Player Variable(Event Player, PutaranKartuNasib, Subtract, 1);
+		Play Effect(All Players(All Teams), Ring Explosion, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Event Player.PosisiKartuNasib, 1.500);
+		Modify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);
+		Loop If Condition Is True;
 		Stop Chasing Player Variable(Event Player, PosisiKartuNasib);
+		If(Event Player.KartuNasibMerah == True);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("RED! Death in 3...") : Event Player.IndeksBahasa == 1 ? Custom String("MERAH! Mati dalam 3...") : Custom String("แดง! ตายใน 3..."));
+			Wait(1, Abort When False);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("RED! Death in 2...") : Event Player.IndeksBahasa == 1 ? Custom String("MERAH! Mati dalam 2...") : Custom String("แดง! ตายใน 2..."));
+			Wait(1, Abort When False);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("RED! Death in 1...") : Event Player.IndeksBahasa == 1 ? Custom String("MERAH! Mati dalam 1...") : Custom String("แดง! ตายใน 1..."));
+			Wait(1, Abort When False);
+			Clear Status(Event Player, Unkillable);
+			Kill(Event Player, Null);
+		Else;
+			Set Player Health(Event Player, Max Health(Event Player));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("GREEN! Full health restored.") : Event Player.IndeksBahasa == 1 ? Custom String("HIJAU! Kesehatan penuh dipulihkan.") : Custom String("เขียว! ฟื้นพลังชีวิตเต็มแล้ว"));
+			Wait(1.500, Abort When False);
+		End;
 		If(Event Player.TeksKartuNasib != Null);
 			Destroy In-World Text(Event Player.TeksKartuNasib);
 		End;
 		Event Player.TeksKartuNasib = Null;
 		Event Player.KartuNasibAktif = False;
-		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib, 3);
-		If(Random Integer(0, 1) == 0);
-			Set Player Health(Event Player, Max Health(Event Player));
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("LUCK! Full health restored.") : Event Player.IndeksBahasa == 1 ? Custom String("BERUNTUNG! Kesehatan penuh dipulihkan.") : Custom String("โชคดี! ฟื้นพลังชีวิตเต็มแล้ว"));
-		Else;
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("BAD LUCK! The card chose death.") : Event Player.IndeksBahasa == 1 ? Custom String("SIAL! Kartunya memilih kematian.") : Custom String("โชคร้าย! การ์ดเลือกความตาย"));
-			Clear Status(Event Player, Unkillable);
-			Kill(Event Player, Null);
-		End;
+		Event Player.PutaranKartuNasib = 0;
+		Event Player.JedaKartuNasib = 0;
 	}
 }
 
@@ -3140,9 +3156,9 @@ rule("91n - Subrutin: Gambar kartu nasib")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("\n{0}: create | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))
 			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("\n{0}: buat | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))
 			: Custom String("{0}\n{1}", Custom String("\n{0}: สร้าง | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("กด {0} ค้าง 0.5 วิ: ปิด", Input Binding String(Button(Melee)))),
-			Event Player.IndeksBahasa == 0 ? Custom String("10 - TRY YOUR LUCK\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ACTIVE") : Custom String("READY"), Event Player.KartuNasibAktif ? Custom String("SHOOT YOUR CARD") : Custom String("CREATE CARD"))
-			: Event Player.IndeksBahasa == 1 ? Custom String("10 - COBA NASIB\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("AKTIF") : Custom String("SIAP"), Event Player.KartuNasibAktif ? Custom String("TEMBAK KARTUMU") : Custom String("BUAT KARTU"))
-			: Custom String("10 - เสี่ยงโชค\nสถานะ: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ทำงาน") : Custom String("พร้อม"), Event Player.KartuNasibAktif ? Custom String("ยิงการ์ดของคุณ") : Custom String("สร้างการ์ด")), Top, 100,
+			Event Player.IndeksBahasa == 0 ? Custom String("10 - TRY YOUR LUCK\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ACTIVE") : Custom String("READY"), Event Player.KartuNasibAktif ? Custom String("WATCH THE ROULETTE") : Custom String("START ROULETTE"))
+			: Event Player.IndeksBahasa == 1 ? Custom String("10 - COBA NASIB\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("AKTIF") : Custom String("SIAP"), Event Player.KartuNasibAktif ? Custom String("LIHAT ROULETTE") : Custom String("MULAI ROULETTE"))
+			: Custom String("10 - เสี่ยงโชค\nสถานะ: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ทำงาน") : Custom String("พร้อม"), Event Player.KartuNasibAktif ? Custom String("ดูรูเล็ต") : Custom String("เริ่มรูเล็ต")), Top, 100,
 			Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3353,6 +3369,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KartuNasibAktif = False;
 		Event Player.PosisiKartuNasib = Vector(0, 0, 0);
 		Event Player.TeksKartuNasib = Null;
+		Event Player.KartuNasibMerah = False;
+		Event Player.PutaranKartuNasib = 0;
+		Event Player.JedaKartuNasib = 0;
 	}
 }
 

@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-c267f266aac75091ac23ea2320f60ebbc9790f39
+64447f31db8b097f200babb5b0e131c1a738f825
 ```
 
 ## Controlli statici correnti
@@ -30,7 +30,7 @@ Il gate verifica:
 - Menu 5 Unkillable/Kebal 1 HP;
 - Menu 6 Hero Voice;
 - Menu 7 Player Icon;
-- Menu 10 Try Your Luck: carta pubblica bassa/grande, hitbox reticolo 1,25 m solo proprietario, esito 50/50;
+- Menu 10 Try Your Luck: roulette automatica rosso/verde progressivamente più lenta, verde cura completa, rosso uccide dopo countdown 3 s, esito 50/50;
 - Teleport su overlay Crouch, non nel Main Menu;
 - feedback menu idempotente;
 - transizione colore menu Vector RGB a circa 0,35 s;

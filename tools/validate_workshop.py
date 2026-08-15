@@ -1776,21 +1776,25 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         if code_contains(
             rule.body,
             "Event Player.KartuNasibAktif == True;",
-            "Is Firing Primary(Event Player) == True;",
-            "Distance Between(Event Player.PosisiKartuNasib, Eye Position(Event Player) + Facing Direction Of(Event Player) * Distance Between(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 1.250;",
-            "Is In Line of Sight(",
-            "Random Integer(0, 1)",
+            "Event Player.PutaranKartuNasib > 0;",
+            "Wait(Event Player.JedaKartuNasib, Abort When False);",
+            "Event Player.KartuNasibMerah = Event Player.KartuNasibMerah == False;",
+            "Modify Player Variable(Event Player, PutaranKartuNasib, Subtract, 1);",
+            "Modify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);",
+            "Loop If Condition Is True;",
+            "Event Player.KartuNasibMerah == True",
             "Set Player Health(Event Player, Max Health(Event Player));",
+            "Clear Status(Event Player, Unkillable);",
             "Kill(Event Player, Null);",
         )
     ]
-    checks.equal(len(luck), 1, "Nasib: una sola regola di risoluzione proprietario-only")
+    checks.equal(len(luck), 1, "Nasib: una sola roulette automatica rosso/verde")
     if luck:
-        checks.equal(
-            len(call_texts(luck[0].body, "Play Effect")),
-            1,
-            "Nasib: un solo Ring alla risoluzione",
-        )
+        luck_code = mask_strings(luck[0].body)
+        checks.equal(len(call_texts(luck[0].body, "Play Effect")), 1, "Nasib: un solo Ring riutilizzato a ogni cambio colore")
+        checks.require("Is Firing Primary" not in luck_code, "Nasib: il vecchio sparo non deve più attivare la carta")
+        checks.require("Is In Line of Sight" not in luck_code, "Nasib: la roulette non deve dipendere dalla linea di vista")
+        checks.require(luck_code.count("Wait(1, Abort When False);") == 3, "Nasib: countdown rosso deve durare tre secondi")
     card_texts = [
         call for call in call_texts(source, "Create In-World Text")
         if "KartuNasib" in call and "All Players(All Teams)" in call
@@ -1801,6 +1805,10 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Event Player.PosisiKartuNasib, 3.500, Do Not Clip" in card_texts[0],
             "Nasib: la carta pubblica deve usare dimensione 3,5",
         )
+        checks.require(
+            "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],
+            "Nasib: il testo mondo non cambia dinamicamente rosso/verde",
+        )
     checks.require(
         "Event Player.PosisiKartuNasib = Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 2.500 - Vector(0, 0.450, 0);" in mask_strings(source),
         "Nasib: posizione bassa davanti al proprietario assente",
@@ -1809,11 +1817,12 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 1.000, 0), 0.600, Destination and Duration);" in mask_strings(source),
         "Nasib: animazione bassa di emersione dal terreno assente",
     )
-    if luck:
-        checks.require(
-            "Angle Between Vectors(" not in mask_strings(luck[0].body),
-            "Nasib: il vecchio test angolare fragile non deve restare nella risoluzione",
-        )
+    checks.require(
+        "Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;" in clean
+        and "Event Player.PutaranKartuNasib = Random Integer(12, 16);" in clean
+        and "Event Player.JedaKartuNasib = 0.080;" in clean,
+        "Nasib: inizializzazione casuale 50/50 e 12..16 passaggi assente",
+    )
     menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
     blocked_one_hp = menu_interact[
         menu_interact.find("If(And(Event Player.KursorKebal == 1"):
@@ -2202,14 +2211,26 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
     effect_calls = call_texts(source, "Play Effect")
-    checks.equal(len(effect_calls), 4, "feedback: due Ring RGB impostazioni più due Ring RGB carta Nasib")
-    for index, call in enumerate(effect_calls, 1):
+    checks.equal(len(effect_calls), 4, "feedback: due Ring RGB impostazioni più due Ring rosso/verde Nasib")
+    system_effects = [call for call in effect_calls if "Global.RGB" in call]
+    luck_effects = [call for call in effect_calls if "KartuNasibMerah" in call]
+    checks.equal(len(system_effects), 2, "feedback: esattamente due Ring RGB di sistema")
+    checks.equal(len(luck_effects), 2, "Nasib: esattamente due Ring rosso/verde")
+    for index, call in enumerate(system_effects, 1):
         checks.require(
             "Ring Explosion" in call
-            and "Global.RGB" in call
             and "All Players(All Teams)" in call
             and "Sound" not in call,
-            f"feedback #{index}: deve essere esclusivamente Ring Explosion RGB visivo",
+            f"feedback sistema #{index}: deve essere Ring Explosion RGB visivo",
+        )
+    for index, call in enumerate(luck_effects, 1):
+        checks.require(
+            "Ring Explosion" in call
+            and "Custom Color(255, 70, 70, 255)" in call
+            and "Custom Color(70, 255, 110, 255)" in call
+            and "All Players(All Teams)" in call
+            and "Sound" not in call,
+            f"Nasib effetto #{index}: deve alternare esclusivamente rosso/verde",
         )
     for forbidden in ("Good Explosion", "Buff Impact Sound", "Ring Explosion Sound"):
         checks.require(forbidden not in clean, f"feedback vietato ancora presente: {forbidden}")
