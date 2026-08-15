@@ -15,11 +15,14 @@ VALIDATION = ROOT / "docs" / "VALIDAZIONE.md"
 # only extends its validation contract; it does not duplicate the large source
 # transformation and therefore cannot silently diverge from the first attempt.
 parent_patch = subprocess.check_output(
-    ["git", "show", "HEAD^:.github/maintenance/patch.py"],
+    ["git", "show", "HEAD^^:.github/maintenance/patch.py"],
     text=True,
     encoding="utf-8",
 )
-exec(compile(parent_patch, "parent-maintenance-patch.py", "exec"), {"__name__": "__main__"})
+exec(
+    compile(parent_patch, "parent-maintenance-patch.py", "exec"),
+    {"__name__": "__main__", "__file__": str(Path(__file__).resolve())},
+)
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -89,10 +92,13 @@ replacement = needle + '''
         "Chase Player Variable Over Time(Event Player, PosisiKartuNasib" in mask_strings(source),
         "Nasib: animazione di emersione dal terreno assente",
     )
+    menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
+    blocked_one_hp = menu_interact[
+        menu_interact.find("If(And(Event Player.KursorKebal == 1"):
+        menu_interact.find("Else;", menu_interact.find("If(And(Event Player.KursorKebal == 1"))
+    ]
     checks.require(
-        "Event Player.KursorKebal = Event Player.ModeKebal;" not in mask_strings(
-            next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
-        ),
+        "Event Player.KursorKebal = Event Player.ModeKebal;" not in mask_strings(blocked_one_hp),
         "Kebal: il rifiuto 1 HP nello Spawn Room non deve spostare il cursore",
     )
 '''
