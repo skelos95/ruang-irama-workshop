@@ -1833,9 +1833,9 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         for call in luck_icons:
             checks.require(
                 "All Players(All Teams)" in call
-                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4" in call
+                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)" in call
                 and "Visible To and Position" in call,
-                "Nasib: icona nativa non è pubblica o non segue il mirino",
+                "Nasib: icona nativa non è pubblica, non segue il mirino o manca la compensazione verticale da 0,45 m",
             )
         for call in [call for call in luck_icons if ", Skull," in call]:
             checks.require("Custom Color(255, 70, 70, 255)" in call, "Nasib: Skull non rosso")
