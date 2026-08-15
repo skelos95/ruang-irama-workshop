@@ -7,9 +7,8 @@ script = subprocess.check_output(
     text=True,
 )
 
-# Repair the malformed "open submenu" branch left by the previous Unkillable
-# implementation. Use section boundaries in the patch source, not exact quote
-# matching.
+# Repair the malformed opening branch by replacing that patch section using
+# stable section markers.
 start = script.index("open_start = block.index(")
 end = script.index("\n# Replace the actual apply branch", start)
 replacement_lines = [
@@ -45,8 +44,7 @@ replacement_lines = [
 ]
 script = script[:start] + "\n".join(replacement_lines) + "\n" + script[end:]
 
-# Replace all locator code before apply_branch. Anchor on the legacy two-state
-# statement itself, then rfind its enclosing outer page-5 branch.
+# Target the actual legacy two-state apply branch by its unique old statement.
 section = script.index("# Replace the actual apply branch")
 locator_start = script.index("apply_start = block.index(", section)
 locator_end = script.index("apply_branch = '''", locator_start)
@@ -59,4 +57,16 @@ locator_lines = [
 ]
 script = script[:locator_start] + "\n".join(locator_lines) + "\n" + script[locator_end:]
 
-exec(compile(script, "exact_unkillable_patch.py", "exec"))
+# Menu 5 is stateful rather than a free preview: opening it must synchronize
+# the cursor to ModeKebal so the selected row reflects the actually applied
+# exclusive state. Remove the old generic "persistent cursor" prohibition.
+validator_marker = 'val = VALIDATOR.read_text(encoding="utf-8")\n'
+insert = (
+    validator_marker
+    + "val = val.replace('        \\\"Event Player.KursorKebal = Event Player.ModeKebal\\\",\\n', '')\n"
+)
+if validator_marker not in script:
+    raise SystemExit("validator read marker not found")
+script = script.replace(validator_marker, insert, 1)
+
+exec(compile(script, "final_unkillable_patch.py", "exec"))
