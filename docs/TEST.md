@@ -242,3 +242,9 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - **Menu 9 Crouch Privacy:** nuovo player = OFF e un nemico vede icona + nome + salute. Attivare Privacy: un nemico non deve vedere assolutamente nulla sopra al target; un alleato deve continuare a vedere sempre icona + nome + salute. Disattivare Privacy: anche il nemico torna a vedere la riga completa.
 
 - **10 menu:** scorrere Main Menu avanti/indietro e verificare wrap `0..9`, cursori persistenti e sfumatura colore anche tra menu 7/8/9.
+
+- **Unkillable 1 HP:** attivare 1 HP, verificare salute a 1, ritorno a 1 quando raggiunge il massimo e Halo visibile a tutti anche con Crouch Privacy ON.
+
+- **Unkillable FULL HP:** attivare FULL HP, subire danni normali e verificare che la salute non scenda; Halo visibile a tutti. Passare 1 HP ↔ FULL HP senza duplicare l’icona.
+
+- **Unkillable cleanup:** OFF, Spawn Room e Player Left devono rimuovere Halo; OFF/Spawn devono ripristinare Damage Received a 100%.

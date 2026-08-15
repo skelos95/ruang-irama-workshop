@@ -16,7 +16,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
   3. `2 - Name Color` — **32 colori**.
   4. `3 - HUD Language` — English / Bahasa Indonesia / ไทย.
   5. `4 - Revenge` — debiti basati sulle kill dirette ricevute.
-  6. `5 - Unkillable: 1 HP` — non disponibile nello Spawn Room.
+  6. `5 - Unkillable` — non disponibile nello Spawn Room.
   7. `6 - Hero Voice` — 5 preset vocali.
   8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
   9. `8 - Crouch Teleport` — abilita/disabilita l’HUD Teleport su Crouch; default OFF.
@@ -129,3 +129,7 @@ Per i dettagli tecnici consulta:
 - [`docs/PROGETTO.md`](docs/PROGETTO.md)
 - [`docs/TEST.md`](docs/TEST.md)
 - [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md)
+
+### Menu 5 — Unkillable
+
+Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e mantiene la salute al massimo. In 1 HP e FULL HP compare un **Halo pubblico** sopra al player, visibile a entrambe le squadre e indipendente da Crouch Privacy. L'Halo usa il valore `Global.RGB` presente quando viene creato e segue il player senza un loop di ricreazione.

@@ -978,7 +978,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorWarna = Event Player.IndeksWarna;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorKebal = Event Player.KebalAktif",
+            "Event Player.KursorKebal = Event Player.ModeKebal",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
             "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
@@ -994,7 +994,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorKamera = 0;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorKebal = Event Player.KebalAktif",
+            "Event Player.KursorKebal = Event Player.ModeKebal",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
             "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
@@ -1728,11 +1728,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "menu 5 non deve più eseguire il refresh Teleport",
     )
     checks.require(
-        "Else If(Event Player.HalamanMenu == 5);" in source
-        and "If(Is In Spawn Room(Event Player) == True);" in source
-        and "Event Player.HalamanMenu = -1;" in source
-        and "Unkillable: 1 HP is unavailable in Spawn Room." in source,
-        "Kebal: menu 5 non bloccato nella Spawn Room",
+        "Else If(Event Player.HalamanMenu == 5);" in source,
+        "Kebal: pagina menu 5 assente dal dispatcher",
     )
     spawn_disable = [
         rule
@@ -1741,8 +1738,11 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             rule.body,
             "Is In Spawn Room(Event Player) == True;",
             "Event Player.KebalAktif = False;",
+            "Event Player.ModeKebal = 0;",
             "Clear Status(Event Player, Unkillable);",
+            "Set Damage Received(Event Player, 100);",
             "Set Player Health(Event Player, Max Health(Event Player));",
+            "Destroy Icon(Event Player.IkonKebal);",
             "Event Player.HalamanMenu = -1;",
         )
     ]
@@ -2327,7 +2327,7 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
         "If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));",
         "If(Event Player.IndeksWarna != Event Player.KursorWarna);",
         "If(Event Player.IndeksBahasa != Event Player.KursorBahasa);",
-        "If(Event Player.KebalAktif != And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == False));",
+        "If(Event Player.ModeKebal != Event Player.KursorKebal);",
         "If(Event Player.IndeksSuara != Event Player.KursorSuara);",
         "If(Event Player.IndeksIkon != Event Player.KursorIkon);",
         "If(Event Player.TeleportasiJongkokDiaktifkan != (Event Player.KursorTeleportasiJongkok == 1));",
@@ -2340,6 +2340,7 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
         ("If(Event Player.IndeksGenre != Event Player.KursorGenre);", "Event Player.IndeksGenre = Event Player.KursorGenre;"),
         ("If(Event Player.IndeksWarna != Event Player.KursorWarna);", "Event Player.IndeksWarna = Event Player.KursorWarna;"),
         ("If(Event Player.IndeksBahasa != Event Player.KursorBahasa);", "Event Player.IndeksBahasa = Event Player.KursorBahasa;"),
+        ("If(Event Player.ModeKebal != Event Player.KursorKebal);", "Event Player.ModeKebal = Event Player.KursorKebal;"),
         ("If(Event Player.IndeksSuara != Event Player.KursorSuara);", "Event Player.IndeksSuara = Event Player.KursorSuara;"),
         ("If(Event Player.IndeksIkon != Event Player.KursorIkon);", "Event Player.IndeksIkon = Event Player.KursorIkon;"),
         ("If(Event Player.TeleportasiJongkokDiaktifkan != (Event Player.KursorTeleportasiJongkok == 1));", "Event Player.TeleportasiJongkokDiaktifkan = Event Player.KursorTeleportasiJongkok == 1;"),
@@ -2592,8 +2593,8 @@ def check_localization_and_indonesian_naming(checks: Checks, source: str, rules:
         "LOAD {0}% | AVG {1}% | MAX {2}%",
         "โหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%",
         "0 - MUSIK",
-        "5 - KEBAL: 1 HP",
-        "5 - ฆ่าไม่ตาย: 1 HP",
+        "5 - KEBAL",
+        "5 - ฆ่าไม่ตาย",
         "6 - SUARA PAHLAWAN",
         "6 - เสียงฮีโร่",
     ):
@@ -2669,6 +2670,55 @@ def check_crouch_toggle_and_name_privacy(checks: Checks, source: str, rules: lis
         ):
             checks.require(token in body, f"menu 8/9: applicazione mancante {token}")
 
+
+def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule]) -> None:
+    clean = mask_strings(source)
+    variables = section_body(source, "variables")
+    for slot, name in ((68, "ModeKebal"), (69, "IkonKebal")):
+        checks.require(re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", variables) is not None, f"Unkillable: slot {slot} deve essere {name}")
+    checks.require("Event Player.ModeKebal = 0;" in clean and "Event Player.IkonKebal = Null;" in clean, "Unkillable: default OFF/icon Null")
+    checks.require("Event Player.KursorKebal = (Event Player.KursorKebal + 1) % 3;" in clean, "Unkillable: next non usa 3 modalità")
+    checks.require("Event Player.KursorKebal = (Event Player.KursorKebal + 2) % 3;" in clean, "Unkillable: previous non usa 3 modalità")
+
+    renderer = rules_containing(rules, "Subroutine;", "GambarKebal;")
+    checks.equal(len(renderer), 1, "Unkillable renderer")
+    if renderer:
+        checks.require("/3" in renderer[0].body and "FULL HP" in renderer[0].body and "1 HP" in renderer[0].body, "Unkillable: menu non mostra OFF/1HP/FULLHP")
+
+    menu = [r for r in rules if code_contains(r.body, "Event Player.PerintahMenu == 1;", "Else If(Event Player.HalamanMenu == 5);")]
+    checks.equal(len(menu), 1, "Unkillable handler menu 5")
+    if menu:
+        body = mask_strings(menu[0].body)
+        for token in (
+            "If(Event Player.ModeKebal != Event Player.KursorKebal);",
+            "Event Player.KebalAktif = Event Player.ModeKebal != 0;",
+            "If(Event Player.ModeKebal == 1);",
+            "Set Damage Received(Event Player, 100);",
+            "Set Player Health(Event Player, 1);",
+            "Set Damage Received(Event Player, 0);",
+            "Set Player Health(Event Player, Max Health(Event Player));",
+            "Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);",
+            "Event Player.IkonKebal = Last Created Entity;",
+            "Destroy Icon(Event Player.IkonKebal);",
+        ):
+            checks.require(token in body, f"Unkillable menu incompleto: {token}")
+
+    full = [r for r in rules if r.name.startswith("18d - Kebal:")]
+    checks.equal(len(full), 1, "Unkillable FULL HP guard")
+    if full:
+        body = mask_strings(full[0].body)
+        checks.require("Event Player.ModeKebal == 2;" in body and "Health(Event Player) < Max Health(Event Player);" in body and "Set Player Health(Event Player, Max Health(Event Player));" in body, "Unkillable FULL HP guard incompleta")
+
+    # Public icon is intentionally independent from Crouch Privacy and team.
+    icon_calls = [call for call in call_texts(source, "Create Icon") if "Halo" in call and "Event Player" in call]
+    checks.equal(len(icon_calls), 1, "Unkillable Halo public icon")
+    if icon_calls:
+        checks.require("All Players(All Teams)" in icon_calls[0] and "Global.RGB" in icon_calls[0] and "Visible To and Position" in icon_calls[0], "Unkillable Halo non è pubblico/RGB/follow")
+        checks.require("PrivasiInspeksiAktif" not in icon_calls[0] and "Team Of(" not in icon_calls[0], "Unkillable Halo dipende dalla privacy/team")
+
+    leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
+    checks.require(bool(leave) and "Destroy Icon(Event Player.IkonKebal);" in mask_strings(leave[0].body), "Unkillable Halo cleanup leave assente")
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2694,6 +2744,7 @@ def main() -> None:
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)
         check_arcade_features(checks, source, rules)
+        check_unkillable_three_modes(checks, source, rules)
         check_feedback_and_jump_respawn(checks, source, rules)
         check_rgb_system(checks, source, rules)
         check_player_icon_menu(checks, source, rules, subroutines)

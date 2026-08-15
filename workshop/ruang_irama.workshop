@@ -114,6 +114,8 @@ variables
 		65: KursorTeleportasiJongkok
 		66: PrivasiInspeksiAktif
 		67: KursorPrivasiInspeksi
+		68: ModeKebal
+		69: IkonKebal
 }
 
 subroutines
@@ -1059,6 +1061,10 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 		Global.PemainPembersihan = Event Player;
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
 		If(Global.IndeksKeluar >= 0);
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
 			Stop Camera(Event Player);
 			If(Event Player.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Event Player);
@@ -1321,7 +1327,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 				Event Player.KursorBalasDendam = (Event Player.KursorBalasDendam + 1) % Count Of(Event Player.DaftarTargetBalasDendam);
 			End;
 		Else If(Event Player.HalamanMenu == 5);
-			Event Player.KursorKebal = (Event Player.KursorKebal + 1) % 2;
+			Event Player.KursorKebal = (Event Player.KursorKebal + 1) % 3;
 		Else If(Event Player.HalamanMenu == 6);
 			Event Player.KursorSuara = (Event Player.KursorSuara + 1) % 5;
 		Else If(Event Player.HalamanMenu == 7);
@@ -1374,7 +1380,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 					Event Player.DaftarTargetBalasDendam);
 			End;
 		Else If(Event Player.HalamanMenu == 5);
-			Event Player.KursorKebal = (Event Player.KursorKebal + 1) % 2;
+			Event Player.KursorKebal = (Event Player.KursorKebal + 2) % 3;
 		Else If(Event Player.HalamanMenu == 6);
 			Event Player.KursorSuara = (Event Player.KursorSuara + 4) % 5;
 		Else If(Event Player.HalamanMenu == 7);
@@ -1526,14 +1532,45 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.KursorBalasDendam = Event Player.KursorBalasDendam;
 				Call Subroutine(SegarkanTargetBalasDendam);
 			Else If(Event Player.HalamanMenu == 5);
-				If(Is In Spawn Room(Event Player) == True);
-					Event Player.HalamanMenu = -1;
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP is unavailable in Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String(
-						"Kebal: 1 HP tidak tersedia di ruang muncul.") : Custom String("ใช้โหมดฆ่าไม่ตาย: 1 HP ในห้องเกิดไม่ได้"));
+			If(Event Player.ModeKebal != Event Player.KursorKebal);
+				Event Player.ModeKebal = Event Player.KursorKebal;
+				Event Player.KebalAktif = Event Player.ModeKebal != 0;
+				If(Event Player.ModeKebal == 0);
+					Call Subroutine(EfekPulihkan);
+					Clear Status(Event Player, Unkillable);
+					Set Damage Received(Event Player, 100);
+					If(Is Alive(Event Player) == True);
+						Set Player Health(Event Player, Max Health(Event Player));
+					End;
+					If(Event Player.IkonKebal != Null);
+						Destroy Icon(Event Player.IkonKebal);
+						Event Player.IkonKebal = Null;
+					End;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable disabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Mode Kebal nonaktif.") : Custom String("ปิดโหมดฆ่าไม่ตายแล้ว"));
 				Else;
-					Event Player.KursorKebal = Event Player.KursorKebal;
+					Call Subroutine(EfekTerapkan);
+					Set Status(Event Player, Null, Unkillable, 9999);
+					If(Event Player.ModeKebal == 1);
+						Set Damage Received(Event Player, 100);
+						If(Is Alive(Event Player) == True);
+							Set Player Health(Event Player, 1);
+						End;
+						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว"));
+					Else;
+						Set Damage Received(Event Player, 0);
+						If(Is Alive(Event Player) == True);
+							Set Player Health(Event Player, Max Health(Event Player));
+						End;
+						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: FULL HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: FULL HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: FULL HP แล้ว"));
+					End;
+					If(Event Player.IkonKebal == Null);
+						Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
+						Event Player.IkonKebal = Last Created Entity;
+					End;
 				End;
-			Else If(Event Player.HalamanMenu == 6);
+			End;
+			Call Subroutine(GambarMenu);
+		Else If(Event Player.HalamanMenu == 6);
 				Event Player.KursorSuara = Event Player.KursorSuara;
 			Else If(Event Player.HalamanMenu == 7);
 				Event Player.KursorIkon = Event Player.KursorIkon;
@@ -2146,10 +2183,17 @@ rule("18 - Kebal: Pasang kembali status setelah respawn")
 	actions
 	{
 		Set Status(Event Player, Null, Unkillable, 9999);
+		If(Event Player.ModeKebal == 1);
+			Set Damage Received(Event Player, 100);
+			Set Player Health(Event Player, 1);
+		Else;
+			Set Damage Received(Event Player, 0);
+			Set Player Health(Event Player, Max Health(Event Player));
+		End;
 	}
 }
 
-rule("18b - Kebal: Saat kesehatan penuh kembali ke satu HP")
+rule("18b - Kebal: Mode 1 HP kembali ke satu saat penuh")
 {
 	event
 	{
@@ -2162,6 +2206,7 @@ rule("18b - Kebal: Saat kesehatan penuh kembali ke satu HP")
 	{
 		Event Player.Manusia == True;
 		Event Player.KebalAktif == True;
+		Event Player.ModeKebal == 1;
 		Is In Spawn Room(Event Player) == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
@@ -2171,6 +2216,32 @@ rule("18b - Kebal: Saat kesehatan penuh kembali ke satu HP")
 	actions
 	{
 		Set Player Health(Event Player, 1);
+	}
+}
+
+rule("18d - Kebal: Mode FULL HP selalu kembali penuh")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.KebalAktif == True;
+		Event Player.ModeKebal == 2;
+		Is In Spawn Room(Event Player) == False;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Health(Event Player) < Max Health(Event Player);
+	}
+
+	actions
+	{
+		Set Player Health(Event Player, Max Health(Event Player));
 	}
 }
 
@@ -2194,14 +2265,20 @@ rule("18c - Kebal: Nonaktifkan otomatis di Spawn Room")
 	{
 		If(Event Player.KebalAktif == True);
 			Event Player.KebalAktif = False;
+			Event Player.ModeKebal = 0;
 			Event Player.KursorKebal = 0;
 			Call Subroutine(EfekPulihkan);
 			Clear Status(Event Player, Unkillable);
+			Set Damage Received(Event Player, 100);
 			If(Is Alive(Event Player) == True);
 				Set Player Health(Event Player, Max Health(Event Player));
 			End;
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable disabled: Spawn Room rules.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Kebal dimatikan: aturan ruang muncul.") : Custom String("ปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว: คุณเข้าไปในห้องเกิด"));
+				"Mode Kebal dimatikan: aturan ruang muncul.") : Custom String("ปิดโหมดฆ่าไม่ตาย: กฎห้องเกิด"));
 		End;
 		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 5));
 			Event Player.HalamanMenu = -1;
@@ -2586,7 +2663,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nSETTLE YOUR SCORE")
-			: Event Player.KursorUtama == 5 ? Custom String("5 - UNKILLABLE: 1 HP\nCURRENT: {0}", Event Player.KebalAktif ? Custom String("ON") : Custom String("OFF"))
+			: Event Player.KursorUtama == 5 ? Custom String("5 - UNKILLABLE\nCURRENT: {0}", Event Player.ModeKebal == 0 ? Custom String("OFF") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
 			: Event Player.KursorUtama == 6 ? Custom String("6 - HERO VOICE\nCURRENT: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("LOW 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("LOW 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ICON\nCURRENT: NOTHING") : Custom String("7 - ICON\nCURRENT: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - CROUCH TELEPORT\nCURRENT: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("ON") : Custom String("OFF"))
@@ -2596,7 +2673,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - BAHASA\nSAAT INI: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - BALAS DENDAM\nTAGIH UTANG KILL")
-			: Event Player.KursorUtama == 5 ? Custom String("5 - KEBAL: 1 HP\nSAAT INI: {0}", Event Player.KebalAktif ? Custom String("AKTIF") : Custom String("MATI"))
+			: Event Player.KursorUtama == 5 ? Custom String("5 - KEBAL\nSAAT INI: {0}", Event Player.ModeKebal == 0 ? Custom String("MATI") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
 			: Event Player.KursorUtama == 6 ? Custom String("6 - SUARA PAHLAWAN\nSAAT INI: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("RENDAH 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("RENDAH 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("TINGGI 1.25x") : Custom String("TINGGI 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - IKON\nSAAT INI: TIDAK ADA") : Custom String("7 - IKON\nSAAT INI: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - TELEPORT JONGKOK\nSAAT INI: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("AKTIF") : Custom String("MATI"))
@@ -2606,7 +2683,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaTH[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - ภาษา\nปัจจุบัน: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - ล้างแค้น\nทวงหนี้กันหน่อย")
-			: Event Player.KursorUtama == 5 ? Custom String("5 - ฆ่าไม่ตาย: 1 HP\nสถานะ: {0}", Event Player.KebalAktif ? Custom String("เปิด") : Custom String("ปิด"))
+			: Event Player.KursorUtama == 5 ? Custom String("5 - ฆ่าไม่ตาย\nสถานะ: {0}", Event Player.ModeKebal == 0 ? Custom String("ปิด") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
 			: Event Player.KursorUtama == 6 ? Custom String("6 - เสียงฮีโร่\nสถานะ: {0}", Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอน\nปัจจุบัน: ไม่มี") : Custom String("7 - ไอคอน\nปัจจุบัน: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - เทเลพอร์ตตอนย่อ\nสถานะ: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("เปิด") : Custom String("ปิด"))
@@ -2874,13 +2951,12 @@ rule("91h - Subrutin: Gambar menu unkillable")
 			Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
 			Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)),
 			Input Binding String(Button(Secondary Fire))), Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))),
-			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("5 - UNKILLABLE: 1 HP {0}/2\nCURRENT: {1}",
-			Event Player.KursorKebal + 1, Event Player.KebalAktif ? Custom String("ON") : Custom String("OFF")), Event Player.KursorKebal == 0
-			? Custom String("OFF") : Custom String("ON")) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String(
-			"5 - UNKILLABLE: 1 HP {0}/2\nSAAT INI: {1}", Event Player.KursorKebal + 1, Event Player.KebalAktif ? Custom String("AKTIF") : Custom String("MATI")),
-			Event Player.KursorKebal == 0 ? Custom String("MATI") : Custom String("AKTIF")) : Custom String("{0}\n> {1}", Custom String(
-			"5 - UNKILLABLE: 1 HP {0}/2\nปัจจุบัน: {1}", Event Player.KursorKebal + 1, Event Player.KebalAktif ? Custom String("เปิด") : Custom String("ปิด")),
-			Event Player.KursorKebal == 0 ? Custom String("ปิด") : Custom String("เปิด")),
+			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("5 - UNKILLABLE {0}/3\nCURRENT: {1}", Event Player.KursorKebal + 1,
+			Event Player.ModeKebal == 0 ? Custom String("OFF") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP")), Event Player.KursorKebal == 0 ? Custom String("OFF") : Event Player.KursorKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
+			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("5 - KEBAL {0}/3\nSAAT INI: {1}", Event Player.KursorKebal + 1,
+			Event Player.ModeKebal == 0 ? Custom String("MATI") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP")), Event Player.KursorKebal == 0 ? Custom String("MATI") : Event Player.KursorKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
+			: Custom String("{0}\n> {1}", Custom String("5 - ฆ่าไม่ตาย {0}/3\nสถานะ: {1}", Event Player.KursorKebal + 1,
+			Event Player.ModeKebal == 0 ? Custom String("ปิด") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP")), Event Player.KursorKebal == 0 ? Custom String("ปิด") : Event Player.KursorKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP")),
 			Top, 100, Color(White), Custom Color(255, 220, 220, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3174,6 +3250,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorTeleportasiJongkok = 0;
 		Event Player.PrivasiInspeksiAktif = False;
 		Event Player.KursorPrivasiInspeksi = 0;
+		Event Player.ModeKebal = 0;
+		Event Player.IkonKebal = Null;
 	}
 }
 

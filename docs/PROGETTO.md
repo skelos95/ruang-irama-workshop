@@ -231,3 +231,8 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 `Menu 8 - Crouch Teleport` usa `TeleportasiJongkokDiaktifkan`: OFF di default. Solo quando è ON la pressione di Crouch può aprire `GambarTeleportasi`; l'ispezione eroe/salute resta indipendente. `TeleportasiJongkokAktif` continua a rappresentare soltanto l'overlay attualmente aperto.
 
 `Menu 9 - Crouch Privacy` usa `PrivasiInspeksiAktif`: OFF di default. Quando è ON, un viewer della squadra nemica riceve una stringa completamente vuota per quel target, quindi sopra al player non compaiono icona eroe, nome o salute. Un viewer della stessa squadra vede invece sempre la riga completa `icona + nome + salute`, indipendentemente dalla privacy. Con Privacy OFF la riga completa è visibile anche ai nemici. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.
+
+
+## Unkillable — OFF / 1 HP / FULL HP
+
+`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Le modalità 1 HP e FULL HP condividono un Halo creato con `Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True)`, quindi l'indicatore non dipende da Crouch Privacy. OFF, Spawn Room e Player Left distruggono l'icona e ripristinano Damage Received a 100%.

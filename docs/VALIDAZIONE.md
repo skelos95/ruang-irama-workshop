@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-5dac1912e178d39d6c3df911452f81b396e39860
+41de2a3f37f2597d657ec55c5b095629b6e052d9
 ```
 
 ## Controlli statici correnti
@@ -95,3 +95,5 @@ Workflow permanenti previsti:
 ## Decisione
 
 Il repository è **static-ready, live-pending**. Il gate statico può certificare coerenza strutturale e invarianti controllate, ma non sostituisce una sessione reale Overwatch con 12 player.
+
+- Menu 5: OFF / 1 HP / FULL HP con Halo pubblico indipendente dalla Crouch Privacy.
