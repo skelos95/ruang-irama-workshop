@@ -1790,11 +1790,11 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("A luck card is already active. Close the menu and shoot it first.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib masih aktif. Tutup menu lalu tembak dulu.") : Custom String("การ์ดเสี่ยงโชคยังทำงานอยู่ ปิดเมนูแล้วค่อยยิงมันก่อน"));
 			Else;
 				Event Player.KartuNasibAktif = True;
-				Event Player.PosisiKartuNasib = Nearest Walkable Position(Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 3) - Vector(0, 1.200, 0);
-				Create In-World Text(All Players(All Teams), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("[ ? ]\nTRY YOUR LUCK") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("[ ? ]\nCOBA NASIB") : Custom String("[ ? ]\nเสี่ยงโชค"), Event Player.PosisiKartuNasib, 1.500, Do Not Clip, Visible To Position String and Color, Global.RGB, Visible Never);
+				Event Player.PosisiKartuNasib = Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 2.500 - Vector(0, 0.450, 0);
+				Create In-World Text(All Players(All Teams), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("[ ? ]\nTRY YOUR LUCK\nSHOOT ME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("[ ? ]\nCOBA NASIB\nTEMBAK") : Custom String("[ ? ]\nเสี่ยงโชค\nยิงเลย"), Event Player.PosisiKartuNasib, 3.500, Do Not Clip, Visible To Position String and Color, Global.RGB, Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
-				Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib + Vector(0, 1.200, 0), 3);
-				Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 2.200, 0), 0.600, Destination and Duration);
+				Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib + Vector(0, 0.450, 0), 3);
+				Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 1.000, 0), 0.600, Destination and Duration);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck card created. Close the menu and shoot it to reveal your fate.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib dibuat. Tutup menu lalu tembak untuk melihat nasibmu.") : Custom String("สร้างการ์ดเสี่ยงโชคแล้ว ปิดเมนูแล้วยิงเพื่อดูชะตาของคุณ"));
 			End;
 			Call Subroutine(GambarMenu);
@@ -2310,8 +2310,8 @@ rule("18e - Nasib: Pemilik menembak kartu sendiri")
 		Event Player.MenuTerbuka == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Is Button Held(Event Player, Button(Primary Fire)) == True;
-		Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 7;
+		Is Firing Primary(Event Player) == True;
+		Distance Between(Event Player.PosisiKartuNasib, Eye Position(Event Player) + Facing Direction Of(Event Player) * Distance Between(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 1.250;
 		Is In Line of Sight(Eye Position(Event Player), Event Player.PosisiKartuNasib, All Barriers Block LOS) == True;
 	}
 

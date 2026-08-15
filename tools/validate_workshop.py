@@ -1776,8 +1776,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         if code_contains(
             rule.body,
             "Event Player.KartuNasibAktif == True;",
-            "Is Button Held(Event Player, Button(Primary Fire)) == True;",
-            "Angle Between Vectors(",
+            "Is Firing Primary(Event Player) == True;",
+            "Distance Between(Event Player.PosisiKartuNasib, Eye Position(Event Player) + Facing Direction Of(Event Player) * Distance Between(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 1.250;",
             "Is In Line of Sight(",
             "Random Integer(0, 1)",
             "Set Player Health(Event Player, Max Health(Event Player));",
@@ -1796,10 +1796,24 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         if "KartuNasib" in call and "All Players(All Teams)" in call
     ]
     checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
+    if card_texts:
+        checks.require(
+            "Event Player.PosisiKartuNasib, 3.500, Do Not Clip" in card_texts[0],
+            "Nasib: la carta pubblica deve usare dimensione 3,5",
+        )
     checks.require(
-        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib" in mask_strings(source),
-        "Nasib: animazione di emersione dal terreno assente",
+        "Event Player.PosisiKartuNasib = Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 2.500 - Vector(0, 0.450, 0);" in mask_strings(source),
+        "Nasib: posizione bassa davanti al proprietario assente",
     )
+    checks.require(
+        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 1.000, 0), 0.600, Destination and Duration);" in mask_strings(source),
+        "Nasib: animazione bassa di emersione dal terreno assente",
+    )
+    if luck:
+        checks.require(
+            "Angle Between Vectors(" not in mask_strings(luck[0].body),
+            "Nasib: il vecchio test angolare fragile non deve restare nella risoluzione",
+        )
     menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
     blocked_one_hp = menu_interact[
         menu_interact.find("If(And(Event Player.KursorKebal == 1"):

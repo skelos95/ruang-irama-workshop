@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-223da9ac0c21dce11f8ff15a20d922e8716bdf8b
+c267f266aac75091ac23ea2320f60ebbc9790f39
 ```
 
 ## Controlli statici correnti
@@ -30,7 +30,7 @@ Il gate verifica:
 - Menu 5 Unkillable/Kebal 1 HP;
 - Menu 6 Hero Voice;
 - Menu 7 Player Icon;
-- Menu 10 Try Your Luck: carta pubblica, attivazione solo proprietario, esito 50/50;
+- Menu 10 Try Your Luck: carta pubblica bassa/grande, hitbox reticolo 1,25 m solo proprietario, esito 50/50;
 - Teleport su overlay Crouch, non nel Main Menu;
 - feedback menu idempotente;
 - transizione colore menu Vector RGB a circa 0,35 s;
