@@ -971,6 +971,10 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     checks.equal(len(menu_open_rules), 1, "apertura Arcade Menu")
     if menu_open_rules:
         opening = mask_strings(menu_open_rules[0].body)
+        checks.require(
+            "Event Player.KartuNasibAktif == False;" in opening,
+            "Menu 10: Arcade Menu può ancora aprirsi durante la roulette",
+        )
         for forbidden in (
             "Event Player.KursorUtama = 0;",
             "Event Player.KursorGenre = Event Player.IndeksGenre",
@@ -1850,6 +1854,29 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         )
 
     menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
+    luck_start = menu_interact.find("Event Player.KartuNasibAktif = True;")
+    checks.require(luck_start >= 0, "Nasib: avvio carta non trovato nel dispatcher")
+    if luck_start >= 0:
+        before_luck = mask_strings(menu_interact[max(0, luck_start - 900):luck_start])
+        after_luck = mask_strings(menu_interact[luck_start:])
+        for token in (
+            "Event Player.KebalAktif = False;",
+            "Event Player.ModeKebal = 0;",
+            "Event Player.KursorKebal = 0;",
+            "Clear Status(Event Player, Unkillable);",
+            "Set Damage Received(Event Player, 100);",
+            "Destroy Icon(Event Player.IkonKebal);",
+        ):
+            checks.require(token in before_luck, f"Nasib: avvio carta non forza Unkillable OFF: {token}")
+        checks.require(
+            "Call Subroutine(TutupMenu);" in after_luck,
+            "Nasib: il menu non viene chiuso quando parte la carta",
+        )
+        checks.require(
+            "Call Subroutine(GambarMenu);" not in after_luck,
+            "Nasib: il menu viene ridisegnato dopo l'avvio della carta",
+        )
+
     blocked_one_hp = menu_interact[
         menu_interact.find("If(And(Event Player.KursorKebal == 1"):
         menu_interact.find("Else;", menu_interact.find("If(And(Event Player.KursorKebal == 1"))

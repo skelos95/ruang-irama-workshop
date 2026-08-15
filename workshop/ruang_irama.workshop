@@ -1180,6 +1180,7 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Is Alive(Event Player) == True;
 		Event Player.SeranganDekatDipakai == False;
 		Event Player.TeleportasiJongkokAktif == False;
+		Event Player.KartuNasibAktif == False;
 		Is Button Held(Event Player, Button(Melee)) == True;
 	}
 
@@ -1790,8 +1791,18 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else;
 			If(Event Player.KartuNasibAktif == True);
+				Call Subroutine(TutupMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("The luck card is already rolling. Wait for the result.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib sedang berputar. Tunggu hasilnya.") : Custom String("การ์ดเสี่ยงโชคกำลังสุ่มอยู่ รอผลก่อน"));
 			Else;
+				Event Player.KebalAktif = False;
+				Event Player.ModeKebal = 0;
+				Event Player.KursorKebal = 0;
+				Clear Status(Event Player, Unkillable);
+				Set Damage Received(Event Player, 100);
+				If(Event Player.IkonKebal != Null);
+					Destroy Icon(Event Player.IkonKebal);
+					Event Player.IkonKebal = Null;
+				End;
 				Event Player.KartuNasibAktif = True;
 				Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
@@ -1799,9 +1810,9 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;
 				Create In-World Text(All Players(All Teams), Event Player.KartuNasibMerah ? Custom String("[ ☠ ]") : Custom String("[ ♥ ]"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.500, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
+				Call Subroutine(TutupMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
 			End;
-			Call Subroutine(GambarMenu);
 		End;
 	}
 }
