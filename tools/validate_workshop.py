@@ -989,7 +989,6 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         for forbidden in (
             "Event Player.KursorGenre = Event Player.IndeksGenre",
             "Event Player.KursorKamera = 0;",
-            "Event Player.KursorWarna = Event Player.IndeksWarna;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
             "Event Player.KursorUnkillable = Event Player.UnkillableAktif",
@@ -2418,7 +2417,7 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
     for token in (
         "Event Player.KursorUtama == 0 ? Custom Color(55, 235, 245, 255)",
         "Event Player.KursorUtama == 1 ? Custom Color(90, 180, 255, 255)",
-        "Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]",
+        "Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]",
         "Event Player.KursorUtama == 3 ? Custom Color(190, 120, 255, 255)",
         "Event Player.KursorUtama == 4 ? Custom Color(255, 80, 80, 255)",
         "Event Player.KursorUtama == 5 ? Custom Color(255, 185, 90, 255)",
@@ -2469,6 +2468,22 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
     for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarUnkillable", "GambarSuara", "GambarIkon"):
         checks.equal(len(rules_containing(rules, "Subroutine;", f"{sub};")), 1, f"audit: definizione unica {sub}")
 
+
+def check_color_menu_cursor_sync(checks: Checks, source: str, rules: list[Rule]) -> None:
+    clean = mask_strings(source)
+    checks.require(
+        "Else If(Event Player.HalamanMenu == 2);\n\t\t\t\tEvent Player.KursorWarna = Event Player.IndeksWarna;" in clean,
+        "menu colore: cursore non sincronizzato al colore applicato all'ingresso",
+    )
+    checks.require(
+        ": Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]" in clean,
+        "menu colore: main menu non usa il colore realmente applicato",
+    )
+    checks.require(
+        ": Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]" not in clean,
+        "menu colore: main menu usa ancora il cursore preview stale",
+    )
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2488,6 +2503,7 @@ def main() -> None:
         check_menus(checks, source, rules, subroutines)
         check_menu_palette_and_name_colors(checks, source, rules)
         check_runtime_efficiency_audit(checks, source, rules)
+        check_color_menu_cursor_sync(checks, source, rules)
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)

@@ -1465,7 +1465,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Else If(Event Player.HalamanMenu == 1);
 				Call Subroutine(SegarkanTargetKamera);
 			Else If(Event Player.HalamanMenu == 2);
-				Event Player.KursorWarna = Event Player.KursorWarna;
+				Event Player.KursorWarna = Event Player.IndeksWarna;
 			Else If(Event Player.HalamanMenu == 3);
 				Event Player.KursorBahasa = Event Player.KursorBahasa;
 			Else If(Event Player.HalamanMenu == 4);
@@ -2518,7 +2518,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอนผู้เล่น\nปัจจุบัน: ไม่มี") : Custom String("7 - ไอคอนผู้เล่น\nปัจจุบัน: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon]), Top, 100,
 			Color(White), Custom Color(210, 230, 255, 255), Event Player.KursorUtama == 0 ? Custom Color(55, 235, 245, 255)
 			: Event Player.KursorUtama == 1 ? Custom Color(90, 180, 255, 255)
-			: Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]
+			: Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]
 			: Event Player.KursorUtama == 3 ? Custom Color(190, 120, 255, 255)
 			: Event Player.KursorUtama == 4 ? Custom Color(255, 80, 80, 255)
 			: Event Player.KursorUtama == 5 ? Custom Color(255, 185, 90, 255)
