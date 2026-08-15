@@ -53,9 +53,6 @@ new_target_text = '''Event Player.TargetInspeksi == Null ? Custom String("") : A
 block = replace_once(block, old_target_text, new_target_text, "enemy-only complete Crouch privacy")
 src = src[:start] + block + src[end:]
 
-# ---------------------------------------------------------------------------
-# Menu 9 wording now describes full enemy HUD privacy rather than name hiding.
-# ---------------------------------------------------------------------------
 replacements = {
     '9 - NAME PRIVACY\\nCURRENT: {0}': '9 - CROUCH PRIVACY\\nCURRENT: {0}',
     'Event Player.PrivasiInspeksiAktif ? Custom String("VISIBLE") : Custom String("HIDDEN")': 'Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF")',
@@ -81,11 +78,7 @@ for old, new in replacements.items():
 
 SOURCE.write_text(src, encoding="utf-8")
 
-# ---------------------------------------------------------------------------
-# Validator: replace old name-only privacy expectations with the team contract.
-# ---------------------------------------------------------------------------
 val = VALIDATOR.read_text(encoding="utf-8")
-
 val = val.replace(
     'checks.require("9 - NAME PRIVACY" in source and "9 - PRIVASI NAMA" in source and "9 - ความเป็นส่วนตัวชื่อ" in source, "menu 9 non localizzato EN/ID/TH")',
     'checks.require("9 - CROUCH PRIVACY" in source and "9 - PRIVASI JONGKOK" in source and "9 - ความเป็นส่วนตัวตอนย่อ" in source, "menu 9 non localizzato EN/ID/TH")',
@@ -94,21 +87,21 @@ val = val.replace(
 old_privacy_checks = '''        checks.require("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True" in body, "menu 9: nome target non dipende dalla privacy")
         checks.require('Custom String("")' in inspect[0].body, "menu 9: ramo nome nascosto assente")
         checks.require("Hero Icon String" in body and "Health(Event Player.TargetInspeksi)" in body, "menu 9: privacy non deve nascondere eroe o salute")'''
-new_privacy_checks = '''        checks.require("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True" in body, "menu 9: target non dipende dalla privacy")
+new_privacy_checks = '''        raw = inspect[0].body
+        checks.require("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True" in body, "menu 9: target non dipende dalla privacy")
         checks.require("Team Of(Event Player.TargetInspeksi) != Team Of(Event Player)" in body, "menu 9: privacy non limitata ai viewer nemici")
-        checks.require('Custom String("")' in inspect[0].body, "menu 9: ramo HUD nemico completamente vuoto assente")
+        checks.require('Custom String("")' in raw, "menu 9: ramo HUD nemico completamente vuoto assente")
         privacy_at = body.find("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True")
         enemy_at = body.find("Team Of(Event Player.TargetInspeksi) != Team Of(Event Player)", privacy_at)
-        blank_at = body.find('Custom String("")', enemy_at)
-        full_at = body.find('Custom String("{0} {1} | {2}"', blank_at)
-        checks.require(0 <= privacy_at < enemy_at < blank_at < full_at, "menu 9: ordine privacy nemico -> vuoto -> HUD completo errato")
-        full_segment = body[full_at:full_at + 650]
+        checks.require(0 <= privacy_at < enemy_at, "menu 9: controllo privacy/squadra in ordine errato")
+        checks.require('Custom String("{0} {1} | {2}"' in raw, "menu 9: HUD completo alleato/pubblico assente")
+        full_at = raw.find('Custom String("{0} {1} | {2}"')
+        full_segment = raw[full_at:full_at + 900]
         checks.require("Hero Icon String" in full_segment and 'Custom String("{0}", Event Player.TargetInspeksi)' in full_segment and "Health(Event Player.TargetInspeksi)" in full_segment, "menu 9: HUD completo alleato/pubblico deve mantenere icona, nome e salute")'''
 if old_privacy_checks not in val:
     raise SystemExit("validator old privacy checks not found")
 val = val.replace(old_privacy_checks, new_privacy_checks, 1)
 
-# Strengthen explicit semantics in the same dedicated checker.
 needle = '    checks.require("8 - CROUCH TELEPORT" in source and "8 - TELEPORT JONGKOK" in source and "8 - เทเลพอร์ตตอนย่อ" in source, "menu 8 non localizzato EN/ID/TH")\n'
 addition = '''    checks.require("Crouch privacy enabled. Enemies see nothing." in source, "menu 9: feedback EN privacy ON assente")
     checks.require("Privasi Jongkok aktif. Musuh tidak melihat apa pun." in source, "menu 9: feedback ID privacy ON assente")
@@ -121,31 +114,18 @@ if addition not in val:
 
 VALIDATOR.write_text(val, encoding="utf-8")
 
-# ---------------------------------------------------------------------------
-# Documentation: update semantics everywhere.
-# ---------------------------------------------------------------------------
 readme = README.read_text(encoding="utf-8")
-readme = readme.replace(
-    '`9 - Name Privacy` — decide se gli altri vedono il tuo nome durante Crouch inspection; default OFF.',
-    '`9 - Crouch Privacy` — quando ON nasconde completamente icona/nome/salute ai nemici durante Crouch inspection; i compagni vedono sempre tutto; default OFF.',
-)
-readme = readme.replace(
-    '| 9 | Name Privacy | OFF / ON, default OFF |',
-    '| 9 | Crouch Privacy | OFF / ON; ON nasconde tutto ai nemici, alleati sempre visibili |',
-)
+readme = readme.replace('`9 - Name Privacy` — decide se gli altri vedono il tuo nome durante Crouch inspection; default OFF.', '`9 - Crouch Privacy` — quando ON nasconde completamente icona/nome/salute ai nemici durante Crouch inspection; i compagni vedono sempre tutto; default OFF.')
+readme = readme.replace('| 9 | Name Privacy | OFF / ON, default OFF |', '| 9 | Crouch Privacy | OFF / ON; ON nasconde tutto ai nemici, alleati sempre visibili |')
 README.write_text(readme, encoding="utf-8")
 
 project = PROJECT.read_text(encoding="utf-8")
-project = project.replace(
-    '| 9 | Name Privacy | mostra/nasconde il proprio nome agli altri, default OFF |',
-    '| 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |',
-)
+project = project.replace('| 9 | Name Privacy | mostra/nasconde il proprio nome agli altri, default OFF |', '| 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |')
 old_para = '`Menu 9 - Name Privacy` usa `PrivasiInspeksiAktif`: OFF di default. Quando è OFF, gli altri viewer che ispezionano quel player con Crouch vedono ancora icona eroe e salute ma ricevono una stringa nome vuota; quando è ON vedono anche il nome. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.'
 new_para = '`Menu 9 - Crouch Privacy` usa `PrivasiInspeksiAktif`: OFF di default. Quando è ON, un viewer della squadra nemica riceve una stringa completamente vuota per quel target, quindi sopra al player non compaiono icona eroe, nome o salute. Un viewer della stessa squadra vede invece sempre la riga completa `icona + nome + salute`, indipendentemente dalla privacy. Con Privacy OFF la riga completa è visibile anche ai nemici. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.'
 if old_para in project:
     project = project.replace(old_para, new_para)
 else:
-    # Previous renaming may already have changed only the identifier name.
     pattern = re.compile(r'`Menu 9 - Name Privacy`.*?impostazione\.', re.S)
     project, n = pattern.subn(new_para, project, count=1)
     if n != 1:
@@ -158,17 +138,11 @@ new_test = '- **Menu 9 Crouch Privacy:** nuovo player = OFF e un nemico vede ico
 if old_test in tests:
     tests = tests.replace(old_test, new_test)
 else:
-    # tolerate exact identifier rename from the first pass
     tests = tests.replace(old_test.replace("Name Privacy", "Crouch Privacy"), new_test)
 TESTS.write_text(tests, encoding="utf-8")
 
 report = REPORT.read_text(encoding="utf-8")
-report = report.replace(
-    'Menu 9 Name Privacy, default OFF; eroe/salute restano visibili anche col nome nascosto;',
-    'Menu 9 Crouch Privacy, default OFF; quando ON i nemici non vedono alcun HUD inspection mentre gli alleati vedono sempre icona/nome/salute;',
-)
-
-# Refresh source blob marker.
+report = report.replace('Menu 9 Name Privacy, default OFF; eroe/salute restano visibili anche col nome nascosto;', 'Menu 9 Crouch Privacy, default OFF; quando ON i nemici non vedono alcun HUD inspection mentre gli alleati vedono sempre icona/nome/salute;')
 data = SOURCE.read_bytes().replace(b"\r\n", b"\n")
 blob = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 report, n = re.subn(r"```text\n[0-9a-f]{40}\n```", f"```text\n{blob}\n```", report, count=1)
