@@ -1,142 +1,127 @@
 # CHILL Dedicated Server — Overwatch Workshop
 
-**CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2. Aggiunge timer di sessione, soundtrack personale, colori, telecamera in terza persona, Revenge, Unkillable + 1 HP, modifica voce e ispezione con Crouch senza imporre mappe o impostazioni lobby.
+**CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.5.5** stabilizza i percorsi non-camera di menu, Crouch, nameplate, Teleport e lifecycle sulla base Season 4: **Heroes of Busan**. La camera in terza persona, i suoi parametri e i suoi menu restano invariati rispetto alla 0.5.4. Lo stato della release è **static-ready, live-pending**: il gate statico e le prove che richiedono il client Overwatch sono distinti in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
-
-## Compatibilità 6v6
-
-L'overlay è pensato per le modalità core 6v6:
-
-- Control
-- Escort
-- Hybrid
-- Push
-- Flashpoint
-- Clash
-
-Il sorgente non contiene un blocco `settings`, quindi non seleziona né sovrascrive modalità, mappe, roster o regole della lobby. Durante la sessione disabilita il completamento e il punteggio nativi: nessuna squadra riceve punti, vittorie o pareggi. La partita termina soltanto quando il timer personalizzato arriva a `00:00`, quindi viene eseguito un unico `Restart Match` senza dichiarare un vincitore.
-
-La durata è configurabile con `Server duration (minutes)` da 30 a 90 minuti. Il paese mostrato nell’HUD `SERVER LOCATION` è selezionabile direttamente per nome con `Server location (Asia)`; la lista contiene 26 località asiatiche e il default resta Indonesia.
+La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo README descrive lo **stato funzionale attuale** del Workshop dopo gli aggiornamenti successivi.
 
 ## Funzioni principali
 
-- HUD centrale con nome server, `SERVER LOCATION` configurabile e countdown personalizzato.
-- Avvio rapido: Waiting for Players viene avviato automaticamente e Assemble Heroes / Setup vengono portati immediatamente a zero.
-- Liste sociali degli umani con icona dell'eroe, tempo trascorso e soundtrack scelta.
-- Sette menu: `0 - Soundtrack`, `1 - Third-Person Camera`, `2 - Name Color`, `3 - HUD Language`, `4 - Revenge`, `5 - Unkillable + 1 HP` e `6 - Voice Modifier`. Il menu Unkillable è bloccato nelle Spawn Room e la funzione si disattiva automaticamente quando il player vi rientra.
-- 100 generi musicali e 20 colori, navigabili con wrap circolare.
-- Tre localizzazioni indipendenti per viewer: **English**, **Bahasa Indonesia** e **ไทย**.
-- Camera dinamica calcolata interamente dal renderer: arretramento sensibile al pitch, spalla orizzontale, collisione e mira condividono lo stesso fotogramma, con un solo raycast e senza loop server.
-- Ispezione Crouch con candidati validi e visibili, ordinati per angolo rispetto al reticolo; nome, icona eroe e carica Ultimate usano il colore personale per gli umani e l'arancione per i bot.
-- Revenge basato sulle eliminazioni dirette ricevute dagli altri umani, con identità del bersaglio preservata anche durante cambiamenti della lobby.
-- Teleport verso l'ultima Spawn Room visitata, obiettivi disponibili e giocatori presenti, con identità del target bloccata prima del refresh per evitare retarget quando qualcuno esce.
-- Classificazione degli umani e dei bot AI prima della creazione degli HUD sociali; i dummy bot seguono invece il lifecycle edge-triggered dedicato.
-- Cleanup di HUD, testi nel mondo, camera e riferimenti Revenge in uscita, più ripristino di menu e Crouch durante morte, despawn, hero-select o passaggio a spettatore.
-- Sincronizzazione delle nameplate quando un umano viene registrato o un bot viene bloccato/spawnato mentre altri viewer stanno già ispezionando.
-- Slot HUD riutilizzabili e registri allineati, per evitare crescita permanente dopo cicli join/leave.
-- Diagnostica prestazionale opzionale, visibile soltanto all'host e disattivata per impostazione predefinita; quando attiva compare in forma compatta sotto l’ultimo player della lista sinistra.
+- HUD centrale con `CHILL DEDICATED SERVER`, countdown personalizzato e `SERVER LOCATION` configurabile.
+- Due roster sociali:
+  - sinistra: icona personale + icona eroe + player + `N MIN`;
+  - destra: icona personale + icona eroe + player + genere musicale scelto.
+- **8 menu Arcade**:
+  1. `0 - Soundtrack` — 100 generi.
+  2. `1 - Third-Person Camera` — OFF, self o spectate.
+  3. `2 - Name Color` — **32 colori**.
+  4. `3 - HUD Language` — English / Bahasa Indonesia / ไทย.
+  5. `4 - Revenge` — debiti basati sulle kill dirette ricevute.
+  6. `5 - Unkillable: 1 HP` — non disponibile nello Spawn Room.
+  7. `6 - Hero Voice` — 5 preset vocali.
+  8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
+- Player Icon predefinita: **Nothing**.
+- Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
+- Colori menu diversi e coordinati con i rispettivi sottomenu.
+- Transizione colore morbida di circa **0,35 s** tramite Vector RGB.
+- RGB globale pastel/neon lento per titolo, timer ed effetti visivi.
+- Feedback `Small Message` + visuale + audio soltanto quando una modifica cambia davvero; premere `Interact` sulla stessa scelta non ripete il feedback.
+- Crouch inspection con icona eroe, nome e salute; la percentuale Ultimate non viene mostrata.
+- Teleport spostato fuori dal Main Menu: viene gestito tramite **Crouch**.
+- Jump da morto per respawn vicino al punto di morte tramite `Nearest Walkable Position`.
+- Camera rapida fuori menu con `Interact` tenuto per 0,5 s.
+- Diagnostica prestazionale opzionale host-only.
+
+## Menu Arcade attuale
+
+| # | Menu | Contenuto |
+|---:|---|---|
+| 0 | Soundtrack | 100 generi |
+| 1 | Third-Person Camera | OFF / self / target |
+| 2 | Name Color | 32 colori |
+| 3 | HUD Language | EN / ID / TH |
+| 4 | Revenge | debiti kill dirette |
+| 5 | Unkillable: 1 HP | ON / OFF |
+| 6 | Hero Voice | 5 preset |
+| 7 | Player Icon | Nothing + 36 icone |
+
+**Teleport non è un nono menu**: è un overlay associato a Crouch.
 
 ## Controlli
 
 | Contesto | Input | Azione |
 |---|---|---|
-| Sempre | Tieni Melee per 0,5 s | Apre o chiude il Menu Arcade |
-| Fuori menu | Tieni Crouch e mira | Ispeziona il target vicino al reticolo |
-| Fuori menu | Tieni Interact per 0,5 s | Attiva la terza persona sul proprio eroe; se una camera è già attiva, torna alla prima persona |
-| Menu principale | Primary / Secondary Fire | Voce successiva / precedente |
-| Menu principale | Interact | Entra nel menu selezionato |
-| Sottomenu | Primary / Secondary Fire | Scelta successiva / precedente (`±1`) |
-| Menu Soundtrack | Jump / Crouch | Salta indietro / avanti di 10 generi (`−10` / `+10`) |
-| Sottomenu | Interact | Applica la scelta o l'azione |
-| Sottomenu | Reload | Torna al menu principale |
-| Qualunque pagina menu | Tieni Melee per 0,5 s | Chiude il menu |
+| Sempre | Tieni Melee 0,5 s | Apre/chiude il Menu Arcade |
+| Fuori menu | Tieni Interact 0,5 s | Alterna terza / prima persona |
+| Fuori menu | Tieni Crouch | Inspection + overlay Teleport |
+| Da morto, menu chiuso | Jump | Respawn vicino al punto di morte |
+| Main Menu | Primary / Secondary | Voce successiva / precedente |
+| Main Menu | Interact | Apre il sottomenu |
+| Sottomenu | Primary / Secondary | Scelta successiva / precedente |
+| Soundtrack | Jump / Crouch | `−10` / `+10` generi |
+| Sottomenu | Interact | Applica la scelta |
+| Sottomenu | Reload | Torna al Main Menu |
 
-Quando più input vengono rilevati nello stesso ciclo, il dispatcher usa questa priorità: `Interact → Reload → Primary → Secondary → Jump → Crouch`.
+## Localizzazione
 
-## Installazione
+Tutti gli HUD principali e i `Small Message` sono gestiti in tre lingue indipendenti per viewer:
 
-1. Salva una copia delle impostazioni della Partita personalizzata.
-2. Se necessario, imposta temporaneamente la lingua testo di Overwatch su **English (US)** per importare le keyword Workshop.
-3. Apri [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop) e copia il contenuto raw.
-4. In Overwatch apri Partita personalizzata → Crea → Impostazioni → Workshop e incolla il sorgente.
-5. Configura una delle modalità core 6v6 e le mappe desiderate nelle normali impostazioni lobby.
-6. Imposta durata, `Server location (Asia)` e diagnostica dalle opzioni Workshop; per la lista consulta [`docs/SERVER_LOCATIONS.md`](docs/SERVER_LOCATIONS.md).
-7. Prima di pubblicare, esegui i controlli live descritti in [`docs/TEST.md`](docs/TEST.md).
+- **English**
+- **Bahasa Indonesia**
+- **ไทย**
 
-Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.
+Le keyword native Workshop restano in inglese; identificatori, subroutine, titoli regole e commenti personalizzati sono mantenuti in Bahasa Indonesia.
 
-## Note tecniche
+## Prestazioni e 12 player
 
-- Le keyword e le API native Workshop restano in inglese; identificatori, regole e commenti personalizzati sono in Bahasa Indonesia.
-- I dummy bot bypassano la classificazione degli umani e sono gestiti dal lifecycle edge-triggered tramite `Is Dummy Bot`. Per i normali bot AI resta necessario il workaround con due sentinelle `U+200B`, da ricontrollare dopo ogni patch.
-- Bot AI e dummy bot non ricevono i menu o gli HUD sociali, ma possono restare destinazioni valide per camera e Crouch.
-- Il timer usa una propria origine e una propria scadenza e aggiorna la stringa visualizzata una volta al secondo.
-- Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l’host vede sotto la lista sinistra `LOAD / AVG / MAX` e i conteggi `HUD / IWT`.
-- I controlli statici non possono certificare il comportamento live del parser, la sentinella bot o la stabilità a 12 giocatori. Lo stato verificato è riportato in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
-- Le modifiche automatizzate usano un runner permanente (`maintenance-patch.yml`) attivato solo da `.github/maintenance/patch.py`; il validatore vieta altri workflow temporanei, evitando YAML dinamico malformato e runner con `jobs: []`.
+Il runtime è stato alleggerito per una lobby piena:
 
-## Struttura
+- pool HUD riutilizzabile `0..11`;
+- cleanup completo join/leave;
+- cache `SlotHUDTerakhir` per evitare sort continui nei roster;
+- inspection Crouch a **5 Hz**;
+- refresh passivi Camera/Revenge/Teleport a **1 Hz**;
+- contatore minuti ogni **5 s**;
+- cache Spawn Room a **1 Hz**;
+- un solo loop RGB globale a 10 Hz;
+- un solo raycast Camera;
+- nessun loop per-player dedicato alla transizione colore menu.
 
-```text
-workshop/ruang_irama.workshop  sorgente Workshop importabile
-docs/GENERI.md                  catalogo dei 100 generi
-docs/PROGETTO.md                architettura e scelte di progetto
-docs/TEST.md                    matrice di test statici e live
-docs/VALIDAZIONE.md             rapporto di validazione della release
-tools/validate_workshop.py      validatore statico read-only
-```
+## Teleport Crouch
 
-## Versione attuale
+L'overlay Teleport include:
 
-**0.5.5 — Stabilizzazione non-camera**
+- Spawn Room registrata;
+- obiettivo della modalità quando disponibile;
+- player/bot validi.
 
-- La chiusura del menu mantiene coerente il latch Melee anche durante morte, despawn, hero-select e passaggio a spettatore.
-- Crouch filtra prima target non validi o occlusi e sceglie poi il candidato col minore angolo rispetto al reticolo, senza nuove soglie di distanza o angolo.
-- Nameplate, HUD e testi vengono ripuliti nei percorsi di lifecycle e sincronizzati per i nuovi umani e bot mentre l'ispezione è già attiva.
-- Teleport conserva l'identità selezionata prima del refresh; se il player esce, l'azione viene annullata invece di passare al nuovo elemento dello stesso indice.
-- Lo stato vuoto di Revenge è localizzato; la lista continua intenzionalmente a mostrare gli altri umani anche con debito `0`, ma il claim resta bloccato.
-- Validatore, test negativi e CI sono irrigiditi; la release resta **static-ready, live-pending** fino al completamento della matrice nel client.
-- Logica, valori, raycast, comportamento e menu della camera in terza persona sono invariati.
+Escort/Hybrid usano `Payload Position`, CTF usa la flag nemica, Push prova un player sull'obiettivo come proxy del robot e usa il fallback obiettivo quando disponibile.
 
-Release precedente: **0.5.4 — Inquadratura verticale pitch-aware**
+## Name Color
 
-- Il braccio posteriore della camera segue sia yaw sia pitch, mantenendo l'eroe nell'inquadratura quando si guarda in alto o in basso.
-- L'offset laterale resta sul piano orizzontale per evitare capovolgimenti o collassi della spalla agli angoli estremi.
-- Restano invariati pipeline per-frame, singolo raycast, margine anti-muro e blend `0` della correzione fluida.
+Sono disponibili **32 tonalità**. I primi 20 colori originali sono stati mantenuti e sono state aggiunte 12 tonalità pastel/neon. Gli array EN/ID/TH e la tabella Vector RGB sono allineati.
 
-Release precedente alla 0.5.4: **0.5.3 — Camera interamente per-frame**
+## Player Icon
 
-- Rimossi il loop camera e tutte le cache di posizione sincronizzate dal server.
-- Anchor, spalla, raycast, margine parete e punto di mira sono rivalutati nella stessa pipeline visuale del client.
-- Blend `0` per evitare un secondo inseguitore sopra coordinate già aggiornate per fotogramma.
-- Il test live ha confermato la fluidità, ma ha anche mostrato che l'arretramento soltanto orizzontale lasciava uscire l'eroe dall'inquadratura con pitch elevato; la 0.5.4 corregge la geometria.
+Il Menu 7 contiene **37 voci**:
 
-Release precedente: **0.5.2 — Primo intervento sulla fluidità camera**
+- indice 0: `Nothing`;
+- indici 1..36: tutte le icone standard disponibili tramite `Icon String`.
 
-- Eliminata l'oscillazione verticale causata da pitch e correzione variabile vicino agli spigoli.
-- Il test live ha però mostrato che la traslazione per-frame combinata con un offset server e blend `80` poteva ancora produrre vibrazione; la 0.5.3 sostituisce quella pipeline.
+L'icona mantiene il proprio colore nativo e viene mostrata prima dell'icona eroe nei due roster. Non viene creata alcuna icona sopra il player.
 
-Release precedente stabile per l'import: **0.5.1 — Correzione importazione Workshop**
+## GitHub
 
-- Sostituito il tipo evento inesistente `Player Spawned` con transizioni compatibili di morte/despawn e `Is Alive`.
-- Il validatore ora rifiuta tipi evento non riconosciuti dal Workshop.
+- branch operativo: `main`;
+- workflow permanenti: `validate-workshop.yml` e `maintenance-patch.yml`;
+- nessun workflow temporaneo permanente;
+- test statici: 20 unit test + validatore Workshop.
 
-Base funzionale: **0.5.0 — Season 4: Heroes of Busan**.
+## Stato validazione
 
-Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+Il repository è **static-ready, live-pending**. I controlli statici non possono certificare importazione reale, rendering HUD, input simultanei o stabilità effettiva con 12 client Overwatch.
 
-- I cursori del menu restano memorizzati: chiudendo e riaprendo Arcade Menu o un submenu si riparte dall’ultima voce selezionata; anche il menu Teleport Crouch conserva l’ultimo indice.
+Per i dettagli tecnici consulta:
 
-- Le modifiche e i ripristini hanno feedback audiovisivo: visuale visibile a tutti, audio solo per chi esegue l’azione.
-- Da morto, con menu chiuso, `Jump` forza il respawn vicino al punto di morte su una posizione corretta da `Nearest Walkable Position`.
-
-- Sistema RGB globale animato: il titolo `CHILL DEDICATED SERVER`, il timer centrale e gli effetti visivi condividono lo stesso ciclo rainbow pastel/neon lento in tempo reale.
-
-- Menu 7 `Player Icon`: 37 voci (`Niente` + 36 icone Workshop), con cursore persistente e feedback di applicazione.
-- Nelle liste player l’icona scelta precede l’icona eroe; la riga sinistra mostra il tempo come `N MIN` e la riga destra soltanto il genere scelto, senza i prefissi `CHILL for` / `soundtrack`.
-
-- Palette menu coordinata: ogni voce del Main Menu usa lo stesso colore principale del proprio sottomenu, mentre i colori degli input restano invariati.
-- `Name Color` offre 32 tonalità: le 20 originali più 12 nuove sfumature pastel/neon.
-
-- Audit localizzazione completo: HUD e Small Message verificati in English / Bahasa Indonesia / ไทย; nomenclatura Workshop interna ripulita in Bahasa Indonesia.
+- [`docs/PROGETTO.md`](docs/PROGETTO.md)
+- [`docs/TEST.md`](docs/TEST.md)
+- [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md)
