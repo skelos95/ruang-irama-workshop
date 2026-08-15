@@ -122,6 +122,7 @@ variables
 		73: KartuNasibMerah
 		74: PutaranKartuNasib
 		75: JedaKartuNasib
+		76: IkonKartuNasib
 }
 
 subroutines
@@ -921,6 +922,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
 		Event Player.MenitLobi = 0;
+		Event Player.IkonKartuNasib = Null;
 		Event Player.UrutanHUD = First Of(Global.SlotHUDTersedia);
 		Global.SlotHUDTerakhir = Max(Global.SlotHUDTerakhir, Event Player.UrutanHUD);
 		Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);
@@ -1073,7 +1075,11 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 				If(Event Player.TeksKartuNasib != Null);
 					Destroy In-World Text(Event Player.TeksKartuNasib);
 				End;
+				If(Event Player.IkonKartuNasib != Null);
+					Destroy Icon(Event Player.IkonKartuNasib);
+				End;
 				Event Player.TeksKartuNasib = Null;
+				Event Player.IkonKartuNasib = Null;
 				Event Player.KartuNasibAktif = False;
 			End;
 			If(Event Player.IkonKebal != Null);
@@ -1808,8 +1814,14 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
 				Event Player.JedaKartuNasib = 0.080;
 				Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;
-				Create In-World Text(All Players(All Teams), Event Player.KartuNasibMerah ? Custom String("[ ☠ ]") : Custom String("[ ♥ ]"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.500, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
+				Create In-World Text(All Players(All Teams), Custom String("[     ]"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.200, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
+				If(Event Player.KartuNasibMerah == True);
+					Create Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
+				Else;
+					Create Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
+				End;
+				Event Player.IkonKartuNasib = Last Created Entity;
 				Call Subroutine(TutupMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
 			End;
@@ -2331,6 +2343,15 @@ rule("18e - Nasib: Roulette merah hijau makin lambat")
 	{
 		Wait(Event Player.JedaKartuNasib, Abort When False);
 		Event Player.KartuNasibMerah = Event Player.KartuNasibMerah == False;
+		If(Event Player.IkonKartuNasib != Null);
+			Destroy Icon(Event Player.IkonKartuNasib);
+		End;
+		If(Event Player.KartuNasibMerah == True);
+			Create Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
+		Else;
+			Create Icon(All Players(All Teams), Eye Position(Event Player) + Facing Direction Of(Event Player) * 4, Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
+		End;
+		Event Player.IkonKartuNasib = Last Created Entity;
 		Modify Player Variable(Event Player, PutaranKartuNasib, Subtract, 1);
 		Modify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);
 		Loop If Condition Is True;
@@ -2359,7 +2380,11 @@ rule("18e - Nasib: Roulette merah hijau makin lambat")
 		If(Event Player.TeksKartuNasib != Null);
 			Destroy In-World Text(Event Player.TeksKartuNasib);
 		End;
+		If(Event Player.IkonKartuNasib != Null);
+			Destroy Icon(Event Player.IkonKartuNasib);
+		End;
 		Event Player.TeksKartuNasib = Null;
+		Event Player.IkonKartuNasib = Null;
 		Event Player.KartuNasibAktif = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
@@ -2385,7 +2410,11 @@ rule("18f - Nasib: Hapus kartu saat pemilik mati")
 		If(Event Player.TeksKartuNasib != Null);
 			Destroy In-World Text(Event Player.TeksKartuNasib);
 		End;
+		If(Event Player.IkonKartuNasib != Null);
+			Destroy Icon(Event Player.IkonKartuNasib);
+		End;
 		Event Player.TeksKartuNasib = Null;
+		Event Player.IkonKartuNasib = Null;
 		Event Player.KartuNasibAktif = False;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;

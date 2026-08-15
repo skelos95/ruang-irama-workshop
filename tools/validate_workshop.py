@@ -1701,6 +1701,7 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         (52, "KursorKebal"),
         (53, "IndeksSuara"),
         (54, "KursorSuara"),
+        (76, "IkonKartuNasib"),
     ):
         checks.require(
             player_table is not None
@@ -1808,21 +1809,43 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
     if card_texts:
         checks.require(
-            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.500, Do Not Clip" in card_texts[0],
-            "Nasib: la carta pubblica deve restare agganciata al mirino a 4 m e usare dimensione 2,5",
+            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.200, Do Not Clip" in card_texts[0],
+            "Nasib: le parentesi della carta devono restare agganciate al mirino a 4 m e usare dimensione 2,2",
         )
         checks.require(
             "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],
-            "Nasib: il testo mondo non cambia dinamicamente rosso/verde",
+            "Nasib: le parentesi non cambiano dinamicamente rosso/verde",
         )
         checks.require(
-            "Custom String(\"[ ☠ ]\")" in card_texts[0]
-            and "Custom String(\"[ ♥ ]\")" in card_texts[0]
+            "Custom String(\"[     ]\")" in card_texts[0]
             and "Icon String(" not in card_texts[0]
+            and "☠" not in card_texts[0]
+            and "♥" not in card_texts[0]
             and "TRY YOUR LUCK" not in card_texts[0]
             and "COBA NASIB" not in card_texts[0],
-            "Nasib: la carta deve usare simboli testuali centrati [ ☠ ] / [ ♥ ] colorabili, senza Icon String",
+            "Nasib: le parentesi devono essere testo semplice; il simbolo è un Create Icon nativo",
         )
+    luck_icons = [call for call in call_texts(source, "Create Icon") if ", Skull," in call or ", Heart," in call]
+    checks.equal(len(luck_icons), 4, "Nasib: due Create Icon iniziali più due per i cambi roulette")
+    if luck_icons:
+        checks.equal(len([call for call in luck_icons if ", Skull," in call]), 2, "Nasib: due rami Skull nativi")
+        checks.equal(len([call for call in luck_icons if ", Heart," in call]), 2, "Nasib: due rami Heart nativi")
+        for call in luck_icons:
+            checks.require(
+                "All Players(All Teams)" in call
+                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4" in call
+                and "Visible To and Position" in call,
+                "Nasib: icona nativa non è pubblica o non segue il mirino",
+            )
+        for call in [call for call in luck_icons if ", Skull," in call]:
+            checks.require("Custom Color(255, 70, 70, 255)" in call, "Nasib: Skull non rosso")
+        for call in [call for call in luck_icons if ", Heart," in call]:
+            checks.require("Custom Color(70, 255, 110, 255)" in call, "Nasib: Heart non verde")
+    checks.require(
+        "Destroy Icon(Event Player.IkonKartuNasib);" in clean,
+        "Nasib: cleanup icona nativa assente",
+    )
+
     checks.require(
         "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),
         "Nasib: cache effetto non segue il mirino del proprietario",
@@ -1849,6 +1872,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
                 "Event Player.JedaKartuNasib = 0;",
                 "Event Player.PosisiKartuNasib = Vector(0, 0, 0);",
                 "Destroy In-World Text(Event Player.TeksKartuNasib);",
+                "Destroy Icon(Event Player.IkonKartuNasib);",
+                "Event Player.IkonKartuNasib = Null;",
             ),
             "Nasib: morte prima della fine non resetta completamente la carta",
         )
