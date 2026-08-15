@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-3feaa6c12613264bed84edeb8b30d56036fc038e
+5dac1912e178d39d6c3df911452f81b396e39860
 ```
 
 ## Controlli statici correnti

@@ -112,8 +112,8 @@ variables
 		63: WarnaMenu
 		64: TeleportasiJongkokDiaktifkan
 		65: KursorTeleportasiJongkok
-		66: NamaInspeksiTerlihat
-		67: KursorPrivasiNama
+		66: PrivasiInspeksiAktif
+		67: KursorPrivasiInspeksi
 }
 
 subroutines
@@ -141,7 +141,7 @@ subroutines
 	20: GambarIkon
 	21: TransisiWarnaMenu
 	22: GambarSakelarTeleportasi
-	23: GambarPrivasiNama
+	23: GambarPrivasiInspeksi
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -1329,7 +1329,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 		Else If(Event Player.HalamanMenu == 8);
 			Event Player.KursorTeleportasiJongkok = (Event Player.KursorTeleportasiJongkok + 1) % 2;
 		Else If(Event Player.HalamanMenu == 9);
-			Event Player.KursorPrivasiNama = (Event Player.KursorPrivasiNama + 1) % 2;
+			Event Player.KursorPrivasiInspeksi = (Event Player.KursorPrivasiInspeksi + 1) % 2;
 		End;
 		Call Subroutine(GambarMenu);
 	}
@@ -1382,7 +1382,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 		Else If(Event Player.HalamanMenu == 8);
 			Event Player.KursorTeleportasiJongkok = (Event Player.KursorTeleportasiJongkok + 1) % 2;
 		Else If(Event Player.HalamanMenu == 9);
-			Event Player.KursorPrivasiNama = (Event Player.KursorPrivasiNama + 1) % 2;
+			Event Player.KursorPrivasiInspeksi = (Event Player.KursorPrivasiInspeksi + 1) % 2;
 		End;
 		Call Subroutine(GambarMenu);
 	}
@@ -1540,7 +1540,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Else If(Event Player.HalamanMenu == 8);
 				Event Player.KursorTeleportasiJongkok = Event Player.KursorTeleportasiJongkok;
 			Else;
-				Event Player.KursorPrivasiNama = Event Player.KursorPrivasiNama;
+				Event Player.KursorPrivasiInspeksi = Event Player.KursorPrivasiInspeksi;
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
@@ -1740,14 +1740,14 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			End;
 			Call Subroutine(GambarMenu);
 		Else;
-			If(Event Player.NamaInspeksiTerlihat != (Event Player.KursorPrivasiNama == 1));
-				Event Player.NamaInspeksiTerlihat = Event Player.KursorPrivasiNama == 1;
-				If(Event Player.NamaInspeksiTerlihat == True);
+			If(Event Player.PrivasiInspeksiAktif != (Event Player.KursorPrivasiInspeksi == 1));
+				Event Player.PrivasiInspeksiAktif = Event Player.KursorPrivasiInspeksi == 1;
+				If(Event Player.PrivasiInspeksiAktif == True);
 					Call Subroutine(EfekTerapkan);
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Crouch name visible. Others can see you.") : Event Player.IndeksBahasa == 1 ? Custom String("Nama saat intip terlihat. Pemain lain bisa melihatmu.") : Custom String("แสดงชื่อเมื่อตรวจแล้ว คนอื่นเห็นชื่อคุณได้"));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Crouch privacy enabled. Enemies see nothing.") : Event Player.IndeksBahasa == 1 ? Custom String("Privasi Jongkok aktif. Musuh tidak melihat apa pun.") : Custom String("เปิดความเป็นส่วนตัวตอนย่อ ศัตรูจะไม่เห็นอะไรเลย"));
 				Else;
 					Call Subroutine(EfekPulihkan);
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Crouch name hidden. Incognito mode.") : Event Player.IndeksBahasa == 1 ? Custom String("Nama saat intip disembunyikan. Mode penyamaran.") : Custom String("ซ่อนชื่อเมื่อตรวจแล้ว โหมดไม่เปิดเผยตัว"));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Crouch privacy disabled. HUD visible to everyone.") : Event Player.IndeksBahasa == 1 ? Custom String("Privasi Jongkok nonaktif. HUD terlihat oleh semua.") : Custom String("ปิดความเป็นส่วนตัวตอนย่อ ทุกคนเห็น HUD ได้"));
 				End;
 			End;
 			Call Subroutine(GambarMenu);
@@ -1972,9 +1972,10 @@ rule("13 - Intip Pahlawan: Tampilkan ikon, nama, dan kesehatan saat ini")
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
 		Call Subroutine(SegarkanTargetInspeksi);
-		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : Custom String("{0}{1} | {2}",
-			Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(
-			Event Player.TargetInspeksi)), Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, NamaInspeksiTerlihat) == True ? Custom String(" {0}", Event Player.TargetInspeksi) : Custom String("") : Custom String(" {0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null ? Eye Position(Event Player) : Eye Position(
+		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : And(Player Variable(Event Player.TargetInspeksi, Manusia) == True, And(
+			Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True, Team Of(Event Player.TargetInspeksi) != Team Of(Event Player))) ? Custom String("")
+			: Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(
+			Event Player.TargetInspeksi)), Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Event Player.TargetInspeksi == Null ? Eye Position(Event Player) : Eye Position(
 			Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Event Player.TargetInspeksi == Null
 			? Color(White) : Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama)
 			: Color(Orange), Visible Never);
@@ -2555,7 +2556,7 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 		Else If(Event Player.HalamanMenu == 8);
 			Call Subroutine(GambarSakelarTeleportasi);
 		Else;
-			Call Subroutine(GambarPrivasiNama);
+			Call Subroutine(GambarPrivasiInspeksi);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -2589,7 +2590,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - HERO VOICE\nCURRENT: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("LOW 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("LOW 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ICON\nCURRENT: NOTHING") : Custom String("7 - ICON\nCURRENT: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - CROUCH TELEPORT\nCURRENT: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("ON") : Custom String("OFF"))
-			: Custom String("9 - NAME PRIVACY\nCURRENT: {0}", Event Player.NamaInspeksiTerlihat ? Custom String("VISIBLE") : Custom String("HIDDEN"))
+			: Custom String("9 - CROUCH PRIVACY\nCURRENT: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF"))
 			: Event Player.IndeksBahasa == 1 ? Event Player.KursorUtama == 0 ? Custom String("0 - MUSIK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih musik"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA 3P\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati") : Event Player.ModeKamera == 1 ? Custom String("hero sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
@@ -2599,7 +2600,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - SUARA PAHLAWAN\nSAAT INI: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("RENDAH 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("RENDAH 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("TINGGI 1.25x") : Custom String("TINGGI 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - IKON\nSAAT INI: TIDAK ADA") : Custom String("7 - IKON\nSAAT INI: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - TELEPORT JONGKOK\nSAAT INI: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("AKTIF") : Custom String("MATI"))
-			: Custom String("9 - PRIVASI NAMA\nSAAT INI: {0}", Event Player.NamaInspeksiTerlihat ? Custom String("TERLIHAT") : Custom String("TERSEMBUNYI"))
+			: Custom String("9 - PRIVASI JONGKOK\nSAAT INI: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("AKTIF") : Custom String("MATI"))
 			: Event Player.KursorUtama == 0 ? Custom String("0 - เพลงประกอบ\nปัจจุบัน: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - กล้องบุคคลที่สาม\nสถานะ: {0}", Event Player.ModeKamera == 0 ? Custom String("ปิด") : Event Player.ModeKamera == 1 ? Custom String("ฮีโร่ของคุณ") : Custom String("กำลังดู {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaTH[Event Player.IndeksWarna])
@@ -2609,7 +2610,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - เสียงฮีโร่\nสถานะ: {0}", Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอน\nปัจจุบัน: ไม่มี") : Custom String("7 - ไอคอน\nปัจจุบัน: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - เทเลพอร์ตตอนย่อ\nสถานะ: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("เปิด") : Custom String("ปิด"))
-			: Custom String("9 - ความเป็นส่วนตัวชื่อ\nสถานะ: {0}", Event Player.NamaInspeksiTerlihat ? Custom String("แสดง") : Custom String("ซ่อน")), Top, 100,
+			: Custom String("9 - ความเป็นส่วนตัวตอนย่อ\nสถานะ: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("เปิด") : Custom String("ปิด")), Top, 100,
 			Color(White), Custom Color(210, 230, 255, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -2951,12 +2952,12 @@ rule("91l - Subrutin: Gambar sakelar teleportasi Jongkok")
 	}
 }
 
-rule("91m - Subrutin: Gambar privasi nama saat diintip")
+rule("91m - Subrutin: Gambar privasi inspeksi dari musuh")
 {
 	event
 	{
 		Subroutine;
-		GambarPrivasiNama;
+		GambarPrivasiInspeksi;
 	}
 
 	actions
@@ -2964,9 +2965,9 @@ rule("91m - Subrutin: Gambar privasi nama saat diintip")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))))
 			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))))
 			: Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))),
-			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("9 - NAME PRIVACY {0}/2\nOTHERS SEE YOUR NAME: {1}", Event Player.KursorPrivasiNama + 1, Event Player.NamaInspeksiTerlihat ? Custom String("ON") : Custom String("OFF")), Event Player.KursorPrivasiNama == 1 ? Custom String("ON") : Custom String("OFF"))
-			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("9 - PRIVASI NAMA {0}/2\nORANG LAIN LIHAT NAMA: {1}", Event Player.KursorPrivasiNama + 1, Event Player.NamaInspeksiTerlihat ? Custom String("AKTIF") : Custom String("MATI")), Event Player.KursorPrivasiNama == 1 ? Custom String("AKTIF") : Custom String("MATI"))
-			: Custom String("{0}\n> {1}", Custom String("9 - ความเป็นส่วนตัวชื่อ {0}/2\nคนอื่นเห็นชื่อคุณ: {1}", Event Player.KursorPrivasiNama + 1, Event Player.NamaInspeksiTerlihat ? Custom String("เปิด") : Custom String("ปิด")), Event Player.KursorPrivasiNama == 1 ? Custom String("เปิด") : Custom String("ปิด")), Top, 100,
+			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("9 - CROUCH PRIVACY {0}/2\nHIDE HUD FROM ENEMIES: {1}", Event Player.KursorPrivasiInspeksi + 1, Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF")), Event Player.KursorPrivasiInspeksi == 1 ? Custom String("ON") : Custom String("OFF"))
+			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("9 - PRIVASI JONGKOK {0}/2\nSEMBUNYIKAN HUD DARI MUSUH: {1}", Event Player.KursorPrivasiInspeksi + 1, Event Player.PrivasiInspeksiAktif ? Custom String("AKTIF") : Custom String("MATI")), Event Player.KursorPrivasiInspeksi == 1 ? Custom String("AKTIF") : Custom String("MATI"))
+			: Custom String("{0}\n> {1}", Custom String("9 - ความเป็นส่วนตัวตอนย่อ {0}/2\nซ่อน HUD จากศัตรู: {1}", Event Player.KursorPrivasiInspeksi + 1, Event Player.PrivasiInspeksiAktif ? Custom String("เปิด") : Custom String("ปิด")), Event Player.KursorPrivasiInspeksi == 1 ? Custom String("เปิด") : Custom String("ปิด")), Top, 100,
 			Color(White), Custom Color(255, 220, 238, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3171,8 +3172,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.WarnaMenu = Vector(55, 235, 245);
 		Event Player.TeleportasiJongkokDiaktifkan = False;
 		Event Player.KursorTeleportasiJongkok = 0;
-		Event Player.NamaInspeksiTerlihat = False;
-		Event Player.KursorPrivasiNama = 0;
+		Event Player.PrivasiInspeksiAktif = False;
+		Event Player.KursorPrivasiInspeksi = 0;
 	}
 }
 

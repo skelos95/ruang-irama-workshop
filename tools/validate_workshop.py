@@ -872,7 +872,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
         "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
-        "GambarSakelarTeleportasi", "GambarPrivasiNama",
+        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -981,7 +981,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorKebal = Event Player.KebalAktif",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
-            "Event Player.KursorPrivasiNama = Event Player.NamaInspeksiTerlihat;",
+            "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
         ):
             checks.require(forbidden not in opening, f"menu reopen resetta il cursore: {forbidden}")
 
@@ -997,7 +997,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorKebal = Event Player.KebalAktif",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
-            "Event Player.KursorPrivasiNama = Event Player.NamaInspeksiTerlihat;",
+            "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
         ):
             checks.require(forbidden not in body, f"submenu resetta il cursore: {forbidden}")
 
@@ -2331,7 +2331,7 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
         "If(Event Player.IndeksSuara != Event Player.KursorSuara);",
         "If(Event Player.IndeksIkon != Event Player.KursorIkon);",
         "If(Event Player.TeleportasiJongkokDiaktifkan != (Event Player.KursorTeleportasiJongkok == 1));",
-        "If(Event Player.NamaInspeksiTerlihat != (Event Player.KursorPrivasiNama == 1));",
+        "If(Event Player.PrivasiInspeksiAktif != (Event Player.KursorPrivasiInspeksi == 1));",
     ):
         checks.require(token in body, f"feedback menu non protetto da cambio reale: {token}")
 
@@ -2343,7 +2343,7 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
         ("If(Event Player.IndeksSuara != Event Player.KursorSuara);", "Event Player.IndeksSuara = Event Player.KursorSuara;"),
         ("If(Event Player.IndeksIkon != Event Player.KursorIkon);", "Event Player.IndeksIkon = Event Player.KursorIkon;"),
         ("If(Event Player.TeleportasiJongkokDiaktifkan != (Event Player.KursorTeleportasiJongkok == 1));", "Event Player.TeleportasiJongkokDiaktifkan = Event Player.KursorTeleportasiJongkok == 1;"),
-        ("If(Event Player.NamaInspeksiTerlihat != (Event Player.KursorPrivasiNama == 1));", "Event Player.NamaInspeksiTerlihat = Event Player.KursorPrivasiNama == 1;"),
+        ("If(Event Player.PrivasiInspeksiAktif != (Event Player.KursorPrivasiInspeksi == 1));", "Event Player.PrivasiInspeksiAktif = Event Player.KursorPrivasiInspeksi == 1;"),
     )
     for guard, assignment in ordered_pairs:
         checks.require(0 <= body.find(guard) < body.find(assignment), f"assegnazione menu fuori dalla guardia: {assignment}")
@@ -2395,7 +2395,7 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
     voice = renderer("GambarSuara")
     icon = renderer("GambarIkon")
     crouch_teleport = renderer("GambarSakelarTeleportasi")
-    name_privacy = renderer("GambarPrivasiNama")
+    name_privacy = renderer("GambarPrivasiInspeksi")
 
     # Inputs/subheaders keep their established light colors.
     for body, token, label in (
@@ -2528,7 +2528,7 @@ def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[
         checks.require("Call Subroutine(TransisiWarnaMenu);" in mask_strings(router[0].body), "menu smooth: GambarMenu non aggiorna destinazione")
 
     converted = "Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255)"
-    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon", "GambarSakelarTeleportasi", "GambarPrivasiNama"):
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon", "GambarSakelarTeleportasi", "GambarPrivasiInspeksi"):
         matches = rules_containing(rules, "Subroutine;", f"{sub};")
         checks.equal(len(matches), 1, f"menu smooth: renderer {sub}")
         if matches:
@@ -2612,16 +2612,16 @@ def check_crouch_toggle_and_name_privacy(checks: Checks, source: str, rules: lis
     for slot, name in (
         (64, "TeleportasiJongkokDiaktifkan"),
         (65, "KursorTeleportasiJongkok"),
-        (66, "NamaInspeksiTerlihat"),
-        (67, "KursorPrivasiNama"),
+        (66, "PrivasiInspeksiAktif"),
+        (67, "KursorPrivasiInspeksi"),
     ):
         checks.require(re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", variables) is not None, f"menu 8/9: slot player {slot} deve essere {name}")
 
     for token in (
         "Event Player.TeleportasiJongkokDiaktifkan = False;",
         "Event Player.KursorTeleportasiJongkok = 0;",
-        "Event Player.NamaInspeksiTerlihat = False;",
-        "Event Player.KursorPrivasiNama = 0;",
+        "Event Player.PrivasiInspeksiAktif = False;",
+        "Event Player.KursorPrivasiInspeksi = 0;",
     ):
         checks.require(token in mask_strings(source), f"menu 8/9: default OFF mancante {token}")
 
@@ -2630,7 +2630,7 @@ def check_crouch_toggle_and_name_privacy(checks: Checks, source: str, rules: lis
     if open_rules:
         checks.require("Event Player.TeleportasiJongkokDiaktifkan == True;" in mask_strings(open_rules[0].body), "menu 8: Crouch apre Teleport anche quando OFF")
 
-    for sub in ("GambarSakelarTeleportasi", "GambarPrivasiNama"):
+    for sub in ("GambarSakelarTeleportasi", "GambarPrivasiInspeksi"):
         checks.require(sub in subroutines, f"menu 8/9: subroutine {sub} assente")
         renderers = rules_containing(rules, "Subroutine;", f"{sub};")
         checks.equal(len(renderers), 1, f"menu 8/9: renderer {sub}")
@@ -2638,15 +2638,26 @@ def check_crouch_toggle_and_name_privacy(checks: Checks, source: str, rules: lis
             checks.require("/2" in renderers[0].body, f"menu 8/9: {sub} non mostra 2 voci")
 
     checks.require("8 - CROUCH TELEPORT" in source and "8 - TELEPORT JONGKOK" in source and "8 - เทเลพอร์ตตอนย่อ" in source, "menu 8 non localizzato EN/ID/TH")
-    checks.require("9 - NAME PRIVACY" in source and "9 - PRIVASI NAMA" in source and "9 - ความเป็นส่วนตัวชื่อ" in source, "menu 9 non localizzato EN/ID/TH")
+    checks.require("Crouch privacy enabled. Enemies see nothing." in source, "menu 9: feedback EN privacy ON assente")
+    checks.require("Privasi Jongkok aktif. Musuh tidak melihat apa pun." in source, "menu 9: feedback ID privacy ON assente")
+    checks.require("เปิดความเป็นส่วนตัวตอนย่อ ศัตรูจะไม่เห็นอะไรเลย" in source, "menu 9: feedback TH privacy ON assente")
+    checks.require("9 - CROUCH PRIVACY" in source and "9 - PRIVASI JONGKOK" in source and "9 - ความเป็นส่วนตัวตอนย่อ" in source, "menu 9 non localizzato EN/ID/TH")
 
     inspect = [rule for rule in rules if rule.name.startswith("13 - Intip Pahlawan:")]
     checks.equal(len(inspect), 1, "menu 9: regola testo inspection")
     if inspect:
         body = mask_strings(inspect[0].body)
-        checks.require("Player Variable(Event Player.TargetInspeksi, NamaInspeksiTerlihat) == True" in body, "menu 9: nome target non dipende dalla privacy")
-        checks.require('Custom String("")' in inspect[0].body, "menu 9: ramo nome nascosto assente")
-        checks.require("Hero Icon String" in body and "Health(Event Player.TargetInspeksi)" in body, "menu 9: privacy non deve nascondere eroe o salute")
+        raw = inspect[0].body
+        checks.require("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True" in body, "menu 9: target non dipende dalla privacy")
+        checks.require("Team Of(Event Player.TargetInspeksi) != Team Of(Event Player)" in body, "menu 9: privacy non limitata ai viewer nemici")
+        checks.require('Custom String("")' in raw, "menu 9: ramo HUD nemico completamente vuoto assente")
+        privacy_at = body.find("Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True")
+        enemy_at = body.find("Team Of(Event Player.TargetInspeksi) != Team Of(Event Player)", privacy_at)
+        checks.require(0 <= privacy_at < enemy_at, "menu 9: controllo privacy/squadra in ordine errato")
+        checks.require('Custom String("{0} {1} | {2}"' in raw, "menu 9: HUD completo alleato/pubblico assente")
+        full_at = raw.find('Custom String("{0} {1} | {2}"')
+        full_segment = raw[full_at:full_at + 900]
+        checks.require("Hero Icon String" in full_segment and 'Custom String("{0}", Event Player.TargetInspeksi)' in full_segment and "Health(Event Player.TargetInspeksi)" in full_segment, "menu 9: HUD completo alleato/pubblico deve mantenere icona, nome e salute")
 
     handler = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu")]
     checks.equal(len(handler), 1, "menu 8/9: handler Interact")
@@ -2654,7 +2665,7 @@ def check_crouch_toggle_and_name_privacy(checks: Checks, source: str, rules: lis
         body = mask_strings(handler[0].body)
         for token in (
             "Event Player.TeleportasiJongkokDiaktifkan = Event Player.KursorTeleportasiJongkok == 1;",
-            "Event Player.NamaInspeksiTerlihat = Event Player.KursorPrivasiNama == 1;",
+            "Event Player.PrivasiInspeksiAktif = Event Player.KursorPrivasiInspeksi == 1;",
         ):
             checks.require(token in body, f"menu 8/9: applicazione mancante {token}")
 

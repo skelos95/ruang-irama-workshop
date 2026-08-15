@@ -46,7 +46,7 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
-| 9 | Name Privacy | mostra/nasconde il proprio nome agli altri, default OFF |
+| 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |
 
 Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
 
@@ -230,4 +230,4 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 
 `Menu 8 - Crouch Teleport` usa `TeleportasiJongkokDiaktifkan`: OFF di default. Solo quando è ON la pressione di Crouch può aprire `GambarTeleportasi`; l'ispezione eroe/salute resta indipendente. `TeleportasiJongkokAktif` continua a rappresentare soltanto l'overlay attualmente aperto.
 
-`Menu 9 - Name Privacy` usa `NamaInspeksiTerlihat`: OFF di default. Quando è OFF, gli altri viewer che ispezionano quel player con Crouch vedono ancora icona eroe e salute ma ricevono una stringa nome vuota; quando è ON vedono anche il nome. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.
+`Menu 9 - Crouch Privacy` usa `PrivasiInspeksiAktif`: OFF di default. Quando è ON, un viewer della squadra nemica riceve una stringa completamente vuota per quel target, quindi sopra al player non compaiono icona eroe, nome o salute. Un viewer della stessa squadra vede invece sempre la riga completa `icona + nome + salute`, indipendentemente dalla privacy. Con Privacy OFF la riga completa è visibile anche ai nemici. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.

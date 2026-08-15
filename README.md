@@ -20,7 +20,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
   7. `6 - Hero Voice` — 5 preset vocali.
   8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
   9. `8 - Crouch Teleport` — abilita/disabilita l’HUD Teleport su Crouch; default OFF.
-  10. `9 - Name Privacy` — decide se gli altri vedono il tuo nome durante Crouch inspection; default OFF.
+  10. `9 - Crouch Privacy` — quando ON nasconde completamente icona/nome/salute ai nemici durante Crouch inspection; i compagni vedono sempre tutto; default OFF.
 - Player Icon predefinita: **Nothing**.
 - Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
 - Colori menu diversi e coordinati con i rispettivi sottomenu.
@@ -46,7 +46,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
-| 9 | Name Privacy | OFF / ON, default OFF |
+| 9 | Crouch Privacy | OFF / ON; ON nasconde tutto ai nemici, alleati sempre visibili |
 
 Il Teleport resta un overlay associato a Crouch; **Menu 8** decide soltanto se quell’overlay può aprirsi.
 

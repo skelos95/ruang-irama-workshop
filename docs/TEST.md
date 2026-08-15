@@ -239,6 +239,6 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 
 - **Menu 8 Crouch Teleport:** nuovo player = OFF; Crouch non deve aprire Teleport. Attivare dal menu 8, chiudere il menu e tenere Crouch: HUD Teleport visibile. Disattivare: torna a non aprirsi.
 
-- **Menu 9 Name Privacy:** nuovo player = OFF; un secondo player in Crouch inspection deve vedere eroe + salute ma non il nome. Attivare Menu 9: il nome deve comparire live; disattivare: deve sparire senza rimuovere eroe/salute.
+- **Menu 9 Crouch Privacy:** nuovo player = OFF e un nemico vede icona + nome + salute. Attivare Privacy: un nemico non deve vedere assolutamente nulla sopra al target; un alleato deve continuare a vedere sempre icona + nome + salute. Disattivare Privacy: anche il nemico torna a vedere la riga completa.
 
 - **10 menu:** scorrere Main Menu avanti/indietro e verificare wrap `0..9`, cursori persistenti e sfumatura colore anche tra menu 7/8/9.
