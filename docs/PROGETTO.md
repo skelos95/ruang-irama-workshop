@@ -235,4 +235,9 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 
 ## Unkillable — OFF / 1 HP / FULL HP
 
-`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Le modalità 1 HP e FULL HP condividono un Halo creato con `Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True)`, quindi l'indicatore non dipende da Crouch Privacy. OFF, Spawn Room e Player Left distruggono l'icona e ripristinano Damage Received a 100%.
+`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Le modalità 1 HP e FULL HP condividono un Halo creato con `Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True)`, quindi l'indicatore non dipende da Crouch Privacy. OFF e Player Left distruggono l'icona. La Spawn Room disattiva esclusivamente ModeKebal=1; ModeKebal=2 resta attivo con Damage Received 0%, Max Health e Halo pubblico.
+
+
+### Transizioni Unkillable esclusive
+
+`ModeKebal` è l'unica modalità applicata: 0=OFF, 1=1 HP, 2=FULL HP. Aprire Menu 5 sincronizza soltanto il cursore e non cambia lo stato. Applicare FULL HP dopo 1 HP imposta prima `ModeKebal=2`, poi Damage Received 0% e Max Health: la regola 1 HP smette immediatamente di essere eleggibile. Applicare 1 HP dopo FULL HP imposta `ModeKebal=1`, Damage Received 100% e salute 1. Dentro Spawn Room 1 HP non può essere applicata e viene disattivata se il player vi entra; FULL HP rimane attiva.

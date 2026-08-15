@@ -1532,45 +1532,8 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.KursorBalasDendam = Event Player.KursorBalasDendam;
 				Call Subroutine(SegarkanTargetBalasDendam);
 			Else If(Event Player.HalamanMenu == 5);
-			If(Event Player.ModeKebal != Event Player.KursorKebal);
-				Event Player.ModeKebal = Event Player.KursorKebal;
-				Event Player.KebalAktif = Event Player.ModeKebal != 0;
-				If(Event Player.ModeKebal == 0);
-					Call Subroutine(EfekPulihkan);
-					Clear Status(Event Player, Unkillable);
-					Set Damage Received(Event Player, 100);
-					If(Is Alive(Event Player) == True);
-						Set Player Health(Event Player, Max Health(Event Player));
-					End;
-					If(Event Player.IkonKebal != Null);
-						Destroy Icon(Event Player.IkonKebal);
-						Event Player.IkonKebal = Null;
-					End;
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable disabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Mode Kebal nonaktif.") : Custom String("ปิดโหมดฆ่าไม่ตายแล้ว"));
-				Else;
-					Call Subroutine(EfekTerapkan);
-					Set Status(Event Player, Null, Unkillable, 9999);
-					If(Event Player.ModeKebal == 1);
-						Set Damage Received(Event Player, 100);
-						If(Is Alive(Event Player) == True);
-							Set Player Health(Event Player, 1);
-						End;
-						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว"));
-					Else;
-						Set Damage Received(Event Player, 0);
-						If(Is Alive(Event Player) == True);
-							Set Player Health(Event Player, Max Health(Event Player));
-						End;
-						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: FULL HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: FULL HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: FULL HP แล้ว"));
-					End;
-					If(Event Player.IkonKebal == Null);
-						Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
-						Event Player.IkonKebal = Last Created Entity;
-					End;
-				End;
-			End;
-			Call Subroutine(GambarMenu);
-		Else If(Event Player.HalamanMenu == 6);
+				Event Player.KursorKebal = Event Player.ModeKebal;
+			Else If(Event Player.HalamanMenu == 6);
 				Event Player.KursorSuara = Event Player.KursorSuara;
 			Else If(Event Player.HalamanMenu == 7);
 				Event Player.KursorIkon = Event Player.KursorIkon;
@@ -1711,24 +1674,47 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				End;
 			End;
 		Else If(Event Player.HalamanMenu == 5);
-			If(Event Player.KebalAktif != And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == False));
-				Event Player.KebalAktif = And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == False);
-				If(Event Player.KebalAktif == True);
-					Call Subroutine(EfekTerapkan);
-					Set Status(Event Player, Null, Unkillable, 9999);
-					If(Is Alive(Event Player) == True);
-						Set Player Health(Event Player, 1);
-					End;
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
-						"Kebal: 1 HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว"));
+			If(Event Player.ModeKebal != Event Player.KursorKebal);
+				If(And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == True));
+					Event Player.KursorKebal = Event Player.ModeKebal;
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP is unavailable in Spawn Room. FULL HP is still available.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP tidak tersedia di ruang muncul. FULL HP tetap tersedia.") : Custom String("ใช้โหมดฆ่าไม่ตาย: 1 HP ในห้องเกิดไม่ได้ แต่ FULL HP ยังใช้ได้"));
 				Else;
-					Call Subroutine(EfekPulihkan);
-					Clear Status(Event Player, Unkillable);
-					If(Is Alive(Event Player) == True);
-						Set Player Health(Event Player, Max Health(Event Player));
+					Event Player.ModeKebal = Event Player.KursorKebal;
+					Event Player.KebalAktif = Event Player.ModeKebal != 0;
+					If(Event Player.ModeKebal == 0);
+						Call Subroutine(EfekPulihkan);
+						Clear Status(Event Player, Unkillable);
+						Set Damage Received(Event Player, 100);
+						If(Is Alive(Event Player) == True);
+							Set Player Health(Event Player, Max Health(Event Player));
+						End;
+						If(Event Player.IkonKebal != Null);
+							Destroy Icon(Event Player.IkonKebal);
+							Event Player.IkonKebal = Null;
+						End;
+						Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable disabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Mode Kebal nonaktif.") : Custom String("ปิดโหมดฆ่าไม่ตายแล้ว"));
+					Else;
+						Call Subroutine(EfekTerapkan);
+						Clear Status(Event Player, Unkillable);
+						Set Status(Event Player, Null, Unkillable, 9999);
+						If(Event Player.ModeKebal == 1);
+							Set Damage Received(Event Player, 100);
+							If(Is Alive(Event Player) == True);
+								Set Player Health(Event Player, 1);
+							End;
+							Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว"));
+						Else;
+							Set Damage Received(Event Player, 0);
+							If(Is Alive(Event Player) == True);
+								Set Player Health(Event Player, Max Health(Event Player));
+							End;
+							Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: FULL HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: FULL HP aktif.") : Custom String("เปิดโหมดฆ่าไม่ตาย: FULL HP แล้ว"));
+						End;
+						If(Event Player.IkonKebal == Null);
+							Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
+							Event Player.IkonKebal = Last Created Entity;
+						End;
 					End;
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP disabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
-						"Kebal: 1 HP nonaktif.") : Custom String("ปิดโหมดฆ่าไม่ตาย: 1 HP แล้ว"));
 				End;
 			End;
 			Call Subroutine(GambarMenu);
@@ -2174,7 +2160,7 @@ rule("18 - Kebal: Pasang kembali status setelah respawn")
 	{
 		Event Player.Manusia == True;
 		Event Player.KebalAktif == True;
-		Is In Spawn Room(Event Player) == False;
+		Or(Event Player.ModeKebal == 2, Is In Spawn Room(Event Player) == False) == True;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
 		Has Status(Event Player, Unkillable) == False;
@@ -2233,7 +2219,6 @@ rule("18d - Kebal: Mode FULL HP selalu kembali penuh")
 		Event Player.Manusia == True;
 		Event Player.KebalAktif == True;
 		Event Player.ModeKebal == 2;
-		Is In Spawn Room(Event Player) == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
 		Health(Event Player) < Max Health(Event Player);
@@ -2245,7 +2230,7 @@ rule("18d - Kebal: Mode FULL HP selalu kembali penuh")
 	}
 }
 
-rule("18c - Kebal: Nonaktifkan otomatis di Spawn Room")
+rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Spawn Room")
 {
 	event
 	{
@@ -2257,36 +2242,32 @@ rule("18c - Kebal: Nonaktifkan otomatis di Spawn Room")
 	conditions
 	{
 		Event Player.Manusia == True;
+		Event Player.ModeKebal == 1;
 		Is In Spawn Room(Event Player) == True;
-		Or(Event Player.KebalAktif == True, And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 5)) == True;
 	}
 
 	actions
 	{
-		If(Event Player.KebalAktif == True);
-			Event Player.KebalAktif = False;
-			Event Player.ModeKebal = 0;
-			Event Player.KursorKebal = 0;
-			Call Subroutine(EfekPulihkan);
-			Clear Status(Event Player, Unkillable);
-			Set Damage Received(Event Player, 100);
-			If(Is Alive(Event Player) == True);
-				Set Player Health(Event Player, Max Health(Event Player));
-			End;
-			If(Event Player.IkonKebal != Null);
-				Destroy Icon(Event Player.IkonKebal);
-				Event Player.IkonKebal = Null;
-			End;
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable disabled: Spawn Room rules.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Mode Kebal dimatikan: aturan ruang muncul.") : Custom String("ปิดโหมดฆ่าไม่ตาย: กฎห้องเกิด"));
+		Event Player.KebalAktif = False;
+		Event Player.ModeKebal = 0;
+		Event Player.KursorKebal = 0;
+		Call Subroutine(EfekPulihkan);
+		Clear Status(Event Player, Unkillable);
+		Set Damage Received(Event Player, 100);
+		If(Is Alive(Event Player) == True);
+			Set Player Health(Event Player, Max Health(Event Player));
 		End;
+		If(Event Player.IkonKebal != Null);
+			Destroy Icon(Event Player.IkonKebal);
+			Event Player.IkonKebal = Null;
+		End;
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP disabled in Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP dimatikan di ruang muncul.") : Custom String("ปิดโหมดฆ่าไม่ตาย: 1 HP ในห้องเกิดแล้ว"));
 		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 5));
-			Event Player.HalamanMenu = -1;
-			Event Player.KursorUtama = 5;
 			Call Subroutine(GambarMenu);
 		End;
 	}
 }
+
 
 rule("19 - Teleportasi Jongkok: Buka tampilan selama Jongkok ditahan")
 {

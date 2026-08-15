@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-41de2a3f37f2597d657ec55c5b095629b6e052d9
+df4ec75a68ed8a04a3192ac0423a899455712254
 ```
 
 ## Controlli statici correnti
@@ -97,3 +97,5 @@ Workflow permanenti previsti:
 Il repository è **static-ready, live-pending**. Il gate statico può certificare coerenza strutturale e invarianti controllate, ma non sostituisce una sessione reale Overwatch con 12 player.
 
 - Menu 5: OFF / 1 HP / FULL HP con Halo pubblico indipendente dalla Crouch Privacy.
+
+- Unkillable: transizioni esclusive OFF/1 HP/FULL HP; Spawn Room resetta solo 1 HP, FULL HP persiste.

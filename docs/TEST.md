@@ -248,3 +248,11 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - **Unkillable FULL HP:** attivare FULL HP, subire danni normali e verificare che la salute non scenda; Halo visibile a tutti. Passare 1 HP ↔ FULL HP senza duplicare l’icona.
 
 - **Unkillable cleanup:** OFF, Spawn Room e Player Left devono rimuovere Halo; OFF/Spawn devono ripristinare Damage Received a 100%.
+
+- **Unkillable 1 HP → FULL HP:** attivare 1 HP, poi selezionare FULL HP senza passare da OFF; verificare Mode FULL HP, salute massima, Damage Received 0%, nessun ritorno a 1 HP e un solo Halo.
+
+- **Unkillable FULL HP → 1 HP:** fuori Spawn Room passare direttamente da FULL HP a 1 HP; verificare Damage Received 100%, salute 1 e nessun comportamento FULL HP residuo.
+
+- **FULL HP in Spawn Room:** entrare nello spawn con FULL HP attiva; verificare che ModeKebal resti FULL HP, salute massima, Damage Received 0%, Unkillable e Halo restino attivi.
+
+- **1 HP in Spawn Room:** entrare nello spawn con 1 HP attiva; verificare reset a OFF, salute massima, Damage Received 100%, status e Halo rimossi. Provare anche a selezionare 1 HP mentre si è già nello spawn: non deve sostituire OFF/FULL HP.

@@ -978,8 +978,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorWarna = Event Player.IndeksWarna;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorKebal = Event Player.ModeKebal",
-            "Event Player.KursorSuara = Event Player.IndeksSuara;",
+                "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
             "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
         ):
@@ -994,8 +993,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorKamera = 0;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorKebal = Event Player.ModeKebal",
-            "Event Player.KursorSuara = Event Player.IndeksSuara;",
+                "Event Player.KursorSuara = Event Player.IndeksSuara;",
             "Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan;",
             "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
         ):
@@ -1736,6 +1734,7 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         for rule in rules
         if code_contains(
             rule.body,
+            "Event Player.ModeKebal == 1;",
             "Is In Spawn Room(Event Player) == True;",
             "Event Player.KebalAktif = False;",
             "Event Player.ModeKebal = 0;",
@@ -1743,18 +1742,34 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Set Damage Received(Event Player, 100);",
             "Set Player Health(Event Player, Max Health(Event Player));",
             "Destroy Icon(Event Player.IkonKebal);",
-            "Event Player.HalamanMenu = -1;",
         )
     ]
-    checks.equal(len(spawn_disable), 1, "regola auto-disattivazione Unkillable in Spawn Room")
-    for title in ("18 - Kebal:", "18b - Kebal:"):
-        matching = [rule for rule in rules if rule.name.startswith(title)]
-        checks.equal(len(matching), 1, f"regola {title} per guard Spawn Room")
-        if matching:
-            checks.require(
-                code_contains(matching[0].body, "Is In Spawn Room(Event Player) == False;"),
-                f"{title} non esclude la Spawn Room",
-            )
+    checks.equal(len(spawn_disable), 1, "regola auto-disattivazione solo 1 HP in Spawn Room")
+
+    one_hp = [rule for rule in rules if rule.name.startswith("18b - Kebal:")]
+    checks.equal(len(one_hp), 1, "regola 1 HP per guard Spawn Room")
+    if one_hp:
+        checks.require(
+            code_contains(one_hp[0].body, "Is In Spawn Room(Event Player) == False;"),
+            "1 HP deve restare escluso dalla Spawn Room",
+        )
+
+    reapply = [rule for rule in rules if rule.name.startswith("18 - Kebal:")]
+    checks.equal(len(reapply), 1, "regola riapplicazione Unkillable")
+    if reapply:
+        body = mask_strings(reapply[0].body)
+        checks.require(
+            "Or(Event Player.ModeKebal == 2, Is In Spawn Room(Event Player) == False) == True;" in body,
+            "riapplicazione: FULL HP non resta valido in Spawn Room",
+        )
+
+    full_hp = [rule for rule in rules if rule.name.startswith("18d - Kebal:")]
+    checks.equal(len(full_hp), 1, "regola FULL HP per Spawn Room")
+    if full_hp:
+        checks.require(
+            "Is In Spawn Room(Event Player) == False;" not in mask_strings(full_hp[0].body),
+            "FULL HP non deve essere escluso dalla Spawn Room",
+        )
 
 
 
@@ -2685,13 +2700,30 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
     if renderer:
         checks.require("/3" in renderer[0].body and "FULL HP" in renderer[0].body and "1 HP" in renderer[0].body, "Unkillable: menu non mostra OFF/1HP/FULLHP")
 
-    menu = [r for r in rules if code_contains(r.body, "Event Player.PerintahMenu == 1;", "Else If(Event Player.HalamanMenu == 5);")]
-    checks.equal(len(menu), 1, "Unkillable handler menu 5")
-    if menu:
-        body = mask_strings(menu[0].body)
+    handlers = [r for r in rules if code_contains(r.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu")]
+    checks.equal(len(handlers), 1, "Unkillable handler menu")
+    if handlers:
+        raw = handlers[0].body
+        body = mask_strings(raw)
+        compact = re.sub(r"\s+", "", body)
+
+        # Opening page 5 only mirrors the applied mode; it must never apply it.
+        checks.require(
+            "ElseIf(EventPlayer.HalamanMenu==5);EventPlayer.KursorKebal=EventPlayer.ModeKebal;ElseIf(EventPlayer.HalamanMenu==6);" in compact,
+            "Unkillable: apertura menu 5 non sincronizza soltanto il cursore",
+        )
+        checks.equal(body.count("Event Player.ModeKebal = Event Player.KursorKebal;"), 1, "Unkillable: una sola assegnazione modalità nel dispatcher")
+        checks.require("KebalAktif != And(Event Player.KursorKebal == 1" not in body, "Unkillable: logica legacy ON/OFF ancora presente")
+        checks.require("KebalAktif = And(Event Player.KursorKebal == 1" not in body, "Unkillable: assegnazione legacy ON/OFF ancora presente")
+
+        # 1 HP cannot be enabled inside Spawn Room; FULL HP remains selectable.
         for token in (
             "If(Event Player.ModeKebal != Event Player.KursorKebal);",
+            "If(And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == True));",
+            "Event Player.KursorKebal = Event Player.ModeKebal;",
+            "Event Player.ModeKebal = Event Player.KursorKebal;",
             "Event Player.KebalAktif = Event Player.ModeKebal != 0;",
+            "If(Event Player.ModeKebal == 0);",
             "If(Event Player.ModeKebal == 1);",
             "Set Damage Received(Event Player, 100);",
             "Set Player Health(Event Player, 1);",
@@ -2703,11 +2735,38 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
         ):
             checks.require(token in body, f"Unkillable menu incompleto: {token}")
 
+        mode_assignment = body.find("Event Player.ModeKebal = Event Player.KursorKebal;")
+        one_hp_branch = body.find("If(Event Player.ModeKebal == 1);", mode_assignment)
+        damage_100 = body.find("Set Damage Received(Event Player, 100);", one_hp_branch)
+        hp_one = body.find("Set Player Health(Event Player, 1);", damage_100)
+        full_else = body.find("Else;", hp_one)
+        damage_zero = body.find("Set Damage Received(Event Player, 0);", full_else)
+        hp_full = body.find("Set Player Health(Event Player, Max Health(Event Player));", damage_zero)
+        checks.require(
+            0 <= mode_assignment < one_hp_branch < damage_100 < hp_one < full_else < damage_zero < hp_full,
+            "Unkillable: transizione esclusiva 1 HP / FULL HP in ordine errato",
+        )
+
+    one_hp = [r for r in rules if r.name.startswith("18b - Kebal:")]
+    checks.equal(len(one_hp), 1, "Unkillable 1 HP guard")
+    if one_hp:
+        body = mask_strings(one_hp[0].body)
+        checks.require("Event Player.ModeKebal == 1;" in body and "Is In Spawn Room(Event Player) == False;" in body, "Unkillable: 1 HP non confinato fuori Spawn Room")
+
     full = [r for r in rules if r.name.startswith("18d - Kebal:")]
     checks.equal(len(full), 1, "Unkillable FULL HP guard")
     if full:
         body = mask_strings(full[0].body)
         checks.require("Event Player.ModeKebal == 2;" in body and "Health(Event Player) < Max Health(Event Player);" in body and "Set Player Health(Event Player, Max Health(Event Player));" in body, "Unkillable FULL HP guard incompleta")
+        checks.require("Is In Spawn Room(Event Player) == False;" not in body, "Unkillable FULL HP si resetta ancora in Spawn Room")
+
+    spawn = [r for r in rules if r.name.startswith("18c - Kebal:")]
+    checks.equal(len(spawn), 1, "Unkillable Spawn Room reset")
+    if spawn:
+        body = mask_strings(spawn[0].body)
+        checks.require("Event Player.ModeKebal == 1;" in body, "Spawn Room reset non limitato a 1 HP")
+        checks.require("Event Player.ModeKebal == 2;" not in body, "Spawn Room reset coinvolge FULL HP")
+        checks.require("Event Player.HalamanMenu = -1;" not in body, "Spawn Room non deve chiudere il menu 5 per FULL HP")
 
     # Public icon is intentionally independent from Crouch Privacy and team.
     icon_calls = [call for call in call_texts(source, "Create Icon") if "Halo" in call and "Event Player" in call]
