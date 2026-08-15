@@ -125,3 +125,5 @@ Release precedente stabile per l'import: **0.5.1 — Correzione importazione Wor
 Base funzionale: **0.5.0 — Season 4: Heroes of Busan**.
 
 Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-august-11-2026/1032368).
+
+- I cursori del menu restano memorizzati: chiudendo e riaprendo Arcade Menu o un submenu si riparte dall’ultima voce selezionata; anche il menu Teleport Crouch conserva l’ultimo indice.

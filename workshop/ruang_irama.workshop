@@ -955,21 +955,8 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
-			Event Player.KursorUtama = 0;
-			Event Player.KursorGenre = Event Player.IndeksGenre >= 0 ? Event Player.IndeksGenre : 0;
-			Event Player.KursorKamera = 0;
 			Call Subroutine(SegarkanTargetKamera);
-			If(Event Player.ModeKamera == 1);
-				Event Player.KursorKamera = 1;
-			Else If(And(Event Player.ModeKamera == 2, Array Contains(Event Player.DaftarTargetKamera, Event Player.TargetKamera)));
-				Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.TargetKamera) + 2;
-			End;
-			Event Player.KursorWarna = Event Player.IndeksWarna;
-			Event Player.KursorBahasa = Event Player.IndeksBahasa;
-			Event Player.KursorBalasDendam = 0;
 			Call Subroutine(SegarkanTargetBalasDendam);
-			Event Player.KursorUnkillable = Event Player.UnkillableAktif ? 1 : 0;
-			Event Player.KursorSuara = Event Player.IndeksSuara;
 			Disallow Button(Event Player, Button(Melee));
 			Disallow Button(Event Player, Button(Jump));
 			Disallow Button(Event Player, Button(Crouch));
@@ -1298,21 +1285,15 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 		If(Event Player.HalamanMenu == -1);
 			Event Player.HalamanMenu = Global.KodeMenu[Event Player.KursorUtama];
 			If(Event Player.HalamanMenu == 0);
-				Event Player.KursorGenre = Event Player.IndeksGenre >= 0 ? Event Player.IndeksGenre : 0;
+				Event Player.KursorGenre = Event Player.KursorGenre;
 			Else If(Event Player.HalamanMenu == 1);
-				Event Player.KursorKamera = 0;
 				Call Subroutine(SegarkanTargetKamera);
-				If(Event Player.ModeKamera == 1);
-					Event Player.KursorKamera = 1;
-				Else If(And(Event Player.ModeKamera == 2, Array Contains(Event Player.DaftarTargetKamera, Event Player.TargetKamera)));
-					Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.TargetKamera) + 2;
-				End;
 			Else If(Event Player.HalamanMenu == 2);
-				Event Player.KursorWarna = Event Player.IndeksWarna;
+				Event Player.KursorWarna = Event Player.KursorWarna;
 			Else If(Event Player.HalamanMenu == 3);
-				Event Player.KursorBahasa = Event Player.IndeksBahasa;
+				Event Player.KursorBahasa = Event Player.KursorBahasa;
 			Else If(Event Player.HalamanMenu == 4);
-				Event Player.KursorBalasDendam = 0;
+				Event Player.KursorBalasDendam = Event Player.KursorBalasDendam;
 				Call Subroutine(SegarkanTargetBalasDendam);
 			Else If(Event Player.HalamanMenu == 5);
 				If(Is In Spawn Room(Event Player) == True);
@@ -1320,10 +1301,10 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP is unavailable in the Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String(
 						"Unkillable + 1 HP tidak tersedia di ruang muncul.") : Custom String("ไม่สามารถใช้ Unkillable + 1 HP ในห้องเกิดได้"));
 				Else;
-					Event Player.KursorUnkillable = Event Player.UnkillableAktif ? 1 : 0;
+					Event Player.KursorUnkillable = Event Player.KursorUnkillable;
 				End;
 			Else;
-				Event Player.KursorSuara = Event Player.IndeksSuara;
+				Event Player.KursorSuara = Event Player.KursorSuara;
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
@@ -1887,7 +1868,6 @@ rule("19 - Teleport Crouch: Buka overlay selama Crouch ditahan")
 	{
 		Event Player.TeleportCrouchAktif = True;
 		Event Player.PerintahTeleportasi = 0;
-		Event Player.KursorTeleportasi = 0;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
 		Disallow Button(Event Player, Button(Primary Fire));
@@ -2473,7 +2453,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY FOR TACTICAL RETREAT")
 				: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> CURRENT OBJECTIVE\n{1}",
 				Custom String("TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("UNAVAILABLE IN THIS MODE")
+				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("UNAVAILABLE IN THIS MODE")
 				: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
 				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
 			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> RUANG MUNCUL\n{1}",
@@ -2481,7 +2461,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
 				: Custom String("MASUK KE RUANG MUNCUL UNTUK MENYIMPANNYA")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> OBJEKTIF SAAT INI\n{1}",
 				Custom String("TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("TIDAK TERSEDIA DI MODE INI")
+				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("TIDAK TERSEDIA DI MODE INI")
 				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
 				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
 			: Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> ห้องเกิด\n{1}", Custom String("เทเลพอร์ต {0}/{1}",
@@ -2489,7 +2469,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				"คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อมถอยอย่างมีกลยุทธ์") : Custom String(
 				"ไปห้องเกิดเพื่อบันทึกตำแหน่ง")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> เป้าหมายปัจจุบัน\n{1}",
 				Custom String("เทเลพอร์ต {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100 ? Custom String("ใช้ไม่ได้ในโหมดนี้")
+				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("ใช้ไม่ได้ในโหมดนี้")
 				: Custom String("พร้อม - ตำแหน่งที่เดินถึงใกล้ที่สุด")) : Custom String("เทเลพอร์ต {0}/{1}\n> {2}",
 				Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[
 				Event Player.KursorTeleportasi]), Top, 100,

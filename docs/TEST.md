@@ -258,3 +258,7 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Diagnostics OFF live:** verificare che sotto l’ultimo player del roster sinistro non compaia più `0`; il campo deve restare visivamente vuoto.
 
 - **Teleport obiettivo dinamico live:** Escort/Hybrid vicino al payload; CTF vicino alla bandiera nemica; Push vicino al robot quando almeno un player è sull’obiettivo e fallback obiettivo quando il robot è solo; le altre modalità mantengono il comportamento precedente.
+
+- **Memoria menu live:** spostare ogni menu/submenu su una voce diversa dalla prima, chiudere e riaprire; deve ripartire dalla stessa voce. Ripetere anche con Teleport Crouch.
+
+- **CTF teleport HUD live:** su `Current Objective` non deve comparire `UNAVAILABLE IN THIS MODE`; il teleport deve continuare a portare vicino alla bandiera nemica.

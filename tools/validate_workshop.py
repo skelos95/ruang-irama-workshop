@@ -963,6 +963,53 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*90\)\s*%\s*100", clean) is not None,
         "salto musicale -10 assente",
     )
+    menu_open_rules = [
+        rule for rule in rules
+        if code_contains(rule.body, "Event Player.MenuTerbuka = True;", "Event Player.HalamanMenu = -1;")
+    ]
+    checks.equal(len(menu_open_rules), 1, "apertura Arcade Menu")
+    if menu_open_rules:
+        opening = mask_strings(menu_open_rules[0].body)
+        for forbidden in (
+            "Event Player.KursorUtama = 0;",
+            "Event Player.KursorGenre = Event Player.IndeksGenre",
+            "Event Player.KursorKamera = 0;",
+            "Event Player.KursorWarna = Event Player.IndeksWarna;",
+            "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
+            "Event Player.KursorBalasDendam = 0;",
+            "Event Player.KursorUnkillable = Event Player.UnkillableAktif",
+            "Event Player.KursorSuara = Event Player.IndeksSuara;",
+        ):
+            checks.require(forbidden not in opening, f"menu reopen resetta il cursore: {forbidden}")
+
+    interact_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu[Event Player.KursorUtama];")]
+    checks.equal(len(interact_rules), 1, "dispatcher Interact menu")
+    if interact_rules:
+        body = mask_strings(interact_rules[0].body)
+        for forbidden in (
+            "Event Player.KursorGenre = Event Player.IndeksGenre",
+            "Event Player.KursorKamera = 0;",
+            "Event Player.KursorWarna = Event Player.IndeksWarna;",
+            "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
+            "Event Player.KursorBalasDendam = 0;",
+            "Event Player.KursorUnkillable = Event Player.UnkillableAktif",
+            "Event Player.KursorSuara = Event Player.IndeksSuara;",
+        ):
+            checks.require(forbidden not in body, f"submenu resetta il cursore: {forbidden}")
+
+    teleport_open_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.TeleportCrouchAktif = True;")]
+    checks.equal(len(teleport_open_rules), 1, "apertura teleport Crouch")
+    if teleport_open_rules:
+        checks.require(
+            "Event Player.KursorTeleportasi = 0;" not in mask_strings(teleport_open_rules[0].body),
+            "teleport Crouch resetta ancora il cursore a zero",
+        )
+
+    checks.equal(
+        source.count('And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String('),
+        3,
+        "HUD teleport CTF non deve mostrare unavailable basandosi su Objective Position",
+    )
 
     for rule in rules:
         refreshes_dynamic_menu = any(

@@ -163,3 +163,8 @@ Le patch repository non richiedono più workflow YAML temporanei. Il workflow pe
 ### Teleport obiettivo dinamico
 
 `Current Objective` usa il payload reale in Escort/Hybrid, la bandiera nemica in Capture the Flag e, in Push, un player vivo attualmente sull’obiettivo come proxy del robot. Se nessuno è sul robot, resta il fallback alla posizione obiettivo. Le altre modalità continuano a usare `Objective Position(Objective Index)`.
+
+
+### Memoria cursori menu
+
+I cursori di Main Menu, Soundtrack, Camera, Name Color, HUD Language, Revenge, Unkillable, Voice Modifier e Teleport Crouch non vengono più riallineati alla prima voce o al valore applicato quando il menu viene riaperto. Le liste dinamiche Camera/Revenge continuano a essere aggiornate e clampate quando i target cambiano. In Capture the Flag lo stato visivo di `Current Objective` non dipende più da `Objective Position`, perché il teleport usa la bandiera nemica tramite `Flag Position`.
