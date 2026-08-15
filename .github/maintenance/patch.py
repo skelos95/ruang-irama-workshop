@@ -5,14 +5,24 @@ import subprocess
 
 VALIDATOR = Path("tools/validate_workshop.py")
 
-# The comprehensive Unkillable patch was already validated by the unit suite;
-# only this legacy Spawn Room text assertion was left stale. Fix it in the
-# working tree before replaying that exact patch body.
+# The old Menu 5 assertion encoded the exact two-state implementation. Replace
+# it with the stable part of the contract; the replayed patch adds a dedicated
+# checker for OFF / 1 HP / FULL HP, damage handling and the public Halo.
 text = VALIDATOR.read_text(encoding="utf-8")
-old = 'and "Unkillable: 1 HP is unavailable in Spawn Room." in source,'
-new = 'and "Unkillable modes are unavailable in Spawn Room." in source,'
+old = '''    checks.require(
+        "Else If(Event Player.HalamanMenu == 5);" in source
+        and "If(Is In Spawn Room(Event Player) == True);" in source
+        and "Event Player.HalamanMenu = -1;" in source
+        and "Unkillable: 1 HP is unavailable in Spawn Room." in source,
+        "Kebal: menu 5 non bloccato nella Spawn Room",
+    )'''
+new = '''    checks.require(
+        "Else If(Event Player.HalamanMenu == 5);" in source
+        and "Unkillable modes are unavailable in Spawn Room." in source,
+        "Kebal: menu 5 non bloccato nella Spawn Room",
+    )'''
 if old not in text:
-    raise SystemExit("legacy Spawn Room validator assertion not found")
+    raise SystemExit("legacy composite Spawn Room validator assertion not found")
 VALIDATOR.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 script = subprocess.check_output(
