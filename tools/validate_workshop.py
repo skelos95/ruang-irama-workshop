@@ -1791,7 +1791,7 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     checks.equal(len(luck), 1, "Nasib: una sola roulette automatica rosso/verde")
     if luck:
         luck_code = mask_strings(luck[0].body)
-        checks.equal(len(call_texts(luck[0].body, "Play Effect")), 1, "Nasib: un solo Ring riutilizzato a ogni cambio colore")
+        checks.equal(len(call_texts(luck[0].body, "Play Effect")), 0, "Nasib: nessun Ring Explosion deve essere usato")
         checks.require("Is Firing Primary" not in luck_code, "Nasib: il vecchio sparo non deve più attivare la carta")
         checks.require("Is In Line of Sight" not in luck_code, "Nasib: la roulette non deve dipendere dalla linea di vista")
         checks.require(luck_code.count("Wait(1, Ignore Condition);") == 3, "Nasib: countdown rosso deve durare tre secondi anche dopo Putaran == 0")
@@ -1812,10 +1812,10 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Nasib: il testo mondo non cambia dinamicamente rosso/verde",
         )
         checks.require(
-            "Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart)" in card_texts[0]
+            "Custom String(\"[{0}]\", Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart))" in card_texts[0]
             and "TRY YOUR LUCK" not in card_texts[0]
             and "COBA NASIB" not in card_texts[0],
-            "Nasib: la carta deve mostrare solo teschio rosso o cuore verde senza etichetta",
+            "Nasib: la carta deve mostrare esattamente [teschio] rosso o [cuore] verde senza etichetta",
         )
     checks.require(
         "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),
@@ -2235,26 +2235,20 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
     effect_calls = call_texts(source, "Play Effect")
-    checks.equal(len(effect_calls), 4, "feedback: due Ring RGB impostazioni più due Ring rosso/verde Nasib")
+    checks.equal(len(effect_calls), 2, "feedback: solo i due Ring RGB generici; Menu 10 non usa effetti")
     system_effects = [call for call in effect_calls if "Global.RGB" in call]
-    luck_effects = [call for call in effect_calls if "KartuNasibMerah" in call]
     checks.equal(len(system_effects), 2, "feedback: esattamente due Ring RGB di sistema")
-    checks.equal(len(luck_effects), 2, "Nasib: esattamente due Ring rosso/verde")
+    checks.equal(
+        len([call for call in effect_calls if "KartuNasibMerah" in call]),
+        0,
+        "Nasib: nessun Ring rosso/verde deve restare nel Menu 10",
+    )
     for index, call in enumerate(system_effects, 1):
         checks.require(
             "Ring Explosion" in call
             and "All Players(All Teams)" in call
             and "Sound" not in call,
             f"feedback sistema #{index}: deve essere Ring Explosion RGB visivo",
-        )
-    for index, call in enumerate(luck_effects, 1):
-        checks.require(
-            "Ring Explosion" in call
-            and "Custom Color(255, 70, 70, 255)" in call
-            and "Custom Color(70, 255, 110, 255)" in call
-            and "All Players(All Teams)" in call
-            and "Sound" not in call,
-            f"Nasib effetto #{index}: deve alternare esclusivamente rosso/verde",
         )
     for forbidden in ("Good Explosion", "Buff Impact Sound", "Ring Explosion Sound"):
         checks.require(forbidden not in clean, f"feedback vietato ancora presente: {forbidden}")

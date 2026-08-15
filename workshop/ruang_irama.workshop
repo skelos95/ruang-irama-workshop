@@ -1797,9 +1797,8 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
 				Event Player.JedaKartuNasib = 0.080;
 				Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;
-				Create In-World Text(All Players(All Teams), Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 3.500, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
+				Create In-World Text(All Players(All Teams), Custom String("[{0}]", Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart)), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 3.500, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
-				Play Effect(All Players(All Teams), Ring Explosion, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Event Player.PosisiKartuNasib, 3);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
 			End;
 			Call Subroutine(GambarMenu);
@@ -2322,8 +2321,6 @@ rule("18e - Nasib: Roulette merah hijau makin lambat")
 		Wait(Event Player.JedaKartuNasib, Abort When False);
 		Event Player.KartuNasibMerah = Event Player.KartuNasibMerah == False;
 		Modify Player Variable(Event Player, PutaranKartuNasib, Subtract, 1);
-		Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;
-		Play Effect(All Players(All Teams), Ring Explosion, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Event Player.PosisiKartuNasib, 1.500);
 		Modify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);
 		Loop If Condition Is True;
 		If(Event Player.KartuNasibMerah == True);
