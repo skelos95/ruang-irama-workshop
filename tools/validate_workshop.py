@@ -20,6 +20,8 @@ SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
 WORKFLOW = ROOT / ".github" / "workflows" / "validate-workshop.yml"
+MAINTENANCE_WORKFLOW = ROOT / ".github" / "workflows" / "maintenance-patch.yml"
+ALLOWED_WORKFLOW_NAMES = {"validate-workshop.yml", "maintenance-patch.yml"}
 LEGACY_AUTOMATION = (
     ROOT / ".github" / "trigger-camera-bots",
     ROOT / ".github" / "workflows" / "patch-camera-bots.yml",
@@ -1948,6 +1950,42 @@ def check_workflow_text(checks: Checks, workflow: str) -> None:
     )
 
 
+def check_maintenance_workflow_text(checks: Checks, workflow: str) -> None:
+    """Valida il runner permanente usato per applicare patch senza YAML dinamico."""
+    clean = strip_yaml_comments(workflow)
+    checks.require("\t" not in clean, "maintenance workflow: vietati tab YAML")
+    for token in (
+        "name: Apply Maintenance Patch",
+        "      - '.github/maintenance/patch.py'",
+        "  contents: write",
+        "  group: maintenance-patch-main",
+        "  cancel-in-progress: false",
+        "    if: github.actor != 'github-actions[bot]'",
+        "    timeout-minutes: 10",
+        "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "run: python .github/maintenance/patch.py",
+        "run: python -m unittest discover -s tests -p 'test_*.py'",
+        "run: python tools/validate_workshop.py",
+        "Maintenance patches may not modify workflow files.",
+        "git diff --check",
+        "rm -f .github/maintenance/patch.py",
+        "git diff --cached --check",
+        "git commit -m \"Apply validated maintenance patch\"",
+        "git push origin HEAD:main",
+    ):
+        checks.require(token in clean, f"maintenance workflow incompleto: {token}")
+
+    checks.require(
+        "workflow_dispatch:" not in clean,
+        "maintenance workflow non deve poter essere avviato senza un patch.py versionato",
+    )
+    checks.require(
+        "pull_request:" not in clean,
+        "maintenance workflow non deve girare sulle pull request",
+    )
+
+
 def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     checks.require(VERSION.exists(), f"file VERSION mancante: {VERSION}")
     if VERSION.exists():
@@ -1993,6 +2031,27 @@ def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     checks.require(WORKFLOW.exists(), f"workflow read-only mancante: {WORKFLOW.relative_to(ROOT)}")
     if WORKFLOW.exists():
         check_workflow_text(checks, WORKFLOW.read_text(encoding="utf-8"))
+
+    checks.require(
+        MAINTENANCE_WORKFLOW.exists(),
+        f"workflow manutenzione permanente mancante: {MAINTENANCE_WORKFLOW.relative_to(ROOT)}",
+    )
+    if MAINTENANCE_WORKFLOW.exists():
+        check_maintenance_workflow_text(
+            checks, MAINTENANCE_WORKFLOW.read_text(encoding="utf-8")
+        )
+
+    workflow_dir = ROOT / ".github" / "workflows"
+    workflow_names = {
+        path.name
+        for path in workflow_dir.iterdir()
+        if path.is_file() and path.suffix in {".yml", ".yaml"}
+    } if workflow_dir.exists() else set()
+    checks.equal(
+        workflow_names,
+        ALLOWED_WORKFLOW_NAMES,
+        "workflow consentiti; i runner temporanei sono vietati",
+    )
 
 
 def main() -> None:

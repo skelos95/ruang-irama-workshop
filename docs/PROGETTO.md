@@ -153,3 +153,8 @@ Il validatore statico può controllare struttura, invarianti e assenza di azioni
 ## Avvio immediato
 
 Quando il server entra in `Waiting for Players`, il Workshop esegue `Start Game Mode`. `Is Assembling Heroes` e `Is In Setup` sono gestiti da due regole globali separate che impostano `Set Match Time(0)`, così ogni fase viene saltata anche quando le transizioni sono consecutive. Il countdown CHILL resta indipendente perché usa `Total Time Elapsed` e non `Match Time`.
+
+
+## Manutenzione automatizzata
+
+Le patch repository non richiedono più workflow YAML temporanei. Il workflow permanente `.github/workflows/maintenance-patch.yml` si attiva esclusivamente quando viene aggiunto `.github/maintenance/patch.py`, esegue la patch, i test unitari e il validatore, impedisce alla patch di modificare `.github/workflows`, quindi committa il risultato e rimuove lo script di manutenzione. Il validatore ammette soltanto `validate-workshop.yml` e `maintenance-patch.yml`: qualsiasi runner temporaneo aggiuntivo fa fallire il gate statico.

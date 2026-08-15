@@ -74,6 +74,7 @@ Il codice breve Blizzard può essere generato soltanto dal client di Overwatch.
 - Il timer usa una propria origine e una propria scadenza e aggiorna la stringa visualizzata una volta al secondo.
 - Con `Performance diagnostics` disattivato non viene mantenuta la telemetria Inspector dedicata. Quando è attivo, soltanto l’host vede sotto la lista sinistra `LOAD / AVG / MAX` e i conteggi `HUD / IWT`.
 - I controlli statici non possono certificare il comportamento live del parser, la sentinella bot o la stabilità a 12 giocatori. Lo stato verificato è riportato in [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md).
+- Le modifiche automatizzate usano un runner permanente (`maintenance-patch.yml`) attivato solo da `.github/maintenance/patch.py`; il validatore vieta altri workflow temporanei, evitando YAML dinamico malformato e runner con `jobs: []`.
 
 ## Struttura
 
