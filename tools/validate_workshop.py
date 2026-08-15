@@ -1804,18 +1804,20 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
     if card_texts:
         checks.require(
-            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 3.500, Do Not Clip" in card_texts[0],
-            "Nasib: la carta pubblica deve restare agganciata al mirino a 4 m e usare dimensione 3,5",
+            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.500, Do Not Clip" in card_texts[0],
+            "Nasib: la carta pubblica deve restare agganciata al mirino a 4 m e usare dimensione 2,5",
         )
         checks.require(
             "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],
             "Nasib: il testo mondo non cambia dinamicamente rosso/verde",
         )
         checks.require(
-            "Custom String(\"[{0}]\", Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart))" in card_texts[0]
+            "Custom String(\"[ ☠ ]\")" in card_texts[0]
+            and "Custom String(\"[ ♥ ]\")" in card_texts[0]
+            and "Icon String(" not in card_texts[0]
             and "TRY YOUR LUCK" not in card_texts[0]
             and "COBA NASIB" not in card_texts[0],
-            "Nasib: la carta deve mostrare esattamente [teschio] rosso o [cuore] verde senza etichetta",
+            "Nasib: la carta deve usare simboli testuali centrati [ ☠ ] / [ ♥ ] colorabili, senza Icon String",
         )
     checks.require(
         "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),
