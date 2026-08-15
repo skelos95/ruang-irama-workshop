@@ -41,6 +41,34 @@ src = replace_once(
 SOURCE.write_text(src, encoding="utf-8")
 
 val = VALIDATOR.read_text(encoding="utf-8")
+
+# Legacy validation treated every submenu cursor as persistent. NAME COLOR is
+# different: its preview cursor must deliberately re-enter from CURRENT so an
+# abandoned preview never looks one step behind.
+interact_anchor = '    if interact_rules:\n        body = mask_strings(interact_rules[0].body)\n'
+anchor_at = val.find(interact_anchor)
+if anchor_at < 0:
+    raise SystemExit("validator interact menu anchor not found")
+next_section = val.find('\n    teleport_open_rules =', anchor_at)
+if next_section < 0:
+    raise SystemExit("validator interact menu end not found")
+segment = val[anchor_at:next_section]
+legacy_color_forbidden = '            "Event Player.KursorWarna = Event Player.IndeksWarna;",\n'
+if segment.count(legacy_color_forbidden) != 1:
+    raise SystemExit("validator color submenu legacy forbidden not found exactly once")
+segment = segment.replace(legacy_color_forbidden, '', 1)
+val = val[:anchor_at] + segment + val[next_section:]
+
+# Main Menu displays CURRENT state, so its accent must follow IndeksWarna.
+legacy_main = 'Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]'
+if val.count(legacy_main) != 1:
+    raise SystemExit(f"validator legacy main-menu color expectation count={val.count(legacy_main)}")
+val = val.replace(
+    legacy_main,
+    'Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]',
+    1,
+)
+
 check = r'''
 
 def check_color_menu_cursor_sync(checks: Checks, source: str, rules: list[Rule]) -> None:
