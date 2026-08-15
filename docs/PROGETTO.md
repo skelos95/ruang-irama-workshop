@@ -148,3 +148,8 @@ Il validatore statico può controllare struttura, invarianti e assenza di azioni
 - Le patch Blizzard possono cambiare parser, limiti Workshop, comportamento dei bot o geometrie delle mappe.
 - Una compilazione statica pulita non equivale a una sessione live stabile.
 - Il codice breve condivisibile può essere generato soltanto dal client Overwatch.
+
+
+## Avvio immediato
+
+Quando il server entra in `Waiting for Players`, il Workshop esegue `Start Game Mode`. `Is Assembling Heroes` e `Is In Setup` sono gestiti da due regole globali separate che impostano `Set Match Time(0)`, così ogni fase viene saltata anche quando le transizioni sono consecutive. Il countdown CHILL resta indipendente perché usa `Total Time Elapsed` e non `Match Time`.

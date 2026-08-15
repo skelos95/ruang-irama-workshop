@@ -722,6 +722,49 @@ def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> Non
         )
 
 
+
+def check_instant_start(checks: Checks, source: str, rules: list[Rule]) -> None:
+    waiting = [
+        rule for rule in rules
+        if code_contains(
+            rule.body,
+            "Ongoing - Global;",
+            "Global.Siap == True;",
+            "Is Waiting For Players == True;",
+            "Start Game Mode;",
+        )
+    ]
+    checks.equal(len(waiting), 1, "avvio immediato da Waiting For Players")
+
+    assembling = [
+        rule for rule in rules
+        if code_contains(
+            rule.body,
+            "Ongoing - Global;",
+            "Global.Siap == True;",
+            "Is Assembling Heroes == True;",
+            "Set Match Time(0);",
+        )
+    ]
+    checks.equal(len(assembling), 1, "skip Assemble Heroes")
+
+    setup = [
+        rule for rule in rules
+        if code_contains(
+            rule.body,
+            "Ongoing - Global;",
+            "Global.Siap == True;",
+            "Is In Setup == True;",
+            "Set Match Time(0);",
+        )
+    ]
+    checks.equal(len(setup), 1, "skip fase Setup")
+
+    checks.require(
+        assembling and setup and assembling[0].name != setup[0].name,
+        "Assemble Heroes e Setup devono restare in regole separate",
+    )
+
 def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
     clean = mask_strings(source)
     classification = rules_containing(rules, "Start Forcing Dummy Bot Name", "Stop Forcing Dummy Bot Name")
@@ -1966,6 +2009,7 @@ def main() -> None:
         genres, rules = check_language_arrays(checks, source)
         check_source_structure(checks, source, rules, global_names, player_names, subroutines)
         check_timer_and_match(checks, source, rules)
+        check_instant_start(checks, source, rules)
         check_bot_lifecycle(checks, source, rules)
         check_menus(checks, source, rules, subroutines)
         check_camera(checks, source, rules, player_names)

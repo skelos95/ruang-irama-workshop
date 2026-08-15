@@ -504,6 +504,63 @@ rule("00a - Global: Blokir penyelesaian saat permainan dimulai")
 	}
 }
 
+rule("00a1 - Global: Mulai mode segera saat menunggu pemain")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Waiting For Players == True;
+	}
+
+	actions
+	{
+		Start Game Mode;
+	}
+}
+
+rule("00a2 - Global: Lewati pemilihan pahlawan")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("00a3 - Global: Lewati persiapan awal")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
 rule("00b - Global: Perbarui hitung mundur server")
 {
 	event
