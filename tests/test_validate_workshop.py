@@ -172,7 +172,8 @@ subroutines
         )
 
     def test_crouch_dead_candidate_must_be_filtered_positively(self) -> None:
-        mutated = self.source.replace(
+        refresh_at = self.source.index('rule("96 - ')
+        mutated = self.source[:refresh_at] + self.source[refresh_at:].replace(
             "Is Alive(Current Array Element)",
             "Is Alive(Current Array Element) == False",
             1,

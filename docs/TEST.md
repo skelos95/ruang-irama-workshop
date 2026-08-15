@@ -256,3 +256,5 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Avvio rapido live:** verificare nel client che Waiting for Players avvii subito il mode, Assemble Heroes venga saltato e Setup/prepare-to-attack non introduca attese visibili nei mode core 6v6.
 
 - **Diagnostics OFF live:** verificare che sotto l’ultimo player del roster sinistro non compaia più `0`; il campo deve restare visivamente vuoto.
+
+- **Teleport obiettivo dinamico live:** Escort/Hybrid vicino al payload; CTF vicino alla bandiera nemica; Push vicino al robot quando almeno un player è sull’obiettivo e fallback obiettivo quando il robot è solo; le altre modalità mantengono il comportamento precedente.

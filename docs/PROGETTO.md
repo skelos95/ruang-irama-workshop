@@ -158,3 +158,8 @@ Quando il server entra in `Waiting for Players`, il Workshop esegue `Start Game 
 ## Manutenzione automatizzata
 
 Le patch repository non richiedono più workflow YAML temporanei. Il workflow permanente `.github/workflows/maintenance-patch.yml` si attiva esclusivamente quando viene aggiunto `.github/maintenance/patch.py`, esegue la patch, i test unitari e il validatore, impedisce alla patch di modificare `.github/workflows`, quindi committa il risultato e rimuove lo script di manutenzione. Il validatore ammette soltanto `validate-workshop.yml` e `maintenance-patch.yml`: qualsiasi runner temporaneo aggiuntivo fa fallire il gate statico.
+
+
+### Teleport obiettivo dinamico
+
+`Current Objective` usa il payload reale in Escort/Hybrid, la bandiera nemica in Capture the Flag e, in Push, un player vivo attualmente sull’obiettivo come proxy del robot. Se nessuno è sul robot, resta il fallback alla posizione obiettivo. Le altre modalità continuano a usare `Objective Position(Objective Index)`.

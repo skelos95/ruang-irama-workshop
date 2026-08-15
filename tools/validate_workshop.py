@@ -1589,6 +1589,18 @@ def check_teleport(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Teleport: spawn e obiettivo non usano il tipo di destinazione catturato",
     )
     for token in (
+        "CurrentGameMode==GameMode(Escort)",
+        "CurrentGameMode==GameMode(Hybrid)",
+        "PayloadPosition+Vector(2,0,0)",
+        "CurrentGameMode==GameMode(CaptureTheFlag)",
+        "FlagPosition(OppositeTeamOf(TeamOf(EventPlayer)))+Vector(2,0,0)",
+        "CurrentGameMode==GameMode(Push)",
+        "IsOnObjective(CurrentArrayElement)==True",
+        "PositionOf(FirstOf(FilteredArray(AllPlayers(AllTeams)",
+        "ObjectivePosition(ObjectiveIndex)",
+    ):
+        checks.require(token in after_refresh, f"Teleport obiettivo dinamico incompleto: {token}")
+    for token in (
         "EventPlayer.TargetTeleportasiTerkunci==Null",
         "EntityExists(EventPlayer.TargetTeleportasiTerkunci)==False",
         "IsAlive(EventPlayer.TargetTeleportasiTerkunci)==False",
