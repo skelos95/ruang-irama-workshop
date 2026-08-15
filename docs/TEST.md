@@ -292,3 +292,7 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Transizione colori menu live:** scorrere rapidamente avanti/indietro tra tutte le 8 voci del Main Menu e aprire/chiudere i relativi submenu; il colore principale deve sfumare in circa 0,35 s senza scatti. Name Color deve continuare a riaprire sull’ultimo cursore salvato.
 
 - **HUD menu + sfumatura live:** aprire il Main Menu e tutti gli 8 submenu: input e contenuto principale devono essere sempre visibili. Scorrere rapidamente tra le voci e verificare la sfumatura ~0,35 s; in Name Color la tonalità di preview deve seguire le 32 scelte senza far sparire il testo.
+
+- **Audit 3 lingue live:** cambiare HUD Language tra English / Bahasa Indonesia / ไทย e aprire tutti gli 8 menu, Teleport Crouch/Jongkok, Crouch inspection e diagnostics; nessun testo deve restare nella lingua precedente.
+
+- **Small Message live:** provare Camera, Name Color, Soundtrack/Musik, Revenge, Kebal/Unkillable, Voice, Player Icon, Jump respawn e Teleport; verificare testi brevi e coerenti nella lingua selezionata.

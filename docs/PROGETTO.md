@@ -204,7 +204,7 @@ Il Main Menu ora eredita visivamente il colore principale del sottomenu evidenzi
 
 Audit completo eseguito su inizializzazione, classificazione umano/bot, join/leave, HUD roster, dispatcher e renderer menu, Camera, Revenge, Teleport, Crouch inspection, Unkillable, Jump respawn, RGB, timer ed effetti. Non risultano regole funzionalmente duplicate o renderer/subroutine menu morti; le regole simili rimaste coprono bootstrap, edge detection, cleanup o fasi diverse e sono intenzionali.
 
-Ottimizzazioni conservative: `SlotHUDTerakhir` sostituisce due sort del roster dentro HUD rivalutati; il Main Menu non scansiona più Camera/Revenge inutilmente; refresh passivi Camera/Revenge/Teleport da 0,5 s a 1 s con refresh immediato conservato sugli input; `MenitLobby` da 1 s a 5 s; posizione Spawn Room salvata subito e poi a 1 Hz invece che continuamente; Crouch inspection da 10 Hz a 5 Hz. Restano invariati il RGB globale a 10 Hz, il timer server a 1 Hz e il singolo raycast camera, già bounded.
+Ottimizzazioni conservative: `SlotHUDTerakhir` sostituisce due sort del roster dentro HUD rivalutati; il Main Menu non scansiona più Camera/Revenge inutilmente; refresh passivi Camera/Revenge/Teleport da 0,5 s a 1 s con refresh immediato conservato sugli input; `MenitLobi` da 1 s a 5 s; posizione Spawn Room salvata subito e poi a 1 Hz invece che continuamente; Crouch inspection da 10 Hz a 5 Hz. Restano invariati il RGB globale a 10 Hz, il timer server a 1 Hz e il singolo raycast camera, già bounded.
 
 
 ### Transizioni colore menu
@@ -215,3 +215,10 @@ Il colore principale dei menu non cambia più istantaneamente tra una voce e l'a
 ### Fix HUD menu invisibili — Vector RGB
 
 La prima implementazione della sfumatura inseguiva direttamente un valore `Color` con `Chase Player Variable Over Time`; nel client il campo principale dei menu risultava invisibile mentre gli input a colore fisso restavano visibili. `WarnaMenu` è ora una `Vector(R,G,B)`, cioè un tipo supportato dal chase, e ciascun renderer la converte con `Custom Color(X Component Of(...), Y Component Of(...), Z Component Of(...), 255)`. `DaftarWarnaRGB` contiene 32 vettori paralleli a `DaftarWarna`, inclusi i valori RGB reali delle costanti Workshop, così Name Color mantiene una preview coerente durante la transizione. Nessun loop per-player è stato aggiunto.
+
+
+### Audit localizzazione e nomenclatura
+
+Tutti gli HUD principali e i `Small Message` sono stati ricontrollati nelle tre lingue disponibili (English, Bahasa Indonesia e ไทย). I testi più lunghi sono stati abbreviati e il tono è stato reso più coerente con una modalità social/CHILL; i diagnostics ora hanno anche etichette Bahasa Indonesia proprie. I messaggi di Jump respawn usano `Input Binding String(Button(Jump))` invece della parola fissa `Jump`.
+
+La nomenclatura Workshop interna è stata ripulita: i residui misti `VPN`, `Lobby`, `BotAI`, `UnkillableAktif`, `TeleportCrouchAktif`, `RespawnJumpDipakai` e simili sono stati sostituiti con nomi Bahasa Indonesia (`DaftarLokasiServer`, `MenitLobi`, `BotOtomatis`, `KebalAktif`, `TeleportasiJongkokAktif`, `BangkitLompatDipakai`, ecc.). Anche i titoli delle regole con frammenti italiani/inglesi sono stati normalizzati; restano invariati solo keyword Workshop, nomi dei pulsanti, acronimi tecnici e nomi propri.

@@ -630,7 +630,7 @@ def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> Non
     clean = mask_strings(source)
     for name in (
         "DurasiServerMenit", "WaktuMulaiServer", "WaktuAkhirServer", "SisaWaktuServer",
-        "TeksWaktuServer", "RestartSudahDiminta",
+        "TeksWaktuServer", "MulaiUlangSudahDiminta",
     ):
         checks.require(f"Global.{name}" in clean, f"timer: variabile {name} assente")
 
@@ -713,14 +713,14 @@ def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Restart Match non è condizionato dal timer personalizzato a zero",
         )
         checks.require(
-            "Global.RestartSudahDiminta == False;" in restart,
+            "Global.MulaiUlangSudahDiminta == False;" in restart,
             "Restart Match privo di guardia one-shot",
         )
-        set_guard = restart.find("Global.RestartSudahDiminta = True;")
+        set_guard = restart.find("Global.MulaiUlangSudahDiminta = True;")
         restart_at = restart.find("Restart Match;")
         checks.require(
             0 <= set_guard < restart_at,
-            "la guardia RestartSudahDiminta deve essere impostata prima del riavvio",
+            "la guardia MulaiUlangSudahDiminta deve essere impostata prima del riavvio",
         )
 
 
@@ -871,7 +871,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
 
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
-        "GambarBalasDendam", "GambarUnkillable", "GambarSuara", "GambarIkon",
+        "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -977,7 +977,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorWarna = Event Player.IndeksWarna;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorUnkillable = Event Player.UnkillableAktif",
+            "Event Player.KursorKebal = Event Player.KebalAktif",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
         ):
             checks.require(forbidden not in opening, f"menu reopen resetta il cursore: {forbidden}")
@@ -991,12 +991,12 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorKamera = 0;",
             "Event Player.KursorBahasa = Event Player.IndeksBahasa;",
             "Event Player.KursorBalasDendam = 0;",
-            "Event Player.KursorUnkillable = Event Player.UnkillableAktif",
+            "Event Player.KursorKebal = Event Player.KebalAktif",
             "Event Player.KursorSuara = Event Player.IndeksSuara;",
         ):
             checks.require(forbidden not in body, f"submenu resetta il cursore: {forbidden}")
 
-    teleport_open_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.TeleportCrouchAktif = True;")]
+    teleport_open_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.TeleportasiJongkokAktif = True;")]
     checks.equal(len(teleport_open_rules), 1, "apertura teleport Crouch")
     if teleport_open_rules:
         checks.require(
@@ -1185,7 +1185,7 @@ def check_camera(
         if code_contains(
   rule.body,
   "Event Player.MenuTerbuka == False;",
-  "Event Player.TeleportCrouchAktif == False;",
+  "Event Player.TeleportasiJongkokAktif == False;",
   "Event Player.InteraksiKameraDipakai == False;",
   "Is Button Held(Event Player, Button(Interact)) == True;",
   "Wait(0.500, Abort When False);",
@@ -1690,8 +1690,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         section_body(source, "variables"),
     )
     for slot, name in (
-        (51, "UnkillableAktif"),
-        (52, "KursorUnkillable"),
+        (51, "KebalAktif"),
+        (52, "KursorKebal"),
         (53, "IndeksSuara"),
         (54, "KursorSuara"),
     ):
@@ -1726,8 +1726,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "Else If(Event Player.HalamanMenu == 5);" in source
         and "If(Is In Spawn Room(Event Player) == True);" in source
         and "Event Player.HalamanMenu = -1;" in source
-        and "Unkillable + 1 HP is unavailable in the Spawn Room." in source,
-        "Unkillable: menu 5 non bloccato nella Spawn Room",
+        and "Unkillable: 1 HP is unavailable in Spawn Room." in source,
+        "Kebal: menu 5 non bloccato nella Spawn Room",
     )
     spawn_disable = [
         rule
@@ -1735,14 +1735,14 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         if code_contains(
             rule.body,
             "Is In Spawn Room(Event Player) == True;",
-            "Event Player.UnkillableAktif = False;",
+            "Event Player.KebalAktif = False;",
             "Clear Status(Event Player, Unkillable);",
             "Set Player Health(Event Player, Max Health(Event Player));",
             "Event Player.HalamanMenu = -1;",
         )
     ]
     checks.equal(len(spawn_disable), 1, "regola auto-disattivazione Unkillable in Spawn Room")
-    for title in ("18 - Unkillable:", "18b - Unkillable:"):
+    for title in ("18 - Kebal:", "18b - Kebal:"):
         matching = [rule for rule in rules if rule.name.startswith(title)]
         checks.equal(len(matching), 1, f"regola {title} per guard Spawn Room")
         if matching:
@@ -1753,27 +1753,27 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
 
 
 
-def check_vpn_country_setting(checks: Checks, source: str) -> None:
+def check_server_location_setting(checks: Checks, source: str) -> None:
     expected = ['Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'Hong Kong', 'India', 'Indonesia', 'Japan', 'Kazakhstan', 'Kyrgyzstan', 'Laos', 'Malaysia', 'Maldives', 'Myanmar', 'Mongolia', 'Nepal', 'Pakistan', 'Philippines', 'Singapore', 'South Korea', 'Sri Lanka', 'Tajikistan', 'Taiwan', 'Thailand', 'Uzbekistan', 'Vietnam']
     try:
-        countries = custom_strings(array_body(source, "Global.DaftarNegaraVPN"))
+        countries = custom_strings(array_body(source, "Global.DaftarLokasiServer"))
     except ParseError as exc:
-        checks.require(False, f"VPN countries: {exc}")
+        checks.require(False, f"Server Location countries: {exc}")
         return
-    checks.equal(countries, expected, "lista VPN Asia")
-    checks.equal(len(countries), 26, "paesi VPN Asia")
-    checks.equal(countries.index("Indonesia") if "Indonesia" in countries else -1, 6, "indice VPN predefinito Indonesia")
+    checks.equal(countries, expected, "lista Server Location Asia")
+    checks.equal(len(countries), 26, "paesi Server Location Asia")
+    checks.equal(countries.index("Indonesia") if "Indonesia" in countries else -1, 6, "indice Server Location predefinito Indonesia")
     checks.require(
-        'Global.IndeksNegaraVPN = Workshop Setting Combo' in mask_strings(source),
-        "VPN: Workshop Setting Combo non assegnato a Global.IndeksNegaraVPN",
+        'Global.IndeksLokasiServer = Workshop Setting Combo' in mask_strings(source),
+        "Server Location: Workshop Setting Combo non assegnato a Global.IndeksLokasiServer",
     )
     checks.require(
         'Custom String("Server location (Asia)")' in source,
-        "VPN: nome della combo Asia non trovato",
+        "Server Location: nome della combo Asia non trovato",
     )
     checks.require(
-        'Global.IndeksNegaraVPN = Workshop Setting Integer' not in mask_strings(source),
-        "VPN: la vecchia impostazione numerica non deve essere presente",
+        'Global.IndeksLokasiServer = Workshop Setting Integer' not in mask_strings(source),
+        "Server Location: la vecchia impostazione numerica non deve essere presente",
     )
     combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'Server location (Asia)' in call]
     checks.equal(len(combos), 1, "Workshop Setting Combo Server Location Asia")
@@ -1785,9 +1785,9 @@ def check_vpn_country_setting(checks: Checks, source: str) -> None:
             checks.equal(args[2].strip(), "6", "default Workshop Setting Combo Server Location Asia")
             checks.equal(custom_strings(args[3]), expected, "opzioni Workshop Setting Combo Server Location Asia")
     checks.require(
-        'Custom String("SERVER LOCATION: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
-        and 'Custom String("LOKASI SERVER: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
-        and 'Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
+        'Custom String("SERVER LOCATION: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer])' in source
+        and 'Custom String("LOKASI SERVER: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer])' in source
+        and 'Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer])' in source,
         "HUD SERVER LOCATION non usa il paese configurato",
     )
 
@@ -1855,7 +1855,7 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
         "diagnostica OFF usa ancora Null e può renderizzare 0 nel roster",
     )
     checks.require(
-        'rule("00d - Global: Tampilkan diagnostik performa hanya kepada host")' not in source,
+        'rule("00d - Umum: Tampilkan diagnostik performa hanya kepada host")' not in source,
         "vecchio HUD diagnostica separato ancora presente",
     )
     inspector_rules = rules_containing(
@@ -2119,7 +2119,7 @@ def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
 def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rule]) -> None:
     clean = mask_strings(source)
     for token in (
-        "58: PosisiMati", "59: PosisiRespawnAman", "60: RespawnJumpDipakai",
+        "58: PosisiMati", "59: PosisiBangkitAman", "60: BangkitLompatDipakai",
         "18: EfekTerapkan", "19: EfekPulihkan",
         "Play Effect(All Players(All Teams), Good Explosion, Global.RGB",
         "Play Effect(Event Player, Buff Impact Sound",
@@ -2128,7 +2128,7 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
         "Event Player.PosisiMati = Position Of(Event Player);",
         "Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)))",
         "Respawn(Event Player);",
-        "Teleport(Event Player, Event Player.PosisiRespawnAman);",
+        "Teleport(Event Player, Event Player.PosisiBangkitAman);",
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
     checks.require(
@@ -2142,12 +2142,12 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     checks.equal(len(restore), 1, "subroutine EfekPulihkan")
     death = rules_containing(rules, "Player Died;", "Event Player.PosisiMati = Position Of(Event Player);")
     checks.equal(len(death), 1, "cattura posizione morte")
-    jump = [rule for rule in rules if code_contains(rule.body, "Is Alive(Event Player) == False;", "Button(Jump)", "Respawn(Event Player);", "PosisiRespawnAman")]
+    jump = [rule for rule in rules if code_contains(rule.body, "Is Alive(Event Player) == False;", "Button(Jump)", "Respawn(Event Player);", "PosisiBangkitAman")]
     checks.equal(len(jump), 1, "Jump respawn")
     if jump:
         body = mask_strings(jump[0].body)
         checks.require(
-            body.find("Nearest Walkable Position") < body.find("Respawn(Event Player);") < body.find("Teleport(Event Player, Event Player.PosisiRespawnAman);"),
+            body.find("Nearest Walkable Position") < body.find("Respawn(Event Player);") < body.find("Teleport(Event Player, Event Player.PosisiBangkitAman);"),
             "Jump respawn: ordine posizione sicura -> respawn -> teleport errato",
         )
 
@@ -2288,7 +2288,7 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
         checks.require(" - soundtrack:" not in body and " - เพลงประกอบ:" not in body, "roster destro contiene ancora il prefisso soundtrack")
         checks.require("Global.RGB" not in body, "roster: RGB non deve colorare il nome player")
         checks.require(body.count("Event Player.WarnaNama") >= 2, "roster: entrambe le liste devono usare il colore nome scelto")
-        checks.require('Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobby)' in body, "roster sinistro: MIN assente")
+        checks.require('Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi)' in body, "roster sinistro: MIN assente")
 
     next_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 3;", "Event Player.KursorIkon = (Event Player.KursorIkon + 1) % Count Of(Global.DaftarIkon);")]
     prev_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 4;", "Event Player.KursorIkon = (Event Player.KursorIkon + Count Of(Global.DaftarIkon) - 1) % Count Of(Global.DaftarIkon);")]
@@ -2322,7 +2322,7 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
         "If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));",
         "If(Event Player.IndeksWarna != Event Player.KursorWarna);",
         "If(Event Player.IndeksBahasa != Event Player.KursorBahasa);",
-        "If(Event Player.UnkillableAktif != And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False));",
+        "If(Event Player.KebalAktif != And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == False));",
         "If(Event Player.IndeksSuara != Event Player.KursorSuara);",
         "If(Event Player.IndeksIkon != Event Player.KursorIkon);",
     ):
@@ -2382,7 +2382,7 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
     name_color = renderer("GambarWarna")
     language = renderer("GambarBahasa")
     revenge = renderer("GambarBalasDendam")
-    unkillable = renderer("GambarUnkillable")
+    unkillable = renderer("GambarKebal")
     voice = renderer("GambarSuara")
     icon = renderer("GambarIkon")
 
@@ -2451,7 +2451,7 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
         ("07b - Menu kamera:", "Wait(1, Abort When False);", "camera passive 1Hz"),
         ("07c - Menu Balas Dendam:", "Wait(1, Abort When False);", "revenge passive 1Hz"),
         ("14 - Intip Pahlawan:", "Wait(0.200, Abort When False);", "inspection 5Hz"),
-        ("19f - Teleport Crouch:", "Wait(1, Abort When False);", "teleport passive 1Hz"),
+        ("19f - Teleportasi Jongkok:", "Wait(1, Abort When False);", "teleport passive 1Hz"),
     )
     for prefix, token, label in expected:
         matches = [rule for rule in rules if rule.name.startswith(prefix)]
@@ -2466,7 +2466,7 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
     inspection_sorts = [rule for rule in rules if code_contains(rule.body, "Subroutine;", "SegarkanTargetInspeksi;", "Sorted Array(Event Player.DaftarTargetInspeksi")]
     checks.equal(len(inspection_sorts), 1, "audit: sort inspection")
 
-    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarUnkillable", "GambarSuara", "GambarIkon"):
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarKebal", "GambarSuara", "GambarIkon"):
         checks.equal(len(rules_containing(rules, "Subroutine;", f"{sub};")), 1, f"audit: definizione unica {sub}")
 
 
@@ -2509,7 +2509,7 @@ def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[
         checks.require("Call Subroutine(TransisiWarnaMenu);" in mask_strings(router[0].body), "menu smooth: GambarMenu non aggiorna destinazione")
 
     converted = "Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255)"
-    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarUnkillable", "GambarSuara", "GambarIkon"):
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon"):
         matches = rules_containing(rules, "Subroutine;", f"{sub};")
         checks.equal(len(matches), 1, f"menu smooth: renderer {sub}")
         if matches:
@@ -2517,6 +2517,75 @@ def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[
             checks.require(converted in body, f"menu smooth: {sub} non converte WarnaMenu Vector in Custom Color")
             checks.require("Visible To String and Color" in body, f"menu smooth: {sub} non rivaluta il colore")
     checks.require("Event Player.WarnaMenu, Visible To" not in clean, "menu smooth: Color raw non valido ancora passato agli HUD")
+
+
+def check_localization_and_indonesian_naming(checks: Checks, source: str, rules: list[Rule]) -> None:
+    variables = section_body(source, "variables")
+    for old in (
+        "RestartSudahDiminta", "DaftarNegaraVPN", "IndeksNegaraVPN", "BotAI", "MenitLobby",
+        "UnkillableAktif", "KursorUnkillable", "TeleportCrouchAktif", "PosisiRespawnAman",
+        "RespawnJumpDipakai", "GambarUnkillable",
+    ):
+        checks.require(old not in variables and old not in source, f"nomenclatura lama ancora presente: {old}")
+
+    for new in (
+        "MulaiUlangSudahDiminta", "DaftarLokasiServer", "IndeksLokasiServer", "BotOtomatis", "MenitLobi",
+        "KebalAktif", "KursorKebal", "TeleportasiJongkokAktif", "PosisiBangkitAman",
+        "BangkitLompatDipakai", "GambarKebal",
+    ):
+        checks.require(new in source, f"nomenclatura Indonesia mancante: {new}")
+
+    banned_rule_fragments = (
+        " - Global:", "lento", "Respawn Jump:", "Unkillable:", "Teleport Crouch:",
+        "Dispatcher input", "dispatcher", "separato", "Riattiva", "destinazione", "precedente",
+        "successiva", "esegue il teletrasporto", "lista target", "senza ridisegno", "Chiudi appena",
+        "overlay selama Crouch", "scatto",
+    )
+    names = "\n".join(rule.name for rule in rules)
+    for fragment in banned_rule_fragments:
+        checks.require(fragment not in names, f"titolo regola non completamente indonesiano: {fragment}")
+
+    for required in (
+        "00 - Umum:", "RGB pastel neon lambat untuk judul, waktu, dan efek",
+        "Bangkit Lompat:", "Kebal:", "Teleportasi Jongkok:",
+        "Pengatur masukan terpisah dari Menu Arcade", "tujuan berikutnya", "tujuan sebelumnya",
+        "Interact menjalankan teleportasi", "tanpa menggambar ulang berkala", "tanpa lompatan",
+    ):
+        checks.require(required in names, f"titolo regola Indonesia mancante: {required}")
+
+    small_messages = call_texts(source, "Small Message")
+    checks.require(len(small_messages) > 0, "nessun Small Message trovato")
+    for call in small_messages:
+        checks.require("IndeksBahasa" in call, "Small Message non localizzato in base alla lingua")
+
+    # Three-language HUD anchors: global info, menus and diagnostics.
+    for token in (
+        "Hold {0}: inspect hero + HP",
+        "Tahan {0}: cek pahlawan + HP",
+        "กด {0} ค้าง: ดูฮีโร่ + HP",
+        "LOBBY & CHILL TIME",
+        "LOBI & WAKTU SANTAI",
+        "ล็อบบี้ & เวลาชิล",
+        "PLAYER VIBES",
+        "MUSIK PEMAIN",
+        "เพลงของผู้เล่น",
+        "BEBAN {0}% | RATA {1}% | PUNCAK {2}%",
+        "LOAD {0}% | AVG {1}% | MAX {2}%",
+        "โหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%",
+        "0 - MUSIK",
+        "5 - KEBAL: 1 HP",
+        "5 - ฆ่าไม่ตาย: 1 HP",
+        "6 - SUARA PAHLAWAN",
+        "6 - เสียงฮีโร่",
+    ):
+        checks.require(token in source, f"localizzazione HUD mancante: {token}")
+
+    for stale in (
+        "DAFTAR PEMAIN & WAKTU CHILL", "SOUNDTRACK PEMAIN", "belum pilih soundtrack",
+        "Tahan {0}: lihat pemain, hero & kesehatan", "Unkillable + 1 HP aktif.",
+        "Pengubah suara hero diterapkan.", "Respawn Jump:", "Teleport Crouch:",
+    ):
+        checks.require(stale not in source, f"testo vecchio/non localizzato ancora presente: {stale}")
 
 def main() -> None:
     checks = Checks()
@@ -2538,6 +2607,7 @@ def main() -> None:
         check_menu_palette_and_name_colors(checks, source, rules)
         check_runtime_efficiency_audit(checks, source, rules)
         check_smooth_menu_color_transition(checks, source, rules, subroutines)
+        check_localization_and_indonesian_naming(checks, source, rules)
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)
@@ -2546,7 +2616,7 @@ def main() -> None:
         check_rgb_system(checks, source, rules)
         check_player_icon_menu(checks, source, rules, subroutines)
         check_idempotent_menu_feedback(checks, source, rules)
-        check_vpn_country_setting(checks, source)
+        check_server_location_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)
     except ParseError as exc:

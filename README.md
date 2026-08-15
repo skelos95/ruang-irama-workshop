@@ -138,3 +138,5 @@ Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us
 
 - Palette menu coordinata: ogni voce del Main Menu usa lo stesso colore principale del proprio sottomenu, mentre i colori degli input restano invariati.
 - `Name Color` offre 32 tonalità: le 20 originali più 12 nuove sfumature pastel/neon.
+
+- Audit localizzazione completo: HUD e Small Message verificati in English / Bahasa Indonesia / ไทย; nomenclatura Workshop interna ripulita in Bahasa Indonesia.
