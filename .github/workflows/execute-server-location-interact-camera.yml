@@ -1,0 +1,44 @@
+name: Execute server location and Interact camera patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/execute-server-location-interact-camera.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract patch script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          wf = Path('.github/workflows/apply-server-location-interact-camera.yml').read_text(encoding='utf-8')
+          marker = "          python - <<'PY'\n"
+          start = wf.index(marker) + len(marker)
+          end = wf.index("          PY\n", start)
+          lines = wf[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/apply_camera.py').write_text(script, encoding='utf-8')
+          PY
+      - name: Apply, test and push
+        shell: bash
+        run: |
+          python /tmp/apply_camera.py
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.workshop tools/validate_workshop.py README.md docs/PROGETTO.md docs/VALIDAZIONE.md docs/SERVER_LOCATIONS.md
+          git add -u docs/VPN_COUNTRIES.md
+          git commit -m "Restore server location and add Interact camera shortcut"
+          git push origin HEAD:main
