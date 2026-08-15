@@ -97,6 +97,7 @@ variables
 		54: KursorSuara
 		55: TeleportCrouchAktif
 		56: PerintahTeleportasi
+		57: InteraksiKameraDipakai
 }
 
 subroutines
@@ -411,7 +412,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.JarakBidik = 25;
 		"Timer server berdiri sendiri dari timer mode bawaan. Host lobi dapat memilih 30 sampai 90 menit."
 		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("CHILL DEDICATED SERVER"), Custom String("Server duration (minutes)"), 30, 30, 90, 0);
-		Global.IndeksNegaraVPN = Workshop Setting Combo(Custom String("CHILL DEDICATED SERVER"), Custom String("VPN country (Asia)"), 6, Array(
+		Global.IndeksNegaraVPN = Workshop Setting Combo(Custom String("CHILL DEDICATED SERVER"), Custom String("Server location (Asia)"), 6, Array(
 			Custom String("Bangladesh"),
 			Custom String("Bhutan"),
 			Custom String("Brunei"),
@@ -457,7 +458,7 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 		End;
 
 		Create HUD Text(Global.PemainManusia, Null,
-			Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]),
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("SERVER LOCATION: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOKASI SERVER: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]) : Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN]),
 			Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
@@ -1477,6 +1478,69 @@ rule("12b - Menu: Tutup juga saat pemain tidak aktif atau tidak muncul")
 	actions
 	{
 		Call Subroutine(TutupMenu);
+	}
+}
+
+rule("12c - Kamera: Tahan Interact setengah detik untuk beralih di luar menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Event Player.MenuTerbuka == False;
+		Event Player.TeleportCrouchAktif == False;
+		Event Player.InteraksiKameraDipakai == False;
+		Is Button Held(Event Player, Button(Crouch)) == False;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Wait(0.500, Abort When False);
+		Event Player.InteraksiKameraDipakai = True;
+		If(Event Player.ModeKamera == 0);
+			Event Player.TargetKamera = Event Player;
+			Wait(0.016, Ignore Condition);
+			Event Player.ModeKamera = 1;
+			Call Subroutine(MulaiKamera);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Third person enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kamera orang ketiga aktif.") : Custom String("เปิดมุมมองบุคคลที่สามแล้ว"));
+		Else;
+			Stop Camera(Event Player);
+			Event Player.ModeKamera = 0;
+			Event Player.TargetKamera = Null;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("First person restored.") : Event Player.IndeksBahasa == 1 ? Custom String("Kamera orang pertama kembali.") : Custom String("กลับสู่มุมมองบุคคลที่หนึ่งแล้ว"));
+		End;
+	}
+}
+
+rule("12d - Kamera: Lepaskan Interact sebelum pakai lagi")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InteraksiKameraDipakai == True;
+		Is Button Held(Event Player, Button(Interact)) == False;
+	}
+
+	actions
+	{
+		Event Player.InteraksiKameraDipakai = False;
 	}
 }
 
@@ -2547,6 +2611,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorSuara = 0;
 		Event Player.TeleportCrouchAktif = False;
 		Event Player.PerintahTeleportasi = 0;
+		Event Player.InteraksiKameraDipakai = False;
 	}
 }
 

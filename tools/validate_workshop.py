@@ -1088,6 +1088,52 @@ def check_camera(
             checks.equal(look_global_refs, {"JarakBidik"}, "riferimenti globali nel punto di mira")
             checks.equal(args[3], "0", "blend Start Camera per aggancio diretto tipo prima persona")
 
+    checks.require("InteraksiKameraDipakai" in player_names, "camera shortcut: latch InteraksiKameraDipakai assente")
+    shortcut_rules = [
+        rule for rule in rules
+        if code_contains(
+  rule.body,
+  "Event Player.MenuTerbuka == False;",
+  "Event Player.TeleportCrouchAktif == False;",
+  "Event Player.InteraksiKameraDipakai == False;",
+  "Is Button Held(Event Player, Button(Interact)) == True;",
+  "Wait(0.500, Abort When False);",
+  "Event Player.TargetKamera = Event Player;",
+  "Event Player.ModeKamera = 1;",
+  "Call Subroutine(MulaiKamera);",
+  "Stop Camera(Event Player);",
+  "Event Player.ModeKamera = 0;",
+  "Event Player.TargetKamera = Null;",
+        )
+    ]
+    checks.equal(len(shortcut_rules), 1, "camera shortcut Interact 0,5 s fuori menu")
+    if shortcut_rules:
+        checks.require(
+  code_contains(shortcut_rules[0].body, "If(Event Player.ModeKamera == 0);", "Else;"),
+  "camera shortcut non alterna prima persona e camera attiva",
+        )
+    release_rules = [
+        rule for rule in rules
+        if code_contains(
+  rule.body,
+  "Event Player.InteraksiKameraDipakai == True;",
+  "Is Button Held(Event Player, Button(Interact)) == False;",
+  "Event Player.InteraksiKameraDipakai = False;",
+        )
+    ]
+    checks.equal(len(release_rules), 1, "release latch Interact camera")
+    menu_camera_rules = [
+        rule for rule in rules
+        if code_contains(
+  rule.body,
+  "Event Player.MenuTerbuka == True;",
+  "Event Player.PerintahMenu == 1;",
+  "Else If(Event Player.HalamanMenu == 1);",
+  "Event Player.KursorKamera",
+        )
+    ]
+    checks.equal(len(menu_camera_rules), 1, "Interact camera nel menu resta gestito dal dispatcher")
+
 
 def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
     checks.equal(
@@ -1622,26 +1668,27 @@ def check_vpn_country_setting(checks: Checks, source: str) -> None:
         "VPN: Workshop Setting Combo non assegnato a Global.IndeksNegaraVPN",
     )
     checks.require(
-        'Custom String("VPN country (Asia)")' in source,
+        'Custom String("Server location (Asia)")' in source,
         "VPN: nome della combo Asia non trovato",
     )
     checks.require(
         'Global.IndeksNegaraVPN = Workshop Setting Integer' not in mask_strings(source),
         "VPN: la vecchia impostazione numerica non deve essere presente",
     )
-    combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'VPN country (Asia)' in call]
-    checks.equal(len(combos), 1, "Workshop Setting Combo VPN Asia")
+    combos = [call for call in call_texts(source, "Workshop Setting Combo") if 'Server location (Asia)' in call]
+    checks.equal(len(combos), 1, "Workshop Setting Combo Server Location Asia")
     if combos:
         opening = combos[0].find("(")
         args = top_level_items(combos[0][opening + 1 : -1])
-        checks.equal(len(args), 5, "argomenti Workshop Setting Combo VPN Asia")
+        checks.equal(len(args), 5, "argomenti Workshop Setting Combo Server Location Asia")
         if len(args) == 5:
-            checks.equal(args[2].strip(), "6", "default Workshop Setting Combo VPN Asia")
-            checks.equal(custom_strings(args[3]), expected, "opzioni Workshop Setting Combo VPN Asia")
+            checks.equal(args[2].strip(), "6", "default Workshop Setting Combo Server Location Asia")
+            checks.equal(custom_strings(args[3]), expected, "opzioni Workshop Setting Combo Server Location Asia")
     checks.require(
-        'Custom String("SERVER VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
-        and 'Custom String("เซิร์ฟเวอร์ VPN: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
-        "HUD SERVER VPN non usa il paese configurato",
+        'Custom String("SERVER LOCATION: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
+        and 'Custom String("LOKASI SERVER: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source
+        and 'Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarNegaraVPN[Global.IndeksNegaraVPN])' in source,
+        "HUD SERVER LOCATION non usa il paese configurato",
     )
 
 

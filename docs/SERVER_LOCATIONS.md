@@ -1,6 +1,6 @@
-# VPN Countries — Asia
+# Server Locations — Asia
 
-La Workshop Setting `VPN country (Asia)` mostra direttamente questi paesi/località. Il default è **Indonesia**.
+La Workshop Setting `Server location (Asia)` mostra direttamente questi paesi/località. Il default è **Indonesia**.
 
 - Bangladesh
 - Bhutan
