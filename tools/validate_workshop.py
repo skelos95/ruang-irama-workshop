@@ -2400,31 +2400,32 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
     ):
         checks.require(token in body, f"palette input modificata per {label}")
 
-    # Primary submenu colors are unique, except Name Color which intentionally
-    # previews the currently highlighted name color.
-    for body, token, label in (
-        (soundtrack, "Custom Color(55, 235, 245, 255)", "soundtrack aqua"),
-        (camera, "Custom Color(90, 180, 255, 255)", "camera blue"),
-        (name_color, "Global.DaftarWarna[Event Player.KursorWarna]", "name color preview"),
-        (language, "Custom Color(190, 120, 255, 255)", "language violet"),
-        (revenge, "Custom Color(255, 80, 80, 255)", "revenge red"),
-        (unkillable, "Custom Color(255, 185, 90, 255)", "unkillable amber"),
-        (voice, "Custom Color(115, 235, 170, 255)", "voice mint"),
-        (icon, "Custom Color(235, 135, 255, 255)", "player icon fuchsia"),
+    transition = renderer("TransisiWarnaMenu")
+    for body, label in (
+        (main, "main"),
+        (soundtrack, "soundtrack"),
+        (camera, "camera"),
+        (name_color, "name color"),
+        (language, "language"),
+        (revenge, "revenge"),
+        (unkillable, "unkillable"),
+        (voice, "voice"),
+        (icon, "player icon"),
     ):
-        checks.require(token in body, f"palette submenu errata: {label}")
+        checks.require("Event Player.WarnaMenu" in body, f"palette animata assente per {label}")
+        checks.require("Visible To String and Color" in body, f"rivalutazione colore assente per {label}")
 
     for token in (
-        "Event Player.KursorUtama == 0 ? Custom Color(55, 235, 245, 255)",
-        "Event Player.KursorUtama == 1 ? Custom Color(90, 180, 255, 255)",
-        "Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]",
-        "Event Player.KursorUtama == 3 ? Custom Color(190, 120, 255, 255)",
-        "Event Player.KursorUtama == 4 ? Custom Color(255, 80, 80, 255)",
-        "Event Player.KursorUtama == 5 ? Custom Color(255, 185, 90, 255)",
-        "Event Player.KursorUtama == 6 ? Custom Color(115, 235, 170, 255)",
+        "Custom Color(55, 235, 245, 255)",
+        "Custom Color(90, 180, 255, 255)",
+        "Global.DaftarWarna[Event Player.KursorWarna]",
+        "Custom Color(190, 120, 255, 255)",
+        "Custom Color(255, 80, 80, 255)",
+        "Custom Color(255, 185, 90, 255)",
+        "Custom Color(115, 235, 170, 255)",
         "Custom Color(235, 135, 255, 255)",
     ):
-        checks.require(token in main, f"Main Menu non corrisponde al sottomenu: {token}")
+        checks.require(token in transition, f"palette transizione incompleta: {token}")
 
 
 def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule]) -> None:
@@ -2469,20 +2470,61 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
         checks.equal(len(rules_containing(rules, "Subroutine;", f"{sub};")), 1, f"audit: definizione unica {sub}")
 
 
-def check_color_menu_cursor_sync(checks: Checks, source: str, rules: list[Rule]) -> None:
+
+def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
+    variables = section_body(source, "variables")
     checks.require(
-        "Else If(Event Player.HalamanMenu == 2);\n\t\t\t\tEvent Player.KursorWarna = Event Player.IndeksWarna;" in clean,
-        "menu colore: cursore non sincronizzato al colore applicato all'ingresso",
+        re.search(r"(?m)^\s*63\s*:\s*WarnaMenu\s*$", variables) is not None,
+        "menu smooth: player variable WarnaMenu assente",
+    )
+    checks.require("TransisiWarnaMenu" in subroutines, "menu smooth: subroutine TransisiWarnaMenu assente")
+    checks.require(
+        "Event Player.KursorWarna = Event Player.KursorWarna;" in clean,
+        "menu smooth: Name Color deve conservare l'ultimo cursore",
     )
     checks.require(
-        ": Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.IndeksWarna]" in clean,
-        "menu colore: main menu non usa il colore realmente applicato",
+        "Event Player.KursorWarna = Event Player.IndeksWarna;" not in clean,
+        "menu smooth: Name Color non deve essere risincronizzato all'apertura",
     )
-    checks.require(
-        ": Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]" not in clean,
-        "menu colore: main menu usa ancora il cursore preview stale",
-    )
+
+    transition = rules_containing(rules, "Subroutine;", "TransisiWarnaMenu;")
+    checks.equal(len(transition), 1, "menu smooth: renderer transizione")
+    if transition:
+        body = mask_strings(transition[0].body)
+        checks.require(
+            "Chase Player Variable Over Time(Event Player, WarnaMenu," in body
+            and "0.350, Destination and Duration);" in body,
+            "menu smooth: chase WarnaMenu 0,35 s assente",
+        )
+        for token in (
+            "Custom Color(55, 235, 245, 255)",
+            "Custom Color(90, 180, 255, 255)",
+            "Global.DaftarWarna[Event Player.KursorWarna]",
+            "Custom Color(190, 120, 255, 255)",
+            "Custom Color(255, 80, 80, 255)",
+            "Custom Color(255, 185, 90, 255)",
+            "Custom Color(115, 235, 170, 255)",
+            "Custom Color(235, 135, 255, 255)",
+        ):
+            checks.require(token in body, f"menu smooth: destinazione palette assente {token}")
+        checks.require("Loop If Condition Is True;" not in body, "menu smooth: transizione non deve usare loop")
+
+    router = rules_containing(rules, "Subroutine;", "GambarMenu;")
+    checks.equal(len(router), 1, "menu smooth: router GambarMenu")
+    if router:
+        checks.require(
+            "Call Subroutine(TransisiWarnaMenu);" in mask_strings(router[0].body),
+            "menu smooth: GambarMenu non aggiorna la destinazione colore",
+        )
+
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarUnkillable", "GambarSuara", "GambarIkon"):
+        matches = rules_containing(rules, "Subroutine;", f"{sub};")
+        checks.equal(len(matches), 1, f"menu smooth: renderer {sub}")
+        if matches:
+            body = mask_strings(matches[0].body)
+            checks.require("Event Player.WarnaMenu" in body, f"menu smooth: {sub} non usa WarnaMenu")
+            checks.require("Visible To String and Color" in body, f"menu smooth: {sub} non rivaluta il colore")
 
 def main() -> None:
     checks = Checks()
@@ -2503,7 +2545,7 @@ def main() -> None:
         check_menus(checks, source, rules, subroutines)
         check_menu_palette_and_name_colors(checks, source, rules)
         check_runtime_efficiency_audit(checks, source, rules)
-        check_color_menu_cursor_sync(checks, source, rules)
+        check_smooth_menu_color_transition(checks, source, rules, subroutines)
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)

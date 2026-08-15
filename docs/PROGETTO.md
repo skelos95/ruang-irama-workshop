@@ -205,3 +205,8 @@ Il Main Menu ora eredita visivamente il colore principale del sottomenu evidenzi
 Audit completo eseguito su inizializzazione, classificazione umano/bot, join/leave, HUD roster, dispatcher e renderer menu, Camera, Revenge, Teleport, Crouch inspection, Unkillable, Jump respawn, RGB, timer ed effetti. Non risultano regole funzionalmente duplicate o renderer/subroutine menu morti; le regole simili rimaste coprono bootstrap, edge detection, cleanup o fasi diverse e sono intenzionali.
 
 Ottimizzazioni conservative: `SlotHUDTerakhir` sostituisce due sort del roster dentro HUD rivalutati; il Main Menu non scansiona più Camera/Revenge inutilmente; refresh passivi Camera/Revenge/Teleport da 0,5 s a 1 s con refresh immediato conservato sugli input; `MenitLobby` da 1 s a 5 s; posizione Spawn Room salvata subito e poi a 1 Hz invece che continuamente; Crouch inspection da 10 Hz a 5 Hz. Restano invariati il RGB globale a 10 Hz, il timer server a 1 Hz e il singolo raycast camera, già bounded.
+
+
+### Transizioni colore menu
+
+Il colore principale dei menu non cambia più istantaneamente tra una voce e l'altra. `Event Player.WarnaMenu` viene portato al colore destinazione con `Chase Player Variable Over Time` in 0,35 s dalla subroutine `TransisiWarnaMenu`. Tutti i renderer del Main Menu e dei submenu rivalutano soltanto il colore e condividono `WarnaMenu`; i colori degli input restano fissi. La transizione è event-driven su `GambarMenu` e non introduce loop periodici per player. Il cursore di Name Color resta persistente come gli altri submenu.

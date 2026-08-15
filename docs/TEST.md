@@ -288,3 +288,5 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Audit frequenze live:** Crouch inspection a 5 Hz deve restare fluido; menu dinamici devono riflettere join/leave entro circa 1 s; MIN può aggiornarsi con massimo ~5 s di ritardo; Spawn Room deve registrare subito la posizione e aggiornarla poi ogni secondo.
 
 - **Menu colore live:** applicare un colore, navigare su un altro senza applicarlo, tornare indietro e riaprire NAME COLOR; il cursore deve partire dal colore applicato e la tinta del Main Menu deve rappresentare subito CURRENT, senza essere un input/colpo indietro.
+
+- **Transizione colori menu live:** scorrere rapidamente avanti/indietro tra tutte le 8 voci del Main Menu e aprire/chiudere i relativi submenu; il colore principale deve sfumare in circa 0,35 s senza scatti. Name Color deve continuare a riaprire sull’ultimo cursore salvato.
