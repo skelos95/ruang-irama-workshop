@@ -3132,8 +3132,7 @@ rule("93a - Subrutin: Efek perubahan diterapkan")
 
 	actions
 	{
-		Play Effect(All Players(All Teams), Good Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 2.500);
-		Play Effect(Event Player, Buff Impact Sound, Color(White), Position Of(Event Player), 35);
+		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 3);
 	}
 }
 
@@ -3148,7 +3147,6 @@ rule("93b - Subrutin: Efek pengaturan dipulihkan")
 	actions
 	{
 		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 3);
-		Play Effect(Event Player, Ring Explosion Sound, Color(White), Position Of(Event Player), 35);
 	}
 }
 

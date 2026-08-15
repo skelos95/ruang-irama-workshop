@@ -241,3 +241,8 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 ### Transizioni Unkillable esclusive
 
 `ModeKebal` è l'unica modalità applicata: 0=OFF, 1=1 HP, 2=FULL HP. Aprire Menu 5 sincronizza soltanto il cursore e non cambia lo stato. Applicare FULL HP dopo 1 HP imposta prima `ModeKebal=2`, poi Damage Received 0% e Max Health: la regola 1 HP smette immediatamente di essere eleggibile. Applicare 1 HP dopo FULL HP imposta `ModeKebal=1`, Damage Received 100% e salute 1. Dentro Spawn Room 1 HP non può essere applicata e viene disattivata se il player vi entra; FULL HP rimane attiva.
+
+
+### Feedback solo visivo
+
+Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerapkan` e `EfekPulihkan` mantengono una sola chiamata `Play Effect` ciascuna: `Ring Explosion`, visibile a tutti e colorata con `Global.RGB`. `Good Explosion`, `Buff Impact Sound` e `Ring Explosion Sound` non devono comparire nel sorgente. La feature Hero Voice resta indipendente perché modifica le voice line del giocatore e non è un effetto di feedback.

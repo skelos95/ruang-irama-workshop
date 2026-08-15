@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-df4ec75a68ed8a04a3192ac0423a899455712254
+2736763d19cac5e8ff3fbc80571a6719b357a680
 ```
 
 ## Controlli statici correnti
@@ -99,3 +99,5 @@ Il repository è **static-ready, live-pending**. Il gate statico può certificar
 - Menu 5: OFF / 1 HP / FULL HP con Halo pubblico indipendente dalla Crouch Privacy.
 
 - Unkillable: transizioni esclusive OFF/1 HP/FULL HP; Spawn Room resetta solo 1 HP, FULL HP persiste.
+
+- Feedback impostazioni: zero effetti audio; entrambe le subroutine usano esclusivamente Ring Explosion RGB.

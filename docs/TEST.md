@@ -256,3 +256,7 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - **FULL HP in Spawn Room:** entrare nello spawn con FULL HP attiva; verificare che ModeKebal resti FULL HP, salute massima, Damage Received 0%, Unkillable e Halo restino attivi.
 
 - **1 HP in Spawn Room:** entrare nello spawn con 1 HP attiva; verificare reset a OFF, salute massima, Damage Received 100%, status e Halo rimossi. Provare anche a selezionare 1 HP mentre si è già nello spawn: non deve sostituire OFF/FULL HP.
+
+- **Feedback senza audio:** applicare e ripristinare più impostazioni del Menu Arcade; non deve essere riprodotto alcun effetto sonoro di conferma.
+
+- **Ring RGB unico:** applicazione e ripristino devono mostrare solo `Ring Explosion` RGB sul giocatore; nessuna Good Explosion o altra forma visiva di feedback.

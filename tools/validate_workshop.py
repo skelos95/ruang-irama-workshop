@@ -2141,25 +2141,40 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     for token in (
         "58: PosisiMati", "59: PosisiBangkitAman", "60: BangkitLompatDipakai",
         "18: EfekTerapkan", "19: EfekPulihkan",
-        "Play Effect(All Players(All Teams), Good Explosion, Global.RGB",
-        "Play Effect(Event Player, Buff Impact Sound",
         "Play Effect(All Players(All Teams), Ring Explosion, Global.RGB",
-        "Play Effect(Event Player, Ring Explosion Sound",
         "Event Player.PosisiMati = Position Of(Event Player);",
         "Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)))",
         "Respawn(Event Player);",
         "Teleport(Event Player, Event Player.PosisiBangkitAman);",
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
-    checks.require(
-        "Play Effect(All Players(All Teams), Buff Impact Sound" not in clean
-        and "Play Effect(All Players(All Teams), Ring Explosion Sound" not in clean,
-        "gli effetti sonori devono essere personali, non globali",
-    )
+    effect_calls = call_texts(source, "Play Effect")
+    checks.equal(len(effect_calls), 2, "feedback: devono esistere solo i due Ring RGB delle subroutine")
+    for index, call in enumerate(effect_calls, 1):
+        checks.require(
+            "Ring Explosion" in call
+            and "Global.RGB" in call
+            and "All Players(All Teams)" in call
+            and "Sound" not in call,
+            f"feedback #{index}: deve essere esclusivamente Ring Explosion RGB visivo",
+        )
+    for forbidden in ("Good Explosion", "Buff Impact Sound", "Ring Explosion Sound"):
+        checks.require(forbidden not in clean, f"feedback vietato ancora presente: {forbidden}")
     apply = rules_containing(rules, "Subroutine;", "EfekTerapkan;")
     restore = rules_containing(rules, "Subroutine;", "EfekPulihkan;")
     checks.equal(len(apply), 1, "subroutine EfekTerapkan")
     checks.equal(len(restore), 1, "subroutine EfekPulihkan")
+    for label, matches in (("EfekTerapkan", apply), ("EfekPulihkan", restore)):
+        if matches:
+            calls = call_texts(matches[0].body, "Play Effect")
+            checks.equal(len(calls), 1, f"{label}: un solo effetto visivo")
+            if calls:
+                checks.require(
+                    "Ring Explosion" in calls[0]
+                    and "Global.RGB" in calls[0]
+                    and "Sound" not in calls[0],
+                    f"{label}: effetto diverso da Ring RGB visivo",
+                )
     death = rules_containing(rules, "Player Died;", "Event Player.PosisiMati = Position Of(Event Player);")
     checks.equal(len(death), 1, "cattura posizione morte")
     jump = [rule for rule in rules if code_contains(rule.body, "Is Alive(Event Player) == False;", "Button(Jump)", "Respawn(Event Player);", "PosisiBangkitAman")]
@@ -2199,9 +2214,9 @@ def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
     apply = rules_containing(rules, "Subroutine;", "EfekTerapkan;")
     restore = rules_containing(rules, "Subroutine;", "EfekPulihkan;")
     if apply:
-        checks.require(code_contains(apply[0].body, "Good Explosion, Global.RGB"), "effetto applicazione non usa RGB")
+        checks.require(code_contains(apply[0].body, "Ring Explosion, Global.RGB"), "effetto applicazione non usa Ring RGB")
     if restore:
-        checks.require(code_contains(restore[0].body, "Ring Explosion, Global.RGB"), "effetto ripristino non usa RGB")
+        checks.require(code_contains(restore[0].body, "Ring Explosion, Global.RGB"), "effetto ripristino non usa Ring RGB")
 
 
 def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
