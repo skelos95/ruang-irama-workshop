@@ -168,3 +168,10 @@ Le patch repository non richiedono più workflow YAML temporanei. Il workflow pe
 ### Memoria cursori menu
 
 I cursori di Main Menu, Soundtrack, Camera, Name Color, HUD Language, Revenge, Unkillable, Voice Modifier e Teleport Crouch non vengono più riallineati alla prima voce o al valore applicato quando il menu viene riaperto. Le liste dinamiche Camera/Revenge continuano a essere aggiornate e clampate quando i target cambiano. In Capture the Flag lo stato visivo di `Current Objective` non dipende più da `Objective Position`, perché il teleport usa la bandiera nemica tramite `Flag Position`.
+
+
+### Feedback audiovisivo e Jump respawn
+
+Le modifiche applicate usano un `Good Explosion` azzurro-turchese visibile a tutti e `Buff Impact Sound` solo per il player che agisce. I ripristini usano un `Ring Explosion` violetto chiaro visibile a tutti e `Ring Explosion Sound` soltanto per il player interessato.
+
+Alla morte viene salvata la posizione. Premendo `Jump` a menu chiuso viene scelto un punto casuale entro ±6 m, corretto con `Nearest Walkable Position`, poi il player viene respawnato e teletrasportato al punto sicuro.

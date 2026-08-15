@@ -98,6 +98,9 @@ variables
 		55: TeleportCrouchAktif
 		56: PerintahTeleportasi
 		57: InteraksiKameraDipakai
+		58: PosisiMati
+		59: PosisiRespawnAman
+		60: RespawnJumpDipakai
 }
 
 subroutines
@@ -120,6 +123,8 @@ subroutines
 	15: SegarkanTargetTeleportasi
 	16: GambarUnkillable
 	17: GambarSuara
+	18: EfekTerapkan
+	19: EfekPulihkan
 }
 
 rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -1309,6 +1314,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.IndeksGenre = Event Player.KursorGenre;
+			Call Subroutine(EfekTerapkan);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 				"Soundtrack locked: {0}. Excellent taste, probably.", Global.DaftarGenre[Event Player.IndeksGenre]) : Event Player.IndeksBahasa == 1
 				? Custom String("Soundtrack dipilih: {0}. Selera bagus. Mungkin.", Global.DaftarGenre[Event Player.IndeksGenre]) : Custom String(
@@ -1321,6 +1327,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Stop Camera(Event Player);
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
+				Call Subroutine(EfekPulihkan);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 					"First person restored. You may pretend that never happened.") : Event Player.IndeksBahasa == 1 ? Custom String(
 					"Kamera orang pertama kembali. Tidak ada yang melihat tadi.") : Custom String(
@@ -1331,6 +1338,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Wait(0.016, Ignore Condition);
 				Event Player.ModeKamera = 1;
 				Call Subroutine(MulaiKamera);
+				Call Subroutine(EfekTerapkan);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 					"Third person enabled. Admire responsibly.") : Event Player.IndeksBahasa == 1 ? Custom String(
 					"Orang ketiga aktif. Silakan mengagumi diri secukupnya.") : Custom String(
@@ -1347,6 +1355,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Wait(0.016, Ignore Condition);
 					Event Player.ModeKamera = 2;
 					Call Subroutine(MulaiKamera);
+					Call Subroutine(EfekTerapkan);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 						"Now spectating {0}. Definitely not stalking.", Event Player.TargetKamera) : Event Player.IndeksBahasa == 1 ? Custom String(
 						"Sekarang menonton {0}. Sama sekali bukan menguntit.", Event Player.TargetKamera) : Custom String(
@@ -1362,6 +1371,11 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 		Else If(Event Player.HalamanMenu == 2);
 			Event Player.IndeksWarna = Event Player.KursorWarna;
 			Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
+			If(Event Player.IndeksWarna == 0);
+				Call Subroutine(EfekPulihkan);
+			Else;
+				Call Subroutine(EfekTerapkan);
+			End;
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 				"Name color set to {0}. Subtlety is optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
 				"Warna nama: {0}. Kalem itu opsional.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
@@ -1369,6 +1383,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 3);
 			Event Player.IndeksBahasa = Event Player.KursorBahasa;
+			Call Subroutine(EfekTerapkan);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 				"HUD language: English.") : Event Player.IndeksBahasa == 1 ? Custom String(
 				"Bahasa HUD: Bahasa Indonesia.") : Custom String("ภาษา HUD: ไทย"));
@@ -1405,6 +1420,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Set Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam, True);
 					Kill(Event Player.TargetBalasDendamTerkunci, Event Player);
 					Modify Player Variable At Index(Event Player, JumlahBalasDendam, Event Player.IndeksBalasDendam, Subtract, 1);
+					Call Subroutine(EfekTerapkan);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge claimed on {0}. Remaining: {1}.",
 						Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]) : Event Player.IndeksBahasa == 1 ? Custom String(
 						"Balas dendam dibayar pada {0}. Sisa: {1}.", Event Player.TargetBalasDendamTerkunci,
@@ -1417,6 +1433,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 		Else If(Event Player.HalamanMenu == 5);
 			Event Player.UnkillableAktif = And(Event Player.KursorUnkillable == 1, Is In Spawn Room(Event Player) == False);
 			If(Event Player.UnkillableAktif == True);
+				Call Subroutine(EfekTerapkan);
 				Set Status(Event Player, Null, Unkillable, 9999);
 				If(Is Alive(Event Player) == True);
 					Set Player Health(Event Player, 1);
@@ -1424,6 +1441,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable + 1 HP enabled.") : Event Player.IndeksBahasa == 1 ? Custom String(
 					"Unkillable + 1 HP aktif.") : Custom String("เปิด Unkillable + 1 HP แล้ว"));
 			Else;
+				Call Subroutine(EfekPulihkan);
 				Clear Status(Event Player, Unkillable);
 				If(Is Alive(Event Player) == True);
 					Set Player Health(Event Player, Max Health(Event Player));
@@ -1434,6 +1452,11 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else;
 			Event Player.IndeksSuara = Event Player.KursorSuara;
+			If(Event Player.IndeksSuara == 0);
+				Call Subroutine(EfekPulihkan);
+			Else;
+				Call Subroutine(EfekTerapkan);
+			End;
 			If(Event Player.IndeksSuara == 0);
 				Stop Modifying Hero Voice Lines(Event Player);
 			Else If(Event Player.IndeksSuara == 1);
@@ -1551,11 +1574,13 @@ rule("12c - Kamera: Tahan Interact setengah detik untuk beralih di luar menu")
 			Wait(0.016, Ignore Condition);
 			Event Player.ModeKamera = 1;
 			Call Subroutine(MulaiKamera);
+			Call Subroutine(EfekTerapkan);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Third person enabled.") : Event Player.IndeksBahasa == 1 ? Custom String("Kamera orang ketiga aktif.") : Custom String("เปิดมุมมองบุคคลที่สามแล้ว"));
 		Else;
 			Stop Camera(Event Player);
 			Event Player.ModeKamera = 0;
 			Event Player.TargetKamera = Null;
+			Call Subroutine(EfekPulihkan);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("First person restored.") : Event Player.IndeksBahasa == 1 ? Custom String("Kamera orang pertama kembali.") : Custom String("กลับสู่มุมมองบุคคลที่หนึ่งแล้ว"));
 		End;
 	}
@@ -1579,6 +1604,66 @@ rule("12d - Kamera: Lepaskan Interact sebelum pakai lagi")
 	actions
 	{
 		Event Player.InteraksiKameraDipakai = False;
+	}
+}
+
+rule("12e - Respawn Jump: Simpan posisi kematian")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.PosisiMati = Position Of(Event Player);
+		Event Player.RespawnJumpDipakai = False;
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press Jump to respawn near where you died.") : Event Player.IndeksBahasa == 1 ? Custom String("Tekan Jump untuk hidup kembali dekat tempat kamu mati.") : Custom String("กด Jump เพื่อเกิดใหม่ใกล้จุดที่คุณตาย"));
+	}
+}
+
+rule("12f - Respawn Jump: Bangkit di posisi aman yang bisa dilalui")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.BotAI == False;
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == False;
+		Event Player.MenuTerbuka == False;
+		Event Player.TeleportCrouchAktif == False;
+		Event Player.RespawnJumpDipakai == False;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Event Player.RespawnJumpDipakai = True;
+		Event Player.PosisiRespawnAman = Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)));
+		If(Distance Between(Event Player.PosisiRespawnAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiRespawnAman = Nearest Walkable Position(Event Player.PosisiMati);
+		End;
+		Respawn(Event Player);
+		Wait(0.016, Ignore Condition);
+		Teleport(Event Player, Event Player.PosisiRespawnAman);
+		Call Subroutine(EfekPulihkan);
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Respawned at a nearby safe walkable position.") : Event Player.IndeksBahasa == 1 ? Custom String("Hidup kembali di posisi aman terdekat yang bisa dilalui.") : Custom String("เกิดใหม่ในตำแหน่งปลอดภัยใกล้เคียงที่เดินได้แล้ว"));
 	}
 }
 
@@ -1717,6 +1802,7 @@ rule("16 - Kamera: Target pergi, pulangkan pandangan")
 		Stop Camera(Event Player);
 		Event Player.ModeKamera = 0;
 		Event Player.TargetKamera = Null;
+		Call Subroutine(EfekPulihkan);
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 			"Camera target left. First person has reclaimed you.") : Event Player.IndeksBahasa == 1 ? Custom String(
 			"Target kamera keluar. Orang pertama mengambilmu kembali.") : Custom String(
@@ -1828,6 +1914,7 @@ rule("18c - Unkillable: Nonaktifkan otomatis di Spawn Room")
 		If(Event Player.UnkillableAktif == True);
 			Event Player.UnkillableAktif = False;
 			Event Player.KursorUnkillable = 0;
+			Call Subroutine(EfekPulihkan);
 			Clear Status(Event Player, Unkillable);
 			If(Is Alive(Event Player) == True);
 				Set Player Health(Event Player, Max Health(Event Player));
@@ -2600,6 +2687,36 @@ rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 	}
 }
 
+rule("93a - Subrutin: Efek perubahan diterapkan")
+{
+	event
+	{
+		Subroutine;
+		EfekTerapkan;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Good Explosion, Custom Color(80, 220, 255, 255), Position Of(Event Player) + Vector(0, 1, 0), 2.500);
+		Play Effect(Event Player, Buff Impact Sound, Color(White), Position Of(Event Player), 35);
+	}
+}
+
+rule("93b - Subrutin: Efek pengaturan dipulihkan")
+{
+	event
+	{
+		Subroutine;
+		EfekPulihkan;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Ring Explosion, Custom Color(205, 160, 255, 255), Position Of(Event Player) + Vector(0, 1, 0), 3);
+		Play Effect(Event Player, Ring Explosion Sound, Color(White), Position Of(Event Player), 35);
+	}
+}
+
 rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 {
 	event
@@ -2669,6 +2786,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TeleportCrouchAktif = False;
 		Event Player.PerintahTeleportasi = 0;
 		Event Player.InteraksiKameraDipakai = False;
+		Event Player.PosisiMati = Vector(0, 0, 0);
+		Event Player.PosisiRespawnAman = Vector(0, 0, 0);
+		Event Player.RespawnJumpDipakai = False;
 	}
 }
 

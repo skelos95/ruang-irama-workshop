@@ -262,3 +262,7 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Memoria menu live:** spostare ogni menu/submenu su una voce diversa dalla prima, chiudere e riaprire; deve ripartire dalla stessa voce. Ripetere anche con Teleport Crouch.
 
 - **CTF teleport HUD live:** su `Current Objective` non deve comparire `UNAVAILABLE IN THIS MODE`; il teleport deve continuare a portare vicino alla bandiera nemica.
+
+- **Feedback live:** con due player applicare/ripristinare Camera, colore, Unkillable e Voice Modifier; entrambi vedono il visuale ma soltanto chi agisce sente il suono.
+
+- **Jump respawn live:** morire vicino a muri, scale e bordi; premere Jump e verificare il respawn vicino senza finire dentro la geometria.

@@ -2121,6 +2121,42 @@ def check_documentation_and_ci(checks: Checks, genres: list[str]) -> None:
     )
 
 
+
+def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rule]) -> None:
+    clean = mask_strings(source)
+    for token in (
+        "58: PosisiMati", "59: PosisiRespawnAman", "60: RespawnJumpDipakai",
+        "18: EfekTerapkan", "19: EfekPulihkan",
+        "Play Effect(All Players(All Teams), Good Explosion, Custom Color(80, 220, 255, 255)",
+        "Play Effect(Event Player, Buff Impact Sound",
+        "Play Effect(All Players(All Teams), Ring Explosion, Custom Color(205, 160, 255, 255)",
+        "Play Effect(Event Player, Ring Explosion Sound",
+        "Event Player.PosisiMati = Position Of(Event Player);",
+        "Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)))",
+        "Respawn(Event Player);",
+        "Teleport(Event Player, Event Player.PosisiRespawnAman);",
+    ):
+        checks.require(token in clean, f"feedback/respawn mancante: {token}")
+    checks.require(
+        "Play Effect(All Players(All Teams), Buff Impact Sound" not in clean
+        and "Play Effect(All Players(All Teams), Ring Explosion Sound" not in clean,
+        "gli effetti sonori devono essere personali, non globali",
+    )
+    apply = rules_containing(rules, "Subroutine;", "EfekTerapkan;")
+    restore = rules_containing(rules, "Subroutine;", "EfekPulihkan;")
+    checks.equal(len(apply), 1, "subroutine EfekTerapkan")
+    checks.equal(len(restore), 1, "subroutine EfekPulihkan")
+    death = rules_containing(rules, "Player Died;", "Event Player.PosisiMati = Position Of(Event Player);")
+    checks.equal(len(death), 1, "cattura posizione morte")
+    jump = [rule for rule in rules if code_contains(rule.body, "Is Alive(Event Player) == False;", "Button(Jump)", "Respawn(Event Player);", "PosisiRespawnAman")]
+    checks.equal(len(jump), 1, "Jump respawn")
+    if jump:
+        body = mask_strings(jump[0].body)
+        checks.require(
+            body.find("Nearest Walkable Position") < body.find("Respawn(Event Player);") < body.find("Teleport(Event Player, Event Player.PosisiRespawnAman);"),
+            "Jump respawn: ordine posizione sicura -> respawn -> teleport errato",
+        )
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2142,6 +2178,7 @@ def main() -> None:
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)
         check_arcade_features(checks, source, rules)
+        check_feedback_and_jump_respawn(checks, source, rules)
         check_vpn_country_setting(checks, source)
         check_diagnostics(checks, source, rules)
         check_documentation_and_ci(checks, genres)
