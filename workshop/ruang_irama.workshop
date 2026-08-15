@@ -116,6 +116,9 @@ variables
 		67: KursorPrivasiInspeksi
 		68: ModeKebal
 		69: IkonKebal
+		70: KartuNasibAktif
+		71: PosisiKartuNasib
+		72: TeksKartuNasib
 }
 
 subroutines
@@ -144,6 +147,7 @@ subroutines
 	21: TransisiWarnaMenu
 	22: GambarSakelarTeleportasi
 	23: GambarPrivasiInspeksi
+	24: GambarNasib
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -284,7 +288,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.SlotHUDPemain = Empty Array;
 		Global.IndeksKeluar = -1;
 		Global.SlotHUDTerakhir = -1;
-		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 		Global.DaftarWarna = Array(
 			Color(White),
 			Custom Color(190, 210, 230, 255),
@@ -1061,6 +1065,14 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 		Global.PemainPembersihan = Event Player;
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
 		If(Global.IndeksKeluar >= 0);
+			If(Event Player.KartuNasibAktif == True);
+				Stop Chasing Player Variable(Event Player, PosisiKartuNasib);
+				If(Event Player.TeksKartuNasib != Null);
+					Destroy In-World Text(Event Player.TeksKartuNasib);
+				End;
+				Event Player.TeksKartuNasib = Null;
+				Event Player.KartuNasibAktif = False;
+			End;
 			If(Event Player.IkonKebal != Null);
 				Destroy Icon(Event Player.IkonKebal);
 				Event Player.IkonKebal = Null;
@@ -1193,9 +1205,9 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Disallow Button(Event Player, Button(Ultimate));
 			Call Subroutine(GambarMenu);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-				"Arcade Menu online. Eight extremely important decisions await.") : Event Player.IndeksBahasa == 1 ? Custom String(
-				"Menu Arcade online. Delapan keputusan yang sangat penting menunggu.") : Custom String(
-				"เปิดเมนูอาร์เคดแล้ว มีแปดตัวเลือกสำคัญรอคุณอยู่"));
+				"Arcade Menu online. Eleven extremely important decisions await.") : Event Player.IndeksBahasa == 1 ? Custom String(
+				"Menu Arcade online. Sebelas keputusan yang sangat penting menunggu.") : Custom String(
+				"เปิดเมนูอาร์เคดแล้ว มีสิบเอ็ดตัวเลือกสำคัญรอคุณอยู่"));
 		End;
 	}
 }
@@ -1311,7 +1323,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 	actions
 	{
 		If(Event Player.HalamanMenu == -1);
-			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 10;
+			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 11;
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 1) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -1362,7 +1374,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 	actions
 	{
 		If(Event Player.HalamanMenu == -1);
-			Event Player.KursorUtama = (Event Player.KursorUtama + 9) % 10;
+			Event Player.KursorUtama = (Event Player.KursorUtama + 10) % 11;
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 99) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -1539,7 +1551,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.KursorIkon = Event Player.KursorIkon;
 			Else If(Event Player.HalamanMenu == 8);
 				Event Player.KursorTeleportasiJongkok = Event Player.KursorTeleportasiJongkok;
-			Else;
+			Else If(Event Player.HalamanMenu == 9);
 				Event Player.KursorPrivasiInspeksi = Event Player.KursorPrivasiInspeksi;
 			End;
 			Call Subroutine(GambarMenu);
@@ -1676,7 +1688,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 		Else If(Event Player.HalamanMenu == 5);
 			If(Event Player.ModeKebal != Event Player.KursorKebal);
 				If(And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == True));
-					Event Player.KursorKebal = Event Player.ModeKebal;
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP is unavailable in Spawn Room. FULL HP is still available.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP tidak tersedia di ruang muncul. FULL HP tetap tersedia.") : Custom String("ใช้โหมดฆ่าไม่ตาย: 1 HP ในห้องเกิดไม่ได้ แต่ FULL HP ยังใช้ได้"));
 				Else;
 					Event Player.ModeKebal = Event Player.KursorKebal;
@@ -1762,7 +1773,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				End;
 			End;
 			Call Subroutine(GambarMenu);
-		Else;
+		Else If(Event Player.HalamanMenu == 9);
 			If(Event Player.PrivasiInspeksiAktif != (Event Player.KursorPrivasiInspeksi == 1));
 				Event Player.PrivasiInspeksiAktif = Event Player.KursorPrivasiInspeksi == 1;
 				If(Event Player.PrivasiInspeksiAktif == True);
@@ -1772,6 +1783,19 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Call Subroutine(EfekPulihkan);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Crouch privacy disabled. HUD visible to everyone.") : Event Player.IndeksBahasa == 1 ? Custom String("Privasi Jongkok nonaktif. HUD terlihat oleh semua.") : Custom String("ปิดความเป็นส่วนตัวตอนย่อ ทุกคนเห็น HUD ได้"));
 				End;
+			End;
+			Call Subroutine(GambarMenu);
+		Else;
+			If(Event Player.KartuNasibAktif == True);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("A luck card is already active. Close the menu and shoot it first.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib masih aktif. Tutup menu lalu tembak dulu.") : Custom String("การ์ดเสี่ยงโชคยังทำงานอยู่ ปิดเมนูแล้วค่อยยิงมันก่อน"));
+			Else;
+				Event Player.KartuNasibAktif = True;
+				Event Player.PosisiKartuNasib = Nearest Walkable Position(Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 3) - Vector(0, 1.200, 0);
+				Create In-World Text(All Players(All Teams), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("[ ? ]\nTRY YOUR LUCK") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("[ ? ]\nCOBA NASIB") : Custom String("[ ? ]\nเสี่ยงโชค"), Event Player.PosisiKartuNasib, 1.500, Do Not Clip, Visible To Position String and Color, Global.RGB, Visible Never);
+				Event Player.TeksKartuNasib = Last Text ID;
+				Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib + Vector(0, 1.200, 0), 3);
+				Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 2.200, 0), 0.600, Destination and Duration);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck card created. Close the menu and shoot it to reveal your fate.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib dibuat. Tutup menu lalu tembak untuk melihat nasibmu.") : Custom String("สร้างการ์ดเสี่ยงโชคแล้ว ปิดเมนูแล้วยิงเพื่อดูชะตาของคุณ"));
 			End;
 			Call Subroutine(GambarMenu);
 		End;
@@ -2250,7 +2274,7 @@ rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Spawn Room")
 	{
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
-		Event Player.KursorKebal = 0;
+		Event Player.KursorKebal = 1;
 		Call Subroutine(EfekPulihkan);
 		Clear Status(Event Player, Unkillable);
 		Set Damage Received(Event Player, 100);
@@ -2268,6 +2292,73 @@ rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Spawn Room")
 	}
 }
 
+
+
+rule("18e - Nasib: Pemilik menembak kartu sendiri")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.KartuNasibAktif == True;
+		Event Player.MenuTerbuka == False;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+		Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Event Player.PosisiKartuNasib)) <= 7;
+		Is In Line of Sight(Eye Position(Event Player), Event Player.PosisiKartuNasib, All Barriers Block LOS) == True;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, PosisiKartuNasib);
+		If(Event Player.TeksKartuNasib != Null);
+			Destroy In-World Text(Event Player.TeksKartuNasib);
+		End;
+		Event Player.TeksKartuNasib = Null;
+		Event Player.KartuNasibAktif = False;
+		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Event Player.PosisiKartuNasib, 3);
+		If(Random Integer(0, 1) == 0);
+			Set Player Health(Event Player, Max Health(Event Player));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("LUCK! Full health restored.") : Event Player.IndeksBahasa == 1 ? Custom String("BERUNTUNG! Kesehatan penuh dipulihkan.") : Custom String("โชคดี! ฟื้นพลังชีวิตเต็มแล้ว"));
+		Else;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("BAD LUCK! The card chose death.") : Event Player.IndeksBahasa == 1 ? Custom String("SIAL! Kartunya memilih kematian.") : Custom String("โชคร้าย! การ์ดเลือกความตาย"));
+			Clear Status(Event Player, Unkillable);
+			Kill(Event Player, Null);
+		End;
+	}
+}
+
+rule("18f - Nasib: Hapus kartu saat pemilik mati")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.KartuNasibAktif == True;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, PosisiKartuNasib);
+		If(Event Player.TeksKartuNasib != Null);
+			Destroy In-World Text(Event Player.TeksKartuNasib);
+		End;
+		Event Player.TeksKartuNasib = Null;
+		Event Player.KartuNasibAktif = False;
+	}
+}
 
 rule("19 - Teleportasi Jongkok: Buka tampilan selama Jongkok ditahan")
 {
@@ -2613,8 +2704,10 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 			Call Subroutine(GambarIkon);
 		Else If(Event Player.HalamanMenu == 8);
 			Call Subroutine(GambarSakelarTeleportasi);
-		Else;
+		Else If(Event Player.HalamanMenu == 9);
 			Call Subroutine(GambarPrivasiInspeksi);
+		Else;
+			Call Subroutine(GambarNasib);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -2648,7 +2741,8 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - HERO VOICE\nCURRENT: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("LOW 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("LOW 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ICON\nCURRENT: NOTHING") : Custom String("7 - ICON\nCURRENT: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - CROUCH TELEPORT\nCURRENT: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("ON") : Custom String("OFF"))
-			: Custom String("9 - CROUCH PRIVACY\nCURRENT: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF"))
+			: Event Player.KursorUtama == 9 ? Custom String("9 - CROUCH PRIVACY\nCURRENT: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF"))
+			: Custom String("10 - TRY YOUR LUCK\nSTATUS: {0}", Event Player.KartuNasibAktif ? Custom String("ACTIVE") : Custom String("READY"))
 			: Event Player.IndeksBahasa == 1 ? Event Player.KursorUtama == 0 ? Custom String("0 - MUSIK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih musik"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA 3P\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati") : Event Player.ModeKamera == 1 ? Custom String("hero sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
@@ -2658,7 +2752,8 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - SUARA PAHLAWAN\nSAAT INI: {0}", Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("RENDAH 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("RENDAH 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("TINGGI 1.25x") : Custom String("TINGGI 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - IKON\nSAAT INI: TIDAK ADA") : Custom String("7 - IKON\nSAAT INI: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - TELEPORT JONGKOK\nSAAT INI: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("AKTIF") : Custom String("MATI"))
-			: Custom String("9 - PRIVASI JONGKOK\nSAAT INI: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("AKTIF") : Custom String("MATI"))
+			: Event Player.KursorUtama == 9 ? Custom String("9 - PRIVASI JONGKOK\nSAAT INI: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("AKTIF") : Custom String("MATI"))
+			: Custom String("10 - COBA NASIB\nSTATUS: {0}", Event Player.KartuNasibAktif ? Custom String("AKTIF") : Custom String("SIAP"))
 			: Event Player.KursorUtama == 0 ? Custom String("0 - เพลงประกอบ\nปัจจุบัน: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - กล้องบุคคลที่สาม\nสถานะ: {0}", Event Player.ModeKamera == 0 ? Custom String("ปิด") : Event Player.ModeKamera == 1 ? Custom String("ฮีโร่ของคุณ") : Custom String("กำลังดู {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaTH[Event Player.IndeksWarna])
@@ -2668,7 +2763,8 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 6 ? Custom String("6 - เสียงฮีโร่\nสถานะ: {0}", Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x"))
 			: Event Player.KursorUtama == 7 ? Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอน\nปัจจุบัน: ไม่มี") : Custom String("7 - ไอคอน\nปัจจุบัน: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon])
 			: Event Player.KursorUtama == 8 ? Custom String("8 - เทเลพอร์ตตอนย่อ\nสถานะ: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("เปิด") : Custom String("ปิด"))
-			: Custom String("9 - ความเป็นส่วนตัวตอนย่อ\nสถานะ: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("เปิด") : Custom String("ปิด")), Top, 100,
+			: Event Player.KursorUtama == 9 ? Custom String("9 - ความเป็นส่วนตัวตอนย่อ\nสถานะ: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("เปิด") : Custom String("ปิด"))
+			: Custom String("10 - เสี่ยงโชค\nสถานะ: {0}", Event Player.KartuNasibAktif ? Custom String("ทำงาน") : Custom String("พร้อม")), Top, 100,
 			Color(White), Custom Color(210, 230, 255, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3030,6 +3126,28 @@ rule("91m - Subrutin: Gambar privasi inspeksi dari musuh")
 	}
 }
 
+
+rule("91n - Subrutin: Gambar kartu nasib")
+{
+	event
+	{
+		Subroutine;
+		GambarNasib;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("\n{0}: create | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))
+			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("\n{0}: buat | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))
+			: Custom String("{0}\n{1}", Custom String("\n{0}: สร้าง | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("กด {0} ค้าง 0.5 วิ: ปิด", Input Binding String(Button(Melee)))),
+			Event Player.IndeksBahasa == 0 ? Custom String("10 - TRY YOUR LUCK\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ACTIVE") : Custom String("READY"), Event Player.KartuNasibAktif ? Custom String("SHOOT YOUR CARD") : Custom String("CREATE CARD"))
+			: Event Player.IndeksBahasa == 1 ? Custom String("10 - COBA NASIB\nSTATUS: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("AKTIF") : Custom String("SIAP"), Event Player.KartuNasibAktif ? Custom String("TEMBAK KARTUMU") : Custom String("BUAT KARTU"))
+			: Custom String("10 - เสี่ยงโชค\nสถานะ: {0}\n> {1}", Event Player.KartuNasibAktif ? Custom String("ทำงาน") : Custom String("พร้อม"), Event Player.KartuNasibAktif ? Custom String("ยิงการ์ดของคุณ") : Custom String("สร้างการ์ด")), Top, 100,
+			Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
+		Event Player.HudMenu = Last Text ID;
+	}
+}
+
 rule("91k - Subrutin: Transisi warna menu tanpa lompatan")
 {
 	event
@@ -3050,7 +3168,8 @@ rule("91k - Subrutin: Transisi warna menu tanpa lompatan")
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 6 ? Vector(115, 235, 170)
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 7 ? Vector(235, 135, 255)
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 8 ? Vector(190, 255, 80)
-			: Vector(255, 120, 190), 0.350, Destination and Duration);
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 9 ? Vector(255, 120, 190)
+			: Vector(255, 210, 70), 0.350, Destination and Duration);
 	}
 }
 
@@ -3231,6 +3350,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorPrivasiInspeksi = 0;
 		Event Player.ModeKebal = 0;
 		Event Player.IkonKebal = Null;
+		Event Player.KartuNasibAktif = False;
+		Event Player.PosisiKartuNasib = Vector(0, 0, 0);
+		Event Player.TeksKartuNasib = Null;
 	}
 }
 

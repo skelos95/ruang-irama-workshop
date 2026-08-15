@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-2736763d19cac5e8ff3fbc80571a6719b357a680
+223da9ac0c21dce11f8ff15a20d922e8716bdf8b
 ```
 
 ## Controlli statici correnti
@@ -24,12 +24,13 @@ Il gate verifica:
 - dichiarazioni e regole senza duplicati invalidi;
 - 100 generi;
 - 3 lingue EN / ID / TH;
-- **10 menu Arcade** (`0..9`);
+- **11 menu Arcade** (`0..10`);
 - **32 Name Color** con array nomi allineati;
 - **37 Player Icon** (`Nothing` + 36 icone);
 - Menu 5 Unkillable/Kebal 1 HP;
 - Menu 6 Hero Voice;
 - Menu 7 Player Icon;
+- Menu 10 Try Your Luck: carta pubblica, attivazione solo proprietario, esito 50/50;
 - Teleport su overlay Crouch, non nel Main Menu;
 - feedback menu idempotente;
 - transizione colore menu Vector RGB a circa 0,35 s;
@@ -63,7 +64,7 @@ Generi: 100 | Lingue: 3 | Regole: 72 | Raycast camera: 1
 ## Verifiche live ancora obbligatorie
 
 - importazione nel client Overwatch;
-- apertura e navigazione di tutti gli 8 menu;
+- apertura e navigazione di tutti gli 11 menu;
 - localizzazione EN / ID / TH;
 - 32 Name Color;
 - 37 Player Icon;
@@ -73,6 +74,7 @@ Generi: 100 | Lingue: 3 | Regole: 72 | Raycast camera: 1
 - Jump respawn;
 - Unkillable entrando/uscendo dallo Spawn Room;
 - Hero Voice;
+- Try Your Luck con due giocatori: il non proprietario non deve poter attivare la carta;
 - feedback audiovisivo solo su cambi reali;
 - Camera self/target/first-person;
 - join/leave ripetuti;

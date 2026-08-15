@@ -859,10 +859,10 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
     codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
-    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "codici dei dieci menu")
+    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], "codici degli undici menu")
     checks.require(
-        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*10\s*;", clean) is not None,
-        "navigazione principale non limitata a dieci menu",
+        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*11\s*;", clean) is not None,
+        "navigazione principale non limitata a undici menu",
     )
     checks.require(
         re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", clean) is not None,
@@ -872,7 +872,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
         "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
-        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi",
+        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -1239,8 +1239,8 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Enable Nameplates cleanup",
     )
     checks.equal(
-        len(call_texts(source, "Create In-World Text")), 2,
-        "testi mondo Crouch",
+        len(call_texts(source, "Create In-World Text")), 3,
+        "due testi mondo Crouch più una carta Nasib",
     )
     checks.equal(
         len(call_texts(source, "Start Forcing Player Outlines")), 0,
@@ -1771,6 +1771,45 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "FULL HP non deve essere escluso dalla Spawn Room",
         )
 
+    luck = [
+        rule for rule in rules
+        if code_contains(
+            rule.body,
+            "Event Player.KartuNasibAktif == True;",
+            "Is Button Held(Event Player, Button(Primary Fire)) == True;",
+            "Angle Between Vectors(",
+            "Is In Line of Sight(",
+            "Random Integer(0, 1)",
+            "Set Player Health(Event Player, Max Health(Event Player));",
+            "Kill(Event Player, Null);",
+        )
+    ]
+    checks.equal(len(luck), 1, "Nasib: una sola regola di risoluzione proprietario-only")
+    if luck:
+        checks.equal(
+            len(call_texts(luck[0].body, "Play Effect")),
+            1,
+            "Nasib: un solo Ring alla risoluzione",
+        )
+    card_texts = [
+        call for call in call_texts(source, "Create In-World Text")
+        if "KartuNasib" in call and "All Players(All Teams)" in call
+    ]
+    checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
+    checks.require(
+        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib" in mask_strings(source),
+        "Nasib: animazione di emersione dal terreno assente",
+    )
+    menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
+    blocked_one_hp = menu_interact[
+        menu_interact.find("If(And(Event Player.KursorKebal == 1"):
+        menu_interact.find("Else;", menu_interact.find("If(And(Event Player.KursorKebal == 1"))
+    ]
+    checks.require(
+        "Event Player.KursorKebal = Event Player.ModeKebal;" not in mask_strings(blocked_one_hp),
+        "Kebal: il rifiuto 1 HP nello Spawn Room non deve spostare il cursore",
+    )
+
 
 
 def check_server_location_setting(checks: Checks, source: str) -> None:
@@ -2149,7 +2188,7 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
     effect_calls = call_texts(source, "Play Effect")
-    checks.equal(len(effect_calls), 2, "feedback: devono esistere solo i due Ring RGB delle subroutine")
+    checks.equal(len(effect_calls), 4, "feedback: due Ring RGB impostazioni più due Ring RGB carta Nasib")
     for index, call in enumerate(effect_calls, 1):
         checks.require(
             "Ring Explosion" in call

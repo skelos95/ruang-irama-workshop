@@ -33,7 +33,7 @@ Lingue disponibili:
 
 HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native Workshop restano in inglese; identificatori, subroutine, regole e commenti personalizzati sono in Bahasa Indonesia.
 
-## Main Menu: 8 voci
+## Main Menu: 11 voci
 
 | Indice | Menu | Contenuto |
 |---:|---|---|
@@ -47,6 +47,7 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
 | 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |
+| 10 | Try Your Luck | crea una carta pubblica; solo il proprietario può attivarla, con esito 50/50 cura completa o morte |
 
 Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
 
@@ -121,7 +122,7 @@ Quando attivo:
 - porta la salute a 1 HP;
 - quando la salute torna al massimo, viene riportata a 1 HP.
 
-Non può essere attivato nello Spawn Room e viene disattivato automaticamente entrando nello spawn.
+Non può essere attivato nello Spawn Room e viene disattivato automaticamente entrando nello spawn. Se l'opzione 1 HP viene rifiutata mentre il menu è aperto, il cursore resta sulla voce 2/3 e lo `Small Message` spiega il blocco.
 
 ## Hero Voice
 
@@ -159,6 +160,13 @@ Gestione modalità:
 - altre modalità → `Objective Position` quando disponibile.
 
 Il target player viene bloccato per identità prima del refresh per evitare retarget accidentali se qualcuno esce.
+
+
+## Menu 10 — Try Your Luck
+
+Interact crea davanti al giocatore una carta virtuale che emerge dal terreno con un `Ring Explosion`. La carta usa `Create In-World Text`, è visibile a tutti e non occupa slot bot. Ogni giocatore può avere una sola carta attiva.
+
+L'attivazione è proprietario-only: la regola legge esclusivamente `KartuNasibAktif` e `PosisiKartuNasib` dell'`Event Player`, richiede Primary Fire, mira entro 7° e linea di vista libera. Al colpo estrae `Random Integer(0, 1)`: un esito ripristina la salute massima, l'altro forza la morte del proprietario. Testo e stato vengono ripuliti anche alla morte o all'uscita del giocatore.
 
 ## Jump respawn
 
@@ -213,7 +221,7 @@ La CI esegue 20 unit test e il validatore statico. Il runner di manutenzione eli
 La validazione statica non sostituisce il client Overwatch. Restano da testare live:
 
 - import del sorgente;
-- 8 menu EN/ID/TH;
+- 11 menu EN/ID/TH;
 - 32 Name Color;
 - 37 Player Icon;
 - transizione colori HUD;
