@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 
-# Re-run the complete audit/optimization patch from the previous input commit.
+# Re-run the complete audit/optimization patch from the first audit input.
 previous = subprocess.run(
     ["git", "show", "HEAD^:.github/maintenance/patch.py"],
     check=True,
@@ -15,40 +15,52 @@ exec(compile(previous, "previous-maintenance-patch.py", "exec"), {})
 validator = Path("tools/validate_workshop.py")
 text = validator.read_text(encoding="utf-8")
 
-# Update two legacy assertions that deliberately described the pre-audit design.
-def replace_nearest_before(label: str, candidates: tuple[tuple[str, str], ...]) -> None:
+
+def replace_check_by_label(label: str, replacement: str) -> None:
+    """Replace the checks.require(...) whose message contains label."""
     global text
     label_at = text.find(label)
     if label_at < 0:
         raise SystemExit(f"validator label not found: {label}")
-    for old, new in candidates:
-        old_at = text.rfind(old, max(0, label_at - 1800), label_at)
-        if old_at >= 0:
-            text = text[:old_at] + new + text[old_at + len(old):]
-            return
-    raise SystemExit(f"validator legacy expectation not found before: {label}")
+    start = text.rfind("    checks.require(", 0, label_at)
+    if start < 0:
+        raise SystemExit(f"checks.require start not found for: {label}")
+    open_at = text.find("(", start)
+    depth = 1
+    in_string = False
+    escaped = False
+    end = -1
+    for i in range(open_at + 1, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end < 0 or not (start < label_at < end):
+        raise SystemExit(f"checks.require block not resolved for: {label}")
+    text = text[:start] + replacement + text[end:]
 
-replace_nearest_before(
+
+replace_check_by_label(
     "refresh Crouch non a 0,10 s",
-    (
-        (r"0\.100", r"0\.200"),
-        ("0.100", "0.200"),
-    ),
+    '''    checks.require(\n        "Wait(0.200, Abort When False);" in source,\n        "refresh Crouch non a 0,20 s",\n    )''',
 )
-text = text.replace("refresh Crouch non a 0,10 s", "refresh Crouch non a 0,20 s", 1)
-
-replace_nearest_before(
+replace_check_by_label(
     "diagnostica non ancorata all'ultimo player della lista sinistra",
-    (
-        (
-            "Event Player == Last Of(Sorted Array(Global.PemainManusia, Player Variable(Current Array Element, UrutanHUD)))",
-            "Event Player.UrutanHUD == Global.SlotHUDTerakhir",
-        ),
-        (
-            "EventPlayer==LastOf(SortedArray(Global.PemainManusia,PlayerVariable(CurrentArrayElement,UrutanHUD)))",
-            "EventPlayer.UrutanHUD==Global.SlotHUDTerakhir",
-        ),
-    ),
+    '''    checks.require(\n        "Event Player.UrutanHUD == Global.SlotHUDTerakhir" in source,\n        "diagnostica non ancorata alla cache dell'ultimo player della lista sinistra",\n    )''',
 )
 
 validator.write_text(text, encoding="utf-8")
