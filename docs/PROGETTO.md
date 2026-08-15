@@ -164,9 +164,9 @@ Il target player viene bloccato per identità prima del refresh per evitare reta
 
 ## Menu 10 — Try Your Luck
 
-Interact crea 2,5 m davanti al giocatore una carta virtuale che emerge dal terreno con un `Ring Explosion`. La posizione resta calcolata dal piano dei piedi del proprietario e il testo usa dimensione 3,5. Appena compare, la carta avvia automaticamente una roulette rosso/verde: il colore iniziale è casuale, esegue 12..16 cambi e parte con intervallo 0,08 s aggiungendo 0,055 s a ogni passaggio, quindi rallenta progressivamente. La carta è visibile a tutti e non occupa slot bot.
+Interact crea una carta virtuale agganciata al mirino del proprietario, circa 4 m davanti agli occhi, rivalutata ogni frame e visibile a tutti. Non mostra più testo: usa soltanto `Icon String(Heart)` in verde oppure `Icon String(Skull)` in rosso. La roulette parte con colore casuale, esegue 20..24 cambi e parte da 0,08 s aggiungendo 0,055 s a ogni passaggio, quindi dura sensibilmente più a lungo e rallenta progressivamente.
 
-Non serve più sparare. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene la carta rossa e mostra un countdown di 3 secondi, poi rimuove `Unkillable` e uccide il proprietario. Poiché colore iniziale e numero di cambi sono indipendenti, l'esito finale resta 50/50. Testo e stato vengono ripuliti anche alla morte o all'uscita del giocatore.
+Non serve sparare. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene il teschio rosso e mostra un countdown di 3 secondi, poi rimuove `Unkillable` e uccide il proprietario. Se il proprietario muore prima che la sequenza finisca, la carta viene distrutta e `KartuNasibAktif`, colore, contatore, intervallo e posizione vengono azzerati; una vecchia outcome non può colpire una nuova carta dopo il respawn. L'esito finale resta 50/50.
 
 ## Jump respawn
 

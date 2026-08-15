@@ -1794,7 +1794,9 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         checks.equal(len(call_texts(luck[0].body, "Play Effect")), 1, "Nasib: un solo Ring riutilizzato a ogni cambio colore")
         checks.require("Is Firing Primary" not in luck_code, "Nasib: il vecchio sparo non deve più attivare la carta")
         checks.require("Is In Line of Sight" not in luck_code, "Nasib: la roulette non deve dipendere dalla linea di vista")
-        checks.require(luck_code.count("Wait(1, Abort When False);") == 3, "Nasib: countdown rosso deve durare tre secondi")
+        checks.require(luck_code.count("Wait(1, Ignore Condition);") == 3, "Nasib: countdown rosso deve durare tre secondi anche dopo Putaran == 0")
+        checks.require(luck_code.count("Abort If(Event Player.KartuNasibAktif == False);") >= 4, "Nasib: outcome non si annulla dopo morte/reset")
+        checks.require(luck_code.count("Abort If(Event Player.PutaranKartuNasib > 0);") >= 4, "Nasib: una vecchia outcome può interferire con una nuova roulette")
     card_texts = [
         call for call in call_texts(source, "Create In-World Text")
         if "KartuNasib" in call and "All Players(All Teams)" in call
@@ -1802,27 +1804,49 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
     if card_texts:
         checks.require(
-            "Event Player.PosisiKartuNasib, 3.500, Do Not Clip" in card_texts[0],
-            "Nasib: la carta pubblica deve usare dimensione 3,5",
+            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 3.500, Do Not Clip" in card_texts[0],
+            "Nasib: la carta pubblica deve restare agganciata al mirino a 4 m e usare dimensione 3,5",
         )
         checks.require(
             "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],
             "Nasib: il testo mondo non cambia dinamicamente rosso/verde",
         )
+        checks.require(
+            "Event Player.KartuNasibMerah ? Icon String(Skull) : Icon String(Heart)" in card_texts[0]
+            and "TRY YOUR LUCK" not in card_texts[0]
+            and "COBA NASIB" not in card_texts[0],
+            "Nasib: la carta deve mostrare solo teschio rosso o cuore verde senza etichetta",
+        )
     checks.require(
-        "Event Player.PosisiKartuNasib = Position Of(Event Player) + Direction From Angles(Horizontal Facing Angle Of(Event Player), 0) * 2.500 - Vector(0, 0.450, 0);" in mask_strings(source),
-        "Nasib: posizione bassa davanti al proprietario assente",
+        "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),
+        "Nasib: cache effetto non segue il mirino del proprietario",
     )
     checks.require(
-        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib, Event Player.PosisiKartuNasib + Vector(0, 1.000, 0), 0.600, Destination and Duration);" in mask_strings(source),
-        "Nasib: animazione bassa di emersione dal terreno assente",
+        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib" not in mask_strings(source),
+        "Nasib: la vecchia animazione dal terreno non deve restare attiva",
     )
     checks.require(
         "Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;" in clean
-        and "Event Player.PutaranKartuNasib = Random Integer(12, 16);" in clean
+        and "Event Player.PutaranKartuNasib = Random Integer(20, 24);" in clean
         and "Event Player.JedaKartuNasib = 0.080;" in clean,
-        "Nasib: inizializzazione casuale 50/50 e 12..16 passaggi assente",
+        "Nasib: inizializzazione casuale 50/50 e 20..24 passaggi assente",
     )
+    death_reset = [rule for rule in rules if rule.name.startswith("18f - Nasib:")]
+    checks.equal(len(death_reset), 1, "Nasib: una sola regola reset alla morte")
+    if death_reset:
+        checks.require(
+            code_contains(
+                death_reset[0].body,
+                "Event Player.KartuNasibAktif = False;",
+                "Event Player.KartuNasibMerah = False;",
+                "Event Player.PutaranKartuNasib = 0;",
+                "Event Player.JedaKartuNasib = 0;",
+                "Event Player.PosisiKartuNasib = Vector(0, 0, 0);",
+                "Destroy In-World Text(Event Player.TeksKartuNasib);",
+            ),
+            "Nasib: morte prima della fine non resetta completamente la carta",
+        )
+
     menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
     blocked_one_hp = menu_interact[
         menu_interact.find("If(And(Event Player.KursorKebal == 1"):
