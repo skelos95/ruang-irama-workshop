@@ -193,3 +193,8 @@ Nota live: `Icon String` mantiene il colore nativo del glifo e non accetta il co
 ### Feedback solo su cambi reali
 
 Il dispatcher `Interact` dei menu è idempotente: Soundtrack, Camera, Name Color, HUD Language, Unkillable, Voice Modifier e Player Icon confrontano prima la selezione con lo stato già applicato. Se coincidono, non vengono rieseguite azioni di modifica e non partono `Small Message`, `EfekTerapkan`/`EfekPulihkan` né i relativi suoni. Gli avvisi di errore o indisponibilità restano separati perché descrivono un'azione non eseguibile, non una conferma di modifica.
+
+
+### Palette menu coordinata
+
+Il Main Menu ora eredita visivamente il colore principale del sottomenu evidenziato: Soundtrack aqua, Camera blu elettrico, Name Color usa la preview del colore evidenziato, HUD Language viola, Revenge rosso corallo, Unkillable ambra, Voice Modifier mint e Player Icon fucsia-lavanda. I colori chiari degli input/comandi non sono stati modificati. `DaftarWarna` è stato esteso da 20 a 32 voci mantenendo invariati i primi 20 indici e aggiungendo 12 tonalità pastel/neon con nomi EN/ID/TH allineati.

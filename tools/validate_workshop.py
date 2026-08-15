@@ -471,14 +471,14 @@ def check_language_arrays(checks: Checks, source: str) -> tuple[list[str], list[
     checks.equal(languages, ["English", "Bahasa Indonesia", "ไทย"], "lingue HUD")
 
     colors = top_level_items(array_body(source, "Global.DaftarWarna"))
-    checks.equal(len(colors), 20, "numero di colori")
+    checks.equal(len(colors), 32, "numero di colori")
     localized_arrays = {
         "pagine indonesiane": ("Global.NamaHalaman", 10, False),
         "pagine inglesi": ("Global.NamaHalamanEN", 10, False),
         "pagine thailandesi": ("Global.NamaHalamanTH", 10, True),
-        "colori indonesiani": ("Global.NamaWarna", 20, False),
-        "colori inglesi": ("Global.NamaWarnaEN", 20, False),
-        "colori thailandesi": ("Global.NamaWarnaTH", 20, True),
+        "colori indonesiani": ("Global.NamaWarna", 32, False),
+        "colori inglesi": ("Global.NamaWarnaEN", 32, False),
+        "colori thailandesi": ("Global.NamaWarnaTH", 32, True),
     }
     for label, (assignment, expected, require_thai) in localized_arrays.items():
         values = custom_strings(array_body(source, assignment))
@@ -2345,6 +2345,93 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
     for guard, assignment in ordered_pairs:
         checks.require(0 <= body.find(guard) < body.find(assignment), f"assegnazione menu fuori dalla guardia: {assignment}")
 
+
+def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[Rule]) -> None:
+    colors = [re.sub(r"\s+", " ", item).strip() for item in top_level_items(array_body(source, "Global.DaftarWarna"))]
+    id_names = custom_strings(array_body(source, "Global.NamaWarna"))
+    en_names = custom_strings(array_body(source, "Global.NamaWarnaEN"))
+    th_names = custom_strings(array_body(source, "Global.NamaWarnaTH"))
+    checks.equal(len(colors), 32, "Name Color: 32 colori")
+    checks.equal(len(id_names), 32, "Name Color: 32 nomi ID")
+    checks.equal(len(en_names), 32, "Name Color: 32 nomi EN")
+    checks.equal(len(th_names), 32, "Name Color: 32 nomi TH")
+
+    expected_tail = [
+        "Custom Color(255, 180, 145, 255)",
+        "Custom Color(255, 145, 90, 255)",
+        "Custom Color(255, 165, 205, 255)",
+        "Custom Color(255, 70, 220, 255)",
+        "Custom Color(230, 100, 255, 255)",
+        "Custom Color(155, 165, 255, 255)",
+        "Custom Color(105, 100, 255, 255)",
+        "Custom Color(80, 110, 255, 255)",
+        "Custom Color(70, 255, 255, 255)",
+        "Custom Color(110, 245, 210, 255)",
+        "Custom Color(80, 240, 170, 255)",
+        "Custom Color(190, 255, 80, 255)",
+    ]
+    checks.equal(colors[-12:], expected_tail, "Name Color: nuove 12 tonalità")
+    checks.equal(
+        en_names[-12:],
+        ["Peach Glow", "Apricot Neon", "Cherry Blossom", "Hot Magenta", "Fuchsia Dream", "Soft Periwinkle", "Electric Indigo", "Royal Blue", "Cyan Neon", "Seafoam", "Jade Glow", "Neon Chartreuse"],
+        "Name Color: nomi EN nuove tonalità",
+    )
+
+    def renderer(subroutine: str) -> str:
+        matches = rules_containing(rules, "Subroutine;", f"{subroutine};")
+        checks.equal(len(matches), 1, f"palette renderer {subroutine}")
+        return matches[0].body if matches else ""
+
+    main = renderer("GambarUtama")
+    soundtrack = renderer("GambarMusik")
+    camera = renderer("GambarKamera")
+    name_color = renderer("GambarWarna")
+    language = renderer("GambarBahasa")
+    revenge = renderer("GambarBalasDendam")
+    unkillable = renderer("GambarUnkillable")
+    voice = renderer("GambarSuara")
+    icon = renderer("GambarIkon")
+
+    # Inputs/subheaders keep their established light colors.
+    for body, token, label in (
+        (main, "Custom Color(210, 230, 255, 255)", "main"),
+        (soundtrack, "Custom Color(205, 235, 255, 255)", "soundtrack"),
+        (camera, "Custom Color(205, 235, 255, 255)", "camera"),
+        (name_color, "Custom Color(220, 235, 255, 255)", "name color"),
+        (language, "Custom Color(225, 210, 255, 255)", "language"),
+        (revenge, "Custom Color(255, 220, 220, 255)", "revenge"),
+        (unkillable, "Custom Color(255, 220, 220, 255)", "unkillable"),
+        (voice, "Custom Color(225, 215, 255, 255)", "voice"),
+        (icon, "Custom Color(225, 215, 255, 255)", "player icon"),
+    ):
+        checks.require(token in body, f"palette input modificata per {label}")
+
+    # Primary submenu colors are unique, except Name Color which intentionally
+    # previews the currently highlighted name color.
+    for body, token, label in (
+        (soundtrack, "Custom Color(55, 235, 245, 255)", "soundtrack aqua"),
+        (camera, "Custom Color(90, 180, 255, 255)", "camera blue"),
+        (name_color, "Global.DaftarWarna[Event Player.KursorWarna]", "name color preview"),
+        (language, "Custom Color(190, 120, 255, 255)", "language violet"),
+        (revenge, "Custom Color(255, 80, 80, 255)", "revenge red"),
+        (unkillable, "Custom Color(255, 185, 90, 255)", "unkillable amber"),
+        (voice, "Custom Color(115, 235, 170, 255)", "voice mint"),
+        (icon, "Custom Color(235, 135, 255, 255)", "player icon fuchsia"),
+    ):
+        checks.require(token in body, f"palette submenu errata: {label}")
+
+    for token in (
+        "Event Player.KursorUtama == 0 ? Custom Color(55, 235, 245, 255)",
+        "Event Player.KursorUtama == 1 ? Custom Color(90, 180, 255, 255)",
+        "Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]",
+        "Event Player.KursorUtama == 3 ? Custom Color(190, 120, 255, 255)",
+        "Event Player.KursorUtama == 4 ? Custom Color(255, 80, 80, 255)",
+        "Event Player.KursorUtama == 5 ? Custom Color(255, 185, 90, 255)",
+        "Event Player.KursorUtama == 6 ? Custom Color(115, 235, 170, 255)",
+        "Custom Color(235, 135, 255, 255)",
+    ):
+        checks.require(token in main, f"Main Menu non corrisponde al sottomenu: {token}")
+
 def main() -> None:
     checks = Checks()
     if not SOURCE.exists():
@@ -2362,6 +2449,7 @@ def main() -> None:
         check_instant_start(checks, source, rules)
         check_bot_lifecycle(checks, source, rules)
         check_menus(checks, source, rules, subroutines)
+        check_menu_palette_and_name_colors(checks, source, rules)
         check_camera(checks, source, rules, player_names)
         check_crouch(checks, source, rules)
         check_cleanup_and_revenge(checks, source, rules)

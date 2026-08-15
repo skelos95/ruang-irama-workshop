@@ -135,3 +135,6 @@ Riferimento patch: [Overwatch Retail Patch Notes — August 11, 2026](https://us
 
 - Menu 7 `Player Icon`: 37 voci (`Niente` + 36 icone Workshop), con cursore persistente e feedback di applicazione.
 - Nelle liste player l’icona scelta precede l’icona eroe; la riga sinistra mostra il tempo come `N MIN` e la riga destra soltanto il genere scelto, senza i prefissi `CHILL for` / `soundtrack`.
+
+- Palette menu coordinata: ogni voce del Main Menu usa lo stesso colore principale del proprio sottomenu, mentre i colori degli input restano invariati.
+- `Name Color` offre 32 tonalità: le 20 originali più 12 nuove sfumature pastel/neon.

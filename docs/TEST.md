@@ -276,3 +276,7 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 - **Liste compatte live:** a sinistra verificare `icona + eroe + nome + N MIN` senza `CHILL for`; a destra `icona + eroe + nome + genere` senza il prefisso `soundtrack`.
 
 - **Feedback idempotente live:** in Soundtrack, Camera, Name Color, HUD Language, Unkillable, Voice Modifier e Player Icon applicare una scelta, poi premere `Interact` più volte senza cambiare cursore; dopo la prima applicazione non devono comparire altri Small Message, effetti visivi o suoni. Cambiando voce, il feedback deve partire una sola volta.
+
+- **Palette menu live:** scorrere le 8 voci del Main Menu e aprire ogni sottomenu; il colore principale della voce deve coincidere con quello del sottomenu, mentre il colore degli input deve restare quello precedente.
+
+- **Name Color 32 live:** scorrere tutte le 32 tonalità, incluse le nuove da Peach Glow a Neon Chartreuse, applicarne diverse e verificare persistenza cursore e colore nome.

@@ -292,7 +292,19 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Color(Turquoise),
 			Custom Color(120, 255, 200, 255),
 			Custom Color(70, 220, 110, 255),
-			Color(Lime Green)
+			Color(Lime Green),
+			Custom Color(255, 180, 145, 255),
+			Custom Color(255, 145, 90, 255),
+			Custom Color(255, 165, 205, 255),
+			Custom Color(255, 70, 220, 255),
+			Custom Color(230, 100, 255, 255),
+			Custom Color(155, 165, 255, 255),
+			Custom Color(105, 100, 255, 255),
+			Custom Color(80, 110, 255, 255),
+			Custom Color(70, 255, 255, 255),
+			Custom Color(110, 245, 210, 255),
+			Custom Color(80, 240, 170, 255),
+			Custom Color(190, 255, 80, 255)
 		);
 		Global.NamaWarna = Array(
 			Custom String("Putih Salju"),
@@ -314,7 +326,19 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Toska Santai"),
 			Custom String("Mint Segar"),
 			Custom String("Hijau Zamrud"),
-			Custom String("Hijau Limau")
+			Custom String("Hijau Limau"),
+			Custom String("Persik Bersinar"),
+			Custom String("Aprikot Neon"),
+			Custom String("Bunga Sakura"),
+			Custom String("Magenta Panas"),
+			Custom String("Fuchsia Mimpi"),
+			Custom String("Periwinkle Lembut"),
+			Custom String("Indigo Elektrik"),
+			Custom String("Biru Royal"),
+			Custom String("Cyan Neon"),
+			Custom String("Busa Laut"),
+			Custom String("Giok Bersinar"),
+			Custom String("Chartreuse Neon")
 		);
 		Global.NamaWarnaEN = Array(
 			Custom String("Snow White"),
@@ -336,7 +360,19 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Chill Turquoise"),
 			Custom String("Fresh Mint"),
 			Custom String("Emerald Green"),
-			Custom String("Lime Green")
+			Custom String("Lime Green"),
+			Custom String("Peach Glow"),
+			Custom String("Apricot Neon"),
+			Custom String("Cherry Blossom"),
+			Custom String("Hot Magenta"),
+			Custom String("Fuchsia Dream"),
+			Custom String("Soft Periwinkle"),
+			Custom String("Electric Indigo"),
+			Custom String("Royal Blue"),
+			Custom String("Cyan Neon"),
+			Custom String("Seafoam"),
+			Custom String("Jade Glow"),
+			Custom String("Neon Chartreuse")
 		);
 		Global.NamaWarnaTH = Array(
 			Custom String("ขาวหิมะ"),
@@ -358,7 +394,19 @@ rule("00 - Global: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("เทอร์ควอยซ์สบายตา"),
 			Custom String("มิ้นต์สดชื่น"),
 			Custom String("เขียวมรกต"),
-			Custom String("เขียวมะนาว")
+			Custom String("เขียวมะนาว"),
+			Custom String("พีชเรืองแสง"),
+			Custom String("แอปริคอตนีออน"),
+			Custom String("ซากุระอ่อน"),
+			Custom String("แมเจนตาร้อน"),
+			Custom String("ฟูเชียฝัน"),
+			Custom String("เพอริวิงเคิลอ่อน"),
+			Custom String("อินดิโกไฟฟ้า"),
+			Custom String("น้ำเงินรอยัล"),
+			Custom String("ไซแอนนีออน"),
+			Custom String("ซีโฟม"),
+			Custom String("หยกเรืองแสง"),
+			Custom String("ชาร์เทรสนีออน")
 		);
 		Global.NamaBahasa = Array(
 			Custom String("English"),
@@ -2466,7 +2514,14 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 5 ? Custom String("5 - UNKILLABLE + 1 HP\nสถานะ: {0}", Event Player.UnkillableAktif ? Custom String("เปิด") : Custom String("ปิด"))
 			: Event Player.KursorUtama == 6 ? Custom String("6 - ปรับเสียงฮีโร่\nสถานะ: {0}", Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x"))
 			: Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอนผู้เล่น\nปัจจุบัน: ไม่มี") : Custom String("7 - ไอคอนผู้เล่น\nปัจจุบัน: {0} {1}", Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon]), Top, 100,
-			Color(White), Custom Color(210, 230, 255, 255), Custom Color(255, 185, 65, 255), Visible To and String, Visible Never);
+			Color(White), Custom Color(210, 230, 255, 255), Event Player.KursorUtama == 0 ? Custom Color(55, 235, 245, 255)
+			: Event Player.KursorUtama == 1 ? Custom Color(90, 180, 255, 255)
+			: Event Player.KursorUtama == 2 ? Global.DaftarWarna[Event Player.KursorWarna]
+			: Event Player.KursorUtama == 3 ? Custom Color(190, 120, 255, 255)
+			: Event Player.KursorUtama == 4 ? Custom Color(255, 80, 80, 255)
+			: Event Player.KursorUtama == 5 ? Custom Color(255, 185, 90, 255)
+			: Event Player.KursorUtama == 6 ? Custom Color(115, 235, 170, 255)
+			: Custom Color(235, 135, 255, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -2738,7 +2793,7 @@ rule("91h - Subrutin: Gambar menu unkillable")
 			Event Player.KursorUnkillable == 0 ? Custom String("MATI") : Custom String("AKTIF")) : Custom String("{0}\n> {1}", Custom String(
 			"5 - UNKILLABLE + 1 HP {0}/2\nปัจจุบัน: {1}", Event Player.KursorUnkillable + 1, Event Player.UnkillableAktif ? Custom String("เปิด") : Custom String("ปิด")),
 			Event Player.KursorUnkillable == 0 ? Custom String("ปิด") : Custom String("เปิด")),
-			Top, 100, Color(White), Custom Color(255, 220, 220, 255), Custom Color(255, 85, 85, 255), Visible To and String, Visible Never);
+			Top, 100, Color(White), Custom Color(255, 220, 220, 255), Custom Color(255, 185, 90, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -2761,7 +2816,7 @@ rule("91i - Subrutin: Gambar menu pengubah suara")
 			Input Binding String(Button(Secondary Fire))), Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))),
 			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("6 - VOICE MODIFIER {0}/5\nCURRENT: {1}", Event Player.KursorSuara + 1, Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("LOW 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("LOW 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")), Event Player.KursorSuara == 0 ? Custom String("NORMAL") : Event Player.KursorSuara == 1 ? Custom String("LOW 0.50x") : Event Player.KursorSuara == 2 ? Custom String("LOW 0.75x") : Event Player.KursorSuara == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))
 			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("6 - PENGUBAH SUARA {0}/5\nSAAT INI: {1}", Event Player.KursorSuara + 1, Event Player.IndeksSuara == 0 ? Custom String("NORMAL") : Event Player.IndeksSuara == 1 ? Custom String("RENDAH 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("RENDAH 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("TINGGI 1.25x") : Custom String("TINGGI 1.50x")), Event Player.KursorSuara == 0 ? Custom String("NORMAL") : Event Player.KursorSuara == 1 ? Custom String("RENDAH 0.50x") : Event Player.KursorSuara == 2 ? Custom String("RENDAH 0.75x") : Event Player.KursorSuara == 3 ? Custom String("TINGGI 1.25x") : Custom String("TINGGI 1.50x"))
-			: Custom String("{0}\n> {1}", Custom String("6 - ปรับเสียงฮีโร่ {0}/5\nปัจจุบัน: {1}", Event Player.KursorSuara + 1, Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x")), Event Player.KursorSuara == 0 ? Custom String("ปกติ") : Event Player.KursorSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.KursorSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.KursorSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x")), Top, 100, Color(White), Custom Color(225, 215, 255, 255), Custom Color(195, 120, 255, 255), Visible To and String, Visible Never);
+			: Custom String("{0}\n> {1}", Custom String("6 - ปรับเสียงฮีโร่ {0}/5\nปัจจุบัน: {1}", Event Player.KursorSuara + 1, Event Player.IndeksSuara == 0 ? Custom String("ปกติ") : Event Player.IndeksSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.IndeksSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.IndeksSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x")), Event Player.KursorSuara == 0 ? Custom String("ปกติ") : Event Player.KursorSuara == 1 ? Custom String("ต่ำ 0.50x") : Event Player.KursorSuara == 2 ? Custom String("ต่ำ 0.75x") : Event Player.KursorSuara == 3 ? Custom String("สูง 1.25x") : Custom String("สูง 1.50x")), Top, 100, Color(White), Custom Color(225, 215, 255, 255), Custom Color(115, 235, 170, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -2783,7 +2838,7 @@ rule("91j - Subrutin: Gambar menu ikon pemain")
 			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Event Player.IndeksIkon == 0 ? Custom String("7 - PLAYER ICON {0}/37\nCURRENT: NOTHING", Event Player.KursorIkon + 1) : Custom String("7 - PLAYER ICON {0}/37\nCURRENT: {1} {2}", Event Player.KursorIkon + 1, Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon]), Event Player.KursorIkon == 0 ? Custom String("NOTHING") : Custom String("{0} {1}", Global.DaftarIkon[Event Player.KursorIkon], Global.NamaIkon[Event Player.KursorIkon]))
 			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Event Player.IndeksIkon == 0 ? Custom String("7 - IKON PEMAIN {0}/37\nSAAT INI: TIDAK ADA", Event Player.KursorIkon + 1) : Custom String("7 - IKON PEMAIN {0}/37\nSAAT INI: {1} {2}", Event Player.KursorIkon + 1, Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon]), Event Player.KursorIkon == 0 ? Custom String("TIDAK ADA") : Custom String("{0} {1}", Global.DaftarIkon[Event Player.KursorIkon], Global.NamaIkon[Event Player.KursorIkon]))
 			: Custom String("{0}\n> {1}", Event Player.IndeksIkon == 0 ? Custom String("7 - ไอคอนผู้เล่น {0}/37\nปัจจุบัน: ไม่มี", Event Player.KursorIkon + 1) : Custom String("7 - ไอคอนผู้เล่น {0}/37\nปัจจุบัน: {1} {2}", Event Player.KursorIkon + 1, Global.DaftarIkon[Event Player.IndeksIkon], Global.NamaIkon[Event Player.IndeksIkon]), Event Player.KursorIkon == 0 ? Custom String("ไม่มี") : Custom String("{0} {1}", Global.DaftarIkon[Event Player.KursorIkon], Global.NamaIkon[Event Player.KursorIkon])),
-			Top, 100, Color(White), Custom Color(225, 215, 255, 255), Custom Color(195, 120, 255, 255), Visible To String and Color, Visible Never);
+			Top, 100, Color(White), Custom Color(225, 215, 255, 255), Custom Color(235, 135, 255, 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
