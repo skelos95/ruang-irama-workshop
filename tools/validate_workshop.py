@@ -2192,6 +2192,7 @@ def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
 
 def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     expected_icons = [
+        'Custom String("")',
         "Icon String(Arrow: Down)",
         "Icon String(Arrow: Left)",
         "Icon String(Arrow: Right)",
@@ -2230,6 +2231,7 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
         "Icon String(X)",
     ]
     expected_names = [
+        "NOTHING",
         "ARROW: DOWN",
         "ARROW: LEFT",
         "ARROW: RIGHT",
@@ -2268,8 +2270,8 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
         "X",
     ]
     actual_icons = [re.sub(r"\s+", " ", item).strip() for item in top_level_items(array_body(source, "Global.DaftarIkon"))]
-    checks.equal(actual_icons, expected_icons, "36 icone Workshop del menu 7")
-    checks.equal(custom_strings(array_body(source, "Global.NamaIkon")), expected_names, "nomi delle 36 icone")
+    checks.equal(actual_icons, expected_icons, "37 voci menu 7: niente + 36 icone Workshop")
+    checks.equal(custom_strings(array_body(source, "Global.NamaIkon")), expected_names, "nomi delle 37 voci icona")
 
     variables = section_body(source, "variables")
     for slot, name in ((40, "DaftarIkon"), (41, "NamaIkon")):
@@ -2277,7 +2279,7 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
     for slot, name in ((61, "IndeksIkon"), (62, "KursorIkon")):
         checks.require(re.search(rf"(?m)^\s*{slot}\s*:\s*{name}\s*$", variables) is not None, f"icone: slot player {slot} deve essere {name}")
     checks.require("GambarIkon" in subroutines, "icone: subroutine GambarIkon assente")
-    checks.require("Event Player.IndeksIkon = 17;" in source and "Event Player.KursorIkon = 17;" in source, "icone: default Heart non inizializzato")
+    checks.require("Event Player.IndeksIkon = 0;" in source and "Event Player.KursorIkon = 0;" in source, "icone: default NOTHING non inizializzato")
 
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "regola roster per icona player")
@@ -2290,7 +2292,9 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
             checks.require(0 <= icon_at < hero_at, "icona player deve precedere l'icona eroe")
         checks.require("CHILL for" not in body and " - CHILL " not in body, "roster sinistro contiene ancora CHILL for")
         checks.require(" - soundtrack:" not in body and " - เพลงประกอบ:" not in body, "roster destro contiene ancora il prefisso soundtrack")
-        checks.require(body.count("Global.RGB") >= 2, "le due liste non usano il colore RGB per le icone")
+        checks.require("Global.RGB" not in body, "roster: RGB non deve colorare il nome player")
+        checks.require(body.count("Event Player.WarnaNama") >= 2, "roster: entrambe le liste devono usare il colore nome scelto")
+        checks.require('Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobby)' in body, "roster sinistro: MIN assente")
 
     next_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 3;", "Event Player.KursorIkon = (Event Player.KursorIkon + 1) % Count Of(Global.DaftarIkon);")]
     prev_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.PerintahMenu == 4;", "Event Player.KursorIkon = (Event Player.KursorIkon + Count Of(Global.DaftarIkon) - 1) % Count Of(Global.DaftarIkon);")]
@@ -2302,7 +2306,9 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
     renderers = rules_containing(rules, "Subroutine;", "GambarIkon;")
     checks.equal(len(renderers), 1, "renderer menu 7")
     if renderers:
-        checks.require("/36" in renderers[0].body and "Global.RGB" in renderers[0].body, "menu 7 non mostra 36 icone con colore RGB")
+        checks.require("/37" in renderers[0].body, "menu 7 non mostra 37 voci")
+        checks.require("Global.RGB" not in renderers[0].body, "menu 7: RGB deve restare fuori dal menu icone")
+        checks.require("NOTHING" in renderers[0].body and "TIDAK ADA" in renderers[0].body and "ไม่มี" in renderers[0].body, "menu 7: voce niente non localizzata")
 
 
 def main() -> None:

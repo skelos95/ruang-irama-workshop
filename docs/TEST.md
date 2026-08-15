@@ -271,6 +271,6 @@ Fino ad allora lo stato resta **static-ready, live-pending** e [`VALIDAZIONE.md`
 
 - **RGB pastel/neon live:** osservare il titolo per almeno 55 secondi; il ciclo deve essere più lento, luminoso e senza passare per canali scuri sotto circa 80.
 
-- **Player Icon live:** aprire menu 7, scorrere tutte le 36 icone, applicarne varie e verificare che compaiano nelle due liste prima dell’icona eroe, senza alcuna icona sopra al personaggio.
+- **Player Icon live:** aprire menu 7, verificare 37 voci con `Niente` predefinito e scorrere le 36 icone reali, applicarne varie e verificare che compaiano nelle due liste prima dell’icona eroe, senza alcuna icona sopra al personaggio.
 
 - **Liste compatte live:** a sinistra verificare `icona + eroe + nome + N MIN` senza `CHILL for`; a destra `icona + eroe + nome + genere` senza il prefisso `soundtrack`.

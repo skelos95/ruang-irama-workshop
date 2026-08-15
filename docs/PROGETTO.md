@@ -184,4 +184,7 @@ Alla morte viene salvata la posizione. Premendo `Jump` a menu chiuso viene scelt
 
 ### Menu 7 — Player Icon
 
-Il menu 7 contiene le 36 icone standard disponibili tramite `Icon String`, da `Arrow: Down` a `X`. La scelta è memorizzata in `IndeksIkon` e il cursore in `KursorIkon`; il default è `Heart`. L’icona viene inserita direttamente nelle due righe HUD prima della `Hero Icon String`, quindi non viene creato alcun `Create Icon` sopra al personaggio. Le righe del roster sono state compattate: a sinistra resta il numero di minuti, a destra il genere scelto (o il placeholder se non è stato ancora scelto).
+Il menu 7 contiene 37 voci: `Niente` all’indice 0 più le 36 icone standard disponibili tramite `Icon String`, da `Arrow: Down` a `X`. La scelta è memorizzata in `IndeksIkon` e il cursore in `KursorIkon`; il default è `Niente`. L’icona viene inserita direttamente nelle due righe HUD prima della `Hero Icon String`, quindi non viene creato alcun `Create Icon` sopra al personaggio. Le righe del roster sono state compattate: a sinistra resta `N MIN`, a destra il genere scelto (o il placeholder se non è stato ancora scelto).
+
+
+Nota live: `Icon String` mantiene il colore nativo del glifo e non accetta il colore del campo HUD. Per questo il Menu 7 usa colori fissi e il nome player conserva il colore scelto; non viene dichiarato un falso RGB sul glifo nativo.
