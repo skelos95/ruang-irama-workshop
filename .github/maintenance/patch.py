@@ -7,8 +7,9 @@ script = subprocess.check_output(
     text=True,
 )
 
-# Replace the fragile Menu-5 opening edit by section boundaries in the patch
-# script itself, rather than matching its exact quoting/escaping.
+# Repair the malformed "open submenu" branch left by the previous Unkillable
+# implementation. Use section boundaries in the patch source, not exact quote
+# matching.
 start = script.index("open_start = block.index(")
 end = script.index("\n# Replace the actual apply branch", start)
 replacement_lines = [
@@ -44,10 +45,18 @@ replacement_lines = [
 ]
 script = script[:start] + "\n".join(replacement_lines) + "\n" + script[end:]
 
-# Remove the obsolete probe that depended on the old opening-block offsets.
+# Replace all locator code before apply_branch. Anchor on the legacy two-state
+# statement itself, then rfind its enclosing outer page-5 branch.
 section = script.index("# Replace the actual apply branch")
-probe = script.index("apply_start = block.index(", section)
-probe_end = script.index("\n", probe) + 1
-script = script[:probe] + "apply_start = 0\n" + script[probe_end:]
+locator_start = script.index("apply_start = block.index(", section)
+locator_end = script.index("apply_branch = '''", locator_start)
+locator_lines = [
+    "legacy_apply = block.index('If(Event Player.KebalAktif != And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == False));')",
+    "apply_start = block.rfind('\\t\\tElse If(Event Player.HalamanMenu == 5);', 0, legacy_apply)",
+    "if apply_start < 0:",
+    "    raise SystemExit('outer legacy Menu 5 apply branch not found')",
+    "apply_end = block.index('\\t\\tElse If(Event Player.HalamanMenu == 6);', legacy_apply)",
+]
+script = script[:locator_start] + "\n".join(locator_lines) + "\n" + script[locator_end:]
 
-exec(compile(script, "robust_unkillable_patch.py", "exec"))
+exec(compile(script, "exact_unkillable_patch.py", "exec"))
