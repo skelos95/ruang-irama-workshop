@@ -217,21 +217,58 @@ subroutines
                     checks.errors,
                 )
 
-    def test_menu_inactive_cleanup_requires_or(self) -> None:
-        cleanup_at = self.source.index('rule("12b - ')
-        mutated = self.source[:cleanup_at] + self.source[cleanup_at:].replace(
-            "Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False) == True;",
-            "And(Has Spawned(Event Player) == False, Is Alive(Event Player) == False) == True;",
-            1,
+    def test_menu_must_not_close_on_death_or_despawn(self) -> None:
+        bad_rules = (
+            '''
+rule("TEST - bad death menu close")
+{
+    event
+    {
+        Player Died;
+        All;
+        All;
+    }
+    conditions
+    {
+        Event Player.MenuTerbuka == True;
+    }
+    actions
+    {
+        Call Subroutine(TutupMenu);
+    }
+}
+''',
+            '''
+rule("TEST - bad dead-state menu close")
+{
+    event
+    {
+        Ongoing - Each Player;
+        All;
+        All;
+    }
+    conditions
+    {
+        Event Player.MenuTerbuka == True;
+        Is Alive(Event Player) == False;
+    }
+    actions
+    {
+        Call Subroutine(TutupMenu);
+    }
+}
+''',
         )
-        self.assertNotEqual(mutated, self.source)
-        _, _, subroutines = validator.declaration_tables(mutated)
-        checks = validator.Checks()
-        validator.check_menus(checks, mutated, self.rules(mutated), subroutines)
-        self.assertTrue(
-            any("devono restare alternative OR" in error for error in checks.errors),
-            checks.errors,
-        )
+        _, _, subroutines = validator.declaration_tables(self.source)
+        for bad_rule in bad_rules:
+            with self.subTest(bad_rule=bad_rule.splitlines()[1]):
+                mutated = self.source + "\n" + bad_rule
+                checks = validator.Checks()
+                validator.check_menus(checks, mutated, self.rules(mutated), subroutines)
+                self.assertTrue(
+                    any("non deve chiudere" in error or "non devono chiudere" in error for error in checks.errors),
+                    checks.errors,
+                )
 
     def test_crouch_cleanup_requires_or(self) -> None:
         mutated = self.source.replace(
@@ -331,15 +368,25 @@ subroutines
         validator.check_arcade_features(checks, mutated, self.rules(mutated))
         self.assertTrue(any("dispatcher menu non bloccato" in error for error in checks.errors), checks.errors)
 
-    def test_luck_red_must_force_position_and_shrink_ring(self) -> None:
-        mutated = self.source.replace(
-            "Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);",
-            '"Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);"',
+    def test_luck_red_must_use_speed_lock_without_forcing(self) -> None:
+        forcing = self.source.replace(
+            "Set Move Speed(Event Player, 0);",
+            "Set Move Speed(Event Player, 0);\n\t\t\tStart Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);",
             1,
         )
-        self.assertNotEqual(mutated, self.source)
+        self.assertNotEqual(forcing, self.source)
         checks = validator.Checks()
-        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        validator.check_arcade_features(checks, forcing, self.rules(forcing))
+        self.assertTrue(any("posizione forzata" in error for error in checks.errors), checks.errors)
+
+        no_speed_lock = self.source.replace(
+            "Set Move Speed(Event Player, 0);",
+            '"Set Move Speed(Event Player, 0);"',
+            1,
+        )
+        self.assertNotEqual(no_speed_lock, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, no_speed_lock, self.rules(no_speed_lock))
         self.assertTrue(any("sequenza rosso/verde incompleta" in error for error in checks.errors), checks.errors)
 
     def test_camera_dead_candidate_is_rejected(self) -> None:

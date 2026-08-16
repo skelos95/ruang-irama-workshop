@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.4.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.5.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.4"
+CURRENT_VERSION = "0.6.5"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1061,34 +1061,28 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "ripristina subito altrimenti",
         )
 
+    death_menu_closers = [
+        rule
+        for rule in rules_containing(rules, "Player Died;", "Call Subroutine(TutupMenu);")
+        if code_contains(rule.body, "Event Player.MenuTerbuka == True;")
+    ]
+    checks.equal(
+        len(death_menu_closers),
+        0,
+        "menu: la morte non deve chiudere automaticamente un menu aperto",
+    )
+
     invalid_state_cleanup = [
         rule
         for rule in rules_containing(rules, "Event Player.MenuTerbuka == True;", "Call Subroutine(TutupMenu);")
-        if code_contains(
-            rule.body,
-            "Has Spawned(Event Player) == False",
-            "Is Alive(Event Player) == False",
-        )
+        if code_contains(rule.body, "Has Spawned(Event Player) == False")
+        or code_contains(rule.body, "Is Alive(Event Player) == False")
     ]
     checks.equal(
         len(invalid_state_cleanup),
-        1,
-        "cleanup menu su morte, despawn, hero-select o passaggio spettatore",
+        0,
+        "menu: morte/despawn non devono chiudere automaticamente un menu aperto",
     )
-    if invalid_state_cleanup:
-        conditions = re.sub(
-            r"\s+",
-            "",
-            mask_strings(section_body(invalid_state_cleanup[0].body, "conditions")),
-        )
-        checks.require(
-            conditions
-            == (
-                "EventPlayer.MenuTerbuka==True;"
-                "Or(HasSpawned(EventPlayer)==False,IsAlive(EventPlayer)==False)==True;"
-            ),
-            "cleanup menu: despawn e morte devono restare alternative OR",
-        )
 
     revenge_renderers = rules_containing(rules, "Subroutine;", "GambarBalasDendam;")
     checks.equal(len(revenge_renderers), 1, "renderer BalasDendam")
@@ -1850,13 +1844,44 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Event Player.ModeKebalTerakhir",
             "Event Player.ModeKebal = 0;",
             "Set Move Speed(Event Player, 0);",
-            "Set Knockback Received(Event Player, 0);",
-            "Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);",
             "Create Effect(All Players(All Teams), Light Shaft, Event Player.WarnaNasibTerkunci",
             "Create Effect(All Players(All Teams), Ring, Event Player.WarnaNasibTerkunci",
             "Chase Player Variable Over Time(Event Player, RadiusNasib, 0.250, 3, Destination and Duration);",
         ):
             checks.require(token in luck_code, f"Nasib: sequenza rosso/verde incompleta: {token}")
+        checks.require("Start Forcing Player Position" not in luck_code, "Nasib: il rosso deve bloccare solo la velocità, senza posizione forzata")
+        checks.require("Set Knockback Received(Event Player, 0);" not in luck_code, "Nasib: il rosso non deve bloccare il knockback")
+    luck_death_cleanup = [
+        rule
+        for rule in rules_containing(
+            rules,
+            "Player Died;",
+            "Event Player.KartuNasibAktif == True;",
+            "Event Player.KartuNasibAktif = False;",
+        )
+    ]
+    checks.equal(len(luck_death_cleanup), 1, "Nasib: un solo reset della roulette su morte")
+    if luck_death_cleanup:
+        death_code = mask_strings(luck_death_cleanup[0].body)
+        for token in (
+            "Event Player.ModeKebal = Event Player.ModeKebalTerakhir;",
+            "Event Player.KursorKebal = Event Player.ModeKebalTerakhir;",
+            "Event Player.PutaranKartuNasib = 0;",
+            "Event Player.JedaKartuNasib = 0;",
+            "Call Subroutine(GambarMenu);",
+        ):
+            checks.require(token in death_code, f"Nasib: reset su morte incompleto: {token}")
+
+    for status_text in (
+        "ROLLING", "RED", "GREEN",
+        "BERPUTAR", "MERAH", "HIJAU",
+        "กำลังสุ่ม", "แดง", "เขียว",
+    ):
+        checks.require(
+            source.count(f'Custom String("{status_text}")') >= 2,
+            f"Nasib: stato menu dinamico mancante o incompleto: {status_text}",
+        )
+
     card_texts = [
         call for call in call_texts(source, "Create In-World Text")
         if "All Players(All Teams)" in call
@@ -1898,26 +1923,32 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     death_reset = [rule for rule in rules if rule.name.startswith("18f - Nasib:")]
     checks.equal(len(death_reset), 1, "Nasib: una sola regola reset alla morte")
     if death_reset:
+        death_code = mask_strings(death_reset[0].body)
+        for token in (
+            "Event Player.KartuNasibAktif = False;",
+            "Event Player.KartuNasibMerah = False;",
+            "Event Player.PutaranKartuNasib = 0;",
+            "Event Player.JedaKartuNasib = 0;",
+            "Destroy In-World Text(Event Player.TeksKartuNasib);",
+            "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
+            "Destroy Icon(Event Player.IkonKartuNasib);",
+            "Destroy Icon(Event Player.IkonKartuNasibHijau);",
+            "Event Player.IkonKartuNasib = Null;",
+            "Event Player.IkonKartuNasibHijau = Null;",
+            "Set Move Speed(Event Player, 100);",
+            "Destroy Effect(Event Player.EfekNasibCahaya);",
+            "Destroy Effect(Event Player.EfekNasibLingkaran);",
+            "Event Player.ModeKebal = Event Player.ModeKebalTerakhir;",
+            "Event Player.KursorKebal = Event Player.ModeKebalTerakhir;",
+        ):
+            checks.require(token in death_code, f"Nasib: reset morte incompleto: {token}")
         checks.require(
-            code_contains(
-                death_reset[0].body,
-                "Event Player.KartuNasibAktif = False;",
-                "Event Player.KartuNasibMerah = False;",
-                "Event Player.PutaranKartuNasib = 0;",
-                "Event Player.JedaKartuNasib = 0;",
-                "Destroy In-World Text(Event Player.TeksKartuNasib);",
-                "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
-                "Destroy Icon(Event Player.IkonKartuNasib);",
-                "Destroy Icon(Event Player.IkonKartuNasibHijau);",
-                "Event Player.IkonKartuNasib = Null;",
-                "Event Player.IkonKartuNasibHijau = Null;",
-                "Stop Forcing Player Position(Event Player);",
-                "Set Move Speed(Event Player, 100);",
-                "Set Knockback Received(Event Player, 100);",
-                "Destroy Effect(Event Player.EfekNasibCahaya);",
-                "Destroy Effect(Event Player.EfekNasibLingkaran);",
-            ),
-            "Nasib: morte prima della fine non resetta completamente la carta",
+            "Stop Forcing Player Position(Event Player);" not in death_code,
+            "Nasib: cleanup morte contiene ancora forcing posizione",
+        )
+        checks.require(
+            "Set Knockback Received(Event Player, 100);" not in death_code,
+            "Nasib: cleanup morte ripristina ancora un knockback non modificato dalla roulette",
         )
 
     menu_dispatchers = [rule for rule in rules if rule.name.startswith("10 - Menu:")]

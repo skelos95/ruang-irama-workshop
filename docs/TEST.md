@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.4
+# Piano di test — versione 0.6.5
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.4.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.5.
 
 ## Gate statico
 
@@ -291,3 +291,11 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - Incollare l'intero sorgente nel Workshop: non deve comparire `Global variable '47' has an invalid name`.
 - La tabella `variables` deve mostrare `47: IndeksVote`.
 - Aprire Menu 11 e verificare che conteggio, cambio voto e cleanup su cambio squadra continuino a funzionare senza differenze rispetto alla 0.6.2.
+
+
+## Hotfix Try Your Luck 0.6.5
+
+- lo status Menu 10 distingue READY / ROLLING / RED / GREEN (localizzato EN/ID/TH);
+- morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
+- la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
+- l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.

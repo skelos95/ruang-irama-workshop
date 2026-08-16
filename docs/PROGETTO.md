@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.4
+# Note di progetto — versione 0.6.5
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.4.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.5.
 
 ## Architettura generale
 
@@ -299,3 +299,11 @@ Il voto resta una singola variabile `PemainDipilih`, non un array. Scegliendo un
 ## Hotfix import Workshop 0.6.3
 
 La variabile globale di appoggio del conteggio voti resta nello slot `47`, ma il nome è stato abbreviato da `IndeksHitungSuara` a `IndeksVote`. Il cambio è esclusivamente nominale: tutti i `For Global Variable` e gli accessi al tally usano lo stesso slot e mantengono identica la logica voto. Il validatore blocca il ritorno del vecchio identificatore perché il client Overwatch lo rifiuta in fase di importazione con `Global variable '47' has an invalid name`.
+
+
+## Hotfix Try Your Luck 0.6.5
+
+- lo status Menu 10 distingue READY / ROLLING / RED / GREEN (localizzato EN/ID/TH);
+- morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
+- la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
+- l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.
