@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.8.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.9.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.8"
+CURRENT_VERSION = "0.6.9"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -932,15 +932,25 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
     router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
-    checks.equal(len(router_rules), 1, "router GambarMenu")
+    checks.equal(len(router_rules), 1, "renderer persistente GambarMenu")
     if router_rules:
         router = router_rules[0].body
-        checks.require("Create HUD Text" not in router, "GambarMenu deve restare un router leggero")
+        huds = call_texts(router, "Create HUD Text")
+        checks.equal(len(huds), 1, "HUD persistente unico del Menu Arcade")
+        checks.require("Destroy HUD Text" not in mask_strings(router), "GambarMenu non deve distruggere l'HUD durante il cambio pagina")
+        checks.require(code_contains(router, "Event Player.HudMenu == Null", "Event Player.HudMenu = Last Text ID;", "Call Subroutine(TransisiWarnaMenu);"), "GambarMenu non usa creazione lazy persistente")
         for renderer in sorted(expected_renderers):
-            checks.require(
-                f"Call Subroutine({renderer});" in router,
-                f"GambarMenu non instrada {renderer}",
-            )
+            checks.require(f"Call Subroutine({renderer});" not in router, f"GambarMenu richiama ancora il renderer legacy {renderer}")
+        if huds:
+            hud = huds[0]
+            checks.require("Visible To String and Color" in hud, "HUD persistente non rivaluta stringhe/colori")
+            for page in range(-1, 11):
+                checks.require(f"Event Player.HalamanMenu == {page}" in hud, f"HUD persistente privo del ramo pagina {page}")
+            for text in ("4 - REVENGE", "4 - BALAS DENDAM", "4 - ล้างแค้น"):
+                checks.require(
+                    f'Custom String("{text}")' in hud,
+                    "BalasDendam: stato vuoto non localizzato in tutte e tre le lingue",
+                )
 
     dispatcher_candidates = [
         rule

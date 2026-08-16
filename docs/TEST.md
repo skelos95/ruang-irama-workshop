@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.8
+# Piano di test — versione 0.6.9
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.8.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.9.
 
 ## Gate statico
 
@@ -314,3 +314,8 @@ Verifica live obbligatoria: con Menu Arcade aperto, morire e provare Primary Fir
 ## Menu fluido 0.6.8
 
 Verifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Secondary; applicare con Interact, tornare con Reload e usare Jump/Crouch nel Soundtrack. Camera dal menu non deve mostrare il precedente frame di attesa. Verificare Hero Voice NORMAL e Try Your Luck READY->ROLLING. Ripetere nell'overlay Crouch Teleport. Melee 0,5 s resta volutamente invariato.
+
+
+## Cambio pagina immediato 0.6.9
+
+Con Menu Arcade aperto, premere ripetutamente `Interact` e `Reload`: Main/submenu deve cambiare senza flash e senza la pausa percepita di circa mezzo secondo.

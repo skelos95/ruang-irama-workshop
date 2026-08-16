@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.8
+# Note di progetto — versione 0.6.9
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.8.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.9.
 
 ## Architettura generale
 
@@ -322,3 +322,8 @@ Da morto il Menu Arcade non viene chiuso, ma tutte le regole che eseguono `Perin
 ## Ottimizzazione input menu 0.6.8
 
 Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Primary/Secondary e i salti Soundtrack sfruttano la rivalutazione live dell'HUD. Interact Camera non inserisce più frame di attesa, mentre i redraw di applicazione restano per non indebolire Voice, Try Your Luck e gli altri cambi di stato. Anche Crouch Teleport usa release immediato e navigazione live. Transizione colore: 0,18 s.
+
+
+## HUD Arcade persistente 0.6.9
+
+`GambarMenu` crea lazy un solo HUD. Le pagine sono rami live selezionati da `HalamanMenu`; Interact/Reload non ricreano più il testo HUD.
