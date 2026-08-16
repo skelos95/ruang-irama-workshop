@@ -18,21 +18,20 @@ def original_patch() -> str:
 
 code = original_patch()
 
-# replace_region keeps the end marker from the original source, therefore the
-# replacement for rule 18e must not append the 18f marker a second time.
-old = 'source = replace_region(source, luck_rule_start, luck_rule_end, luck_rule + luck_rule_end, "replace Try Your Luck outcome")'
-new = 'source = replace_region(source, luck_rule_start, luck_rule_end, luck_rule, "replace Try Your Luck outcome")'
-if code.count(old) != 1:
-    raise RuntimeError(f"18e/18f correction: expected 1 occurrence, found {code.count(old)}")
-code = code.replace(old, new, 1)
+# replace_region already preserves the end marker from the source.
+needle = "luck_rule + luck_rule_end"
+if code.count(needle) != 1:
+    raise RuntimeError(f"18e/18f correction: expected 1 occurrence, found {code.count(needle)}")
+code = code.replace(needle, "luck_rule", 1)
 
-# Scope the new menu-lock negative test to rule 05c. The source already has a
-# different KartuNasibAktif guard in rule 05, and a global replace could mutate
-# the wrong rule instead of proving the dispatcher lock.
-old = '''    def test_luck_menu_must_stay_open_and_locked(self) -> None:\n        mutated = self.source.replace(\n            "Event Player.KartuNasibAktif == False;",\n            '\"Event Player.KartuNasibAktif == False;\"',\n            1,\n        )\n        self.assertNotEqual(mutated, self.source)\n        checks = validator.Checks()\n        validator.check_arcade_features(checks, mutated, self.rules(mutated))\n        self.assertTrue(any("dispatcher menu non bloccato" in error for error in checks.errors), checks.errors)\n'''
-new = '''    def test_luck_menu_must_stay_open_and_locked(self) -> None:\n        dispatcher_at = self.source.index('rule("05c - ')\n        dispatcher_end = self.source.index('\\nrule("05d - ', dispatcher_at)\n        dispatcher = self.source[dispatcher_at:dispatcher_end]\n        dispatcher2 = dispatcher.replace(\n            "Event Player.KartuNasibAktif == False;",\n            '\"Event Player.KartuNasibAktif == False;\"',\n            1,\n        )\n        self.assertNotEqual(dispatcher2, dispatcher)\n        mutated = self.source[:dispatcher_at] + dispatcher2 + self.source[dispatcher_end:]\n        checks = validator.Checks()\n        validator.check_arcade_features(checks, mutated, self.rules(mutated))\n        self.assertTrue(any("dispatcher menu non bloccato" in error for error in checks.errors), checks.errors)\n'''
-if code.count(old) != 1:
-    raise RuntimeError(f"menu lock test correction: expected 1 occurrence, found {code.count(old)}")
-code = code.replace(old, new, 1)
+# Scope the menu-lock negative test to rule 05c. There is an older roulette
+# guard in rule 05, so a whole-file replace would mutate the wrong occurrence.
+method_start = code.find("    def test_luck_menu_must_stay_open_and_locked(self) -> None:\\n")
+method_end = code.find("\\n    def test_luck_red_must_force_position_and_shrink_ring", method_start)
+if method_start < 0 or method_end < 0:
+    raise RuntimeError("menu lock test correction: method markers not found")
+old_method = code[method_start:method_end]
+new_method = '''    def test_luck_menu_must_stay_open_and_locked(self) -> None:\n        dispatcher_at = self.source.index('rule("05c - ')\n        dispatcher_end = self.source.index('\\nrule("05d - ', dispatcher_at)\n        dispatcher = self.source[dispatcher_at:dispatcher_end]\n        dispatcher2 = dispatcher.replace(\n            "Event Player.KartuNasibAktif == False;",\n            '\"Event Player.KartuNasibAktif == False;\"',\n            1,\n        )\n        self.assertNotEqual(dispatcher2, dispatcher)\n        mutated = self.source[:dispatcher_at] + dispatcher2 + self.source[dispatcher_end:]\n        checks = validator.Checks()\n        validator.check_arcade_features(checks, mutated, self.rules(mutated))\n        self.assertTrue(any("dispatcher menu non bloccato" in error for error in checks.errors), checks.errors)\n'''
+code = code[:method_start] + new_method.replace("\n", "\\n") + code[method_end:]
 
 exec(compile(code, PATCH_PATH, "exec"), {"__name__": "__main__", "__file__": PATCH_PATH})
