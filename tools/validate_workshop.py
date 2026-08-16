@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.2.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.3.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.2"
+CURRENT_VERSION = "0.6.3"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -3101,6 +3101,12 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
 
 def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
+    variables = section_body(source, "variables")
+    checks.require(
+        re.search(r"(?m)^\s*47\s*:\s*IndeksVote\s*$", variables) is not None,
+        "Vote: global slot 47 deve usare il nome client-safe IndeksVote",
+    )
+    checks.require("IndeksHitungSuara" not in source, "Vote: nome legacy non valido dello slot 47 ancora presente")
     checks.require("GambarPilihan" in subroutines and "HitungPilihan" in subroutines, "Vote: subroutine mancanti")
     checks.require("Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);" in clean, "Vote: Menu 11 non registrato")
     renderer = rules_containing(rules, "Subroutine;", "GambarPilihan;")

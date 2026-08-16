@@ -480,5 +480,14 @@ subroutines
         self.assertTrue(any("voto precedente" in error for error in checks.errors), checks.errors)
 
 
+    def test_vote_global_slot_47_name_must_stay_client_safe(self) -> None:
+        mutated = self.source.replace("47: IndeksVote", "47: IndeksHitungSuara", 1)
+        self.assertNotEqual(mutated, self.source)
+        _, _, subroutines = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_vote_menu(checks, mutated, self.rules(mutated), subroutines)
+        self.assertTrue(any("slot 47" in error for error in checks.errors), checks.errors)
+
+
 if __name__ == "__main__":
     unittest.main()

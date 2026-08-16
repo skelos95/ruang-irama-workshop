@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.2
+# Piano di test — versione 0.6.3
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.2.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.3.
 
 ## Gate statico
 
@@ -14,7 +14,7 @@ python tools/validate_workshop.py
 Esito atteso:
 
 ```text
-Ran 28 tests
+Ran 29 tests
 OK
 ```
 
@@ -284,3 +284,10 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - Anche tutti i voti ricevuti dal player che cambia squadra devono essere eliminati, come in un vero leave/rejoin.
 - Menu, Crouch Teleport, camera, Unkillable, voce, cursori e HUD temporanei devono ripartire dai valori iniziali.
 - Votare A e poi B senza cambiare Team: A deve perdere immediatamente un voto e B deve guadagnarne uno; il votante non può contribuire a due target contemporaneamente.
+
+
+## Import Workshop - slot globale 47
+
+- Incollare l'intero sorgente nel Workshop: non deve comparire `Global variable '47' has an invalid name`.
+- La tabella `variables` deve mostrare `47: IndeksVote`.
+- Aprire Menu 11 e verificare che conteggio, cambio voto e cleanup su cambio squadra continuino a funzionare senza differenze rispetto alla 0.6.2.

@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.2
+# Rapporto di validazione — versione 0.6.3
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.2**
+Release tecnica: **CHILL Dedicated Server 0.6.3**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,10 +11,10 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-fee4d4046dee3c26c952fd6deff7b1cdcd76a456
+d31522ae98a6cf7784d2f7cb87684212a342daa1
 ```
 
-## Audit 0.6.2
+## Audit 0.6.3
 
 - team-switch trattato come leave + fresh join con cleanup riutilizzabile e guardia anti-duplicato roster;
 - voto singolo certificato: cambio scelta azzera il target precedente prima di assegnare il nuovo;
@@ -38,14 +38,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 28 tests
+Ran 29 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.2 superati
+OK - controlli statici v0.6.3 superati
 ```
 
 ## GitHub
@@ -73,3 +73,10 @@ Non risultano tag o release legacy da sincronizzare. `.github/maintenance/patch.
 ## Decisione
 
 Il repository è **static-ready, live-pending**: il gate certifica coerenza strutturale e invarianti automatiche, mentre fluidità reale e stress 12-client restano prove da eseguire nel client Overwatch.
+
+
+### Hotfix import 0.6.3
+
+- lo slot globale `47` è dichiarato come `IndeksVote`;
+- `IndeksHitungSuara` è vietato dal validatore;
+- il cambio è nominale e non modifica il tally delle votazioni.

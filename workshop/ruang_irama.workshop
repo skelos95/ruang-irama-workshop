@@ -46,7 +46,7 @@ variables
 		44: PemimpinSuara
 		45: SuaraTerbanyak
 		46: SuaraSeri
-		47: IndeksHitungSuara
+		47: IndeksVote
 	player:
 		0: WaktuMasuk
 		2: SudahDiperiksa
@@ -303,7 +303,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.PemimpinSuara = Null;
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
-		Global.IndeksHitungSuara = 0;
+		Global.IndeksVote = 0;
 		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		Global.DaftarWarna = Array(
 			Color(White),
@@ -3262,13 +3262,13 @@ rule("91p - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 		Global.PemimpinSuara = Null;
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
-		For Global Variable(IndeksHitungSuara, 0, Count Of(Global.PemainManusia), 1);
-			Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], JumlahSuara, Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Global.PemainManusia[Global.IndeksHitungSuara])));
-			If(Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara > Global.SuaraTerbanyak);
-				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara;
-				Global.PemimpinSuara = Global.PemainManusia[Global.IndeksHitungSuara];
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);
+			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Global.PemainManusia[Global.IndeksVote])));
+			If(Global.PemainManusia[Global.IndeksVote].JumlahSuara > Global.SuaraTerbanyak);
+				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksVote].JumlahSuara;
+				Global.PemimpinSuara = Global.PemainManusia[Global.IndeksVote];
 				Global.SuaraSeri = False;
-			Else If(And(Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara == Global.SuaraTerbanyak, Global.SuaraTerbanyak > 0));
+			Else If(And(Global.PemainManusia[Global.IndeksVote].JumlahSuara == Global.SuaraTerbanyak, Global.SuaraTerbanyak > 0));
 				Global.SuaraSeri = True;
 			End;
 		End;
@@ -3428,11 +3428,11 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
 			Global.SlotHUDTerakhir = Count Of(Global.SlotHUDPemain) == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));
 		End;
-		For Global Variable(IndeksHitungSuara, 0, Count Of(Global.PemainManusia), 1);
-			If(Global.PemainManusia[Global.IndeksHitungSuara].PemainDipilih == Global.PemainPembersihan);
-				Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], PemainDipilih, Null);
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);
+			If(Global.PemainManusia[Global.IndeksVote].PemainDipilih == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih, Null);
 			End;
-			Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], KursorPilihan, Count Of(Global.PemainManusia) == 0 ? 0 : Min(Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], KursorPilihan), Count Of(Global.PemainManusia) - 1));
+			Set Player Variable(Global.PemainManusia[Global.IndeksVote], KursorPilihan, Count Of(Global.PemainManusia) == 0 ? 0 : Min(Player Variable(Global.PemainManusia[Global.IndeksVote], KursorPilihan), Count Of(Global.PemainManusia) - 1));
 		End;
 		Call Subroutine(HitungPilihan);
 		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
