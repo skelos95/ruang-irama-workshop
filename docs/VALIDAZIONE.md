@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.10
+# Rapporto di validazione — versione 0.6.11
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.10**
+Release tecnica: **CHILL Dedicated Server 0.6.11**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-8d7e4d2002473772cc64a29b3ff4f281f7abd938
+cd6dbc32ae8a8c3575e819903aa6acdf106573f1
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.10 superati
+OK - controlli statici v0.6.11 superati
 ```
 
 ## GitHub
@@ -109,3 +109,8 @@ Il gate richiede un solo HUD runtime dentro `GambarMenu`, creazione lazy e nessu
 ## Limite regola Workshop 0.6.10
 
 Il gate impedisce il ritorno del renderer monolitico: `GambarMenu` non può contenere `Create HUD Text` o testi delle pagine, deve restare sotto 12 KB di sorgente e deve inizializzare i 13 renderer split. Ogni renderer deve avere visibilità rivalutata sulla propria `HalamanMenu` e registrare il Text ID in `HudMenuArcade`; `TutupMenu` deve distruggere tutte le 13 pagine. Il valore definitivo del limite compilato resta da verificare nel `Script Diagnostics` del client Overwatch.
+
+
+## Hold Melee e cache lazy 0.6.11
+
+Il gate richiede un unico opener Melee con `Wait(0.500, Abort When False)` e nessun secondo `Wait` nella stessa regola. `GambarMenu` deve usare `HalamanHudMenuArcade` + `Array Contains` e non può più usare il gate eager `Count Of(HudMenuArcade) == 0` che pre-caricava tutte le pagine. Ogni renderer registra ID e codice pagina nella cache; la chiusura svuota entrambe.

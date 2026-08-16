@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.10
+# Note di progetto — versione 0.6.11
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.10.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.11.
 
 ## Architettura generale
 
@@ -332,3 +332,8 @@ Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Prim
 ## Menu split e limite regola 0.6.10
 
 `GambarMenu` non contiene più testi o `Create HUD Text`: chiama i 13 renderer solo quando `HudMenuArcade` è vuoto. I renderer salvano i propri Text ID nell'array e usano rivalutazione `Visible To String and Color` con `MenuTerbuka + HalamanMenu`. Questo mantiene il cambio pagina immediato senza concentrare l'intero menu in una regola da 124 KB.
+
+
+## Lazy loading Menu Arcade 0.6.11
+
+La soglia Melee rimane esattamente 0,5 s. `GambarMenu` non pre-carica più 13 HUD alla prima apertura: verifica `HalamanHudMenuArcade` e crea solo la pagina corrente se non è già presente. L'array degli ID HUD e l'array dei codici pagina vengono svuotati insieme alla chiusura o alla pulizia del giocatore.

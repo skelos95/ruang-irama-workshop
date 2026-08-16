@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.10
+# Piano di test — versione 0.6.11
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.10.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.11.
 
 ## Gate statico
 
@@ -324,3 +324,8 @@ Con Menu Arcade aperto, premere ripetutamente `Interact` e `Reload`: Main/submen
 ## Diagnostica limiti Workshop 0.6.10
 
 Dopo l'importazione aprire `Script Diagnostics`: **Size of Largest Rule deve risultare sotto 98 KB** e il Total Element Count deve rimanere sotto 32.768. Poi aprire il Menu Arcade e provare rapidamente Primary/Secondary -> Interact -> Reload su tutte le pagine: il cambio pagina deve restare immediato e senza flash. Chiudere/riaprire il menu più volte per verificare che gli HUD non si accumulino.
+
+
+## Hold Melee 0,5 s / lazy loading 0.6.11
+
+Test live con cronometro percepito: da menu chiuso tenere Melee; il Main Menu deve comparire appena termina il mezzo secondo, senza la pausa aggiuntiva vista in 0.6.10. Rilasciare Melee, aprire una pagina con Interact: al primo accesso viene creato solo quel renderer. Tornare con Reload e riaprire la stessa pagina: nessun nuovo HUD deve essere creato e la risposta deve restare immediata. Verificare inoltre Script Diagnostics: il margine ottenuto in 0.6.10 non deve regredire in modo significativo.

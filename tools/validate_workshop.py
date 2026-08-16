@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.10.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.11.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.10"
+CURRENT_VERSION = "0.6.11"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -950,6 +950,10 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         re.search(r"(?m)^\s*88:\s*HudMenuArcade\s*$", source) is not None,
         "array HudMenuArcade non dichiarato",
     )
+    checks.require(
+        re.search(r"(?m)^\s*89:\s*HalamanHudMenuArcade\s*$", source) is not None,
+        "cache HalamanHudMenuArcade non dichiarata",
+    )
     router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
     checks.equal(len(router_rules), 1, "router split GambarMenu")
     if router_rules:
@@ -958,12 +962,19 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         checks.require("Create HUD Text" not in router_code, "GambarMenu non deve contenere un HUD monolitico")
         checks.require("Custom String" not in router_code, "GambarMenu non deve duplicare i testi delle pagine")
         checks.require(
-            "HudMenuArcade" in router_code and "TransisiWarnaMenu" in router_code,
-            "GambarMenu non usa il gate di creazione split",
+            "HalamanHudMenuArcade" in router_code
+            and "Array Contains" in router_code
+            and "TransisiWarnaMenu" in router_code,
+            "GambarMenu non usa il gate lazy per pagina",
+        )
+        checks.require(
+            "Count Of(Event Player.HudMenuArcade) == 0" not in router_code,
+            "GambarMenu non deve pre-caricare tutte le pagine all'apertura",
         )
         checks.require(len(router.encode("utf-8")) < 12000, "GambarMenu è tornato troppo grande")
-        for renderer in sorted(expected_renderers):
-            checks.require(f"Call Subroutine({renderer});" in router_code, f"GambarMenu non inizializza {renderer}")
+        for renderer, page in page_by_renderer.items():
+            checks.require(f"Event Player.HalamanMenu == {page}" in router_code, f"GambarMenu non instrada pagina {page}")
+            checks.require(f"Call Subroutine({renderer});" in router_code, f"GambarMenu non inizializza {renderer} on demand")
 
     for renderer, page in page_by_renderer.items():
         candidates = rules_containing(rules, "Subroutine;", f"{renderer};")
@@ -983,9 +994,10 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
                 code_contains(
                     body,
                     "Event Player.HudMenuArcade = Append To Array(Event Player.HudMenuArcade, Event Player.HudMenu);",
+                    f"Event Player.HalamanHudMenuArcade = Append To Array(Event Player.HalamanHudMenuArcade, {page});",
                     "Event Player.HudMenu = Null;",
                 ),
-                f"{renderer}: ID HUD non salvato nell'array split",
+                f"{renderer}: ID/pagina HUD non salvati nella cache lazy",
             )
 
     close_rules = rules_containing(rules, "Subroutine;", "TutupMenu;")
@@ -993,7 +1005,27 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     if close_rules:
         close_code = mask_strings(close_rules[0].body)
         checks.require("Event Player.HudMenuArcade = Empty Array;" in close_code, "TutupMenu non svuota HudMenuArcade")
-        checks.require(close_code.count("Destroy HUD Text(Event Player.HudMenuArcade[") == 13, "TutupMenu non distrugge tutte le 13 pagine HUD")
+        checks.require("Event Player.HalamanHudMenuArcade = Empty Array;" in close_code, "TutupMenu non svuota la cache pagine")
+        checks.require(close_code.count("Destroy HUD Text(Event Player.HudMenuArcade[") == 13, "TutupMenu non distrugge tutte le pagine HUD caricate")
+
+    melee_openers = [
+        rule for rule in rules
+        if code_contains(
+            rule.body,
+            "Is Button Held(Event Player, Button(Melee)) == True;",
+            "Wait(0.500, Abort When False);",
+            "Call Subroutine(GambarMenu);",
+        )
+        and code_contains(rule.body, "Event Player.MenuTerbuka = True;")
+    ]
+    checks.equal(len(melee_openers), 1, "apertura Menu Arcade con hold Melee 0,5 s")
+    if melee_openers:
+        melee_code = mask_strings(melee_openers[0].body)
+        checks.equal(melee_code.count("Wait("), 1, "Melee opener deve avere un solo Wait")
+        checks.require(
+            "Wait(0.500, Abort When False);" in melee_code,
+            "Melee opener non usa esattamente 0,5 s",
+        )
 
     dispatcher_candidates = [
         rule

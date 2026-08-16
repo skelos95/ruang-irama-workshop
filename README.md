@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.10** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.11** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -193,3 +193,8 @@ Il Menu Arcade mantiene un unico HUD durante tutta l'apertura. `Interact` e `Rel
 ### Riduzione limiti Workshop 0.6.10
 
 La 0.6.9 aveva reso `GambarMenu` un HUD monolitico con tutte le 13 viste duplicate nella stessa regola; il client ha misurato **124 KB**, oltre il limite Workshop di **98 KB**, con **25.654 elementi** totali. La 0.6.10 elimina quella duplicazione: `GambarMenu` torna a essere un router piccolo e inizializza una volta, per ogni apertura, i 13 renderer già esistenti. Ogni HUD è visibile solo quando `MenuTerbuka` e `HalamanMenu` corrispondono alla sua pagina, quindi `Interact`/`Reload` cambiano pagina senza Destroy/Create. Alla chiusura tutti i 13 HUD vengono distrutti e l'array viene svuotato.
+
+
+### Apertura Melee immediata dopo 0,5 s — 0.6.11
+
+Il `Wait(0.500, Abort When False)` resta invariato: la soglia di hold non viene accorciata. Il ritardo extra osservato live dipendeva dal fatto che allo scadere dei 0,5 s `GambarMenu` creava tutte le 13 pagine HUD in sequenza. Ora il router usa una cache lazy (`HalamanHudMenuArcade`): all'apertura crea soltanto il Main Menu; ogni submenu viene creato soltanto al primo accesso e poi riutilizzato fino alla chiusura. `Reload` verso il Main e i ritorni a pagine già visitate non ricreano HUD.
