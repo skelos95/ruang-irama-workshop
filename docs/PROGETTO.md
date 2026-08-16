@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.9
+# Note di progetto — versione 0.6.10
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.9.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.10.
 
 ## Architettura generale
 
@@ -327,3 +327,8 @@ Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Prim
 ## HUD Arcade persistente 0.6.9
 
 `GambarMenu` crea lazy un solo HUD. Le pagine sono rami live selezionati da `HalamanMenu`; Interact/Reload non ricreano più il testo HUD.
+
+
+## Menu split e limite regola 0.6.10
+
+`GambarMenu` non contiene più testi o `Create HUD Text`: chiama i 13 renderer solo quando `HudMenuArcade` è vuoto. I renderer salvano i propri Text ID nell'array e usano rivalutazione `Visible To String and Color` con `MenuTerbuka + HalamanMenu`. Questo mantiene il cambio pagina immediato senza concentrare l'intero menu in una regola da 124 KB.

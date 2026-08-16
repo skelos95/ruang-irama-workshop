@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.9
+# Piano di test — versione 0.6.10
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.9.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.10.
 
 ## Gate statico
 
@@ -319,3 +319,8 @@ Verifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Seconda
 ## Cambio pagina immediato 0.6.9
 
 Con Menu Arcade aperto, premere ripetutamente `Interact` e `Reload`: Main/submenu deve cambiare senza flash e senza la pausa percepita di circa mezzo secondo.
+
+
+## Diagnostica limiti Workshop 0.6.10
+
+Dopo l'importazione aprire `Script Diagnostics`: **Size of Largest Rule deve risultare sotto 98 KB** e il Total Element Count deve rimanere sotto 32.768. Poi aprire il Menu Arcade e provare rapidamente Primary/Secondary -> Interact -> Reload su tutte le pagine: il cambio pagina deve restare immediato e senza flash. Chiudere/riaprire il menu più volte per verificare che gli HUD non si accumulino.
