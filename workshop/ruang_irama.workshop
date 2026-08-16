@@ -1235,6 +1235,59 @@ rule("05d - Menu: Lepaskan pengatur setelah semua masukan dilepas")
 	}
 }
 
+rule("05e - Menu: Muat halaman lain bertahap setelah menu utama tampil")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.BotOtomatis == False;
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Event Player.MenuTerbuka == True;
+		Count Of(Event Player.HalamanHudMenuArcade) > 0;
+		Count Of(Event Player.HalamanHudMenuArcade) < 13;
+	}
+
+	actions
+	{
+		"Main Menu sudah tampil. Buat maksimal satu HUD tersembunyi per siklus agar submenu siap tanpa pop dan tanpa beban besar dalam satu tick."
+		Wait(0.016, Abort When False);
+		If(Array Contains(Event Player.HalamanHudMenuArcade, 0) == False);
+			Call Subroutine(GambarMusik);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 1) == False);
+			Call Subroutine(GambarKamera);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 2) == False);
+			Call Subroutine(GambarWarna);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 3) == False);
+			Call Subroutine(GambarBahasa);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 4) == False);
+			Call Subroutine(GambarBalasDendam);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 5) == False);
+			Call Subroutine(GambarKebal);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 6) == False);
+			Call Subroutine(GambarSuara);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 7) == False);
+			Call Subroutine(GambarIkon);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 8) == False);
+			Call Subroutine(GambarSakelarTeleportasi);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 9) == False);
+			Call Subroutine(GambarPrivasiInspeksi);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 10) == False);
+			Call Subroutine(GambarNasib);
+		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 11) == False);
+			Call Subroutine(GambarPilihan);
+		End;
+		Loop If Condition Is True;
+	}
+}
+
 rule("06 - Menu: Tembakan utama memilih berikutnya")
 {
 	event

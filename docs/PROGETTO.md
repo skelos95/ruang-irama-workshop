@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.13
+# Note di progetto — versione 0.6.14
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.13.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.14.
 
 ## Architettura generale
 
@@ -347,3 +347,8 @@ Il Menu Arcade non esegue più `Disallow Button` su Melee e Jump. Il dispatcher 
 ## Palette menu 0.6.13
 
 `TransisiWarnaMenu` usa RGB fissi unici per 0,1,3..11; il menu 2 Name Color continua a seguire `Global.DaftarWarnaRGB[Event Player.KursorWarna]`. Main e submenu condividono la stessa identità cromatica e la durata del chase resta 0,18 s.
+
+
+## Preload HUD progressivo 0.6.14
+
+La cache lazy resta la sorgente di verità, ma dopo la creazione del Main Menu (`HalamanHudMenuArcade` non vuoto) la regola 05e prepara le pagine 0..11 in ordine. Ogni iterazione inizia con un wait da 0,016 s e chiama al massimo un renderer, distribuendo la costruzione degli HUD su frame differenti. Le pagine restano nascoste finché `HalamanMenu` non coincide; non viene duplicato alcun `Create HUD Text` dentro il preload.

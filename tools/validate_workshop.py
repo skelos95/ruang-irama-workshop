@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.13.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.14.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.13"
+CURRENT_VERSION = "0.6.14"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -954,6 +954,53 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         re.search(r"(?m)^\s*89:\s*HalamanHudMenuArcade\s*$", source) is not None,
         "cache HalamanHudMenuArcade non dichiarata",
     )
+    preload_rules = [
+        rule for rule in rules
+        if rule.name.startswith("05e - Menu: Muat halaman lain bertahap")
+    ]
+    checks.equal(len(preload_rules), 1, "preload progressivo HUD Arcade")
+    if preload_rules:
+        preload = preload_rules[0].body
+        preload_code = mask_strings(preload)
+        checks.require(
+            code_contains(
+                preload,
+                "Event Player.MenuTerbuka == True;",
+                "Count Of(Event Player.HalamanHudMenuArcade) > 0;",
+                "Count Of(Event Player.HalamanHudMenuArcade) < 13;",
+                "Wait(0.016, Abort When False);",
+                "Loop If Condition Is True;",
+            ),
+            "preload progressivo non è bounded alla sessione Menu Arcade",
+        )
+        checks.require(
+            "Create HUD Text" not in preload_code,
+            "preload progressivo deve delegare ai renderer senza duplicare HUD",
+        )
+        checks.require(
+            "Call Subroutine(GambarUtama);" not in preload_code,
+            "preload progressivo non deve ricreare il Main Menu",
+        )
+        progressive_renderers = (
+            "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
+            "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
+            "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarPilihan",
+        )
+        for page, renderer in enumerate(progressive_renderers):
+            checks.require(
+                f"Array Contains(Event Player.HalamanHudMenuArcade, {page}) == False" in preload_code,
+                f"preload progressivo privo del gate pagina {page}",
+            )
+            checks.require(
+                f"Call Subroutine({renderer});" in preload_code,
+                f"preload progressivo non prepara {renderer}",
+            )
+        checks.equal(
+            preload_code.count("Call Subroutine("),
+            12,
+            "preload progressivo deve creare al massimo una delle 12 pagine per iterazione",
+        )
+
     router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
     checks.equal(len(router_rules), 1, "router split GambarMenu")
     if router_rules:

@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.13
+# Rapporto di validazione — versione 0.6.14
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.13**
+Release tecnica: **CHILL Dedicated Server 0.6.14**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-4fa0d5e5e3cc09b42092991c927cc2026fa7f906
+8aa12640d4d3c3c5df6a60cf70e5e6e838005a4e
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.13 superati
+OK - controlli statici v0.6.14 superati
 ```
 
 ## GitHub
@@ -124,3 +124,8 @@ Il gate certifica che l'apertura Menu non disabiliti Melee/Jump, che Ability 1/2
 ## Palette menu 0.6.13
 
 Il gate richiede 11 RGB fissi tutti diversi, mantiene Name Color dinamico e conserva `0.180, Destination and Duration`.
+
+
+## Preload progressivo 0.6.14
+
+Il gate richiede una sola regola 05e di preload, attiva soltanto con Menu Arcade aperto e cache già iniziata, con `Count Of(HalamanHudMenuArcade) < 13`, un `Wait(0.016, Abort When False)` prima di ogni iterazione e 12 renderer delegati senza `Create HUD Text` diretto. `GambarUtama` non può essere richiamato dal preload e il router lazy resta presente come fallback.

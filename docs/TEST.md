@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.13
+# Piano di test — versione 0.6.14
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.13.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.14.
 
 ## Gate statico
 
@@ -339,3 +339,8 @@ Test live: aprire il Menu Arcade e verificare che un tap Melee esegua il normale
 ## Palette menu 0.6.13
 
 Scorrere tutte le 12 voci: 0,1,3..11 devono avere tonalità chiaramente diverse con transizione sfumata. Aprire ogni submenu e verificare che mantenga il colore della voce. Name Color deve invece seguire il colore evidenziato.
+
+
+## Preload progressivo sottomenu 0.6.14
+
+Test live: aprire il Menu Arcade e attendere circa 0,2–0,3 s senza entrare in un sottomenu; poi visitare rapidamente tutte le pagine con Interact/Reload. Nessuna pagina dovrebbe più comparire con il precedente pop di creazione al primo accesso. Ripetere chiudendo e riaprendo il menu più volte, verificando che il Main continui ad apparire subito dopo 0,5 s e che Script Diagnostics non mostri regressioni rilevanti. Come stress test, aprire immediatamente un sottomenu appena appare il Main: il router lazy deve continuare a garantire la corretta visualizzazione anche se il preload non è ancora arrivato a quella pagina.
