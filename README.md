@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo README descrive lo **stato funzionale attuale** del Workshop dopo gli aggiornamenti successivi.
+La versione **0.6.0** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -16,7 +16,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
   3. `2 - Name Color` — **32 colori**.
   4. `3 - HUD Language` — English / Bahasa Indonesia / ไทย.
   5. `4 - Revenge` — debiti basati sulle kill dirette ricevute.
-  6. `5 - Unkillable` — non disponibile nello Spawn Room.
+  6. `5 - Unkillable` — OFF / 1 HP / FULL HP; solo 1 HP non è disponibile nello Spawn Room.
   7. `6 - Hero Voice` — 5 preset vocali.
   8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
   9. `8 - Crouch Teleport` — abilita/disabilita l’HUD Teleport su Crouch; default OFF.
@@ -44,7 +44,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
 | 2 | Name Color | 32 colori |
 | 3 | HUD Language | EN / ID / TH |
 | 4 | Revenge | debiti kill dirette |
-| 5 | Unkillable: 1 HP | ON / OFF |
+| 5 | Unkillable | OFF / 1 HP / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
@@ -86,11 +86,11 @@ Il runtime è stato alleggerito per una lobby piena:
 - pool HUD riutilizzabile `0..11`;
 - cleanup completo join/leave;
 - cache `SlotHUDTerakhir` per evitare sort continui nei roster;
-- inspection Crouch a **5 Hz**;
+- inspection Crouch a **4 Hz**;
 - refresh passivi Camera/Revenge/Teleport a **1 Hz**;
-- contatore minuti ogni **5 s**;
+- contatore minuti ogni **10 s**;
 - cache Spawn Room a **1 Hz**;
-- un solo loop RGB globale a 10 Hz;
+- un solo loop RGB globale a 8 Hz;
 - un solo raycast Camera;
 - nessun loop per-player dedicato alla transizione colore menu.
 
@@ -122,7 +122,7 @@ L'icona mantiene il proprio colore nativo e viene mostrata prima dell'icona eroe
 - branch operativo: `main`;
 - workflow permanenti: `validate-workshop.yml` e `maintenance-patch.yml`;
 - nessun workflow temporaneo permanente;
-- test statici: 20 unit test + validatore Workshop.
+- test statici: 24 unit test + validatore Workshop.
 
 ## Stato validazione
 
@@ -141,3 +141,8 @@ Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e
 **Correzione Spawn Room:** FULL HP resta attiva nella Spawn Room. Solo 1 HP viene disattivata automaticamente. Il passaggio 1 HP → FULL HP porta subito la salute al massimo e Damage Received a 0%; FULL HP → 1 HP ripristina Damage Received a 100% e porta la salute a 1.
 
 **Feedback visivo:** i feedback delle impostazioni non riproducono più suoni. `EfekTerapkan` e `EfekPulihkan` usano esclusivamente `Ring Explosion` con `Global.RGB`.
+
+
+### Audit 0.6.0
+
+La manutenzione 0.6.0 rimuove stato Workshop non più usato, unifica il cleanup Menu 10 nel Player Left, verifica automaticamente che ogni variabile player dichiarata sia inizializzata in `SiapkanPemain`, controlla riferimenti stale e titoli regola duplicati, localizza i minuti roster EN/ID/TH e rende il cambio target della camera diretto senza `Stop Camera` intermedio. Il repository mantiene un solo branch operativo (`main`) e soltanto i due workflow permanenti.

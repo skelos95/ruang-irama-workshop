@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.5.5.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.0.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.5.5"
+CURRENT_VERSION = "0.6.0"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1232,6 +1232,15 @@ def check_camera(
     ]
     checks.equal(len(menu_camera_rules), 1, "Interact camera nel menu resta gestito dal dispatcher")
 
+    camera_subroutines = rules_containing(rules, "Subroutine;", "MulaiKamera;")
+    checks.equal(len(camera_subroutines), 1, "camera: una sola subroutine MulaiKamera")
+    if camera_subroutines:
+        camera_body = mask_strings(camera_subroutines[0].body)
+        checks.require(
+            "Stop Camera(Event Player);" not in camera_body,
+            "camera: MulaiKamera non deve fare Stop Camera prima di Start Camera; causa micro-scatto",
+        )
+
 
 def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
     checks.equal(
@@ -1336,8 +1345,8 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
 
     if refresh:
         checks.require(
-        "Wait(0.200, Abort When False);" in source,
-        "refresh Crouch non a 0,20 s",
+        "Wait(0.250, Abort When False);" in source,
+        "refresh Crouch non a 0,25 s",
     )
 
     cleanup = [
@@ -1701,11 +1710,12 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         (52, "KursorKebal"),
         (53, "IndeksSuara"),
         (54, "KursorSuara"),
-        (76, "IkonKartuNasib"),
-        (77, "IkonKartuNasibHijau"),
-        (78, "TeksKartuNasibKanan"),
-        (79, "ModeKameraSebelumNasib"),
-        (80, "TargetKameraSebelumNasib"),
+        (75, "IkonKartuNasib"),
+        (76, "IkonKartuNasibHijau"),
+        (77, "TeksKartuNasibKanan"),
+        (78, "KursorVoto"),
+        (79, "TargetVoto"),
+        (80, "NumeroVoti"),
     ):
         checks.require(
             player_table is not None
@@ -1836,14 +1846,8 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "Nasib: cleanup icone persistenti incompleto",
     )
 
-    checks.require(
-        "Event Player.PosisiKartuNasib = Eye Position(Event Player) + Facing Direction Of(Event Player) * 4;" in mask_strings(source),
-        "Nasib: cache effetto non segue il mirino del proprietario",
-    )
-    checks.require(
-        "Chase Player Variable Over Time(Event Player, PosisiKartuNasib" not in mask_strings(source),
-        "Nasib: la vecchia animazione dal terreno non deve restare attiva",
-    )
+    for obsolete in ("PosisiKartuNasib", "ModeKameraSebelumNasib", "TargetKameraSebelumNasib"):
+        checks.require(obsolete not in source, f"Nasib: stato obsoleto ancora presente: {obsolete}")
     checks.require(
         "Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;" in clean
         and "Event Player.PutaranKartuNasib = Random Integer(20, 24);" in clean
@@ -1860,7 +1864,6 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
                 "Event Player.KartuNasibMerah = False;",
                 "Event Player.PutaranKartuNasib = 0;",
                 "Event Player.JedaKartuNasib = 0;",
-                "Event Player.PosisiKartuNasib = Vector(0, 0, 0);",
                 "Destroy In-World Text(Event Player.TeksKartuNasib);",
                 "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
                 "Destroy Icon(Event Player.IkonKartuNasib);",
@@ -2361,8 +2364,8 @@ def check_rgb_system(checks: Checks, source: str, rules: list[Rule]) -> None:
         rule.body,
         "Ongoing - Global;",
         "Global.RGB = Custom Color(",
-        "Wait(0.100, Ignore Condition);",
-        "Global.RGBFase = (Global.RGBFase + 3) % 1530;",
+        "Wait(0.125, Ignore Condition);",
+        "Global.RGBFase = (Global.RGBFase + 3.750) % 1530;",
         "Loop If Condition Is True;",
     )]
     checks.equal(len(rgb_rules), 1, "loop RGB globale")
@@ -2498,6 +2501,71 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
         checks.require("Global.RGB" not in renderers[0].body, "menu 7: RGB deve restare fuori dal menu icone")
         checks.require("NOTHING" in renderers[0].body and "TIDAK ADA" in renderers[0].body and "ไม่มี" in renderers[0].body, "menu 7: voce niente non localizzata")
 
+
+
+
+def check_lifecycle_hygiene(
+    checks: Checks,
+    source: str,
+    rules: list[Rule],
+    player_names: set[str],
+) -> None:
+    clean = mask_strings(source)
+    names = [rule.name for rule in rules]
+    checks.equal(len(names), len(set(names)), "audit lifecycle: titoli regola duplicati")
+
+    for dead in (
+        "HudInfoKiri", "HudInfoKanan", "WaktuTercatat",
+        "PosisiKartuNasib", "ModeKameraSebelumNasib", "TargetKameraSebelumNasib",
+    ):
+        checks.require(dead not in source, f"audit lifecycle: stato morto ancora presente {dead}")
+
+    setup = rules_containing(rules, "Subroutine;", "SiapkanPemain;")
+    checks.equal(len(setup), 1, "audit lifecycle: una sola SiapkanPemain")
+    if setup:
+        body = mask_strings(setup[0].body)
+        for name in sorted(player_names):
+            checks.require(
+                re.search(rf"Event Player\.{re.escape(name)}\s*=", body) is not None,
+                f"audit lifecycle: variabile player non inizializzata in SiapkanPemain: {name}",
+            )
+
+    join = [rule for rule in rules if code_contains(rule.body, "Player Joined Match;", "Call Subroutine(SiapkanPemain);")]
+    fallback = [rule for rule in rules if code_contains(rule.body, "Ongoing - Each Player;", "Event Player.SudahSiap == False;", "Call Subroutine(SiapkanPemain);")]
+    checks.equal(len(join), 1, "audit lifecycle: init Player Joined")
+    checks.equal(len(fallback), 1, "audit lifecycle: init player già presenti")
+
+    leave = [rule for rule in rules if code_contains(rule.body, "Player Left Match;")]
+    checks.equal(len(leave), 1, "audit lifecycle: un solo cleanup Player Left")
+    if leave:
+        body = mask_strings(leave[0].body)
+        capture = body.find("Global.PemainPembersihan = Event Player;")
+        checks.require(capture >= 0, "audit lifecycle: leave non cattura identità")
+        for token in (
+            "Destroy In-World Text(Event Player.TeksKartuNasib);",
+            "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
+            "Destroy Icon(Event Player.IkonKartuNasib);",
+            "Destroy Icon(Event Player.IkonKartuNasibHijau);",
+        ):
+            position = body.find(token)
+            checks.require(0 <= position < capture, f"audit lifecycle: cleanup Nasib non universale prima del lookup: {token}")
+        for array_name in (
+            "HudKiriPemain", "HudKananPemain", "HudMenuPemain", "TeksDuniaPemain",
+            "TeksDiriPemain", "SlotHUDPemain", "PemainManusia",
+        ):
+            checks.require(
+                f"Modify Global Variable({array_name}, Remove From Array By Index, Global.IndeksKeluar);" in body,
+                f"audit lifecycle: array parallelo non ripulito al leave: {array_name}",
+            )
+        for token in (
+            "TargetVoto == Global.PemainPembersihan",
+            "TargetKamera == Global.PemainPembersihan",
+            "TargetInspeksi == Global.PemainPembersihan",
+            "TargetTeleportasiTerkunci == Global.PemainPembersihan",
+            "TargetBalasDendamDipilih == Global.PemainPembersihan",
+            "TargetBalasDendamTerkunci == Global.PemainPembersihan",
+        ):
+            checks.require(token in body, f"audit lifecycle: riferimento stale non ripulito: {token}")
 
 
 def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule]) -> None:
@@ -2654,10 +2722,10 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
 
     expected = (
         ("02c - Ruang Muncul:", "Wait(1, Abort When False);", "spawn cache 1Hz"),
-        ("03 - Waktu:", "Wait(5, Ignore Condition);", "minuti 0,2Hz"),
+        ("03 - Waktu:", "Wait(10, Ignore Condition);", "minuti 0,1Hz"),
         ("07b - Menu kamera:", "Wait(1, Abort When False);", "camera passive 1Hz"),
         ("07c - Menu Balas Dendam:", "Wait(1, Abort When False);", "revenge passive 1Hz"),
-        ("14 - Intip Pahlawan:", "Wait(0.200, Abort When False);", "inspection 5Hz"),
+        ("14 - Intip Pahlawan:", "Wait(0.250, Abort When False);", "inspection 4Hz"),
         ("19f - Teleportasi Jongkok:", "Wait(1, Abort When False);", "teleport passive 1Hz"),
     )
     for prefix, token, label in expected:
@@ -2748,7 +2816,7 @@ def check_localization_and_indonesian_naming(checks: Checks, source: str, rules:
         " - Global:", "lento", "Respawn Jump:", "Unkillable:", "Teleport Crouch:",
         "Dispatcher input", "dispatcher", "separato", "Riattiva", "destinazione", "precedente",
         "successiva", "esegue il teletrasporto", "lista target", "senza ridisegno", "Chiudi appena",
-        "overlay selama Crouch", "scatto",
+        "overlay selama Crouch", "scatto", "vote", "leader", "Roulette",
     )
     names = "\n".join(rule.name for rule in rules)
     for fragment in banned_rule_fragments:
@@ -2788,6 +2856,17 @@ def check_localization_and_indonesian_naming(checks: Checks, source: str, rules:
         "6 - เสียงฮีโร่",
     ):
         checks.require(token in source, f"localizzazione HUD mancante: {token}")
+
+    for token in (
+        'Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi)',
+        'Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi)',
+        'Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)',
+        '11 - PILIH PEMAIN',
+        'PILIHAN KAMU',
+        'SUARA',
+    ):
+        checks.require(token in source, f"localizzazione roster/voto mancante: {token}")
+    checks.require("11 - VOTE PEMAIN" not in source and "VOTE KAMU" not in source, "ramo Indonesia Menu 11 usa ancora testo inglese")
 
     for stale in (
         "DAFTAR PEMAIN & WAKTU CHILL", "SOUNDTRACK PEMAIN", "belum pilih soundtrack",
@@ -2964,7 +3043,8 @@ def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines:
     checks.equal(len(renderer), 1, "Vote: renderer")
     if renderer:
         raw = renderer[0].body
-        checks.require("11 - VOTE PLAYER" in raw and "11 - VOTE PEMAIN" in raw and "11 - โหวตผู้เล่น" in raw, "Vote: localizzazione incompleta")
+        checks.require("11 - VOTE PLAYER" in raw and "11 - PILIH PEMAIN" in raw and "11 - โหวตผู้เล่น" in raw, "Vote: localizzazione incompleta")
+        checks.require("PILIHAN KAMU" in raw and "SUARA" in raw, "Vote: ramo Bahasa Indonesia incompleto")
         checks.require(raw.count("NumeroVoti") >= 12, "Vote: lista conteggi incompleta")
     tally = rules_containing(rules, "Subroutine;", "HitungPilihan;")
     checks.equal(len(tally), 1, "Vote: tally")
@@ -2999,6 +3079,7 @@ def main() -> None:
         check_timer_and_match(checks, source, rules)
         check_instant_start(checks, source, rules)
         check_bot_lifecycle(checks, source, rules)
+        check_lifecycle_hygiene(checks, source, rules, player_names)
         check_menus(checks, source, rules, subroutines)
         check_menu_palette_and_name_colors(checks, source, rules)
         check_runtime_efficiency_audit(checks, source, rules)

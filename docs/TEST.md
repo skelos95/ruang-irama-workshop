@@ -1,6 +1,6 @@
-# Piano di test — versione 0.5.5
+# Piano di test — versione 0.6.0
 
-Questa matrice descrive lo **stato funzionale corrente** del Workshop, inclusi gli aggiornamenti successivi alla release tecnica 0.5.5.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.0.
 
 ## Gate statico
 
@@ -14,7 +14,7 @@ python tools/validate_workshop.py
 Esito atteso:
 
 ```text
-Ran 20 tests
+Ran 24 tests
 OK
 ```
 
@@ -24,20 +24,24 @@ OK
 - Verificare che non compaiano errori parser.
 - Confermare che il server parta senza countdown nativo lungo.
 
-## 8 menu Arcade
+## 12 menu Arcade
 
-Aprire il Menu Arcade con Melee 0,5 s e verificare esattamente 8 voci:
+Aprire il Menu Arcade con Melee 0,5 s e verificare esattamente 12 voci:
 
 1. Soundtrack
 2. Third-Person Camera
 3. Name Color
 4. HUD Language
 5. Revenge
-6. Unkillable: 1 HP
+6. Unkillable (OFF / 1 HP / FULL HP)
 7. Hero Voice
 8. Player Icon
+9. Crouch Teleport
+10. Crouch Privacy
+11. Try Your Luck
+12. Vote Player
 
-Teleport non deve comparire come nona voce del Main Menu.
+Teleport operativo resta nell'overlay Crouch; Menu 8 abilita/disabilita soltanto quell'overlay.
 
 ## Navigazione menu
 
@@ -49,7 +53,7 @@ Teleport non deve comparire come nona voce del Main Menu.
 
 ## Transizione colori menu
 
-- Scorrere rapidamente tra tutte le 8 voci.
+- Scorrere rapidamente tra tutte le 12 voci.
 - Il colore principale deve sfumare in circa 0,35 s senza scatti.
 - Entrando nel sottomenu, il colore principale deve restare coerente con la voce del Main Menu.
 - Gli input devono mantenere il proprio colore fisso.
@@ -98,7 +102,9 @@ Lista sinistra:
 - icona personale opzionale;
 - icona eroe;
 - nome player;
-- `N MIN`.
+- EN: `N MIN`;
+- ID: `N MENIT`;
+- TH: `N นาที`.
 
 Lista destra:
 
@@ -121,7 +127,7 @@ Per ogni lingua verificare:
 
 - HUD superiore;
 - roster;
-- tutti gli 8 menu;
+- tutti i 12 menu;
 - diagnostics;
 - Small Message Camera;
 - Soundtrack;
@@ -142,6 +148,7 @@ Controllare soprattutto wrapping e glifi Thai.
 - Dal Menu Camera provare OFF, self e target remoti.
 - Se il target esce, la camera deve tornare a uno stato valido.
 - Verificare collisione pareti e pitch estremo.
+- Passare rapidamente self → target → altro target: non deve comparire un frame in prima persona fra due `Start Camera`.
 
 ## Crouch inspection
 
@@ -150,7 +157,7 @@ Controllare soprattutto wrapping e glifi Thai.
 - Non deve mostrare percentuale Ultimate.
 - Verificare target dietro ostacoli secondo il comportamento previsto dalla selezione attuale.
 - Verificare cleanup al rilascio Crouch, apertura menu, morte, despawn e cambio camera.
-- Il refresh a 5 Hz deve risultare visivamente reattivo.
+- Il refresh a 4 Hz deve risultare visivamente reattivo.
 
 ## Teleport Crouch
 
@@ -163,13 +170,14 @@ Controllare soprattutto wrapping e glifi Thai.
 - Player target: posizione camminabile vicina al target.
 - Se il target esce durante l'azione, il teleport deve annullarsi senza retarget accidentale.
 
-## Unkillable: 1 HP
+## Unkillable — OFF / 1 HP / FULL HP
 
 - Non deve essere attivabile nello Spawn Room.
 - Fuori spawn: applicare ON e verificare 1 HP + status Unkillable.
 - Curare fino al massimo: la salute deve tornare a 1 HP.
 - Entrare nello Spawn Room: auto-disattivazione e ripristino salute/status.
 - OFF manuale: ripristino corretto.
+- FULL HP deve restare attivo anche nello Spawn Room, con Halo RGB e salute piena.
 
 ## Hero Voice
 
@@ -260,3 +268,10 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - **Feedback senza audio:** applicare e ripristinare più impostazioni del Menu Arcade; non deve essere riprodotto alcun effetto sonoro di conferma.
 
 - **Ring RGB unico:** applicazione e ripristino devono mostrare solo `Ring Explosion` RGB sul giocatore; nessuna Good Explosion o altra forma visiva di feedback.
+
+
+## Menu 10 / 11
+
+- Try Your Luck: attivazione chiude e blocca il menu, forza Unkillable OFF e non cambia la camera; morte/leave devono distruggere entrambi i bracket e Heart/Skull senza oggetti orfani.
+- Vote Player: lista soli umani, self-vote consentito, conteggi aggiornati nel Menu 11; pareggio al primo posto = nessuna CHILL STAR; leave del target cancella i voti verso di lui e ricalcola.
+- Ripetere join/leave mentre Menu 11 è aperto e verificare cursori validi e nessun riferimento stale.

@@ -378,5 +378,58 @@ subroutines
                 self.assertTrue(checks.errors)
 
 
+    def test_lifecycle_requires_every_player_variable_initialized(self) -> None:
+        setup_at = self.source.index('rule("94 - ')
+        tail = self.source[setup_at:]
+        tail2 = tail.replace(
+            "Event Player.TargetVoto = Null;",
+            '"Event Player.TargetVoto = Null;"',
+            1,
+        )
+        self.assertNotEqual(tail2, tail)
+        mutated = self.source[:setup_at] + tail2
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("TargetVoto" in error and "non inizializzata" in error for error in checks.errors), checks.errors)
+
+    def test_obsolete_luck_state_is_rejected(self) -> None:
+        mutated = self.source.replace(
+            "\t\t80: NumeroVoti\n",
+            "\t\t80: NumeroVoti\n\t\t84: PosisiKartuNasib\n",
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("stato obsoleto" in error for error in checks.errors), checks.errors)
+
+    def test_camera_subroutine_must_not_stop_before_start(self) -> None:
+        camera_at = self.source.index('rule("93 - ')
+        tail = self.source[camera_at:]
+        tail2 = tail.replace(
+            "\t\tStart Camera(Event Player,",
+            "\t\tStop Camera(Event Player);\n\t\tStart Camera(Event Player,",
+            1,
+        )
+        self.assertNotEqual(tail2, tail)
+        mutated = self.source[:camera_at] + tail2
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_camera(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("micro-scatto" in error for error in checks.errors), checks.errors)
+
+    def test_roster_minutes_need_three_languages(self) -> None:
+        mutated = self.source.replace(
+            'Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi)',
+            'Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi)',
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_localization_and_indonesian_naming(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("localizzazione roster/voto" in error for error in checks.errors), checks.errors)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,110 +1,72 @@
-# Rapporto di validazione — versione 0.5.5
+# Rapporto di validazione — versione 0.6.0
 
-Data: 2026-08-15
+Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.5.5**
+Release tecnica: **CHILL Dedicated Server 0.6.0**
 
 Stato corrente: **static-ready, live-pending**.
-
-Questo rapporto descrive il feature set attuale del repository pur mantenendo il numero versione tecnico richiesto dal validatore esistente.
 
 ## Revisione Workshop
 
 Blob Git del sorgente Workshop validato:
 
 ```text
-9f93f26dd8098f355f36befe4f5ea7dfedcb730f
+7b9c74ca0c5255c5587856cffc73a99fa466de2f
 ```
 
-## Controlli statici correnti
+## Audit 0.6.0
 
 Il gate verifica:
 
-- sintassi e struttura Workshop;
-- dichiarazioni e regole senza duplicati invalidi;
-- 100 generi;
-- 3 lingue EN / ID / TH;
-- **12 menu Arcade** (`0..10`);
-- **32 Name Color** con array nomi allineati;
-- **37 Player Icon** (`Nothing` + 36 icone);
-- Menu 5 Unkillable/Kebal 1 HP;
-- Menu 6 Hero Voice;
-- Menu 7 Player Icon;
-- Menu 10 Try Your Luck: due bracket separati a ±0,30 m, Heart/Skull persistenti con Update Every Frame; la roulette non modifica più la camera, quindi in 3P non esegue Stop Camera o switch 3P→1P; Unkillable OFF, menu bloccato, reset alla morte, verde cura completa, rosso uccide dopo countdown 3 s, esito 50/50;
-- Teleport su overlay Crouch, non nel Main Menu;
-- feedback menu idempotente;
-- transizione colore menu Vector RGB a circa 0,35 s;
-- RGB globale pastel/neon lento;
-- pool HUD `0..11` e cleanup join/leave;
-- cache `SlotHUDTerakhir`;
-- Spawn cache 1 Hz;
-- minuti lobby ogni 5 s;
-- Camera/Revenge/Teleport passivi a 1 Hz;
-- Crouch inspection a 5 Hz;
-- un solo raycast Camera;
-- nomenclatura personalizzata Bahasa Indonesia;
-- localizzazione HUD/Small Message nelle tre lingue;
-- assenza di scoring/vittoria built-in;
-- workflow consentiti limitati ai due permanenti.
+- struttura Workshop, delimitatori, dichiarazioni e titoli regola senza duplicati;
+- inizializzazione esplicita in `SiapkanPemain` di ogni variabile player dichiarata;
+- un solo percorso Player Left con cleanup degli array HUD/IWT, slot HUD, voti e riferimenti Camera/Revenge/Teleport/Inspection;
+- assenza dello stato morto rimosso (`HudInfoKiri`, `HudInfoKanan`, `WaktuTercatat`, `PosisiKartuNasib`, `ModeKameraSebelumNasib`, `TargetKameraSebelumNasib`);
+- 100 generi, 12 menu (`0..11`), 32 Name Color e 37 Player Icon;
+- HUD e Small Message EN / Bahasa Indonesia / ไทย, inclusi minuti roster `MIN / MENIT / นาที`;
+- titoli regola personalizzati in Bahasa Indonesia;
+- Menu 5 OFF / 1 HP / FULL HP: Warning rosso per 1 HP, Halo RGB per FULL HP, Spawn Room reset solo 1 HP;
+- Menu 10: bracket + Heart/Skull persistenti, nessun cambio camera, Unkillable OFF, reset morte/leave, 50/50;
+- Menu 11: soli umani, self-vote, conteggio event-driven, pareggio = nessuna CHILL STAR;
+- Camera con un solo raycast e `MulaiKamera` senza `Stop Camera` immediatamente prima del nuovo `Start Camera`;
+- refresh passivi Camera/Revenge/Teleport a 1 Hz, Spawn cache a 1 Hz, minuti lobby a 0,1 Hz, inspection a 4 Hz, RGB globale a 8 Hz;
+- workflow consentiti limitati ai due permanenti e nessuna automazione legacy.
 
 ## Unit test
 
 ```text
-Ran 20 tests
+Ran 24 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.5.5 superati
-Generi: 100 | Lingue: 3 | Regole: 72 | Raycast camera: 1
+OK - controlli statici v0.6.0 superati
 ```
-
-## Verifiche live ancora obbligatorie
-
-- importazione nel client Overwatch;
-- apertura e navigazione di tutti gli 12 menu;
-- localizzazione EN / ID / TH;
-- 32 Name Color;
-- 37 Player Icon;
-- transizione colore menu senza sparizione HUD;
-- Crouch inspection;
-- Teleport Crouch;
-- Jump respawn;
-- Unkillable entrando/uscendo dallo Spawn Room;
-- Hero Voice;
-- Try Your Luck con due giocatori: il non proprietario non deve poter attivare la carta;
-- feedback audiovisivo solo su cambi reali;
-- Camera self/target/first-person;
-- join/leave ripetuti;
-- stress con 12 player attivi;
-- diagnostics host-only;
-- wrapping/glifi Thai;
-- Server Load reale.
 
 ## GitHub
 
-Branch operativo previsto: `main`.
+Branch operativo: `main` (unico branch del repository al momento dell'audit).
 
-Workflow permanenti previsti:
+Workflow permanenti:
 
 - `validate-workshop.yml`
 - `maintenance-patch.yml`
 
-`.github/maintenance/patch.py` deve essere presente soltanto durante una manutenzione e rimosso al termine.
+Non risultano tag o release legacy da sincronizzare. `.github/maintenance/patch.py` è temporaneo e viene eliminato dal workflow di manutenzione dopo il commit validato.
+
+## Verifiche live ancora obbligatorie
+
+- importazione nel client Overwatch;
+- tutti i 12 menu in EN / ID / TH;
+- join/leave ripetuti e stress con 12 player;
+- Camera self/target e cambi target rapidi senza micro-scatto;
+- Crouch inspection/Teleport;
+- Try Your Luck durante movimento/camera 3P;
+- Vote Player con join/leave e pareggi;
+- Server Load Average/Peak reale e assenza di crescita permanente HUD/IWT.
 
 ## Decisione
 
-Il repository è **static-ready, live-pending**. Il gate statico può certificare coerenza strutturale e invarianti controllate, ma non sostituisce una sessione reale Overwatch con 12 player.
-
-- Menu 5: OFF / 1 HP / FULL HP con Halo pubblico indipendente dalla Crouch Privacy.
-
-- Unkillable: transizioni esclusive OFF/1 HP/FULL HP; Spawn Room resetta solo 1 HP, FULL HP persiste.
-
-- Feedback impostazioni: zero effetti audio; entrambe le subroutine usano esclusivamente Ring Explosion RGB.
-
-- Menu 11 Vote Player: soli umani, self-vote consentito, un voto attivo per player, conteggio event-driven; leader HUD solo se unico, pareggio = nessun leader; diagnostics dopo un'altra riga vuota;
-- Unkillable: 1 HP Warning rosso, FULL HP Halo RGB; cambio modalità sostituisce l'icona;
-
-- Vote HUD: il leader unico viene mostrato come `CHILL STAR` / `BINTANG CHILL` / `ดาวสายชิล`, senza numero voti; i conteggi restano esclusivamente nel Menu 11;
+Il repository è **static-ready, live-pending**: il gate certifica coerenza strutturale e invarianti automatiche, mentre fluidità reale e stress 12-client restano prove da eseguire nel client Overwatch.

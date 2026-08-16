@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.5.5
+# Note di progetto — versione 0.6.0
 
-Questo documento descrive lo **stato funzionale corrente** del Workshop, inclusi gli aggiornamenti successivi alla release tecnica 0.5.5.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.0.
 
 ## Architettura generale
 
@@ -42,7 +42,7 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 2 | Name Color | 32 colori |
 | 3 | HUD Language | EN / ID / TH |
 | 4 | Revenge | debiti kill dirette |
-| 5 | Unkillable: 1 HP / Kebal | ON / OFF |
+| 5 | Unkillable / Kebal | OFF / 1 HP / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
@@ -107,7 +107,7 @@ Dal Menu Camera è possibile selezionare:
 - proprio eroe;
 - altro target valido.
 
-La pipeline usa un solo raycast e non mantiene un loop camera server per-frame dedicato.
+La pipeline usa un solo raycast e non mantiene un loop camera server per-frame dedicato. `MulaiKamera` passa direttamente a `Start Camera` senza un `Stop Camera` intermedio: quando si cambia target evita il frame di ritorno alla camera normale che può apparire come micro-scatto. `Stop Camera` resta soltanto nei veri percorsi di disattivazione/cleanup.
 
 ## Revenge
 
@@ -137,7 +137,7 @@ Menu 6 con 5 preset:
 
 ## Crouch inspection
 
-L'inspection aggiorna il target a **5 Hz** e mostra:
+L'inspection aggiorna il target a **4 Hz** e mostra:
 
 - icona eroe;
 - nome player;
@@ -167,7 +167,7 @@ Il target player viene bloccato per identità prima del refresh per evitare reta
 
 Interact crea una carta virtuale centrata sul mirino e visibile a tutti. La roulette non cambia più la camera del player: se Menu 10 viene attivato in terza persona, la terza persona resta attiva senza `Stop Camera`, passaggio in prima persona o successivo ripristino. Le parentesi sono due In-World Text distinti posti fisicamente a ±0,30 m dal centro, quindi la loro apertura non dipende dagli spazi del font. Heart e Skull sono due Create Icon persistenti, entrambi con posizione racchiusa in Update Every Frame; il cambio rosso/verde alterna soltanto la visibilità, senza Destroy/Create per tick. La roulette resta a 20..24 cambi con intervallo iniziale 0,08 s e +0,055 s per passaggio.
 
-Non serve sparare. All'avvio della roulette, il Menu 5 Unkillable viene forzato su OFF (`ModeKebal = 0`, `KursorKebal = 0`, status rimosso e danno ricevuto riportato a 100) senza curare automaticamente il player; l'Arcade Menu viene chiuso e non può essere riaperto finché `KartuNasibAktif` resta `True`. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene il teschio rosso e mostra un countdown di 3 secondi, poi uccide il proprietario. Se il proprietario muore prima che la sequenza finisca, la carta viene distrutta e `KartuNasibAktif`, colore, contatore, intervallo e posizione vengono azzerati; una vecchia outcome non può colpire una nuova carta dopo il respawn. L'esito finale resta 50/50.
+Non serve sparare. All'avvio della roulette, il Menu 5 Unkillable viene forzato su OFF (`ModeKebal = 0`, `KursorKebal = 0`, status rimosso e danno ricevuto riportato a 100) senza curare automaticamente il player; l'Arcade Menu viene chiuso e non può essere riaperto finché `KartuNasibAktif` resta `True`. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene il teschio rosso e mostra un countdown di 3 secondi, poi uccide il proprietario. Se il proprietario muore prima che la sequenza finisca, la carta viene distrutta e `KartuNasibAktif`, colore, contatore e intervallo vengono azzerati; una vecchia outcome non può colpire una nuova carta dopo il respawn. L'esito finale resta 50/50.
 
 ## Jump respawn
 
@@ -200,9 +200,9 @@ Ottimizzazioni correnti:
 - refresh Camera/Revenge/Teleport passivi a 1 Hz;
 - refresh immediato quando un input usa davvero la lista;
 - inspection a 5 Hz;
-- `MenitLobi` ogni 5 s;
+- `MenitLobi` ogni 10 s;
 - Spawn Room cache a 1 Hz;
-- RGB unico globale;
+- RGB unico globale a 8 Hz;
 - nessun loop periodico per-player per la transizione menu;
 - cleanup completo degli array e ID al leave.
 
@@ -215,14 +215,14 @@ Workflow permanenti:
 - `.github/workflows/validate-workshop.yml`
 - `.github/workflows/maintenance-patch.yml`
 
-La CI esegue 20 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
+La CI esegue 24 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
 
 ## Limiti
 
 La validazione statica non sostituisce il client Overwatch. Restano da testare live:
 
 - import del sorgente;
-- 11 menu EN/ID/TH;
+- 12 menu EN/ID/TH;
 - 32 Name Color;
 - 37 Player Icon;
 - transizione colori HUD;
@@ -260,3 +260,8 @@ Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerap
 ## Menu 11 — Vote Player
 
 Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `NumeroVoti`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `LeaderVoto = Null` e nessun nome viene mostrato.
+
+
+## Audit lifecycle 0.6.0
+
+`SiapkanPemain` inizializza esplicitamente ogni variabile player dichiarata e il validatore verifica questa proprietà automaticamente. Il Player Left usa un solo percorso di cleanup: distrugge prima tutti gli oggetti temporanei della carta, poi rimuove gli HUD/IWT dagli array paralleli, restituisce lo slot HUD, cancella i voti verso il player uscito e ripulisce riferimenti Camera/Revenge/Teleport/Inspection dei player rimasti. Sono stati eliminati gli handle globali statici `HudInfoKiri/HudInfoKanan`, il legacy `WaktuTercatat` e lo stato Menu 10 non più usato `PosisiKartuNasib/ModeKameraSebelumNasib/TargetKameraSebelumNasib`.
