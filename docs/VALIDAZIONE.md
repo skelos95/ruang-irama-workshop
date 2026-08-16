@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.7
+# Rapporto di validazione — versione 0.6.8
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.7**
+Release tecnica: **CHILL Dedicated Server 0.6.8**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-e21fb9455653d5f4e26e98373d3ea36d05a433ee
+468881ed84f169467b8646bfd864d43b55d60b47
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.7 superati
+OK - controlli statici v0.6.8 superati
 ```
 
 ## GitHub
@@ -94,3 +94,8 @@ Il gate verifica che la regola `12f - Bangkit Lompat` esista una sola volta e no
 ## Hotfix input da morto 0.6.7
 
 Il gate statico richiede `Is Alive(Event Player) == True` su tutte le regole che eseguono comandi `PerintahMenu == N`, richiede l'azzeramento di `PerintahMenu`/`PerintahTeleportasi` alla morte e certifica che i due attivatori Crouch (inspection e Teleport) siano disponibili solo da vivi. La regola Jump respawn resta invece utilizzabile da morto anche con Menu Arcade aperto.
+
+
+## Ottimizzazione menu 0.6.8
+
+Il gate verifica release immediato, assenza dei Wait da 0,016 s nel percorso Interact Camera, navigazione primaria senza ricreazione HUD, Crouch Teleport senza redraw per ogni cursor step e transizione colore a 0,18 s. I redraw applicativi Interact restano intenzionalmente disponibili.

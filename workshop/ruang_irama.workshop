@@ -1230,8 +1230,7 @@ rule("05d - Menu: Lepaskan pengatur setelah semua masukan dilepas")
 
 	actions
 	{
-		"Tunda satu bingkai agar pengendali menyelesaikan perintah sebelum pengatur masukan diaktifkan kembali."
-		Wait(0.016, Ignore Condition);
+		"Aktifkan kembali pengatur segera setelah semua tombol dilepas; latch tetap mencegah pengulangan saat tombol ditahan."
 		Event Player.PerintahMenu = 0;
 	}
 }
@@ -1288,7 +1287,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 				Event Player.KursorPilihan = (Event Player.KursorPilihan + 1) % Count Of(Global.PemainManusia);
 			End;
 		End;
-		Call Subroutine(GambarMenu);
+		Call Subroutine(TransisiWarnaMenu);
 	}
 }
 
@@ -1346,7 +1345,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 				Event Player.KursorPilihan = (Event Player.KursorPilihan + Count Of(Global.PemainManusia) - 1) % Count Of(Global.PemainManusia);
 			End;
 		End;
-		Call Subroutine(GambarMenu);
+		Call Subroutine(TransisiWarnaMenu);
 	}
 }
 
@@ -1425,7 +1424,6 @@ rule("08 - Menu 0: Lompat mundur sepuluh genre")
 	actions
 	{
 		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
-		Call Subroutine(GambarMenu);
 	}
 }
 
@@ -1452,7 +1450,6 @@ rule("09 - Menu 0: Jongkok maju sepuluh genre")
 	actions
 	{
 		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
-		Call Subroutine(GambarMenu);
 	}
 }
 
@@ -1531,8 +1528,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Else If(Event Player.KursorKamera == 1);
 				If(Or(Event Player.ModeKamera != 1, Event Player.TargetKamera != Event Player));
 					Event Player.TargetKamera = Event Player;
-					"Biarkan satu bingkai Interact selesai sebelum mengganti tampilan kamera."
-					Wait(0.016, Ignore Condition);
 					Event Player.ModeKamera = 1;
 					Call Subroutine(MulaiKamera);
 					Call Subroutine(EfekTerapkan);
@@ -1550,8 +1545,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
 					If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));
 						Event Player.TargetKamera = Event Player.CalonTargetKamera;
-						"Gunakan jeda satu bingkai yang sama saat mulai menonton dari orang pertama."
-						Wait(0.016, Ignore Condition);
 						Event Player.ModeKamera = 2;
 						Call Subroutine(MulaiKamera);
 						Call Subroutine(EfekTerapkan);
@@ -2533,7 +2526,6 @@ rule("19b - Teleportasi Jongkok: Aktifkan lagi pengatur setelah tombol dilepas")
 
 	actions
 	{
-		Wait(0.016, Ignore Condition);
 		Event Player.PerintahTeleportasi = 0;
 	}
 }
@@ -2559,7 +2551,6 @@ rule("19c - Teleportasi Jongkok: Tembakan utama memilih tujuan berikutnya")
 		If(Count Of(Event Player.DaftarTargetTeleportasi) > 0);
 			Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % Count Of(Event Player.DaftarTargetTeleportasi);
 		End;
-		Call Subroutine(GambarTeleportasi);
 	}
 }
 
@@ -2584,7 +2575,6 @@ rule("19d - Teleportasi Jongkok: Tembakan sekunder memilih tujuan sebelumnya")
 		If(Count Of(Event Player.DaftarTargetTeleportasi) > 0);
 			Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + Count Of(Event Player.DaftarTargetTeleportasi) - 1) % Count Of(Event Player.DaftarTargetTeleportasi);
 		End;
-		Call Subroutine(GambarTeleportasi);
 	}
 }
 
@@ -2659,9 +2649,6 @@ rule("19e - Teleportasi Jongkok: Interact menjalankan teleportasi")
 		End;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
-		If(Event Player.TeleportasiJongkokAktif == True);
-			Call Subroutine(GambarTeleportasi);
-		End;
 	}
 }
 
@@ -3267,7 +3254,7 @@ rule("91k - Subrutin: Transisi warna menu tanpa lompatan")
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 7 ? Vector(235, 135, 255)
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 8 ? Vector(190, 255, 80)
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 9 ? Vector(255, 120, 190)
-			: Vector(255, 210, 70), 0.350, Destination and Duration);
+			: Vector(255, 210, 70), 0.180, Destination and Duration);
 	}
 }
 

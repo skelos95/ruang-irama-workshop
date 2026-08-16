@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.7
+# Note di progetto — versione 0.6.8
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.7.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.8.
 
 ## Architettura generale
 
@@ -71,7 +71,7 @@ Vale per Soundtrack, Camera, Name Color, HUD Language, Unkillable, Hero Voice e 
 
 Ogni menu ha una palette distinta. Main Menu e relativo sottomenu condividono lo stesso colore principale.
 
-`WarnaMenu` è una Vector RGB animata con `Chase Player Variable Over Time` per circa **0,35 s**. I renderer convertono la vector in `Custom Color(...)`. Questo evita il problema del chase diretto su un valore Color e mantiene la transizione senza loop periodici per-player.
+`WarnaMenu` è una Vector RGB animata con `Chase Player Variable Over Time` per circa **0,18 s**. I renderer convertono la vector in `Custom Color(...)`. Questo evita il problema del chase diretto su un valore Color e mantiene la transizione senza loop periodici per-player.
 
 ## Soundtrack
 
@@ -317,3 +317,8 @@ Il respawn manuale con `Jump` resta disponibile da morto anche con il Menu Arcad
 ## Hotfix input da morto 0.6.7
 
 Da morto il Menu Arcade non viene chiuso, ma tutte le regole che eseguono `PerintahMenu == N` richiedono `Is Alive(Event Player) == True`. La regola di morte azzera inoltre `PerintahMenu` e `PerintahTeleportasi` per eliminare input catturati nell'istante della morte. Gli attivatori Crouch inspection/Teleport restano protetti da `Is Alive == True`. `Jump` nella regola `12f` è l'unica eccezione e continua a eseguire il respawn manuale anche con menu aperto.
+
+
+## Ottimizzazione input menu 0.6.8
+
+Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Primary/Secondary e i salti Soundtrack sfruttano la rivalutazione live dell'HUD. Interact Camera non inserisce più frame di attesa, mentre i redraw di applicazione restano per non indebolire Voice, Try Your Luck e gli altri cambi di stato. Anche Crouch Teleport usa release immediato e navigazione live. Transizione colore: 0,18 s.

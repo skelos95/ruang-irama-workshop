@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.7.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.8.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.7"
+CURRENT_VERSION = "0.6.8"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -982,9 +982,8 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     checks.equal(len(release_candidates), 1, "release gate chord-safe del dispatcher")
     if release_candidates:
         checks.require(
-            re.search(r"Wait\s*\(\s*0\.016\s*,\s*Ignore Condition\s*\)", release_candidates[0].body)
-            is not None,
-            "release gate dispatcher privo del tick di arbitraggio prima del reset",
+            "Wait(" not in mask_strings(release_candidates[0].body),
+            "release gate dispatcher deve riarmarsi subito dopo il rilascio completo",
         )
     for command in range(1, 7):
         handlers = [
@@ -998,6 +997,50 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
                 "Event Player.PerintahMenu = 0;" not in handlers[0].body,
                 f"handler {command} resetta il dispatcher prima del rilascio di tutti gli input",
             )
+
+    handler_by_command = {
+        command: next((rule for rule in rules if code_contains(rule.body, f"Event Player.PerintahMenu == {command};")), None)
+        for command in range(1, 7)
+    }
+    interact_handler = handler_by_command[1]
+    if interact_handler is not None:
+        interact_code = mask_strings(interact_handler.body)
+        checks.require("Wait(0.016" not in interact_code, "Interact menu contiene ancora un Wait da un frame")
+        checks.require(
+            code_contains(interact_handler.body, "Stop Modifying Hero Voice Lines(Event Player);"),
+            "Voice NORMAL deve restare applicabile nel Menu 6",
+        )
+        checks.require(
+            code_contains(interact_handler.body, "Event Player.KartuNasibAktif = True;", "Call Subroutine(GambarMenu);"),
+            "Try Your Luck deve mantenere il refresh READY -> ROLLING",
+        )
+    for label, command in (("Primary", 3), ("Secondary", 4)):
+        handler = handler_by_command[command]
+        if handler is not None:
+            checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")
+            checks.require(code_contains(handler.body, "Call Subroutine(TransisiWarnaMenu);"), f"{label}: transizione colore leggera assente")
+    for label, command in (("Jump x10", 5), ("Crouch x10", 6)):
+        handler = handler_by_command[command]
+        if handler is not None:
+            checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")
+
+    teleport_release = [rule for rule in rules if rule.name.startswith("19b - Teleportasi Jongkok:")]
+    checks.equal(len(teleport_release), 1, "release gate Crouch Teleport")
+    if teleport_release:
+        checks.require("Wait(" not in mask_strings(teleport_release[0].body), "Crouch Teleport release gate non immediato")
+    for prefix in ("19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:"):
+        candidates = [rule for rule in rules if rule.name.startswith(prefix)]
+        checks.equal(len(candidates), 1, f"handler overlay {prefix}")
+        if candidates:
+            checks.require(not code_contains(candidates[0].body, "Call Subroutine(GambarTeleportasi);"), f"{prefix}: redraw HUD inutile")
+
+    transition_rules = rules_containing(rules, "Subroutine;", "TransisiWarnaMenu;")
+    checks.equal(len(transition_rules), 1, "subroutine TransisiWarnaMenu")
+    if transition_rules:
+        checks.require(
+            re.search(r"0\.180\s*,\s*Destination and Duration", mask_strings(transition_rules[0].body)) is not None,
+            "transizione colore menu non impostata a 0,18 s",
+        )
 
     melee_rules = [
         rule for rule in rules
@@ -2939,7 +2982,7 @@ def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[
     checks.equal(len(transition), 1, "menu smooth: renderer transizione")
     if transition:
         body = mask_strings(transition[0].body)
-        checks.require("Chase Player Variable Over Time(Event Player, WarnaMenu," in body and "0.350, Destination and Duration);" in body, "menu smooth: chase 0,35 s assente")
+        checks.require("Chase Player Variable Over Time(Event Player, WarnaMenu," in body and "0.180, Destination and Duration);" in body, "menu smooth: chase 0,35 s assente")
         for token in (
             "Vector(55, 235, 245)",
             "Vector(90, 180, 255)",

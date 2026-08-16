@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.7
+# Piano di test — versione 0.6.8
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.7.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.8.
 
 ## Gate statico
 
@@ -54,7 +54,7 @@ Teleport operativo resta nell'overlay Crouch; Menu 8 abilita/disabilita soltanto
 ## Transizione colori menu
 
 - Scorrere rapidamente tra tutte le 12 voci.
-- Il colore principale deve sfumare in circa 0,35 s senza scatti.
+- Il colore principale deve sfumare in circa 0,18 s senza scatti.
 - Entrando nel sottomenu, il colore principale deve restare coerente con la voce del Main Menu.
 - Gli input devono mantenere il proprio colore fisso.
 - Nessun contenuto principale HUD deve sparire durante la transizione.
@@ -309,3 +309,8 @@ Verifica live obbligatoria: aprire il Menu Arcade, morire lasciandolo aperto, pr
 ## Hotfix input da morto 0.6.7
 
 Verifica live obbligatoria: con Menu Arcade aperto, morire e provare Primary Fire, Secondary Fire, Interact, Reload, Crouch e Melee; nessuno deve modificare o chiudere il menu e Crouch non deve aprire inspection/Teleport. Premere quindi `Jump`: deve essere l'unico comando custom efficace, effettuare il respawn vicino al punto di morte e lasciare il menu aperto. Dopo il respawn, verificare che tutti i comandi menu tornino immediatamente disponibili.
+
+
+## Menu fluido 0.6.8
+
+Verifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Secondary; applicare con Interact, tornare con Reload e usare Jump/Crouch nel Soundtrack. Camera dal menu non deve mostrare il precedente frame di attesa. Verificare Hero Voice NORMAL e Try Your Luck READY->ROLLING. Ripetere nell'overlay Crouch Teleport. Melee 0,5 s resta volutamente invariato.

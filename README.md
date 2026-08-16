@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.7** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.8** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -26,7 +26,7 @@ La versione **0.6.7** identifica lo stato funzionale e tecnico corrente del repo
 - Player Icon predefinita: **Nothing**.
 - Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
 - Colori menu diversi e coordinati con i rispettivi sottomenu.
-- Transizione colore morbida di circa **0,35 s** tramite Vector RGB.
+- Transizione colore morbida di circa **0,18 s** tramite Vector RGB.
 - RGB globale pastel/neon lento per titolo, timer ed effetti visivi.
 - Feedback `Small Message` + visuale + audio soltanto quando una modifica cambia davvero; premere `Interact` sulla stessa scelta non ripete il feedback.
 - Crouch inspection con icona eroe, nome e salute; la percentuale Ultimate non viene mostrata.
@@ -178,3 +178,8 @@ Da morto, `Jump` esegue il respawn vicino al punto di morte anche se il Menu Arc
 ### Input da morto 0.6.7
 
 Quando il player muore, un Menu Arcade già aperto resta visibile ma viene congelato: Primary Fire, Secondary Fire, Interact, Reload, Crouch e gli altri input Arcade non eseguono azioni. Anche Crouch inspection e Crouch Teleport restano inattivi. L'unico input custom attivo da morto è `Jump`, usato esclusivamente dal respawn manuale vicino al punto di morte. Dopo il respawn il menu rimane aperto e torna utilizzabile.
+
+
+### Menu fluido 0.6.8
+
+La navigazione pura riusa gli HUD con stringhe/colori rivalutati invece di distruggerli e ricrearli a ogni pressione. Primary/Secondary aggiornano cursore e transizione colore; Jump/Crouch nel Soundtrack aggiornano direttamente il cursore. Interact mantiene i redraw necessari all'applicazione dello stato, ma non contiene più i due `Wait(0.016)` della Camera. Anche Crouch Teleport elimina il frame di release e i redraw per ogni step. La transizione colore passa da circa 0,35 s a 0,18 s. Il hold Melee da 0,5 s resta intenzionale.
