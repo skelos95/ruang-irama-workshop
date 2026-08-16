@@ -5,7 +5,10 @@ from pathlib import Path
 
 ORIGINAL_COMMIT = "5ef4d51ca85bb8d017fb5c05bd2d1ecfdcf6ad35"
 PATCH_PATH = ".github/maintenance/patch.py"
+SOURCE_PATH = Path("workshop/ruang_irama.workshop")
+VALIDATOR_PATH = Path("tools/validate_workshop.py")
 TESTS_PATH = Path("tests/test_validate_workshop.py")
+DIAGNOSTIC_PATH = Path("PATCH_DIAGNOSTIC.txt")
 
 
 def original_patch() -> str:
@@ -17,17 +20,16 @@ def original_patch() -> str:
     ).stdout
 
 
-code = original_patch()
+source_before = SOURCE_PATH.read_text(encoding="utf-8")
+validator_before = VALIDATOR_PATH.read_text(encoding="utf-8")
+tests_before = TESTS_PATH.read_text(encoding="utf-8")
 
-# replace_region already preserves the end marker.
+code = original_patch()
 needle = "luck_rule + luck_rule_end"
 if code.count(needle) != 1:
     raise RuntimeError(f"18e/18f correction: expected 1 occurrence, found {code.count(needle)}")
 code = code.replace(needle, "luck_rule", 1)
 
-# The old death anchor exists both in rule 18f and common lifecycle cleanup.
-# Scope the replacement explicitly to rule 18f instead of requiring a global
-# one-occurrence match.
 old_call = 'source = replace_once(source, death_cleanup_anchor, death_cleanup_replacement, "death roulette cleanup")'
 new_call = '''death_rule_at = source.find(luck_rule_end)\nif death_rule_at < 0:\n    raise RuntimeError("death roulette cleanup: rule 18f not found")\ndeath_rule_next = source.find('\\n\\nrule("19 - ', death_rule_at)\nif death_rule_next < 0:\n    raise RuntimeError("death roulette cleanup: rule 19 marker not found")\ndeath_rule_body = source[death_rule_at:death_rule_next]\nif death_rule_body.count(death_cleanup_anchor) != 1:\n    raise RuntimeError(f"death roulette cleanup: expected 1 occurrence in rule 18f, found {death_rule_body.count(death_cleanup_anchor)}")\ndeath_rule_body = death_rule_body.replace(death_cleanup_anchor, death_cleanup_replacement, 1)\nsource = source[:death_rule_at] + death_rule_body + source[death_rule_next:]'''
 if code.count(old_call) != 1:
@@ -36,8 +38,6 @@ code = code.replace(old_call, new_call, 1)
 
 exec(compile(code, PATCH_PATH, "exec"), {"__name__": "__main__", "__file__": PATCH_PATH})
 
-# Fix the newly generated menu-lock negative test so it mutates rule 05c,
-# rather than the older KartuNasibAktif guard in rule 05.
 tests = TESTS_PATH.read_text(encoding="utf-8")
 method_start = tests.find("    def test_luck_menu_must_stay_open_and_locked(self) -> None:\n")
 method_end = tests.find("\n    def test_luck_red_must_force_position_and_shrink_ring", method_start)
@@ -47,4 +47,18 @@ new_method = '''    def test_luck_menu_must_stay_open_and_locked(self) -> None:\
 tests = tests[:method_start] + new_method + tests[method_end:]
 TESTS_PATH.write_text(tests, encoding="utf-8")
 
-Path("PATCH_DIAGNOSTIC.txt").unlink(missing_ok=True)
+result = subprocess.run(
+    ["python", "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+    capture_output=True,
+    text=True,
+)
+DIAGNOSTIC_PATH.write_text(
+    f"returncode={result.returncode}\n\nSTDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}",
+    encoding="utf-8",
+)
+
+# Restore tracked sources so the workflow's own tests/validator stay on the
+# currently accepted baseline and can commit only the diagnostic file.
+SOURCE_PATH.write_text(source_before, encoding="utf-8")
+VALIDATOR_PATH.write_text(validator_before, encoding="utf-8")
+TESTS_PATH.write_text(tests_before, encoding="utf-8")
