@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.17
+# Rapporto di validazione — versione 0.6.18
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.17**
+Release tecnica: **CHILL Dedicated Server 0.6.18**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-3414fa558af1fc8033c0cea75b28547c4298da8f
+80c262bfbd278a1d1ce7bc97ad80a90ae051b1e5
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.17 superati
+OK - controlli statici v0.6.18 superati
 ```
 
 ## GitHub
@@ -143,3 +143,8 @@ Il validatore richiede latch one-shot e guardia `Is Game In Progress == False` p
 ## Gate lifecycle ripetuto 0.6.17
 
 Il validatore impone il lock `SiklusPemainAktif` sul Player Joined, limita 01b a `PernahDisiapkan == False`, richiede che `SudahSiap = True` sia l'ultima assegnazione player di `SiapkanPemain`, blocca la classificazione durante il setup e rende one-shot `Start Game Mode`. Restano valide le invarianti zero-Wait/zero-Loop per ogni regola che crea HUD.
+
+
+## Gate team switch leggero 0.6.18
+
+Il validatore vieta `BersihkanPemain`, `Create HUD Text` e `Destroy HUD Text` nella regola `Player Joined Match`. Un player già presente nel roster deve terminare il percorso prima di `SiapkanPemain`; il cleanup completo resta obbligatorio sull'evento `Player Left Match`.

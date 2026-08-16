@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.17.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.18.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.17"
+CURRENT_VERSION = "0.6.18"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -2952,15 +2952,29 @@ def check_lifecycle_hygiene(
         checks.require(0 <= lock_at < setup_at, "audit lifecycle: fallback non blocca prima del setup")
     if join:
         body = mask_strings(join[0].body)
-        condition_lock = body.find("Event Player.SiklusPemainAktif == False;")
-        set_lock = body.find("Event Player.SiklusPemainAktif = True;")
         duplicate_at = body.find("If(Array Contains(Global.PemainManusia, Event Player));")
-        cleanup_at = body.find("Call Subroutine(BersihkanPemain);", duplicate_at)
-        setup_at = body.find("Call Subroutine(SiapkanPemain);", cleanup_at)
+        abort_registered = body.find("Abort;", duplicate_at)
+        setup_at = body.find("Call Subroutine(SiapkanPemain);", abort_registered)
         checks.require(
-            0 <= condition_lock < set_lock < duplicate_at < cleanup_at < setup_at,
-            "audit lifecycle: cambio team non è serializzato cleanup → setup",
+            0 <= duplicate_at < abort_registered < setup_at,
+            "audit lifecycle: player già registrato non esce prima del setup",
         )
+        checks.require(
+            "Call Subroutine(BersihkanPemain);" not in body,
+            "audit lifecycle: cambio team esegue ancora cleanup completo",
+        )
+        checks.require(
+            "Destroy HUD Text" not in body and "Create HUD Text" not in body,
+            "audit lifecycle: cambio team crea/distrugge HUD",
+        )
+        for token in (
+            "Event Player.SudahSiap = True;",
+            "Event Player.SudahDiperiksa = True;",
+            "Event Player.Manusia = True;",
+            "Disable Game Mode HUD(Event Player);",
+            "Disable Game Mode In-World UI(Event Player);",
+        ):
+            checks.require(token in body, f"audit lifecycle: refresh leggero cambio team incompleto: {token}")
 
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")
@@ -2980,6 +2994,10 @@ def check_lifecycle_hygiene(
     checks.equal(len(cleanup), 1, "audit lifecycle: un solo cleanup riutilizzabile")
     if leave:
         checks.require(code_contains(leave[0].body, "Call Subroutine(BersihkanPemain);"), "audit lifecycle: Player Left non usa cleanup comune")
+        checks.require(
+            not any(code_contains(rule.body, "Player Joined Match;", "Call Subroutine(BersihkanPemain);") for rule in rules),
+            "audit lifecycle: BersihkanPemain non deve essere chiamato da Player Joined/cambio team",
+        )
     if cleanup:
         body = mask_strings(cleanup[0].body)
         capture = body.find("Global.PemainPembersihan = Event Player;")

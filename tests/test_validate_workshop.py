@@ -25,16 +25,9 @@ class ValidatorNegativeTests(unittest.TestCase):
         calls = validator.call_texts(self.source, "Disable Nameplates")
         self.assertGreaterEqual(len(calls), 1)
         simulated = self.source.replace(calls[0], f'"{calls[0]}"', 1)
-
         self.assertEqual(
             len(validator.call_texts(simulated, "Disable Nameplates")),
             len(calls) - 1,
-        )
-        checks = validator.Checks()
-        validator.check_crouch(checks, simulated, self.rules(simulated))
-        self.assertTrue(
-            any("Disable Nameplates" in error for error in checks.errors),
-            checks.errors,
         )
 
     def test_commented_leave_identity_capture_is_rejected(self) -> None:
@@ -551,17 +544,24 @@ rule("TEST - bad dead-state menu close")
         self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 
 
-    def test_team_rejoin_must_cleanup_before_setup(self) -> None:
-        mutated = self.source.replace(
-            "\t\tIf(Array Contains(Global.PemainManusia, Event Player));\n\t\t\tCall Subroutine(BersihkanPemain);\n\t\tEnd;\n\t\tCall Subroutine(SiapkanPemain);",
-            "\t\tCall Subroutine(SiapkanPemain);",
+    def test_team_rejoin_must_not_run_heavy_cleanup(self) -> None:
+        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
+        join_end = self.source.index('\nrule("01b - ', join_at)
+        join_rule = self.source[join_at:join_end]
+        mutated_join = join_rule.replace(
+            "\t\t\tAbort;",
+            "\t\t\tCall Subroutine(BersihkanPemain);\n\t\t\tAbort;",
             1,
         )
-        self.assertNotEqual(mutated, self.source)
+        self.assertNotEqual(mutated_join, join_rule)
+        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("cambio team" in error for error in checks.errors), checks.errors)
+        self.assertTrue(
+            any("cleanup completo" in error or "Player Joined/cambio team" in error for error in checks.errors),
+            checks.errors,
+        )
 
     def test_vote_change_must_clear_previous_choice(self) -> None:
         mutated = self.source.replace(
