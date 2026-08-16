@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/.github/maintenance/patch.py", line 27, in <module>
+    exec(compile(code, PATCH_PATH, "exec"), {"__name__": "__main__", "__file__": PATCH_PATH})
+  File ".github/maintenance/patch.py", line 92, in <module>
+  File ".github/maintenance/patch.py", line 14, in replace_once
+    check=True,
+RuntimeError: death roulette cleanup: expected 1 occurrence, found 2
