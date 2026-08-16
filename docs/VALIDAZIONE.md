@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.14
+# Rapporto di validazione — versione 0.6.15
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.14**
+Release tecnica: **CHILL Dedicated Server 0.6.15**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-8aa12640d4d3c3c5df6a60cf70e5e6e838005a4e
+ca70ec9f67cb805152764c3dced88cc820232c97
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.14 superati
+OK - controlli statici v0.6.15 superati
 ```
 
 ## GitHub
@@ -129,3 +129,7 @@ Il gate richiede 11 RGB fissi tutti diversi, mantiene Name Color dinamico e cons
 ## Preload progressivo 0.6.14
 
 Il gate richiede una sola regola 05e di preload, attiva soltanto con Menu Arcade aperto e cache già iniziata, con `Count Of(HalamanHudMenuArcade) < 13`, un `Wait(0.016, Abort When False)` prima di ogni iterazione e 12 renderer delegati senza `Create HUD Text` diretto. `GambarUtama` non può essere richiamato dal preload e il router lazy resta presente come fallback.
+
+
+## Audit HUD 0.6.15
+Il gate rifiuta qualsiasi regola `Create HUD Text` che contenga `Wait` o `Loop If Condition Is True`.

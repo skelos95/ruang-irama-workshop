@@ -169,6 +169,7 @@ subroutines
 	25: GambarPilihan
 	26: HitungPilihan
 	27: BersihkanPemain
+	28: PramuatHalamanTerpilih
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -933,7 +934,6 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Abort If(Entity Exists(Event Player) == False);
 		Abort If(Array Contains(Global.PemainManusia, Event Player));
 		Abort If(Count Of(Global.SlotHUDTersedia) == 0);
-		Event Player.Manusia = True;
 		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
 		Disable Game Mode HUD(Event Player);
 		Disable Game Mode In-World UI(Event Player);
@@ -947,6 +947,39 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 
+		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, 0);
+		Global.HudKananPemain = Append To Array(Global.HudKananPemain, 0);
+		Global.HudMenuPemain = Append To Array(Global.HudMenuPemain, 0);
+		Global.TeksDuniaPemain = Append To Array(Global.TeksDuniaPemain, 0);
+		Global.TeksDiriPemain = Append To Array(Global.TeksDiriPemain, 0);
+		Global.SlotHUDPemain = Append To Array(Global.SlotHUDPemain, Event Player.UrutanHUD);
+		Event Player.Manusia = True;
+	}
+}
+
+rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Event Player.Manusia == True;
+		Event Player.BotOtomatis == False;
+		Is Dummy Bot(Event Player) == False;
+		Array Contains(Global.PemainManusia, Event Player) == True;
+		Event Player.HudKiri == Null;
+		Event Player.HudKanan == Null;
+	}
+
+	actions
+	{
+		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat pada aturan terpisah tanpa tunda dan tanpa pengulangan."
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinSuara != Null
@@ -965,18 +998,14 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.TeksDiriPemain, Current Array Element != 0)))) : Custom String(" "), Left, -99 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
-		Global.HudKiriPemain = Append To Array(Global.HudKiriPemain, Event Player.HudKiri);
+		Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}", Global.DaftarIkon[Event Player.IndeksIkon],
 			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player,
 			Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Custom String("\n ") : Custom String("")), Null, Right, -99 + Event Player.UrutanHUD,
 			Color(White), Event Player.WarnaNama, Color(White), Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
-		Global.HudKananPemain = Append To Array(Global.HudKananPemain, Event Player.HudKanan);
-		Global.HudMenuPemain = Append To Array(Global.HudMenuPemain, 0);
-		Global.TeksDuniaPemain = Append To Array(Global.TeksDuniaPemain, 0);
-		Global.TeksDiriPemain = Append To Array(Global.TeksDiriPemain, 0);
-		Global.SlotHUDPemain = Append To Array(Global.SlotHUDPemain, Event Player.UrutanHUD);
+		Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 			"Welcome to CHILL. Pick a vibe, pick a color, stay weird.") : Event Player.IndeksBahasa == 1 ? Custom String(
 			"Selamat datang di CHILL. Pilih vibe, pilih warna, tetap aneh.") : Custom String(
@@ -1144,6 +1173,40 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 	}
 }
 
+rule("05a - Menu: Siapkan HUD tersembunyi saat Melee mulai ditahan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.BotOtomatis == False;
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Event Player.SeranganDekatDipakai == False;
+		Event Player.MenuTerbuka == False;
+		Event Player.TeleportasiJongkokAktif == False;
+		Event Player.KartuNasibAktif == False;
+		Is Button Held(Event Player, Button(Melee)) == True;
+		Or(Array Contains(Event Player.HalamanHudMenuArcade, -1) == False, Array Contains(Event Player.HalamanHudMenuArcade,
+			Event Player.KursorUtama) == False) == True;
+	}
+
+	actions
+	{
+		"HUD dibuat tersembunyi selama penghitung tahan Melee berjalan; pada 0,5 detik hanya visibilitas yang berubah."
+		If(Array Contains(Event Player.HalamanHudMenuArcade, -1) == False);
+			Call Subroutine(GambarUtama);
+		End;
+		Call Subroutine(PramuatHalamanTerpilih);
+	}
+}
+
 rule("05b - Menu: Lepaskan serangan jarak dekat sebelum pakai lagi")
 {
 	event
@@ -1235,59 +1298,6 @@ rule("05d - Menu: Lepaskan pengatur setelah semua masukan dilepas")
 	}
 }
 
-rule("05e - Menu: Muat halaman lain bertahap setelah menu utama tampil")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Manusia == True;
-		Event Player.BotOtomatis == False;
-		Is Dummy Bot(Event Player) == False;
-		Is Alive(Event Player) == True;
-		Event Player.MenuTerbuka == True;
-		Count Of(Event Player.HalamanHudMenuArcade) > 0;
-		Count Of(Event Player.HalamanHudMenuArcade) < 13;
-	}
-
-	actions
-	{
-		"Main Menu sudah tampil. Buat maksimal satu HUD tersembunyi per siklus agar submenu siap tanpa pop dan tanpa beban besar dalam satu tick."
-		Wait(0.016, Abort When False);
-		If(Array Contains(Event Player.HalamanHudMenuArcade, 0) == False);
-			Call Subroutine(GambarMusik);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 1) == False);
-			Call Subroutine(GambarKamera);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 2) == False);
-			Call Subroutine(GambarWarna);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 3) == False);
-			Call Subroutine(GambarBahasa);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 4) == False);
-			Call Subroutine(GambarBalasDendam);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 5) == False);
-			Call Subroutine(GambarKebal);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 6) == False);
-			Call Subroutine(GambarSuara);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 7) == False);
-			Call Subroutine(GambarIkon);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 8) == False);
-			Call Subroutine(GambarSakelarTeleportasi);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 9) == False);
-			Call Subroutine(GambarPrivasiInspeksi);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 10) == False);
-			Call Subroutine(GambarNasib);
-		Else If(Array Contains(Event Player.HalamanHudMenuArcade, 11) == False);
-			Call Subroutine(GambarPilihan);
-		End;
-		Loop If Condition Is True;
-	}
-}
-
 rule("06 - Menu: Tembakan utama memilih berikutnya")
 {
 	event
@@ -1311,6 +1321,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 	{
 		If(Event Player.HalamanMenu == -1);
 			Event Player.KursorUtama = (Event Player.KursorUtama + 1) % 12;
+			Call Subroutine(PramuatHalamanTerpilih);
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 1) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -1367,6 +1378,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 	{
 		If(Event Player.HalamanMenu == -1);
 			Event Player.KursorUtama = (Event Player.KursorUtama + 11) % 12;
+			Call Subroutine(PramuatHalamanTerpilih);
 		Else If(Event Player.HalamanMenu == 0);
 			Event Player.KursorGenre = (Event Player.KursorGenre + 99) % 100;
 		Else If(Event Player.HalamanMenu == 1);
@@ -2851,35 +2863,6 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 	actions
 	{
 		Call Subroutine(TransisiWarnaMenu);
-		If(Array Contains(Event Player.HalamanHudMenuArcade, Event Player.HalamanMenu) == False);
-			If(Event Player.HalamanMenu == -1);
-				Call Subroutine(GambarUtama);
-			Else If(Event Player.HalamanMenu == 0);
-				Call Subroutine(GambarMusik);
-			Else If(Event Player.HalamanMenu == 1);
-				Call Subroutine(GambarKamera);
-			Else If(Event Player.HalamanMenu == 2);
-				Call Subroutine(GambarWarna);
-			Else If(Event Player.HalamanMenu == 3);
-				Call Subroutine(GambarBahasa);
-			Else If(Event Player.HalamanMenu == 4);
-				Call Subroutine(GambarBalasDendam);
-			Else If(Event Player.HalamanMenu == 5);
-				Call Subroutine(GambarKebal);
-			Else If(Event Player.HalamanMenu == 6);
-				Call Subroutine(GambarSuara);
-			Else If(Event Player.HalamanMenu == 7);
-				Call Subroutine(GambarIkon);
-			Else If(Event Player.HalamanMenu == 8);
-				Call Subroutine(GambarSakelarTeleportasi);
-			Else If(Event Player.HalamanMenu == 9);
-				Call Subroutine(GambarPrivasiInspeksi);
-			Else If(Event Player.HalamanMenu == 10);
-				Call Subroutine(GambarNasib);
-			Else If(Event Player.HalamanMenu == 11);
-				Call Subroutine(GambarPilihan);
-			End;
-		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Count Of(Event Player.HudMenuArcade) > 0 ? First Of(Event Player.HudMenuArcade) : 0;
 		End;
@@ -3355,6 +3338,47 @@ rule("91n - Subrutin: Gambar kartu nasib")
 		Event Player.HudMenuArcade = Append To Array(Event Player.HudMenuArcade, Event Player.HudMenu);
 		Event Player.HalamanHudMenuArcade = Append To Array(Event Player.HalamanHudMenuArcade, 10);
 		Event Player.HudMenu = Null;
+	}
+}
+
+rule("91p - Subrutin: Pramuat halaman menu yang sedang dipilih")
+{
+	event
+	{
+		Subroutine;
+		PramuatHalamanTerpilih;
+	}
+
+	actions
+	{
+		"Buat HUD submenu sebelum pemain membukanya. Tidak ada tunda dan tidak ada pengulangan; daftar halaman mencegah pembuatan ganda."
+		If(Array Contains(Event Player.HalamanHudMenuArcade, Event Player.KursorUtama) == False);
+			If(Event Player.KursorUtama == 0);
+				Call Subroutine(GambarMusik);
+			Else If(Event Player.KursorUtama == 1);
+				Call Subroutine(GambarKamera);
+			Else If(Event Player.KursorUtama == 2);
+				Call Subroutine(GambarWarna);
+			Else If(Event Player.KursorUtama == 3);
+				Call Subroutine(GambarBahasa);
+			Else If(Event Player.KursorUtama == 4);
+				Call Subroutine(GambarBalasDendam);
+			Else If(Event Player.KursorUtama == 5);
+				Call Subroutine(GambarKebal);
+			Else If(Event Player.KursorUtama == 6);
+				Call Subroutine(GambarSuara);
+			Else If(Event Player.KursorUtama == 7);
+				Call Subroutine(GambarIkon);
+			Else If(Event Player.KursorUtama == 8);
+				Call Subroutine(GambarSakelarTeleportasi);
+			Else If(Event Player.KursorUtama == 9);
+				Call Subroutine(GambarPrivasiInspeksi);
+			Else If(Event Player.KursorUtama == 10);
+				Call Subroutine(GambarNasib);
+			Else If(Event Player.KursorUtama == 11);
+				Call Subroutine(GambarPilihan);
+			End;
+		End;
 	}
 }
 

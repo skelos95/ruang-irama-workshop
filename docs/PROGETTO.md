@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.14
+# Note di progetto — versione 0.6.15
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.14.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.15.
 
 ## Architettura generale
 
@@ -352,3 +352,7 @@ Il Menu Arcade non esegue più `Disallow Button` su Melee e Jump. Il dispatcher 
 ## Preload HUD progressivo 0.6.14
 
 La cache lazy resta la sorgente di verità, ma dopo la creazione del Main Menu (`HalamanHudMenuArcade` non vuoto) la regola 05e prepara le pagine 0..11 in ordine. Ogni iterazione inizia con un wait da 0,016 s e chiama al massimo un renderer, distribuendo la costruzione degli HUD su frame differenti. Le pagine restano nascoste finché `HalamanMenu` non coincide; non viene duplicato alcun `Create HUD Text` dentro il preload.
+
+
+## HUD edge-triggered 0.6.15
+La creazione HUD è separata da timer e loop. 05a prepara Main + pagina selezionata senza attese; 02b crea i due HUD sociali dopo la classificazione, anch’essa senza attese nella regola HUD.

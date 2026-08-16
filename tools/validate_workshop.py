@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.14.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.15.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.14"
+CURRENT_VERSION = "0.6.15"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -954,53 +954,6 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         re.search(r"(?m)^\s*89:\s*HalamanHudMenuArcade\s*$", source) is not None,
         "cache HalamanHudMenuArcade non dichiarata",
     )
-    preload_rules = [
-        rule for rule in rules
-        if rule.name.startswith("05e - Menu: Muat halaman lain bertahap")
-    ]
-    checks.equal(len(preload_rules), 1, "preload progressivo HUD Arcade")
-    if preload_rules:
-        preload = preload_rules[0].body
-        preload_code = mask_strings(preload)
-        checks.require(
-            code_contains(
-                preload,
-                "Event Player.MenuTerbuka == True;",
-                "Count Of(Event Player.HalamanHudMenuArcade) > 0;",
-                "Count Of(Event Player.HalamanHudMenuArcade) < 13;",
-                "Wait(0.016, Abort When False);",
-                "Loop If Condition Is True;",
-            ),
-            "preload progressivo non è bounded alla sessione Menu Arcade",
-        )
-        checks.require(
-            "Create HUD Text" not in preload_code,
-            "preload progressivo deve delegare ai renderer senza duplicare HUD",
-        )
-        checks.require(
-            "Call Subroutine(GambarUtama);" not in preload_code,
-            "preload progressivo non deve ricreare il Main Menu",
-        )
-        progressive_renderers = (
-            "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
-            "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
-            "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarPilihan",
-        )
-        for page, renderer in enumerate(progressive_renderers):
-            checks.require(
-                f"Array Contains(Event Player.HalamanHudMenuArcade, {page}) == False" in preload_code,
-                f"preload progressivo privo del gate pagina {page}",
-            )
-            checks.require(
-                f"Call Subroutine({renderer});" in preload_code,
-                f"preload progressivo non prepara {renderer}",
-            )
-        checks.equal(
-            preload_code.count("Call Subroutine("),
-            12,
-            "preload progressivo deve creare al massimo una delle 12 pagine per iterazione",
-        )
-
     router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
     checks.equal(len(router_rules), 1, "router split GambarMenu")
     if router_rules:
@@ -1008,20 +961,12 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         router_code = mask_strings(router)
         checks.require("Create HUD Text" not in router_code, "GambarMenu non deve contenere un HUD monolitico")
         checks.require("Custom String" not in router_code, "GambarMenu non deve duplicare i testi delle pagine")
-        checks.require(
-            "HalamanHudMenuArcade" in router_code
-            and "Array Contains" in router_code
-            and "TransisiWarnaMenu" in router_code,
-            "GambarMenu non usa il gate lazy per pagina",
-        )
-        checks.require(
-            "Count Of(Event Player.HudMenuArcade) == 0" not in router_code,
-            "GambarMenu non deve pre-caricare tutte le pagine all'apertura",
-        )
-        checks.require(len(router.encode("utf-8")) < 12000, "GambarMenu è tornato troppo grande")
-        for renderer, page in page_by_renderer.items():
-            checks.require(f"Event Player.HalamanMenu == {page}" in router_code, f"GambarMenu non instrada pagina {page}")
-            checks.require(f"Call Subroutine({renderer});" in router_code, f"GambarMenu non inizializza {renderer} on demand")
+        checks.require("Call Subroutine(TransisiWarnaMenu);" in router_code, "GambarMenu non aggiorna la transizione colore")
+        checks.require("Create HUD Text" not in router_code, "GambarMenu non deve creare HUD")
+        checks.require("Array Contains" not in router_code, "GambarMenu non deve gestire la creazione HUD")
+        checks.require(len(router.encode("utf-8")) < 5000, "GambarMenu è tornato troppo grande")
+        for renderer in page_by_renderer:
+            checks.require(f"Call Subroutine({renderer});" not in router_code, f"GambarMenu richiama ancora {renderer}")
 
     for renderer, page in page_by_renderer.items():
         candidates = rules_containing(rules, "Subroutine;", f"{renderer};")
@@ -1073,6 +1018,34 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Wait(0.500, Abort When False);" in melee_code,
             "Melee opener non usa esattamente 0,5 s",
         )
+
+    hud_creator_rules = [rule for rule in rules if code_contains(rule.body, "Create HUD Text(")]
+    checks.require(len(hud_creator_rules) > 0, "nessuna regola Create HUD Text trovata")
+    for hud_rule in hud_creator_rules:
+        hud_code = mask_strings(hud_rule.body)
+        checks.require("Wait(" not in hud_code, f"HUD creato dentro Wait in {hud_rule.name!r}")
+        checks.require("Loop If Condition Is True;" not in hud_code, f"HUD creato dentro Loop in {hud_rule.name!r}")
+    checks.equal(len([r for r in rules if r.name.startswith("05e - Menu: Muat halaman lain bertahap")]), 0, "preload 0.6.14 ancora presente")
+    pre_open=[r for r in rules if r.name.startswith("05a - Menu: Siapkan HUD tersembunyi")]
+    checks.equal(len(pre_open),1,"pre-creazione Main Menu")
+    if pre_open:
+        pc=mask_strings(pre_open[0].body)
+        checks.require("Wait(" not in pc and "Loop If Condition Is True;" not in pc,"pre-creazione Main contiene Wait/Loop")
+        checks.require("Call Subroutine(GambarUtama);" in pc and "Call Subroutine(PramuatHalamanTerpilih);" in pc,"pre-creazione Main/submenu incompleta")
+    selected=rules_containing(rules,"Subroutine;","PramuatHalamanTerpilih;")
+    checks.equal(len(selected),1,"PramuatHalamanTerpilih")
+    if selected:
+        sc=mask_strings(selected[0].body)
+        checks.require("Wait(" not in sc and "Loop If Condition Is True;" not in sc,"preload selezionato contiene Wait/Loop")
+    classifier=[r for r in rules if r.name.startswith("02 - Pemain: Pisahkan manusia")]
+    checks.equal(len(classifier),1,"classificatore umano/bot")
+    if classifier: checks.require("Create HUD Text" not in mask_strings(classifier[0].body),"classificatore con Wait crea HUD")
+    player_hud=[r for r in rules if r.name.startswith("02b - HUD Pemain:")]
+    checks.equal(len(player_hud),1,"HUD player separato")
+    if player_hud:
+        pc=mask_strings(player_hud[0].body)
+        checks.equal(pc.count("Create HUD Text("),2,"HUD player sinistro/destra")
+        checks.require("Wait(" not in pc and "Loop If Condition Is True;" not in pc,"HUD player contiene Wait/Loop")
 
     dispatcher_candidates = [
         rule
@@ -1568,37 +1541,18 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         "variabile outline ancora presente",
     )
 
-    registration = rules_containing(
-        rules,
-        "Append To Array(Global.PemainManusia, Event Player)",
-    )
-    checks.equal(
-        len(registration), 1,
-        "regola registrazione HUD sociali",
-    )
-
-    if registration:
-        huds = call_texts(
-            registration[0].body,
-            "Create HUD Text",
-        )
-        checks.equal(
-            len(huds), 2,
-            "HUD sociali per giocatore",
-        )
-
+    registration = rules_containing(rules, "Append To Array(Global.PemainManusia, Event Player)")
+    checks.equal(len(registration), 1, "regola registrazione umano")
+    social_hud = [rule for rule in rules if rule.name.startswith("02b - HUD Pemain:")]
+    checks.equal(len(social_hud), 1, "regola HUD sociali separata")
+    if social_hud:
+        huds = call_texts(social_hud[0].body, "Create HUD Text")
+        checks.equal(len(huds), 2, "HUD sociali per giocatore")
         for i, call in enumerate(huds, 1):
-            checks.require(
-                "Hero Icon String" in call,
-                f"HUD sociale #{i} privo di icona eroe",
-            )
+            checks.require("Hero Icon String" in call, f"HUD sociale #{i} privo di icona eroe")
+    if registration:
         checks.require(
-            code_contains(
-                registration[0].body,
-                "Disable Nameplates(Event Player",
-                "Global.PemainManusia",
-                "InspeksiAktif",
-            ),
+            code_contains(registration[0].body, "Disable Nameplates(Event Player", "Global.PemainManusia", "InspeksiAktif"),
             "registrazione umano non nasconde la nameplate ai viewer che ispezionano",
         )
 
@@ -2375,7 +2329,7 @@ def check_diagnostics(checks: Checks, source: str, rules: list[Rule]) -> None:
         rule for rule in rules
         if code_contains(
             rule.body,
-            "Global.HudKiriPemain = Append To Array",
+            "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;",
             "Global.DiagnostikPerforma == True",
             "Local Player == Host Player",
             "Server Load",
@@ -2864,7 +2818,7 @@ def check_player_icon_menu(checks: Checks, source: str, rules: list[Rule], subro
     checks.require("GambarIkon" in subroutines, "icone: subroutine GambarIkon assente")
     checks.require("Event Player.IndeksIkon = 0;" in source and "Event Player.KursorIkon = 0;" in source, "icone: default NOTHING non inizializzato")
 
-    classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
+    classification = [rule for rule in rules if rule.name.startswith("02b - HUD Pemain:")]
     checks.equal(len(classification), 1, "regola roster per icona player")
     if classification:
         body = classification[0].body
