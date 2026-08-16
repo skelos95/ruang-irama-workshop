@@ -6,17 +6,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR = ROOT / "tools" / "validate_workshop.py"
 
-# Reuse the complete 0.6.5 maintenance patch from the immediately preceding
-# commit, then align the one remaining legacy validator invariant with the
-# new speed-only Try Your Luck behavior.
+# Reuse the complete 0.6.5 maintenance patch from the earlier commit, then
+# align the one remaining legacy validator invariant with speed-only luck.
 original = subprocess.run(
-    ["git", "show", "HEAD^:.github/maintenance/patch.py"],
+    ["git", "show", "a431d202263d109f9b64ea88976a7edc559071b6:.github/maintenance/patch.py"],
     cwd=ROOT,
     check=True,
     capture_output=True,
     text=True,
 ).stdout
-exec(compile(original, ".github/maintenance/patch.py@HEAD^", "exec"), {"__name__": "__main__"})
+exec(
+    compile(original, ".github/maintenance/patch.py@a431d202", "exec"),
+    {
+        "__name__": "__main__",
+        "__file__": str(ROOT / ".github" / "maintenance" / "patch.py"),
+    },
+)
 
 validator = VALIDATOR.read_text(encoding="utf-8")
 old = '''    death_reset = [rule for rule in rules if rule.name.startswith("18f - Nasib:")]
