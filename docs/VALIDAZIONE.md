@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.3
+# Rapporto di validazione — versione 0.6.4
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.3**
+Release tecnica: **CHILL Dedicated Server 0.6.4**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -14,7 +14,7 @@ Blob Git del sorgente Workshop validato:
 c255608fe0b3624a79fea8ff07164141bd408bf0
 ```
 
-## Audit 0.6.3
+## Audit 0.6.4
 
 - team-switch trattato come leave + fresh join con cleanup riutilizzabile e guardia anti-duplicato roster;
 - voto singolo certificato: cambio scelta azzera il target precedente prima di assegnare il nuovo;
@@ -29,23 +29,23 @@ Il gate verifica:
 - HUD e Small Message EN / Bahasa Indonesia / ไทย, inclusi minuti roster `MIN / MENIT / นาที`;
 - titoli regola personalizzati in Bahasa Indonesia;
 - Menu 5 OFF / 1 HP / FULL HP: Warning rosso per 1 HP, Halo RGB per FULL HP, Spawn Room reset solo 1 HP;
-- Menu 10: bracket + Heart/Skull persistenti, nessun cambio camera, Unkillable OFF, reset morte/leave, 50/50;
+- Menu 10: bracket + Heart/Skull persistenti, menu bloccato in pagina 10, FULL HP temporaneo senza perdere l'ultima scelta, verde = ripristino scelta, rosso = OFF + forcing posizione + Light Shaft/Ring RGB in chiusura + morte; cleanup completo morte/leave/team switch;
 - Menu 11: soli umani, self-vote, conteggio event-driven, pareggio = nessuna CHILL STAR;
-- Camera con un solo raycast e `MulaiKamera` senza `Stop Camera` immediatamente prima del nuovo `Start Camera`;
+- Camera con un solo raycast, target list limitata a entità esistenti/spawnate/vive e `MulaiKamera` senza `Stop Camera` immediatamente prima del nuovo `Start Camera`;
 - refresh passivi Camera/Revenge/Teleport a 1 Hz, Spawn cache a 1 Hz, minuti lobby a 0,1 Hz, inspection a 4 Hz, RGB globale a 8 Hz;
 - workflow consentiti limitati ai due permanenti e nessuna automazione legacy.
 
 ## Unit test
 
 ```text
-Ran 29 tests
+Ran 33 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.3 superati
+OK - controlli statici v0.6.4 superati
 ```
 
 ## GitHub
@@ -65,8 +65,8 @@ Non risultano tag o release legacy da sincronizzare. `.github/maintenance/patch.
 - tutti i 12 menu in EN / ID / TH;
 - join/leave ripetuti e stress con 12 player;
 - Camera self/target e cambi target rapidi senza micro-scatto;
-- Crouch inspection/Teleport;
-- Try Your Luck durante movimento/camera 3P;
+- Crouch inspection/Teleport, inclusi target morti/non spawnati e disponibilità obiettivo per Escort/Hybrid/CTF/Push;
+- Try Your Luck verde/rosso durante movimento e camera 3P, inclusi forcing posizione, Ring/Light Shaft, countdown e cleanup;
 - Vote Player con join/leave e pareggi;
 - Server Load Average/Peak reale e assenza di crescita permanente HUD/IWT.
 

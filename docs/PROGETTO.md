@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.3
+# Note di progetto — versione 0.6.4
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.3.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.4.
 
 ## Architettura generale
 
@@ -47,7 +47,7 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
 | 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |
-| 10 | Try Your Luck | crea una carta pubblica; solo il proprietario può attivarla, con esito 50/50 cura completa o morte |
+| 10 | Try Your Luck | roulette 50/50; pagina 10 bloccata durante l'esecuzione, FULL HP temporaneo, verde ripristina l'ultima scelta Unkillable, rosso immobilizza e uccide dopo il countdown |
 | 11 | Vote Player | vota qualsiasi umano della lobby, incluso se stessi; bot esclusi |
 
 Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
@@ -165,9 +165,26 @@ Il target player viene bloccato per identità prima del refresh per evitare reta
 
 ## Menu 10 — Try Your Luck
 
-Interact crea una carta virtuale centrata sul mirino e visibile a tutti. La roulette non cambia più la camera del player: se Menu 10 viene attivato in terza persona, la terza persona resta attiva senza `Stop Camera`, passaggio in prima persona o successivo ripristino. Le parentesi sono due In-World Text distinti posti fisicamente a ±0,30 m dal centro, quindi la loro apertura non dipende dagli spazi del font. Heart e Skull sono due Create Icon persistenti, entrambi con posizione racchiusa in Update Every Frame; il cambio rosso/verde alterna soltanto la visibilità, senza Destroy/Create per tick. La roulette resta a 20..24 cambi con intervallo iniziale 0,08 s e +0,055 s per passaggio.
+Interact avvia una carta pubblica con bracket e Heart/Skull persistenti. La roulette mantiene 20..24 cambi, intervallo iniziale 0,08 s e rallentamento +0,055 s per passaggio. La camera non viene modificata.
 
-Non serve sparare. All'avvio della roulette, il Menu 5 Unkillable viene forzato su OFF (`ModeKebal = 0`, `KursorKebal = 0`, status rimosso e danno ricevuto riportato a 100) senza curare automaticamente il player; l'Arcade Menu viene chiuso e non può essere riaperto finché `KartuNasibAktif` resta `True`. Quando la roulette termina, il colore finale decide l'esito: verde ripristina immediatamente la salute massima; rosso mantiene il teschio rosso e mostra un countdown di 3 secondi, poi uccide il proprietario. Se il proprietario muore prima che la sequenza finisca, la carta viene distrutta e `KartuNasibAktif`, colore, contatore e intervallo vengono azzerati; una vecchia outcome non può colpire una nuova carta dopo il respawn. L'esito finale resta 50/50.
+Durante `KartuNasibAktif == True` il Menu Arcade resta aperto sulla **pagina 10** e il dispatcher non accetta navigazione, back o nuove applicazioni. L'avvio salva la preferenza Unkillable in `ModeKebalTerakhir` e applica soltanto a runtime `ModeKebal = 2`, `KebalAktif = True`, status Unkillable, Damage Received 0% e Max Health. La preferenza del player non viene sovrascritta.
+
+Esito verde:
+
+- `ModeKebalTerakhir = 0` → OFF, Damage Received 100%, salute piena;
+- `ModeKebalTerakhir = 1` → 1 HP fuori Spawn Room; dentro Spawn Room resta runtime OFF e la preferenza 1 HP resta memorizzata;
+- `ModeKebalTerakhir = 2` → FULL HP con Damage Received 0%, Max Health e Halo RGB.
+
+Esito rosso:
+
+1. la protezione runtime passa a OFF;
+2. vengono salvati `PosisiNasibTerkunci` e il colore corrente `Global.RGB` in `WarnaNasibTerkunci`;
+3. Move Speed e Knockback Received passano a 0 e parte `Start Forcing Player Position`;
+4. vengono creati `Light Shaft` e `Ring` a terra con il colore congelato;
+5. `RadiusNasib` viene inseguito da 4 a 0,25 in 3 secondi mentre scorrono i messaggi 3-2-1;
+6. il player viene ucciso.
+
+Il cleanup su morte, leave e cambio team interrompe il chase, ferma il forcing, ripristina Move Speed/Knockback Received a 100 e distrugge entrambi gli effetti.
 
 ## Jump respawn
 
@@ -215,7 +232,7 @@ Workflow permanenti:
 - `.github/workflows/validate-workshop.yml`
 - `.github/workflows/maintenance-patch.yml`
 
-La CI esegue 29 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
+La CI esegue 33 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
 
 ## Limiti
 

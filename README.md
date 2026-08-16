@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.3** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.4** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -21,7 +21,7 @@ La versione **0.6.3** identifica lo stato funzionale e tecnico corrente del repo
   8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
   9. `8 - Crouch Teleport` — abilita/disabilita l’HUD Teleport su Crouch; default OFF.
   10. `9 - Crouch Privacy` — quando ON nasconde completamente icona/nome/salute ai nemici durante Crouch inspection; i compagni vedono sempre tutto; default OFF.
-  11. `10 - Try Your Luck` — roulette 50/50 cura completa o morte.
+  11. `10 - Try Your Luck` — roulette 50/50 con menu bloccato in pagina 10: protezione FULL HP temporanea; verde ripristina l'ultima modalità Unkillable scelta, rosso immobilizza il player con Light Shaft + Ring RGB in chiusura e lo uccide dopo 3 secondi.
   12. `11 - Vote Player` — voto verso qualsiasi umano, incluso se stessi; bot esclusi.
 - Player Icon predefinita: **Nothing**.
 - Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
@@ -49,7 +49,7 @@ La versione **0.6.3** identifica lo stato funzionale e tecnico corrente del repo
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
 | 9 | Crouch Privacy | OFF / ON; ON nasconde tutto ai nemici, alleati sempre visibili |
-| 10 | Try Your Luck | roulette 50/50 |
+| 10 | Try Your Luck | 50/50; menu bloccato, FULL HP temporaneo, verde ripristina Unkillable, rosso = freeze + Ring/Light Shaft + morte |
 | 11 | Vote Player | umani + conteggio voti, self-vote consentito |
 
 Il Teleport resta un overlay associato a Crouch; **Menu 8** decide soltanto se quell’overlay può aprirsi.
@@ -122,7 +122,7 @@ L'icona mantiene il proprio colore nativo e viene mostrata prima dell'icona eroe
 - branch operativo: `main`;
 - workflow permanenti: `validate-workshop.yml` e `maintenance-patch.yml`;
 - nessun workflow temporaneo permanente;
-- test statici: 29 unit test + validatore Workshop.
+- test statici: 33 unit test + validatore Workshop.
 
 ## Stato validazione
 
@@ -141,6 +141,17 @@ Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e
 **Correzione Spawn Room:** FULL HP resta attiva nella Spawn Room. Solo 1 HP viene disattivata automaticamente. Il passaggio 1 HP → FULL HP porta subito la salute al massimo e Damage Received a 0%; FULL HP → 1 HP ripristina Damage Received a 100% e porta la salute a 1.
 
 **Feedback visivo:** i feedback delle impostazioni non riproducono più suoni. `EfekTerapkan` e `EfekPulihkan` usano esclusivamente `Ring Explosion` con `Global.RGB`.
+
+
+### Try Your Luck 0.6.4
+
+Durante la roulette il Menu Arcade **resta aperto sulla pagina 10** e il dispatcher degli input viene bloccato finché `KartuNasibAktif` torna `False`. All'attivazione viene applicato temporaneamente **Unkillable FULL HP** senza modificare `ModeKebalTerakhir`, che conserva l'ultima scelta esplicita del player.
+
+- **Verde:** ripristina OFF / 1 HP / FULL HP in base a `ModeKebalTerakhir`; la restrizione 1 HP nello Spawn Room resta invariata.
+- **Rosso:** porta la protezione runtime a OFF, blocca movimento e knockback, forza la posizione, congela il colore corrente di `Global.RGB`, crea `Light Shaft` e `Ring` sul pavimento e riduce gradualmente il raggio durante il countdown 3-2-1 prima della morte.
+- Morte, leave e cambio squadra fermano il forcing/chase, ripristinano movimento e knockback e distruggono gli effetti senza lasciare entità orfane.
+
+Camera e Teleport ora escludono dai rispettivi elenchi target entità non esistenti, non spawnate o morte. Il Teleport obiettivo usa inoltre la stessa sorgente della sua esecuzione: Payload per Escort/Hybrid, flag nemica valida per CTF, proxy/fallback per Push e `Objective Position` negli altri casi.
 
 
 ### Audit 0.6.3

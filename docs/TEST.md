@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.3
+# Piano di test — versione 0.6.4
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.3.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.4.
 
 ## Gate statico
 
@@ -14,7 +14,7 @@ python tools/validate_workshop.py
 Esito atteso:
 
 ```text
-Ran 29 tests
+Ran 33 tests
 OK
 ```
 
@@ -146,7 +146,7 @@ Controllare soprattutto wrapping e glifi Thai.
 - Fuori menu, tenere Interact 0,5 s: terza persona self.
 - Ripetere: ritorno alla prima persona.
 - Dal Menu Camera provare OFF, self e target remoti.
-- Se il target esce, la camera deve tornare a uno stato valido.
+- Target morti/non spawnati non devono essere proposti; se il target selezionato esce, la camera deve tornare a uno stato valido.
 - Verificare collisione pareti e pitch estremo.
 - Passare rapidamente self → target → altro target: non deve comparire un frame in prima persona fra due `Start Camera`.
 
@@ -165,10 +165,10 @@ Controllare soprattutto wrapping e glifi Thai.
 - Verificare cursore persistente.
 - Spawn Room: disponibile solo dopo registrazione posizione.
 - Escort/Hybrid: vicino al payload.
-- CTF: vicino alla flag nemica.
+- CTF: vicino alla flag nemica solo quando la posizione della flag è valida.
 - Push: proxy robot quando disponibile, fallback obiettivo altrimenti.
-- Player target: posizione camminabile vicina al target.
-- Se il target esce durante l'azione, il teleport deve annullarsi senza retarget accidentale.
+- Player target: posizione camminabile vicina al target; player/bot morti o non spawnati non devono comparire nell'elenco.
+- Se il target esce o muore durante l'azione, il teleport deve annullarsi senza retarget accidentale.
 
 ## Unkillable — OFF / 1 HP / FULL HP
 
@@ -251,7 +251,7 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 
 - **10 menu:** scorrere Main Menu avanti/indietro e verificare wrap `0..9`, cursori persistenti e sfumatura colore anche tra menu 7/8/9.
 
-- **Unkillable 1 HP:** attivare 1 HP, verificare salute a 1, ritorno a 1 quando raggiunge il massimo e Halo visibile a tutti anche con Crouch Privacy ON.
+- **Unkillable 1 HP:** attivare 1 HP, verificare salute a 1, ritorno a 1 quando raggiunge il massimo e Warning rosso visibile a tutti anche con Crouch Privacy ON.
 
 - **Unkillable FULL HP:** attivare FULL HP, subire danni normali e verificare che la salute non scenda; Halo visibile a tutti. Passare 1 HP ↔ FULL HP senza duplicare l’icona.
 
@@ -272,7 +272,7 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 
 ## Menu 10 / 11
 
-- Try Your Luck: attivazione chiude e blocca il menu, forza Unkillable OFF e non cambia la camera; morte/leave devono distruggere entrambi i bracket e Heart/Skull senza oggetti orfani.
+- Try Your Luck: l'attivazione lascia il menu aperto e bloccato sulla pagina 10, forza temporaneamente FULL HP e non cambia la camera. Verde deve ripristinare l'ultima scelta Unkillable. Rosso deve passare runtime a OFF, bloccare movimento/knockback, forzare la posizione, creare Light Shaft + Ring con l'RGB congelato, restringere il Ring durante 3-2-1 e poi uccidere il player. Morte/leave/team switch devono ripristinare movimento/knockback, fermare forcing/chase e distruggere bracket, Heart/Skull, Light Shaft e Ring senza oggetti orfani.
 - Vote Player: lista soli umani, self-vote consentito, conteggi aggiornati nel Menu 11; pareggio al primo posto = nessuna CHILL STAR; leave del target cancella i voti verso di lui e ricalcola.
 - Ripetere join/leave mentre Menu 11 è aperto e verificare cursori validi e nessun riferimento stale.
 
