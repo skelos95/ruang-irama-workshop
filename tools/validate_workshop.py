@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.6.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.7.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.6"
+CURRENT_VERSION = "0.6.7"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -872,6 +872,47 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
 
 def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
+    # Da morto il Menu Arcade resta visibile ma non accetta comandi.
+    menu_command_rules = [
+        rule for rule in rules
+        if code_contains(rule.body, "Event Player.MenuTerbuka == True;")
+        and re.search(r"Event Player\.PerintahMenu == \d+;", mask_strings(rule.body)) is not None
+    ]
+    checks.require(menu_command_rules, "menu: nessuna regola comando trovata")
+    for rule in menu_command_rules:
+        checks.require(
+            code_contains(rule.body, "Is Alive(Event Player) == True;"),
+            f"menu da morto non bloccato nella regola: {rule.name}",
+        )
+
+    death_input_reset = [
+        rule for rule in rules if rule.name.startswith("12e - Bangkit Lompat:")
+    ]
+    checks.equal(len(death_input_reset), 1, "regola morte/respawn")
+    if death_input_reset:
+        checks.require(
+            code_contains(
+                death_input_reset[0].body,
+                "Event Player.PerintahMenu = 0;",
+                "Event Player.PerintahTeleportasi = 0;",
+            ),
+            "morte: comandi Menu/Teleport in coda non vengono azzerati",
+        )
+
+    crouch_activators = [
+        rule for rule in rules
+        if code_contains(rule.body, "Is Button Held(Event Player, Button(Crouch)) == True;")
+        and (
+            code_contains(rule.body, "Event Player.InspeksiAktif = True;")
+            or code_contains(rule.body, "Event Player.TeleportasiJongkokAktif = True;")
+        )
+    ]
+    checks.equal(len(crouch_activators), 2, "attivatori Crouch vivi")
+    for rule in crouch_activators:
+        checks.require(
+            code_contains(rule.body, "Is Alive(Event Player) == True;"),
+            f"Crouch non deve attivarsi da morto: {rule.name}",
+        )
     codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
     checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"], "codici dei dodici menu")
     checks.require(

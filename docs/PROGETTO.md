@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.6
+# Note di progetto — versione 0.6.7
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.6.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.7.
 
 ## Architettura generale
 
@@ -312,3 +312,8 @@ La variabile globale di appoggio del conteggio voti resta nello slot `47`, ma il
 ## Hotfix Respawn Jump 0.6.6
 
 Il respawn manuale con `Jump` resta disponibile da morto anche con il Menu Arcade aperto. La morte e il respawn non chiudono il menu; viene rimosso soltanto il guard `MenuTerbuka == False` dalla regola `12f`, mantenendo invariati `TeleportasiJongkokAktif`, il latch `BangkitLompatDipakai`, `Nearest Walkable Position`, `Respawn` e il teleport alla posizione sicura.
+
+
+## Hotfix input da morto 0.6.7
+
+Da morto il Menu Arcade non viene chiuso, ma tutte le regole che eseguono `PerintahMenu == N` richiedono `Is Alive(Event Player) == True`. La regola di morte azzera inoltre `PerintahMenu` e `PerintahTeleportasi` per eliminare input catturati nell'istante della morte. Gli attivatori Crouch inspection/Teleport restano protetti da `Is Alive == True`. `Jump` nella regola `12f` è l'unica eccezione e continua a eseguire il respawn manuale anche con menu aperto.

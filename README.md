@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.6** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.7** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -173,3 +173,8 @@ Variabili, subroutine, titoli regola e commenti personalizzati sono controllati 
 ### Respawn Jump 0.6.6
 
 Da morto, `Jump` esegue il respawn vicino al punto di morte anche se il Menu Arcade è già aperto. Il menu non viene chiuso dal respawn e la regola `12f - Bangkit Lompat` non dipende più da `MenuTerbuka == False`.
+
+
+### Input da morto 0.6.7
+
+Quando il player muore, un Menu Arcade già aperto resta visibile ma viene congelato: Primary Fire, Secondary Fire, Interact, Reload, Crouch e gli altri input Arcade non eseguono azioni. Anche Crouch inspection e Crouch Teleport restano inattivi. L'unico input custom attivo da morto è `Jump`, usato esclusivamente dal respawn manuale vicino al punto di morte. Dopo il respawn il menu rimane aperto e torna utilizzabile.

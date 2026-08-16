@@ -1182,6 +1182,7 @@ rule("05c - Menu: Pengatur masukan dengan prioritas tetap")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.MenuTerbuka == True;
 		Event Player.PerintahMenu == 0;
@@ -1246,6 +1247,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1301,6 +1303,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1410,6 +1413,7 @@ rule("08 - Menu 0: Lompat mundur sepuluh genre")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1436,6 +1440,7 @@ rule("09 - Menu 0: Jongkok maju sepuluh genre")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1462,6 +1467,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1800,6 +1806,7 @@ rule("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 
 	conditions
 	{
+		Is Alive(Event Player) == True;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -1900,6 +1907,8 @@ rule("12e - Bangkit Lompat: Simpan posisi kematian")
 	{
 		Event Player.PosisiMati = Position Of(Event Player);
 		Event Player.BangkitLompatDipakai = False;
+		Event Player.PerintahMenu = 0;
+		Event Player.PerintahTeleportasi = 0;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: respawn near your death spot.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit dekat lokasi mati.", Input Binding String(Button(Jump))) : Custom String("กด {0}: เกิดใหม่ใกล้จุดตาย", Input Binding String(Button(Jump))));
 	}
 }

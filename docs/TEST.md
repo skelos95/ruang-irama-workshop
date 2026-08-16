@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.6
+# Piano di test — versione 0.6.7
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.6.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.7.
 
 ## Gate statico
 
@@ -304,3 +304,8 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 ## Hotfix Respawn Jump 0.6.6
 
 Verifica live obbligatoria: aprire il Menu Arcade, morire lasciandolo aperto, premere `Jump` e confermare che il player rinasca vicino al punto di morte senza che il menu venga chiuso. Ripetere sia dal Main Menu sia da un sottomenu.
+
+
+## Hotfix input da morto 0.6.7
+
+Verifica live obbligatoria: con Menu Arcade aperto, morire e provare Primary Fire, Secondary Fire, Interact, Reload, Crouch e Melee; nessuno deve modificare o chiudere il menu e Crouch non deve aprire inspection/Teleport. Premere quindi `Jump`: deve essere l'unico comando custom efficace, effettuare il respawn vicino al punto di morte e lasciare il menu aperto. Dopo il respawn, verificare che tutti i comandi menu tornino immediatamente disponibili.

@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.6
+# Rapporto di validazione — versione 0.6.7
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.6**
+Release tecnica: **CHILL Dedicated Server 0.6.7**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-35dc9ecd5627a36017391df5dcda8cc1ff1282de
+e21fb9455653d5f4e26e98373d3ea36d05a433ee
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.6 superati
+OK - controlli statici v0.6.7 superati
 ```
 
 ## GitHub
@@ -89,3 +89,8 @@ Lo status Menu 10 ora mostra lo stato reale della roulette; la morte interrompe 
 ## Hotfix Respawn Jump 0.6.6
 
 Il gate verifica che la regola `12f - Bangkit Lompat` esista una sola volta e non contenga `Event Player.MenuTerbuka == False;`. In questo modo il respawn con `Jump` resta disponibile anche con Menu Arcade aperto, che deve restare visibile durante morte e respawn.
+
+
+## Hotfix input da morto 0.6.7
+
+Il gate statico richiede `Is Alive(Event Player) == True` su tutte le regole che eseguono comandi `PerintahMenu == N`, richiede l'azzeramento di `PerintahMenu`/`PerintahTeleportasi` alla morte e certifica che i due attivatori Crouch (inspection e Teleport) siano disponibili solo da vivi. La regola Jump respawn resta invece utilizzabile da morto anche con Menu Arcade aperto.
