@@ -33,7 +33,7 @@ Lingue disponibili:
 
 HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native Workshop restano in inglese; identificatori, subroutine, regole e commenti personalizzati sono in Bahasa Indonesia.
 
-## Main Menu: 11 voci
+## Main Menu: 12 voci
 
 | Indice | Menu | Contenuto |
 |---:|---|---|
@@ -48,6 +48,7 @@ HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native
 | 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
 | 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |
 | 10 | Try Your Luck | crea una carta pubblica; solo il proprietario può attivarla, con esito 50/50 cura completa o morte |
+| 11 | Vote Player | vota qualsiasi umano della lobby, incluso se stessi; bot esclusi |
 
 Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
 
@@ -243,7 +244,7 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 
 ## Unkillable — OFF / 1 HP / FULL HP
 
-`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Le modalità 1 HP e FULL HP condividono un Halo creato con `Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True)`, quindi l'indicatore non dipende da Crouch Privacy. OFF e Player Left distruggono l'icona. La Spawn Room disattiva esclusivamente ModeKebal=1; ModeKebal=2 resta attivo con Damage Received 0%, Max Health e Halo pubblico.
+`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Gli indicatori sono distinti e pubblici: 1 HP usa `Warning` rosso, FULL HP usa `Halo` con `Global.RGB`; entrambi restano indipendenti da Crouch Privacy. OFF e Player Left distruggono l'icona. La Spawn Room disattiva esclusivamente ModeKebal=1; ModeKebal=2 resta attivo con Damage Received 0%, Max Health e Halo pubblico.
 
 
 ### Transizioni Unkillable esclusive
@@ -254,3 +255,8 @@ La validazione statica non sostituisce il client Overwatch. Restano da testare l
 ### Feedback solo visivo
 
 Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerapkan` e `EfekPulihkan` mantengono una sola chiamata `Play Effect` ciascuna: `Ring Explosion`, visibile a tutti e colorata con `Global.RGB`. `Good Explosion`, `Buff Impact Sound` e `Ring Explosion Sound` non devono comparire nel sorgente. La feature Hero Voice resta indipendente perché modifica le voice line del giocatore e non è un effetto di feedback.
+
+
+## Menu 11 — Vote Player
+
+Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `NumeroVoti`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `LeaderVoto = Null` e nessun nome viene mostrato.

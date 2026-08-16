@@ -10,7 +10,7 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
 - Due roster sociali:
   - sinistra: icona personale + icona eroe + player + `N MIN`;
   - destra: icona personale + icona eroe + player + genere musicale scelto.
-- **10 menu Arcade**:
+- **12 menu Arcade**:
   1. `0 - Soundtrack` — 100 generi.
   2. `1 - Third-Person Camera` — OFF, self o spectate.
   3. `2 - Name Color` — **32 colori**.
@@ -21,6 +21,8 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
   8. `7 - Player Icon` — **37 voci**: `Nothing` + 36 icone Workshop standard.
   9. `8 - Crouch Teleport` — abilita/disabilita l’HUD Teleport su Crouch; default OFF.
   10. `9 - Crouch Privacy` — quando ON nasconde completamente icona/nome/salute ai nemici durante Crouch inspection; i compagni vedono sempre tutto; default OFF.
+  11. `10 - Try Your Luck` — roulette 50/50 cura completa o morte.
+  12. `11 - Vote Player` — voto verso qualsiasi umano, incluso se stessi; bot esclusi.
 - Player Icon predefinita: **Nothing**.
 - Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
 - Colori menu diversi e coordinati con i rispettivi sottomenu.
@@ -47,6 +49,8 @@ La versione **0.5.5** resta il numero tecnico corrente del repository, ma questo
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
 | 9 | Crouch Privacy | OFF / ON; ON nasconde tutto ai nemici, alleati sempre visibili |
+| 10 | Try Your Luck | roulette 50/50 |
+| 11 | Vote Player | umani + conteggio voti, self-vote consentito |
 
 Il Teleport resta un overlay associato a Crouch; **Menu 8** decide soltanto se quell’overlay può aprirsi.
 
@@ -132,7 +136,7 @@ Per i dettagli tecnici consulta:
 
 ### Menu 5 — Unkillable
 
-Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e mantiene la salute al massimo. In 1 HP e FULL HP compare un **Halo pubblico** sopra al player, visibile a entrambe le squadre e indipendente da Crouch Privacy. L'Halo usa il valore `Global.RGB` presente quando viene creato e segue il player senza un loop di ricreazione.
+Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e mantiene la salute al massimo. Gli indicatori sono pubblici e distinti: **1 HP usa Warning rosso**, mentre **FULL HP usa Halo RGB**. Passando da una modalità all'altra l'icona viene sostituita.
 
 **Correzione Spawn Room:** FULL HP resta attiva nella Spawn Room. Solo 1 HP viene disattivata automaticamente. Il passaggio 1 HP → FULL HP porta subito la salute al massimo e Damage Received a 0%; FULL HP → 1 HP ripristina Damage Received a 100% e porta la salute a 1.
 

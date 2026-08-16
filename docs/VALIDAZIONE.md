@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-456084ef264ca7dcbc7192f2bb7d83b8f0a40c90
+ba7f0284eae9171c3638e86af81d36cf34574e48
 ```
 
 ## Controlli statici correnti
@@ -24,7 +24,7 @@ Il gate verifica:
 - dichiarazioni e regole senza duplicati invalidi;
 - 100 generi;
 - 3 lingue EN / ID / TH;
-- **11 menu Arcade** (`0..10`);
+- **12 menu Arcade** (`0..10`);
 - **32 Name Color** con array nomi allineati;
 - **37 Player Icon** (`Nothing` + 36 icone);
 - Menu 5 Unkillable/Kebal 1 HP;
@@ -64,7 +64,7 @@ Generi: 100 | Lingue: 3 | Regole: 72 | Raycast camera: 1
 ## Verifiche live ancora obbligatorie
 
 - importazione nel client Overwatch;
-- apertura e navigazione di tutti gli 11 menu;
+- apertura e navigazione di tutti gli 12 menu;
 - localizzazione EN / ID / TH;
 - 32 Name Color;
 - 37 Player Icon;
@@ -103,3 +103,6 @@ Il repository è **static-ready, live-pending**. Il gate statico può certificar
 - Unkillable: transizioni esclusive OFF/1 HP/FULL HP; Spawn Room resetta solo 1 HP, FULL HP persiste.
 
 - Feedback impostazioni: zero effetti audio; entrambe le subroutine usano esclusivamente Ring Explosion RGB.
+
+- Menu 11 Vote Player: soli umani, self-vote consentito, un voto attivo per player, conteggio event-driven; leader HUD solo se unico, pareggio = nessun leader; diagnostics dopo un'altra riga vuota;
+- Unkillable: 1 HP Warning rosso, FULL HP Halo RGB; cambio modalità sostituisce l'icona;

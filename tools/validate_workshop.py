@@ -859,10 +859,10 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
 def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
     codes = [re.sub(r"\s+", "", item) for item in top_level_items(array_body(source, "Global.KodeMenu"))]
-    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], "codici degli undici menu")
+    checks.equal(codes, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"], "codici dei dodici menu")
     checks.require(
-        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*11\s*;", clean) is not None,
-        "navigazione principale non limitata a undici menu",
+        re.search(r"KursorUtama\s*=\s*\([^;]+\)\s*%\s*12\s*;", clean) is not None,
+        "navigazione principale non limitata a dodici menu",
     )
     checks.require(
         re.search(r"KursorBahasa\s*=\s*\([^;]+\)\s*%\s*3\s*;", clean) is not None,
@@ -872,7 +872,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
         "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
-        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib",
+        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarVoto",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -1875,8 +1875,11 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
     luck_start = menu_interact.find("Event Player.KartuNasibAktif = True;")
     checks.require(luck_start >= 0, "Nasib: avvio carta non trovato nel dispatcher")
     if luck_start >= 0:
-        before_luck = mask_strings(menu_interact[max(0, luck_start - 900):luck_start])
+        masked_menu_interact = mask_strings(menu_interact)
+        before_luck = masked_menu_interact[max(0, luck_start - 900):luck_start]
         after_luck = mask_strings(menu_interact[luck_start:])
+        vote_branch_at = after_luck.find("Event Player.KursorVoto %=")
+        luck_only = after_luck[:vote_branch_at] if vote_branch_at >= 0 else after_luck
         for token in (
             "Event Player.KebalAktif = False;",
             "Event Player.ModeKebal = 0;",
@@ -1891,7 +1894,7 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
             "Nasib: il menu non viene chiuso quando parte la carta",
         )
         checks.require(
-            "Call Subroutine(GambarMenu);" not in after_luck,
+            "Call Subroutine(GambarMenu);" not in luck_only,
             "Nasib: il menu viene ridisegnato dopo l'avvio della carta",
         )
 
@@ -2900,6 +2903,7 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
             "Set Player Health(Event Player, 1);",
             "Set Damage Received(Event Player, 0);",
             "Set Player Health(Event Player, Max Health(Event Player));",
+            "Create Icon(All Players(All Teams), Event Player, Warning, Visible To and Position, Custom Color(255, 80, 80, 255), True);",
             "Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);",
             "Event Player.IkonKebal = Last Created Entity;",
             "Destroy Icon(Event Player.IkonKebal);",
@@ -2939,15 +2943,43 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
         checks.require("Event Player.ModeKebal == 2;" not in body, "Spawn Room reset coinvolge FULL HP")
         checks.require("Event Player.HalamanMenu = -1;" not in body, "Spawn Room non deve chiudere il menu 5 per FULL HP")
 
-    # Public icon is intentionally independent from Crouch Privacy and team.
-    icon_calls = [call for call in call_texts(source, "Create Icon") if "Halo" in call and "Event Player" in call]
-    checks.equal(len(icon_calls), 1, "Unkillable Halo public icon")
-    if icon_calls:
-        checks.require("All Players(All Teams)" in icon_calls[0] and "Global.RGB" in icon_calls[0] and "Visible To and Position" in icon_calls[0], "Unkillable Halo non è pubblico/RGB/follow")
-        checks.require("PrivasiInspeksiAktif" not in icon_calls[0] and "Team Of(" not in icon_calls[0], "Unkillable Halo dipende dalla privacy/team")
+    halo_calls = [call for call in call_texts(source, "Create Icon") if ", Halo," in call and "Event Player" in call]
+    warning_calls = [call for call in call_texts(source, "Create Icon") if ", Warning," in call and "Event Player" in call]
+    checks.equal(len(halo_calls), 1, "Unkillable FULL HP Halo public icon")
+    checks.equal(len(warning_calls), 1, "Unkillable 1 HP Warning public icon")
+    if halo_calls:
+        checks.require("All Players(All Teams)" in halo_calls[0] and "Global.RGB" in halo_calls[0] and "Visible To and Position" in halo_calls[0], "Unkillable FULL HP Halo non è pubblico/RGB/follow")
+    if warning_calls:
+        checks.require("All Players(All Teams)" in warning_calls[0] and "Custom Color(255, 80, 80, 255)" in warning_calls[0] and "Visible To and Position" in warning_calls[0], "Unkillable 1 HP Warning non è pubblico/rosso/follow")
 
     leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
     checks.require(bool(leave) and "Destroy Icon(Event Player.IkonKebal);" in mask_strings(leave[0].body), "Unkillable Halo cleanup leave assente")
+
+
+def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
+    clean = mask_strings(source)
+    checks.require("GambarVoto" in subroutines and "HitungPilihan" in subroutines, "Vote: subroutine mancanti")
+    checks.require("Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);" in clean, "Vote: Menu 11 non registrato")
+    renderer = rules_containing(rules, "Subroutine;", "GambarVoto;")
+    checks.equal(len(renderer), 1, "Vote: renderer")
+    if renderer:
+        raw = renderer[0].body
+        checks.require("11 - VOTE PLAYER" in raw and "11 - VOTE PEMAIN" in raw and "11 - โหวตผู้เล่น" in raw, "Vote: localizzazione incompleta")
+        checks.require(raw.count("NumeroVoti") >= 12, "Vote: lista conteggi incompleta")
+    tally = rules_containing(rules, "Subroutine;", "HitungPilihan;")
+    checks.equal(len(tally), 1, "Vote: tally")
+    if tally:
+        body = mask_strings(tally[0].body)
+        checks.require("Filtered Array(Global.PemainManusia" in body and "Global.PariVoti = True;" in body and "Global.LeaderVoto = Null;" in body, "Vote: tally/pareggio incompleto")
+    handlers = [r for r in rules if code_contains(r.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu")]
+    checks.equal(len(handlers), 1, "Vote: handler")
+    if handlers:
+        body = mask_strings(handlers[0].body)
+        checks.require("Event Player.TargetVoto = Global.PemainManusia[Event Player.KursorVoto];" in body and "Call Subroutine(HitungPilihan);" in body, "Vote: applicazione voto incompleta")
+    checks.require("MOST VOTED:" in source and "PALING BANYAK DIPILIH:" in source and "โหวตสูงสุด:" in source, "Vote: HUD leader assente")
+    checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean and "Global.LeaderVoto != Null" in clean, "Vote: leader non ancorato/nascosto in pareggio")
+    leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
+    checks.require(bool(leave) and "TargetVoto == Global.PemainPembersihan" in mask_strings(leave[0].body), "Vote: cleanup leave assente")
 
 def main() -> None:
     checks = Checks()
@@ -2979,6 +3011,7 @@ def main() -> None:
         check_rgb_system(checks, source, rules)
         check_player_icon_menu(checks, source, rules, subroutines)
         check_idempotent_menu_feedback(checks, source, rules)
+        check_vote_menu(checks, source, rules, subroutines)
         check_crouch_toggle_and_name_privacy(checks, source, rules, subroutines)
         check_server_location_setting(checks, source)
         check_diagnostics(checks, source, rules)
