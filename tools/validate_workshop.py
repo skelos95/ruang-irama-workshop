@@ -1026,9 +1026,9 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         )
 
     checks.equal(
-        source.count('And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String('),
-        3,
-        "HUD teleport CTF non deve mostrare unavailable basandosi su Objective Position",
+        source.count('Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100'),
+        4,
+        "HUD/esecuzione teleport CTF devono controllare la posizione della bandiera",
     )
 
     for rule in rules:
@@ -1125,6 +1125,11 @@ def check_camera(
             code_contains(ray_rules[0].body, "Subroutine;", "MulaiKamera;"),
             "raycast camera non confinato alla subroutine MulaiKamera",
         )
+    camera_refresh = rules_containing(rules, "Subroutine;", "SegarkanTargetKamera;")
+    checks.equal(len(camera_refresh), 1, "subroutine target Camera")
+    if camera_refresh:
+        refresh_code = re.sub(r"\s+", "", mask_strings(camera_refresh[0].body))
+        checks.require("EntityExists(CurrentArrayElement)" in refresh_code and "IsAlive(CurrentArrayElement)" in refresh_code and "IsAlive(CurrentArrayElement)==False" not in refresh_code, "Camera: candidati morti/non esistenti non filtrati")
     camera_loops = [
         rule for rule in rules
         if code_contains(rule.body, "ModeKamera != 0;", "Loop If Condition Is True;")
@@ -1706,6 +1711,11 @@ def check_teleport(checks: Checks, source: str, rules: list[Rule]) -> None:
         > after_refresh.find("Teleport(EventPlayer"),
         "Teleport: identità catturata non azzerata dopo l'azione",
     )
+    refresh_rules = rules_containing(rules, "Subroutine;", "SegarkanTargetTeleportasi;")
+    checks.equal(len(refresh_rules), 1, "subroutine target Teleport")
+    if refresh_rules:
+        refresh_code = re.sub(r"\s+", "", mask_strings(refresh_rules[0].body))
+        checks.require("EntityExists(CurrentArrayElement)" in refresh_code and "IsAlive(CurrentArrayElement)" in refresh_code and "IsAlive(CurrentArrayElement)==False" not in refresh_code, "Teleport: candidati morti/non esistenti non filtrati")
 
     cleanup_rules = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
     if cleanup_rules:
@@ -1836,6 +1846,17 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         checks.require(luck_code.count("Wait(1, Ignore Condition);") == 3, "Nasib: countdown rosso deve durare tre secondi anche dopo Putaran == 0")
         checks.require(luck_code.count("Abort If(Event Player.KartuNasibAktif == False);") >= 4, "Nasib: outcome non si annulla dopo morte/reset")
         checks.require(luck_code.count("Abort If(Event Player.PutaranKartuNasib > 0);") >= 4, "Nasib: una vecchia outcome può interferire con una nuova roulette")
+        for token in (
+            "Event Player.ModeKebalTerakhir",
+            "Event Player.ModeKebal = 0;",
+            "Set Move Speed(Event Player, 0);",
+            "Set Knockback Received(Event Player, 0);",
+            "Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);",
+            "Create Effect(All Players(All Teams), Light Shaft, Event Player.WarnaNasibTerkunci",
+            "Create Effect(All Players(All Teams), Ring, Event Player.WarnaNasibTerkunci",
+            "Chase Player Variable Over Time(Event Player, RadiusNasib, 0.250, 3, Destination and Duration);",
+        ):
+            checks.require(token in luck_code, f"Nasib: sequenza rosso/verde incompleta: {token}")
     card_texts = [
         call for call in call_texts(source, "Create In-World Text")
         if "All Players(All Teams)" in call
@@ -1890,6 +1911,11 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
                 "Destroy Icon(Event Player.IkonKartuNasibHijau);",
                 "Event Player.IkonKartuNasib = Null;",
                 "Event Player.IkonKartuNasibHijau = Null;",
+                "Stop Forcing Player Position(Event Player);",
+                "Set Move Speed(Event Player, 100);",
+                "Set Knockback Received(Event Player, 100);",
+                "Destroy Effect(Event Player.EfekNasibCahaya);",
+                "Destroy Effect(Event Player.EfekNasibLingkaran);",
             ),
             "Nasib: morte prima della fine non resetta completamente la carta",
         )
@@ -1917,21 +1943,26 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         vote_branch_at = after_luck.find("Event Player.KursorPilihan %=")
         luck_only = after_luck[:vote_branch_at] if vote_branch_at >= 0 else after_luck
         for token in (
-            "Event Player.KebalAktif = False;",
-            "Event Player.ModeKebal = 0;",
-            "Event Player.KursorKebal = 0;",
-            "Clear Status(Event Player, Unkillable);",
-            "Set Damage Received(Event Player, 100);",
-            "Destroy Icon(Event Player.IkonKebal);",
+            "Event Player.ModeKebal = 2;",
+            "Event Player.KebalAktif = True;",
+            "Set Status(Event Player, Null, Unkillable, 9999);",
+            "Set Damage Received(Event Player, 0);",
+            "Set Player Health(Event Player, Max Health(Event Player));",
         ):
-            checks.require(token in before_luck, f"Nasib: avvio carta non forza Unkillable OFF: {token}")
+            checks.require(token in luck_only, f"Nasib: avvio carta non forza temporaneamente FULL HP: {token}")
         checks.require(
-            "Call Subroutine(TutupMenu);" in after_luck,
-            "Nasib: il menu non viene chiuso quando parte la carta",
+            "Call Subroutine(TutupMenu);" not in luck_only,
+            "Nasib: il menu 10 non deve chiudersi quando parte la carta",
         )
         checks.require(
-            "Call Subroutine(GambarMenu);" not in luck_only,
-            "Nasib: il menu viene ridisegnato dopo l'avvio della carta",
+            "Call Subroutine(GambarMenu);" in luck_only,
+            "Nasib: il menu 10 non resta visibile come ACTIVE durante la roulette",
+        )
+        checks.require(
+            "Event Player.KartuNasibAktif == False;" in mask_strings(next(
+                rule.body for rule in rules if rule.name.startswith("05c - Menu:")
+            )),
+            "Nasib: dispatcher menu non bloccato durante la roulette",
         )
 
     checks.require(
@@ -3088,8 +3119,8 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
 
     halo_calls = [call for call in call_texts(source, "Create Icon") if ", Halo," in call and "Event Player" in call]
     warning_calls = [call for call in call_texts(source, "Create Icon") if ", Warning," in call and "Event Player" in call]
-    checks.equal(len(halo_calls), 1, "Unkillable FULL HP Halo public icon")
-    checks.equal(len(warning_calls), 1, "Unkillable 1 HP Warning public icon")
+    checks.equal(len(halo_calls), 3, "Unkillable FULL HP Halo public icon")
+    checks.equal(len(warning_calls), 2, "Unkillable 1 HP Warning public icon")
     if halo_calls:
         checks.require("All Players(All Teams)" in halo_calls[0] and "Global.RGB" in halo_calls[0] and "Visible To and Position" in halo_calls[0], "Unkillable FULL HP Halo non è pubblico/RGB/follow")
     if warning_calls:

@@ -316,6 +316,55 @@ subroutines
         validator.check_arcade_features(checks, mutated, self.rules(mutated))
         self.assertTrue(any("Health(Event Player)" in error for error in checks.errors), checks.errors)
 
+    def test_luck_menu_must_stay_open_and_locked(self) -> None:
+        dispatcher_at = self.source.index('rule("05c - ')
+        dispatcher_end = self.source.index('\nrule("05d - ', dispatcher_at)
+        dispatcher = self.source[dispatcher_at:dispatcher_end]
+        dispatcher2 = dispatcher.replace(
+            "Event Player.KartuNasibAktif == False;",
+            '"Event Player.KartuNasibAktif == False;"',
+            1,
+        )
+        self.assertNotEqual(dispatcher2, dispatcher)
+        mutated = self.source[:dispatcher_at] + dispatcher2 + self.source[dispatcher_end:]
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("dispatcher menu non bloccato" in error for error in checks.errors), checks.errors)
+
+    def test_luck_red_must_force_position_and_shrink_ring(self) -> None:
+        mutated = self.source.replace(
+            "Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);",
+            '"Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);"',
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        checks = validator.Checks()
+        validator.check_arcade_features(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("sequenza rosso/verde incompleta" in error for error in checks.errors), checks.errors)
+
+    def test_camera_dead_candidate_is_rejected(self) -> None:
+        refresh_at = self.source.index('rule("95 - ')
+        mutated = self.source[:refresh_at] + self.source[refresh_at:].replace(
+            "Is Alive(Current Array Element)",
+            "Is Alive(Current Array Element) == False",
+            1,
+        )
+        checks = validator.Checks()
+        _, player_names, _ = validator.declaration_tables(mutated)
+        validator.check_camera(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("candidati morti" in error for error in checks.errors), checks.errors)
+
+    def test_teleport_dead_candidate_is_rejected(self) -> None:
+        refresh_at = self.source.index('rule("98 - ')
+        mutated = self.source[:refresh_at] + self.source[refresh_at:].replace(
+            "Is Alive(Current Array Element)",
+            "Is Alive(Current Array Element) == False",
+            1,
+        )
+        checks = validator.Checks()
+        validator.check_teleport(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("candidati morti" in error for error in checks.errors), checks.errors)
+
     def test_voice_normal_stop_is_required(self) -> None:
         menu_at = self.source.index('rule("10 - Menu:')
         menu_end = self.source.index('\nrule("11 - ', menu_at)

@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-d31522ae98a6cf7784d2f7cb87684212a342daa1
+c255608fe0b3624a79fea8ff07164141bd408bf0
 ```
 
 ## Audit 0.6.3

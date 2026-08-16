@@ -128,6 +128,13 @@ variables
 		78: KursorPilihan
 		79: PemainDipilih
 		80: JumlahSuara
+		81: ModeKebalTerakhir
+		82: PosisiNasibTerkunci
+		83: WarnaNasibTerkunci
+		84: EfekNasibCahaya
+		85: EfekNasibLingkaran
+		86: RadiusNasib
+		87: GerakNasibDikunci
 }
 
 subroutines
@@ -1178,6 +1185,7 @@ rule("05c - Menu: Pengatur masukan dengan prioritas tetap")
 		Event Player.Manusia == True;
 		Event Player.MenuTerbuka == True;
 		Event Player.PerintahMenu == 0;
+		Event Player.KartuNasibAktif == False;
 		Or(Or(Is Button Held(Event Player, Button(Interact)), And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu
 			!= -1)), Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), And(
 			Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Jump)), Is Button Held(Event Player, Button(Crouch)))))) == True;
@@ -1625,6 +1633,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				If(And(Event Player.KursorKebal == 1, Is In Spawn Room(Event Player) == True));
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP is unavailable in Spawn Room. FULL HP is still available.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP tidak tersedia di ruang muncul. FULL HP tetap tersedia.") : Custom String("ใช้โหมดฆ่าไม่ตาย: 1 HP ในห้องเกิดไม่ได้ แต่ FULL HP ยังใช้ได้"));
 				Else;
+					Event Player.ModeKebalTerakhir = Event Player.KursorKebal;
 					Event Player.ModeKebal = Event Player.KursorKebal;
 					Event Player.KebalAktif = Event Player.ModeKebal != 0;
 					If(Event Player.ModeKebal == 0);
@@ -1728,22 +1737,32 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 10);
 			If(Event Player.KartuNasibAktif == True);
-				Call Subroutine(TutupMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("The luck card is already rolling. Wait for the result.") : Event Player.IndeksBahasa == 1 ? Custom String("Kartu nasib sedang berputar. Tunggu hasilnya.") : Custom String("การ์ดเสี่ยงโชคกำลังสุ่มอยู่ รอผลก่อน"));
 			Else;
-				Event Player.KebalAktif = False;
-				Event Player.ModeKebal = 0;
-				Event Player.KursorKebal = 0;
-				Clear Status(Event Player, Unkillable);
-				Set Damage Received(Event Player, 100);
-				If(Event Player.IkonKebal != Null);
-					Destroy Icon(Event Player.IkonKebal);
-					Event Player.IkonKebal = Null;
-				End;
 				Event Player.KartuNasibAktif = True;
 				Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
 				Event Player.JedaKartuNasib = 0.080;
+				Event Player.GerakNasibDikunci = False;
+				Event Player.PosisiNasibTerkunci = Position Of(Event Player);
+				Event Player.WarnaNasibTerkunci = Global.RGB;
+				Event Player.RadiusNasib = 0;
+				Event Player.EfekNasibCahaya = Null;
+				Event Player.EfekNasibLingkaran = Null;
+				"Perlindungan undian hanya sementara; pilihan pemain tetap disimpan di ModeKebalTerakhir."
+				Event Player.ModeKebal = 2;
+				Event Player.KebalAktif = True;
+				Clear Status(Event Player, Unkillable);
+				Set Status(Event Player, Null, Unkillable, 9999);
+				Set Damage Received(Event Player, 0);
+				If(Is Alive(Event Player) == True);
+					Set Player Health(Event Player, Max Health(Event Player));
+				End;
+				If(Event Player.IkonKebal != Null);
+					Destroy Icon(Event Player.IkonKebal);
+				End;
+				Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
+				Event Player.IkonKebal = Last Created Entity;
 				Create In-World Text(All Players(All Teams), Custom String("["), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Cross Product(Direction From Angles(Horizontal Facing Angle Of(Event Player), 0), Vector(0, 1, 0)) * 0.300), 2.200, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
 				Create In-World Text(All Players(All Teams), Custom String("]"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 + Cross Product(Direction From Angles(Horizontal Facing Angle Of(Event Player), 0), Vector(0, 1, 0)) * 0.300), 2.200, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
@@ -1752,7 +1771,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.IkonKartuNasib = Last Created Entity;
 				Create Icon(Event Player.KartuNasibMerah ? Empty Array : All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)), Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
 				Event Player.IkonKartuNasibHijau = Last Created Entity;
-				Call Subroutine(TutupMenu);
+				Call Subroutine(GambarMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
 			End;
 		Else;
@@ -2288,6 +2307,27 @@ rule("18e - Nasib: Undian merah hijau makin lambat")
 		Modify Player Variable(Event Player, JedaKartuNasib, Add, 0.055);
 		Loop If Condition Is True;
 		If(Event Player.KartuNasibMerah == True);
+			"Hasil merah hanya mematikan perlindungan sementara; ModeKebalTerakhir tetap menyimpan pilihan pemain."
+			Event Player.KebalAktif = False;
+			Event Player.ModeKebal = 0;
+			Clear Status(Event Player, Unkillable);
+			Set Damage Received(Event Player, 100);
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
+			Event Player.PosisiNasibTerkunci = Position Of(Event Player);
+			Event Player.WarnaNasibTerkunci = Global.RGB;
+			Event Player.GerakNasibDikunci = True;
+			Set Move Speed(Event Player, 0);
+			Set Knockback Received(Event Player, 0);
+			Start Forcing Player Position(Event Player, Event Player.PosisiNasibTerkunci, False);
+			Event Player.RadiusNasib = 4;
+			Create Effect(All Players(All Teams), Light Shaft, Event Player.WarnaNasibTerkunci, Event Player.PosisiNasibTerkunci, Event Player.RadiusNasib, Visible To Position and Radius);
+			Event Player.EfekNasibCahaya = Last Created Entity;
+			Create Effect(All Players(All Teams), Ring, Event Player.WarnaNasibTerkunci, Event Player.PosisiNasibTerkunci + Vector(0, 0.050, 0), Event Player.RadiusNasib, Visible To Position and Radius);
+			Event Player.EfekNasibLingkaran = Last Created Entity;
+			Chase Player Variable Over Time(Event Player, RadiusNasib, 0.250, 3, Destination and Duration);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("RED! Death in 3...") : Event Player.IndeksBahasa == 1 ? Custom String("MERAH! Mati dalam 3...") : Custom String("แดง! ตายใน 3..."));
 			Wait(1, Ignore Condition);
 			Abort If(Event Player.KartuNasibAktif == False);
@@ -2300,11 +2340,45 @@ rule("18e - Nasib: Undian merah hijau makin lambat")
 			Wait(1, Ignore Condition);
 			Abort If(Event Player.KartuNasibAktif == False);
 			Abort If(Event Player.PutaranKartuNasib > 0);
-			Clear Status(Event Player, Unkillable);
 			Kill(Event Player, Null);
+			Abort;
 		Else;
-			Set Player Health(Event Player, Max Health(Event Player));
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("GREEN! Full health restored.") : Event Player.IndeksBahasa == 1 ? Custom String("HIJAU! Kesehatan penuh dipulihkan.") : Custom String("เขียว! ฟื้นพลังชีวิตเต็มแล้ว"));
+			Clear Status(Event Player, Unkillable);
+			Event Player.ModeKebal = Event Player.ModeKebalTerakhir;
+			Event Player.KursorKebal = Event Player.ModeKebalTerakhir;
+			If(And(Event Player.ModeKebalTerakhir == 1, Is In Spawn Room(Event Player) == True));
+				Event Player.KebalAktif = False;
+				Event Player.ModeKebal = 0;
+				Set Damage Received(Event Player, 100);
+				Set Player Health(Event Player, Max Health(Event Player));
+			Else If(Event Player.ModeKebalTerakhir == 0);
+				Event Player.KebalAktif = False;
+				Set Damage Received(Event Player, 100);
+				Set Player Health(Event Player, Max Health(Event Player));
+			Else;
+				Event Player.KebalAktif = True;
+				Set Status(Event Player, Null, Unkillable, 9999);
+				If(Event Player.ModeKebalTerakhir == 1);
+					Set Damage Received(Event Player, 100);
+					Set Player Health(Event Player, 1);
+				Else;
+					Set Damage Received(Event Player, 0);
+					Set Player Health(Event Player, Max Health(Event Player));
+				End;
+			End;
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
+			If(Event Player.KebalAktif == True);
+				If(Event Player.ModeKebal == 1);
+					Create Icon(All Players(All Teams), Event Player, Warning, Visible To and Position, Custom Color(255, 80, 80, 255), True);
+				Else;
+					Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
+				End;
+				Event Player.IkonKebal = Last Created Entity;
+			End;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("GREEN! Your last Unkillable setting is back.") : Event Player.IndeksBahasa == 1 ? Custom String("HIJAU! Pengaturan Kebal terakhirmu kembali.") : Custom String("เขียว! คืนค่าฆ่าไม่ตายล่าสุดของคุณแล้ว"));
 			Wait(1.500, Ignore Condition);
 			Abort If(Event Player.KartuNasibAktif == False);
 			Abort If(Event Player.PutaranKartuNasib > 0);
@@ -2328,6 +2402,9 @@ rule("18e - Nasib: Undian merah hijau makin lambat")
 		Event Player.KartuNasibAktif = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
+		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 10));
+			Call Subroutine(GambarMenu);
+		End;
 	}
 }
 
@@ -2363,6 +2440,22 @@ rule("18f - Nasib: Hapus kartu saat pemilik mati")
 		Event Player.TeksKartuNasibKanan = Null;
 		Event Player.IkonKartuNasib = Null;
 		Event Player.IkonKartuNasibHijau = Null;
+		Stop Chasing Player Variable(Event Player, RadiusNasib);
+		If(Event Player.GerakNasibDikunci == True);
+			Stop Forcing Player Position(Event Player);
+			Set Move Speed(Event Player, 100);
+			Set Knockback Received(Event Player, 100);
+		End;
+		If(Event Player.EfekNasibCahaya != Null);
+			Destroy Effect(Event Player.EfekNasibCahaya);
+		End;
+		If(Event Player.EfekNasibLingkaran != Null);
+			Destroy Effect(Event Player.EfekNasibLingkaran);
+		End;
+		Event Player.EfekNasibCahaya = Null;
+		Event Player.EfekNasibLingkaran = Null;
+		Event Player.RadiusNasib = 0;
+		Event Player.GerakNasibDikunci = False;
 		Event Player.KartuNasibAktif = False;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
@@ -2551,8 +2644,12 @@ rule("19e - Teleportasi Jongkok: Interact menjalankan teleportasi")
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the payload.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat payload.") : Custom String("เทเลพอร์ตใกล้เพย์โหลดแล้ว"));
 				End;
 			Else If(Current Game Mode == Game Mode(Capture The Flag));
-				Teleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the enemy flag.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat bendera musuh.") : Custom String("เทเลพอร์ตใกล้ธงของศัตรูแล้ว"));
+				If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Enemy flag position unavailable right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi bendera musuh belum tersedia saat ini.") : Custom String("ตำแหน่งธงศัตรูยังไม่พร้อมใช้งานตอนนี้"));
+				Else;
+					Teleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the enemy flag.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat bendera musuh.") : Custom String("เทเลพอร์ตใกล้ธงของศัตรูแล้ว"));
+				End;
 			Else If(Current Game Mode == Game Mode(Push));
 				If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
 					Teleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
@@ -3000,7 +3097,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY FOR TACTICAL RETREAT")
 				: Custom String("VISIT SPAWN TO REGISTER IT")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> CURRENT OBJECTIVE\n{1}",
 				Custom String("TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("UNAVAILABLE IN THIS MODE")
+				Or(Or(And(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)), Distance Between(Payload Position, Vector(0, 0, 0)) <= 0.100), And(Current Game Mode == Game Mode(Capture The Flag), Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100)), Or(And(Current Game Mode == Game Mode(Push), And(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) == 0, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)), And(And(Current Game Mode != Game Mode(Escort), Current Game Mode != Game Mode(Hybrid)), And(And(Current Game Mode != Game Mode(Capture The Flag), Current Game Mode != Game Mode(Push)), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)))) ? Custom String("UNAVAILABLE IN THIS MODE")
 				: Custom String("READY - NEAREST WALKABLE POSITION")) : Custom String("TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
 				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
 			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> RUANG MUNCUL\n{1}",
@@ -3008,7 +3105,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP UNTUK MUNDUR TAKTIS")
 				: Custom String("MASUK KE RUANG MUNCUL UNTUK MENYIMPANNYA")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> OBJEKTIF SAAT INI\n{1}",
 				Custom String("TELEPORT {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("TIDAK TERSEDIA DI MODE INI")
+				Or(Or(And(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)), Distance Between(Payload Position, Vector(0, 0, 0)) <= 0.100), And(Current Game Mode == Game Mode(Capture The Flag), Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100)), Or(And(Current Game Mode == Game Mode(Push), And(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) == 0, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)), And(And(Current Game Mode != Game Mode(Escort), Current Game Mode != Game Mode(Hybrid)), And(And(Current Game Mode != Game Mode(Capture The Flag), Current Game Mode != Game Mode(Push)), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)))) ? Custom String("TIDAK TERSEDIA DI MODE INI")
 				: Custom String("SIAP - POSISI TERDEKAT YANG BISA DILALUI")) : Custom String("TELEPORT {0}/{1}\n> {2}", Event Player.KursorTeleportasi + 1,
 				Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[Event Player.KursorTeleportasi])
 			: Event Player.KursorTeleportasi == 0 ? Custom String("{0}\n> ห้องเกิด\n{1}", Custom String("เทเลพอร์ต {0}/{1}",
@@ -3016,7 +3113,7 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 				"คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อมถอยอย่างมีกลยุทธ์") : Custom String(
 				"ไปห้องเกิดเพื่อบันทึกตำแหน่ง")) : Event Player.KursorTeleportasi == 1 ? Custom String("{0}\n> เป้าหมายปัจจุบัน\n{1}",
 				Custom String("เทเลพอร์ต {0}/{1}", Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi)),
-				And(Current Game Mode != Game Mode(Capture The Flag), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100) ? Custom String("ใช้ไม่ได้ในโหมดนี้")
+				Or(Or(And(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)), Distance Between(Payload Position, Vector(0, 0, 0)) <= 0.100), And(Current Game Mode == Game Mode(Capture The Flag), Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100)), Or(And(Current Game Mode == Game Mode(Push), And(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) == 0, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)), And(And(Current Game Mode != Game Mode(Escort), Current Game Mode != Game Mode(Hybrid)), And(And(Current Game Mode != Game Mode(Capture The Flag), Current Game Mode != Game Mode(Push)), Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100)))) ? Custom String("ใช้ไม่ได้ในโหมดนี้")
 				: Custom String("พร้อม - ตำแหน่งที่เดินถึงใกล้ที่สุด")) : Custom String("เทเลพอร์ต {0}/{1}\n> {2}",
 				Event Player.KursorTeleportasi + 1, Count Of(Event Player.DaftarTargetTeleportasi), Event Player.DaftarTargetTeleportasi[
 				Event Player.KursorTeleportasi]), Top, 100,
@@ -3365,8 +3462,11 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Set Damage Dealt(Event Player, 100);
 		Set Healing Dealt(Event Player, 100);
 		Set Knockback Dealt(Event Player, 100);
+		Set Knockback Received(Event Player, 100);
 		Set Damage Received(Event Player, 100);
 		Set Move Speed(Event Player, 100);
+		Stop Forcing Player Position(Event Player);
+		Stop Chasing Player Variable(Event Player, RadiusNasib);
 		Clear Status(Event Player, Unkillable);
 		Stop Modifying Hero Voice Lines(Event Player);
 		Enable Game Mode HUD(Event Player);
@@ -3393,6 +3493,16 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.TeksKartuNasibKanan = Null;
 		Event Player.IkonKartuNasib = Null;
 		Event Player.IkonKartuNasibHijau = Null;
+		If(Event Player.EfekNasibCahaya != Null);
+			Destroy Effect(Event Player.EfekNasibCahaya);
+		End;
+		If(Event Player.EfekNasibLingkaran != Null);
+			Destroy Effect(Event Player.EfekNasibLingkaran);
+		End;
+		Event Player.EfekNasibCahaya = Null;
+		Event Player.EfekNasibLingkaran = Null;
+		Event Player.RadiusNasib = 0;
+		Event Player.GerakNasibDikunci = False;
 		Event Player.KartuNasibAktif = False;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
@@ -3582,6 +3692,13 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorPilihan = 0;
 		Event Player.PemainDipilih = Null;
 		Event Player.JumlahSuara = 0;
+		Event Player.ModeKebalTerakhir = 0;
+		Event Player.PosisiNasibTerkunci = Vector(0, 0, 0);
+		Event Player.WarnaNasibTerkunci = Color(White);
+		Event Player.EfekNasibCahaya = Null;
+		Event Player.EfekNasibLingkaran = Null;
+		Event Player.RadiusNasib = 0;
+		Event Player.GerakNasibDikunci = False;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
@@ -3603,8 +3720,8 @@ rule("95 - Subrutin: Segarkan daftar tontonan, termasuk para bot")
 		Else;
 			Event Player.CalonTargetKamera = Null;
 		End;
-		Event Player.DaftarTargetKamera = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, Has Spawned(
-			Current Array Element)));
+		Event Player.DaftarTargetKamera = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(
+			Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))));
 		If(And(Event Player.CalonTargetKamera != Null, Array Contains(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera)));
 			Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera) + 2;
 		Else If(Event Player.KursorKamera >= Count Of(Event Player.DaftarTargetKamera) + 2);
@@ -3679,7 +3796,7 @@ rule("98 - Subrutin: Segarkan ruang muncul, objektif, dan target teleportasi")
 		End;
 		"Indeks 0 adalah ruang muncul, indeks 1 adalah objektif, lalu semua manusia dan bot. Null hanya penanda objektif."
 		Event Player.DaftarTargetTeleportasi = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
-			And(Current Array Element != Event Player, Has Spawned(Current Array Element))));
+			And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
 		If(Event Player.KursorTeleportasi == 1);
 			"Pertahankan objektif yang dipilih; penanda Null tidak perlu dicari di dalam array."
 		Else If(And(Event Player.CalonTargetTeleportasi != Null, Array Contains(Event Player.DaftarTargetTeleportasi, Event Player.CalonTargetTeleportasi)));
