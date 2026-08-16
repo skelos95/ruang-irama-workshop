@@ -4,24 +4,9 @@ STDOUT:
 
 
 STDERR:
-.F.......................F.......
-======================================================================
-FAIL: test_camera_dead_candidate_is_rejected (test_validate_workshop.ValidatorNegativeTests.test_camera_dead_candidate_is_rejected)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tests/test_validate_workshop.py", line 355, in test_camera_dead_candidate_is_rejected
-    self.assertTrue(any("candidati morti" in error for error in checks.errors), checks.errors)
-AssertionError: False is not true : []
-
-======================================================================
-FAIL: test_teleport_dead_candidate_is_rejected (test_validate_workshop.ValidatorNegativeTests.test_teleport_dead_candidate_is_rejected)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tests/test_validate_workshop.py", line 366, in test_teleport_dead_candidate_is_rejected
-    self.assertTrue(any("candidati morti" in error for error in checks.errors), checks.errors)
-AssertionError: False is not true : []
-
-----------------------------------------------------------------------
-Ran 33 tests in 3.108s
-
-FAILED (failures=2)
+ERRORE - 5 controllo/i non superato/i:
+  - commento non indonesiano alla riga 1752: ['roulette']
+  - commento non indonesiano alla riga 2310: ['scelta', 'solo']
+  - Unkillable FULL HP Halo public icon: atteso 1, trovato 3
+  - Unkillable 1 HP Warning public icon: atteso 1, trovato 2
+  - docs/VALIDAZIONE.md non registra il blob Workshop effettivo 19e289d8759420f5f1447d507609f052d5108720
