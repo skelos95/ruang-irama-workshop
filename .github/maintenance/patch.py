@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,8 +43,6 @@ for path in FILES:
         text = text.replace(old, new)
     path.write_text(text, encoding="utf-8")
 
-# Rule titles and Workshop-only comments: use Bahasa Indonesia rather than
-# English/Italian leftovers. Native Workshop actions/keywords remain untouched.
 source = SOURCE.read_text(encoding="utf-8")
 TITLE_RENAMES = {
     'rule("18 - Kebal: Pasang kembali status setelah respawn")': 'rule("18 - Kebal: Pasang kembali status setelah muncul kembali")',
@@ -60,24 +59,20 @@ COMMENT_RENAMES = {
     '"Tunda satu frame agar handler menyelesaikan perintah sebelum dispatcher diaktifkan kembali."': '"Tunda satu bingkai agar pengendali menyelesaikan perintah sebelum pengatur masukan diaktifkan kembali."',
     '"Biarkan frame Interact selesai sebelum mengganti render kamera."': '"Biarkan satu bingkai Interact selesai sebelum mengganti tampilan kamera."',
     '"Ganti kamera langsung tanpa Stop Camera agar perpindahan target tidak berkedip satu frame."': '"Ganti kamera langsung tanpa Stop Camera agar perpindahan target tidak berkedip satu bingkai."',
+    '"Gunakan jeda satu frame yang sama saat mulai menonton dari orang pertama."': '"Gunakan jeda satu bingkai yang sama saat mulai menonton dari orang pertama."',
 }
 for old, new in COMMENT_RENAMES.items():
     if old in source:
         source = source.replace(old, new)
 SOURCE.write_text(source, encoding="utf-8")
 
-# Version patch.
 VERSION.write_text("0.6.1\n", encoding="utf-8")
 for path in (README, PROJECT, TESTDOC, VALIDATION, VALIDATOR):
     text = path.read_text(encoding="utf-8").replace("0.6.0", "0.6.1")
     path.write_text(text, encoding="utf-8")
 
-# Strengthen validator: identifiers must not contain the known legacy
-# English/Italian fragments, while technical Indonesian loanwords and native
-# Workshop terms remain allowed.
 validator = VALIDATOR.read_text(encoding="utf-8")
-anchor = '''ITALIAN_WORDS = {
-'''
+anchor = "ITALIAN_WORDS = {\n"
 insert = '''FOREIGN_IDENTIFIER_WORDS = {
     "leader", "voto", "voti", "numero", "max", "pari", "en", "th",
 }
@@ -140,7 +135,6 @@ if old_rule_check not in validator:
     raise RuntimeError("validator rule/comment-language block not found")
 validator = validator.replace(old_rule_check, new_rule_check, 1)
 
-# Extend stale identifier guard so old mixed-language names can never return.
 old_stale = '''        "PosSpawnRoom", "NomorUrut",
     }
 '''
@@ -154,7 +148,6 @@ if old_stale not in validator:
 validator = validator.replace(old_stale, new_stale, 1)
 VALIDATOR.write_text(validator, encoding="utf-8")
 
-# Two regression tests for identifier/rule naming. 24 -> 26 tests.
 tests = TESTS.read_text(encoding="utf-8")
 marker = '\n\nif __name__ == "__main__":\n    unittest.main()'
 extra = r'''
@@ -181,7 +174,7 @@ extra = r'''
         validator.check_source_structure(
             checks, mutated, self.rules(mutated), global_names, player_names, subroutines
         )
-        self.assertTrue(any("respawn" in error and "nama regola" in error for error in checks.errors), checks.errors)
+        self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 '''
 if extra.strip() not in tests:
     if marker not in tests:
@@ -189,7 +182,6 @@ if extra.strip() not in tests:
     tests = tests.replace(marker, extra + marker, 1)
 TESTS.write_text(tests, encoding="utf-8")
 
-# Documentation consistency.
 for path in (README, PROJECT, TESTDOC, VALIDATION):
     text = path.read_text(encoding="utf-8")
     text = text.replace("24 unit test", "26 unit test").replace("Ran 24 tests", "Ran 26 tests")
@@ -205,10 +197,8 @@ if "Nomenclatura 0.6.1" not in readme:
     readme += '''\n\n### Nomenclatura 0.6.1\n\nVariabili, subroutine, titoli regola e commenti personalizzati sono ora controllati contro i residui linguistici legacy. Restano in inglese soltanto keyword/azioni native Workshop e i contenuti HUD del ramo English.\n'''
 README.write_text(readme, encoding="utf-8")
 
-# Refresh validation report's source blob after all source edits.
 validation = VALIDATION.read_text(encoding="utf-8")
 blob = git_blob_sha(SOURCE)
-import re
 validation = re.sub(
     r"(Blob Git del sorgente Workshop validato:\s*```text\s*)[0-9a-f]{40}(\s*```)",
     rf"\g<1>{blob}\g<2>",
