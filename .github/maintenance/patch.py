@@ -20,8 +20,8 @@ old = '''src = once(
 '''
 new = '''src = once(
     src,
-    "\\t\\tGlobal.PilihPahlawanDilewati = False;\\n\\t\\tGlobal.PersiapanDilewati = False;\\n\\t\\tGlobal.MulaiUlangSudahDiminta = False;\\n",
-    "\\t\\tGlobal.PilihPahlawanDilewati = False;\\n\\t\\tGlobal.PersiapanDilewati = False;\\n\\t\\tGlobal.ModeMulaiDiminta = False;\\n\\t\\tGlobal.MulaiUlangSudahDiminta = False;\\n",
+    "\\t\\tGlobal.MulaiUlangSudahDiminta = False;\\n\\t\\tGlobal.RGBFase = 0;\\n",
+    "\\t\\tGlobal.MulaiUlangSudahDiminta = False;\\n\\t\\tGlobal.ModeMulaiDiminta = False;\\n\\t\\tGlobal.RGBFase = 0;\\n",
     "initial start latch",
 )
 '''
