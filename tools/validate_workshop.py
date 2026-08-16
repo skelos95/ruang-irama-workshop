@@ -2976,7 +2976,9 @@ def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines:
     if handlers:
         body = mask_strings(handlers[0].body)
         checks.require("Event Player.TargetVoto = Global.PemainManusia[Event Player.KursorVoto];" in body and "Call Subroutine(HitungPilihan);" in body, "Vote: applicazione voto incompleta")
-    checks.require("MOST VOTED:" in source and "PALING BANYAK DIPILIH:" in source and "โหวตสูงสุด:" in source, "Vote: HUD leader assente")
+    checks.require("CHILL STAR:" in source and "BINTANG CHILL:" in source and "ดาวสายชิล:" in source, "Vote: HUD Chill Star assente")
+    checks.require("MOST VOTED:" not in source and "PALING BANYAK DIPILIH:" not in source and "โหวตสูงสุด:" not in source, "Vote: vecchio testo competitivo ancora presente")
+    checks.require('Custom String("\\n \\nCHILL STAR: {0}", Global.LeaderVoto)' in source and 'Custom String("\\n \\nBINTANG CHILL: {0}", Global.LeaderVoto)' in source and 'Custom String("\\n \\nดาวสายชิล: {0}", Global.LeaderVoto)' in source, "Vote: HUD leader mostra ancora il conteggio voti")
     checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean and "Global.LeaderVoto != Null" in clean, "Vote: leader non ancorato/nascosto in pareggio")
     leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
     checks.require(bool(leave) and "TargetVoto == Global.PemainPembersihan" in mask_strings(leave[0].body), "Vote: cleanup leave assente")

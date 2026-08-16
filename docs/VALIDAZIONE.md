@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-ba7f0284eae9171c3638e86af81d36cf34574e48
+9f93f26dd8098f355f36befe4f5ea7dfedcb730f
 ```
 
 ## Controlli statici correnti
@@ -106,3 +106,5 @@ Il repository è **static-ready, live-pending**. Il gate statico può certificar
 
 - Menu 11 Vote Player: soli umani, self-vote consentito, un voto attivo per player, conteggio event-driven; leader HUD solo se unico, pareggio = nessun leader; diagnostics dopo un'altra riga vuota;
 - Unkillable: 1 HP Warning rosso, FULL HP Halo RGB; cambio modalità sostituisce l'icona;
+
+- Vote HUD: il leader unico viene mostrato come `CHILL STAR` / `BINTANG CHILL` / `ดาวสายชิล`, senza numero voti; i conteggi restano esclusivamente nel Menu 11;

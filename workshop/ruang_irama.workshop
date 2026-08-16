@@ -950,9 +950,9 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
 			Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.LeaderVoto != Null
-			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nโหวตสูงสุด: {0} - {1} โหวต", Global.LeaderVoto, Global.MaxVoti)
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nPALING BANYAK DIPILIH: {0} - {1} VOTE", Global.LeaderVoto, Global.MaxVoti)
-			: Custom String("\n \nMOST VOTED: {0} - {1} VOTES", Global.LeaderVoto, Global.MaxVoti) : Custom String("\n ") : Custom String("")),
+			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Global.LeaderVoto)
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.LeaderVoto)
+			: Custom String("\n \nCHILL STAR: {0}", Global.LeaderVoto) : Custom String("\n ") : Custom String("")),
 			And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player.UrutanHUD == Global.SlotHUDTerakhir)) ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("{0}\n{1}",
 			Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}",
 			3 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(
