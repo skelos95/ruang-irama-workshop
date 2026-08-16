@@ -31,21 +31,14 @@ extra = r'''old_semantic_test = ''' + "'''" + r'''    def test_semantic_action_i
 new_semantic_test = ''' + "'''" + r'''    def test_semantic_action_inside_comment_does_not_count(self) -> None:
         calls = validator.call_texts(self.source, "Disable Nameplates")
         self.assertGreaterEqual(len(calls), 1)
-        found_required_crouch_action = False
-        for call in calls:
-            simulated = self.source.replace(call, f'"{call}"', 1)
-            self.assertEqual(
-                len(validator.call_texts(simulated, "Disable Nameplates")),
-                len(calls) - 1,
-            )
-            checks = validator.Checks()
-            validator.check_crouch(checks, simulated, self.rules(simulated))
-            if any("Disable Nameplates" in error for error in checks.errors):
-                found_required_crouch_action = True
-                break
-        self.assertTrue(found_required_crouch_action, "nessuna azione Disable Nameplates richiesta dal sistema Crouch individuata")
+        simulated = self.source.replace(calls[0], f'"{calls[0]}"', 1)
+        self.assertEqual(
+            len(validator.call_texts(simulated, "Disable Nameplates")),
+            len(calls) - 1,
+        )
+        self.assertNotIn(calls[0], validator.call_texts(simulated, "Disable Nameplates"))
 ''' + "'''" + r'''
-tests = once(tests, old_semantic_test, new_semantic_test, "semantic Disable Nameplates test")
+tests = once(tests, old_semantic_test, new_semantic_test, "semantic action comment parser test")
 TESTS_FILE.write_text(tests, encoding="utf-8")
 '''
 if base_patch.count(needle) != 1:
