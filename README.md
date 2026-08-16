@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.16** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.17** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -222,3 +222,8 @@ Il Main Menu viene creato invisibile mentre inizia il hold Melee e a 0,5 s cambi
 ### Protezione cambio team 0.6.16
 
 Il cambio team durante una partita non può più riattivare in modo continuo le regole globali che saltano Assemble Heroes/Setup. Entrambe sono ora one-shot, valide solo prima che la partita sia in corso e riarmate soltanto prima di un vero `Restart Match`. La creazione dei due HUD sociali resta senza `Wait` e senza `Loop`, ma usa un latch per-player impostato **prima** del primo `Create HUD Text` e richiede uno spawn stabile. La classificazione umano/bot abbandona e ritenta se il player entra in una transizione di team durante i due probe da 0,016 s.
+
+
+### Cambio team ripetuto 0.6.17
+
+Il lifecycle player è ora serializzato. `01b` resta esclusivamente un bootstrap per i player già presenti quando lo script parte e non può più riattivarsi quando `BersihkanPemain` porta temporaneamente `SudahSiap` a false. `SiapkanPemain` pubblica `SudahSiap = True` soltanto come **ultima azione**, dopo avere completato tutti i reset; la classificazione 02 richiede inoltre che il lock lifecycle sia libero. È stato aggiunto anche un latch one-shot a `Start Game Mode`, l'ultima azione globale di fase che poteva ancora essere richiesta più volte.

@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.16
+# Rapporto di validazione — versione 0.6.17
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.16**
+Release tecnica: **CHILL Dedicated Server 0.6.17**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-b7d52e5f1f125303c36ad20f477d1cc50f160ad5
+3414fa558af1fc8033c0cea75b28547c4298da8f
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.16 superati
+OK - controlli statici v0.6.17 superati
 ```
 
 ## GitHub
@@ -138,3 +138,8 @@ Il gate rifiuta qualsiasi regola `Create HUD Text` che contenga `Wait` o `Loop I
 ## Gate cambio team 0.6.16
 
 Il validatore richiede latch one-shot e guardia `Is Game In Progress == False` per Assemble Heroes/Setup, reset dei latch prima del vero restart, protezione one-shot `HudPemainDibuat` prima di ogni creazione HUD sociale e guardie di transizione nella classificazione umano/bot. Resta valida l'invariante 0.6.15: nessuna regola che contiene `Create HUD Text` può contenere `Wait` o `Loop If Condition Is True`.
+
+
+## Gate lifecycle ripetuto 0.6.17
+
+Il validatore impone il lock `SiklusPemainAktif` sul Player Joined, limita 01b a `PernahDisiapkan == False`, richiede che `SudahSiap = True` sia l'ultima assegnazione player di `SiapkanPemain`, blocca la classificazione durante il setup e rende one-shot `Start Game Mode`. Restano valide le invarianti zero-Wait/zero-Loop per ogni regola che crea HUD.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.16.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.17.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.16"
+CURRENT_VERSION = "0.6.17"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -738,7 +738,8 @@ def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> Non
         )
         checks.require(
             restart.find("Global.PilihPahlawanDilewati = False;") < restart_at
-            and restart.find("Global.PersiapanDilewati = False;") < restart_at,
+            and restart.find("Global.PersiapanDilewati = False;") < restart_at
+            and restart.find("Global.ModeMulaiDiminta = False;") < restart_at,
             "i latch delle fasi iniziali non vengono riarmati prima del Restart Match",
         )
 
@@ -756,6 +757,16 @@ def check_instant_start(checks: Checks, source: str, rules: list[Rule]) -> None:
         )
     ]
     checks.equal(len(waiting), 1, "avvio immediato da Waiting For Players")
+    if waiting:
+        waiting_code = mask_strings(waiting[0].body)
+        checks.require(
+            "Global.ModeMulaiDiminta == False;" in waiting_code
+            and "Is Game In Progress == False;" in waiting_code,
+            "Start Game Mode non protetto da latch one-shot/in-match",
+        )
+        latch_at = waiting_code.find("Global.ModeMulaiDiminta = True;")
+        start_at = waiting_code.find("Start Game Mode;")
+        checks.require(0 <= latch_at < start_at, "latch Start Game Mode deve armarsi prima dell'azione")
 
     assembling = [
         rule for rule in rules
@@ -2913,25 +2924,52 @@ def check_lifecycle_hygiene(
                 re.search(rf"Event Player\.{re.escape(name)}\s*=", body) is not None,
                 f"audit lifecycle: variabile player non inizializzata in SiapkanPemain: {name}",
             )
+        ready_positions = [m.start() for m in re.finditer(r"Event Player\.SudahSiap\s*=\s*True\s*;", body)]
+        checks.equal(len(ready_positions), 1, "audit lifecycle: un solo publish SudahSiap=True")
+        if ready_positions:
+            checks.require(
+                body.find("Event Player.PernahDisiapkan = True;") < body.find("Event Player.SiklusPemainAktif = False;") < ready_positions[0],
+                "audit lifecycle: readiness pubblicata prima della fine del setup",
+            )
+            checks.require(
+                not re.search(r"Event Player\.[A-Za-z_][A-Za-z0-9_]*\s*=", body[ready_positions[0] + 1:]),
+                "audit lifecycle: assegnazioni player presenti dopo SudahSiap=True",
+            )
 
     join = [rule for rule in rules if code_contains(rule.body, "Player Joined Match;", "Call Subroutine(SiapkanPemain);")]
     fallback = [rule for rule in rules if code_contains(rule.body, "Ongoing - Each Player;", "Event Player.SudahSiap == False;", "Call Subroutine(SiapkanPemain);")]
     checks.equal(len(join), 1, "audit lifecycle: init Player Joined")
     checks.equal(len(fallback), 1, "audit lifecycle: init player già presenti")
+    if fallback:
+        fallback_code = mask_strings(fallback[0].body)
+        checks.require(
+            "Event Player.PernahDisiapkan == False;" in fallback_code
+            and "Event Player.SiklusPemainAktif == False;" in fallback_code,
+            "audit lifecycle: fallback può riattivarsi durante un cambio team",
+        )
+        lock_at = fallback_code.find("Event Player.SiklusPemainAktif = True;")
+        setup_at = fallback_code.find("Call Subroutine(SiapkanPemain);")
+        checks.require(0 <= lock_at < setup_at, "audit lifecycle: fallback non blocca prima del setup")
     if join:
         body = mask_strings(join[0].body)
+        condition_lock = body.find("Event Player.SiklusPemainAktif == False;")
+        set_lock = body.find("Event Player.SiklusPemainAktif = True;")
         duplicate_at = body.find("If(Array Contains(Global.PemainManusia, Event Player));")
         cleanup_at = body.find("Call Subroutine(BersihkanPemain);", duplicate_at)
         setup_at = body.find("Call Subroutine(SiapkanPemain);", cleanup_at)
         checks.require(
-            0 <= duplicate_at < cleanup_at < setup_at,
-            "audit lifecycle: cambio team non esegue cleanup prima della nuova inizializzazione",
+            0 <= condition_lock < set_lock < duplicate_at < cleanup_at < setup_at,
+            "audit lifecycle: cambio team non è serializzato cleanup → setup",
         )
 
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")
     if classification:
         body = mask_strings(classification[0].body)
+        checks.require(
+            "Event Player.SiklusPemainAktif == False;" in body,
+            "audit lifecycle: classificatore può partire durante il setup",
+        )
         guard = body.find("Abort If(Array Contains(Global.PemainManusia, Event Player));")
         append = body.find("Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);")
         checks.require(0 <= guard < append, "audit lifecycle: append roster senza guardia anti-duplicato")

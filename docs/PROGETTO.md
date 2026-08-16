@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.16
+# Note di progetto — versione 0.6.17
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.16.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.17.
 
 ## Architettura generale
 
@@ -361,3 +361,8 @@ La creazione HUD è separata da timer e loop. 05a prepara Main + pagina selezion
 ## Cambio team senza picchi di script load 0.6.16
 
 Le regole 00a2/00a3 non possono più eseguire `Set Match Time(0)` a raffica durante una selezione eroe in-match: hanno latch globali one-shot e `Is Game In Progress == False`. `02b` possiede inoltre `HudPemainDibuat`, armato prima della creazione HUD, così un ID HUD anomalo durante una transizione non può trasformare la regola Ongoing in una fabbrica HUD per-frame.
+
+
+## Lifecycle cambio team serializzato 0.6.17
+
+`SiklusPemainAktif` impedisce re-entry del percorso cleanup/setup. `PernahDisiapkan` rende 01b un fallback solo di bootstrap. La readiness `SudahSiap` viene impostata esclusivamente al termine di `SiapkanPemain`; fino a quel momento 02 non può partire. `ModeMulaiDiminta` rende one-shot anche `Start Game Mode` e viene riarmato soltanto prima del restart completo.

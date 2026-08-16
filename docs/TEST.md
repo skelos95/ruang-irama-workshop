@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.16
+# Piano di test — versione 0.6.17
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.16.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.17.
 
 ## Gate statico
 
@@ -353,3 +353,8 @@ Verificare che il Main compaia esattamente alla soglia Melee di 0,5 s, che i sot
 ## Cambio team 0.6.16
 
 Test live prioritario: durante una partita in corso cambiare Team 1 → Team 2 e viceversa, restare alcuni secondi nella schermata scelta eroe e poi scegliere un eroe. Il server non deve più mostrare `The server closed due to excessive Workshop script load`. Gli HUD sociali devono ricomparire una sola volta dopo lo spawn. Ripetere il cambio team più volte e controllare Script Diagnostics/server load se disponibile.
+
+
+## Cambio team ripetuto 0.6.17
+
+Test live prioritario: effettuare almeno cinque cambi consecutivi Team 1 ↔ Team 2, aspettando lo spawn fra un cambio e il successivo. Il primo, secondo e successivi cambi devono completarsi senza `excessive Workshop script load`; gli HUD sociali devono essere distrutti e ricreati una sola volta per ciclo. Ripetere anche un cambio rapido durante la schermata eroe per verificare che il lock impedisca doppie inizializzazioni.
