@@ -182,6 +182,11 @@ new='''    expected_renderers = {
             checks.require("Visible To String and Color" in hud, "HUD persistente non rivaluta stringhe/colori")
             for page in range(-1, 11):
                 checks.require(f"Event Player.HalamanMenu == {page}" in hud, f"HUD persistente privo del ramo pagina {page}")
+            for text in ("4 - REVENGE", "4 - BALAS DENDAM", "4 - ล้างแค้น"):
+                checks.require(
+                    f'Custom String("{text}")' in hud,
+                    "BalasDendam: stato vuoto non localizzato in tutte e tre le lingue",
+                )
 
 '''
 validator=replace_once(validator,old,new,"persistent router validator")
@@ -195,4 +200,4 @@ valid=VALIDAZIONE.read_text(encoding="utf-8"); valid=replace_once(valid,"# Rappo
 data=SOURCE.read_bytes().replace(b"\r\n",b"\n"); blob=hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest(); valid,count=re.subn(r'(Blob Git del sorgente Workshop validato:\n\n```text\n)[0-9a-f]{40}(\n```)',rf'\g<1>{blob}\g<2>',valid,count=1)
 if count != 1: raise RuntimeError("VALIDAZIONE blob marker")
 VALIDAZIONE.write_text(valid,encoding="utf-8")
-print("Applied CHILL 0.6.9 persistent Arcade Menu HUD with legacy validation stubs")
+print("Applied CHILL 0.6.9 persistent Arcade Menu HUD with runtime localization validation")
