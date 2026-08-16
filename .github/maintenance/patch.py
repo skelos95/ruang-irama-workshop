@@ -163,7 +163,6 @@ def cleanup_lines(owner: str, array_expr: str, indent: str = "\t\t") -> str:
 
 source = SOURCE.read_text(encoding="utf-8")
 
-# Dedicated array for the split Arcade page HUD IDs. HudMenu stays reserved for transient overlays.
 source = replace_once(
     source,
     "\t\t87: GerakNasibDikunci\n",
@@ -171,7 +170,6 @@ source = replace_once(
     "player variable HudMenuArcade",
 )
 
-# Initialize the page HUD array in player setup.
 _, setup_start, setup_end, setup_rule = find_subroutine_rule(source, "SiapkanPemain")
 setup_rule = replace_once(
     setup_rule,
@@ -181,8 +179,6 @@ setup_rule = replace_once(
 )
 source = replace_rule(source, setup_start, setup_end, setup_rule)
 
-# Turn the existing 13 page renderers into persistent-per-open-page HUDs.
-# They are created once per menu opening; visibility is reevaluated from MenuTerbuka + HalamanMenu.
 for page, subroutine in RENDERERS:
     _, start, end, rule = find_subroutine_rule(source, subroutine)
     if "Destroy HUD Text(Event Player.HudMenu);" in mask_strings(rule):
@@ -198,7 +194,6 @@ for page, subroutine in RENDERERS:
     rule = replace_once(rule, marker, replacement, f"{subroutine} store persistent HUD")
     source = replace_rule(source, start, end, rule)
 
-# Replace the 124 KB monolithic 0.6.9 HUD with a tiny router that only creates the 13 split HUDs once.
 router_name = "91 - Subrutin: Pilih gambar menu yang sedang dibuka"
 router_start, router_end, router = get_rule(source, router_name)
 calls = "\n".join(f"\t\t\tCall Subroutine({subroutine});" for _, subroutine in RENDERERS)
@@ -212,14 +207,12 @@ router_actions = f'''\t\tCall Subroutine(TransisiWarnaMenu);
 router = replace_actions(router, router_actions)
 source = replace_rule(source, router_start, router_end, router)
 
-# Closing the Arcade menu destroys all 13 split HUDs, so there is no hidden-HUD accumulation.
 _, close_start, close_end, close_rule = find_subroutine_rule(source, "TutupMenu")
 old_close = '''\t\tIf(Event Player.HudMenu != Null);\n\t\t\tDestroy HUD Text(Event Player.HudMenu);\n\t\tEnd;\n\t\tIf(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);\n\t\t\tGlobal.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;\n\t\tEnd;\n\t\tEvent Player.HudMenu = Null;\n'''
 new_close = cleanup_lines("Event Player", "Event Player.HudMenuArcade") + '''\n\t\tIf(Event Player.HudMenu != Null);\n\t\t\tDestroy HUD Text(Event Player.HudMenu);\n\t\tEnd;\n\t\tIf(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);\n\t\t\tGlobal.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;\n\t\tEnd;\n\t\tEvent Player.HudMenu = Null;\n'''
 close_rule = replace_once(close_rule, old_close, new_close, "TutupMenu split HUD cleanup")
 source = replace_rule(source, close_start, close_end, close_rule)
 
-# Player-leave cleanup must remove every split page if the player leaves with the menu open.
 _, cleanup_start, cleanup_end, cleanup_rule = find_subroutine_rule(source, "BersihkanPemain")
 old_leave_menu = '''\t\t\tIf(Global.HudMenuPemain[Global.IndeksKeluar] != 0);\n\t\t\t\tDestroy HUD Text(Global.HudMenuPemain[Global.IndeksKeluar]);\n\t\t\tEnd;\n'''
 leave_cleanup = cleanup_lines(
@@ -230,7 +223,6 @@ leave_cleanup = cleanup_lines(
 cleanup_rule = replace_once(cleanup_rule, old_leave_menu, leave_cleanup, "BersihkanPemain split HUD cleanup")
 source = replace_rule(source, cleanup_start, cleanup_end, cleanup_rule)
 
-# Structural sanity: the router must stay tiny and contain no visible strings/HUD creation.
 _, _, router = get_rule(source, router_name)
 router_clean = mask_strings(router)
 if "Create HUD Text" in router_clean or "Custom String" in router_clean:
@@ -243,7 +235,6 @@ for _, subroutine in RENDERERS:
 
 SOURCE.write_text(source, encoding="utf-8")
 
-# Validator 0.6.10: certify split persistent page architecture instead of the monolithic 0.6.9 rule.
 validator = VALIDATOR.read_text(encoding="utf-8")
 validator = replace_once(validator, "della versione 0.6.9.", "della versione 0.6.10.", "validator doc version")
 validator = replace_once(validator, 'CURRENT_VERSION = "0.6.9"', 'CURRENT_VERSION = "0.6.10"', "validator current version")
@@ -272,7 +263,10 @@ new_validator_block = '''    expected_renderers = {
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
-    checks.require("HudMenuArcade" in player_names, "array HudMenuArcade non dichiarato")
+    checks.require(
+        re.search(r"(?m)^\\s*88:\\s*HudMenuArcade\\s*$", source) is not None,
+        "array HudMenuArcade non dichiarato",
+    )
     router_rules = rules_containing(rules, "Subroutine;", "GambarMenu;")
     checks.equal(len(router_rules), 1, "router split GambarMenu")
     if router_rules:
@@ -324,7 +318,6 @@ VALIDATOR.write_text(validator, encoding="utf-8")
 
 VERSION.write_text("0.6.10\n", encoding="utf-8")
 
-# Documentation.
 readme = README.read_text(encoding="utf-8")
 readme = replace_once(readme, "La versione **0.6.9** identifica lo stato funzionale e tecnico corrente del repository.", "La versione **0.6.10** identifica lo stato funzionale e tecnico corrente del repository.", "README version")
 readme += '''\n\n### Riduzione limiti Workshop 0.6.10\n\nLa 0.6.9 aveva reso `GambarMenu` un HUD monolitico con tutte le 13 viste duplicate nella stessa regola; il client ha misurato **124 KB**, oltre il limite Workshop di **98 KB**, con **25.654 elementi** totali. La 0.6.10 elimina quella duplicazione: `GambarMenu` torna a essere un router piccolo e inizializza una volta, per ogni apertura, i 13 renderer già esistenti. Ogni HUD è visibile solo quando `MenuTerbuka` e `HalamanMenu` corrispondono alla sua pagina, quindi `Interact`/`Reload` cambiano pagina senza Destroy/Create. Alla chiusura tutti i 13 HUD vengono distrutti e l'array viene svuotato.\n'''
