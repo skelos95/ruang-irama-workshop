@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.11
+# Rapporto di validazione — versione 0.6.12
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.11**
+Release tecnica: **CHILL Dedicated Server 0.6.12**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-cd6dbc32ae8a8c3575e819903aa6acdf106573f1
+e62c33ffc359e4961bcdac2a9ea27ef5a29ef717
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.11 superati
+OK - controlli statici v0.6.12 superati
 ```
 
 ## GitHub
@@ -114,3 +114,8 @@ Il gate impedisce il ritorno del renderer monolitico: `GambarMenu` non può cont
 ## Hold Melee e cache lazy 0.6.11
 
 Il gate richiede un unico opener Melee con `Wait(0.500, Abort When False)` e nessun secondo `Wait` nella stessa regola. `GambarMenu` deve usare `HalamanHudMenuArcade` + `Array Contains` e non può più usare il gate eager `Count Of(HudMenuArcade) == 0` che pre-caricava tutte le pagine. Ogni renderer registra ID e codice pagina nella cache; la chiusura svuota entrambe.
+
+
+## Controlli input e privacy 0.6.12
+
+Il gate certifica che l'apertura Menu non disabiliti Melee/Jump, che Ability 1/2 restino disabilitate come abilità reali e siano gli unici comandi ±10 del Soundtrack, che il dispatcher/release gate non usino più Jump/Crouch e che il renderer Soundtrack mostri i binding aggiornati. `SegarkanTargetTeleportasi` deve includere il filtro `PrivasiInspeksiAktif == False`.

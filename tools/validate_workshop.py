@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.11.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.12.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.11"
+CURRENT_VERSION = "0.6.12"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1033,7 +1033,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         if code_contains(rule.body, "MenuTerbuka == True;")
         and all(
             code_contains(rule.body, f"Button({button})")
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Ability 1", "Ability 2")
         )
     ]
     checks.equal(len(dispatcher_candidates), 1, "dispatcher unico degli input menu")
@@ -1041,11 +1041,15 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         dispatcher = dispatcher_candidates[0].body
         positions = [
             dispatcher.find(f"Is Button Held(Event Player, Button({button}))")
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Ability 1", "Ability 2")
         ]
         checks.require(
             all(position >= 0 for position in positions) and positions == sorted(positions),
-            "priorità dispatcher errata; attesa Interact → Reload → Primary → Secondary → Jump → Crouch",
+            "priorità dispatcher errata; attesa Interact → Reload → Primary → Secondary → Ability 1 → Ability 2",
+        )
+        checks.require(
+            "Button(Jump)" not in dispatcher and "Button(Crouch)" not in dispatcher,
+            "dispatcher menu intercetta ancora Jump/Crouch",
         )
 
     release_candidates = [
@@ -1061,7 +1065,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
                 rule.body,
                 f"Is Button Held(Event Player, Button({button})) == False",
             )
-            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Jump", "Crouch")
+            for button in ("Interact", "Reload", "Primary Fire", "Secondary Fire", "Ability 1", "Ability 2")
         )
     ]
     checks.equal(len(release_candidates), 1, "release gate chord-safe del dispatcher")
@@ -1104,10 +1108,35 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         if handler is not None:
             checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")
             checks.require(code_contains(handler.body, "Call Subroutine(TransisiWarnaMenu);"), f"{label}: transizione colore leggera assente")
-    for label, command in (("Jump x10", 5), ("Crouch x10", 6)):
+    for label, command in (("Ability 1 +10", 5), ("Ability 2 -10", 6)):
         handler = handler_by_command[command]
         if handler is not None:
             checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")
+    if handler_by_command[5] is not None:
+        checks.require(
+            re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*10\)\s*%\s*100", mask_strings(handler_by_command[5].body)) is not None,
+            "Ability 1 non esegue +10 nel Soundtrack",
+        )
+    if handler_by_command[6] is not None:
+        checks.require(
+            re.search(r"KursorGenre\s*=\s*\([^;]+\+\s*90\)\s*%\s*100", mask_strings(handler_by_command[6].body)) is not None,
+            "Ability 2 non esegue -10 nel Soundtrack",
+        )
+
+    soundtrack_renderers = rules_containing(rules, "Subroutine;", "GambarMusik;")
+    checks.equal(len(soundtrack_renderers), 1, "renderer Soundtrack")
+    if soundtrack_renderers:
+        soundtrack_body = soundtrack_renderers[0].body
+        checks.require(
+            "Input Binding String(Button(Ability 1))" in soundtrack_body
+            and "Input Binding String(Button(Ability 2))" in soundtrack_body,
+            "HUD Soundtrack non mostra Ability 1/2 per ±10",
+        )
+        checks.require(
+            "Input Binding String(Button(Jump))" not in soundtrack_body
+            and "Input Binding String(Button(Crouch))" not in soundtrack_body,
+            "HUD Soundtrack mostra ancora Jump/Crouch per ±10",
+        )
 
     teleport_release = [rule for rule in rules if rule.name.startswith("19b - Teleportasi Jongkok:")]
     checks.equal(len(teleport_release), 1, "release gate Crouch Teleport")
@@ -1158,6 +1187,19 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KartuNasibAktif == False;" in opening,
             "Menu 10: Arcade Menu può ancora aprirsi durante la roulette",
         )
+        checks.require(
+            "Disallow Button(Event Player, Button(Melee));" not in opening,
+            "Menu Arcade blocca ancora l'attacco Melee normale",
+        )
+        checks.require(
+            "Disallow Button(Event Player, Button(Jump));" not in opening,
+            "Menu Arcade blocca ancora il Jump normale",
+        )
+        checks.require(
+            "Disallow Button(Event Player, Button(Ability 1));" in opening
+            and "Disallow Button(Event Player, Button(Ability 2));" in opening,
+            "Ability 1/2 devono restare disabilitate come abilità reali mentre comandano il Soundtrack",
+        )
         for forbidden in (
             "Event Player.KursorUtama = 0;",
             "Event Player.KursorGenre = Event Player.IndeksGenre",
@@ -1185,6 +1227,17 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             "Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif;",
         ):
             checks.require(forbidden not in body, f"submenu resetta il cursore: {forbidden}")
+
+    teleport_refresh_rules = rules_containing(rules, "Subroutine;", "SegarkanTargetTeleportasi;")
+    checks.equal(len(teleport_refresh_rules), 1, "refresh target Crouch Teleport")
+    if teleport_refresh_rules:
+        checks.require(
+            code_contains(
+                teleport_refresh_rules[0].body,
+                "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
+            ),
+            "Crouch Teleport mostra ancora player con privacy attiva",
+        )
 
     teleport_open_rules = [rule for rule in rules if code_contains(rule.body, "Event Player.TeleportasiJongkokAktif = True;")]
     checks.equal(len(teleport_open_rules), 1, "apertura teleport Crouch")

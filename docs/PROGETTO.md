@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.11
+# Note di progetto — versione 0.6.12
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.11.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.12.
 
 ## Architettura generale
 
@@ -337,3 +337,8 @@ Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Prim
 ## Lazy loading Menu Arcade 0.6.11
 
 La soglia Melee rimane esattamente 0,5 s. `GambarMenu` non pre-carica più 13 HUD alla prima apertura: verifica `HalamanHudMenuArcade` e crea solo la pagina corrente se non è già presente. L'array degli ID HUD e l'array dei codici pagina vengono svuotati insieme alla chiusura o alla pulizia del giocatore.
+
+
+## Input menu e privacy Teleport 0.6.12
+
+Il Menu Arcade non esegue più `Disallow Button` su Melee e Jump. Il dispatcher Soundtrack usa Ability 1/2 come comandi custom (+10/−10) mentre le abilità reali restano disabilitate dal menu. Crouch non è più usato per il salto +10. La lista Crouch Teleport esclude in fase di refresh ogni entità con `PrivasiInspeksiAktif == True`, mantenendo invariati Spawn Room e obiettivo.

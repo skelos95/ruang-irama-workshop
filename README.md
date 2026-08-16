@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.11** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.12** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -58,14 +58,14 @@ Il Teleport resta un overlay associato a Crouch; **Menu 8** decide soltanto se q
 
 | Contesto | Input | Azione |
 |---|---|---|
-| Sempre | Tieni Melee 0,5 s | Apre/chiude il Menu Arcade |
+| Sempre | Tieni Melee 0,5 s | Apre/chiude il Menu Arcade; il normale attacco Melee resta utilizzabile a menu aperto |
 | Fuori menu | Tieni Interact 0,5 s | Alterna terza / prima persona |
 | Fuori menu | Tieni Crouch | Inspection + overlay Teleport |
 | Da morto, menu aperto o chiuso | Jump | Respawn vicino al punto di morte |
 | Main Menu | Primary / Secondary | Voce successiva / precedente |
 | Main Menu | Interact | Apre il sottomenu |
 | Sottomenu | Primary / Secondary | Scelta successiva / precedente |
-| Soundtrack | Jump / Crouch | `−10` / `+10` generi |
+| Soundtrack | Ability 1 / Ability 2 | `+10` / `−10` generi |
 | Sottomenu | Interact | Applica la scelta |
 | Sottomenu | Reload | Torna al Main Menu |
 
@@ -100,7 +100,7 @@ L'overlay Teleport include:
 
 - Spawn Room registrata;
 - obiettivo della modalità quando disponibile;
-- player/bot validi.
+- player/bot validi, esclusi i player con **Crouch Privacy ON**.
 
 Escort/Hybrid usano `Payload Position`, CTF usa la flag nemica, Push prova un player sull'obiettivo come proxy del robot e usa il fallback obiettivo quando disponibile.
 
@@ -198,3 +198,8 @@ La 0.6.9 aveva reso `GambarMenu` un HUD monolitico con tutte le 13 viste duplica
 ### Apertura Melee immediata dopo 0,5 s — 0.6.11
 
 Il `Wait(0.500, Abort When False)` resta invariato: la soglia di hold non viene accorciata. Il ritardo extra osservato live dipendeva dal fatto che allo scadere dei 0,5 s `GambarMenu` creava tutte le 13 pagine HUD in sequenza. Ora il router usa una cache lazy (`HalamanHudMenuArcade`): all'apertura crea soltanto il Main Menu; ogni submenu viene creato soltanto al primo accesso e poi riutilizzato fino alla chiusura. `Reload` verso il Main e i ritorni a pagine già visitate non ricreano HUD.
+
+
+### Controlli menu e privacy Teleport 0.6.12
+
+Con il Menu Arcade aperto, **Melee e Jump restano azioni normali dell'eroe**: Melee può comunque chiudere il menu se viene tenuto per 0,5 s, mentre Jump non viene più intercettato dal dispatcher. Nel Soundtrack i salti rapidi diventano **Ability 1 = +10** e **Ability 2 = −10**; le due abilità reali restano bloccate finché il menu è aperto, quindi la pressione agisce soltanto sul cursore musicale. `SegarkanTargetTeleportasi` filtra inoltre qualunque player con `PrivasiInspeksiAktif == True`: il suo nome non appare nel Crouch Teleport e un target diventato privato prima della conferma viene rifiutato perché non è più presente nella lista aggiornata.

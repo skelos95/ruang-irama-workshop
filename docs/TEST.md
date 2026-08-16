@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.11
+# Piano di test — versione 0.6.12
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.11.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.12.
 
 ## Gate statico
 
@@ -329,3 +329,8 @@ Dopo l'importazione aprire `Script Diagnostics`: **Size of Largest Rule deve ris
 ## Hold Melee 0,5 s / lazy loading 0.6.11
 
 Test live con cronometro percepito: da menu chiuso tenere Melee; il Main Menu deve comparire appena termina il mezzo secondo, senza la pausa aggiuntiva vista in 0.6.10. Rilasciare Melee, aprire una pagina con Interact: al primo accesso viene creato solo quel renderer. Tornare con Reload e riaprire la stessa pagina: nessun nuovo HUD deve essere creato e la risposta deve restare immediata. Verificare inoltre Script Diagnostics: il margine ottenuto in 0.6.10 non deve regredire in modo significativo.
+
+
+## Input menu / Soundtrack / privacy Teleport 0.6.12
+
+Test live: aprire il Menu Arcade e verificare che un tap Melee esegua il normale attacco, mentre un hold di 0,5 s continui a chiudere il menu; Jump deve saltare normalmente e, da morto, continuare a fare respawn manuale. Nel Soundtrack Ability 1 deve avanzare di 10 generi e Ability 2 arretrare di 10 senza attivare le abilità dell'eroe. Attivare Crouch Privacy su un secondo player: quel player non deve comparire nel Crouch Teleport; disattivando privacy deve ricomparire al refresh successivo.

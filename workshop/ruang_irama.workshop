@@ -1127,8 +1127,6 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
-			Disallow Button(Event Player, Button(Melee));
-			Disallow Button(Event Player, Button(Jump));
 			Disallow Button(Event Player, Button(Crouch));
 			Disallow Button(Event Player, Button(Primary Fire));
 			Disallow Button(Event Player, Button(Secondary Fire));
@@ -1191,7 +1189,7 @@ rule("05c - Menu: Pengatur masukan dengan prioritas tetap")
 		Event Player.KartuNasibAktif == False;
 		Or(Or(Is Button Held(Event Player, Button(Interact)), And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu
 			!= -1)), Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), And(
-			Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Jump)), Is Button Held(Event Player, Button(Crouch)))))) == True;
+			Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2)))))) == True;
 	}
 
 	actions
@@ -1204,9 +1202,9 @@ rule("05c - Menu: Pengatur masukan dengan prioritas tetap")
 			Event Player.PerintahMenu = 3;
 		Else If(Is Button Held(Event Player, Button(Secondary Fire)));
 			Event Player.PerintahMenu = 4;
-		Else If(And(Is Button Held(Event Player, Button(Jump)), Event Player.HalamanMenu == 0));
+		Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.HalamanMenu == 0));
 			Event Player.PerintahMenu = 5;
-		Else If(And(Is Button Held(Event Player, Button(Crouch)), Event Player.HalamanMenu == 0));
+		Else If(And(Is Button Held(Event Player, Button(Ability 2)), Event Player.HalamanMenu == 0));
 			Event Player.PerintahMenu = 6;
 		End;
 	}
@@ -1227,7 +1225,7 @@ rule("05d - Menu: Lepaskan pengatur setelah semua masukan dilepas")
 		Event Player.PerintahMenu != 0;
 		And(And(Is Button Held(Event Player, Button(Interact)) == False, Is Button Held(Event Player, Button(Reload)) == False), And(And(
 			Is Button Held(Event Player, Button(Primary Fire)) == False, Is Button Held(Event Player, Button(Secondary Fire)) == False), And(
-			Is Button Held(Event Player, Button(Jump)) == False, Is Button Held(Event Player, Button(Crouch)) == False))) == True;
+			Is Button Held(Event Player, Button(Ability 1)) == False, Is Button Held(Event Player, Button(Ability 2)) == False))) == True;
 	}
 
 	actions
@@ -1403,7 +1401,7 @@ rule("07c - Menu Balas Dendam: Segarkan data tanpa menggambar ulang")
 	}
 }
 
-rule("08 - Menu 0: Lompat mundur sepuluh genre")
+rule("08 - Menu 0: Kemampuan 1 maju sepuluh genre")
 {
 	event
 	{
@@ -1425,11 +1423,11 @@ rule("08 - Menu 0: Lompat mundur sepuluh genre")
 
 	actions
 	{
-		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
+		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
 	}
 }
 
-rule("09 - Menu 0: Jongkok maju sepuluh genre")
+rule("09 - Menu 0: Kemampuan 2 mundur sepuluh genre")
 {
 	event
 	{
@@ -1451,7 +1449,7 @@ rule("09 - Menu 0: Jongkok maju sepuluh genre")
 
 	actions
 	{
-		Event Player.KursorGenre = (Event Player.KursorGenre + 10) % 100;
+		Event Player.KursorGenre = (Event Player.KursorGenre + 90) % 100;
 	}
 }
 
@@ -2908,16 +2906,16 @@ rule("91b - Subrutin: Gambar menu musik")
 	{
 		Create HUD Text(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 0) ? Event Player : Empty Array, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}",
 			Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-			Custom String("{0}: back 10 | {1}: forward 10", Input Binding String(Button(Jump)), Input Binding String(Button(Crouch)))),
+			Custom String("{0}: +10 | {1}: -10", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))),
 			Custom String("{0}\n{1}", Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
 			Custom String("Hold {0} 0.5 sec: close", Input Binding String(Button(Melee))))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
 			Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)),
-			Input Binding String(Button(Secondary Fire))), Custom String("{0}: mundur 10 | {1}: maju 10", Input Binding String(Button(Jump)),
-			Input Binding String(Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Secondary Fire))), Custom String("{0}: +10 | {1}: -10", Input Binding String(Button(Ability 1)),
+			Input Binding String(Button(Ability 2)))), Custom String("{0}\n{1}", Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)),
 			Input Binding String(Button(Reload))), Custom String("Tahan {0} 0,5 dtk: tutup", Input Binding String(Button(Melee))))) : Custom String("{0}\n{1}",
 			Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)),
-			Input Binding String(Button(Secondary Fire))), Custom String("{0}: ย้อน 10 | {1}: เดินหน้า 10", Input Binding String(Button(Jump)),
-			Input Binding String(Button(Crouch)))), Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)),
+			Input Binding String(Button(Secondary Fire))), Custom String("{0}: +10 | {1}: -10", Input Binding String(Button(Ability 1)),
+			Input Binding String(Button(Ability 2)))), Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)),
 			Input Binding String(Button(Reload))), Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))),
 			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}\n> {2}", Custom String("0 - SOUNDTRACK {0}/100\nCURRENT: {1}",
 			Event Player.KursorGenre + 1, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet")),
@@ -3885,7 +3883,7 @@ rule("98 - Subrutin: Segarkan ruang muncul, objektif, dan target teleportasi")
 		End;
 		"Indeks 0 adalah ruang muncul, indeks 1 adalah objektif, lalu semua manusia dan bot. Null hanya penanda objektif."
 		Event Player.DaftarTargetTeleportasi = Append To Array(Array(Event Player, Null), Filtered Array(All Players(All Teams),
-			And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
+			And(Current Array Element != Event Player, And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));
 		If(Event Player.KursorTeleportasi == 1);
 			"Pertahankan objektif yang dipilih; penanda Null tidak perlu dicari di dalam array."
 		Else If(And(Event Player.CalonTargetTeleportasi != Null, Array Contains(Event Player.DaftarTargetTeleportasi, Event Player.CalonTargetTeleportasi)));
