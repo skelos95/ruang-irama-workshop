@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.0
+# Piano di test — versione 0.6.1
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.0.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.1.
 
 ## Gate statico
 
@@ -14,7 +14,7 @@ python tools/validate_workshop.py
 Esito atteso:
 
 ```text
-Ran 24 tests
+Ran 26 tests
 OK
 ```
 

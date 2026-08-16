@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.0
+# Note di progetto — versione 0.6.1
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.0.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.1.
 
 ## Architettura generale
 
@@ -215,7 +215,7 @@ Workflow permanenti:
 - `.github/workflows/validate-workshop.yml`
 - `.github/workflows/maintenance-patch.yml`
 
-La CI esegue 24 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
+La CI esegue 26 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
 
 ## Limiti
 
@@ -259,9 +259,14 @@ Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerap
 
 ## Menu 11 — Vote Player
 
-Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `NumeroVoti`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `LeaderVoto = Null` e nessun nome viene mostrato.
+Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `JumlahSuara`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `PemimpinSuara = Null` e nessun nome viene mostrato.
 
 
-## Audit lifecycle 0.6.0
+## Audit lifecycle 0.6.1
 
 `SiapkanPemain` inizializza esplicitamente ogni variabile player dichiarata e il validatore verifica questa proprietà automaticamente. Il Player Left usa un solo percorso di cleanup: distrugge prima tutti gli oggetti temporanei della carta, poi rimuove gli HUD/IWT dagli array paralleli, restituisce lo slot HUD, cancella i voti verso il player uscito e ripulisce riferimenti Camera/Revenge/Teleport/Inspection dei player rimasti. Sono stati eliminati gli handle globali statici `HudInfoKiri/HudInfoKanan`, il legacy `WaktuTercatat` e lo stato Menu 10 non più usato `PosisiKartuNasib/ModeKameraSebelumNasib/TargetKameraSebelumNasib`.
+
+
+## Nomenclatura Bahasa Indonesia 0.6.1
+
+Le dichiarazioni personalizzate non usano più i residui misti `Voto/Voti/Numero/Leader/Max/Pari` o i suffissi `EN/TH`: sono stati sostituiti da `PemimpinSuara`, `SuaraTerbanyak`, `SuaraSeri`, `IndeksHitungSuara`, `KursorPilihan`, `PemainDipilih`, `JumlahSuara`, `NamaWarnaInggris` e `NamaWarnaThai`. Anche `GambarVoto` è diventata `GambarPilihan`. Titoli regola e commenti personalizzati usano Bahasa Indonesia; le keyword e azioni native di Overwatch Workshop restano nella sintassi ufficiale inglese.

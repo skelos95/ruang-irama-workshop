@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.0
+# Rapporto di validazione — versione 0.6.1
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.0**
+Release tecnica: **CHILL Dedicated Server 0.6.1**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,10 +11,10 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-7b9c74ca0c5255c5587856cffc73a99fa466de2f
+244de67a2febf91f2a60de18f82167ecd489c06f
 ```
 
-## Audit 0.6.0
+## Audit 0.6.1
 
 Il gate verifica:
 
@@ -35,14 +35,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 24 tests
+Ran 26 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.0 superati
+OK - controlli statici v0.6.1 superati
 ```
 
 ## GitHub

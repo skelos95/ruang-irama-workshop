@@ -382,8 +382,8 @@ subroutines
         setup_at = self.source.index('rule("94 - ')
         tail = self.source[setup_at:]
         tail2 = tail.replace(
-            "Event Player.TargetVoto = Null;",
-            '"Event Player.TargetVoto = Null;"',
+            "Event Player.PemainDipilih = Null;",
+            '"Event Player.PemainDipilih = Null;"',
             1,
         )
         self.assertNotEqual(tail2, tail)
@@ -391,12 +391,12 @@ subroutines
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("TargetVoto" in error and "non inizializzata" in error for error in checks.errors), checks.errors)
+        self.assertTrue(any("PemainDipilih" in error and "non inizializzata" in error for error in checks.errors), checks.errors)
 
     def test_obsolete_luck_state_is_rejected(self) -> None:
         mutated = self.source.replace(
-            "\t\t80: NumeroVoti\n",
-            "\t\t80: NumeroVoti\n\t\t84: PosisiKartuNasib\n",
+            "\t\t80: JumlahSuara\n",
+            "\t\t80: JumlahSuara\n\t\t84: PosisiKartuNasib\n",
             1,
         )
         self.assertNotEqual(mutated, self.source)
@@ -429,6 +429,26 @@ subroutines
         checks = validator.Checks()
         validator.check_localization_and_indonesian_naming(checks, mutated, self.rules(mutated))
         self.assertTrue(any("localizzazione roster/voto" in error for error in checks.errors), checks.errors)
+
+
+    def test_mixed_language_vote_identifier_is_rejected(self) -> None:
+        mutated = self.source.replace("PemimpinSuara", "LeaderVoto", 1)
+        self.assertNotEqual(mutated, self.source)
+        global_names, player_names, subroutines = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_source_structure(checks, mutated, self.rules(mutated), global_names, player_names, subroutines)
+        self.assertTrue(any("LeaderVoto" in error and "non indonesiano" in error for error in checks.errors), checks.errors)
+
+    def test_english_word_in_rule_title_is_rejected(self) -> None:
+        mutated = self.source.replace(
+            'rule("18 - Kebal: Pasang kembali status setelah muncul kembali")',
+            'rule("18 - Kebal: Pasang kembali status setelah respawn")', 1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        global_names, player_names, subroutines = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_source_structure(checks, mutated, self.rules(mutated), global_names, player_names, subroutines)
+        self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 
 
 if __name__ == "__main__":

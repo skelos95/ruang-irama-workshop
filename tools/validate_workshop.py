@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.0.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.1.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.0"
+CURRENT_VERSION = "0.6.1"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -435,6 +435,15 @@ def identifier_tokens(identifier: str) -> list[str]:
 # Lessico volutamente conservativo: termini inequívocamente italiani nel
 # contesto di regole/commenti Workshop. Prestiti tecnici (menu, camera, server,
 # bot, target, HUD e simili) sono ammessi.
+FOREIGN_IDENTIFIER_WORDS = {
+    "leader", "voto", "voti", "numero", "max", "pari", "en", "th",
+}
+
+FOREIGN_RULE_OR_COMMENT_WORDS = {
+    "respawn", "spawn", "full", "arcade", "vote", "leader", "roulette",
+    "frame", "handler", "dispatcher", "client", "cache", "render",
+}
+
 ITALIAN_WORDS = {
     "abbassa", "aggiorna", "aggiornare", "aggiornato", "aggiornamento",
     "altre", "anche", "annunciatore", "apre", "applica", "assegna",
@@ -474,11 +483,11 @@ def check_language_arrays(checks: Checks, source: str) -> tuple[list[str], list[
     checks.equal(len(colors), 32, "numero di colori")
     localized_arrays = {
         "pagine indonesiane": ("Global.NamaHalaman", 10, False),
-        "pagine inglesi": ("Global.NamaHalamanEN", 10, False),
-        "pagine thailandesi": ("Global.NamaHalamanTH", 10, True),
+        "pagine inglesi": ("Global.NamaHalamanInggris", 10, False),
+        "pagine thailandesi": ("Global.NamaHalamanThai", 10, True),
         "colori indonesiani": ("Global.NamaWarna", 32, False),
-        "colori inglesi": ("Global.NamaWarnaEN", 32, False),
-        "colori thailandesi": ("Global.NamaWarnaTH", 32, True),
+        "colori inglesi": ("Global.NamaWarnaInggris", 32, False),
+        "colori thailandesi": ("Global.NamaWarnaThai", 32, True),
     }
     for label, (assignment, expected, require_thai) in localized_arrays.items():
         values = custom_strings(array_body(source, assignment))
@@ -569,20 +578,23 @@ def check_source_structure(
     ):
         checks.require(bool(names), f"tabella {table_name} vuota")
         for name in sorted(names):
-            hits = set(identifier_tokens(name)) & ITALIAN_WORDS
+            tokens = set(identifier_tokens(name))
+            hits = tokens & (ITALIAN_WORDS | FOREIGN_IDENTIFIER_WORDS)
             checks.require(
                 not hits,
                 f"identificatore {table_name} non indonesiano {name!r}: {sorted(hits)}",
             )
 
     for rule in rules:
-        hits = italian_hits(rule.name)
+        tokens = set(word_tokens(rule.name))
+        hits = tokens & (ITALIAN_WORDS | FOREIGN_RULE_OR_COMMENT_WORDS)
         checks.require(
             not hits,
             f"nome regola non indonesiano {rule.name!r}: {sorted(hits)}",
         )
     for number, comment in standalone_comments(source):
-        hits = italian_hits(comment)
+        tokens = set(word_tokens(comment))
+        hits = tokens & (ITALIAN_WORDS | FOREIGN_RULE_OR_COMMENT_WORDS)
         checks.require(
             not hits,
             f"commento non indonesiano alla riga {number}: {sorted(hits)}",
@@ -591,7 +603,9 @@ def check_source_structure(
     stale_identifiers = {
         "DurataServerMinuti", "MorteRevenge", "KillerRevenge", "JumlahRevenge",
         "DaftarTargetRevenge", "TargetRevenge", "GambarRevenge", "GambarTeleport",
-        "PosSpawnRoom", "NomorUrut",
+        "PosSpawnRoom", "NomorUrut", "NamaWarnaEN", "NamaHalamanEN",
+        "NamaWarnaTH", "NamaHalamanTH", "LeaderVoto", "MaxVoti", "PariVoti",
+        "IndeksVoto", "KursorVoto", "TargetVoto", "NumeroVoti", "GambarVoto",
     }
     declared = global_names | player_names | subroutines
     stale = sorted(stale_identifiers & declared)
@@ -872,7 +886,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
     expected_renderers = {
         "GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa",
         "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
-        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarVoto",
+        "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarPilihan",
     }
     missing_renderers = sorted(expected_renderers - subroutines)
     checks.require(not missing_renderers, f"renderer menu mancanti: {missing_renderers}")
@@ -1713,9 +1727,9 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         (75, "IkonKartuNasib"),
         (76, "IkonKartuNasibHijau"),
         (77, "TeksKartuNasibKanan"),
-        (78, "KursorVoto"),
-        (79, "TargetVoto"),
-        (80, "NumeroVoti"),
+        (78, "KursorPilihan"),
+        (79, "PemainDipilih"),
+        (80, "JumlahSuara"),
     ):
         checks.require(
             player_table is not None
@@ -1881,7 +1895,7 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         masked_menu_interact = mask_strings(menu_interact)
         before_luck = masked_menu_interact[max(0, luck_start - 900):luck_start]
         after_luck = mask_strings(menu_interact[luck_start:])
-        vote_branch_at = after_luck.find("Event Player.KursorVoto %=")
+        vote_branch_at = after_luck.find("Event Player.KursorPilihan %=")
         luck_only = after_luck[:vote_branch_at] if vote_branch_at >= 0 else after_luck
         for token in (
             "Event Player.KebalAktif = False;",
@@ -2558,7 +2572,7 @@ def check_lifecycle_hygiene(
                 f"audit lifecycle: array parallelo non ripulito al leave: {array_name}",
             )
         for token in (
-            "TargetVoto == Global.PemainPembersihan",
+            "PemainDipilih == Global.PemainPembersihan",
             "TargetKamera == Global.PemainPembersihan",
             "TargetInspeksi == Global.PemainPembersihan",
             "TargetTeleportasiTerkunci == Global.PemainPembersihan",
@@ -2610,8 +2624,8 @@ def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule
 def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[Rule]) -> None:
     colors = [re.sub(r"\s+", " ", item).strip() for item in top_level_items(array_body(source, "Global.DaftarWarna"))]
     id_names = custom_strings(array_body(source, "Global.NamaWarna"))
-    en_names = custom_strings(array_body(source, "Global.NamaWarnaEN"))
-    th_names = custom_strings(array_body(source, "Global.NamaWarnaTH"))
+    en_names = custom_strings(array_body(source, "Global.NamaWarnaInggris"))
+    th_names = custom_strings(array_body(source, "Global.NamaWarnaThai"))
     checks.equal(len(colors), 32, "Name Color: 32 colori")
     checks.equal(len(id_names), 32, "Name Color: 32 nomi ID")
     checks.equal(len(en_names), 32, "Name Color: 32 nomi EN")
@@ -2825,7 +2839,7 @@ def check_localization_and_indonesian_naming(checks: Checks, source: str, rules:
     for required in (
         "00 - Umum:", "RGB pastel neon lambat untuk judul, waktu, dan efek",
         "Bangkit Lompat:", "Kebal:", "Teleportasi Jongkok:",
-        "Pengatur masukan terpisah dari Menu Arcade", "tujuan berikutnya", "tujuan sebelumnya",
+        "Pengatur masukan terpisah dari Menu Arkade", "tujuan berikutnya", "tujuan sebelumnya",
         "Interact menjalankan teleportasi", "tanpa menggambar ulang berkala", "tanpa lompatan",
     ):
         checks.require(required in names, f"titolo regola Indonesia mancante: {required}")
@@ -3037,31 +3051,31 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
 
 def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
     clean = mask_strings(source)
-    checks.require("GambarVoto" in subroutines and "HitungPilihan" in subroutines, "Vote: subroutine mancanti")
+    checks.require("GambarPilihan" in subroutines and "HitungPilihan" in subroutines, "Vote: subroutine mancanti")
     checks.require("Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);" in clean, "Vote: Menu 11 non registrato")
-    renderer = rules_containing(rules, "Subroutine;", "GambarVoto;")
+    renderer = rules_containing(rules, "Subroutine;", "GambarPilihan;")
     checks.equal(len(renderer), 1, "Vote: renderer")
     if renderer:
         raw = renderer[0].body
         checks.require("11 - VOTE PLAYER" in raw and "11 - PILIH PEMAIN" in raw and "11 - โหวตผู้เล่น" in raw, "Vote: localizzazione incompleta")
         checks.require("PILIHAN KAMU" in raw and "SUARA" in raw, "Vote: ramo Bahasa Indonesia incompleto")
-        checks.require(raw.count("NumeroVoti") >= 12, "Vote: lista conteggi incompleta")
+        checks.require(raw.count("JumlahSuara") >= 12, "Vote: lista conteggi incompleta")
     tally = rules_containing(rules, "Subroutine;", "HitungPilihan;")
     checks.equal(len(tally), 1, "Vote: tally")
     if tally:
         body = mask_strings(tally[0].body)
-        checks.require("Filtered Array(Global.PemainManusia" in body and "Global.PariVoti = True;" in body and "Global.LeaderVoto = Null;" in body, "Vote: tally/pareggio incompleto")
+        checks.require("Filtered Array(Global.PemainManusia" in body and "Global.SuaraSeri = True;" in body and "Global.PemimpinSuara = Null;" in body, "Vote: tally/pareggio incompleto")
     handlers = [r for r in rules if code_contains(r.body, "Event Player.PerintahMenu == 1;", "Event Player.HalamanMenu = Global.KodeMenu")]
     checks.equal(len(handlers), 1, "Vote: handler")
     if handlers:
         body = mask_strings(handlers[0].body)
-        checks.require("Event Player.TargetVoto = Global.PemainManusia[Event Player.KursorVoto];" in body and "Call Subroutine(HitungPilihan);" in body, "Vote: applicazione voto incompleta")
+        checks.require("Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];" in body and "Call Subroutine(HitungPilihan);" in body, "Vote: applicazione voto incompleta")
     checks.require("CHILL STAR:" in source and "BINTANG CHILL:" in source and "ดาวสายชิล:" in source, "Vote: HUD Chill Star assente")
     checks.require("MOST VOTED:" not in source and "PALING BANYAK DIPILIH:" not in source and "โหวตสูงสุด:" not in source, "Vote: vecchio testo competitivo ancora presente")
-    checks.require('Custom String("\\n \\nCHILL STAR: {0}", Global.LeaderVoto)' in source and 'Custom String("\\n \\nBINTANG CHILL: {0}", Global.LeaderVoto)' in source and 'Custom String("\\n \\nดาวสายชิล: {0}", Global.LeaderVoto)' in source, "Vote: HUD leader mostra ancora il conteggio voti")
-    checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean and "Global.LeaderVoto != Null" in clean, "Vote: leader non ancorato/nascosto in pareggio")
+    checks.require('Custom String("\\n \\nCHILL STAR: {0}", Global.PemimpinSuara)' in source and 'Custom String("\\n \\nBINTANG CHILL: {0}", Global.PemimpinSuara)' in source and 'Custom String("\\n \\nดาวสายชิล: {0}", Global.PemimpinSuara)' in source, "Vote: HUD leader mostra ancora il conteggio voti")
+    checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean and "Global.PemimpinSuara != Null" in clean, "Vote: leader non ancorato/nascosto in pareggio")
     leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
-    checks.require(bool(leave) and "TargetVoto == Global.PemainPembersihan" in mask_strings(leave[0].body), "Vote: cleanup leave assente")
+    checks.require(bool(leave) and "PemainDipilih == Global.PemainPembersihan" in mask_strings(leave[0].body), "Vote: cleanup leave assente")
 
 def main() -> None:
     checks = Checks()

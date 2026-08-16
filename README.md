@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.0** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.1** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -122,7 +122,7 @@ L'icona mantiene il proprio colore nativo e viene mostrata prima dell'icona eroe
 - branch operativo: `main`;
 - workflow permanenti: `validate-workshop.yml` e `maintenance-patch.yml`;
 - nessun workflow temporaneo permanente;
-- test statici: 24 unit test + validatore Workshop.
+- test statici: 26 unit test + validatore Workshop.
 
 ## Stato validazione
 
@@ -143,6 +143,11 @@ Tre modalità: **OFF**, **1 HP** e **FULL HP**. FULL HP usa Damage Received 0% e
 **Feedback visivo:** i feedback delle impostazioni non riproducono più suoni. `EfekTerapkan` e `EfekPulihkan` usano esclusivamente `Ring Explosion` con `Global.RGB`.
 
 
-### Audit 0.6.0
+### Audit 0.6.1
 
-La manutenzione 0.6.0 rimuove stato Workshop non più usato, unifica il cleanup Menu 10 nel Player Left, verifica automaticamente che ogni variabile player dichiarata sia inizializzata in `SiapkanPemain`, controlla riferimenti stale e titoli regola duplicati, localizza i minuti roster EN/ID/TH e rende il cambio target della camera diretto senza `Stop Camera` intermedio. Il repository mantiene un solo branch operativo (`main`) e soltanto i due workflow permanenti.
+La manutenzione 0.6.1 rimuove stato Workshop non più usato, unifica il cleanup Menu 10 nel Player Left, verifica automaticamente che ogni variabile player dichiarata sia inizializzata in `SiapkanPemain`, controlla riferimenti stale e titoli regola duplicati, localizza i minuti roster EN/ID/TH e rende il cambio target della camera diretto senza `Stop Camera` intermedio. Il repository mantiene un solo branch operativo (`main`) e soltanto i due workflow permanenti.
+
+
+### Nomenclatura 0.6.1
+
+Variabili, subroutine, titoli regola e commenti personalizzati sono controllati contro residui linguistici legacy. Restano in inglese soltanto keyword/azioni native Workshop e i contenuti HUD del ramo English.

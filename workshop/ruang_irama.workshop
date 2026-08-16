@@ -18,9 +18,9 @@ variables
 		16: IndeksKeluar
 		17: KodeMenu
 		18: NamaWarna
-		19: NamaWarnaEN
+		19: NamaWarnaInggris
 		20: NamaBahasa
-		21: NamaHalamanEN
+		21: NamaHalamanInggris
 		22: TeksDiriPemain
 		23: DurasiServerMenit
 		24: WaktuMulaiServer
@@ -29,8 +29,8 @@ variables
 		27: TeksWaktuServer
 		28: MulaiUlangSudahDiminta
 		29: DiagnostikPerforma
-		30: NamaWarnaTH
-		31: NamaHalamanTH
+		30: NamaWarnaThai
+		31: NamaHalamanThai
 		32: IndeksPembersihan
 		33: PemainPembersihan
 		34: IndeksUtangKeluar
@@ -43,10 +43,10 @@ variables
 		41: NamaIkon
 		42: SlotHUDTerakhir
 		43: DaftarWarnaRGB
-		44: LeaderVoto
-		45: MaxVoti
-		46: PariVoti
-		47: IndeksVoto
+		44: PemimpinSuara
+		45: SuaraTerbanyak
+		46: SuaraSeri
+		47: IndeksHitungSuara
 	player:
 		0: WaktuMasuk
 		2: SudahDiperiksa
@@ -125,9 +125,9 @@ variables
 		75: IkonKartuNasib
 		76: IkonKartuNasibHijau
 		77: TeksKartuNasibKanan
-		78: KursorVoto
-		79: TargetVoto
-		80: NumeroVoti
+		78: KursorPilihan
+		79: PemainDipilih
+		80: JumlahSuara
 }
 
 subroutines
@@ -157,7 +157,7 @@ subroutines
 	22: GambarSakelarTeleportasi
 	23: GambarPrivasiInspeksi
 	24: GambarNasib
-	25: GambarVoto
+	25: GambarPilihan
 	26: HitungPilihan
 }
 
@@ -299,10 +299,10 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.SlotHUDPemain = Empty Array;
 		Global.IndeksKeluar = -1;
 		Global.SlotHUDTerakhir = -1;
-		Global.LeaderVoto = Null;
-		Global.MaxVoti = 0;
-		Global.PariVoti = False;
-		Global.IndeksVoto = 0;
+		Global.PemimpinSuara = Null;
+		Global.SuaraTerbanyak = 0;
+		Global.SuaraSeri = False;
+		Global.IndeksHitungSuara = 0;
 		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		Global.DaftarWarna = Array(
 			Color(White),
@@ -406,7 +406,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Giok Bersinar"),
 			Custom String("Chartreuse Neon")
 		);
-		Global.NamaWarnaEN = Array(
+		Global.NamaWarnaInggris = Array(
 			Custom String("Snow White"),
 			Custom String("Silver Mist"),
 			Custom String("Sunny Gold"),
@@ -440,7 +440,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Jade Glow"),
 			Custom String("Neon Chartreuse")
 		);
-		Global.NamaWarnaTH = Array(
+		Global.NamaWarnaThai = Array(
 			Custom String("ขาวหิมะ"),
 			Custom String("หมอกเงิน"),
 			Custom String("ทองแสงอาทิตย์"),
@@ -479,7 +479,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Bahasa Indonesia"),
 			Custom String("ไทย")
 		);
-		Global.NamaHalamanEN = Array(
+		Global.NamaHalamanInggris = Array(
 			Custom String("TOTAL STILLNESS"),
 			Custom String("FULL CHILL"),
 			Custom String("FLOATING EASY"),
@@ -491,7 +491,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("THE SERVER GETS NERVOUS"),
 			Custom String("MAXIMUM CHAOS")
 		);
-		Global.NamaHalamanTH = Array(
+		Global.NamaHalamanThai = Array(
 			Custom String("เงียบสนิท"),
 			Custom String("ชิลเต็มที่"),
 			Custom String("ล่องลอยสบาย ๆ"),
@@ -935,10 +935,10 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.LeaderVoto != Null
-			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Global.LeaderVoto)
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.LeaderVoto)
-			: Custom String("\n \nCHILL STAR: {0}", Global.LeaderVoto) : Custom String("\n ") : Custom String("")),
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinSuara != Null
+			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Global.PemimpinSuara)
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.PemimpinSuara)
+			: Custom String("\n \nCHILL STAR: {0}", Global.PemimpinSuara) : Custom String("\n ") : Custom String("")),
 			And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player.UrutanHUD == Global.SlotHUDTerakhir)) ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("{0}\n{1}",
 			Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}",
 			3 + Count Of(Global.HudKiriPemain) * 2 + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)), Count Of(Filtered Array(
@@ -1127,11 +1127,11 @@ rule("04 - Pemain Keluar: Rapikan HUD dan tulisan dunia")
 			Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
 			Global.SlotHUDTerakhir = Count Of(Global.SlotHUDPemain) == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));
 		End;
-		For Global Variable(IndeksVoto, 0, Count Of(Global.PemainManusia), 1);
-			If(Global.PemainManusia[Global.IndeksVoto].TargetVoto == Global.PemainPembersihan);
-				Set Player Variable(Global.PemainManusia[Global.IndeksVoto], TargetVoto, Null);
+		For Global Variable(IndeksHitungSuara, 0, Count Of(Global.PemainManusia), 1);
+			If(Global.PemainManusia[Global.IndeksHitungSuara].PemainDipilih == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], PemainDipilih, Null);
 			End;
-			Set Player Variable(Global.PemainManusia[Global.IndeksVoto], KursorVoto, Count Of(Global.PemainManusia) == 0 ? 0 : Min(Player Variable(Global.PemainManusia[Global.IndeksVoto], KursorVoto), Count Of(Global.PemainManusia) - 1));
+			Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], KursorPilihan, Count Of(Global.PemainManusia) == 0 ? 0 : Min(Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], KursorPilihan), Count Of(Global.PemainManusia) - 1));
 		End;
 		Call Subroutine(HitungPilihan);
 		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
@@ -1329,7 +1329,7 @@ rule("05d - Menu: Lepaskan pengatur setelah semua masukan dilepas")
 
 	actions
 	{
-		"Tunda satu frame agar handler menyelesaikan perintah sebelum dispatcher diaktifkan kembali."
+		"Tunda satu bingkai agar pengendali menyelesaikan perintah sebelum pengatur masukan diaktifkan kembali."
 		Wait(0.016, Ignore Condition);
 		Event Player.PerintahMenu = 0;
 	}
@@ -1383,7 +1383,7 @@ rule("06 - Menu: Tembakan utama memilih berikutnya")
 			Event Player.KursorPrivasiInspeksi = (Event Player.KursorPrivasiInspeksi + 1) % 2;
 		Else If(Event Player.HalamanMenu == 11);
 			If(Count Of(Global.PemainManusia) > 0);
-				Event Player.KursorVoto = (Event Player.KursorVoto + 1) % Count Of(Global.PemainManusia);
+				Event Player.KursorPilihan = (Event Player.KursorPilihan + 1) % Count Of(Global.PemainManusia);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
@@ -1440,7 +1440,7 @@ rule("07 - Menu: Tembakan sekunder memilih sebelumnya")
 			Event Player.KursorPrivasiInspeksi = (Event Player.KursorPrivasiInspeksi + 1) % 2;
 		Else If(Event Player.HalamanMenu == 11);
 			If(Count Of(Global.PemainManusia) > 0);
-				Event Player.KursorVoto = (Event Player.KursorVoto + Count Of(Global.PemainManusia) - 1) % Count Of(Global.PemainManusia);
+				Event Player.KursorPilihan = (Event Player.KursorPilihan + Count Of(Global.PemainManusia) - 1) % Count Of(Global.PemainManusia);
 			End;
 		End;
 		Call Subroutine(GambarMenu);
@@ -1595,7 +1595,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Else If(Event Player.HalamanMenu == 9);
 				Event Player.KursorPrivasiInspeksi = Event Player.KursorPrivasiInspeksi;
 			Else If(Event Player.HalamanMenu == 11);
-				Event Player.KursorVoto = And(Event Player.TargetVoto != Null, Array Contains(Global.PemainManusia, Event Player.TargetVoto)) ? Index Of Array Value(Global.PemainManusia, Event Player.TargetVoto) : Min(Event Player.KursorVoto, Count Of(Global.PemainManusia) - 1);
+				Event Player.KursorPilihan = And(Event Player.PemainDipilih != Null, Array Contains(Global.PemainManusia, Event Player.PemainDipilih)) ? Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih) : Min(Event Player.KursorPilihan, Count Of(Global.PemainManusia) - 1);
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 0);
@@ -1625,7 +1625,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			Else If(Event Player.KursorKamera == 1);
 				If(Or(Event Player.ModeKamera != 1, Event Player.TargetKamera != Event Player));
 					Event Player.TargetKamera = Event Player;
-					"Biarkan frame Interact selesai sebelum mengganti render kamera."
+					"Biarkan satu bingkai Interact selesai sebelum mengganti tampilan kamera."
 					Wait(0.016, Ignore Condition);
 					Event Player.ModeKamera = 1;
 					Call Subroutine(MulaiKamera);
@@ -1644,7 +1644,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				If(And(Event Player.CalonTargetKamera != Null, Entity Exists(Event Player.CalonTargetKamera)));
 					If(Or(Event Player.ModeKamera != 2, Event Player.TargetKamera != Event Player.CalonTargetKamera));
 						Event Player.TargetKamera = Event Player.CalonTargetKamera;
-						"Gunakan jeda satu frame yang sama saat mulai menonton dari orang pertama."
+						"Gunakan jeda satu bingkai yang sama saat mulai menonton dari orang pertama."
 						Wait(0.016, Ignore Condition);
 						Event Player.ModeKamera = 2;
 						Call Subroutine(MulaiKamera);
@@ -1672,9 +1672,9 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Call Subroutine(EfekTerapkan);
 				End;
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
-					"Name color: {0}. Subtlety optional.", Global.NamaWarnaEN[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
+					"Name color: {0}. Subtlety optional.", Global.NamaWarnaInggris[Event Player.IndeksWarna]) : Event Player.IndeksBahasa == 1 ? Custom String(
 					"Warna nama: {0}. Boleh norak.", Global.NamaWarna[Event Player.IndeksWarna]) : Custom String(
-					"สีชื่อ: {0} เด่นได้ตามใจ", Global.NamaWarnaTH[Event Player.IndeksWarna]));
+					"สีชื่อ: {0} เด่นได้ตามใจ", Global.NamaWarnaThai[Event Player.IndeksWarna]));
 			End;
 			Call Subroutine(GambarMenu);
 		Else If(Event Player.HalamanMenu == 3);
@@ -1865,11 +1865,11 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			End;
 		Else;
 			If(Count Of(Global.PemainManusia) > 0);
-				Event Player.KursorVoto %= Count Of(Global.PemainManusia);
-				If(Event Player.TargetVoto != Global.PemainManusia[Event Player.KursorVoto]);
-					Event Player.TargetVoto = Global.PemainManusia[Event Player.KursorVoto];
+				Event Player.KursorPilihan %= Count Of(Global.PemainManusia);
+				If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);
+					Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];
 					Call Subroutine(HitungPilihan);
-					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Vote registered for {0}.", Event Player.TargetVoto) : Event Player.IndeksBahasa == 1 ? Custom String("Pilihan untuk {0} tersimpan.", Event Player.TargetVoto) : Custom String("โหวตให้ {0} แล้ว", Event Player.TargetVoto));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Vote registered for {0}.", Event Player.PemainDipilih) : Event Player.IndeksBahasa == 1 ? Custom String("Pilihan untuk {0} tersimpan.", Event Player.PemainDipilih) : Custom String("โหวตให้ {0} แล้ว", Event Player.PemainDipilih));
 				End;
 			End;
 			Call Subroutine(GambarMenu);
@@ -2246,7 +2246,7 @@ rule("17 - Balas Dendam: Catat hanya pembunuh langsung")
 	}
 }
 
-rule("18 - Kebal: Pasang kembali status setelah respawn")
+rule("18 - Kebal: Pasang kembali status setelah muncul kembali")
 {
 	event
 	{
@@ -2304,7 +2304,7 @@ rule("18b - Kebal: Mode 1 HP kembali ke satu saat penuh")
 	}
 }
 
-rule("18d - Kebal: Mode FULL HP selalu kembali penuh")
+rule("18d - Kebal: Mode HP PENUH selalu kembali penuh")
 {
 	event
 	{
@@ -2329,7 +2329,7 @@ rule("18d - Kebal: Mode FULL HP selalu kembali penuh")
 	}
 }
 
-rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Spawn Room")
+rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Ruang Muncul")
 {
 	event
 	{
@@ -2513,7 +2513,7 @@ rule("19 - Teleportasi Jongkok: Buka tampilan selama Jongkok ditahan")
 	}
 }
 
-rule("19a - Teleportasi Jongkok: Pengatur masukan terpisah dari Menu Arcade")
+rule("19a - Teleportasi Jongkok: Pengatur masukan terpisah dari Menu Arkade")
 {
 	event
 	{
@@ -2827,7 +2827,7 @@ rule("91 - Subrutin: Pilih gambar menu yang sedang dibuka")
 		Else If(Event Player.HalamanMenu == 10);
 			Call Subroutine(GambarNasib);
 		Else;
-			Call Subroutine(GambarVoto);
+			Call Subroutine(GambarPilihan);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -2854,7 +2854,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			"{0}: เปิด | กด {1} ค้างเพื่อปิด", Input Binding String(Button(Interact)), Input Binding String(Button(Melee)))),
 			Event Player.IndeksBahasa == 0 ? Event Player.KursorUtama == 0 ? Custom String("0 - SOUNDTRACK\nCURRENT: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - THIRD-PERSON\nCURRENT: {0}", Event Player.ModeKamera == 0 ? Custom String("off") : Event Player.ModeKamera == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.TargetKamera))
-			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaEN[Event Player.IndeksWarna])
+			: Event Player.KursorUtama == 2 ? Custom String("2 - NAME COLOR\nCURRENT: {0}", Global.NamaWarnaInggris[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - LANGUAGE\nCURRENT: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - REVENGE\nSETTLE YOUR SCORE")
 			: Event Player.KursorUtama == 5 ? Custom String("5 - UNKILLABLE\nCURRENT: {0}", Event Player.ModeKebal == 0 ? Custom String("OFF") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
@@ -2863,7 +2863,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 8 ? Custom String("8 - CROUCH TELEPORT\nCURRENT: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("ON") : Custom String("OFF"))
 			: Event Player.KursorUtama == 9 ? Custom String("9 - CROUCH PRIVACY\nCURRENT: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("ON") : Custom String("OFF"))
 			: Event Player.KursorUtama == 10 ? Custom String("10 - TRY YOUR LUCK\nSTATUS: {0}", Event Player.KartuNasibAktif ? Custom String("ACTIVE") : Custom String("READY"))
-			: Custom String("11 - VOTE PLAYER\nYOUR VOTE: {0}", Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("NONE"))
+			: Custom String("11 - VOTE PLAYER\nYOUR VOTE: {0}", Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("NONE"))
 			: Event Player.IndeksBahasa == 1 ? Event Player.KursorUtama == 0 ? Custom String("0 - MUSIK\nSAAT INI: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih musik"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - KAMERA 3P\nSAAT INI: {0}", Event Player.ModeKamera == 0 ? Custom String("mati") : Event Player.ModeKamera == 1 ? Custom String("hero sendiri") : Custom String("menonton {0}", Event Player.TargetKamera))
 			: Event Player.KursorUtama == 2 ? Custom String("2 - WARNA NAMA\nSAAT INI: {0}", Global.NamaWarna[Event Player.IndeksWarna])
@@ -2875,10 +2875,10 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 8 ? Custom String("8 - TELEPORT JONGKOK\nSAAT INI: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("AKTIF") : Custom String("MATI"))
 			: Event Player.KursorUtama == 9 ? Custom String("9 - PRIVASI JONGKOK\nSAAT INI: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("AKTIF") : Custom String("MATI"))
 			: Event Player.KursorUtama == 10 ? Custom String("10 - COBA NASIB\nSTATUS: {0}", Event Player.KartuNasibAktif ? Custom String("AKTIF") : Custom String("SIAP"))
-			: Custom String("11 - PILIH PEMAIN\nPILIHAN KAMU: {0}", Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("BELUM ADA"))
+			: Custom String("11 - PILIH PEMAIN\nPILIHAN KAMU: {0}", Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("BELUM ADA"))
 			: Event Player.KursorUtama == 0 ? Custom String("0 - เพลงประกอบ\nปัจจุบัน: {0}", Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง"))
 			: Event Player.KursorUtama == 1 ? Custom String("1 - กล้องบุคคลที่สาม\nสถานะ: {0}", Event Player.ModeKamera == 0 ? Custom String("ปิด") : Event Player.ModeKamera == 1 ? Custom String("ฮีโร่ของคุณ") : Custom String("กำลังดู {0}", Event Player.TargetKamera))
-			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaTH[Event Player.IndeksWarna])
+			: Event Player.KursorUtama == 2 ? Custom String("2 - สีชื่อ\nปัจจุบัน: {0}", Global.NamaWarnaThai[Event Player.IndeksWarna])
 			: Event Player.KursorUtama == 3 ? Custom String("3 - ภาษา\nปัจจุบัน: {0}", Global.NamaBahasa[Event Player.IndeksBahasa])
 			: Event Player.KursorUtama == 4 ? Custom String("4 - ล้างแค้น\nทวงหนี้กันหน่อย")
 			: Event Player.KursorUtama == 5 ? Custom String("5 - ฆ่าไม่ตาย\nสถานะ: {0}", Event Player.ModeKebal == 0 ? Custom String("ปิด") : Event Player.ModeKebal == 1 ? Custom String("1 HP") : Custom String("FULL HP"))
@@ -2887,7 +2887,7 @@ rule("91a - Subrutin: Gambar menu utama")
 			: Event Player.KursorUtama == 8 ? Custom String("8 - เทเลพอร์ตตอนย่อ\nสถานะ: {0}", Event Player.TeleportasiJongkokDiaktifkan ? Custom String("เปิด") : Custom String("ปิด"))
 			: Event Player.KursorUtama == 9 ? Custom String("9 - ความเป็นส่วนตัวตอนย่อ\nสถานะ: {0}", Event Player.PrivasiInspeksiAktif ? Custom String("เปิด") : Custom String("ปิด"))
 			: Event Player.KursorUtama == 10 ? Custom String("10 - เสี่ยงโชค\nสถานะ: {0}", Event Player.KartuNasibAktif ? Custom String("ทำงาน") : Custom String("พร้อม"))
-			: Custom String("11 - โหวตผู้เล่น\nโหวตของคุณ: {0}", Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("ยังไม่ได้โหวต")), Top, 100,
+			: Custom String("11 - โหวตผู้เล่น\nโหวตของคุณ: {0}", Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("ยังไม่ได้โหวต")), Top, 100,
 			Color(White), Custom Color(210, 230, 255, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -2918,12 +2918,12 @@ rule("91b - Subrutin: Gambar menu musik")
 			Input Binding String(Button(Reload))), Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))),
 			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}\n> {2}", Custom String("0 - SOUNDTRACK {0}/100\nCURRENT: {1}",
 			Event Player.KursorGenre + 1, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("no soundtrack yet")),
-			Global.NamaHalamanEN[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Event Player.IndeksBahasa == 1 ? Custom String(
+			Global.NamaHalamanInggris[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]) : Event Player.IndeksBahasa == 1 ? Custom String(
 			"{0}\n{1}\n> {2}", Custom String("0 - MUSIK {0}/100\nSAAT INI: {1}", Event Player.KursorGenre + 1, Event Player.IndeksGenre >= 0
 			? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("belum pilih musik")), Global.NamaHalaman[Round To Integer(Event Player.KursorGenre / 10, Down)],
 			Global.DaftarGenre[Event Player.KursorGenre]) : Custom String("{0}\n{1}\n> {2}", Custom String("0 - เพลงประกอบ {0}/100\nปัจจุบัน: {1}",
 			Event Player.KursorGenre + 1, Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Custom String("ยังไม่ได้เลือกเพลง")),
-			Global.NamaHalamanTH[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]), Top, 100,
+			Global.NamaHalamanThai[Round To Integer(Event Player.KursorGenre / 10, Down)], Global.DaftarGenre[Event Player.KursorGenre]), Top, 100,
 			Color(White), Custom Color(205, 235, 255, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -2989,11 +2989,11 @@ rule("91d - Subrutin: Gambar menu warna")
 			Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("{0}\n{1}", Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))),
 			Custom String("กด {0} ค้าง 0.5 วินาที: ปิด", Input Binding String(Button(Melee))))), Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("2 - NAME COLOR {0}/{1}\nCURRENT: {2}", Event Player.KursorWarna + 1,
-			Count Of(Global.DaftarWarna), Global.NamaWarnaEN[Event Player.IndeksWarna]), Global.NamaWarnaEN[Event Player.KursorWarna]) : Event Player.IndeksBahasa == 1
+			Count Of(Global.DaftarWarna), Global.NamaWarnaInggris[Event Player.IndeksWarna]), Global.NamaWarnaInggris[Event Player.KursorWarna]) : Event Player.IndeksBahasa == 1
 			? Custom String("{0}\n> {1}", Custom String("2 - WARNA NAMA {0}/{1}\nSAAT INI: {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna),
 			Global.NamaWarna[Event Player.IndeksWarna]), Global.NamaWarna[Event Player.KursorWarna]) : Custom String("{0}\n> {1}", Custom String(
-			"2 - สีชื่อ {0}/{1}\nปัจจุบัน: {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarnaTH[Event Player.IndeksWarna]),
-			Global.NamaWarnaTH[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
+			"2 - สีชื่อ {0}/{1}\nปัจจุบัน: {2}", Event Player.KursorWarna + 1, Count Of(Global.DaftarWarna), Global.NamaWarnaThai[Event Player.IndeksWarna]),
+			Global.NamaWarnaThai[Event Player.KursorWarna]), Top, 100, Color(White), Custom Color(220, 235, 255, 255),
 			Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3340,7 +3340,7 @@ rule("91o - Subrutin: Gambar menu pilihan pemain")
 	event
 	{
 		Subroutine;
-		GambarVoto;
+		GambarPilihan;
 	}
 
 	actions
@@ -3348,9 +3348,9 @@ rule("91o - Subrutin: Gambar menu pilihan pemain")
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("\n{0}: next | {1}: previous", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: vote | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))))
 			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("\n{0}: berikutnya | {1}: sebelumnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: pilih | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload))))
 			: Custom String("{0}\n{1}", Custom String("\n{0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: โหวต | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))),
-			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("11 - VOTE PLAYER {0}/{1}\nYOUR VOTE: {2}", Event Player.KursorVoto + 1, Count Of(Global.PemainManusia), Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("NONE")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].NumeroVoti) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorVoto == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].NumeroVoti) : Custom String("")))))))))))))
-			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("11 - PILIH PEMAIN {0}/{1}\nPILIHAN KAMU: {2}", Event Player.KursorVoto + 1, Count Of(Global.PemainManusia), Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("BELUM ADA")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].NumeroVoti) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorVoto == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].NumeroVoti) : Custom String("")))))))))))))
-			: Custom String("{0}\n{1}", Custom String("11 - โหวตผู้เล่น {0}/{1}\nโหวตของคุณ: {2}", Event Player.KursorVoto + 1, Count Of(Global.PemainManusia), Event Player.TargetVoto != Null ? Event Player.TargetVoto : Custom String("ยังไม่ได้โหวต")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].NumeroVoti) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].NumeroVoti) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorVoto == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].NumeroVoti) : Custom String(""))))))))))))), Top, 100,
+			Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("11 - VOTE PLAYER {0}/{1}\nYOUR VOTE: {2}", Event Player.KursorPilihan + 1, Count Of(Global.PemainManusia), Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("NONE")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].JumlahSuara) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} VOTES", Event Player.KursorPilihan == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].JumlahSuara) : Custom String("")))))))))))))
+			: Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("11 - PILIH PEMAIN {0}/{1}\nPILIHAN KAMU: {2}", Event Player.KursorPilihan + 1, Count Of(Global.PemainManusia), Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("BELUM ADA")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].JumlahSuara) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} SUARA", Event Player.KursorPilihan == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].JumlahSuara) : Custom String("")))))))))))))
+			: Custom String("{0}\n{1}", Custom String("11 - โหวตผู้เล่น {0}/{1}\nโหวตของคุณ: {2}", Event Player.KursorPilihan + 1, Count Of(Global.PemainManusia), Event Player.PemainDipilih != Null ? Event Player.PemainDipilih : Custom String("ยังไม่ได้โหวต")), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 0 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 0 ? Custom String(">") : Custom String(" "), Global.PemainManusia[0], Global.PemainManusia[0].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 1 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 1 ? Custom String(">") : Custom String(" "), Global.PemainManusia[1], Global.PemainManusia[1].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 2 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 2 ? Custom String(">") : Custom String(" "), Global.PemainManusia[2], Global.PemainManusia[2].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 3 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 3 ? Custom String(">") : Custom String(" "), Global.PemainManusia[3], Global.PemainManusia[3].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 4 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 4 ? Custom String(">") : Custom String(" "), Global.PemainManusia[4], Global.PemainManusia[4].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 5 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 5 ? Custom String(">") : Custom String(" "), Global.PemainManusia[5], Global.PemainManusia[5].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 6 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 6 ? Custom String(">") : Custom String(" "), Global.PemainManusia[6], Global.PemainManusia[6].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 7 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 7 ? Custom String(">") : Custom String(" "), Global.PemainManusia[7], Global.PemainManusia[7].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 8 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 8 ? Custom String(">") : Custom String(" "), Global.PemainManusia[8], Global.PemainManusia[8].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 9 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 9 ? Custom String(">") : Custom String(" "), Global.PemainManusia[9], Global.PemainManusia[9].JumlahSuara) : Custom String(""), Custom String("{0}\n{1}", Count Of(Global.PemainManusia) > 10 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 10 ? Custom String(">") : Custom String(" "), Global.PemainManusia[10], Global.PemainManusia[10].JumlahSuara) : Custom String(""), Count Of(Global.PemainManusia) > 11 ? Custom String("{0} {1} - {2} โหวต", Event Player.KursorPilihan == 11 ? Custom String(">") : Custom String(" "), Global.PemainManusia[11], Global.PemainManusia[11].JumlahSuara) : Custom String(""))))))))))))), Top, 100,
 			Color(White), Custom Color(235, 230, 190, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
@@ -3366,21 +3366,21 @@ rule("91p - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 
 	actions
 	{
-		Global.LeaderVoto = Null;
-		Global.MaxVoti = 0;
-		Global.PariVoti = False;
-		For Global Variable(IndeksVoto, 0, Count Of(Global.PemainManusia), 1);
-			Set Player Variable(Global.PemainManusia[Global.IndeksVoto], NumeroVoti, Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, TargetVoto) == Global.PemainManusia[Global.IndeksVoto])));
-			If(Global.PemainManusia[Global.IndeksVoto].NumeroVoti > Global.MaxVoti);
-				Global.MaxVoti = Global.PemainManusia[Global.IndeksVoto].NumeroVoti;
-				Global.LeaderVoto = Global.PemainManusia[Global.IndeksVoto];
-				Global.PariVoti = False;
-			Else If(And(Global.PemainManusia[Global.IndeksVoto].NumeroVoti == Global.MaxVoti, Global.MaxVoti > 0));
-				Global.PariVoti = True;
+		Global.PemimpinSuara = Null;
+		Global.SuaraTerbanyak = 0;
+		Global.SuaraSeri = False;
+		For Global Variable(IndeksHitungSuara, 0, Count Of(Global.PemainManusia), 1);
+			Set Player Variable(Global.PemainManusia[Global.IndeksHitungSuara], JumlahSuara, Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Global.PemainManusia[Global.IndeksHitungSuara])));
+			If(Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara > Global.SuaraTerbanyak);
+				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara;
+				Global.PemimpinSuara = Global.PemainManusia[Global.IndeksHitungSuara];
+				Global.SuaraSeri = False;
+			Else If(And(Global.PemainManusia[Global.IndeksHitungSuara].JumlahSuara == Global.SuaraTerbanyak, Global.SuaraTerbanyak > 0));
+				Global.SuaraSeri = True;
 			End;
 		End;
-		If(Or(Global.MaxVoti <= 0, Global.PariVoti == True));
-			Global.LeaderVoto = Null;
+		If(Or(Global.SuaraTerbanyak <= 0, Global.SuaraSeri == True));
+			Global.PemimpinSuara = Null;
 		End;
 	}
 }
@@ -3397,7 +3397,7 @@ rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Abort If(Entity Exists(Event Player.TargetKamera) == False);
-		"Ganti kamera langsung tanpa Stop Camera agar perpindahan target tidak berkedip satu frame."
+		"Ganti kamera langsung tanpa Stop Camera agar perpindahan target tidak berkedip satu bingkai."
 		Start Camera(Event Player, Update Every Frame(First Of(Mapped Array(Array(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera)
 			+ Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0), Eye Position(
 			Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)
@@ -3526,9 +3526,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TeksKartuNasibKanan = Null;
 		Event Player.IkonKartuNasib = Null;
 		Event Player.IkonKartuNasibHijau = Null;
-		Event Player.KursorVoto = 0;
-		Event Player.TargetVoto = Null;
-		Event Player.NumeroVoti = 0;
+		Event Player.KursorPilihan = 0;
+		Event Player.PemainDipilih = Null;
+		Event Player.JumlahSuara = 0;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
