@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.19** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.20** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -237,3 +237,8 @@ Il cambio team non percorre più `BersihkanPemain → SiapkanPemain` quando il p
 ### Roster dopo cambio team 0.6.19
 
 Il cambio team resta leggero: nessun `BersihkanPemain`, nessun `SiapkanPemain` e nessun `Destroy HUD Text` nel percorso `Player Joined Match` di un umano già registrato. Overwatch rimuove però i due HUD sociali creati dal precedente contesto player; per questo il ramo azzera solo gli ID paralleli `HudKiriPemain/HudKananPemain`, porta `HudKiri/HudKanan` a `Null` e riapre il latch `HudPemainDibuat`. La regola `02b` ricrea quindi soltanto le due righe roster, conservando slot, lingua, colore, icona, soundtrack e tutte le altre preferenze.
+
+
+### Sincronizzazione riferimento team 0.6.20
+
+Il cambio team sincronizza in-place il riferimento del player dentro `Global.PemainManusia`: lookup diretto, poi fallback sullo slot HUD persistente per player già inizializzati. Le due righe sociali vengono riarmate senza cleanup/setup completi. `Disable Game Mode HUD` e `Disable Game Mode In-World UI` non vengono più eseguiti nella schermata hero-select: una regola senza Wait/Loop li riapplica soltanto dopo `Has Spawned == True`.

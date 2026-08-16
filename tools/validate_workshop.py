@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.19.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.20.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.19"
+CURRENT_VERSION = "0.6.20"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -2952,41 +2952,43 @@ def check_lifecycle_hygiene(
         checks.require(0 <= lock_at < setup_at, "audit lifecycle: fallback non blocca prima del setup")
     if join:
         body = mask_strings(join[0].body)
-        duplicate_at = body.find("If(Array Contains(Global.PemainManusia, Event Player));")
-        abort_registered = body.find("Abort;", duplicate_at)
+        direct_lookup = body.find("Global.IndeksSinkronTim = Index Of Array Value(Global.PemainManusia, Event Player);")
+        slot_lookup = body.find("Global.IndeksSinkronTim = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);")
+        registered_at = body.find("If(Global.IndeksSinkronTim >= 0);")
+        replace_ref = body.find("Global.PemainManusia[Global.IndeksSinkronTim] = Event Player;", registered_at)
+        abort_registered = body.find("Abort;", registered_at)
         setup_at = body.find("Call Subroutine(SiapkanPemain);", abort_registered)
-        checks.require(
-            0 <= duplicate_at < abort_registered < setup_at,
-            "audit lifecycle: player già registrato non esce prima del setup",
+        checks.require(0 <= direct_lookup < slot_lookup < registered_at < replace_ref < abort_registered < setup_at,
+            "audit lifecycle: cambio team non sincronizza il riferimento roster prima del ramo leggero")
+        checks.require("Event Player.PernahDisiapkan == True" in body,
+            "audit lifecycle: fallback per slot non è limitato a player già inizializzati")
+        checks.require("Call Subroutine(BersihkanPemain);" not in body,
+            "audit lifecycle: cambio team esegue ancora cleanup completo")
+        checks.require("Destroy HUD Text" not in body and "Create HUD Text" not in body,
+            "audit lifecycle: cambio team crea/distrugge HUD direttamente")
+        tokens = (
+            "Global.HudKiriPemain[Global.IndeksSinkronTim] = 0;",
+            "Global.HudKananPemain[Global.IndeksSinkronTim] = 0;",
+            "Event Player.HudKiri = Null;", "Event Player.HudKanan = Null;",
+            "Event Player.HudPemainDibuat = False;", "Event Player.AntarmukaModeDiterapkan = False;",
         )
-        checks.require(
-            "Call Subroutine(BersihkanPemain);" not in body,
-            "audit lifecycle: cambio team esegue ancora cleanup completo",
-        )
-        checks.require(
-            "Destroy HUD Text" not in body and "Create HUD Text" not in body,
-            "audit lifecycle: cambio team crea/distrugge HUD direttamente",
-        )
-        social_rearm_tokens = (
-            "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;",
-            "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;",
-            "Event Player.HudKiri = Null;",
-            "Event Player.HudKanan = Null;",
-            "Event Player.HudPemainDibuat = False;",
-        )
-        social_rearm_positions = [body.find(token, duplicate_at) for token in social_rearm_tokens]
-        checks.require(
-            all(duplicate_at < position < abort_registered for position in social_rearm_positions),
-            "audit lifecycle: cambio team non riarma i due HUD sociali prima dell'uscita leggera",
-        )
-        for token in (
-            "Event Player.SudahSiap = True;",
-            "Event Player.SudahDiperiksa = True;",
-            "Event Player.Manusia = True;",
-            "Disable Game Mode HUD(Event Player);",
-            "Disable Game Mode In-World UI(Event Player);",
-        ):
+        checks.require(all(registered_at < body.find(token, registered_at) < abort_registered for token in tokens),
+            "audit lifecycle: cambio team non riarma roster/UI prima dell'uscita leggera")
+        checks.require("Disable Game Mode HUD(Event Player);" not in body and "Disable Game Mode In-World UI(Event Player);" not in body,
+            "audit lifecycle: cambio team modifica la UI nativa durante la selezione eroe")
+        for token in ("Event Player.SudahSiap = True;", "Event Player.SudahDiperiksa = True;", "Event Player.Manusia = True;"):
             checks.require(token in body, f"audit lifecycle: refresh leggero cambio team incompleto: {token}")
+
+    post_spawn_ui = [rule for rule in rules if rule.name.startswith("02d - Antarmuka:")]
+    checks.equal(len(post_spawn_ui), 1, "audit lifecycle: riapplicazione UI post-spawn")
+    if post_spawn_ui:
+        ui_body = mask_strings(post_spawn_ui[0].body)
+        for token in ("Event Player.Manusia == True;", "Has Spawned(Event Player) == True;",
+                      "Event Player.AntarmukaModeDiterapkan == False;", "Disable Game Mode HUD(Event Player);",
+                      "Disable Game Mode In-World UI(Event Player);", "Event Player.AntarmukaModeDiterapkan = True;"):
+            checks.require(token in ui_body, f"audit lifecycle: UI post-spawn incompleta: {token}")
+        checks.require("Wait(" not in ui_body and "Loop If Condition Is True;" not in ui_body,
+            "audit lifecycle: UI post-spawn non deve usare Wait/Loop")
 
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")

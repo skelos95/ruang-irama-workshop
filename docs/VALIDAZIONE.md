@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.19
+# Rapporto di validazione — versione 0.6.20
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.19**
+Release tecnica: **CHILL Dedicated Server 0.6.20**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-a75d55a28fde76270f143f6ee827ae29e60ca97c
+815428b96489917dac2e0f0ff27e45644436a4c5
 ```
 
 ## Audit 0.6.5
@@ -38,14 +38,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 34 tests
+Ran 35 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.19 superati
+OK - controlli statici v0.6.20 superati
 ```
 
 ## GitHub
@@ -153,3 +153,8 @@ Il validatore vieta `BersihkanPemain`, `Create HUD Text` e `Destroy HUD Text` ne
 ## Gate roster team-switch 0.6.19
 
 Il gate vieta ancora cleanup completo e `Create/Destroy HUD Text` diretto nella regola `Player Joined Match`. Per il ramo di un player già registrato richiede invece il rearm dei due soli HUD sociali: ID globali a `0`, `HudKiri/HudKanan = Null` e `HudPemainDibuat = False` prima dell'`Abort`. Un nuovo test negativo rimuove il rearm e deve essere intercettato dal validatore.
+
+
+## Gate sincronizzazione team 0.6.20
+
+Il gate richiede lookup diretto + fallback slot, sostituzione in-place del riferimento roster, rearm HUD sociali e UI nativa solo post-spawn.

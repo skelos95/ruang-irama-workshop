@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.19
+# Note di progetto — versione 0.6.20
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.19.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.20.
 
 ## Architettura generale
 
@@ -376,3 +376,8 @@ Le regole 00a2/00a3 non possono più eseguire `Set Match Time(0)` a raffica dura
 ## Rearm roster sociale 0.6.19
 
 Un cambio team non ricostruisce più l'intero lifecycle, ma deve riarmare i soli HUD sociali perché il client elimina le due righe create dal vecchio contesto player. Il ramo per player già presente in `Global.PemainManusia` azzera i due ID paralleli, mette `HudKiri/HudKanan = Null` e `HudPemainDibuat = False`; `02b` ricrea due soli `Create HUD Text` quando il player è di nuovo spawnato. Nessuna preferenza o slot viene riallocato.
+
+
+## Riferimento roster dopo team switch 0.6.20
+
+`IndeksSinkronTim` usa prima l'identità corrente e poi `UrutanHUD/SlotHUDPemain` come chiave di sessione. Il riferimento roster viene sostituito senza riallocare gli array. `AntarmukaModeDiterapkan` sposta la soppressione UI nativa a dopo lo spawn.

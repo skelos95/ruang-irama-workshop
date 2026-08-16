@@ -578,9 +578,21 @@ rule("TEST - bad dead-state menu close")
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
         self.assertTrue(
-            any("non riarma i due HUD sociali" in error for error in checks.errors),
+            any("non riarma roster/UI" in error for error in checks.errors),
             checks.errors,
         )
+
+    def test_team_rejoin_must_sync_roster_reference_by_existing_slot(self) -> None:
+        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
+        join_end = self.source.index('\nrule("01b - ', join_at)
+        join_rule = self.source[join_at:join_end]
+        mutated_join = join_rule.replace("\t\t\tGlobal.PemainManusia[Global.IndeksSinkronTim] = Event Player;\n", "", 1)
+        self.assertNotEqual(mutated_join, join_rule)
+        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("sincronizza il riferimento roster" in error for error in checks.errors), checks.errors)
 
     def test_vote_change_must_clear_previous_choice(self) -> None:
         mutated = self.source.replace(
