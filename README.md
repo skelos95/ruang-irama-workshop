@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.5** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.6** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -61,7 +61,7 @@ Il Teleport resta un overlay associato a Crouch; **Menu 8** decide soltanto se q
 | Sempre | Tieni Melee 0,5 s | Apre/chiude il Menu Arcade |
 | Fuori menu | Tieni Interact 0,5 s | Alterna terza / prima persona |
 | Fuori menu | Tieni Crouch | Inspection + overlay Teleport |
-| Da morto, menu chiuso | Jump | Respawn vicino al punto di morte |
+| Da morto, menu aperto o chiuso | Jump | Respawn vicino al punto di morte |
 | Main Menu | Primary / Secondary | Voce successiva / precedente |
 | Main Menu | Interact | Apre il sottomenu |
 | Sottomenu | Primary / Secondary | Scelta successiva / precedente |
@@ -168,3 +168,8 @@ Variabili, subroutine, titoli regola e commenti personalizzati sono controllati 
 ### Team switch 0.6.3
 
 `Player Joined Match` può essere generato anche da un cambio squadra. Se il player è già presente nel roster, `BersihkanPemain` esegue lo stesso cleanup del Player Left prima di `SiapkanPemain`: HUD, slot, Menu 10, camera, input, Unkillable, riferimenti e voto vengono azzerati. La regola di registrazione ha inoltre una guardia `Array Contains(Global.PemainManusia, Event Player)` che impedisce un secondo append della stessa entità. Ogni player mantiene un solo `PemainDipilih`; cambiando scelta il valore precedente viene prima impostato a `Null`, poi viene assegnato il nuovo target e `HitungPilihan` ricalcola i totali.
+
+
+### Respawn Jump 0.6.6
+
+Da morto, `Jump` esegue il respawn vicino al punto di morte anche se il Menu Arcade è già aperto. Il menu non viene chiuso dal respawn e la regola `12f - Bangkit Lompat` non dipende più da `MenuTerbuka == False`.

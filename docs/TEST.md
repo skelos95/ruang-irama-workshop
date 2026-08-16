@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.5
+# Piano di test — versione 0.6.6
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.5.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.6.
 
 ## Gate statico
 
@@ -299,3 +299,8 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
 - la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
 - l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.
+
+
+## Hotfix Respawn Jump 0.6.6
+
+Verifica live obbligatoria: aprire il Menu Arcade, morire lasciandolo aperto, premere `Jump` e confermare che il player rinasca vicino al punto di morte senza che il menu venga chiuso. Ripetere sia dal Main Menu sia da un sottomenu.

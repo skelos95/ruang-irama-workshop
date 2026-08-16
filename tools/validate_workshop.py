@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.5.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.6.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.5"
+CURRENT_VERSION = "0.6.6"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -2399,6 +2399,16 @@ def check_feedback_and_jump_respawn(checks: Checks, source: str, rules: list[Rul
         "Teleport(Event Player, Event Player.PosisiBangkitAman);",
     ):
         checks.require(token in clean, f"feedback/respawn mancante: {token}")
+    jump_respawn_rules = [
+        rule for rule in rules if rule.name.startswith("12f - Bangkit Lompat:")
+    ]
+    checks.equal(len(jump_respawn_rules), 1, "regola Jump respawn")
+    if jump_respawn_rules:
+        jump_code = mask_strings(jump_respawn_rules[0].body)
+        checks.require(
+            "Event Player.MenuTerbuka == False;" not in jump_code,
+            "Jump respawn non deve richiedere il Menu Arcade chiuso",
+        )
     effect_calls = call_texts(source, "Play Effect")
     checks.equal(len(effect_calls), 2, "feedback: solo i due Ring RGB generici; Menu 10 non usa effetti")
     system_effects = [call for call in effect_calls if "Global.RGB" in call]

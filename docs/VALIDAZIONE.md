@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.5
+# Rapporto di validazione — versione 0.6.6
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.5**
+Release tecnica: **CHILL Dedicated Server 0.6.6**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-85a83f165a862827d173c79da4982599f58ba4bf
+35dc9ecd5627a36017391df5dcda8cc1ff1282de
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.5 superati
+OK - controlli statici v0.6.6 superati
 ```
 
 ## GitHub
@@ -84,3 +84,8 @@ Il repository è **static-ready, live-pending**: il gate certifica coerenza stru
 ## Hotfix Try Your Luck 0.6.5
 
 Lo status Menu 10 ora mostra lo stato reale della roulette; la morte interrompe e resetta la funzione senza chiudere il menu. Il rosso mantiene Ring/Light Shaft e countdown ma immobilizza esclusivamente tramite velocità a 0, senza forcing posizione né knockback lock.
+
+
+## Hotfix Respawn Jump 0.6.6
+
+Il gate verifica che la regola `12f - Bangkit Lompat` esista una sola volta e non contenga `Event Player.MenuTerbuka == False;`. In questo modo il respawn con `Jump` resta disponibile anche con Menu Arcade aperto, che deve restare visibile durante morte e respawn.

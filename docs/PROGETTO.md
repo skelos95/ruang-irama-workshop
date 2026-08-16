@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.5
+# Note di progetto — versione 0.6.6
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.5.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.6.
 
 ## Architettura generale
 
@@ -307,3 +307,8 @@ La variabile globale di appoggio del conteggio voti resta nello slot `47`, ma il
 - morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
 - la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
 - l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.
+
+
+## Hotfix Respawn Jump 0.6.6
+
+Il respawn manuale con `Jump` resta disponibile da morto anche con il Menu Arcade aperto. La morte e il respawn non chiudono il menu; viene rimosso soltanto il guard `MenuTerbuka == False` dalla regola `12f`, mantenendo invariati `TeleportasiJongkokAktif`, il latch `BangkitLompatDipakai`, `Nearest Walkable Position`, `Respawn` e il teleport alla posizione sicura.

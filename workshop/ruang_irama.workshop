@@ -1919,7 +1919,6 @@ rule("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
 		Is Alive(Event Player) == False;
-		Event Player.MenuTerbuka == False;
 		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.BangkitLompatDipakai == False;
 		Is Button Held(Event Player, Button(Jump)) == True;
