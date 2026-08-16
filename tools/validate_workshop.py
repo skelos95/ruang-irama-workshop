@@ -1896,18 +1896,21 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         )
 
     checks.require(
-        "Event Player.ModeKameraSebelumNasib = Event Player.ModeKamera;" in menu_interact
-        and "Stop Camera(Event Player);" in menu_interact
-        and "Event Player.ModeKamera = 0;" in menu_interact,
-        "Nasib: camera non viene temporaneamente bloccata in prima persona",
+        "Event Player.ModeKameraSebelumNasib = Event Player.ModeKamera;" not in menu_interact
+        and "Event Player.TargetKameraSebelumNasib = Event Player.TargetKamera;" not in menu_interact,
+        "Nasib: l'avvio salva ancora una camera che non deve modificare",
     )
-    restore_rules = [rule for rule in rules if rule.name.startswith("18g - Nasib:")]
-    checks.equal(len(restore_rules), 1, "Nasib: una sola regola ripristino camera dopo respawn")
-    if restore_rules:
+    luck_start_at = menu_interact.find("Event Player.KartuNasibAktif = True;")
+    if luck_start_at >= 0:
+        luck_activation_tail = menu_interact[max(0, luck_start_at - 500):luck_start_at + 500]
         checks.require(
-            code_contains(restore_rules[0].body, "ModeKameraSebelumNasib", "Call Subroutine(MulaiKamera);"),
-            "Nasib: ripristino camera incompleto",
+            "Stop Camera(Event Player);" not in luck_activation_tail
+            and "Event Player.ModeKamera = 0;" not in luck_activation_tail
+            and "Event Player.TargetKamera = Null;" not in luck_activation_tail,
+            "Nasib: attivazione cambia ancora la camera e può causare uno scatto",
         )
+    restore_rules = [rule for rule in rules if rule.name.startswith("18g - Nasib:")]
+    checks.equal(len(restore_rules), 0, "Nasib: la vecchia regola ripristino camera non deve più esistere")
 
     blocked_one_hp = menu_interact[
         menu_interact.find("If(And(Event Player.KursorKebal == 1"):

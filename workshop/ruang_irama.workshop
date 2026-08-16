@@ -1821,14 +1821,6 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 					Destroy Icon(Event Player.IkonKebal);
 					Event Player.IkonKebal = Null;
 				End;
-				Event Player.ModeKameraSebelumNasib = Event Player.ModeKamera;
-				Event Player.TargetKameraSebelumNasib = Event Player.TargetKamera;
-				If(Event Player.ModeKamera != 0);
-					Stop Camera(Event Player);
-					Event Player.ModeKamera = 0;
-					Event Player.TargetKamera = Null;
-					Wait(0.016, Ignore Condition);
-				End;
 				Event Player.KartuNasibAktif = True;
 				Event Player.KartuNasibMerah = Random Integer(0, 1) == 0;
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
@@ -2407,21 +2399,6 @@ rule("18e - Nasib: Roulette merah hijau makin lambat")
 		Event Player.KartuNasibAktif = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
-		If(And(Is Alive(Event Player) == True, Event Player.ModeKameraSebelumNasib != 0));
-			If(Event Player.ModeKameraSebelumNasib == 1);
-				Event Player.TargetKamera = Event Player;
-				Wait(0.016, Ignore Condition);
-				Event Player.ModeKamera = 1;
-				Call Subroutine(MulaiKamera);
-			Else If(And(Event Player.TargetKameraSebelumNasib != Null, Entity Exists(Event Player.TargetKameraSebelumNasib)));
-				Event Player.TargetKamera = Event Player.TargetKameraSebelumNasib;
-				Wait(0.016, Ignore Condition);
-				Event Player.ModeKamera = 2;
-				Call Subroutine(MulaiKamera);
-			End;
-			Event Player.ModeKameraSebelumNasib = 0;
-			Event Player.TargetKameraSebelumNasib = Null;
-		End;
 	}
 }
 
@@ -2465,43 +2442,6 @@ rule("18f - Nasib: Hapus kartu saat pemilik mati")
 	}
 }
 
-
-rule("18g - Nasib: Pulihkan kamera setelah respawn")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Manusia == True;
-		Event Player.KartuNasibAktif == False;
-		Event Player.ModeKameraSebelumNasib != 0;
-		Has Spawned(Event Player) == True;
-		Is Alive(Event Player) == True;
-		Event Player.ModeKamera == 0;
-	}
-
-	actions
-	{
-		If(Event Player.ModeKameraSebelumNasib == 1);
-			Event Player.TargetKamera = Event Player;
-			Wait(0.016, Ignore Condition);
-			Event Player.ModeKamera = 1;
-			Call Subroutine(MulaiKamera);
-		Else If(And(Event Player.TargetKameraSebelumNasib != Null, Entity Exists(Event Player.TargetKameraSebelumNasib)));
-			Event Player.TargetKamera = Event Player.TargetKameraSebelumNasib;
-			Wait(0.016, Ignore Condition);
-			Event Player.ModeKamera = 2;
-			Call Subroutine(MulaiKamera);
-		End;
-		Event Player.ModeKameraSebelumNasib = 0;
-		Event Player.TargetKameraSebelumNasib = Null;
-	}
-}
 
 rule("19 - Teleportasi Jongkok: Buka tampilan selama Jongkok ditahan")
 {
