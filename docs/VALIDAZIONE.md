@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.12
+# Rapporto di validazione — versione 0.6.13
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.12**
+Release tecnica: **CHILL Dedicated Server 0.6.13**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-e62c33ffc359e4961bcdac2a9ea27ef5a29ef717
+4fa0d5e5e3cc09b42092991c927cc2026fa7f906
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.12 superati
+OK - controlli statici v0.6.13 superati
 ```
 
 ## GitHub
@@ -119,3 +119,8 @@ Il gate richiede un unico opener Melee con `Wait(0.500, Abort When False)` e nes
 ## Controlli input e privacy 0.6.12
 
 Il gate certifica che l'apertura Menu non disabiliti Melee/Jump, che Ability 1/2 restino disabilitate come abilità reali e siano gli unici comandi ±10 del Soundtrack, che il dispatcher/release gate non usino più Jump/Crouch e che il renderer Soundtrack mostri i binding aggiornati. `SegarkanTargetTeleportasi` deve includere il filtro `PrivasiInspeksiAktif == False`.
+
+
+## Palette menu 0.6.13
+
+Il gate richiede 11 RGB fissi tutti diversi, mantiene Name Color dinamico e conserva `0.180, Destination and Duration`.

@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.12** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.13** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -25,8 +25,8 @@ La versione **0.6.12** identifica lo stato funzionale e tecnico corrente del rep
   12. `11 - Vote Player` — voto verso qualsiasi umano, incluso se stessi; bot esclusi.
 - Player Icon predefinita: **Nothing**.
 - Tutti i cursori menu restano memorizzati tra chiusura e riapertura.
-- Colori menu diversi e coordinati con i rispettivi sottomenu.
-- Transizione colore morbida di circa **0,18 s** tramite Vector RGB.
+- Ogni menu, tranne Name Color, ha una **tonalità identitaria unica**; Name Color segue invece il colore selezionato.
+- Tutti i passaggi colore restano sfumati con transizione morbida di circa **0,18 s** tramite Vector RGB.
 - RGB globale pastel/neon lento per titolo, timer ed effetti visivi.
 - Feedback `Small Message` + visuale + audio soltanto quando una modifica cambia davvero; premere `Interact` sulla stessa scelta non ripete il feedback.
 - Crouch inspection con icona eroe, nome e salute; la percentuale Ultimate non viene mostrata.
@@ -203,3 +203,8 @@ Il `Wait(0.500, Abort When False)` resta invariato: la soglia di hold non viene 
 ### Controlli menu e privacy Teleport 0.6.12
 
 Con il Menu Arcade aperto, **Melee e Jump restano azioni normali dell'eroe**: Melee può comunque chiudere il menu se viene tenuto per 0,5 s, mentre Jump non viene più intercettato dal dispatcher. Nel Soundtrack i salti rapidi diventano **Ability 1 = +10** e **Ability 2 = −10**; le due abilità reali restano bloccate finché il menu è aperto, quindi la pressione agisce soltanto sul cursore musicale. `SegarkanTargetTeleportasi` filtra inoltre qualunque player con `PrivasiInspeksiAktif == True`: il suo nome non appare nel Crouch Teleport e un target diventato privato prima della conferma viene rifiutato perché non è più presente nella lista aggiornata.
+
+
+### Palette menu unica 0.6.13
+
+Ogni voce Arcade ha una tonalità dedicata: Soundtrack ciano, Camera blu, Language viola, Revenge rosso, Unkillable arancio, Hero Voice magenta, Player Icon lime, Crouch Teleport verde, Crouch Privacy teal, Try Your Luck oro e Vote Player rosa. **Name Color resta dinamico** e segue `DaftarWarnaRGB[KursorWarna]`. Tutti i passaggi continuano a usare il chase morbido da 0,18 s.

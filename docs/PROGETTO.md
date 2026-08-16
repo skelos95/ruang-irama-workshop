@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.12
+# Note di progetto — versione 0.6.13
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.12.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.13.
 
 ## Architettura generale
 
@@ -342,3 +342,8 @@ La soglia Melee rimane esattamente 0,5 s. `GambarMenu` non pre-carica più 13 HU
 ## Input menu e privacy Teleport 0.6.12
 
 Il Menu Arcade non esegue più `Disallow Button` su Melee e Jump. Il dispatcher Soundtrack usa Ability 1/2 come comandi custom (+10/−10) mentre le abilità reali restano disabilitate dal menu. Crouch non è più usato per il salto +10. La lista Crouch Teleport esclude in fase di refresh ogni entità con `PrivasiInspeksiAktif == True`, mantenendo invariati Spawn Room e obiettivo.
+
+
+## Palette menu 0.6.13
+
+`TransisiWarnaMenu` usa RGB fissi unici per 0,1,3..11; il menu 2 Name Color continua a seguire `Global.DaftarWarnaRGB[Event Player.KursorWarna]`. Main e submenu condividono la stessa identità cromatica e la durata del chase resta 0,18 s.

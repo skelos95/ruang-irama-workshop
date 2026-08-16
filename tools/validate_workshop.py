@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.12.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.13.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.12"
+CURRENT_VERSION = "0.6.13"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1155,6 +1155,24 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             re.search(r"0\.180\s*,\s*Destination and Duration", mask_strings(transition_rules[0].body)) is not None,
             "transizione colore menu non impostata a 0,18 s",
         )
+        transition_code = mask_strings(transition_rules[0].body)
+        checks.require(
+            "Global.DaftarWarnaRGB[Event Player.KursorWarna]" in transition_code,
+            "Name Color non segue più dinamicamente il colore selezionato",
+        )
+        fixed_menu_colors = {
+            0: (55, 235, 245), 1: (70, 135, 255), 3: (185, 105, 255),
+            4: (255, 75, 85), 5: (255, 145, 55), 6: (255, 80, 205),
+            7: (170, 240, 85), 8: (65, 225, 130), 9: (55, 190, 170),
+            10: (255, 210, 70), 11: (255, 120, 155),
+        }
+        checks.equal(len(set(fixed_menu_colors.values())), len(fixed_menu_colors), "palette fissa menu con colori duplicati")
+        page_expr = "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu)"
+        for page, rgb in fixed_menu_colors.items():
+            checks.require(
+                f"{page_expr} == {page} ? Vector({rgb[0]}, {rgb[1]}, {rgb[2]})" in transition_code,
+                f"colore dedicato menu {page} mancante o modificato",
+            )
 
     melee_rules = [
         rule for rule in rules
@@ -3048,15 +3066,15 @@ def check_menu_palette_and_name_colors(checks: Checks, source: str, rules: list[
 
     for token in (
         "Vector(55, 235, 245)",
-        "Vector(90, 180, 255)",
+        "Vector(70, 135, 255)",
         "Global.DaftarWarnaRGB[Event Player.KursorWarna]",
-        "Vector(190, 120, 255)",
-        "Vector(255, 80, 80)",
-        "Vector(255, 185, 90)",
-        "Vector(115, 235, 170)",
-        "Vector(235, 135, 255)",
-        "Vector(190, 255, 80)",
-        "Vector(255, 120, 190)",
+        "Vector(185, 105, 255)",
+        "Vector(255, 75, 85)",
+        "Vector(255, 145, 55)",
+        "Vector(65, 225, 130)",
+        "Vector(255, 80, 205)",
+        "Vector(170, 240, 85)",
+        "Vector(255, 120, 155)",
     ):
         checks.require(token in transition, f"palette transizione incompleta: {token}")
 
@@ -3123,15 +3141,15 @@ def check_smooth_menu_color_transition(checks: Checks, source: str, rules: list[
         checks.require("Chase Player Variable Over Time(Event Player, WarnaMenu," in body and "0.180, Destination and Duration);" in body, "menu smooth: chase 0,35 s assente")
         for token in (
             "Vector(55, 235, 245)",
-            "Vector(90, 180, 255)",
+            "Vector(70, 135, 255)",
             "Global.DaftarWarnaRGB[Event Player.KursorWarna]",
-            "Vector(190, 120, 255)",
-            "Vector(255, 80, 80)",
-            "Vector(255, 185, 90)",
-            "Vector(115, 235, 170)",
-            "Vector(235, 135, 255)",
-            "Vector(190, 255, 80)",
-            "Vector(255, 120, 190)",
+            "Vector(185, 105, 255)",
+            "Vector(255, 75, 85)",
+            "Vector(255, 145, 55)",
+            "Vector(65, 225, 130)",
+            "Vector(255, 80, 205)",
+            "Vector(170, 240, 85)",
+            "Vector(255, 120, 155)",
         ):
             checks.require(token in body, f"menu smooth: destinazione vector assente {token}")
         checks.require("Custom Color(" not in body, "menu smooth: Chase non deve ricevere Color")

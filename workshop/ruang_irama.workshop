@@ -3315,18 +3315,21 @@ rule("91k - Subrutin: Transisi warna menu tanpa lompatan")
 
 	actions
 	{
+		"Setiap menu memiliki warna identitas sendiri. Hanya Name Color mengikuti warna yang sedang dipilih; semuanya berpindah dengan chase lembut."
 		Chase Player Variable Over Time(Event Player, WarnaMenu,
 			(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 0 ? Vector(55, 235, 245)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 1 ? Vector(90, 180, 255)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 1 ? Vector(70, 135, 255)
 			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 2 ? Global.DaftarWarnaRGB[Event Player.KursorWarna]
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 3 ? Vector(190, 120, 255)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 4 ? Vector(255, 80, 80)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 5 ? Vector(255, 185, 90)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 6 ? Vector(115, 235, 170)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 7 ? Vector(235, 135, 255)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 8 ? Vector(190, 255, 80)
-			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 9 ? Vector(255, 120, 190)
-			: Vector(255, 210, 70), 0.180, Destination and Duration);
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 3 ? Vector(185, 105, 255)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 4 ? Vector(255, 75, 85)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 5 ? Vector(255, 145, 55)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 6 ? Vector(255, 80, 205)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 7 ? Vector(170, 240, 85)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 8 ? Vector(65, 225, 130)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 9 ? Vector(55, 190, 170)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 10 ? Vector(255, 210, 70)
+			: (Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 11 ? Vector(255, 120, 155)
+			: Vector(55, 235, 245), 0.180, Destination and Duration);
 	}
 }
 

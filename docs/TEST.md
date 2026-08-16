@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.12
+# Piano di test — versione 0.6.13
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.12.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.13.
 
 ## Gate statico
 
@@ -334,3 +334,8 @@ Test live con cronometro percepito: da menu chiuso tenere Melee; il Main Menu de
 ## Input menu / Soundtrack / privacy Teleport 0.6.12
 
 Test live: aprire il Menu Arcade e verificare che un tap Melee esegua il normale attacco, mentre un hold di 0,5 s continui a chiudere il menu; Jump deve saltare normalmente e, da morto, continuare a fare respawn manuale. Nel Soundtrack Ability 1 deve avanzare di 10 generi e Ability 2 arretrare di 10 senza attivare le abilità dell'eroe. Attivare Crouch Privacy su un secondo player: quel player non deve comparire nel Crouch Teleport; disattivando privacy deve ricomparire al refresh successivo.
+
+
+## Palette menu 0.6.13
+
+Scorrere tutte le 12 voci: 0,1,3..11 devono avere tonalità chiaramente diverse con transizione sfumata. Aprire ogni submenu e verificare che mantenga il colore della voce. Name Color deve invece seguire il colore evidenziato.
