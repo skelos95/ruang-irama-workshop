@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "workshop" / "ruang_irama.workshop"
 VAL = ROOT / "tools" / "validate_workshop.py"
+TESTS_FILE = ROOT / "tests" / "test_validate_workshop.py"
 README = ROOT / "README.md"
 PROGETTO = ROOT / "docs" / "PROGETTO.md"
 TEST = ROOT / "docs" / "TEST.md"
@@ -130,7 +131,6 @@ new_audit = '''    if join:
 '''
 val = once(val, old_audit, new_audit, "validator lightweight team switch")
 
-# Explicitly certify that only Player Left uses the heavy cleanup path.
 leave_anchor = '''    if leave:
         checks.require(code_contains(leave[0].body, "Call Subroutine(BersihkanPemain);"), "audit lifecycle: Player Left non usa cleanup comune")
 '''
@@ -142,6 +142,43 @@ leave_extra = leave_anchor + '''        checks.require(
 val = once(val, leave_anchor, leave_extra, "validator cleanup only on leave")
 
 VAL.write_text(val, encoding="utf-8")
+
+# Migrate the negative lifecycle test from the old cleanup-on-team-switch contract.
+tests = TESTS_FILE.read_text(encoding="utf-8")
+old_test = '''    def test_team_rejoin_must_cleanup_before_setup(self) -> None:
+        mutated = self.source.replace(
+            "\\t\\tIf(Array Contains(Global.PemainManusia, Event Player));\\n\\t\\t\\tCall Subroutine(BersihkanPemain);\\n\\t\\tEnd;\\n\\t\\tCall Subroutine(SiapkanPemain);",
+            "\\t\\tCall Subroutine(SiapkanPemain);",
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("cambio team" in error for error in checks.errors), checks.errors)
+'''
+new_test = '''    def test_team_rejoin_must_not_run_heavy_cleanup(self) -> None:
+        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
+        join_end = self.source.index('\\nrule("01b - ', join_at)
+        join_rule = self.source[join_at:join_end]
+        mutated_join = join_rule.replace(
+            "\\t\\t\\tAbort;",
+            "\\t\\t\\tCall Subroutine(BersihkanPemain);\\n\\t\\t\\tAbort;",
+            1,
+        )
+        self.assertNotEqual(mutated_join, join_rule)
+        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(
+            any("cleanup completo" in error or "Player Joined/cambio team" in error for error in checks.errors),
+            checks.errors,
+        )
+'''
+tests = once(tests, old_test, new_test, "unit test lightweight team switch")
+TESTS_FILE.write_text(tests, encoding="utf-8")
+
 VERSION.write_text("0.6.18\n", encoding="utf-8")
 
 readme = README.read_text(encoding="utf-8")
