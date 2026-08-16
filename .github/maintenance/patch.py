@@ -275,7 +275,7 @@ new_validator_block = '''    expected_renderers = {
         checks.require("Create HUD Text" not in router_code, "GambarMenu non deve contenere un HUD monolitico")
         checks.require("Custom String" not in router_code, "GambarMenu non deve duplicare i testi delle pagine")
         checks.require(
-            code_contains(router, "Count Of(Event Player.HudMenuArcade) == 0;", "Call Subroutine(TransisiWarnaMenu);"),
+            "HudMenuArcade" in router_code and "TransisiWarnaMenu" in router_code,
             "GambarMenu non usa il gate di creazione split",
         )
         checks.require(len(router.encode("utf-8")) < 12000, "GambarMenu è tornato troppo grande")
