@@ -6,6 +6,7 @@ PROJECT = ROOT / "docs" / "PROGETTO.md"
 TEST = ROOT / "docs" / "TEST.md"
 VALIDATION = ROOT / "docs" / "VALIDAZIONE.md"
 VERSION = ROOT / "VERSION"
+VALIDATOR = ROOT / "tools" / "validate_workshop.py"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -16,6 +17,10 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 VERSION.write_text("0.6.4\n", encoding="utf-8")
+validator = VALIDATOR.read_text(encoding="utf-8")
+validator = replace_once(validator, "della versione 0.6.3.", "della versione 0.6.4.", "validator docstring version")
+validator = replace_once(validator, 'CURRENT_VERSION = "0.6.3"', 'CURRENT_VERSION = "0.6.4"', "validator current version")
+VALIDATOR.write_text(validator, encoding="utf-8")
 
 # README --------------------------------------------------------------------
 text = README.read_text(encoding="utf-8")
