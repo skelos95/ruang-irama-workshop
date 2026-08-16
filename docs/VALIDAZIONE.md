@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.1
+# Rapporto di validazione — versione 0.6.2
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.1**
+Release tecnica: **CHILL Dedicated Server 0.6.2**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,10 +11,13 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-244de67a2febf91f2a60de18f82167ecd489c06f
+fee4d4046dee3c26c952fd6deff7b1cdcd76a456
 ```
 
-## Audit 0.6.1
+## Audit 0.6.2
+
+- team-switch trattato come leave + fresh join con cleanup riutilizzabile e guardia anti-duplicato roster;
+- voto singolo certificato: cambio scelta azzera il target precedente prima di assegnare il nuovo;
 
 Il gate verifica:
 
@@ -35,14 +38,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 26 tests
+Ran 28 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.1 superati
+OK - controlli statici v0.6.2 superati
 ```
 
 ## GitHub

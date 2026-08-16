@@ -317,12 +317,16 @@ subroutines
         self.assertTrue(any("Health(Event Player)" in error for error in checks.errors), checks.errors)
 
     def test_voice_normal_stop_is_required(self) -> None:
-        mutated = self.source.replace(
+        menu_at = self.source.index('rule("10 - Menu:')
+        menu_end = self.source.index('\nrule("11 - ', menu_at)
+        menu = self.source[menu_at:menu_end]
+        menu2 = menu.replace(
             "Stop Modifying Hero Voice Lines(Event Player);",
             '"Stop Modifying Hero Voice Lines(Event Player);"',
             1,
         )
-        self.assertNotEqual(mutated, self.source)
+        self.assertNotEqual(menu2, menu)
+        mutated = self.source[:menu_at] + menu2 + self.source[menu_end:]
         checks = validator.Checks()
         validator.check_arcade_features(checks, mutated, self.rules(mutated))
         self.assertTrue(any("Stop Modifying Hero Voice Lines" in error for error in checks.errors), checks.errors)
@@ -449,6 +453,31 @@ subroutines
         checks = validator.Checks()
         validator.check_source_structure(checks, mutated, self.rules(mutated), global_names, player_names, subroutines)
         self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
+
+
+    def test_team_rejoin_must_cleanup_before_setup(self) -> None:
+        mutated = self.source.replace(
+            "\t\tIf(Array Contains(Global.PemainManusia, Event Player));\n\t\t\tCall Subroutine(BersihkanPemain);\n\t\tEnd;\n\t\tCall Subroutine(SiapkanPemain);",
+            "\t\tCall Subroutine(SiapkanPemain);",
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("cambio team" in error for error in checks.errors), checks.errors)
+
+    def test_vote_change_must_clear_previous_choice(self) -> None:
+        mutated = self.source.replace(
+            "\t\t\t\t\tEvent Player.PemainDipilih = Null;\n\t\t\t\t\tEvent Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];",
+            "\t\t\t\t\tEvent Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];",
+            1,
+        )
+        self.assertNotEqual(mutated, self.source)
+        _, _, subroutines = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_vote_menu(checks, mutated, self.rules(mutated), subroutines)
+        self.assertTrue(any("voto precedente" in error for error in checks.errors), checks.errors)
 
 
 if __name__ == "__main__":

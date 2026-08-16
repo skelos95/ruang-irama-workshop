@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.1
+# Note di progetto — versione 0.6.2
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.1.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.2.
 
 ## Architettura generale
 
@@ -215,7 +215,7 @@ Workflow permanenti:
 - `.github/workflows/validate-workshop.yml`
 - `.github/workflows/maintenance-patch.yml`
 
-La CI esegue 26 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
+La CI esegue 28 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
 
 ## Limiti
 
@@ -262,11 +262,18 @@ Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerap
 Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `JumlahSuara`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `PemimpinSuara = Null` e nessun nome viene mostrato.
 
 
-## Audit lifecycle 0.6.1
+## Audit lifecycle 0.6.2
 
 `SiapkanPemain` inizializza esplicitamente ogni variabile player dichiarata e il validatore verifica questa proprietà automaticamente. Il Player Left usa un solo percorso di cleanup: distrugge prima tutti gli oggetti temporanei della carta, poi rimuove gli HUD/IWT dagli array paralleli, restituisce lo slot HUD, cancella i voti verso il player uscito e ripulisce riferimenti Camera/Revenge/Teleport/Inspection dei player rimasti. Sono stati eliminati gli handle globali statici `HudInfoKiri/HudInfoKanan`, il legacy `WaktuTercatat` e lo stato Menu 10 non più usato `PosisiKartuNasib/ModeKameraSebelumNasib/TargetKameraSebelumNasib`.
 
 
-## Nomenclatura Bahasa Indonesia 0.6.1
+## Nomenclatura Bahasa Indonesia 0.6.2
 
 Le dichiarazioni personalizzate non usano più i residui misti `Voto/Voti/Numero/Leader/Max/Pari` o i suffissi `EN/TH`: sono stati sostituiti da `PemimpinSuara`, `SuaraTerbanyak`, `SuaraSeri`, `IndeksHitungSuara`, `KursorPilihan`, `PemainDipilih`, `JumlahSuara`, `NamaWarnaInggris` e `NamaWarnaThai`. Anche `GambarVoto` è diventata `GambarPilihan`. Titoli regola e commenti personalizzati usano Bahasa Indonesia; le keyword e azioni native di Overwatch Workshop restano nella sintassi ufficiale inglese.
+
+
+## Cambio squadra e voto singolo 0.6.2
+
+Un cambio Team viene trattato come un'uscita e un nuovo ingresso logico. `01 - Pemain Masuk atau Pindah Tim` controlla se l'entità è già in `Global.PemainManusia`; in tal caso chiama `BersihkanPemain`, che usa lo stesso percorso del vero `Player Left Match`, e solo dopo richiama `SiapkanPemain`. Il cleanup rimuove il vecchio HUD e tutti gli array paralleli, restituisce lo slot HUD, azzera il voto uscente, annulla i voti degli altri diretti al player, pulisce i riferimenti Camera/Revenge/Teleport/Inspection, ripristina input e modificatori e ricalcola i voti. La registrazione umana contiene anche una seconda guardia anti-duplicato prima dell'allocazione HUD.
+
+Il voto resta una singola variabile `PemainDipilih`, non un array. Scegliendo un player diverso, l'handler esegue esplicitamente `PemainDipilih = Null`, assegna il nuovo player e poi chiama `HitungPilihan`; quindi il voto precedente viene sempre sottratto e il nuovo aggiunto nello stesso aggiornamento.

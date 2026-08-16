@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.1.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.2.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.1"
+CURRENT_VERSION = "0.6.2"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1515,8 +1515,15 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
 
     leave_rules = [rule for rule in rules if code_contains(rule.body, "Player Left Match;")]
     checks.equal(len(leave_rules), 1, "regole Player Left Match")
+    cleanup_rules = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    checks.equal(len(cleanup_rules), 1, "subroutine lifecycle BersihkanPemain")
     if leave_rules:
-        leave = mask_strings(leave_rules[0].body)
+        checks.require(
+            code_contains(leave_rules[0].body, "Call Subroutine(BersihkanPemain);"),
+            "Player Left non delega al cleanup comune",
+        )
+    if cleanup_rules:
+        leave = mask_strings(cleanup_rules[0].body)
         capture_at = leave.find("Global.PemainPembersihan = Event Player;")
         index_at = leave.find(
             "Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);"
@@ -1551,7 +1558,7 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         )
         checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
         checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
-        checks.require("Stop Camera" in leave, "cleanup uscita non ferma le camere puntate all'uscente")
+        checks.require("Stop Camera(Event Player);" in leave, "cleanup comune non ferma la camera del player")
 
     for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
         checks.require(f"Event Player.{name}" in clean_source, f"Revenge: variabile {name} assente")
@@ -1700,15 +1707,15 @@ def check_teleport(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Teleport: identità catturata non azzerata dopo l'azione",
     )
 
-    leave_rules = [rule for rule in rules if code_contains(rule.body, "Player Left Match;")]
-    if leave_rules:
+    cleanup_rules = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    if cleanup_rules:
         checks.require(
             code_contains(
-                leave_rules[0].body,
+                cleanup_rules[0].body,
                 "TargetTeleportasiTerkunci == Global.PemainPembersihan",
                 "TargetTeleportasiTerkunci, Null",
             ),
-            "Teleport: uscita del target non annulla l'identità bloccata",
+            "Teleport: uscita/cambio team del target non annulla l'identità bloccata",
         )
 
 
@@ -1741,7 +1748,6 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         "Clear Status(Event Player, Unkillable);",
         "Set Player Health(Event Player, 1);",
         "Health(Event Player) >= Max Health(Event Player);",
-        "Stop Modifying Hero Voice Lines(Event Player);",
         "Start Modifying Hero Voice Lines(Event Player, 0.500, False);",
         "Start Modifying Hero Voice Lines(Event Player, 0.750, False);",
         "Start Modifying Hero Voice Lines(Event Player, 1.250, False);",
@@ -1886,6 +1892,19 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
                 "Event Player.IkonKartuNasibHijau = Null;",
             ),
             "Nasib: morte prima della fine non resetta completamente la carta",
+        )
+
+    menu_dispatchers = [rule for rule in rules if rule.name.startswith("10 - Menu:")]
+    checks.equal(len(menu_dispatchers), 1, "Voce eroe: un solo dispatcher Menu 10")
+    if menu_dispatchers:
+        menu_code = mask_strings(menu_dispatchers[0].body)
+        voice_guard = menu_code.find("If(Event Player.IndeksSuara != Event Player.KursorSuara);")
+        voice_end = menu_code.find("Call Subroutine(GambarMenu);", voice_guard)
+        voice_block = menu_code[voice_guard:voice_end] if 0 <= voice_guard < voice_end else ""
+        checks.require(
+            "If(Event Player.IndeksSuara == 0);" in voice_block
+            and "Stop Modifying Hero Voice Lines(Event Player);" in voice_block,
+            "Voce eroe NORMAL: Stop Modifying Hero Voice Lines assente dal ramo applicazione Menu 6",
         )
 
     menu_interact = next(rule.body for rule in rules if rule.name.startswith("10 - Menu:"))
@@ -2548,13 +2567,34 @@ def check_lifecycle_hygiene(
     fallback = [rule for rule in rules if code_contains(rule.body, "Ongoing - Each Player;", "Event Player.SudahSiap == False;", "Call Subroutine(SiapkanPemain);")]
     checks.equal(len(join), 1, "audit lifecycle: init Player Joined")
     checks.equal(len(fallback), 1, "audit lifecycle: init player già presenti")
+    if join:
+        body = mask_strings(join[0].body)
+        duplicate_at = body.find("If(Array Contains(Global.PemainManusia, Event Player));")
+        cleanup_at = body.find("Call Subroutine(BersihkanPemain);", duplicate_at)
+        setup_at = body.find("Call Subroutine(SiapkanPemain);", cleanup_at)
+        checks.require(
+            0 <= duplicate_at < cleanup_at < setup_at,
+            "audit lifecycle: cambio team non esegue cleanup prima della nuova inizializzazione",
+        )
+
+    classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
+    checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")
+    if classification:
+        body = mask_strings(classification[0].body)
+        guard = body.find("Abort If(Array Contains(Global.PemainManusia, Event Player));")
+        append = body.find("Global.PemainManusia = Append To Array(Global.PemainManusia, Event Player);")
+        checks.require(0 <= guard < append, "audit lifecycle: append roster senza guardia anti-duplicato")
 
     leave = [rule for rule in rules if code_contains(rule.body, "Player Left Match;")]
-    checks.equal(len(leave), 1, "audit lifecycle: un solo cleanup Player Left")
+    cleanup = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    checks.equal(len(leave), 1, "audit lifecycle: un solo evento Player Left")
+    checks.equal(len(cleanup), 1, "audit lifecycle: un solo cleanup riutilizzabile")
     if leave:
-        body = mask_strings(leave[0].body)
+        checks.require(code_contains(leave[0].body, "Call Subroutine(BersihkanPemain);"), "audit lifecycle: Player Left non usa cleanup comune")
+    if cleanup:
+        body = mask_strings(cleanup[0].body)
         capture = body.find("Global.PemainPembersihan = Event Player;")
-        checks.require(capture >= 0, "audit lifecycle: leave non cattura identità")
+        checks.require(capture >= 0, "audit lifecycle: cleanup non cattura identità")
         for token in (
             "Destroy In-World Text(Event Player.TeksKartuNasib);",
             "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
@@ -2569,7 +2609,7 @@ def check_lifecycle_hygiene(
         ):
             checks.require(
                 f"Modify Global Variable({array_name}, Remove From Array By Index, Global.IndeksKeluar);" in body,
-                f"audit lifecycle: array parallelo non ripulito al leave: {array_name}",
+                f"audit lifecycle: array parallelo non ripulito: {array_name}",
             )
         for token in (
             "PemainDipilih == Global.PemainPembersihan",
@@ -2580,6 +2620,16 @@ def check_lifecycle_hygiene(
             "TargetBalasDendamTerkunci == Global.PemainPembersihan",
         ):
             checks.require(token in body, f"audit lifecycle: riferimento stale non ripulito: {token}")
+        for token in (
+            "Event Player.PemainDipilih = Null;",
+            "Event Player.JumlahSuara = 0;",
+            "Event Player.SudahSiap = False;",
+            "Event Player.Manusia = False;",
+            "Clear Status(Event Player, Unkillable);",
+            "Set Damage Received(Event Player, 100);",
+            "Allow Button(Event Player, Button(Interact));",
+        ):
+            checks.require(token in body, f"audit lifecycle: reset fresco incompleto: {token}")
 
 
 def check_idempotent_menu_feedback(checks: Checks, source: str, rules: list[Rule]) -> None:
@@ -2755,7 +2805,7 @@ def check_runtime_efficiency_audit(checks: Checks, source: str, rules: list[Rule
     inspection_sorts = [rule for rule in rules if code_contains(rule.body, "Subroutine;", "SegarkanTargetInspeksi;", "Sorted Array(Event Player.DaftarTargetInspeksi")]
     checks.equal(len(inspection_sorts), 1, "audit: sort inspection")
 
-    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarKebal", "GambarSuara", "GambarIkon"):
+    for sub in ("GambarUtama", "GambarMusik", "GambarKamera", "GambarWarna", "GambarBahasa", "GambarBalasDendam", "GambarTeleportasi", "GambarKebal", "GambarSuara", "GambarIkon", "BersihkanPemain"):
         checks.equal(len(rules_containing(rules, "Subroutine;", f"{sub};")), 1, f"audit: definizione unica {sub}")
 
 
@@ -3045,8 +3095,8 @@ def check_unkillable_three_modes(checks: Checks, source: str, rules: list[Rule])
     if warning_calls:
         checks.require("All Players(All Teams)" in warning_calls[0] and "Custom Color(255, 80, 80, 255)" in warning_calls[0] and "Visible To and Position" in warning_calls[0], "Unkillable 1 HP Warning non è pubblico/rosso/follow")
 
-    leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
-    checks.require(bool(leave) and "Destroy Icon(Event Player.IkonKebal);" in mask_strings(leave[0].body), "Unkillable Halo cleanup leave assente")
+    cleanup = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    checks.require(bool(cleanup) and "Destroy Icon(Event Player.IkonKebal);" in mask_strings(cleanup[0].body), "Unkillable icon cleanup leave/team-switch assente")
 
 
 def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines: set[str]) -> None:
@@ -3069,13 +3119,24 @@ def check_vote_menu(checks: Checks, source: str, rules: list[Rule], subroutines:
     checks.equal(len(handlers), 1, "Vote: handler")
     if handlers:
         body = mask_strings(handlers[0].body)
-        checks.require("Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];" in body and "Call Subroutine(HitungPilihan);" in body, "Vote: applicazione voto incompleta")
+        guard = body.find("If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);")
+        clear = body.find("Event Player.PemainDipilih = Null;", guard)
+        assign = body.find("Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];", clear)
+        recount = body.find("Call Subroutine(HitungPilihan);", assign)
+        checks.require(0 <= guard < clear < assign < recount, "Vote: cambio scelta non elimina il voto precedente prima del nuovo")
+        checks.require("Append To Array(Event Player.PemainDipilih" not in body, "Vote: scelta non deve mai diventare un array di voti")
+    cleanup = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    if cleanup:
+        body = mask_strings(cleanup[0].body)
+        checks.require("Event Player.PemainDipilih = Null;" in body, "Vote: voto uscente non azzerato su leave/team-switch")
+        checks.require("PemainDipilih == Global.PemainPembersihan" in body, "Vote: voti ricevuti dal player uscente non azzerati")
+        checks.require("Call Subroutine(HitungPilihan);" in body, "Vote: conteggi non ricalcolati dopo leave/team-switch")
     checks.require("CHILL STAR:" in source and "BINTANG CHILL:" in source and "ดาวสายชิล:" in source, "Vote: HUD Chill Star assente")
     checks.require("MOST VOTED:" not in source and "PALING BANYAK DIPILIH:" not in source and "โหวตสูงสุด:" not in source, "Vote: vecchio testo competitivo ancora presente")
     checks.require('Custom String("\\n \\nCHILL STAR: {0}", Global.PemimpinSuara)' in source and 'Custom String("\\n \\nBINTANG CHILL: {0}", Global.PemimpinSuara)' in source and 'Custom String("\\n \\nดาวสายชิล: {0}", Global.PemimpinSuara)' in source, "Vote: HUD leader mostra ancora il conteggio voti")
     checks.require("Event Player.UrutanHUD == Global.SlotHUDTerakhir" in clean and "Global.PemimpinSuara != Null" in clean, "Vote: leader non ancorato/nascosto in pareggio")
-    leave = [r for r in rules if code_contains(r.body, "Player Left Match;")]
-    checks.require(bool(leave) and "PemainDipilih == Global.PemainPembersihan" in mask_strings(leave[0].body), "Vote: cleanup leave assente")
+    cleanup = rules_containing(rules, "Subroutine;", "BersihkanPemain;")
+    checks.require(bool(cleanup) and "PemainDipilih == Global.PemainPembersihan" in mask_strings(cleanup[0].body), "Vote: cleanup leave/team-switch assente")
 
 def main() -> None:
     checks = Checks()

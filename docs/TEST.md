@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.1
+# Piano di test — versione 0.6.2
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.1.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.2.
 
 ## Gate statico
 
@@ -14,7 +14,7 @@ python tools/validate_workshop.py
 Esito atteso:
 
 ```text
-Ran 26 tests
+Ran 28 tests
 OK
 ```
 
@@ -275,3 +275,12 @@ Il repository può essere classificato **static-ready** quando unit test e valid
 - Try Your Luck: attivazione chiude e blocca il menu, forza Unkillable OFF e non cambia la camera; morte/leave devono distruggere entrambi i bracket e Heart/Skull senza oggetti orfani.
 - Vote Player: lista soli umani, self-vote consentito, conteggi aggiornati nel Menu 11; pareggio al primo posto = nessuna CHILL STAR; leave del target cancella i voti verso di lui e ricalcola.
 - Ripetere join/leave mentre Menu 11 è aperto e verificare cursori validi e nessun riferimento stale.
+
+
+## Cambio squadra
+
+- Con un player già registrato, passare Team 1 → Team 2 → Team 1 più volte. Deve esistere sempre una sola riga roster per quel player e un solo elemento corrispondente in `Global.PemainManusia`.
+- Se il player aveva votato A, dopo il cambio squadra il suo voto deve essere `NONE/BELUM ADA/ยังไม่ได้โหวต` e il totale di A deve diminuire di uno.
+- Anche tutti i voti ricevuti dal player che cambia squadra devono essere eliminati, come in un vero leave/rejoin.
+- Menu, Crouch Teleport, camera, Unkillable, voce, cursori e HUD temporanei devono ripartire dai valori iniziali.
+- Votare A e poi B senza cambiare Team: A deve perdere immediatamente un voto e B deve guadagnarne uno; il votante non può contribuire a due target contemporaneamente.
