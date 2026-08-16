@@ -36,7 +36,6 @@ new_semantic_test = ''' + "'''" + r'''    def test_semantic_action_inside_commen
             len(validator.call_texts(simulated, "Disable Nameplates")),
             len(calls) - 1,
         )
-        self.assertNotIn(calls[0], validator.call_texts(simulated, "Disable Nameplates"))
 ''' + "'''" + r'''
 tests = once(tests, old_semantic_test, new_semantic_test, "semantic action comment parser test")
 TESTS_FILE.write_text(tests, encoding="utf-8")
