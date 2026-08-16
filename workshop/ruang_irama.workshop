@@ -888,6 +888,12 @@ rule("01 - Pemain Masuk atau Pindah Tim: Jangan bangun ulang pemain yang sudah t
 	{
 		"Pindah tim mempertahankan HUD, menu, pilihan, dan pendaftaran. Pembersihan penuh hanya untuk pemain yang benar-benar keluar."
 		If(Array Contains(Global.PemainManusia, Event Player));
+			"Overwatch membuang dua HUD roster yang dibuat dari konteks pemain saat pindah tim. Jangan cleanup penuh: kosongkan hanya ID lama lalu biarkan 02b membuat dua baris lagi."
+			Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			Event Player.HudKiri = Null;
+			Event Player.HudKanan = Null;
+			Event Player.HudPemainDibuat = False;
 			Event Player.SiklusPemainAktif = False;
 			Event Player.SudahSiap = True;
 			Event Player.SudahDiperiksa = True;

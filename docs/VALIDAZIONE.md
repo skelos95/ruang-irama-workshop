@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.18
+# Rapporto di validazione — versione 0.6.19
 
-Data: 2026-08-16
+Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.18**
+Release tecnica: **CHILL Dedicated Server 0.6.19**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-80c262bfbd278a1d1ce7bc97ad80a90ae051b1e5
+a75d55a28fde76270f143f6ee827ae29e60ca97c
 ```
 
 ## Audit 0.6.5
@@ -38,14 +38,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 33 tests
+Ran 34 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.18 superati
+OK - controlli statici v0.6.19 superati
 ```
 
 ## GitHub
@@ -148,3 +148,8 @@ Il validatore impone il lock `SiklusPemainAktif` sul Player Joined, limita 01b a
 ## Gate team switch leggero 0.6.18
 
 Il validatore vieta `BersihkanPemain`, `Create HUD Text` e `Destroy HUD Text` nella regola `Player Joined Match`. Un player già presente nel roster deve terminare il percorso prima di `SiapkanPemain`; il cleanup completo resta obbligatorio sull'evento `Player Left Match`.
+
+
+## Gate roster team-switch 0.6.19
+
+Il gate vieta ancora cleanup completo e `Create/Destroy HUD Text` diretto nella regola `Player Joined Match`. Per il ramo di un player già registrato richiede invece il rearm dei due soli HUD sociali: ID globali a `0`, `HudKiri/HudKanan = Null` e `HudPemainDibuat = False` prima dell'`Abort`. Un nuovo test negativo rimuove il rearm e deve essere intercettato dal validatore.

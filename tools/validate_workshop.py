@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.18.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.19.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.18"
+CURRENT_VERSION = "0.6.19"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -2965,7 +2965,19 @@ def check_lifecycle_hygiene(
         )
         checks.require(
             "Destroy HUD Text" not in body and "Create HUD Text" not in body,
-            "audit lifecycle: cambio team crea/distrugge HUD",
+            "audit lifecycle: cambio team crea/distrugge HUD direttamente",
+        )
+        social_rearm_tokens = (
+            "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;",
+            "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;",
+            "Event Player.HudKiri = Null;",
+            "Event Player.HudKanan = Null;",
+            "Event Player.HudPemainDibuat = False;",
+        )
+        social_rearm_positions = [body.find(token, duplicate_at) for token in social_rearm_tokens]
+        checks.require(
+            all(duplicate_at < position < abort_registered for position in social_rearm_positions),
+            "audit lifecycle: cambio team non riarma i due HUD sociali prima dell'uscita leggera",
         )
         for token in (
             "Event Player.SudahSiap = True;",

@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.18
+# Note di progetto — versione 0.6.19
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.18.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.19.
 
 ## Architettura generale
 
@@ -371,3 +371,8 @@ Le regole 00a2/00a3 non possono più eseguire `Set Match Time(0)` a raffica dura
 ## Team switch senza rebuild 0.6.18
 
 `Player Joined Match` distingue ora il player già registrato dal vero ingresso. Se `Array Contains(Global.PemainManusia, Event Player)` è vero, la regola termina prima di qualsiasi setup e non chiama mai `BersihkanPemain`. Le strutture parallele HUD/slot non vengono mutate durante il cambio team. `BersihkanPemain` rimane associato a `Player Left Match`, dove la rimozione è realmente necessaria.
+
+
+## Rearm roster sociale 0.6.19
+
+Un cambio team non ricostruisce più l'intero lifecycle, ma deve riarmare i soli HUD sociali perché il client elimina le due righe create dal vecchio contesto player. Il ramo per player già presente in `Global.PemainManusia` azzera i due ID paralleli, mette `HudKiri/HudKanan = Null` e `HudPemainDibuat = False`; `02b` ricrea due soli `Create HUD Text` quando il player è di nuovo spawnato. Nessuna preferenza o slot viene riallocato.

@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.18
+# Piano di test — versione 0.6.19
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.18.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.19.
 
 ## Gate statico
 
@@ -363,3 +363,8 @@ Test live prioritario: effettuare almeno cinque cambi consecutivi Team 1 ↔ Tea
 ## Team switch leggero 0.6.18
 
 Test live prioritario: effettuare almeno dieci cambi Team 1 ↔ Team 2 sullo stesso player. Gli HUD sociali e le preferenze devono restare gli stessi, senza nuova welcome message e senza ricreazione del Menu Arcade. Il server non deve mostrare `excessive Workshop script load`. Poi uscire realmente dalla lobby e rientrare: il vero `Player Left Match` deve ancora pulire correttamente slot, HUD e riferimenti prima della nuova registrazione.
+
+
+## Roster dopo cambio team 0.6.19
+
+Test live prioritario: con almeno un player visibile nelle liste, alternare Team 1 ↔ Team 2 almeno dieci volte. Dopo ogni cambio devono ricomparire entrambe le righe sociali con nome, icona eroe, minuti e soundtrack; colore/icona personale/lingua devono restare invariati. Non deve comparire una nuova welcome message e non deve esserci `excessive Workshop script load`. Verificare anche un vero leave/rejoin, che continua invece a usare il cleanup completo.
