@@ -13,7 +13,7 @@ Questo rapporto descrive il feature set attuale del repository pur mantenendo il
 Blob Git del sorgente Workshop validato:
 
 ```text
-59009b48677ef2c1095c4e94de86bfe986e76db5
+d00fa2eac74795696d9753fbeb68f3d8acab2b22
 ```
 
 ## Controlli statici correnti
@@ -30,7 +30,7 @@ Il gate verifica:
 - Menu 5 Unkillable/Kebal 1 HP;
 - Menu 6 Hero Voice;
 - Menu 7 Player Icon;
-- Menu 10 Try Your Luck: parentesi colorate + icona nativa `Heart` verde / `Skull` rossa agganciata al mirino con compensazione verticale -0,45 m, senza Ring Explosion; all'avvio forza Unkillable OFF, chiude e blocca l'Arcade Menu fino alla fine; 20..24 cambi progressivamente più lenti, reset completo alla morte, verde cura completa, rosso uccide dopo countdown 3 s, esito 50/50;
+- Menu 10 Try Your Luck: due bracket separati a ±0,30 m, Heart/Skull persistenti con Update Every Frame, prima persona temporanea e ripristino camera, Unkillable OFF, menu bloccato, reset alla morte, verde cura completa, rosso uccide dopo countdown 3 s, esito 50/50;
 - Teleport su overlay Crouch, non nel Main Menu;
 - feedback menu idempotente;
 - transizione colore menu Vector RGB a circa 0,35 s;

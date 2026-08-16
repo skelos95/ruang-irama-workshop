@@ -1243,8 +1243,8 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Enable Nameplates cleanup",
     )
     checks.equal(
-        len(call_texts(source, "Create In-World Text")), 3,
-        "due testi mondo Crouch più una carta Nasib",
+        len(call_texts(source, "Create In-World Text")), 4,
+        "due testi mondo Crouch più due parentesi Nasib",
     )
     checks.equal(
         len(call_texts(source, "Start Forcing Player Outlines")), 0,
@@ -1544,8 +1544,8 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         kill_at = claim.find("Kill(Event Player.TargetBalasDendamTerkunci, Event Player);")
         checks.require(0 <= capture < kill_at, "target BalasDendam non catturato per identità prima del claim")
         wait_at = claim.find("Wait(", capture + 1)
-        if wait_at >= 0:
-            after_wait = claim[wait_at:]
+        if 0 <= wait_at < kill_at:
+            after_wait = claim[wait_at:kill_at]
             checks.require(
                 "TargetBalasDendamTerkunci" in after_wait,
                 "claim BalasDendam non usa il riferimento catturato dopo il Wait",
@@ -1702,6 +1702,10 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         (53, "IndeksSuara"),
         (54, "KursorSuara"),
         (76, "IkonKartuNasib"),
+        (77, "IkonKartuNasibHijau"),
+        (78, "TeksKartuNasibKanan"),
+        (79, "ModeKameraSebelumNasib"),
+        (80, "TargetKameraSebelumNasib"),
     ):
         checks.require(
             player_table is not None
@@ -1804,46 +1808,32 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         checks.require(luck_code.count("Abort If(Event Player.PutaranKartuNasib > 0);") >= 4, "Nasib: una vecchia outcome può interferire con una nuova roulette")
     card_texts = [
         call for call in call_texts(source, "Create In-World Text")
-        if "KartuNasib" in call and "All Players(All Teams)" in call
+        if "All Players(All Teams)" in call
+        and ("Custom String(\"[\")" in call or "Custom String(\"]\")" in call)
     ]
-    checks.equal(len(card_texts), 1, "Nasib: una sola carta pubblica")
-    if card_texts:
-        checks.require(
-            "Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 2.200, Do Not Clip" in card_texts[0],
-            "Nasib: le parentesi della carta devono restare agganciate al mirino a 4 m e usare dimensione 2,2",
-        )
-        checks.require(
-            "Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255)" in card_texts[0],
-            "Nasib: le parentesi non cambiano dinamicamente rosso/verde",
-        )
-        checks.require(
-            "Custom String(\"[     ]\")" in card_texts[0]
-            and "Icon String(" not in card_texts[0]
-            and "☠" not in card_texts[0]
-            and "♥" not in card_texts[0]
-            and "TRY YOUR LUCK" not in card_texts[0]
-            and "COBA NASIB" not in card_texts[0],
-            "Nasib: le parentesi devono essere testo semplice; il simbolo è un Create Icon nativo",
-        )
+    checks.equal(len(card_texts), 2, "Nasib: due parentesi world-space separate")
+    if len(card_texts) == 2:
+        joined = "\n".join(card_texts)
+        checks.require("Custom String(\"[\")" in joined and "Custom String(\"]\")" in joined, "Nasib: bracket sinistro/destro mancanti")
+        checks.require(joined.count("* 0.300") == 2, "Nasib: bracket non distanziati fisicamente di 0,30 m")
+        checks.require(joined.count("Update Every Frame(") >= 2, "Nasib: bracket non aggiornati ogni frame")
     luck_icons = [call for call in call_texts(source, "Create Icon") if ", Skull," in call or ", Heart," in call]
-    checks.equal(len(luck_icons), 4, "Nasib: due Create Icon iniziali più due per i cambi roulette")
-    if luck_icons:
-        checks.equal(len([call for call in luck_icons if ", Skull," in call]), 2, "Nasib: due rami Skull nativi")
-        checks.equal(len([call for call in luck_icons if ", Heart," in call]), 2, "Nasib: due rami Heart nativi")
-        for call in luck_icons:
-            checks.require(
-                "All Players(All Teams)" in call
-                and "Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)" in call
-                and "Visible To and Position" in call,
-                "Nasib: icona nativa non è pubblica, non segue il mirino o manca la compensazione verticale da 0,45 m",
-            )
-        for call in [call for call in luck_icons if ", Skull," in call]:
-            checks.require("Custom Color(255, 70, 70, 255)" in call, "Nasib: Skull non rosso")
-        for call in [call for call in luck_icons if ", Heart," in call]:
-            checks.require("Custom Color(70, 255, 110, 255)" in call, "Nasib: Heart non verde")
+    checks.equal(len(luck_icons), 2, "Nasib: Heart e Skull devono essere due icone persistenti")
+    if len(luck_icons) == 2:
+        skull = next(call for call in luck_icons if ", Skull," in call)
+        heart = next(call for call in luck_icons if ", Heart," in call)
+        checks.require("Update Every Frame(" in skull and "Update Every Frame(" in heart, "Nasib: icone non agganciate client-side ogni frame")
+        checks.require("Event Player.KartuNasibMerah ? All Players(All Teams) : Empty Array" in skull, "Nasib: visibilità Skull non dinamica")
+        checks.require("Event Player.KartuNasibMerah ? Empty Array : All Players(All Teams)" in heart, "Nasib: visibilità Heart non dinamica")
+        checks.require("Custom Color(255, 70, 70, 255)" in skull, "Nasib: Skull non rosso")
+        checks.require("Custom Color(70, 255, 110, 255)" in heart, "Nasib: Heart non verde")
+    if luck:
+        pre_loop = mask_strings(luck[0].body).split("Loop If Condition Is True;")[0]
+        checks.require("Create Icon(" not in pre_loop and "Destroy Icon(" not in pre_loop, "Nasib: icone ancora ricreate durante i tick")
     checks.require(
-        "Destroy Icon(Event Player.IkonKartuNasib);" in clean,
-        "Nasib: cleanup icona nativa assente",
+        "Destroy Icon(Event Player.IkonKartuNasib);" in clean
+        and "Destroy Icon(Event Player.IkonKartuNasibHijau);" in clean,
+        "Nasib: cleanup icone persistenti incompleto",
     )
 
     checks.require(
@@ -1872,8 +1862,11 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
                 "Event Player.JedaKartuNasib = 0;",
                 "Event Player.PosisiKartuNasib = Vector(0, 0, 0);",
                 "Destroy In-World Text(Event Player.TeksKartuNasib);",
+                "Destroy In-World Text(Event Player.TeksKartuNasibKanan);",
                 "Destroy Icon(Event Player.IkonKartuNasib);",
+                "Destroy Icon(Event Player.IkonKartuNasibHijau);",
                 "Event Player.IkonKartuNasib = Null;",
+                "Event Player.IkonKartuNasibHijau = Null;",
             ),
             "Nasib: morte prima della fine non resetta completamente la carta",
         )
@@ -1900,6 +1893,20 @@ def check_arcade_features(checks: Checks, source: str, rules: list[Rule]) -> Non
         checks.require(
             "Call Subroutine(GambarMenu);" not in after_luck,
             "Nasib: il menu viene ridisegnato dopo l'avvio della carta",
+        )
+
+    checks.require(
+        "Event Player.ModeKameraSebelumNasib = Event Player.ModeKamera;" in menu_interact
+        and "Stop Camera(Event Player);" in menu_interact
+        and "Event Player.ModeKamera = 0;" in menu_interact,
+        "Nasib: camera non viene temporaneamente bloccata in prima persona",
+    )
+    restore_rules = [rule for rule in rules if rule.name.startswith("18g - Nasib:")]
+    checks.equal(len(restore_rules), 1, "Nasib: una sola regola ripristino camera dopo respawn")
+    if restore_rules:
+        checks.require(
+            code_contains(restore_rules[0].body, "ModeKameraSebelumNasib", "Call Subroutine(MulaiKamera);"),
+            "Nasib: ripristino camera incompleto",
         )
 
     blocked_one_hp = menu_interact[
