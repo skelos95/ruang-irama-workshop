@@ -11,6 +11,12 @@ base_patch = subprocess.check_output(
     text=True,
 )
 
+redundant = r'''\t\t\tDisable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
+'''
+if base_patch.count(redundant) != 1:
+    raise RuntimeError(f"redundant team-switch Disable Nameplates: expected 1, found {base_patch.count(redundant)}")
+base_patch = base_patch.replace(redundant, "", 1)
+
 needle = 'TESTS_FILE.write_text(tests, encoding="utf-8")\n'
 extra = r'''old_semantic_test = ''' + "'''" + r'''    def test_semantic_action_inside_comment_does_not_count(self) -> None:
         calls = validator.call_texts(self.source, "Disable Nameplates")
