@@ -47,6 +47,8 @@ variables
 		45: SuaraTerbanyak
 		46: SuaraSeri
 		47: IndeksVote
+		48: PilihPahlawanDilewati
+		49: PersiapanDilewati
 	player:
 		0: WaktuMasuk
 		2: SudahDiperiksa
@@ -137,6 +139,7 @@ variables
 		87: GerakNasibDikunci
 		88: HudMenuArcade
 		89: HalamanHudMenuArcade
+		90: HudPemainDibuat
 }
 
 subroutines
@@ -314,6 +317,8 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
 		Global.IndeksVote = 0;
+		Global.PilihPahlawanDilewati = False;
+		Global.PersiapanDilewati = False;
 		Global.KodeMenu = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		Global.DaftarWarna = Array(
 			Color(White),
@@ -773,11 +778,15 @@ rule("00a2 - Umum: Lewati pemilihan pahlawan")
 	conditions
 	{
 		Global.Siap == True;
+		Global.PilihPahlawanDilewati == False;
+		Is Game In Progress == False;
 		Is Assembling Heroes == True;
 	}
 
 	actions
 	{
+		"Jalankan satu kali hanya pada fase awal; pindah tim saat pertandingan berjalan tidak boleh memicu spam Set Match Time."
+		Global.PilihPahlawanDilewati = True;
 		Set Match Time(0);
 	}
 }
@@ -792,11 +801,15 @@ rule("00a3 - Umum: Lewati persiapan awal")
 	conditions
 	{
 		Global.Siap == True;
+		Global.PersiapanDilewati == False;
+		Is Game In Progress == False;
 		Is In Setup == True;
 	}
 
 	actions
 	{
+		"Lewati persiapan sekali saja agar aturan global tidak menembak Set Match Time terus-menerus."
+		Global.PersiapanDilewati = True;
 		Set Match Time(0);
 	}
 }
@@ -842,6 +855,8 @@ rule("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 	{
 		"Kunci mencegah beberapa aksi mulai ulang pada tick yang sama; tidak ada pemenang atau skor yang diumumkan."
 		Global.MulaiUlangSudahDiminta = True;
+		Global.PilihPahlawanDilewati = False;
+		Global.PersiapanDilewati = False;
 		Restart Match;
 	}
 }
@@ -917,6 +932,11 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
 		Wait(0.016, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
+		If(Or(Event Player.SudahSiap == False, Has Spawned(Event Player) == False));
+			Stop Forcing Dummy Bot Name(Event Player);
+			Event Player.SudahDiperiksa = False;
+			Abort;
+		End;
 		If(Custom String("{0}", Event Player) == Custom String("​"));
 			Event Player.BotOtomatis = True;
 		Else;
@@ -924,6 +944,11 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 		Wait(0.016, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
+		If(Or(Event Player.SudahSiap == False, Has Spawned(Event Player) == False));
+			Stop Forcing Dummy Bot Name(Event Player);
+			Event Player.SudahDiperiksa = False;
+			Abort;
+		End;
 		Stop Forcing Dummy Bot Name(Event Player);
 		If(Event Player.BotOtomatis == True);
 			Cancel Primary Action(Event Player);
@@ -973,13 +998,16 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
 		Array Contains(Global.PemainManusia, Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
 	}
 
 	actions
 	{
-		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat pada aturan terpisah tanpa tunda dan tanpa pengulangan."
+		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
+		Event Player.HudPemainDibuat = True;
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinSuara != Null
@@ -3603,6 +3631,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.SudahSiap = False;
 		Event Player.SudahDiperiksa = False;
 		Event Player.Manusia = False;
+		Event Player.HudPemainDibuat = False;
 
 		If(Event Player.TeksKartuNasib != Null);
 			Destroy In-World Text(Event Player.TeksKartuNasib);
@@ -3789,6 +3818,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.UrutanHUD = -1;
 		Event Player.HudKiri = Null;
 		Event Player.HudKanan = Null;
+		Event Player.HudPemainDibuat = False;
 		Event Player.MenuTerbuka = False;
 		Event Player.KursorGenre = 0;
 		Event Player.HudMenu = Null;

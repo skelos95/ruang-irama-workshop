@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.15
+# Note di progetto — versione 0.6.16
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.15.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.16.
 
 ## Architettura generale
 
@@ -356,3 +356,8 @@ La cache lazy resta la sorgente di verità, ma dopo la creazione del Main Menu (
 
 ## HUD edge-triggered 0.6.15
 La creazione HUD è separata da timer e loop. 05a prepara Main + pagina selezionata senza attese; 02b crea i due HUD sociali dopo la classificazione, anch’essa senza attese nella regola HUD.
+
+
+## Cambio team senza picchi di script load 0.6.16
+
+Le regole 00a2/00a3 non possono più eseguire `Set Match Time(0)` a raffica durante una selezione eroe in-match: hanno latch globali one-shot e `Is Game In Progress == False`. `02b` possiede inoltre `HudPemainDibuat`, armato prima della creazione HUD, così un ID HUD anomalo durante una transizione non può trasformare la regola Ongoing in una fabbrica HUD per-frame.

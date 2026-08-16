@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.15
+# Piano di test — versione 0.6.16
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.15.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.16.
 
 ## Gate statico
 
@@ -348,3 +348,8 @@ Test live: aprire il Menu Arcade e attendere circa 0,2–0,3 s senza entrare in 
 
 ## Timing HUD 0.6.15
 Verificare che il Main compaia esattamente alla soglia Melee di 0,5 s, che i sottomenu non abbiano pop al primo accesso e che i due HUD sociali compaiano dopo la classificazione senza ritardo aggiuntivo.
+
+
+## Cambio team 0.6.16
+
+Test live prioritario: durante una partita in corso cambiare Team 1 → Team 2 e viceversa, restare alcuni secondi nella schermata scelta eroe e poi scegliere un eroe. Il server non deve più mostrare `The server closed due to excessive Workshop script load`. Gli HUD sociali devono ricomparire una sola volta dopo lo spawn. Ripetere il cambio team più volte e controllare Script Diagnostics/server load se disponibile.

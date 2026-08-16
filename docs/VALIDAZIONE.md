@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.15
+# Rapporto di validazione — versione 0.6.16
 
 Data: 2026-08-16
 
-Release tecnica: **CHILL Dedicated Server 0.6.15**
+Release tecnica: **CHILL Dedicated Server 0.6.16**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-ca70ec9f67cb805152764c3dced88cc820232c97
+b7d52e5f1f125303c36ad20f477d1cc50f160ad5
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.15 superati
+OK - controlli statici v0.6.16 superati
 ```
 
 ## GitHub
@@ -133,3 +133,8 @@ Il gate richiede una sola regola 05e di preload, attiva soltanto con Menu Arcade
 
 ## Audit HUD 0.6.15
 Il gate rifiuta qualsiasi regola `Create HUD Text` che contenga `Wait` o `Loop If Condition Is True`.
+
+
+## Gate cambio team 0.6.16
+
+Il validatore richiede latch one-shot e guardia `Is Game In Progress == False` per Assemble Heroes/Setup, reset dei latch prima del vero restart, protezione one-shot `HudPemainDibuat` prima di ogni creazione HUD sociale e guardie di transizione nella classificazione umano/bot. Resta valida l'invariante 0.6.15: nessuna regola che contiene `Create HUD Text` può contenere `Wait` o `Loop If Condition Is True`.

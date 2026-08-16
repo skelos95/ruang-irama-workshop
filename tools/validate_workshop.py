@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.15.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.16.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.15"
+CURRENT_VERSION = "0.6.16"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -736,6 +736,11 @@ def check_timer_and_match(checks: Checks, source: str, rules: list[Rule]) -> Non
             0 <= set_guard < restart_at,
             "la guardia MulaiUlangSudahDiminta deve essere impostata prima del riavvio",
         )
+        checks.require(
+            restart.find("Global.PilihPahlawanDilewati = False;") < restart_at
+            and restart.find("Global.PersiapanDilewati = False;") < restart_at,
+            "i latch delle fasi iniziali non vengono riarmati prima del Restart Match",
+        )
 
 
 
@@ -763,6 +768,16 @@ def check_instant_start(checks: Checks, source: str, rules: list[Rule]) -> None:
         )
     ]
     checks.equal(len(assembling), 1, "skip Assemble Heroes")
+    if assembling:
+        assemble_code = mask_strings(assembling[0].body)
+        checks.require(
+            "Global.PilihPahlawanDilewati == False;" in assemble_code
+            and "Is Game In Progress == False;" in assemble_code,
+            "skip Assemble Heroes non protetto da latch one-shot/in-match",
+        )
+        latch_at = assemble_code.find("Global.PilihPahlawanDilewati = True;")
+        set_time_at = assemble_code.find("Set Match Time(0);")
+        checks.require(0 <= latch_at < set_time_at, "latch Assemble deve armarsi prima di Set Match Time")
 
     setup = [
         rule for rule in rules
@@ -775,6 +790,16 @@ def check_instant_start(checks: Checks, source: str, rules: list[Rule]) -> None:
         )
     ]
     checks.equal(len(setup), 1, "skip fase Setup")
+    if setup:
+        setup_code = mask_strings(setup[0].body)
+        checks.require(
+            "Global.PersiapanDilewati == False;" in setup_code
+            and "Is Game In Progress == False;" in setup_code,
+            "skip Setup non protetto da latch one-shot/in-match",
+        )
+        latch_at = setup_code.find("Global.PersiapanDilewati = True;")
+        set_time_at = setup_code.find("Set Match Time(0);")
+        checks.require(0 <= latch_at < set_time_at, "latch Setup deve armarsi prima di Set Match Time")
 
     checks.require(
         assembling and setup and assembling[0].name != setup[0].name,
@@ -788,6 +813,11 @@ def check_bot_lifecycle(checks: Checks, source: str, rules: list[Rule]) -> None:
     if classification:
         body = classification[0].body
         code = mask_strings(body)
+        checks.require(
+            code.count("Has Spawned(Event Player) == False") >= 2
+            and code.count("Event Player.SudahDiperiksa = False;") >= 2,
+            "classificazione non abbandona in sicurezza una transizione di team",
+        )
         checks.require(
             "If(Is Dummy Bot(Event Player));" not in code,
             "classificazione: ramo dummy irraggiungibile ancora presente",
@@ -1046,6 +1076,14 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         pc=mask_strings(player_hud[0].body)
         checks.equal(pc.count("Create HUD Text("),2,"HUD player sinistro/destra")
         checks.require("Wait(" not in pc and "Loop If Condition Is True;" not in pc,"HUD player contiene Wait/Loop")
+        checks.require(
+            "Has Spawned(Event Player) == True;" in pc
+            and "Event Player.HudPemainDibuat == False;" in pc,
+            "HUD player non è protetto durante il cambio team",
+        )
+        latch_at = pc.find("Event Player.HudPemainDibuat = True;")
+        first_hud_at = pc.find("Create HUD Text(")
+        checks.require(0 <= latch_at < first_hud_at, "latch HUD player deve armarsi prima della prima Create HUD Text")
 
     dispatcher_candidates = [
         rule
