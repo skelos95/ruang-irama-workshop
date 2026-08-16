@@ -59,21 +59,23 @@ def put_rule(text: str, name: str, rule: str) -> str:
     return text[:start] + rule + text[end:]
 
 
-def remove_call_lines(rule: str, call: str, keep_first: bool = False) -> tuple[str, int]:
+def remove_calls(segment: str, call: str) -> tuple[str, int]:
     pattern = re.compile(rf"(?m)^\s*Call Subroutine\({re.escape(call)}\);\n")
-    matches = list(pattern.finditer(rule))
-    removed = 0
-    if keep_first and matches:
-        matches = matches[1:]
+    matches = list(pattern.finditer(segment))
     for match in reversed(matches):
-        rule = rule[:match.start()] + rule[match.end():]
-        removed += 1
-    return rule, removed
+        segment = segment[:match.start()] + segment[match.end():]
+    return segment, len(matches)
+
+
+def branch_segment(rule: str, start_marker: str, end_marker: str | None) -> tuple[int, int, str]:
+    start = rule.index(start_marker)
+    end = len(rule) if end_marker is None else rule.index(end_marker, start + len(start_marker))
+    return start, end, rule[start:end]
 
 
 source = SOURCE.read_text(encoding="utf-8")
 
-# 1) Release gates: re-arm on the same evaluation where every button is released.
+# Menu Arcade: re-arm the input latch immediately after every menu button is released.
 name = "05d - Menu: Lepaskan pengatur setelah semua masukan dilepas"
 _, _, rule = get_rule(source, name)
 rule = replace_once(
@@ -84,8 +86,9 @@ rule = replace_once(
 )
 source = put_rule(source, name, rule)
 
-# 2) Cursor navigation: HUD strings are reevaluated live, so do not destroy/recreate the HUD.
-# Main menu and Name Color still need only the lightweight color-target chase update.
+# Cursor movement does not need to destroy/recreate the HUD: all menu HUDs use
+# live string/color reevaluation. Main and Name Color still need the lightweight
+# palette chase update, which is harmless on other pages.
 for name in (
     "06 - Menu: Tembakan utama memilih berikutnya",
     "07 - Menu: Tembakan sekunder memilih sebelumnya",
@@ -95,7 +98,7 @@ for name in (
         rule,
         "\t\tCall Subroutine(GambarMenu);\n",
         "\t\tCall Subroutine(TransisiWarnaMenu);\n",
-        f"lightweight navigation redraw {name}",
+        f"lightweight navigation {name}",
     )
     source = put_rule(source, name, rule)
 
@@ -104,47 +107,66 @@ for name in (
     "09 - Menu 0: Jongkok maju sepuluh genre",
 ):
     _, _, rule = get_rule(source, name)
-    rule = replace_once(
-        rule,
-        "\t\tCall Subroutine(GambarMenu);\n",
-        "",
-        f"remove genre redraw {name}",
-    )
+    rule = replace_once(rule, "\t\tCall Subroutine(GambarMenu);\n", "", f"live HUD {name}")
     source = put_rule(source, name, rule)
 
-# 3) Interact: keep a full renderer switch only when opening a submenu.
-# Applying a choice stays on the same renderer, whose String/Color are already live-reevaluated.
+# Interact: remove the two artificial one-frame waits used by Camera. Also avoid
+# same-renderer redraws for ordinary apply operations. Two explicit redraws stay:
+# Menu 6 (voice NORMAL/apply semantics) and Menu 10 (roulette READY->ROLLING status),
+# plus the required Main -> submenu renderer switch.
 name = "10 - Menu: Interaksi membuka atau menerapkan pilihan"
 _, _, rule = get_rule(source, name)
-wait_count = rule.count("Wait(0.016, Ignore Condition);")
-if wait_count != 2:
-    raise RuntimeError(f"Interact camera: expected 2 one-frame waits, found {wait_count}")
-rule = rule.replace(
+for old in (
     '\t\t\t\t\t"Biarkan satu bingkai Interact selesai sebelum mengganti tampilan kamera."\n\t\t\t\t\tWait(0.016, Ignore Condition);\n',
-    '',
-)
-rule = rule.replace(
     '\t\t\t\t\t\t"Gunakan jeda satu bingkai yang sama saat mulai menonton dari orang pertama."\n\t\t\t\t\t\tWait(0.016, Ignore Condition);\n',
-    '',
-)
+):
+    if old not in rule:
+        raise RuntimeError("expected Camera one-frame wait not found")
+    rule = rule.replace(old, "", 1)
+
+# Remove redraws only from ordinary apply branches. Preserve branch 6 and 10.
+markers = {
+    0: "\t\tElse If(Event Player.HalamanMenu == 0);",
+    1: "\t\tElse If(Event Player.HalamanMenu == 1);",
+    2: "\t\tElse If(Event Player.HalamanMenu == 2);",
+    3: "\t\tElse If(Event Player.HalamanMenu == 3);",
+    4: "\t\tElse If(Event Player.HalamanMenu == 4);",
+    5: "\t\tElse If(Event Player.HalamanMenu == 5);",
+    6: "\t\tElse If(Event Player.HalamanMenu == 6);",
+    7: "\t\tElse If(Event Player.HalamanMenu == 7);",
+    8: "\t\tElse If(Event Player.HalamanMenu == 8);",
+    9: "\t\tElse If(Event Player.HalamanMenu == 9);",
+    10: "\t\tElse If(Event Player.HalamanMenu == 10);",
+}
+# The final Else is Menu 11 / vote.
+ordered = [markers[i] for i in range(11)]
+removed_redraws = 0
+for i in (9, 8, 7, 5, 4, 3, 2, 1, 0):
+    start_marker = markers[i]
+    end_marker = markers[i + 1]
+    start, end, segment = branch_segment(rule, start_marker, end_marker)
+    segment, removed = remove_calls(segment, "GambarMenu")
+    removed_redraws += removed
+    rule = rule[:start] + segment + rule[end:]
+# Menu 11 follows Menu 10's closing End + final Else; remove only the last GambarMenu
+# in the whole rule, while keeping the Menu 10 redraw immediately before it.
+last_call = rule.rfind("\t\t\tCall Subroutine(GambarMenu);\n")
+menu10_at = rule.index(markers[10])
+if last_call <= menu10_at:
+    raise RuntimeError("Menu 11 redraw not found after Menu 10")
+rule = rule[:last_call] + rule[last_call + len("\t\t\tCall Subroutine(GambarMenu);\n"):]
+removed_redraws += 1
+
 if "Wait(0.016, Ignore Condition);" in rule:
-    raise RuntimeError("Interact menu still contains a one-frame wait")
-rule, removed = remove_call_lines(rule, "GambarMenu", keep_first=True)
-if removed < 8:
-    raise RuntimeError(f"Interact optimization removed too few redundant redraws: {removed}")
-if rule.count("Call Subroutine(GambarMenu);") != 1:
-    raise RuntimeError("Interact must keep exactly one GambarMenu call for main -> submenu")
+    raise RuntimeError("Interact still contains a one-frame wait")
+if rule.count("Call Subroutine(GambarMenu);") != 3:
+    raise RuntimeError(f"Interact must keep exactly 3 targeted redraws, found {rule.count('Call Subroutine(GambarMenu);')}")
 source = put_rule(source, name, rule)
 
-# 4) Crouch Teleport overlay gets the same immediate release and live-HUD navigation.
+# Crouch Teleport overlay: same immediate release and live cursor rendering.
 name = "19b - Teleportasi Jongkok: Aktifkan lagi pengatur setelah tombol dilepas"
 _, _, rule = get_rule(source, name)
-rule = replace_once(
-    rule,
-    "\t\tWait(0.016, Ignore Condition);\n",
-    "",
-    "Crouch Teleport release wait",
-)
+rule = replace_once(rule, "\t\tWait(0.016, Ignore Condition);\n", "", "Crouch Teleport release wait")
 source = put_rule(source, name, rule)
 
 for name in (
@@ -152,25 +174,21 @@ for name in (
     "19d - Teleportasi Jongkok: Tembakan sekunder memilih tujuan sebelumnya",
 ):
     _, _, rule = get_rule(source, name)
-    rule = replace_once(
-        rule,
-        "\t\tCall Subroutine(GambarTeleportasi);\n",
-        "",
-        f"remove Crouch Teleport navigation redraw {name}",
-    )
+    rule = replace_once(rule, "\t\tCall Subroutine(GambarTeleportasi);\n", "", f"live overlay {name}")
     source = put_rule(source, name, rule)
 
+# Post-teleport target/status expressions are already live; no need to recreate HUD.
 name = "19e - Teleportasi Jongkok: Interact menjalankan teleportasi"
 _, _, rule = get_rule(source, name)
 rule = replace_once(
     rule,
     "\t\tIf(Event Player.TeleportasiJongkokAktif == True);\n\t\t\tCall Subroutine(GambarTeleportasi);\n\t\tEnd;\n",
     "",
-    "remove post-teleport redraw",
+    "post teleport redraw",
 )
 source = put_rule(source, name, rule)
 
-# 5) Keep the smooth palette transition but make it substantially snappier.
+# Keep the palette transition smooth but visibly quicker.
 source = replace_once(
     source,
     ": Vector(255, 210, 70), 0.350, Destination and Duration);",
@@ -179,49 +197,43 @@ source = replace_once(
 )
 SOURCE.write_text(source, encoding="utf-8")
 
-# Validator/version.
 validator = VALIDATOR.read_text(encoding="utf-8")
 validator = replace_once(validator, "della versione 0.6.7.", "della versione 0.6.8.", "validator docstring version")
 validator = replace_once(validator, 'CURRENT_VERSION = "0.6.7"', 'CURRENT_VERSION = "0.6.8"', "validator current version")
 
 old_release = '''    if release_candidates:\n        checks.require(\n            re.search(r"Wait\\s*\\(\\s*0\\.016\\s*,\\s*Ignore Condition\\s*\\)", release_candidates[0].body)\n            is not None,\n            "release gate dispatcher privo del tick di arbitraggio prima del reset",\n        )\n'''
 new_release = '''    if release_candidates:\n        checks.require(\n            "Wait(" not in mask_strings(release_candidates[0].body),\n            "release gate dispatcher deve riarmarsi subito dopo il rilascio completo",\n        )\n'''
-validator = replace_once(validator, old_release, new_release, "validator immediate release gate")
+validator = replace_once(validator, old_release, new_release, "validator immediate release")
 
-# Add structural latency checks after the six dispatcher handlers are validated.
 anchor = '''    for command in range(1, 7):\n        handlers = [\n            rule\n            for rule in rules\n            if code_contains(rule.body, f"Event Player.PerintahMenu == {command};")\n        ]\n        checks.equal(len(handlers), 1, f"handler dispatcher comando {command}")\n        if handlers:\n            checks.require(\n                "Event Player.PerintahMenu = 0;" not in handlers[0].body,\n                f"handler {command} resetta il dispatcher prima del rilascio di tutti gli input",\n            )\n'''
-extra = anchor + '''\n    handler_by_command = {\n        command: next(\n            (rule for rule in rules if code_contains(rule.body, f"Event Player.PerintahMenu == {command};")),\n            None,\n        )\n        for command in range(1, 7)\n    }\n    interact_handler = handler_by_command[1]\n    reload_handler = handler_by_command[2]\n    next_handler = handler_by_command[3]\n    previous_handler = handler_by_command[4]\n    jump_handler = handler_by_command[5]\n    crouch_handler = handler_by_command[6]\n    if interact_handler is not None:\n        interact_code = mask_strings(interact_handler.body)\n        checks.require("Wait(" not in interact_code, "Interact menu contiene ancora un Wait bloccante")\n        checks.equal(\n            interact_code.count("Call Subroutine(GambarMenu);"),\n            1,\n            "Interact deve ridisegnare solo nel passaggio Main -> submenu",\n        )\n    if reload_handler is not None:\n        checks.require(\n            code_contains(reload_handler.body, "Call Subroutine(GambarMenu);"),\n            "Reload deve ridisegnare nel passaggio submenu -> Main",\n        )\n    for label, handler in (("Primary", next_handler), ("Secondary", previous_handler)):\n        if handler is not None:\n            checks.require(\n                not code_contains(handler.body, "Call Subroutine(GambarMenu);"),\n                f"{label}: navigazione non deve distruggere/ricreare HUD",\n            )\n            checks.require(\n                code_contains(handler.body, "Call Subroutine(TransisiWarnaMenu);"),\n                f"{label}: aggiornamento colore leggero mancante",\n            )\n    for label, handler in (("Jump x10", jump_handler), ("Crouch x10", crouch_handler)):\n        if handler is not None:\n            checks.require(\n                not code_contains(handler.body, "Call Subroutine(GambarMenu);"),\n                f"{label}: navigazione non deve distruggere/ricreare HUD",\n            )\n\n    teleport_release = [\n        rule for rule in rules\n        if rule.name.startswith("19b - Teleportasi Jongkok:")\n    ]\n    checks.equal(len(teleport_release), 1, "release gate Crouch Teleport")\n    if teleport_release:\n        checks.require(\n            "Wait(" not in mask_strings(teleport_release[0].body),\n            "Crouch Teleport: release gate deve riarmarsi subito",\n        )\n    for prefix in (\n        "19c - Teleportasi Jongkok:",\n        "19d - Teleportasi Jongkok:",\n    ):\n        candidates = [rule for rule in rules if rule.name.startswith(prefix)]\n        checks.equal(len(candidates), 1, f"handler overlay {prefix}")\n        if candidates:\n            checks.require(\n                not code_contains(candidates[0].body, "Call Subroutine(GambarTeleportasi);"),\n                f"{prefix} non deve ridisegnare l'HUD a ogni cursor step",\n            )\n\n    transition_rules = rules_containing(rules, "Subroutine;", "TransisiWarnaMenu;")\n    checks.equal(len(transition_rules), 1, "subroutine TransisiWarnaMenu")\n    if transition_rules:\n        checks.require(\n            re.search(r"0\\.180\\s*,\\s*Destination and Duration", mask_strings(transition_rules[0].body)) is not None,\n            "transizione colore menu non impostata a 0,18 s",\n        )\n'''
-validator = replace_once(validator, anchor, extra, "validator menu latency checks")
-
-# Existing palette check follows the same new transition duration if it pins 0.350.
-validator = validator.replace("0\\.350", "0\\.180")
-validator = validator.replace("0.350", "0.180")
+extra = anchor + '''\n    handler_by_command = {\n        command: next((rule for rule in rules if code_contains(rule.body, f"Event Player.PerintahMenu == {command};")), None)\n        for command in range(1, 7)\n    }\n    interact_handler = handler_by_command[1]\n    if interact_handler is not None:\n        interact_code = mask_strings(interact_handler.body)\n        checks.require("Wait(" not in interact_code, "Interact menu contiene ancora un Wait bloccante")\n        checks.equal(\n            interact_code.count("Call Subroutine(GambarMenu);"),\n            3,\n            "Interact deve ridisegnare solo Main->submenu, Voice apply e Try Your Luck",\n        )\n        checks.require(\n            code_contains(interact_handler.body, "Stop Modifying Hero Voice Lines(Event Player);"),\n            "Voice NORMAL deve restare applicabile nel ramo Menu 6",\n        )\n        checks.require(\n            code_contains(interact_handler.body, "Event Player.KartuNasibAktif = True;", "Call Subroutine(GambarMenu);"),\n            "Try Your Luck deve aggiornare esplicitamente READY -> ROLLING",\n        )\n    for label, command in (("Primary", 3), ("Secondary", 4)):\n        handler = handler_by_command[command]\n        if handler is not None:\n            checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")\n            checks.require(code_contains(handler.body, "Call Subroutine(TransisiWarnaMenu);"), f"{label}: transizione colore leggera assente")\n    for label, command in (("Jump x10", 5), ("Crouch x10", 6)):\n        handler = handler_by_command[command]\n        if handler is not None:\n            checks.require(not code_contains(handler.body, "Call Subroutine(GambarMenu);"), f"{label}: redraw HUD inutile")\n\n    teleport_release = [rule for rule in rules if rule.name.startswith("19b - Teleportasi Jongkok:")]\n    checks.equal(len(teleport_release), 1, "release gate Crouch Teleport")\n    if teleport_release:\n        checks.require("Wait(" not in mask_strings(teleport_release[0].body), "Crouch Teleport release gate non immediato")\n    for prefix in ("19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:"):\n        candidates = [rule for rule in rules if rule.name.startswith(prefix)]\n        checks.equal(len(candidates), 1, f"handler overlay {prefix}")\n        if candidates:\n            checks.require(not code_contains(candidates[0].body, "Call Subroutine(GambarTeleportasi);"), f"{prefix}: redraw HUD inutile")\n\n    transition_rules = rules_containing(rules, "Subroutine;", "TransisiWarnaMenu;")\n    checks.equal(len(transition_rules), 1, "subroutine TransisiWarnaMenu")\n    if transition_rules:\n        checks.require(\n            re.search(r"0\\.180\\s*,\\s*Destination and Duration", mask_strings(transition_rules[0].body)) is not None,\n            "transizione colore menu non impostata a 0,18 s",\n        )\n'''
+validator = replace_once(validator, anchor, extra, "validator latency invariants")
+validator = validator.replace("0\\.350", "0\\.180").replace("0.350", "0.180")
 VALIDATOR.write_text(validator, encoding="utf-8")
 
 VERSION.write_text("0.6.8\n", encoding="utf-8")
 
-# Documentation.
 readme = README.read_text(encoding="utf-8")
 readme = replace_once(readme, "La versione **0.6.7** identifica lo stato funzionale e tecnico corrente del repository.", "La versione **0.6.8** identifica lo stato funzionale e tecnico corrente del repository.", "README version")
 readme = readme.replace("circa **0,35 s**", "circa **0,18 s**")
 if "### Menu fluido 0.6.8" not in readme:
-    readme += '''\n\n### Menu fluido 0.6.8\n\nGli HUD dei menu usano già rivalutazione dinamica di stringa/colore, quindi la navigazione non distrugge e ricrea più l'HUD a ogni input. Primary/Secondary aggiornano soltanto cursore e target colore, Jump/Crouch del menu Soundtrack aggiornano direttamente il cursore, e Interact ridisegna soltanto quando cambia realmente renderer (Main -> submenu). Rimossi i `Wait(0.016)` dai release gate e dalla selezione Camera nel menu; anche l'overlay Crouch Teleport riutilizza l'HUD live senza redraw per ogni step. La transizione colore resta morbida ma passa da circa 0,35 s a 0,18 s. Il hold Melee da 0,5 s resta intenzionale per evitare aperture/chiusure accidentali.\n'''
+    readme += '''\n\n### Menu fluido 0.6.8\n\nLa navigazione riusa gli HUD con stringhe/colori rivalutati invece di distruggerli e ricrearli a ogni pressione. Primary/Secondary aggiornano cursore e transizione colore; Jump/Crouch nel Soundtrack aggiornano direttamente il cursore. Interact non contiene più attese da 0,016 s e ridisegna soltanto quando cambia renderer oppure nei due casi che richiedono un refresh esplicito dello stato applicato: Hero Voice e Try Your Luck. Anche Crouch Teleport elimina il frame di release e i redraw per ogni step. La transizione colore passa da circa 0,35 s a 0,18 s. Il hold Melee da 0,5 s resta intenzionale.\n'''
 README.write_text(readme, encoding="utf-8")
 
 progetto = PROGETTO.read_text(encoding="utf-8")
 progetto = replace_once(progetto, "# Note di progetto — versione 0.6.7", "# Note di progetto — versione 0.6.8", "PROGETTO title")
-progetto = replace_once(progetto, "Workshop 0.6.7.", "Workshop 0.6.8.", "PROGETTO current version")
+progetto = replace_once(progetto, "Workshop 0.6.7.", "Workshop 0.6.8.", "PROGETTO version")
 progetto = progetto.replace("0,35", "0,18")
 if "## Ottimizzazione input menu 0.6.8" not in progetto:
-    progetto += '''\n\n## Ottimizzazione input menu 0.6.8\n\nLa pipeline input mantiene il dispatcher chord-safe, ma elimina i ritardi artificiali: i release gate Menu Arcade/Crouch Teleport non aspettano più 0,016 s e Interact Camera non inserisce più frame di attesa. Gli HUD menu sono `Visible To String and Color`, quindi cursor/status vengono rivalutati senza distruggere e ricreare il testo: `GambarMenu` resta necessario solo quando cambia renderer (Main/submenu), mentre la navigazione usa al massimo `TransisiWarnaMenu`. La durata della transizione colore scende a 0,18 s.\n'''
+    progetto += '''\n\n## Ottimizzazione input menu 0.6.8\n\nIl dispatcher resta chord-safe ma i release gate Menu Arcade/Crouch Teleport non attendono più 0,016 s. I cursor step sfruttano la rivalutazione live dell'HUD e non ricreano il testo. Interact Camera non inserisce più frame di attesa; i redraw Interact sono confinati a cambio renderer, Voice apply e Try Your Luck READY->ROLLING. La transizione colore è 0,18 s.\n'''
 PROGETTO.write_text(progetto, encoding="utf-8")
 
 test_doc = TEST_DOC.read_text(encoding="utf-8")
 test_doc = replace_once(test_doc, "# Piano di test — versione 0.6.7", "# Piano di test — versione 0.6.8", "TEST title")
-test_doc = replace_once(test_doc, "Workshop 0.6.7.", "Workshop 0.6.8.", "TEST current version")
+test_doc = replace_once(test_doc, "Workshop 0.6.7.", "Workshop 0.6.8.", "TEST version")
 test_doc = test_doc.replace("0,35", "0,18")
 if "## Menu fluido 0.6.8" not in test_doc:
-    test_doc += '''\n\n## Menu fluido 0.6.8\n\nVerifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Secondary, applicare ripetutamente con Interact dopo ogni rilascio, tornare con Reload e usare Jump/Crouch nel Soundtrack. Non devono comparire micro-pause o input persi. Camera da Menu deve cambiare immediatamente senza il precedente frame da 0,016 s. Verificare anche l'overlay Crouch Teleport con Primary/Secondary/Interact. La pressione lunga Melee da 0,5 s resta volutamente invariata.\n'''
+    test_doc += '''\n\n## Menu fluido 0.6.8\n\nVerifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Secondary; applicare con Interact, tornare con Reload e usare Jump/Crouch nel Soundtrack. Verificare Hero Voice NORMAL e Try Your Luck: devono aggiornarsi subito. Camera dal menu non deve mostrare il precedente frame di attesa. Ripetere nell'overlay Crouch Teleport con Primary/Secondary/Interact. Melee 0,5 s resta volutamente invariato.\n'''
 TEST_DOC.write_text(test_doc, encoding="utf-8")
 
 validazione = VALIDAZIONE.read_text(encoding="utf-8")
@@ -229,7 +241,7 @@ validazione = replace_once(validazione, "# Rapporto di validazione — versione 
 validazione = replace_once(validazione, "Release tecnica: **CHILL Dedicated Server 0.6.7**", "Release tecnica: **CHILL Dedicated Server 0.6.8**", "VALIDAZIONE release")
 validazione = replace_once(validazione, "OK - controlli statici v0.6.7 superati", "OK - controlli statici v0.6.8 superati", "VALIDAZIONE result")
 if "## Ottimizzazione menu 0.6.8" not in validazione:
-    validazione += '''\n\n## Ottimizzazione menu 0.6.8\n\nIl gate certifica che i release gate Menu/Teleport non contengano `Wait`, che Interact Menu non contenga attese e ridisegni solo nel passaggio Main -> submenu, che Primary/Secondary usino il solo aggiornamento leggero del colore senza `GambarMenu`, che Jump/Crouch Soundtrack e la navigazione Crouch Teleport non ridisegnino l'HUD a ogni step, e che la transizione colore sia 0,18 s.\n'''
+    validazione += '''\n\n## Ottimizzazione menu 0.6.8\n\nIl gate verifica release immediato, assenza di Wait nel percorso Interact, navigazione senza ricreazione HUD, redraw mirati per Voice/Try Your Luck e Crouch Teleport senza redraw per ogni cursor step. La transizione colore è fissata a 0,18 s.\n'''
 
 data = SOURCE.read_bytes().replace(b"\r\n", b"\n")
 payload = b"blob " + str(len(data)).encode("ascii") + b"\0" + data
@@ -244,4 +256,4 @@ if count != 1:
     raise RuntimeError("VALIDAZIONE Workshop blob marker not found")
 VALIDAZIONE.write_text(validazione, encoding="utf-8")
 
-print(f"Applied CHILL 0.6.8 fluid menu optimization; removed {removed} redundant Interact redraws")
+print(f"Applied CHILL 0.6.8 fluid menu optimization; removed {removed_redraws} ordinary Interact redraws")
