@@ -45,7 +45,7 @@ preload_rule = r'''rule("05e - Menu: Muat halaman lain bertahap setelah menu uta
 
 	actions
 	{
-		"Main Menu sudah tampil. Buat maksimal satu HUD tersembunyi per frame agar submenu siap tanpa pop dan tanpa beban besar dalam satu tick."
+		"Main Menu sudah tampil. Buat maksimal satu HUD tersembunyi per siklus agar submenu siap tanpa pop dan tanpa beban besar dalam satu tick."
 		Wait(0.016, Abort When False);
 		If(Array Contains(Event Player.HalamanHudMenuArcade, 0) == False);
 			Call Subroutine(GambarMusik);
