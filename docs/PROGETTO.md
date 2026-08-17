@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.23
+# Note di progetto — versione 0.6.24
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.23.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.24.
 
 ## Architettura generale
 
@@ -396,3 +396,8 @@ La 0.6.21 concentrava cleanup e setup nel `Player Joined Match`; il client live 
 ## Quiescenza prima del cleanup 0.6.23
 
 La fase `TenangkanPemain` è idempotente e volutamente priva di Destroy/Wait/Loop. Disattiva prima tutte le condizioni Ongoing che possono essere state abilitate dal Menu Arcade, rende invisibili gli HUD menu tramite `MenuTerbuka = False` e ferma le modifiche engine persistenti. Solo dopo un yield viene eseguito `BersihkanPemain`, che resta atomico per non lasciare i global scratch `IndeksKeluar/PemainPembersihan` esposti fra più player.
+
+
+## Team switch a carico distribuito 0.6.24
+
+La 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.

@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.23
+# Rapporto di validazione — versione 0.6.24
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.23**
+Release tecnica: **CHILL Dedicated Server 0.6.24**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-3984aba2b7db080464fa645ca080c9ff797780f5
+df52974fc8cd9725d0c7002d23b4a5e2c5c52ae3
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.23 superati
+OK - controlli statici v0.6.24 superati
 ```
 
 ## GitHub
@@ -173,3 +173,8 @@ Il validator richiede due `Wait(0.050, Ignore Condition)` nel `Player Joined Mat
 ## Gate quiescenza team-switch 0.6.23
 
 Il validator richiede `TenangkanPemain` sia sul Player Left sia sul Player Joined prima di qualsiasi cleanup, timing 0,10/0,20/0,10 s, stop esplicito dei sottosistemi persistenti e assenza di Destroy/Wait/Loop nella fase di quiescenza. Un test negativo rimuove la chiamata dal Player Joined e deve essere intercettato. La conferma completa resta live-pending per i casi con Menu Arcade/modifiche attive.
+
+
+## Gate team-switch 0.6.24
+
+`TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.

@@ -893,7 +893,7 @@ rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = True;
 		Call Subroutine(TenangkanPemain);
-		Wait(0.200, Ignore Condition);
+		Wait(0.050, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
 		"Jika pendaftaran lama masih ada, jalankan pembersihan cadangan tepat sekali setelah keadaan sudah tenang."
 		If(Or(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(
@@ -901,7 +901,7 @@ rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
 			Current Array Element)), Custom String("{0}", Event Player))));
 			Call Subroutine(BersihkanPemain);
 		End;
-		Wait(0.100, Ignore Condition);
+		Wait(0.050, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
 		Call Subroutine(SiapkanPemain);
 	}
@@ -1201,7 +1201,7 @@ rule("04 - Pemain Keluar: Tenangkan lalu bersihkan pendaftaran")
 	actions
 	{
 		Call Subroutine(TenangkanPemain);
-		Wait(0.100, Ignore Condition);
+		Wait(0.050, Ignore Condition);
 		Call Subroutine(BersihkanPemain);
 	}
 }
@@ -3642,7 +3642,7 @@ rule("93b - Subrutin: Efek pengaturan dipulihkan")
 	}
 }
 
-rule("93b2 - Subrutin: Tenangkan pemain sebelum pembersihan")
+rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 {
 	event
 	{
@@ -3652,11 +3652,12 @@ rule("93b2 - Subrutin: Tenangkan pemain sebelum pembersihan")
 
 	actions
 	{
-		"Matikan pemicu menu dan efek lebih dulu agar perpindahan tim tidak menjalankan banyak aturan bersamaan."
+		"Hanya variabel: cegah aksi engine menambah beban pada saat pindah tim."
+		Event Player.SudahSiap = False;
 		Event Player.Manusia = False;
-		Event Player.MenuTerbuka = False;
 		Event Player.PerintahMenu = 0;
 		Event Player.SeranganDekatDipakai = False;
+		Event Player.MenuTerbuka = False;
 		Event Player.TeleportasiJongkokAktif = False;
 		Event Player.PerintahTeleportasi = 0;
 		Event Player.InspeksiAktif = False;
@@ -3664,45 +3665,6 @@ rule("93b2 - Subrutin: Tenangkan pemain sebelum pembersihan")
 		Event Player.InteraksiKameraDipakai = False;
 		Event Player.KartuNasibAktif = False;
 		Event Player.PutaranKartuNasib = 0;
-		Event Player.GerakNasibDikunci = False;
-		Event Player.KebalAktif = False;
-		Event Player.ModeKebal = 0;
-		Stop Camera(Event Player);
-		Event Player.ModeKamera = 0;
-		Event Player.TargetKamera = Null;
-		Stop Chasing Player Variable(Event Player, WarnaMenu);
-		Stop Chasing Player Variable(Event Player, RadiusNasib);
-		Clear Status(Event Player, Unkillable);
-		Stop Modifying Hero Voice Lines(Event Player);
-		Stop Forcing Player Position(Event Player);
-		Set Move Speed(Event Player, 100);
-		Set Damage Received(Event Player, 100);
-		Set Damage Dealt(Event Player, 100);
-		Set Healing Dealt(Event Player, 100);
-		Set Knockback Dealt(Event Player, 100);
-		Set Knockback Received(Event Player, 100);
-		Allow Button(Event Player, Button(Melee));
-		Allow Button(Event Player, Button(Jump));
-		Allow Button(Event Player, Button(Crouch));
-		Allow Button(Event Player, Button(Primary Fire));
-		Allow Button(Event Player, Button(Secondary Fire));
-		Allow Button(Event Player, Button(Interact));
-		Allow Button(Event Player, Button(Reload));
-		Allow Button(Event Player, Button(Ability 1));
-		Allow Button(Event Player, Button(Ability 2));
-		Allow Button(Event Player, Button(Ultimate));
-		Set Primary Fire Enabled(Event Player, True);
-		Set Secondary Fire Enabled(Event Player, True);
-		Set Ability 1 Enabled(Event Player, True);
-		Set Ability 2 Enabled(Event Player, True);
-		Set Ultimate Ability Enabled(Event Player, True);
-		Set Melee Enabled(Event Player, True);
-		If(Event Player.PelatNamaDinonaktifkan == True);
-			Enable Nameplates(All Players(All Teams), Event Player);
-			Event Player.PelatNamaDinonaktifkan = False;
-		End;
-		Enable Game Mode HUD(Event Player);
-		Enable Game Mode In-World UI(Event Player);
 	}
 }
 
@@ -3716,7 +3678,36 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 
 	actions
 	{
-		"Keadaan aktif sudah ditenangkan sebelum subrutin ini; sekarang hapus data dan objek yang tersisa."
+		"Pemicu sudah mati; pulihkan engine dalam kelompok kecil dan beri satu bingkai di antaranya."
+		Stop Camera(Event Player);
+		Stop Chasing Player Variable(Event Player, WarnaMenu);
+		Stop Chasing Player Variable(Event Player, RadiusNasib);
+		Wait(0.016, Ignore Condition);
+		Clear Status(Event Player, Unkillable);
+		Set Damage Received(Event Player, 100);
+		Set Move Speed(Event Player, 100);
+		Stop Modifying Hero Voice Lines(Event Player);
+		Wait(0.016, Ignore Condition);
+		Allow Button(Event Player, Button(Melee));
+		Allow Button(Event Player, Button(Jump));
+		Allow Button(Event Player, Button(Crouch));
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
+		Wait(0.016, Ignore Condition);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Melee Enabled(Event Player, True);
+		Enable Game Mode HUD(Event Player);
+		Enable Game Mode In-World UI(Event Player);
+		Wait(0.016, Ignore Condition);
 		Event Player.PemainDipilih = Null;
 		Event Player.JumlahSuara = 0;
 		Event Player.SudahSiap = False;
@@ -3774,44 +3765,58 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			End;
 			Destroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);
 			Destroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);
+			Wait(0.016, Ignore Condition);
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 0);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[0]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 1);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[1]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 2);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[2]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 3);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[3]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 4);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[4]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 5);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[5]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 6);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[6]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 7);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[7]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 8);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[8]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 9);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[9]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 10);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[10]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 11);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[11]);
+				Wait(0.016, Ignore Condition);
 			End;
 			If(Count Of(Player Variable(Global.PemainPembersihan, HudMenuArcade)) > 12);
 				Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[12]);
+				Wait(0.016, Ignore Condition);
 			End;
 			Global.PemainPembersihan.HudMenuArcade = Empty Array;
 			Global.PemainPembersihan.HalamanHudMenuArcade = Empty Array;
@@ -3821,6 +3826,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			If(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
 				Destroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
 			End;
+			Wait(0.016, Ignore Condition);
 			Global.SlotHUDTersedia = Sorted Array(Append To Array(Global.SlotHUDTersedia, Global.SlotHUDPemain[Global.IndeksKeluar]), Current Array Element);
 			Modify Global Variable(HudKiriPemain, Remove From Array By Index, Global.IndeksKeluar);
 			Modify Global Variable(HudKananPemain, Remove From Array By Index, Global.IndeksKeluar);
@@ -3890,6 +3896,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			If(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
 				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetBalasDendamTerkunci, Null);
 			End;
+			Wait(0.016, Ignore Condition);
 		End;
 		Global.IndeksKeluar = -1;
 		Global.PemainPembersihan = Null;

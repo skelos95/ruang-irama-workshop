@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.23.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.24.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.23"
+CURRENT_VERSION = "0.6.24"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1570,8 +1570,8 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Disable Nameplates Crouch, registrazione umano e lock bot",
     )
     checks.equal(
-        len(call_texts(source, "Enable Nameplates")), 3,
-        "Enable Nameplates Crouch, quiescenza e cleanup lifecycle",
+        len(call_texts(source, "Enable Nameplates")), 2,
+        "Enable Nameplates Crouch e cleanup lifecycle",
     )
     checks.equal(
         len(call_texts(source, "Create In-World Text")), 4,
@@ -1849,9 +1849,15 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
         checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
         checks.require(
-            "Stop Camera(Event Player);" not in leave,
-            "cleanup atomico ripete ancora lo stop Camera già eseguito da TenangkanPemain",
+            "Stop Camera(Event Player);" in leave
+            and leave.count("Wait(0.016, Ignore Condition);") >= 18,
+            "cleanup 0.6.24 non distribuisce ripristini engine/HUD su frame separati",
         )
+        for index in range(13):
+            checks.require(
+                f"Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[{index}]);\n\t\t\t\tWait(0.016, Ignore Condition);" in leave,
+                f"cleanup HUD Arcade {index} non distribuito",
+            )
 
     for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
         checks.require(f"Event Player.{name}" in clean_source, f"Revenge: variabile {name} assente")
@@ -2962,19 +2968,19 @@ def check_lifecycle_hygiene(
         set_team_lock = body.find("Event Player.PindahTimDiproses = True;")
         set_cycle_lock = body.find("Event Player.SiklusPemainAktif = True;")
         quiesce_at = body.find("Call Subroutine(TenangkanPemain);")
-        first_wait = body.find("Wait(0.200, Ignore Condition);", quiesce_at)
+        first_wait = body.find("Wait(0.050, Ignore Condition);", quiesce_at)
         stale_guard = body.find("If(Or(Or(Array Contains(Global.PemainManusia, Event Player)", first_wait)
         cleanup_at = body.find("Call Subroutine(BersihkanPemain);", stale_guard)
-        second_wait = body.find("Wait(0.100, Ignore Condition);", cleanup_at)
+        second_wait = body.find("Wait(0.050, Ignore Condition);", cleanup_at)
         setup_at = body.find("Call Subroutine(SiapkanPemain);", second_wait)
         checks.require(
             0 <= condition_lock < set_team_lock < set_cycle_lock < quiesce_at < first_wait < stale_guard < cleanup_at < second_wait < setup_at,
             "audit lifecycle: cambio team deve fare lock → yield → cleanup condizionale → yield → setup; TenangkanPemain deve precedere il primo yield",
         )
-        checks.equal(body.count("Wait(0.200, Ignore Condition);"), 1,
-            "audit lifecycle: primo yield cambio team da 0,20 s")
-        checks.equal(body.count("Wait(0.100, Ignore Condition);"), 1,
-            "audit lifecycle: secondo yield cambio team da 0,10 s")
+        checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,
+            "audit lifecycle: primo yield cambio team da 0,05 s")
+        checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,
+            "audit lifecycle: secondo yield cambio team da 0,05 s")
         checks.equal(body.count("Call Subroutine(BersihkanPemain);"), 1,
             "audit lifecycle: cleanup fallback deve comparire una sola volta nel Player Joined")
         checks.require(
@@ -3018,30 +3024,24 @@ def check_lifecycle_hygiene(
     if quiet_rules:
         quiet = mask_strings(quiet_rules[0].body)
         for token in (
+            "Event Player.SudahSiap = False;",
             "Event Player.Manusia = False;",
             "Event Player.MenuTerbuka = False;",
             "Event Player.PerintahMenu = 0;",
             "Event Player.TeleportasiJongkokAktif = False;",
             "Event Player.InspeksiAktif = False;",
             "Event Player.KartuNasibAktif = False;",
-            "Event Player.KebalAktif = False;",
-            "Stop Camera(Event Player);",
-            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
-            "Stop Chasing Player Variable(Event Player, RadiusNasib);",
-            "Clear Status(Event Player, Unkillable);",
-            "Set Damage Received(Event Player, 100);",
-            "Allow Button(Event Player, Button(Interact));",
-            "Stop Modifying Hero Voice Lines(Event Player);",
         ):
             checks.require(token in quiet, f"audit lifecycle: TenangkanPemain incompleto: {token}")
-        checks.require(
-            "Destroy HUD Text" not in quiet
-            and "Destroy In-World Text" not in quiet
-            and "Destroy Effect" not in quiet
-            and "Wait(" not in quiet
-            and "Loop If Condition Is True;" not in quiet,
-            "audit lifecycle: TenangkanPemain deve solo fermare trigger/effetti, senza distruzioni o attese",
-        )
+        for forbidden in (
+            "Stop Camera(", "Stop Chasing Player Variable(", "Clear Status(",
+            "Set Damage", "Set Healing", "Set Knockback", "Set Move Speed(",
+            "Allow Button(", "Stop Modifying Hero Voice Lines(", "Enable Game Mode",
+            "Destroy HUD Text", "Destroy In-World Text", "Destroy Effect", "Wait(",
+            "Loop If Condition Is True;",
+        ):
+            checks.require(forbidden not in quiet,
+                f"audit lifecycle: TenangkanPemain deve usare solo variabili, trovato {forbidden}")
 
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")
@@ -3063,7 +3063,7 @@ def check_lifecycle_hygiene(
         checks.require(code_contains(leave[0].body, "Call Subroutine(BersihkanPemain);"), "audit lifecycle: Player Left non usa cleanup comune")
         leave_code = mask_strings(leave[0].body)
         leave_quiet = leave_code.find("Call Subroutine(TenangkanPemain);")
-        leave_wait = leave_code.find("Wait(0.100, Ignore Condition);", leave_quiet)
+        leave_wait = leave_code.find("Wait(0.050, Ignore Condition);", leave_quiet)
         leave_cleanup = leave_code.find("Call Subroutine(BersihkanPemain);", leave_wait)
         checks.require(
             0 <= leave_quiet < leave_wait < leave_cleanup,

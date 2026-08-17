@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.23** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.24** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
