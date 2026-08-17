@@ -1,0 +1,25 @@
+name: Export 0.7.0 Candidate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/export-070-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHILL_0.7.0_GlobalFirst_candidate_fixed
+          path: exports/CHILL_0.7.0_GlobalFirst_candidate.txt
+          if-no-files-found: error
+          retention-days: 1
