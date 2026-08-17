@@ -12,6 +12,13 @@ payload = payload.replace(
     '    joined = "\\\\n".join(mask_strings(rule.body) for rule in managers)',
     1,
 )
+payload = payload.replace(
+    'main_call + "\\n    check_global_first_phase_one(checks, source, rules)"',
+    'main_call + "\\n        check_global_first_phase_one(checks, source, rules)"',
+    1,
+)
 if 'joined = "\\\\n".join' not in payload:
     raise RuntimeError("global-first newline escape patch did not apply")
+if 'main_call + "\\n        check_global_first_phase_one' not in payload:
+    raise RuntimeError("global-first validator indentation patch did not apply")
 exec(compile(payload, ".github/maintenance/global_first_070.py", "exec"))
