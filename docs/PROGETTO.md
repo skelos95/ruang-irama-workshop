@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.24
+# Note di progetto — versione 0.6.25
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.24.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.25.
 
 ## Architettura generale
 
@@ -401,3 +401,12 @@ La fase `TenangkanPemain` è idempotente e volutamente priva di Destroy/Wait/Loo
 ## Team switch a carico distribuito 0.6.24
 
 La 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.
+
+
+## Menu Arcade a HUD singolo 0.6.25
+
+Il test live della 0.6.24 ha isolato il crash: il cambio team funziona se il player non usa Menu Arcade/modifiche, mentre può chiudere il server al primo cambio dopo l'uso del menu. La causa più forte nel sorgente era la cache lazy: scorrendo le dodici voci, `HudMenuArcade` conservava fino a tredici `Create HUD Text` persistenti per player.
+
+La 0.6.25 elimina quella crescita. `HudMenuArcade` e `HalamanHudMenuArcade` restano array per compatibilità del lifecycle, ma contengono al massimo un elemento. Durante il hold Melee viene creato soltanto il Main Menu nascosto; Primary/Secondary sul Main modificano solo `KursorUtama` e colore. Entrando o tornando da un submenu, `GambarHalamanAktif` distrugge l'unico HUD corrente e crea il nuovo renderer senza `Wait`. Le modifiche di valore dentro la stessa pagina continuano a usare il testo dinamico e non ricreano l'HUD.
+
+Di conseguenza `TutupMenu` e `BersihkanPemain` devono distruggere al massimo un HUD Arcade per player. Restano invariati il hold Melee da 0,5 s, il dispatcher input, Try Your Luck, Hero Voice NORMAL, Unkillable 1 HP e il menu visibile da morto.

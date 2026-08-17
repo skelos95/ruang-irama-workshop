@@ -540,6 +540,31 @@ rule("TEST - bad dead-state menu close")
         self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 
 
+    def test_arcade_menu_cache_must_stay_single_hud(self) -> None:
+        _, _, subroutines = validator.declaration_tables(self.source)
+        self.assertNotIn("PramuatHalamanTerpilih", subroutines)
+        self.assertIn("GambarHalamanAktif", subroutines)
+        self.assertNotIn("Append To Array(Event Player.HudMenuArcade", self.source)
+        self.assertEqual(self.source.count("Event Player.HudMenuArcade = Array(Event Player.HudMenu);"), 13)
+
+        mutated = self.source.replace(
+            "Event Player.HudMenuArcade = Array(Event Player.HudMenu);",
+            "Event Player.HudMenuArcade = Append To Array(Event Player.HudMenuArcade, Event Player.HudMenu);",
+            1,
+        )
+        checks = validator.Checks()
+        validator.check_menus(checks, mutated, self.rules(mutated), subroutines)
+        self.assertTrue(any("cache HUD può ancora crescere" in error for error in checks.errors), checks.errors)
+
+    def test_main_navigation_must_not_preload_submenus(self) -> None:
+        primary_at = self.source.index('rule("06 - Menu:')
+        secondary_at = self.source.index('rule("07 - Menu:', primary_at)
+        after_secondary = self.source.index('rule("07b - ', secondary_at)
+        nav = self.source[primary_at:after_secondary]
+        self.assertNotIn("GambarHalamanAktif", nav)
+        self.assertNotIn("GambarMusik", nav)
+        self.assertNotIn("GambarKamera", nav)
+
     def test_team_rejoin_must_defer_cleanup_and_fresh_setup(self) -> None:
         join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
         join_end = self.source.index('\nrule("01b - ', join_at)

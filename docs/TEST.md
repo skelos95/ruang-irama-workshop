@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.24
+# Piano di test — versione 0.6.25
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.24.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.25.
 
 ## Gate statico
 
@@ -393,3 +393,10 @@ La 0.6.22 è live-confirmed stabile per cambi ripetuti nello stato default, ma f
 ## Team switch 0.6.24
 
 La 0.6.23 è live-failed al primo cambio team. Provare prima Team 1 → Team 2 senza aprire il Menu Arcade, poi almeno 10 cambi alternati. Ripetere dopo avere visitato tutte le 12 pagine del menu e dopo Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun `excessive Workshop script load` e una sola registrazione roster dopo ogni spawn.
+
+
+## Test live cache HUD singola 0.6.25
+
+La 0.6.24 è live-parzialmente confermata: cambio team senza usare il Menu Arcade funziona, ma dopo l'uso del menu il primo cambio può ancora chiudere il server per carico Workshop eccessivo. Per la 0.6.25 aprire il menu, scorrere tutte e dodici le voci del Main senza entrarci, quindi cambiare team: il server deve restare attivo. Ripetere entrando in ogni submenu uno alla volta, tornando al Main con Reload e cambiando team dopo ogni pagina.
+
+Poi applicare Camera 3P, Name Color, Language, Unkillable, Hero Voice, Player Icon, Crouch Teleport/Privacy, Vote e Try Your Luck, chiudere il menu e fare almeno dieci cambi Team 1 ↔ Team 2. Interact/Reload devono restare immediati: è ammesso al massimo un singolo frame di sostituzione visiva fra Main e submenu, mai il vecchio ritardo da circa 0,5 s. Stato 0.6.25: static-ready dopo gate, live-pending fino a questa prova.

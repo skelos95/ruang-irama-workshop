@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.24
+# Rapporto di validazione — versione 0.6.25
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.24**
+Release tecnica: **CHILL Dedicated Server 0.6.25**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-df52974fc8cd9725d0c7002d23b4a5e2c5c52ae3
+393f4aa1e68633b9702566fd813eb2a0324b0891
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.24 superati
+OK - controlli statici v0.6.25 superati
 ```
 
 ## GitHub
@@ -178,3 +178,10 @@ Il validator richiede `TenangkanPemain` sia sul Player Left sia sul Player Joine
 ## Gate team-switch 0.6.24
 
 `TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.
+
+
+## Gate cache Menu Arcade 0.6.25
+
+Il gate richiede tredici renderer separati ma una sola istanza HUD attiva per player: ogni renderer assegna `HudMenuArcade = Array(HudMenu)` e `HalamanHudMenuArcade = Array(pagina)`, mentre `Append To Array(HudMenuArcade, ...)` è vietato. `GambarHalamanAktif` deve distruggere solo indice 0, svuotare la cache e instradare il renderer della nuova pagina senza Wait/Loop. Il Main Menu non può più pre-caricare submenu durante Primary/Secondary.
+
+`TutupMenu` e il cleanup team-switch possono distruggere un solo HUD Arcade. Restano obbligatorie le invarianti globali: nessuna regola con `Create HUD Text` può contenere Wait o Loop, e il test live Overwatch resta necessario per dichiarare risolto il crash.

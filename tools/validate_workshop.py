@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.24.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.25.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.24"
+CURRENT_VERSION = "0.6.25"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1003,11 +1003,15 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         checks.require("Create HUD Text" not in router_code, "GambarMenu non deve contenere un HUD monolitico")
         checks.require("Custom String" not in router_code, "GambarMenu non deve duplicare i testi delle pagine")
         checks.require("Call Subroutine(TransisiWarnaMenu);" in router_code, "GambarMenu non aggiorna la transizione colore")
-        checks.require("Create HUD Text" not in router_code, "GambarMenu non deve creare HUD")
-        checks.require("Array Contains" not in router_code, "GambarMenu non deve gestire la creazione HUD")
+        checks.require("Call Subroutine(GambarHalamanAktif);" in router_code, "GambarMenu non sostituisce HUD quando cambia pagina")
+        checks.require(
+            "Count Of(Event Player.HalamanHudMenuArcade) == 0" in router_code
+            and "First Of(Event Player.HalamanHudMenuArcade) != Event Player.HalamanMenu" in router_code,
+            "GambarMenu non limita il redraw ai soli cambi pagina",
+        )
         checks.require(len(router.encode("utf-8")) < 5000, "GambarMenu è tornato troppo grande")
         for renderer in page_by_renderer:
-            checks.require(f"Call Subroutine({renderer});" not in router_code, f"GambarMenu richiama ancora {renderer}")
+            checks.require(f"Call Subroutine({renderer});" not in router_code, f"GambarMenu richiama direttamente {renderer}")
 
     for renderer, page in page_by_renderer.items():
         candidates = rules_containing(rules, "Subroutine;", f"{renderer};")
@@ -1026,12 +1030,14 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
             checks.require(
                 code_contains(
                     body,
-                    "Event Player.HudMenuArcade = Append To Array(Event Player.HudMenuArcade, Event Player.HudMenu);",
-                    f"Event Player.HalamanHudMenuArcade = Append To Array(Event Player.HalamanHudMenuArcade, {page});",
+                    "Event Player.HudMenuArcade = Array(Event Player.HudMenu);",
+                    f"Event Player.HalamanHudMenuArcade = Array({page});",
                     "Event Player.HudMenu = Null;",
                 ),
-                f"{renderer}: ID/pagina HUD non salvati nella cache lazy",
+                f"{renderer}: HUD attivo non salvato come cache singola",
             )
+            checks.require("Append To Array(Event Player.HudMenuArcade" not in mask_strings(body),
+                f"{renderer}: cache HUD può ancora crescere oltre un elemento")
 
     close_rules = rules_containing(rules, "Subroutine;", "TutupMenu;")
     checks.equal(len(close_rules), 1, "cleanup Menu Arcade split")
@@ -1039,7 +1045,7 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         close_code = mask_strings(close_rules[0].body)
         checks.require("Event Player.HudMenuArcade = Empty Array;" in close_code, "TutupMenu non svuota HudMenuArcade")
         checks.require("Event Player.HalamanHudMenuArcade = Empty Array;" in close_code, "TutupMenu non svuota la cache pagine")
-        checks.require(close_code.count("Destroy HUD Text(Event Player.HudMenuArcade[") == 13, "TutupMenu non distrugge tutte le pagine HUD caricate")
+        checks.require(close_code.count("Destroy HUD Text(Event Player.HudMenuArcade[") == 1, "TutupMenu deve distruggere un solo HUD Arcade attivo")
 
     melee_openers = [
         rule for rule in rules
@@ -1067,17 +1073,28 @@ def check_menus(checks: Checks, source: str, rules: list[Rule], subroutines: set
         checks.require("Wait(" not in hud_code, f"HUD creato dentro Wait in {hud_rule.name!r}")
         checks.require("Loop If Condition Is True;" not in hud_code, f"HUD creato dentro Loop in {hud_rule.name!r}")
     checks.equal(len([r for r in rules if r.name.startswith("05e - Menu: Muat halaman lain bertahap")]), 0, "preload 0.6.14 ancora presente")
-    pre_open=[r for r in rules if r.name.startswith("05a - Menu: Siapkan HUD tersembunyi")]
-    checks.equal(len(pre_open),1,"pre-creazione Main Menu")
+    pre_open=[r for r in rules if r.name.startswith("05a - Menu: Siapkan hanya HUD utama")]
+    checks.equal(len(pre_open),1,"pre-creazione Main Menu a HUD singolo")
     if pre_open:
         pc=mask_strings(pre_open[0].body)
         checks.require("Wait(" not in pc and "Loop If Condition Is True;" not in pc,"pre-creazione Main contiene Wait/Loop")
-        checks.require("Call Subroutine(GambarUtama);" in pc and "Call Subroutine(PramuatHalamanTerpilih);" in pc,"pre-creazione Main/submenu incompleta")
-    selected=rules_containing(rules,"Subroutine;","PramuatHalamanTerpilih;")
-    checks.equal(len(selected),1,"PramuatHalamanTerpilih")
-    if selected:
-        sc=mask_strings(selected[0].body)
-        checks.require("Wait(" not in sc and "Loop If Condition Is True;" not in sc,"preload selezionato contiene Wait/Loop")
+        checks.require("Call Subroutine(GambarUtama);" in pc,"pre-creazione Main assente")
+        checks.require("GambarHalamanAktif" not in pc,"pre-creazione apre ancora un submenu")
+    checks.require("PramuatHalamanTerpilih" not in source,"preload submenu legacy ancora presente")
+    active=rules_containing(rules,"Subroutine;","GambarHalamanAktif;")
+    checks.equal(len(active),1,"GambarHalamanAktif")
+    if active:
+        sc=mask_strings(active[0].body)
+        checks.require("Wait(" not in sc and "Loop If Condition Is True;" not in sc,"sostituzione pagina contiene Wait/Loop")
+        checks.equal(sc.count("Destroy HUD Text(Event Player.HudMenuArcade["),1,"sostituzione pagina distrugge più di un HUD")
+        checks.require(
+            sc.find("Destroy HUD Text(Event Player.HudMenuArcade[0]);")
+            < sc.find("Event Player.HudMenuArcade = Empty Array;")
+            < sc.find("Call Subroutine(GambarUtama);"),
+            "GambarHalamanAktif non libera il vecchio HUD prima del nuovo renderer",
+        )
+        for renderer in page_by_renderer:
+            checks.require(f"Call Subroutine({renderer});" in sc, f"GambarHalamanAktif non instrada {renderer}")
     classifier=[r for r in rules if r.name.startswith("02 - Pemain: Pisahkan manusia")]
     checks.equal(len(classifier),1,"classificatore umano/bot")
     if classifier: checks.require("Create HUD Text" not in mask_strings(classifier[0].body),"classificatore con Wait crea HUD")
@@ -1850,14 +1867,18 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
         checks.require(
             "Stop Camera(Event Player);" in leave
-            and leave.count("Wait(0.016, Ignore Condition);") >= 18,
-            "cleanup 0.6.24 non distribuisce ripristini engine/HUD su frame separati",
+            and leave.count("Wait(0.016, Ignore Condition);") >= 8,
+            "cleanup 0.6.25 non distribuisce ripristini engine/HUD su frame separati",
         )
-        for index in range(13):
-            checks.require(
-                f"Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[{index}]);\n\t\t\t\tWait(0.016, Ignore Condition);" in leave,
-                f"cleanup HUD Arcade {index} non distribuito",
-            )
+        checks.equal(
+            leave.count("Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)["),
+            1,
+            "cleanup team-switch deve gestire un solo HUD Arcade",
+        )
+        checks.require(
+            "Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[0]);\n\t\t\t\tWait(0.016, Ignore Condition);" in leave,
+            "cleanup HUD Arcade singolo non distribuito",
+        )
 
     for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
         checks.require(f"Event Player.{name}" in clean_source, f"Revenge: variabile {name} assente")
