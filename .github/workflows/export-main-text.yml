@@ -1,0 +1,33 @@
+name: Export Main Workshop Text
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/export-main-text.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Copy Workshop as text
+        shell: bash
+        run: cp workshop/ruang_irama.workshop CHILL_Dedicated_Server_0.6.23_main.txt
+
+      - name: Upload text artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: CHILL-Dedicated-Server-0.6.23-main-text
+          path: CHILL_Dedicated_Server_0.6.23_main.txt
+          if-no-files-found: error
+          retention-days: 1
