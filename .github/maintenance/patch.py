@@ -1,114 +1,42 @@
-from __future__ import annotations
-
+from pathlib import Path
 import hashlib
 import re
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKSHOP = ROOT / "workshop" / "ruang_irama.workshop"
-VALIDATOR = ROOT / "tools" / "validate_workshop.py"
-TESTS = ROOT / "tests" / "test_validate_workshop.py"
-VERSION = ROOT / "VERSION"
-README = ROOT / "README.md"
-PROGETTO = ROOT / "docs" / "PROGETTO.md"
-TEST_DOC = ROOT / "docs" / "TEST.md"
-VALIDAZIONE = ROOT / "docs" / "VALIDAZIONE.md"
+SRC = ROOT / "workshop" / "ruang_irama.workshop"
+VAL = ROOT / "tools" / "validate_workshop.py"
+TST = ROOT / "tests" / "test_validate_workshop.py"
 
 
-def replace_once(text: str, old: str, new: str, label: str) -> str:
-    count = text.count(old)
-    if count != 1:
-        raise RuntimeError(f"{label}: attesa 1 occorrenza, trovate {count}")
+def one(text, old, new, label):
+    n = text.count(old)
+    if n != 1:
+        raise RuntimeError(f"{label}: attesa 1 occorrenza, trovate {n}")
     return text.replace(old, new, 1)
 
 
-def replace_between(text: str, start: str, end: str, replacement: str, label: str) -> str:
-    start_at = text.find(start)
-    if start_at < 0:
-        raise RuntimeError(f"{label}: marker iniziale non trovato")
-    end_at = text.find(end, start_at)
-    if end_at < 0:
-        raise RuntimeError(f"{label}: marker finale non trovato")
-    return text[:start_at] + replacement + text[end_at:]
+def between(text, start, end, new, label):
+    a = text.find(start)
+    b = text.find(end, a + 1) if a >= 0 else -1
+    if a < 0 or b < 0:
+        raise RuntimeError(f"{label}: marker non trovato")
+    return text[:a] + new + text[b:]
 
 
-def git_blob_sha_text(text: str) -> str:
+def blob_sha(text):
     data = text.replace("\r\n", "\n").encode("utf-8")
-    payload = b"blob " + str(len(data)).encode("ascii") + b"\0" + data
-    return hashlib.sha1(payload).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
 
-source = WORKSHOP.read_text(encoding="utf-8")
+s = SRC.read_text(encoding="utf-8")
 
-source = replace_once(source, "\t\t50: ModeMulaiDiminta\n\tplayer:", "\t\t50: ModeMulaiDiminta\n\t\t51: PembersihanAktif\n\t\t52: HudMenuPembersihan\n\tplayer:", "global cleanup vars")
-source = replace_once(source, "\t\t93: PindahTimDiproses\n}", "\t\t93: PindahTimDiproses\n\t\t94: TombolPerluDipulihkan\n\t\t95: KameraPerluDihentikan\n}", "player cleanup vars")
-source = replace_once(source, "\t\tGlobal.ModeMulaiDiminta = False;\n\t\tGlobal.RGBFase = 0;", "\t\tGlobal.ModeMulaiDiminta = False;\n\t\tGlobal.PembersihanAktif = False;\n\t\tGlobal.HudMenuPembersihan = Empty Array;\n\t\tGlobal.RGBFase = 0;", "init cleanup globals")
+# Ritorna ai piccoli yield della 0.6.22: la 0.6.23 aveva allungato la finestra senza ridurre il lavoro.
+s = one(s, "\t\tWait(0.200, Ignore Condition);", "\t\tWait(0.050, Ignore Condition);", "join first wait")
+s = one(s, "\t\tWait(0.100, Ignore Condition);\n\t\tAbort If(Entity Exists(Event Player) == False);\n\t\tCall Subroutine(SiapkanPemain);", "\t\tWait(0.050, Ignore Condition);\n\t\tAbort If(Entity Exists(Event Player) == False);\n\t\tCall Subroutine(SiapkanPemain);", "join second wait")
+s = one(s, "\t\tWait(0.100, Ignore Condition);\n\t\tCall Subroutine(BersihkanPemain);", "\t\tWait(0.050, Ignore Condition);\n\t\tCall Subroutine(BersihkanPemain);", "leave wait")
 
-join_rule = '''rule("01 - Pemain Masuk atau Pindah Tim: Tunggu cleanup tunggal lalu masuk kembali")
-{
-\tevent
-\t{
-\t\tPlayer Joined Match;
-\t\tAll;
-\t\tAll;
-\t}
-
-\tconditions
-\t{
-\t\tIs Dummy Bot(Event Player) == False;
-\t\tEvent Player.PindahTimDiproses == False;
-\t}
-
-\tactions
-\t{
-\t\t"Kunci lifecycle lebih dulu, lalu matikan hanya trigger berbasis variabel. Cleanup berat diserialkan oleh mutex global."
-\t\tEvent Player.PindahTimDiproses = True;
-\t\tEvent Player.SiklusPemainAktif = True;
-\t\tCall Subroutine(TenangkanPemain);
-\t\tWait(0.050, Ignore Condition);
-\t\tAbort If(Entity Exists(Event Player) == False);
-\t\tWait Until(Global.PembersihanAktif == False, 99999);
-\t\tAbort If(Entity Exists(Event Player) == False);
-\t\tIf(Or(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(
-\t\t\tGlobal.SlotHUDPemain, Event Player.UrutanHUD))), Array Contains(Mapped Array(Global.PemainManusia, Custom String("{0}",
-\t\t\tCurrent Array Element)), Custom String("{0}", Event Player))));
-\t\t\tCall Subroutine(BersihkanPemain);
-\t\tEnd;
-\t\tWait(0.050, Ignore Condition);
-\t\tAbort If(Entity Exists(Event Player) == False);
-\t\tCall Subroutine(SiapkanPemain);
-\t}
-}
-
-'''
-source = replace_between(source, 'rule("01 - Pemain Masuk atau Pindah Tim:', 'rule("01b - Pemain Lama:', join_rule, "join rule")
-
-leave_rule = '''rule("04 - Pemain Keluar: Tenangkan lalu cleanup bertahap")
-{
-\tevent
-\t{
-\t\tPlayer Left Match;
-\t\tAll;
-\t\tAll;
-\t}
-
-\tconditions
-\t{
-\t\tIs Dummy Bot(Event Player) == False;
-\t\tEvent Player.PernahDisiapkan == True;
-\t}
-
-\tactions
-\t{
-\t\tCall Subroutine(TenangkanPemain);
-\t\tCall Subroutine(BersihkanPemain);
-\t}
-}
-
-'''
-source = replace_between(source, 'rule("04 - Pemain Keluar:', 'rule("05 - Menu:', leave_rule, "leave rule")
-
-quiet_rule = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
+# TenangkanPemain deve spegnere solo i trigger Ongoing; nessuna azione engine nel frame di cambio team.
+quiet = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 {
 \tevent
 \t{
@@ -118,8 +46,7 @@ quiet_rule = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 
 \tactions
 \t{
-\t\tEvent Player.TombolPerluDipulihkan = Or(Event Player.MenuTerbuka == True, Event Player.TeleportasiJongkokAktif == True);
-\t\tEvent Player.KameraPerluDihentikan = Event Player.ModeKamera != 0;
+\t\t"Solo variabili: evita di sommare Stop/Set/Allow al picco del cambio squadra."
 \t\tEvent Player.SudahSiap = False;
 \t\tEvent Player.Manusia = False;
 \t\tEvent Player.PerintahMenu = 0;
@@ -132,114 +59,88 @@ quiet_rule = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 \t\tEvent Player.InteraksiKameraDipakai = False;
 \t\tEvent Player.KartuNasibAktif = False;
 \t\tEvent Player.PutaranKartuNasib = 0;
-\t\tEvent Player.ModeKamera = 0;
-\t\tEvent Player.TargetKamera = Null;
 \t}
 }
 
 '''
-source = replace_between(source, 'rule("93b2 - Subrutin:', 'rule("93c - Subrutin:', quiet_rule, "quiet rule")
+s = between(s, 'rule("93b2 - Subrutin:', 'rule("93c - Subrutin:', quiet, "quiet subroutine")
 
-cleanup_start = source.index('rule("93c - Subrutin:')
-cleanup_end = source.index('rule("94 - Subrutin:', cleanup_start)
-cleanup = source[cleanup_start:cleanup_end]
-cleanup = replace_once(cleanup, '\t\t"Keadaan aktif sudah ditenangkan sebelum subrutin ini; sekarang hapus data dan objek yang tersisa."\n\t\tEvent Player.PemainDipilih = Null;', '''\t\tWait Until(Global.PembersihanAktif == False, 99999);
-\t\tGlobal.PembersihanAktif = True;
-\t\tIf(Event Player.KameraPerluDihentikan == True);
-\t\t\tStop Camera(Event Player);
-\t\tEnd;
-\t\tIf(Event Player.TombolPerluDipulihkan == True);
-\t\t\tStop Chasing Player Variable(Event Player, WarnaMenu);
-\t\t\tAllow Button(Event Player, Button(Crouch));
-\t\t\tAllow Button(Event Player, Button(Primary Fire));
-\t\t\tAllow Button(Event Player, Button(Secondary Fire));
-\t\t\tAllow Button(Event Player, Button(Interact));
-\t\t\tAllow Button(Event Player, Button(Reload));
-\t\t\tAllow Button(Event Player, Button(Ability 1));
-\t\t\tAllow Button(Event Player, Button(Ability 2));
-\t\t\tAllow Button(Event Player, Button(Ultimate));
-\t\tEnd;
-\t\tIf(Or(Event Player.KebalAktif == True, Event Player.ModeKebal != 0));
-\t\t\tClear Status(Event Player, Unkillable);
-\t\t\tSet Damage Received(Event Player, 100);
-\t\tEnd;
-\t\tIf(Event Player.IndeksSuara != 0);
-\t\t\tStop Modifying Hero Voice Lines(Event Player);
-\t\tEnd;
-\t\tIf(Event Player.RadiusNasib > 0);
-\t\t\tStop Chasing Player Variable(Event Player, RadiusNasib);
-\t\tEnd;
-\t\tIf(Event Player.GerakNasibDikunci == True);
-\t\t\tSet Move Speed(Event Player, 100);
-\t\tEnd;
-\t\tEvent Player.KameraPerluDihentikan = False;
-\t\tEvent Player.TombolPerluDipulihkan = False;
-\t\tEvent Player.KebalAktif = False;
-\t\tEvent Player.ModeKebal = 0;
-\t\tEvent Player.PemainDipilih = Null;''', "cleanup entry")
-cleanup = replace_once(cleanup, 'Global.PemainPembersihan = Global.IndeksKeluar >= 0 ? Global.PemainManusia[Global.IndeksKeluar] : Event Player;', 'Global.PemainPembersihan = Global.IndeksKeluar >= 0 ? Global.PemainManusia[Global.IndeksKeluar] : Event Player;\n\t\tGlobal.HudMenuPembersihan = Global.IndeksKeluar >= 0 ? Player Variable(Global.PemainPembersihan, HudMenuArcade) : Empty Array;', "capture menu cleanup")
-cleanup = cleanup.replace('Player Variable(Global.PemainPembersihan, HudMenuArcade)', 'Global.HudMenuPembersihan')
-cleanup = replace_once(cleanup, '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);', '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);\n\t\t\tWait(0.016, Ignore Condition);', "stage social hud")
-for index in range(13):
-    cleanup = replace_once(cleanup, f'\t\t\t\tDestroy HUD Text(Global.HudMenuPembersihan[{index}]);', f'\t\t\t\tDestroy HUD Text(Global.HudMenuPembersihan[{index}]);\n\t\t\t\tWait(0.016, Ignore Condition);', f"stage arcade hud {index}")
-cleanup = replace_once(cleanup, '''\t\t\tIf(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
+# Il cleanup mantiene la semantica leave/rejoin ma distribuisce le azioni costose su frame diversi.
+a = s.index('rule("93c - Subrutin:')
+b = s.index('rule("94 - Subrutin:', a)
+c = s[a:b]
+head = '\t\t"Keadaan aktif sudah ditenangkan sebelum subrutin ini; sekarang hapus data dan objek yang tersisa."\n\t\tEvent Player.PemainDipilih = Null;'
+staged = '''\t\t"Trigger già spenti: ripristina l'engine in gruppi piccoli e cedi un frame tra i gruppi."
+\t\tStop Camera(Event Player);
+\t\tStop Chasing Player Variable(Event Player, WarnaMenu);
+\t\tStop Chasing Player Variable(Event Player, RadiusNasib);
+\t\tWait(0.016, Ignore Condition);
+\t\tClear Status(Event Player, Unkillable);
+\t\tSet Damage Received(Event Player, 100);
+\t\tSet Move Speed(Event Player, 100);
+\t\tStop Modifying Hero Voice Lines(Event Player);
+\t\tWait(0.016, Ignore Condition);
+\t\tAllow Button(Event Player, Button(Melee));
+\t\tAllow Button(Event Player, Button(Jump));
+\t\tAllow Button(Event Player, Button(Crouch));
+\t\tAllow Button(Event Player, Button(Primary Fire));
+\t\tAllow Button(Event Player, Button(Secondary Fire));
+\t\tAllow Button(Event Player, Button(Interact));
+\t\tAllow Button(Event Player, Button(Reload));
+\t\tAllow Button(Event Player, Button(Ability 1));
+\t\tAllow Button(Event Player, Button(Ability 2));
+\t\tAllow Button(Event Player, Button(Ultimate));
+\t\tWait(0.016, Ignore Condition);
+\t\tSet Primary Fire Enabled(Event Player, True);
+\t\tSet Secondary Fire Enabled(Event Player, True);
+\t\tSet Ability 1 Enabled(Event Player, True);
+\t\tSet Ability 2 Enabled(Event Player, True);
+\t\tSet Ultimate Ability Enabled(Event Player, True);
+\t\tSet Melee Enabled(Event Player, True);
+\t\tEnable Game Mode HUD(Event Player);
+\t\tEnable Game Mode In-World UI(Event Player);
+\t\tWait(0.016, Ignore Condition);
+\t\tEvent Player.PemainDipilih = Null;'''
+c = one(c, head, staged, "cleanup engine staging")
+
+# Due HUD sociali, poi una pagina Arcade per frame.
+c = one(c, '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);', '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);\n\t\t\tWait(0.016, Ignore Condition);', "social hud yield")
+for i in range(13):
+    old = f'\t\t\t\tDestroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[{i}]);'
+    new = old + '\n\t\t\t\tWait(0.016, Ignore Condition);'
+    c = one(c, old, new, f"arcade hud {i}")
+
+# Anche IWT e pulizia riferimenti dei superstiti vengono spezzati.
+c = one(c, '''\t\t\tIf(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
 \t\t\t\tDestroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
 \t\t\tEnd;
 \t\t\tGlobal.SlotHUDTersedia = Sorted Array''', '''\t\t\tIf(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
 \t\t\t\tDestroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
 \t\t\tEnd;
 \t\t\tWait(0.016, Ignore Condition);
-\t\t\tGlobal.SlotHUDTersedia = Sorted Array''', "stage iwt")
-cleanup = replace_once(cleanup, '''\t\t\tIf(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
+\t\t\tGlobal.SlotHUDTersedia = Sorted Array''', "iwt yield")
+c = one(c, '''\t\t\tIf(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
 \t\t\t\tSet Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetBalasDendamTerkunci, Null);
 \t\t\tEnd;
-\t\tEnd;
-\t\tGlobal.IndeksKeluar = -1;''', '''\t\t\tIf(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
+\t\tEnd;''', '''\t\t\tIf(Global.PemainManusia[Global.IndeksPembersihan].TargetBalasDendamTerkunci == Global.PemainPembersihan);
 \t\t\t\tSet Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetBalasDendamTerkunci, Null);
 \t\t\tEnd;
 \t\t\tWait(0.016, Ignore Condition);
-\t\tEnd;
-\t\tGlobal.IndeksKeluar = -1;''', "stage survivors")
-cleanup = replace_once(cleanup, '''\t\tGlobal.IndeksKeluar = -1;
-\t\tGlobal.PemainPembersihan = Null;
+\t\tEnd;''', "survivor yield")
+s = s[:a] + c + s[b:]
+SRC.write_text(s, encoding="utf-8")
+sha = blob_sha(s)
 
-\t}
-}
+# Aggiorna il gate 0.6.23 senza indebolire le altre invarianti.
+v = VAL.read_text(encoding="utf-8")
+v = one(v, 'CURRENT_VERSION = "0.6.23"', 'CURRENT_VERSION = "0.6.24"', "validator version")
+v = one(v, 'Il validatore controlla invarianti strutturali e di progetto della versione 0.6.23.', 'Il validatore controlla invarianti strutturali e di progetto della versione 0.6.24.', "validator doc")
+v = v.replace('Wait(0.200, Ignore Condition);', 'Wait(0.050, Ignore Condition);')
+v = v.replace('primo yield cambio team da 0,20 s', 'primo yield cambio team da 0,05 s')
+v = v.replace('Wait(0.100, Ignore Condition);', 'Wait(0.050, Ignore Condition);')
+v = v.replace('secondo yield cambio team da 0,10 s', 'secondo yield cambio team da 0,05 s')
 
-''', '''\t\tGlobal.IndeksKeluar = -1;
-\t\tGlobal.PemainPembersihan = Null;
-\t\tGlobal.HudMenuPembersihan = Empty Array;
-\t\tGlobal.PembersihanAktif = False;
-
-\t}
-}
-
-''', "release mutex")
-source = source[:cleanup_start] + cleanup + source[cleanup_end:]
-source = replace_once(source, '''\t\tEvent Player.PindahTimDiproses = True;
-\t\tEvent Player.PernahDisiapkan = True;
-\t\tEvent Player.SiklusPemainAktif = False;
-\t\tEvent Player.SudahSiap = True;''', '''\t\tEvent Player.TombolPerluDipulihkan = False;
-\t\tEvent Player.KameraPerluDihentikan = False;
-\t\tEvent Player.PindahTimDiproses = True;
-\t\tEvent Player.PernahDisiapkan = True;
-\t\tEvent Player.SiklusPemainAktif = False;
-\t\tEvent Player.SudahSiap = True;''', "setup vars")
-WORKSHOP.write_text(source, encoding="utf-8")
-new_blob = git_blob_sha_text(source)
-
-validator = VALIDATOR.read_text(encoding="utf-8")
-validator = validator.replace('CURRENT_VERSION = "0.6.23"', 'CURRENT_VERSION = "0.6.24"', 1).replace('versione 0.6.23.', 'versione 0.6.24.', 1)
-# Relax old 0.6.23 lifecycle assertions and require new primitives.
-validator = validator.replace('"Stop Camera(Event Player);" not in leave,\n            "cleanup atomico ripete ancora lo stop Camera già eseguito da TenangkanPemain",', '"Wait Until(Global.PembersihanAktif == False, 99999);" in leave and "Global.PembersihanAktif = True;" in leave and "Global.PembersihanAktif = False;" in leave,\n            "cleanup non serializzato dal mutex globale",', 1)
-validator = validator.replace('first_wait = body.find("Wait(0.200, Ignore Condition);", quiesce_at)', 'first_wait = body.find("Wait(0.050, Ignore Condition);", quiesce_at)\n        mutex_wait = body.find("Wait Until(Global.PembersihanAktif == False, 99999);", first_wait)', 1)
-validator = validator.replace('stale_guard = body.find("If(Or(Or(Array Contains(Global.PemainManusia, Event Player)", first_wait)', 'stale_guard = body.find("If(Or(Or(Array Contains(Global.PemainManusia, Event Player)", mutex_wait)', 1)
-validator = validator.replace('second_wait = body.find("Wait(0.100, Ignore Condition);", cleanup_at)', 'second_wait = body.find("Wait(0.050, Ignore Condition);", cleanup_at)', 1)
-validator = validator.replace('0 <= condition_lock < set_team_lock < set_cycle_lock < quiesce_at < first_wait < stale_guard < cleanup_at < second_wait < setup_at,\n            "audit lifecycle: cambio team deve fare lock → yield → cleanup condizionale → yield → setup; TenangkanPemain deve precedere il primo yield",', '0 <= condition_lock < set_team_lock < set_cycle_lock < quiesce_at < first_wait < mutex_wait < stale_guard < cleanup_at < second_wait < setup_at,\n            "audit lifecycle: cambio team deve fare lock → quiescenza → mutex → cleanup condizionale → yield → setup",', 1)
-validator = validator.replace('checks.equal(body.count("Wait(0.200, Ignore Condition);"), 1,\n            "audit lifecycle: primo yield cambio team da 0,20 s")\n        checks.equal(body.count("Wait(0.100, Ignore Condition);"), 1,\n            "audit lifecycle: secondo yield cambio team da 0,10 s")', 'checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,\n            "audit lifecycle: due yield cambio team da 0,05 s")\n        checks.equal(body.count("Wait Until(Global.PembersihanAktif == False, 99999);"), 1,\n            "audit lifecycle: attesa mutex cleanup")', 1)
-validator = validator.replace('body.count("Abort If(Entity Exists(Event Player) == False);") >= 2', 'body.count("Abort If(Entity Exists(Event Player) == False);") >= 3', 1)
-# Replace quiet required engine actions with variable-only constraints.
-quiet_old = '''        for token in (
+old_quiet = '''        for token in (
             "Event Player.Manusia = False;",
             "Event Player.MenuTerbuka = False;",
             "Event Player.PerintahMenu = 0;",
@@ -264,9 +165,7 @@ quiet_old = '''        for token in (
             and "Loop If Condition Is True;" not in quiet,
             "audit lifecycle: TenangkanPemain deve solo fermare trigger/effetti, senza distruzioni o attese",
         )'''
-quiet_new = '''        for token in (
-            "Event Player.TombolPerluDipulihkan = Or(Event Player.MenuTerbuka == True, Event Player.TeleportasiJongkokAktif == True);",
-            "Event Player.KameraPerluDihentikan = Event Player.ModeKamera != 0;",
+new_quiet = '''        for token in (
             "Event Player.SudahSiap = False;",
             "Event Player.Manusia = False;",
             "Event Player.MenuTerbuka = False;",
@@ -274,67 +173,68 @@ quiet_new = '''        for token in (
             "Event Player.TeleportasiJongkokAktif = False;",
             "Event Player.InspeksiAktif = False;",
             "Event Player.KartuNasibAktif = False;",
-            "Event Player.ModeKamera = 0;",
         ):
             checks.require(token in quiet, f"audit lifecycle: TenangkanPemain incompleto: {token}")
         for forbidden in (
-            "Stop Camera(", "Stop Chasing Player Variable(", "Clear Status(", "Set Damage Received(",
-            "Set Damage Dealt(", "Set Healing Dealt(", "Set Knockback", "Set Move Speed(", "Allow Button(",
-            "Stop Modifying Hero Voice Lines(", "Enable Game Mode HUD(", "Enable Game Mode In-World UI(",
-            "Destroy HUD Text", "Destroy In-World Text", "Destroy Effect", "Wait(", "Wait Until(", "Loop If Condition Is True;",
+            "Stop Camera(", "Stop Chasing Player Variable(", "Clear Status(",
+            "Set Damage", "Set Healing", "Set Knockback", "Set Move Speed(",
+            "Allow Button(", "Stop Modifying Hero Voice Lines(", "Enable Game Mode",
+            "Destroy HUD Text", "Destroy In-World Text", "Destroy Effect", "Wait(",
+            "Loop If Condition Is True;",
         ):
-            checks.require(forbidden not in quiet, f"audit lifecycle: TenangkanPemain deve usare solo variabili, trovato {forbidden}")'''
-validator = validator.replace(quiet_old, quiet_new, 1)
-# Player Left no pre-wait.
-validator = validator.replace('leave_wait = leave_code.find("Wait(0.100, Ignore Condition);", leave_quiet)\n        leave_cleanup = leave_code.find("Call Subroutine(BersihkanPemain);", leave_wait)\n        checks.require(\n            0 <= leave_quiet < leave_wait < leave_cleanup,\n            "audit lifecycle: Player Left deve fare TenangkanPemain → yield → cleanup",\n        )', 'leave_cleanup = leave_code.find("Call Subroutine(BersihkanPemain);", leave_quiet)\n        checks.require(0 <= leave_quiet < leave_cleanup, "audit lifecycle: Player Left deve fare TenangkanPemain → cleanup")\n        checks.require("Wait(" not in leave_code and "Wait Until(" not in leave_code, "audit lifecycle: Player Left non deve attendere prima del cleanup")', 1)
-# Slot markers and staged HUD invariant.
-marker = '    checks.equal(len(names), len(set(names)), "audit lifecycle: titoli regola duplicati")\n'
-validator = validator.replace(marker, marker + '    checks.require("51: PembersihanAktif" in clean and "52: HudMenuPembersihan" in clean, "audit lifecycle: scratch global cleanup 0.6.24 assente")\n    checks.require("94: TombolPerluDipulihkan" in clean and "95: KameraPerluDihentikan" in clean, "audit lifecycle: latch player cleanup 0.6.24 assenti")\n', 1)
-# Add checks near cleanup block before stale refs.
-needle = '        for token in (\n            "PemainDipilih == Global.PemainPembersihan",'
-insert = '''        checks.require("Global.HudMenuPembersihan = Global.IndeksKeluar >= 0 ?" in body, "audit lifecycle: snapshot HUD menu cleanup assente")
-        checks.require(body.count("Destroy HUD Text(Global.HudMenuPembersihan[") == 13, "audit lifecycle: devono esistere 13 cleanup HUD menu")
+            checks.require(forbidden not in quiet,
+                f"audit lifecycle: TenangkanPemain deve usare solo variabili, trovato {forbidden}")'''
+v = one(v, old_quiet, new_quiet, "quiet validator")
+
+old_stop = '''        checks.require(
+            "Stop Camera(Event Player);" not in leave,
+            "cleanup atomico ripete ancora lo stop Camera già eseguito da TenangkanPemain",
+        )'''
+new_stop = '''        checks.require(
+            "Stop Camera(Event Player);" in leave
+            and leave.count("Wait(0.016, Ignore Condition);") >= 18,
+            "cleanup 0.6.24 non distribuisce ripristini engine/HUD su frame separati",
+        )
         for index in range(13):
-            checks.require(f"Destroy HUD Text(Global.HudMenuPembersihan[{index}]);\\n\\t\\t\\t\\tWait(0.016, Ignore Condition);" in body, f"audit lifecycle: HUD Arcade {index} non distribuito")
-        checks.require("Global.HudMenuPembersihan = Empty Array;" in body and body.rfind("Global.HudMenuPembersihan = Empty Array;") < body.rfind("Global.PembersihanAktif = False;"), "audit lifecycle: snapshot/mutex cleanup non rilasciati correttamente")
-        for forbidden in ("Set Damage Dealt(Event Player, 100);", "Set Healing Dealt(Event Player, 100);", "Set Knockback Dealt(Event Player, 100);", "Set Knockback Received(Event Player, 100);", "Stop Forcing Player Position(Event Player);"):
-            checks.require(forbidden not in body, f"audit lifecycle: reset engine inutile nel cleanup umano: {forbidden}")
-'''
-validator = validator.replace(needle, insert + needle, 1)
-VALIDATOR.write_text(validator, encoding="utf-8")
+            checks.require(
+                f"Destroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[{index}]);\\n\\t\\t\\t\\tWait(0.016, Ignore Condition);" in leave,
+                f"cleanup HUD Arcade {index} non distribuito",
+            )'''
+v = one(v, old_stop, new_stop, "cleanup validator")
+VAL.write_text(v, encoding="utf-8")
 
-# Update tests to new timing/mutex semantics.
-tests = TESTS.read_text(encoding="utf-8")
-tests = tests.replace('mutated_join = join_rule.replace("\\t\\tWait(0.200, Ignore Condition);\\n", "", 1)', 'mutated_join = join_rule.replace("\\t\\tWait Until(Global.PembersihanAktif == False, 99999);\\n", "", 1)', 1)
-tests = tests.replace('any("yield" in error for error in checks.errors)', 'any("mutex" in error or "quiescenza" in error for error in checks.errors)', 1)
-tests = tests.replace('any("lock → yield → cleanup condizionale → yield → setup" in error for error in checks.errors)', 'any("lock → quiescenza → mutex" in error for error in checks.errors)', 1)
-# Add a negative test for engine actions in quiet phase.
-anchor = '        self.assertTrue(any("TenangkanPemain" in error for error in checks.errors), checks.errors)\n\n    def test_vote_change_must_clear_previous_choice'
-extra = '''        self.assertTrue(any("TenangkanPemain" in error or "quiescenza" in error for error in checks.errors), checks.errors)
+# I test lifecycle devono cercare il nuovo delay breve; gli altri test restano invariati.
+t = TST.read_text(encoding="utf-8")
+t = t.replace('Wait(0.200, Ignore Condition);', 'Wait(0.050, Ignore Condition);')
+TST.write_text(t, encoding="utf-8")
 
-        quiet_at = self.source.index('rule("93b2 - Subrutin:')
-        quiet_end = self.source.index('\\nrule("93c - Subrutin:', quiet_at)
-        quiet = self.source[quiet_at:quiet_end]
-        poisoned = quiet.replace("\\t\\tEvent Player.Manusia = False;", "\\t\\tEvent Player.Manusia = False;\\n\\t\\tStop Camera(Event Player);", 1)
-        mutated = self.source[:quiet_at] + poisoned + self.source[quiet_end:]
-        _, player_names, _ = validator.declaration_tables(mutated)
-        checks = validator.Checks()
-        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("solo variabili" in error for error in checks.errors), checks.errors)
+(ROOT / "VERSION").write_text("0.6.24\n", encoding="utf-8")
 
-    def test_vote_change_must_clear_previous_choice'''
-tests = tests.replace(anchor, extra, 1)
-TESTS.write_text(tests, encoding="utf-8")
+p = ROOT / "README.md"
+x = p.read_text(encoding="utf-8")
+p.write_text(one(x, "La versione **0.6.23**", "La versione **0.6.24**", "README"), encoding="utf-8")
 
-VERSION.write_text("0.6.24\n", encoding="utf-8")
-README.write_text(README.read_text(encoding="utf-8").replace("La versione **0.6.23**", "La versione **0.6.24**", 1), encoding="utf-8")
-progetto = PROGETTO.read_text(encoding="utf-8").replace("# Note di progetto — versione 0.6.23", "# Note di progetto — versione 0.6.24", 1).replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
-progetto += "\n\n## Cleanup team-switch distribuito 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. TenangkanPemain ora modifica solo variabili/latch. BersihkanPemain usa PembersihanAktif come mutex globale e HudMenuPembersihan come snapshot stabile; i 13 HUD Arcade vengono distrutti uno per frame con Wait(0.016), così il picco di Destroy viene distribuito. I ripristini engine sono condizionali e il cleanup umano non esegue più reset destinati ai bot.\n"
-PROGETTO.write_text(progetto, encoding="utf-8")
-test_doc = TEST_DOC.read_text(encoding="utf-8").replace("# Piano di test — versione 0.6.23", "# Piano di test — versione 0.6.24", 1).replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
-test_doc += "\n\n## Team switch distribuito 0.6.24\n\n0.6.23 live-failed: crash al primo cambio team. Provare 10 cambi Team 1 ↔ Team 2 prima a menu mai aperto, poi dopo aver visitato tutte le 12 pagine per riempire la cache HUD. Ripetere con Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun excessive Workshop script load e una sola registrazione roster dopo ogni spawn.\n"
-TEST_DOC.write_text(test_doc, encoding="utf-8")
-validation = VALIDAZIONE.read_text(encoding="utf-8").replace("# Rapporto di validazione — versione 0.6.23", "# Rapporto di validazione — versione 0.6.24", 1).replace("Release tecnica: **CHILL Dedicated Server 0.6.23**", "Release tecnica: **CHILL Dedicated Server 0.6.24**", 1).replace("OK - controlli statici v0.6.23 superati", "OK - controlli statici v0.6.24 superati", 1)
-validation = re.sub(r"(Blob Git del sorgente Workshop validato:\n\n```text\n)[0-9a-f]{40}(\n```)", rf"\g<1>{new_blob}\g<2>", validation, count=1)
-validation += "\n\n## Gate team-switch distribuito 0.6.24\n\nRichiesti mutex PembersihanAktif, snapshot HudMenuPembersihan, distruzione dei 13 HUD Arcade distribuita con Wait(0.016) e TenangkanPemain privo di azioni engine. 0.6.23 resta live-failed; 0.6.24 è static-ready solo dopo gate verde e live-pending fino al nuovo test in Overwatch.\n"
-VALIDAZIONE.write_text(validation, encoding="utf-8")
+p = ROOT / "docs" / "PROGETTO.md"
+x = p.read_text(encoding="utf-8")
+x = one(x, "# Note di progetto — versione 0.6.23", "# Note di progetto — versione 0.6.24", "PROGETTO")
+x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
+x += "\n\n## Team switch a carico distribuito 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.\n"
+p.write_text(x, encoding="utf-8")
+
+p = ROOT / "docs" / "TEST.md"
+x = p.read_text(encoding="utf-8")
+x = one(x, "# Piano di test — versione 0.6.23", "# Piano di test — versione 0.6.24", "TEST")
+x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
+x += "\n\n## Team switch 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. Provare prima Team 1 → Team 2 senza aprire il Menu Arcade, poi almeno 10 cambi alternati. Ripetere dopo avere visitato tutte le 12 pagine del menu e dopo Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun `excessive Workshop script load` e una sola registrazione roster dopo ogni spawn.\n"
+p.write_text(x, encoding="utf-8")
+
+p = ROOT / "docs" / "VALIDAZIONE.md"
+x = p.read_text(encoding="utf-8")
+x = one(x, "# Rapporto di validazione — versione 0.6.23", "# Rapporto di validazione — versione 0.6.24", "VALIDAZIONE header")
+x = one(x, "Release tecnica: **CHILL Dedicated Server 0.6.23**", "Release tecnica: **CHILL Dedicated Server 0.6.24**", "VALIDAZIONE release")
+x = one(x, "OK - controlli statici v0.6.23 superati", "OK - controlli statici v0.6.24 superati", "VALIDAZIONE status")
+x, n = re.subn(r"(Blob Git del sorgente Workshop validato:\n\n```text\n)[0-9a-f]{40}(\n```)", rf"\g<1>{sha}\g<2>", x, count=1)
+if n != 1:
+    raise RuntimeError("blob validation marker non trovato")
+x += "\n\n## Gate team-switch 0.6.24\n\n`TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.\n"
+p.write_text(x, encoding="utf-8")
