@@ -453,3 +453,5 @@ Il gate richiede tredici renderer separati ma una sola istanza HUD attiva per pl
 `TutupMenu` e il cleanup team-switch possono distruggere un solo HUD Arcade. Restano obbligatorie le invarianti globali: nessuna regola con `Create HUD Text` può contenere Wait o Loop, e il test live Overwatch resta necessario per dichiarare risolto il crash.
 '''
 VALIDAZIONE.write_text(validation, encoding="utf-8")
+
+# retrigger 2026-08-17
