@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.21
+# Rapporto di validazione — versione 0.6.22
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.21**
+Release tecnica: **CHILL Dedicated Server 0.6.22**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-881cdbf8316ed8e825fcc7573380d073e0ad4099
+44573eaa7ce79708b6fb9b52bcf06766d733e811
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.21 superati
+OK - controlli statici v0.6.22 superati
 ```
 
 ## GitHub
@@ -163,3 +163,8 @@ Il gate richiede lookup diretto + fallback slot, sostituzione in-place del rifer
 ## Gate clean team rejoin 0.6.21
 
 Il validator richiede `PindahTimDiproses` prima del cleanup, ordine `BersihkanPemain → SiapkanPemain`, rilascio del lock solo dopo roster HUD stabile e lookup cleanup direct → slot HUD → nome. Sono vietate le vecchie modifiche in-place del roster e il workaround UI 02d della 0.6.20.
+
+
+## Gate team-switch differito 0.6.22
+
+Il validator richiede due `Wait(0.050, Ignore Condition)` nel `Player Joined Match`, cleanup fallback singolo e condizionale dopo il primo yield, controllo stale tramite riferimento/slot/nome, guardia `Entity Exists` dopo i yield e setup soltanto dopo il secondo yield. Il fallimento live 0.6.21 resta documentato e la 0.6.22 richiede nuova conferma nel client.

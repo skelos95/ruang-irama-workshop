@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.21.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.22.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.21"
+CURRENT_VERSION = "0.6.22"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -2957,11 +2957,29 @@ def check_lifecycle_hygiene(
         condition_lock = body.find("Event Player.PindahTimDiproses == False;")
         set_team_lock = body.find("Event Player.PindahTimDiproses = True;")
         set_cycle_lock = body.find("Event Player.SiklusPemainAktif = True;")
-        cleanup_at = body.find("Call Subroutine(BersihkanPemain);")
-        setup_at = body.find("Call Subroutine(SiapkanPemain);")
+        first_wait = body.find("Wait(0.050, Ignore Condition);")
+        stale_guard = body.find("If(Or(Or(Array Contains(Global.PemainManusia, Event Player)", first_wait)
+        cleanup_at = body.find("Call Subroutine(BersihkanPemain);", stale_guard)
+        second_wait = body.find("Wait(0.050, Ignore Condition);", cleanup_at)
+        setup_at = body.find("Call Subroutine(SiapkanPemain);", second_wait)
         checks.require(
-            0 <= condition_lock < set_team_lock < set_cycle_lock < cleanup_at < setup_at,
-            "audit lifecycle: cambio team non esegue un solo ciclo pulito cleanup → setup",
+            0 <= condition_lock < set_team_lock < set_cycle_lock < first_wait < stale_guard < cleanup_at < second_wait < setup_at,
+            "audit lifecycle: cambio team deve fare lock → yield → cleanup condizionale → yield → setup",
+        )
+        checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,
+            "audit lifecycle: due yield da 0,05 s nel cambio team")
+        checks.equal(body.count("Call Subroutine(BersihkanPemain);"), 1,
+            "audit lifecycle: cleanup fallback deve comparire una sola volta nel Player Joined")
+        checks.require(
+            "Array Contains(Global.PemainManusia, Event Player)" in body
+            and "Global.SlotHUDPemain" in body
+            and "Event Player.UrutanHUD" in body
+            and "Mapped Array(Global.PemainManusia, Custom String(" in body,
+            "audit lifecycle: cleanup fallback non controlla riferimento, slot HUD e nome",
+        )
+        checks.require(
+            body.count("Abort If(Entity Exists(Event Player) == False);") >= 2,
+            "audit lifecycle: Player Joined non protegge i due yield da una vera uscita",
         )
         checks.require(
             "Global.PemainManusia[" not in body

@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.21
+# Piano di test — versione 0.6.22
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.21.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.22.
 
 ## Gate statico
 
@@ -378,3 +378,8 @@ Alternare Team 1 ↔ Team 2 più volte. Dopo lo spawn le righe sociali devono to
 ## Team switch clean rejoin 0.6.21
 
 Test live: cambiare Team 1 ↔ Team 2 almeno dieci volte. Ogni cambio deve comportarsi come una nuova entrata: schermata eroe nativa pulita, nessun riquadro `0`, roster precedente rimosso, welcome/tempo/preferenze ripartono come per un rejoin e dopo lo spawn compare una sola nuova riga per lato con il nome corretto. Nessun `excessive Workshop script load` e nessuna riga duplicata/stale deve accumularsi.
+
+
+## Regressione team switch 0.6.22
+
+La 0.6.21 è live-failed: al primo cambio team il server ha mostrato `The server closed due to excessive Workshop script load.` Per la 0.6.22 provare Team 1 ↔ Team 2 almeno dieci volte. Non deve apparire alcuna chiusura per script load; ogni transizione deve rimuovere la vecchia riga e ricreare una sola registrazione/HUD dopo lo spawn.

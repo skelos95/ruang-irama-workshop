@@ -540,17 +540,17 @@ rule("TEST - bad dead-state menu close")
         self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 
 
-    def test_team_rejoin_must_run_cleanup_before_fresh_setup(self) -> None:
+    def test_team_rejoin_must_defer_cleanup_and_fresh_setup(self) -> None:
         join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
         join_end = self.source.index('\nrule("01b - ', join_at)
         join_rule = self.source[join_at:join_end]
-        mutated_join = join_rule.replace("\t\tCall Subroutine(BersihkanPemain);\n", "", 1)
+        mutated_join = join_rule.replace("\t\tWait(0.050, Ignore Condition);\n", "", 1)
         self.assertNotEqual(mutated_join, join_rule)
         mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("cleanup → setup" in error or "leave/rejoin" in error for error in checks.errors), checks.errors)
+        self.assertTrue(any("yield" in error for error in checks.errors), checks.errors)
 
     def test_team_rejoin_lock_must_survive_until_new_roster_hud(self) -> None:
         mutated = self.source.replace("\t\tEvent Player.PindahTimDiproses = True;\n\t\tEvent Player.SiklusPemainAktif = True;", "\t\tEvent Player.SiklusPemainAktif = True;", 1)
@@ -558,7 +558,7 @@ rule("TEST - bad dead-state menu close")
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("cleanup → setup" in error for error in checks.errors), checks.errors)
+        self.assertTrue(any("lock → yield → cleanup condizionale → yield → setup" in error for error in checks.errors), checks.errors)
 
     def test_cleanup_team_switch_must_find_old_roster_by_slot_or_name(self) -> None:
         target = """		If(Global.IndeksKeluar < 0);

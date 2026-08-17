@@ -871,7 +871,7 @@ rule("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 	}
 }
 
-rule("01 - Pemain Masuk atau Pindah Tim: Bersihkan lalu masuk kembali")
+rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
 {
 	event
 	{
@@ -888,10 +888,19 @@ rule("01 - Pemain Masuk atau Pindah Tim: Bersihkan lalu masuk kembali")
 
 	actions
 	{
-		"Pindah tim memakai siklus yang sama seperti keluar lalu masuk. Kunci tetap aktif sampai roster baru selesai dibuat."
+		"Jangan menumpuk pembersihan keluar dan masuk pada bingkai yang sama. Beri jeda agar acara keluar selesai lebih dulu."
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = True;
-		Call Subroutine(BersihkanPemain);
+		Wait(0.050, Ignore Condition);
+		Abort If(Entity Exists(Event Player) == False);
+		"Jika pendaftaran lama masih ada, acara keluar tidak membersihkannya dan kita jalankan pembersihan cadangan tepat sekali."
+		If(Or(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(
+			Global.SlotHUDPemain, Event Player.UrutanHUD))), Array Contains(Mapped Array(Global.PemainManusia, Custom String("{0}",
+			Current Array Element)), Custom String("{0}", Event Player))));
+			Call Subroutine(BersihkanPemain);
+		End;
+		Wait(0.050, Ignore Condition);
+		Abort If(Entity Exists(Event Player) == False);
 		Call Subroutine(SiapkanPemain);
 	}
 }

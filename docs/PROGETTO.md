@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.21
+# Note di progetto — versione 0.6.22
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.21.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.22.
 
 ## Architettura generale
 
@@ -386,3 +386,8 @@ Un cambio team non ricostruisce più l'intero lifecycle, ma deve riarmare i soli
 ## Lifecycle team-switch pulito 0.6.21
 
 La strategia in-place 0.6.18–0.6.20 è rimossa. Il player che cambia team viene prima rimosso dalle strutture parallele e da tutti i riferimenti tramite `BersihkanPemain`, poi inizializzato da zero con `SiapkanPemain`. Il cleanup usa direct reference → `UrutanHUD/SlotHUDPemain` → nome visuale per individuare la vecchia riga anche se Overwatch ha già cambiato il contesto entità.
+
+
+## Lifecycle team-switch differito 0.6.22
+
+La 0.6.21 concentrava cleanup e setup nel `Player Joined Match`; il client live ha chiuso la lobby per carico Workshop eccessivo al primo cambio team. La 0.6.22 sfrutta prima il cleanup naturale di `Player Left Match`, attende un yield, esegue `BersihkanPemain` solo se una registrazione vecchia è ancora presente e separa il successivo `SiapkanPemain` con un secondo yield.
