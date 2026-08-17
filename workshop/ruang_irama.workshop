@@ -50,7 +50,6 @@ variables
 		48: PilihPahlawanDilewati
 		49: PersiapanDilewati
 		50: ModeMulaiDiminta
-		51: IndeksSinkronTim
 	player:
 		0: WaktuMasuk
 		2: SudahDiperiksa
@@ -144,7 +143,7 @@ variables
 		90: HudPemainDibuat
 		91: SiklusPemainAktif
 		92: PernahDisiapkan
-		93: AntarmukaModeDiterapkan
+		93: PindahTimDiproses
 }
 
 subroutines
@@ -673,7 +672,6 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Global.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Global.SisaWaktuServer / 60, Down), Global.SisaWaktuServer % 60);
 		Global.MulaiUlangSudahDiminta = False;
 		Global.ModeMulaiDiminta = False;
-		Global.IndeksSinkronTim = -1;
 		Global.RGBFase = 0;
 		Global.RGB = Custom Color(255, 80, 80, 255);
 		"Tidak ada mode yang boleh mengakhiri pertandingan atau memberi skor; keenam mode inti 6v6 tetap berjalan sampai timer server habis."
@@ -873,7 +871,7 @@ rule("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 	}
 }
 
-rule("01 - Pemain Masuk atau Pindah Tim: Sinkronkan pemain tanpa bangun ulang")
+rule("01 - Pemain Masuk atau Pindah Tim: Bersihkan lalu masuk kembali")
 {
 	event
 	{
@@ -885,33 +883,15 @@ rule("01 - Pemain Masuk atau Pindah Tim: Sinkronkan pemain tanpa bangun ulang")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == False;
+		Event Player.PindahTimDiproses == False;
 	}
 
 	actions
 	{
-		"Cari referensi yang masih aktif lebih dulu. Jika Overwatch mengganti konteks pemain saat pindah tim, slot HUD lama menjadi kunci cadangan yang stabil."
-		Global.IndeksSinkronTim = Index Of Array Value(Global.PemainManusia, Event Player);
-		If(And(Global.IndeksSinkronTim < 0, Event Player.PernahDisiapkan == True));
-			Global.IndeksSinkronTim = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);
-		End;
-		If(Global.IndeksSinkronTim >= 0);
-			Global.PemainManusia[Global.IndeksSinkronTim] = Event Player;
-			Global.HudKiriPemain[Global.IndeksSinkronTim] = 0;
-			Global.HudKananPemain[Global.IndeksSinkronTim] = 0;
-			Event Player.HudKiri = Null;
-			Event Player.HudKanan = Null;
-			Event Player.HudPemainDibuat = False;
-			Event Player.AntarmukaModeDiterapkan = False;
-			Event Player.SiklusPemainAktif = False;
-			Event Player.SudahSiap = True;
-			Event Player.SudahDiperiksa = True;
-			Event Player.Manusia = True;
-			Global.IndeksSinkronTim = -1;
-			Abort;
-		End;
-		Global.IndeksSinkronTim = -1;
-		Abort If(Event Player.SiklusPemainAktif == True);
+		"Pindah tim memakai siklus yang sama seperti keluar lalu masuk. Kunci tetap aktif sampai roster baru selesai dibuat."
+		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = True;
+		Call Subroutine(BersihkanPemain);
 		Call Subroutine(SiapkanPemain);
 	}
 }
@@ -932,11 +912,13 @@ rule("01b - Pemain Lama: Siapkan juga yang sudah telanjur ada")
 		Event Player.SudahSiap == False;
 		Event Player.PernahDisiapkan == False;
 		Event Player.SiklusPemainAktif == False;
+		Event Player.PindahTimDiproses == False;
 	}
 
 	actions
 	{
 		"Aturan cadangan ini hanya untuk pemain yang sudah ada saat skrip mulai, bukan untuk perpindahan tim berikutnya."
+		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = True;
 		Call Subroutine(SiapkanPemain);
 	}
@@ -999,7 +981,6 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
 		Disable Game Mode HUD(Event Player);
 		Disable Game Mode In-World UI(Event Player);
-		Event Player.AntarmukaModeDiterapkan = True;
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
@@ -1079,6 +1060,30 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 	}
 }
 
+rule("02e - Siklus Pemain: Lepaskan kunci setelah roster baru siap")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.PindahTimDiproses == True;
+		Event Player.Manusia == True;
+		Has Spawned(Event Player) == True;
+		Event Player.HudPemainDibuat == True;
+	}
+
+	actions
+	{
+		"Roster baru sudah aktif; perpindahan berikutnya sekarang boleh memulai siklus baru."
+		Event Player.PindahTimDiproses = False;
+	}
+}
+
 rule("02c - Ruang Muncul: Perbarui posisi aman setiap kali masuk")
 {
 	event
@@ -1101,33 +1106,6 @@ rule("02c - Ruang Muncul: Perbarui posisi aman setiap kali masuk")
 		Event Player.PunyaPosisiMuncul = True;
 		Wait(1, Abort When False);
 		Loop If Condition Is True;
-	}
-}
-
-rule("02d - Antarmuka: Terapkan kembali setelah pemain muncul")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Event Player.Manusia == True;
-		Is Dummy Bot(Event Player) == False;
-		Has Spawned(Event Player) == True;
-		Event Player.AntarmukaModeDiterapkan == False;
-	}
-
-	actions
-	{
-		"Jangan ubah antarmuka bawaan ketika layar pemilihan pahlawan masih aktif. Terapkan kembali hanya sesudah pemain benar-benar muncul."
-		Disable Game Mode HUD(Event Player);
-		Disable Game Mode In-World UI(Event Player);
-		Event Player.AntarmukaModeDiterapkan = True;
 	}
 }
 
@@ -3728,8 +3706,15 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
-		Global.PemainPembersihan = Event Player;
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
+		If(And(Global.IndeksKeluar < 0, Event Player.UrutanHUD >= 0));
+			Global.IndeksKeluar = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);
+		End;
+		If(Global.IndeksKeluar < 0);
+			Global.IndeksKeluar = Index Of Array Value(Mapped Array(Global.PemainManusia, Custom String("{0}", Current Array Element)),
+				Custom String("{0}", Event Player));
+		End;
+		Global.PemainPembersihan = Global.IndeksKeluar >= 0 ? Global.PemainManusia[Global.IndeksKeluar] : Event Player;
 		If(Global.IndeksKeluar >= 0);
 			If(Event Player.IkonKebal != Null);
 				Destroy Icon(Event Player.IkonKebal);
@@ -3964,7 +3949,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
 		Event Player.PernahDisiapkan = True;
-		Event Player.AntarmukaModeDiterapkan = False;
+		Event Player.PindahTimDiproses = Event Player.PindahTimDiproses;
 		Event Player.SiklusPemainAktif = False;
 		Event Player.SudahSiap = True;
 	}

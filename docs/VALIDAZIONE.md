@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.20
+# Rapporto di validazione — versione 0.6.21
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.20**
+Release tecnica: **CHILL Dedicated Server 0.6.21**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-815428b96489917dac2e0f0ff27e45644436a4c5
+881cdbf8316ed8e825fcc7573380d073e0ad4099
 ```
 
 ## Audit 0.6.5
@@ -45,7 +45,7 @@ OK
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.20 superati
+OK - controlli statici v0.6.21 superati
 ```
 
 ## GitHub
@@ -158,3 +158,8 @@ Il gate vieta ancora cleanup completo e `Create/Destroy HUD Text` diretto nella 
 ## Gate sincronizzazione team 0.6.20
 
 Il gate richiede lookup diretto + fallback slot, sostituzione in-place del riferimento roster, rearm HUD sociali e UI nativa solo post-spawn.
+
+
+## Gate clean team rejoin 0.6.21
+
+Il validator richiede `PindahTimDiproses` prima del cleanup, ordine `BersihkanPemain → SiapkanPemain`, rilascio del lock solo dopo roster HUD stabile e lookup cleanup direct → slot HUD → nome. Sono vietate le vecchie modifiche in-place del roster e il workaround UI 02d della 0.6.20.

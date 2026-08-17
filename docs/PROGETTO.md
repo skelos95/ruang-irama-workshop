@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.20
+# Note di progetto — versione 0.6.21
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.20.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.21.
 
 ## Architettura generale
 
@@ -381,3 +381,8 @@ Un cambio team non ricostruisce più l'intero lifecycle, ma deve riarmare i soli
 ## Riferimento roster dopo team switch 0.6.20
 
 `IndeksSinkronTim` usa prima l'identità corrente e poi `UrutanHUD/SlotHUDPemain` come chiave di sessione. Il riferimento roster viene sostituito senza riallocare gli array. `AntarmukaModeDiterapkan` sposta la soppressione UI nativa a dopo lo spawn.
+
+
+## Lifecycle team-switch pulito 0.6.21
+
+La strategia in-place 0.6.18–0.6.20 è rimossa. Il player che cambia team viene prima rimosso dalle strutture parallele e da tutti i riferimenti tramite `BersihkanPemain`, poi inizializzato da zero con `SiapkanPemain`. Il cleanup usa direct reference → `UrutanHUD/SlotHUDPemain` → nome visuale per individuare la vecchia riga anche se Overwatch ha già cambiato il contesto entità.

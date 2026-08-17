@@ -31,17 +31,13 @@ class ValidatorNegativeTests(unittest.TestCase):
         )
 
     def test_commented_leave_identity_capture_is_rejected(self) -> None:
-        mutated, replacements = re.subn(
-            r"(?m)^(\s*)Global\.PemainPembersihan = Event Player;\s*$",
-            r'\1"Global.PemainPembersihan = Event Player;"',
-            self.source,
-            count=1,
-        )
-        self.assertEqual(replacements, 1)
+        target = "Global.PemainPembersihan = Global.IndeksKeluar >= 0 ? Global.PemainManusia[Global.IndeksKeluar] : Event Player;"
+        self.assertIn(target, self.source)
+        mutated = self.source.replace(target, f'"{target}"', 1)
         checks = validator.Checks()
         validator.check_cleanup_and_revenge(checks, mutated, self.rules(mutated))
         self.assertTrue(
-            any("non cattura subito l'identità" in error for error in checks.errors),
+            any("diretta → slot HUD → nome" in error for error in checks.errors),
             checks.errors,
         )
 
@@ -544,55 +540,37 @@ rule("TEST - bad dead-state menu close")
         self.assertTrue(any("respawn" in error and "nome regola" in error for error in checks.errors), checks.errors)
 
 
-    def test_team_rejoin_must_not_run_heavy_cleanup(self) -> None:
+    def test_team_rejoin_must_run_cleanup_before_fresh_setup(self) -> None:
         join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
         join_end = self.source.index('\nrule("01b - ', join_at)
         join_rule = self.source[join_at:join_end]
-        mutated_join = join_rule.replace(
-            "\t\t\tAbort;",
-            "\t\t\tCall Subroutine(BersihkanPemain);\n\t\t\tAbort;",
-            1,
-        )
+        mutated_join = join_rule.replace("\t\tCall Subroutine(BersihkanPemain);\n", "", 1)
         self.assertNotEqual(mutated_join, join_rule)
         mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(
-            any("cleanup completo" in error or "Player Joined/cambio team" in error for error in checks.errors),
-            checks.errors,
-        )
+        self.assertTrue(any("cleanup → setup" in error or "leave/rejoin" in error for error in checks.errors), checks.errors)
 
-    def test_team_rejoin_must_rearm_social_roster_without_rebuild(self) -> None:
-        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
-        join_end = self.source.index('\nrule("01b - ', join_at)
-        join_rule = self.source[join_at:join_end]
-        mutated_join = join_rule.replace(
-            "\t\t\tEvent Player.HudPemainDibuat = False;\n",
-            "",
-            1,
-        )
-        self.assertNotEqual(mutated_join, join_rule)
-        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
+    def test_team_rejoin_lock_must_survive_until_new_roster_hud(self) -> None:
+        mutated = self.source.replace("\t\tEvent Player.PindahTimDiproses = True;\n\t\tEvent Player.SiklusPemainAktif = True;", "\t\tEvent Player.SiklusPemainAktif = True;", 1)
+        self.assertNotEqual(mutated, self.source)
         _, player_names, _ = validator.declaration_tables(mutated)
         checks = validator.Checks()
         validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(
-            any("non riarma roster/UI" in error for error in checks.errors),
-            checks.errors,
-        )
+        self.assertTrue(any("cleanup → setup" in error for error in checks.errors), checks.errors)
 
-    def test_team_rejoin_must_sync_roster_reference_by_existing_slot(self) -> None:
-        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
-        join_end = self.source.index('\nrule("01b - ', join_at)
-        join_rule = self.source[join_at:join_end]
-        mutated_join = join_rule.replace("\t\t\tGlobal.PemainManusia[Global.IndeksSinkronTim] = Event Player;\n", "", 1)
-        self.assertNotEqual(mutated_join, join_rule)
-        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
-        _, player_names, _ = validator.declaration_tables(mutated)
+    def test_cleanup_team_switch_must_find_old_roster_by_slot_or_name(self) -> None:
+        target = """		If(Global.IndeksKeluar < 0);
+			Global.IndeksKeluar = Index Of Array Value(Mapped Array(Global.PemainManusia, Custom String("{0}", Current Array Element)),
+				Custom String("{0}", Event Player));
+		End;
+"""
+        mutated = self.source.replace(target, "", 1)
+        self.assertNotEqual(mutated, self.source)
         checks = validator.Checks()
-        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
-        self.assertTrue(any("sincronizza il riferimento roster" in error for error in checks.errors), checks.errors)
+        validator.check_cleanup_and_revenge(checks, mutated, self.rules(mutated))
+        self.assertTrue(any("slot HUD → nome" in error for error in checks.errors), checks.errors)
 
     def test_vote_change_must_clear_previous_choice(self) -> None:
         mutated = self.source.replace(

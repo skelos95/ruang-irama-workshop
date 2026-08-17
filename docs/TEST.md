@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.20
+# Piano di test — versione 0.6.21
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.20.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.21.
 
 ## Gate statico
 
@@ -373,3 +373,8 @@ Test live prioritario: con almeno un player visibile nelle liste, alternare Team
 ## Team switch: roster + hero-select 0.6.20
 
 Alternare Team 1 ↔ Team 2 più volte. Dopo lo spawn le righe sociali devono tornare nello stesso slot con nome/icona/minuti/soundtrack. Nella schermata scelta eroe non deve più comparire il riquadro anomalo `0`. Il server deve restare stabile senza excessive Workshop script load.
+
+
+## Team switch clean rejoin 0.6.21
+
+Test live: cambiare Team 1 ↔ Team 2 almeno dieci volte. Ogni cambio deve comportarsi come una nuova entrata: schermata eroe nativa pulita, nessun riquadro `0`, roster precedente rimosso, welcome/tempo/preferenze ripartono come per un rejoin e dopo lo spawn compare una sola nuova riga per lato con il nome corretto. Nessun `excessive Workshop script load` e nessuna riga duplicata/stale deve accumularsi.
