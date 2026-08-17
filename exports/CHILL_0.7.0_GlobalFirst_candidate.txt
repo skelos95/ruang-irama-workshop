@@ -1179,7 +1179,7 @@ rule("04g - Global-first: Pengatur pemain cepat terpusat")
 
 	actions
 	{
-		For Global Variable(Global.IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
 		If(Global.PemainAktif.Manusia == True);
 		If(Global.PemainAktif.BotOtomatis == False);
@@ -1375,7 +1375,7 @@ rule("04h - Global-first: Pengatur status pemain terpusat")
 
 	actions
 	{
-		For Global Variable(Global.IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
 		If(Global.PemainAktif.PindahTimDiproses == True);
 		If(Global.PemainAktif.Manusia == True);
