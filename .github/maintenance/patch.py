@@ -29,13 +29,10 @@ def blob_sha(text):
 
 
 s = SRC.read_text(encoding="utf-8")
-
-# Ritorna ai piccoli yield della 0.6.22: la 0.6.23 aveva allungato la finestra senza ridurre il lavoro.
 s = one(s, "\t\tWait(0.200, Ignore Condition);", "\t\tWait(0.050, Ignore Condition);", "join first wait")
 s = one(s, "\t\tWait(0.100, Ignore Condition);\n\t\tAbort If(Entity Exists(Event Player) == False);\n\t\tCall Subroutine(SiapkanPemain);", "\t\tWait(0.050, Ignore Condition);\n\t\tAbort If(Entity Exists(Event Player) == False);\n\t\tCall Subroutine(SiapkanPemain);", "join second wait")
 s = one(s, "\t\tWait(0.100, Ignore Condition);\n\t\tCall Subroutine(BersihkanPemain);", "\t\tWait(0.050, Ignore Condition);\n\t\tCall Subroutine(BersihkanPemain);", "leave wait")
 
-# TenangkanPemain deve spegnere solo i trigger Ongoing; nessuna azione engine nel frame di cambio team.
 quiet = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 {
 \tevent
@@ -46,7 +43,7 @@ quiet = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 
 \tactions
 \t{
-\t\t"Solo variabili: evita di sommare Stop/Set/Allow al picco del cambio squadra."
+\t\t"Hanya variabel: cegah aksi engine menambah beban pada saat pindah tim."
 \t\tEvent Player.SudahSiap = False;
 \t\tEvent Player.Manusia = False;
 \t\tEvent Player.PerintahMenu = 0;
@@ -65,12 +62,11 @@ quiet = '''rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 '''
 s = between(s, 'rule("93b2 - Subrutin:', 'rule("93c - Subrutin:', quiet, "quiet subroutine")
 
-# Il cleanup mantiene la semantica leave/rejoin ma distribuisce le azioni costose su frame diversi.
 a = s.index('rule("93c - Subrutin:')
 b = s.index('rule("94 - Subrutin:', a)
 c = s[a:b]
 head = '\t\t"Keadaan aktif sudah ditenangkan sebelum subrutin ini; sekarang hapus data dan objek yang tersisa."\n\t\tEvent Player.PemainDipilih = Null;'
-staged = '''\t\t"Trigger già spenti: ripristina l'engine in gruppi piccoli e cedi un frame tra i gruppi."
+staged = '''\t\t"Pemicu sudah mati; pulihkan engine dalam kelompok kecil dan beri satu bingkai di antaranya."
 \t\tStop Camera(Event Player);
 \t\tStop Chasing Player Variable(Event Player, WarnaMenu);
 \t\tStop Chasing Player Variable(Event Player, RadiusNasib);
@@ -102,15 +98,10 @@ staged = '''\t\t"Trigger già spenti: ripristina l'engine in gruppi piccoli e ce
 \t\tWait(0.016, Ignore Condition);
 \t\tEvent Player.PemainDipilih = Null;'''
 c = one(c, head, staged, "cleanup engine staging")
-
-# Due HUD sociali, poi una pagina Arcade per frame.
 c = one(c, '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);', '\t\t\tDestroy HUD Text(Global.HudKiriPemain[Global.IndeksKeluar]);\n\t\t\tDestroy HUD Text(Global.HudKananPemain[Global.IndeksKeluar]);\n\t\t\tWait(0.016, Ignore Condition);', "social hud yield")
 for i in range(13):
     old = f'\t\t\t\tDestroy HUD Text(Player Variable(Global.PemainPembersihan, HudMenuArcade)[{i}]);'
-    new = old + '\n\t\t\t\tWait(0.016, Ignore Condition);'
-    c = one(c, old, new, f"arcade hud {i}")
-
-# Anche IWT e pulizia riferimenti dei superstiti vengono spezzati.
+    c = one(c, old, old + '\n\t\t\t\tWait(0.016, Ignore Condition);', f"arcade hud {i}")
 c = one(c, '''\t\t\tIf(Global.TeksDiriPemain[Global.IndeksKeluar] != 0);
 \t\t\t\tDestroy In-World Text(Global.TeksDiriPemain[Global.IndeksKeluar]);
 \t\t\tEnd;
@@ -131,7 +122,6 @@ s = s[:a] + c + s[b:]
 SRC.write_text(s, encoding="utf-8")
 sha = blob_sha(s)
 
-# Aggiorna il gate 0.6.23 senza indebolire le altre invarianti.
 v = VAL.read_text(encoding="utf-8")
 v = one(v, 'CURRENT_VERSION = "0.6.23"', 'CURRENT_VERSION = "0.6.24"', "validator version")
 v = one(v, 'Il validatore controlla invarianti strutturali e di progetto della versione 0.6.23.', 'Il validatore controlla invarianti strutturali e di progetto della versione 0.6.24.', "validator doc")
@@ -139,6 +129,7 @@ v = v.replace('Wait(0.200, Ignore Condition);', 'Wait(0.050, Ignore Condition);'
 v = v.replace('primo yield cambio team da 0,20 s', 'primo yield cambio team da 0,05 s')
 v = v.replace('Wait(0.100, Ignore Condition);', 'Wait(0.050, Ignore Condition);')
 v = v.replace('secondo yield cambio team da 0,10 s', 'secondo yield cambio team da 0,05 s')
+v = v.replace('checks.equal(body.count("Wait(0.050, Ignore Condition);"), 1,', 'checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,', 2)
 
 old_quiet = '''        for token in (
             "Event Player.Manusia = False;",
@@ -185,7 +176,6 @@ new_quiet = '''        for token in (
             checks.require(forbidden not in quiet,
                 f"audit lifecycle: TenangkanPemain deve usare solo variabili, trovato {forbidden}")'''
 v = one(v, old_quiet, new_quiet, "quiet validator")
-
 old_stop = '''        checks.require(
             "Stop Camera(Event Player);" not in leave,
             "cleanup atomico ripete ancora lo stop Camera già eseguito da TenangkanPemain",
@@ -201,40 +191,23 @@ new_stop = '''        checks.require(
                 f"cleanup HUD Arcade {index} non distribuito",
             )'''
 v = one(v, old_stop, new_stop, "cleanup validator")
+old_names = '''    checks.equal(
+        len(call_texts(source, "Enable Nameplates")), 3,
+        "Enable Nameplates Crouch, quiescenza e cleanup lifecycle",
+    )'''
+new_names = '''    checks.equal(
+        len(call_texts(source, "Enable Nameplates")), 2,
+        "Enable Nameplates Crouch e cleanup lifecycle",
+    )'''
+v = one(v, old_names, new_names, "nameplates validator")
 VAL.write_text(v, encoding="utf-8")
 
-# I test lifecycle devono cercare il nuovo delay breve; gli altri test restano invariati.
 t = TST.read_text(encoding="utf-8")
 t = t.replace('Wait(0.200, Ignore Condition);', 'Wait(0.050, Ignore Condition);')
 TST.write_text(t, encoding="utf-8")
 
 (ROOT / "VERSION").write_text("0.6.24\n", encoding="utf-8")
-
-p = ROOT / "README.md"
-x = p.read_text(encoding="utf-8")
-p.write_text(one(x, "La versione **0.6.23**", "La versione **0.6.24**", "README"), encoding="utf-8")
-
-p = ROOT / "docs" / "PROGETTO.md"
-x = p.read_text(encoding="utf-8")
-x = one(x, "# Note di progetto — versione 0.6.23", "# Note di progetto — versione 0.6.24", "PROGETTO")
-x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
-x += "\n\n## Team switch a carico distribuito 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.\n"
-p.write_text(x, encoding="utf-8")
-
-p = ROOT / "docs" / "TEST.md"
-x = p.read_text(encoding="utf-8")
-x = one(x, "# Piano di test — versione 0.6.23", "# Piano di test — versione 0.6.24", "TEST")
-x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1)
-x += "\n\n## Team switch 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. Provare prima Team 1 → Team 2 senza aprire il Menu Arcade, poi almeno 10 cambi alternati. Ripetere dopo avere visitato tutte le 12 pagine del menu e dopo Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun `excessive Workshop script load` e una sola registrazione roster dopo ogni spawn.\n"
-p.write_text(x, encoding="utf-8")
-
-p = ROOT / "docs" / "VALIDAZIONE.md"
-x = p.read_text(encoding="utf-8")
-x = one(x, "# Rapporto di validazione — versione 0.6.23", "# Rapporto di validazione — versione 0.6.24", "VALIDAZIONE header")
-x = one(x, "Release tecnica: **CHILL Dedicated Server 0.6.23**", "Release tecnica: **CHILL Dedicated Server 0.6.24**", "VALIDAZIONE release")
-x = one(x, "OK - controlli statici v0.6.23 superati", "OK - controlli statici v0.6.24 superati", "VALIDAZIONE status")
-x, n = re.subn(r"(Blob Git del sorgente Workshop validato:\n\n```text\n)[0-9a-f]{40}(\n```)", rf"\g<1>{sha}\g<2>", x, count=1)
-if n != 1:
-    raise RuntimeError("blob validation marker non trovato")
-x += "\n\n## Gate team-switch 0.6.24\n\n`TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.\n"
-p.write_text(x, encoding="utf-8")
+p = ROOT / "README.md"; x = p.read_text(encoding="utf-8"); p.write_text(one(x, "La versione **0.6.23**", "La versione **0.6.24**", "README"), encoding="utf-8")
+p = ROOT / "docs" / "PROGETTO.md"; x = p.read_text(encoding="utf-8"); x = one(x, "# Note di progetto — versione 0.6.23", "# Note di progetto — versione 0.6.24", "PROGETTO"); x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1); x += "\n\n## Team switch a carico distribuito 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.\n"; p.write_text(x, encoding="utf-8")
+p = ROOT / "docs" / "TEST.md"; x = p.read_text(encoding="utf-8"); x = one(x, "# Piano di test — versione 0.6.23", "# Piano di test — versione 0.6.24", "TEST"); x = x.replace("Workshop 0.6.23", "Workshop 0.6.24", 1); x += "\n\n## Team switch 0.6.24\n\nLa 0.6.23 è live-failed al primo cambio team. Provare prima Team 1 → Team 2 senza aprire il Menu Arcade, poi almeno 10 cambi alternati. Ripetere dopo avere visitato tutte le 12 pagine del menu e dopo Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun `excessive Workshop script load` e una sola registrazione roster dopo ogni spawn.\n"; p.write_text(x, encoding="utf-8")
+p = ROOT / "docs" / "VALIDAZIONE.md"; x = p.read_text(encoding="utf-8"); x = one(x, "# Rapporto di validazione — versione 0.6.23", "# Rapporto di validazione — versione 0.6.24", "VALIDAZIONE header"); x = one(x, "Release tecnica: **CHILL Dedicated Server 0.6.23**", "Release tecnica: **CHILL Dedicated Server 0.6.24**", "VALIDAZIONE release"); x = one(x, "OK - controlli statici v0.6.23 superati", "OK - controlli statici v0.6.24 superati", "VALIDAZIONE status"); x, n = re.subn(r"(Blob Git del sorgente Workshop validato:\n\n```text\n)[0-9a-f]{40}(\n```)", rf"\g<1>{sha}\g<2>", x, count=1); assert n == 1; x += "\n\n## Gate team-switch 0.6.24\n\n`TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.\n"; p.write_text(x, encoding="utf-8")
