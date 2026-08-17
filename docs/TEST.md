@@ -1,6 +1,6 @@
-# Piano di test — versione 0.6.22
+# Piano di test — versione 0.6.23
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.22.
+Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.23.
 
 ## Gate statico
 
@@ -383,3 +383,8 @@ Test live: cambiare Team 1 ↔ Team 2 almeno dieci volte. Ogni cambio deve compo
 ## Regressione team switch 0.6.22
 
 La 0.6.21 è live-failed: al primo cambio team il server ha mostrato `The server closed due to excessive Workshop script load.` Per la 0.6.22 provare Team 1 ↔ Team 2 almeno dieci volte. Non deve apparire alcuna chiusura per script load; ogni transizione deve rimuovere la vecchia riga e ricreare una sola registrazione/HUD dopo lo spawn.
+
+
+## Team switch con menu/modifiche 0.6.23
+
+La 0.6.22 è live-confirmed stabile per cambi ripetuti nello stato default, ma fallisce se il player cambia team con Menu Arcade aperto o dopo modifiche effettuate dal menu. Test 0.6.23: ripetere cambi Team 1 ↔ Team 2 con menu aperto su varie pagine e, separatamente, dopo avere applicato Soundtrack, Camera 3P, Name Color, Language, Unkillable 1 HP/FULL HP, Hero Voice, Icon, Crouch Teleport, Privacy e Vote. Provare anche Try Your Luck durante/alla fine del ciclo. Nessun caso deve produrre `excessive Workshop script load`; dopo lo spawn deve esistere una sola registrazione pulita.

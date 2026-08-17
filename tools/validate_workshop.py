@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validazione statica del sorgente Overwatch Workshop.
 
-Il validatore controlla invarianti strutturali e di progetto della versione 0.6.22.
+Il validatore controlla invarianti strutturali e di progetto della versione 0.6.23.
 Non sostituisce l'importazione nel client o le prove live con dodici giocatori.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.6.22"
+CURRENT_VERSION = "0.6.23"
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 GENRE_DOC = ROOT / "docs" / "GENERI.md"
 VERSION = ROOT / "VERSION"
@@ -1570,8 +1570,8 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         "Disable Nameplates Crouch, registrazione umano e lock bot",
     )
     checks.equal(
-        len(call_texts(source, "Enable Nameplates")), 2,
-        "Enable Nameplates cleanup",
+        len(call_texts(source, "Enable Nameplates")), 3,
+        "Enable Nameplates Crouch, quiescenza e cleanup lifecycle",
     )
     checks.equal(
         len(call_texts(source, "Create In-World Text")), 4,
@@ -1656,6 +1656,7 @@ def check_crouch(checks: Checks, source: str, rules: list[Rule]) -> None:
         r for r in rules_containing(
             rules,
             "Enable Nameplates",
+            "Destroy In-World Text",
         )
         if code_contains(r.body, "Event Player.InspeksiAktif = False;")
     ]
@@ -1847,7 +1848,10 @@ def check_cleanup_and_revenge(checks: Checks, source: str, rules: list[Rule]) ->
         )
         checks.require("For Global Variable" in leave, "cleanup uscita non visita tutti i superstiti")
         checks.require("BalasDendam" in leave, "cleanup uscita non ripulisce i ledger BalasDendam")
-        checks.require("Stop Camera(Event Player);" in leave, "cleanup comune non ferma la camera del player")
+        checks.require(
+            "Stop Camera(Event Player);" not in leave,
+            "cleanup atomico ripete ancora lo stop Camera già eseguito da TenangkanPemain",
+        )
 
     for name in ("TargetBalasDendamDipilih", "TargetBalasDendamTerkunci"):
         checks.require(f"Event Player.{name}" in clean_source, f"Revenge: variabile {name} assente")
@@ -2957,17 +2961,20 @@ def check_lifecycle_hygiene(
         condition_lock = body.find("Event Player.PindahTimDiproses == False;")
         set_team_lock = body.find("Event Player.PindahTimDiproses = True;")
         set_cycle_lock = body.find("Event Player.SiklusPemainAktif = True;")
-        first_wait = body.find("Wait(0.050, Ignore Condition);")
+        quiesce_at = body.find("Call Subroutine(TenangkanPemain);")
+        first_wait = body.find("Wait(0.200, Ignore Condition);", quiesce_at)
         stale_guard = body.find("If(Or(Or(Array Contains(Global.PemainManusia, Event Player)", first_wait)
         cleanup_at = body.find("Call Subroutine(BersihkanPemain);", stale_guard)
-        second_wait = body.find("Wait(0.050, Ignore Condition);", cleanup_at)
+        second_wait = body.find("Wait(0.100, Ignore Condition);", cleanup_at)
         setup_at = body.find("Call Subroutine(SiapkanPemain);", second_wait)
         checks.require(
-            0 <= condition_lock < set_team_lock < set_cycle_lock < first_wait < stale_guard < cleanup_at < second_wait < setup_at,
-            "audit lifecycle: cambio team deve fare lock → yield → cleanup condizionale → yield → setup",
+            0 <= condition_lock < set_team_lock < set_cycle_lock < quiesce_at < first_wait < stale_guard < cleanup_at < second_wait < setup_at,
+            "audit lifecycle: cambio team deve fare lock → yield → cleanup condizionale → yield → setup; TenangkanPemain deve precedere il primo yield",
         )
-        checks.equal(body.count("Wait(0.050, Ignore Condition);"), 2,
-            "audit lifecycle: due yield da 0,05 s nel cambio team")
+        checks.equal(body.count("Wait(0.200, Ignore Condition);"), 1,
+            "audit lifecycle: primo yield cambio team da 0,20 s")
+        checks.equal(body.count("Wait(0.100, Ignore Condition);"), 1,
+            "audit lifecycle: secondo yield cambio team da 0,10 s")
         checks.equal(body.count("Call Subroutine(BersihkanPemain);"), 1,
             "audit lifecycle: cleanup fallback deve comparire una sola volta nel Player Joined")
         checks.require(
@@ -3006,6 +3013,36 @@ def check_lifecycle_hygiene(
     checks.equal(len([rule for rule in rules if rule.name.startswith("02d - Antarmuka:")]), 0,
         "audit lifecycle: workaround UI 0.6.20 deve essere rimosso")
 
+    quiet_rules = rules_containing(rules, "Subroutine;", "TenangkanPemain;")
+    checks.equal(len(quiet_rules), 1, "audit lifecycle: subroutine TenangkanPemain")
+    if quiet_rules:
+        quiet = mask_strings(quiet_rules[0].body)
+        for token in (
+            "Event Player.Manusia = False;",
+            "Event Player.MenuTerbuka = False;",
+            "Event Player.PerintahMenu = 0;",
+            "Event Player.TeleportasiJongkokAktif = False;",
+            "Event Player.InspeksiAktif = False;",
+            "Event Player.KartuNasibAktif = False;",
+            "Event Player.KebalAktif = False;",
+            "Stop Camera(Event Player);",
+            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
+            "Stop Chasing Player Variable(Event Player, RadiusNasib);",
+            "Clear Status(Event Player, Unkillable);",
+            "Set Damage Received(Event Player, 100);",
+            "Allow Button(Event Player, Button(Interact));",
+            "Stop Modifying Hero Voice Lines(Event Player);",
+        ):
+            checks.require(token in quiet, f"audit lifecycle: TenangkanPemain incompleto: {token}")
+        checks.require(
+            "Destroy HUD Text" not in quiet
+            and "Destroy In-World Text" not in quiet
+            and "Destroy Effect" not in quiet
+            and "Wait(" not in quiet
+            and "Loop If Condition Is True;" not in quiet,
+            "audit lifecycle: TenangkanPemain deve solo fermare trigger/effetti, senza distruzioni o attese",
+        )
+
     classification = [rule for rule in rules if rule.name.startswith("02 - Pemain:")]
     checks.equal(len(classification), 1, "audit lifecycle: una sola registrazione roster")
     if classification:
@@ -3024,6 +3061,14 @@ def check_lifecycle_hygiene(
     checks.equal(len(cleanup), 1, "audit lifecycle: un solo cleanup riutilizzabile")
     if leave:
         checks.require(code_contains(leave[0].body, "Call Subroutine(BersihkanPemain);"), "audit lifecycle: Player Left non usa cleanup comune")
+        leave_code = mask_strings(leave[0].body)
+        leave_quiet = leave_code.find("Call Subroutine(TenangkanPemain);")
+        leave_wait = leave_code.find("Wait(0.100, Ignore Condition);", leave_quiet)
+        leave_cleanup = leave_code.find("Call Subroutine(BersihkanPemain);", leave_wait)
+        checks.require(
+            0 <= leave_quiet < leave_wait < leave_cleanup,
+            "audit lifecycle: Player Left deve fare TenangkanPemain → yield → cleanup",
+        )
         checks.require(
             any(code_contains(rule.body, "Player Joined Match;", "Call Subroutine(BersihkanPemain);", "Call Subroutine(SiapkanPemain);") for rule in rules),
             "audit lifecycle: cambio team non usa lo stesso cleanup/setup di un leave/rejoin",
@@ -3065,9 +3110,6 @@ def check_lifecycle_hygiene(
             "Event Player.JumlahSuara = 0;",
             "Event Player.SudahSiap = False;",
             "Event Player.Manusia = False;",
-            "Clear Status(Event Player, Unkillable);",
-            "Set Damage Received(Event Player, 100);",
-            "Allow Button(Event Player, Button(Interact));",
         ):
             checks.require(token in body, f"audit lifecycle: reset fresco incompleto: {token}")
 

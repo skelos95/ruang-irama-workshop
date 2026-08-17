@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.22
+# Note di progetto — versione 0.6.23
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.22.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.23.
 
 ## Architettura generale
 
@@ -391,3 +391,8 @@ La strategia in-place 0.6.18–0.6.20 è rimossa. Il player che cambia team vien
 ## Lifecycle team-switch differito 0.6.22
 
 La 0.6.21 concentrava cleanup e setup nel `Player Joined Match`; il client live ha chiuso la lobby per carico Workshop eccessivo al primo cambio team. La 0.6.22 sfrutta prima il cleanup naturale di `Player Left Match`, attende un yield, esegue `BersihkanPemain` solo se una registrazione vecchia è ancora presente e separa il successivo `SiapkanPemain` con un secondo yield.
+
+
+## Quiescenza prima del cleanup 0.6.23
+
+La fase `TenangkanPemain` è idempotente e volutamente priva di Destroy/Wait/Loop. Disattiva prima tutte le condizioni Ongoing che possono essere state abilitate dal Menu Arcade, rende invisibili gli HUD menu tramite `MenuTerbuka = False` e ferma le modifiche engine persistenti. Solo dopo un yield viene eseguito `BersihkanPemain`, che resta atomico per non lasciare i global scratch `IndeksKeluar/PemainPembersihan` esposti fra più player.

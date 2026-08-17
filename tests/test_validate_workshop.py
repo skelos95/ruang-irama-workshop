@@ -544,7 +544,7 @@ rule("TEST - bad dead-state menu close")
         join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
         join_end = self.source.index('\nrule("01b - ', join_at)
         join_rule = self.source[join_at:join_end]
-        mutated_join = join_rule.replace("\t\tWait(0.050, Ignore Condition);\n", "", 1)
+        mutated_join = join_rule.replace("\t\tWait(0.200, Ignore Condition);\n", "", 1)
         self.assertNotEqual(mutated_join, join_rule)
         mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
         _, player_names, _ = validator.declaration_tables(mutated)
@@ -571,6 +571,18 @@ rule("TEST - bad dead-state menu close")
         checks = validator.Checks()
         validator.check_cleanup_and_revenge(checks, mutated, self.rules(mutated))
         self.assertTrue(any("slot HUD → nome" in error for error in checks.errors), checks.errors)
+
+    def test_team_rejoin_must_quiesce_before_first_yield(self) -> None:
+        join_at = self.source.index('rule("01 - Pemain Masuk atau Pindah Tim:')
+        join_end = self.source.index('\nrule("01b - ', join_at)
+        join_rule = self.source[join_at:join_end]
+        mutated_join = join_rule.replace("\t\tCall Subroutine(TenangkanPemain);\n", "", 1)
+        self.assertNotEqual(mutated_join, join_rule)
+        mutated = self.source[:join_at] + mutated_join + self.source[join_end:]
+        _, player_names, _ = validator.declaration_tables(mutated)
+        checks = validator.Checks()
+        validator.check_lifecycle_hygiene(checks, mutated, self.rules(mutated), player_names)
+        self.assertTrue(any("TenangkanPemain" in error for error in checks.errors), checks.errors)
 
     def test_vote_change_must_clear_previous_choice(self) -> None:
         mutated = self.source.replace(

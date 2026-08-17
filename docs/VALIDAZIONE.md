@@ -1,8 +1,8 @@
-# Rapporto di validazione — versione 0.6.22
+# Rapporto di validazione — versione 0.6.23
 
 Data: 2026-08-17
 
-Release tecnica: **CHILL Dedicated Server 0.6.22**
+Release tecnica: **CHILL Dedicated Server 0.6.23**
 
 Stato corrente: **static-ready, live-pending**.
 
@@ -11,7 +11,7 @@ Stato corrente: **static-ready, live-pending**.
 Blob Git del sorgente Workshop validato:
 
 ```text
-44573eaa7ce79708b6fb9b52bcf06766d733e811
+3984aba2b7db080464fa645ca080c9ff797780f5
 ```
 
 ## Audit 0.6.5
@@ -38,14 +38,14 @@ Il gate verifica:
 ## Unit test
 
 ```text
-Ran 35 tests
+Ran 36 tests
 OK
 ```
 
 ## Esito validatore registrato
 
 ```text
-OK - controlli statici v0.6.22 superati
+OK - controlli statici v0.6.23 superati
 ```
 
 ## GitHub
@@ -168,3 +168,8 @@ Il validator richiede `PindahTimDiproses` prima del cleanup, ordine `BersihkanPe
 ## Gate team-switch differito 0.6.22
 
 Il validator richiede due `Wait(0.050, Ignore Condition)` nel `Player Joined Match`, cleanup fallback singolo e condizionale dopo il primo yield, controllo stale tramite riferimento/slot/nome, guardia `Entity Exists` dopo i yield e setup soltanto dopo il secondo yield. Il fallimento live 0.6.21 resta documentato e la 0.6.22 richiede nuova conferma nel client.
+
+
+## Gate quiescenza team-switch 0.6.23
+
+Il validator richiede `TenangkanPemain` sia sul Player Left sia sul Player Joined prima di qualsiasi cleanup, timing 0,10/0,20/0,10 s, stop esplicito dei sottosistemi persistenti e assenza di Destroy/Wait/Loop nella fase di quiescenza. Un test negativo rimuove la chiamata dal Player Joined e deve essere intercettato. La conferma completa resta live-pending per i casi con Menu Arcade/modifiche attive.

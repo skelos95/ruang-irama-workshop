@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.6.22** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.6.23** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -252,3 +252,10 @@ Il cambio squadra non conserva più la registrazione precedente. Ogni `Player Jo
 ### Team switch differito 0.6.22
 
 Il test live della 0.6.21 ha mostrato `excessive Workshop script load` al primo cambio squadra. `Player Joined Match` non esegue più immediatamente `BersihkanPemain` e `SiapkanPemain` nello stesso frame: arma il lock, attende 0,05 s, verifica se `Player Left Match` ha già eliminato la vecchia registrazione e richiama il cleanup solo come fallback se serve. Dopo un secondo yield da 0,05 s avvia il setup fresco. In questo modo il risultato resta equivalente a leave/rejoin senza sovrapporre due lifecycle pesanti.
+
+
+### Team switch con stato menu attivo 0.6.23
+
+Il test live della 0.6.22 ha mostrato che i cambi squadra ripetuti sono stabili soltanto quando il player non ha il Menu Arcade aperto e non porta modifiche persistenti del menu. La 0.6.23 introduce `TenangkanPemain`: prima del cleanup spegne `Manusia`, nasconde il menu senza distruggerlo, azzera i dispatcher, ferma Camera, Inspection, Crouch Teleport, Try Your Luck, Unkillable, Hero Voice e i chase `WarnaMenu/RadiusNasib`, e ripristina input/UI nativi. Questa fase non distrugge HUD o effetti.
+
+`Player Left Match` esegue ora `TenangkanPemain → 0,10 s → BersihkanPemain`. `Player Joined Match` esegue `lock → TenangkanPemain → 0,20 s → eventuale cleanup fallback → 0,10 s → SiapkanPemain`. Il cleanup comune non ripete più il grosso blocco di ripristino runtime, riducendo il picco di azioni nel momento in cui vengono distrutti HUD e riferimenti.

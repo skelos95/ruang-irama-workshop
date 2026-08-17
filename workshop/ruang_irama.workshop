@@ -177,6 +177,7 @@ subroutines
 	26: HitungPilihan
 	27: BersihkanPemain
 	28: PramuatHalamanTerpilih
+	29: TenangkanPemain
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -888,18 +889,19 @@ rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
 
 	actions
 	{
-		"Jangan menumpuk pembersihan keluar dan masuk pada bingkai yang sama. Beri jeda agar acara keluar selesai lebih dulu."
+		"Tenangkan keadaan aktif sebelum menunggu pembersihan dari acara keluar."
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = True;
-		Wait(0.050, Ignore Condition);
+		Call Subroutine(TenangkanPemain);
+		Wait(0.200, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
-		"Jika pendaftaran lama masih ada, acara keluar tidak membersihkannya dan kita jalankan pembersihan cadangan tepat sekali."
+		"Jika pendaftaran lama masih ada, jalankan pembersihan cadangan tepat sekali setelah keadaan sudah tenang."
 		If(Or(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(
 			Global.SlotHUDPemain, Event Player.UrutanHUD))), Array Contains(Mapped Array(Global.PemainManusia, Custom String("{0}",
 			Current Array Element)), Custom String("{0}", Event Player))));
 			Call Subroutine(BersihkanPemain);
 		End;
-		Wait(0.050, Ignore Condition);
+		Wait(0.100, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
 		Call Subroutine(SiapkanPemain);
 	}
@@ -1187,7 +1189,7 @@ rule("03c - Bot: Kunci saat hidup kembali atau pahlawan berganti")
 	}
 }
 
-rule("04 - Pemain Keluar: Bersihkan pendaftaran dan semua referensi")
+rule("04 - Pemain Keluar: Tenangkan lalu bersihkan pendaftaran")
 {
 	event
 	{
@@ -1198,6 +1200,8 @@ rule("04 - Pemain Keluar: Bersihkan pendaftaran dan semua referensi")
 
 	actions
 	{
+		Call Subroutine(TenangkanPemain);
+		Wait(0.100, Ignore Condition);
 		Call Subroutine(BersihkanPemain);
 	}
 }
@@ -3638,18 +3642,45 @@ rule("93b - Subrutin: Efek pengaturan dipulihkan")
 	}
 }
 
-rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
+rule("93b2 - Subrutin: Tenangkan pemain sebelum pembersihan")
 {
 	event
 	{
 		Subroutine;
-		BersihkanPemain;
+		TenangkanPemain;
 	}
 
 	actions
 	{
-		"Pulihkan keadaan runtime sebelum data roster dihapus; ini membuat pindah tim setara dengan keluar lalu masuk lagi."
+		"Matikan pemicu menu dan efek lebih dulu agar perpindahan tim tidak menjalankan banyak aturan bersamaan."
+		Event Player.Manusia = False;
+		Event Player.MenuTerbuka = False;
+		Event Player.PerintahMenu = 0;
+		Event Player.SeranganDekatDipakai = False;
+		Event Player.TeleportasiJongkokAktif = False;
+		Event Player.PerintahTeleportasi = 0;
+		Event Player.InspeksiAktif = False;
+		Event Player.TargetInspeksi = Null;
+		Event Player.InteraksiKameraDipakai = False;
+		Event Player.KartuNasibAktif = False;
+		Event Player.PutaranKartuNasib = 0;
+		Event Player.GerakNasibDikunci = False;
+		Event Player.KebalAktif = False;
+		Event Player.ModeKebal = 0;
 		Stop Camera(Event Player);
+		Event Player.ModeKamera = 0;
+		Event Player.TargetKamera = Null;
+		Stop Chasing Player Variable(Event Player, WarnaMenu);
+		Stop Chasing Player Variable(Event Player, RadiusNasib);
+		Clear Status(Event Player, Unkillable);
+		Stop Modifying Hero Voice Lines(Event Player);
+		Stop Forcing Player Position(Event Player);
+		Set Move Speed(Event Player, 100);
+		Set Damage Received(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+		Set Healing Dealt(Event Player, 100);
+		Set Knockback Dealt(Event Player, 100);
+		Set Knockback Received(Event Player, 100);
 		Allow Button(Event Player, Button(Melee));
 		Allow Button(Event Player, Button(Jump));
 		Allow Button(Event Player, Button(Crouch));
@@ -3666,23 +3697,32 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Set Ability 2 Enabled(Event Player, True);
 		Set Ultimate Ability Enabled(Event Player, True);
 		Set Melee Enabled(Event Player, True);
-		Set Damage Dealt(Event Player, 100);
-		Set Healing Dealt(Event Player, 100);
-		Set Knockback Dealt(Event Player, 100);
-		Set Knockback Received(Event Player, 100);
-		Set Damage Received(Event Player, 100);
-		Set Move Speed(Event Player, 100);
-		Stop Forcing Player Position(Event Player);
-		Stop Chasing Player Variable(Event Player, RadiusNasib);
-		Clear Status(Event Player, Unkillable);
-		Stop Modifying Hero Voice Lines(Event Player);
+		If(Event Player.PelatNamaDinonaktifkan == True);
+			Enable Nameplates(All Players(All Teams), Event Player);
+			Event Player.PelatNamaDinonaktifkan = False;
+		End;
 		Enable Game Mode HUD(Event Player);
 		Enable Game Mode In-World UI(Event Player);
+	}
+}
+
+rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
+{
+	event
+	{
+		Subroutine;
+		BersihkanPemain;
+	}
+
+	actions
+	{
+		"Keadaan aktif sudah ditenangkan sebelum subrutin ini; sekarang hapus data dan objek yang tersisa."
 		Event Player.PemainDipilih = Null;
 		Event Player.JumlahSuara = 0;
 		Event Player.SudahSiap = False;
 		Event Player.SudahDiperiksa = False;
 		Event Player.Manusia = False;
+		Event Player.MenuTerbuka = False;
 		Event Player.HudPemainDibuat = False;
 
 		If(Event Player.TeksKartuNasib != Null);
