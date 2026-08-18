@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "4fce3ac2585e5d6d5091b9037e7c434fd047d981"
+EXPECTED_SOURCE_BLOB = "d7ed31444e7ee214b96b44d81bb7fd76f3c98060"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -206,10 +206,7 @@ def validate(source: str) -> Checks:
         checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")
         checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")
     if teleport_global:
-        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
-        checks.require(dummy_eligibility in teleport_global.body and bot_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale: bot pubblici (dummy/automatici) e player privacy OFF richiesti")
-        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale dipende ancora dal classificatore Manusia")
-        checks.require("Has Spawned(Current Array Element)" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale esclude dummy tramite Has Spawned")
+        checks.require("DaftarTargetTeleportasi" not in teleport_global.body and "CalonTargetTeleportasi" not in teleport_global.body, "04k gestisce ancora il target Teleport con polling")
     if teleport_render:
         checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     if teleport_open:
@@ -225,13 +222,14 @@ def validate(source: str) -> Checks:
     passive_manager = find_rule(rules, "04i - Global-first:")
     checks.require("PosisiRuangMuncul" not in source and "PunyaPosisiMuncul" not in source, "cache Spawn Room legacy ancora presente")
     if teleport_global:
-        checks.require("TargetTeleportasiTeks != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body, "target label Teleport non rileva il cambio sotto il mirino")
-        checks.require("Destroy In-World Text(Global.PemainAktif.TeksTeleportasi);" in teleport_global.body, "target label Teleport dedicato non viene invalidato al cambio target")
-        checks.require("Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Null);" in teleport_global.body, "04k non forza la ricreazione del label sul nuovo target")
+        checks.require("TeksTeleportasi" not in teleport_global.body and "TargetTeleportasiTeks" not in teleport_global.body, "04k gestisce ancora il refresh del nome Teleport")
     if teleport_label:
-        checks.require("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non fotografa il target corrente")
+        checks.require("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non rivaluta il target live")
         checks.require("Eye Position(Event Player.TargetTeleportasiTeks)" in teleport_label.body, "19d non usa il target label dedicato")
-        checks.require("Event Player.TeksTeleportasi == Null;" in teleport_label.body, "19d non usa l handle dedicato come latch di ricreazione")
+        checks.require("Event Player.TargetTeleportasiTeks != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in teleport_label.body, "19d non rileva direttamente il cambio closest-to-reticle")
+        checks.require(dummy_eligibility in teleport_label.body and bot_eligibility in teleport_label.body and privacy in teleport_label.body, "19d target live: bot pubblici e player privacy OFF richiesti")
+        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_label.body and "Create In-World Text(" in teleport_label.body, "19d non distrugge e ricrea subito il nome al cambio target")
+        checks.require("Wait(" not in teleport_label.body and "Loop If Condition Is True;" not in teleport_label.body, "19d target live non deve usare Wait o Loop")
     if teleport_exec:
         checks.require("Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));" in teleport_exec.body, "Spawn teleport non usa direttamente Spawn Points")
         checks.require("PosisiRuangMuncul" not in teleport_exec.body and "PunyaPosisiMuncul" not in teleport_exec.body, "Spawn teleport usa ancora cache/registrazione")
