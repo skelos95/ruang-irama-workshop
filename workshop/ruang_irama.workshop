@@ -1386,7 +1386,6 @@ rule("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Else;
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
-			Disallow Button(Event Player, Button(Crouch));
 			Disallow Button(Event Player, Button(Primary Fire));
 			Disallow Button(Event Player, Button(Secondary Fire));
 			Disallow Button(Event Player, Button(Interact));

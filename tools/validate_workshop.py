@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "13d77d875f9d5eff3f1bcd982b77052752e35fa2"
+EXPECTED_SOURCE_BLOB = "0ad6bd8f555b008e129b3e3525bae0646ac29a4e"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -218,10 +218,12 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     if teleport_open:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_open.body, "apertura Teleport resetta ancora la pagina")
+        checks.require("Event Player.MenuTerbuka == False;" in teleport_open.body, "Crouch Teleport deve restare disattivato mentre il Menu Arcade è aperto")
     if teleport_close:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_close.body, "chiusura Teleport resetta ancora la pagina")
         checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_close.body, "chiusura Teleport non distrugge il target world text dedicato")
     if inspect_rule:
+        checks.require("Event Player.MenuTerbuka == False;" in inspect_rule.body, "Crouch Inspection deve restare disattivata mentre il Menu Arcade è aperto")
         checks.require("Event Player.TeleportasiJongkokAktif == False;" in inspect_rule.body, "Inspection generica entra ancora nel Teleport")
         checks.require("Event Player.TeksDiri = Last Text ID;" not in inspect_rule.body, "Crouch normale mostra ancora il proprio nome")
         checks.require("Destroy In-World Text(Event Player.TeksDiri);" in inspect_rule.body, "Crouch normale non pulisce un eventuale nome personale residuo")
@@ -268,6 +270,7 @@ def validate(source: str) -> Checks:
     camera_toggle = find_rule(rules, "12c - Kamera:")
     if menu_toggle:
         checks.require("Wait(0.500, Abort When False);" in menu_toggle.body, "hold Melee 0,5 s assente")
+        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_toggle.body, "Menu Arcade non deve bloccare Crouch")
     if camera_toggle:
         checks.require("Wait(0.500, Abort When False);" in camera_toggle.body, "hold Camera 0,5 s assente")
         checks.require("Wait(0.016, Ignore Condition);" not in camera_toggle.body, "Camera mantiene un frame Wait superfluo")
