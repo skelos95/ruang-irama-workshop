@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "87299a960831745e82a0ab782d95760e2ef88e82"
+EXPECTED_SOURCE_BLOB = "37032467d7e305c77f82a18d53c23fe56c3aa45f"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -265,7 +265,7 @@ def validate(source: str) -> Checks:
     checks.require("Set Player Health(Global.PemainAktif, 1);" in source, "Unkillable 1 HP non riporta a 1")
     checks.require("Stop Modifying Hero Voice Lines(Event Player);" in source, "Hero Voice NORMAL assente")
     checks.require("Set Move Speed(Event Player, 0);" in source, "Try Your Luck rosso non blocca la velocità")
-    checks.require('Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 8.000, Do Not Clip' in source, "Try Your Luck card frame non usa la scala 8.000")
+    checks.require('Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 20.000, Do Not Clip' in source, "Try Your Luck card frame non usa la scala 20.000")
     checks.require("Start Forcing Player Position(" not in source, "Try Your Luck non deve forzare la posizione")
     if interact:
         checks.require('Custom String("□")' in interact.body, "Try Your Luck non usa il quadrato Title unico")

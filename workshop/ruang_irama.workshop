@@ -2013,7 +2013,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
 				Event Player.IkonKebal = Last Created Entity;
 				"Satu Header/Title berbentuk kotak menggantikan pasangan [ ]. Ikon Skull/Heart tetap berada di tengah kartu."
-				Create In-World Text(All Players(All Teams), Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 8.000, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
+				Create In-World Text(All Players(All Teams), Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 20.000, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
 				Event Player.TeksKartuNasib = Last Text ID;
 				Event Player.TeksKartuNasibKanan = Null;
 				Create Icon(Event Player.KartuNasibMerah ? All Players(All Teams) : Empty Array, Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)), Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
