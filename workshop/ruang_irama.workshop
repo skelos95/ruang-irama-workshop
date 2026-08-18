@@ -1386,9 +1386,8 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 
 			If(And(Global.PemainAktif.TeleportasiJongkokAktif == True, Global.PemainAktif.KursorTeleportasi == 2));
 				Set Player Variable(Global.PemainAktif, DaftarTargetTeleportasi, Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif,
-					And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element),
-					Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True,
-					And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))))));
+					And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True,
+					And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))));
 				If(Count Of(Global.PemainAktif.DaftarTargetTeleportasi) == 0);
 					Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, Null);
 				Else;
@@ -2258,6 +2257,7 @@ rule("13 - Intip Pahlawan: Tampilkan ikon, nama, dan kesehatan saat ini")
 		Is Alive(Event Player) == True;
 		Event Player.MenuTerbuka == False;
 		Event Player.TeleportasiJongkokAktif == False;
+		Event Player.TeleportasiJongkokDiaktifkan == False;
 		Event Player.ModeKamera != 2;
 		Event Player.InspeksiAktif == False;
 		Is Button Held(Event Player, Button(Crouch)) == True;
@@ -2697,6 +2697,15 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 				Event Player.PelatNamaDinonaktifkan = False;
 			End;
 		Else;
+			If(Event Player.TeksDunia != Null);
+				Destroy In-World Text(Event Player.TeksDunia);
+			End;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			End;
+			Event Player.TeksDunia = Null;
+			Event Player.TargetInspeksi = Null;
+			Event Player.InspeksiAktif = False;
 			Call Subroutine(SegarkanTargetTeleportasi);
 		End;
 	}
@@ -4046,9 +4055,8 @@ rule("98 - Subrutin: Cari target teleport publik terdekat dari bidikan")
 	actions
 	{
 		Event Player.DaftarTargetTeleportasi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player,
-			And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element),
-			Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True,
-			And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))));
+			And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True,
+			And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))));
 		If(Count Of(Event Player.DaftarTargetTeleportasi) == 0);
 			Event Player.CalonTargetTeleportasi = Null;
 		Else;

@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "49a8d2d9c07680061b9d8d76931a1723fdf2ec01"
+EXPECTED_SOURCE_BLOB = "703cd57121cf564654568d286fb559d2388caa7b"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -195,15 +195,17 @@ def validate(source: str) -> Checks:
     if teleport_exec:
         checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
         checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
-    eligibility = "Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True"
-    privacy = "And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)"
+    dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"
+    human_eligibility = "Player Variable(Current Array Element, Manusia) == True"
+    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"
     if teleport_refresh:
         checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
-        checks.require(eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici e umani privacy OFF")
+        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici (dummy) e umani privacy OFF")
+        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")
     if teleport_global:
         checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
-        checks.require(eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici e umani privacy OFF")
-        checks.require("Destroy In-World Text(Global.PemainAktif.TeksDunia);" not in teleport_global.body, "manager 4 Hz ricrea ancora il world text ad ogni target")
+        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici (dummy) e umani privacy OFF")
+        checks.require("Has Spawned(Current Array Element)" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale esclude dummy tramite Has Spawned")
     if teleport_render:
         checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     if teleport_open:
@@ -213,6 +215,7 @@ def validate(source: str) -> Checks:
         checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_close.body, "chiusura Teleport non distrugge il target world text")
     if inspect_rule:
         checks.require("Event Player.TeleportasiJongkokAktif == False;" in inspect_rule.body, "Inspection generica entra ancora nel Teleport")
+        checks.require("Event Player.TeleportasiJongkokDiaktifkan == False;" in inspect_rule.body, "Inspection generica può vincere il primo frame Crouch")
         checks.require("SegarkanTargetTeleportasi" not in inspect_rule.body and "CalonTargetTeleportasi" not in inspect_rule.body, "Inspection generica condivide ancora il target Teleport")
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
