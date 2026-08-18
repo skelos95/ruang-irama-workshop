@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,12 +59,12 @@ validator = replace_once(
     "validator blob",
 )
 
-# Replace only the old eligibility-validation section with simple multiline-safe checks.
+# Replace only the old eligibility-validation section with multiline-safe checks.
 start = validator.find('    eligibility = "Or(Is Dummy Bot(Current Array Element)')
 end = validator.find('    if teleport_render:', start)
 if start < 0 or end < 0:
     raise RuntimeError("validator teleport eligibility block not found")
-new_checks = '''    dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"\n    human_eligibility = "Player Variable(Current Array Element, Manusia) == True"\n    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"\n    if teleport_refresh:\n        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")\n        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue dummy pubblici e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")\n    if teleport_global:\n        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")\n        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue dummy pubblici e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale esclude dummy tramite Has Spawned")\n'''
+new_checks = '''    dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"\n    human_eligibility = "Player Variable(Current Array Element, Manusia) == True"\n    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"\n    if teleport_refresh:\n        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")\n        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici (dummy) e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")\n    if teleport_global:\n        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")\n        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici (dummy) e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale esclude dummy tramite Has Spawned")\n'''
 validator = validator[:start] + new_checks + validator[end:]
 
 # Enforce the first-frame separation without touching other validator sections.
@@ -78,4 +77,4 @@ if needle in validator and "primo frame Crouch" not in validator:
     )
 
 VALIDATOR.write_text(validator, encoding="utf-8")
-print(f"hotfixed 0.7.2 minimal crouch target: {OLD_BLOB} -> {new_blob}")
+print(f"hotfixed 0.7.2 crouch target: {OLD_BLOB} -> {new_blob}")
