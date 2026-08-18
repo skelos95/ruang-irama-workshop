@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "703cd57121cf564654568d286fb559d2388caa7b"
+EXPECTED_SOURCE_BLOB = "3d72da2b4da10ba90a351529a65c073b58fbd117"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -196,15 +196,17 @@ def validate(source: str) -> Checks:
         checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
         checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
     dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"
-    human_eligibility = "Player Variable(Current Array Element, Manusia) == True"
+    bot_eligibility = "Player Variable(Current Array Element, BotOtomatis) == True"
     privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"
     if teleport_refresh:
         checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
-        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici (dummy) e umani privacy OFF")
+        checks.require(dummy_eligibility in teleport_refresh.body and bot_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh: bot pubblici (dummy/automatici) e player privacy OFF richiesti")
+        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")
         checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")
     if teleport_global:
         checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
-        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici (dummy) e umani privacy OFF")
+        checks.require(dummy_eligibility in teleport_global.body and bot_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale: bot pubblici (dummy/automatici) e player privacy OFF richiesti")
+        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale dipende ancora dal classificatore Manusia")
         checks.require("Has Spawned(Current Array Element)" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale esclude dummy tramite Has Spawned")
     if teleport_render:
         checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
