@@ -60,17 +60,17 @@ validator = replace_exact(validator, f'EXPECTED_SOURCE_BLOB = "{OLD_BLOB}"', f'E
 validator = replace_exact(
     validator,
     '    eligibility = "Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True"\n    privacy = "And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)"\n',
-    '    eligibility = "Or(Is Dummy Bot(Current Array Element) == True, And(Player Variable(Current Array Element, Manusia) == True"\n    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"\n',
+    '    dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"\n    human_eligibility = "Player Variable(Current Array Element, Manusia) == True"\n    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"\n',
 )
 validator = replace_exact(
     validator,
     '        checks.require(eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici e umani privacy OFF")\n',
-    '        checks.require(eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue dummy pubblici e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")\n',
+    '        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue dummy pubblici e umani privacy OFF")\n        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")\n',
 )
 validator = replace_exact(
     validator,
     '        checks.require(eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici e umani privacy OFF")\n',
-    '        checks.require(eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue dummy pubblici e umani privacy OFF")\n',
+    '        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue dummy pubblici e umani privacy OFF")\n',
 )
 validator = replace_exact(
     validator,
