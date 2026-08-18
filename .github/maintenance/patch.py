@@ -33,6 +33,12 @@ new_pin = f'EXPECTED_SOURCE_BLOB = "{new_blob}"'
 if validator.count(old_pin) != 1:
     raise RuntimeError("validator blob pin mismatch")
 validator = validator.replace(old_pin, new_pin)
+
+old_guard = 'checks.require(\'Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 4.000, Do Not Clip\' in source, "Try Your Luck card frame non usa la scala 4.000")'
+new_guard = 'checks.require(\'Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 8.000, Do Not Clip\' in source, "Try Your Luck card frame non usa la scala 8.000")'
+if validator.count(old_guard) != 1:
+    raise RuntimeError(f"expected one 4.000 card-frame validator guard, found {validator.count(old_guard)}")
+validator = validator.replace(old_guard, new_guard)
 VALIDATOR.write_text(validator, encoding="utf-8")
 
-print(f"enlarged Try Your Luck square: {OLD_BLOB} -> {new_blob}")
+print(f"enlarged Try Your Luck square and validator: {OLD_BLOB} -> {new_blob}")
