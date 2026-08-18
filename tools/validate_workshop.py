@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "2ed0e0eadf56367719d3065493ebd6078c3f7ffc"
+EXPECTED_SOURCE_BLOB = "a17b1bcb4ffd75e9613b87a44d1c95f153c47727"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -129,7 +129,7 @@ def validate(source: str) -> Checks:
     checks.require(not EXPORTS.exists(), "directory exports temporanea deve essere assente")
     checks.equal(len(rules), len({rule.name for rule in rules}), "titoli regola univoci")
     checks.require(len(rules) >= 75, "numero regole inatteso")
-    for name in ("PemainAktif", "IndeksPemainGlobal"):
+    for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
     for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
@@ -298,11 +298,14 @@ def validate(source: str) -> Checks:
         checks.require("Call Subroutine(TenangkanPemain);" in leave.body and "Call Subroutine(BersihkanPemain);" in leave.body, "Leave lifecycle incompleto")
         checks.require("Is Dummy Bot(Event Player) == False;" in leave.body, "Leave umano non esclude dummy diretti")
     checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop voto fuori limite Count anziché Count-1")
+    checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop votanti fuori limite Count anziché Count-1")
     vote_count = find_rule(rules, "91p - Subrutin:")
     checks.require(vote_count is not None, "subroutine conteggio voti assente")
     if vote_count:
         checks.require("Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);" in vote_count.body, "conteggio voti non azzera JumlahSuara prima del recount")
-        checks.require("Modify Player Variable(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih), JumlahSuara, Add, 1);" in vote_count.body, "conteggio voti non incrementa direttamente il player votato")
+        checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);" in vote_count.body, "conteggio voti non scorre esplicitamente i votanti")
+        checks.require("Modify Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Add, 1);" in vote_count.body, "conteggio voti non incrementa direttamente il candidato")
+        checks.require("Modify Player Variable(Player Variable(" not in vote_count.body, "conteggio voti usa ancora un player-target indiretto")
         checks.require("Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih)" not in vote_count.body, "conteggio voti usa ancora il Filtered Array fragile")
         checks.require("Array Contains(Global.PemainManusia" in vote_count.body, "conteggio voti non valida più il target votato")
     if classifier:

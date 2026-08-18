@@ -52,6 +52,7 @@ variables
 		50: ModeMulaiDiminta
 		51: PemainAktif
 		52: IndeksPemainGlobal
+		53: IndeksPemilihVote
 	player:
 		0: WaktuMasuk
 		2: SudahDiperiksa
@@ -3575,17 +3576,25 @@ rule("91p - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 		Global.PemimpinSuara = Null;
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
-		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);
-		End;
-		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			If(And(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih) != Null, Array Contains(Global.PemainManusia,
-				Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih))));
-				Modify Player Variable(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih), JumlahSuara, Add, 1);
-			Else If(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih) != Null);
-				Set Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih, Null);
+
+		"Buang referensi vote yang sudah tidak menunjuk manusia aktif."
+		For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);
+			If(And(Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih) != Null, Array Contains(Global.PemainManusia,
+				Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih)) == False));
+				Set Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih, Null);
 			End;
 		End;
+
+		"Recount deterministico: candidato esterno, votanti interni. L'incremento colpisce sempre direttamente il candidato dell'array."
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
+			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);
+			For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);
+				If(Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih) == Global.PemainManusia[Global.IndeksVote]);
+					Modify Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Add, 1);
+				End;
+			End;
+		End;
+
 		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
 			If(Global.PemainManusia[Global.IndeksVote].JumlahSuara > Global.SuaraTerbanyak);
 				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksVote].JumlahSuara;
