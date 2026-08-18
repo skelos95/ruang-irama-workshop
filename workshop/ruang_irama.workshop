@@ -1387,7 +1387,7 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 			If(And(Global.PemainAktif.TeleportasiJongkokAktif == True, Global.PemainAktif.KursorTeleportasi == 2));
 				Set Player Variable(Global.PemainAktif, DaftarTargetTeleportasi, Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif,
 					And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, And(Entity Exists(Current Array Element),
-					And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
+					And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));
 				If(Count Of(Global.PemainAktif.DaftarTargetTeleportasi) == 0);
 					Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, Null);
 				Else;
@@ -4012,7 +4012,7 @@ rule("98 - Subrutin: Cari target teleport publik terdekat dari bidikan")
 	{
 		Event Player.DaftarTargetTeleportasi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player,
 			And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, And(Entity Exists(Current Array Element),
-			And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
+			And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));
 		If(Count Of(Event Player.DaftarTargetTeleportasi) == 0);
 			Event Player.CalonTargetTeleportasi = Null;
 		Else;
