@@ -4012,7 +4012,7 @@ rule("98 - Subrutin: Cari target teleport publik terdekat dari bidikan")
 	{
 		Event Player.DaftarTargetTeleportasi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player,
 			And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, And(Entity Exists(Current Array Element),
-			And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));
+			And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
 		If(Count Of(Event Player.DaftarTargetTeleportasi) == 0);
 			Event Player.CalonTargetTeleportasi = Null;
 		Else;

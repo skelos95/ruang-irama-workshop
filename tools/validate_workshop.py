@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "3894f19f3ef0c97e0b84f28cb1d4d4baa9fb16ee"
+EXPECTED_SOURCE_BLOB = "d75a81dd7cf5297b2a326b12a78fd7311592238f"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -192,14 +192,20 @@ def validate(source: str) -> Checks:
     teleport_global = find_rule(rules, "04k - Global-first:")
     if teleport_global:
         checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
-    checks.require(
-        "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" in source,
-        "filtro Teleport privacy senza parentesi finale",
-    )
-    checks.require(
-        source.count("And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));") >= 2,
-        "entrambi i filtri Teleport devono avere la chiusura completa",
-    )
+    if teleport_global:
+        checks.require(
+            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" in teleport_global.body,
+            "filtro Teleport globale senza chiusura Set Player Variable completa",
+        )
+    if teleport_refresh:
+        checks.require(
+            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));" in teleport_refresh.body,
+            "filtro Teleport refresh senza chiusura assegnazione completa",
+        )
+        checks.require(
+            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" not in teleport_refresh.body,
+            "filtro Teleport refresh contiene una parentesi finale di troppo",
+        )
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")
