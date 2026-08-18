@@ -90,14 +90,14 @@ Il runtime è stato alleggerito per una lobby piena:
 - refresh passivi Camera/Revenge a **1 Hz**;
 - target player Teleport closest-to-reticle a **4 Hz** solo sulla pagina `All Players`;
 - contatore minuti ogni **10 s**;
-- cache Spawn Room a **1 Hz**;
+- Spawn Room Teleport diretto via `Spawn Points(Team Of(Event Player))`, senza cache o `Wait`;
 - un solo loop RGB globale a 8 Hz;
 - un solo raycast Camera;
 - nessun loop per-player dedicato alla transizione colore menu.
 
 ## Teleport Crouch
 
-L'overlay Teleport ha **tre pagine fisse**: `Spawn Room`, `Objective / Flag` e `All Players`. Tenendo Crouch, **Secondary Fire** passa alla pagina successiva e **Primary Fire** esegue subito il teleport della pagina attiva.
+L'overlay Teleport ha **tre pagine fisse**: `Spawn Room`, `Objective / Flag` e `All Players`. Tenendo Crouch, **Secondary Fire** passa alla pagina successiva e **Primary Fire** esegue subito il teleport della pagina attiva. `Spawn Room` usa direttamente il primo `Spawn Points(Team Of(Event Player))`: non registra coordinate e non usa `Wait`.
 
 Nella pagina `All Players` non esiste più uno scorrimento manuale: il target è il player/bot valido **più vicino al reticolo**, aggiornato a 4 Hz e ricalcolato anche al click. Sono eleggibili solo target vivi/spawnati con **Crouch Privacy OFF**; il nome mostrato dall'inspection corrisponde al target che verrà usato dal teleport.
 

@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "4d5b46c8606c368fb65066a16a4f0d4c96be7ac6"
+EXPECTED_SOURCE_BLOB = "38929ac945c8571eb2bf4b1f72187f363957a5d1"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -220,12 +220,8 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.TeleportasiJongkokDiaktifkan == False;" in inspect_rule.body, "Inspection generica può vincere il primo frame Crouch")
         checks.require("SegarkanTargetTeleportasi" not in inspect_rule.body and "CalonTargetTeleportasi" not in inspect_rule.body, "Inspection generica condivide ancora il target Teleport")
     fast_manager = find_rule(rules, "04g - Global-first:")
-    if fast_manager:
-        checks.require("Set Player Variable(Global.PemainAktif, PosisiRuangMuncul, Position Of(Global.PemainAktif));" in fast_manager.body, "Spawn Room non viene registrata nel manager rapido")
-        checks.require("Set Player Variable(Global.PemainAktif, PunyaPosisiMuncul, True);" in fast_manager.body, "flag Spawn Room non viene registrato nel manager rapido")
     passive_manager = find_rule(rules, "04i - Global-first:")
-    if passive_manager:
-        checks.require("PosisiRuangMuncul" not in passive_manager.body, "Spawn Room è ancora aggiornata dal manager lento 1 Hz")
+    checks.require("PosisiRuangMuncul" not in source and "PunyaPosisiMuncul" not in source, "cache Spawn Room legacy ancora presente")
     if teleport_global:
         checks.require("TargetTeleportasiTeks != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body, "target label Teleport non rileva il cambio sotto il mirino")
         checks.require("Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body, "target label Teleport non viene invalidato al cambio target")
@@ -233,7 +229,8 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non fotografa il target corrente")
         checks.require("Eye Position(Event Player.TargetTeleportasiTeks)" in teleport_label.body, "19d non usa il target label dedicato")
     if teleport_exec:
-        checks.require("Nearest Walkable Position(Event Player.PosisiRuangMuncul)" in teleport_exec.body, "Spawn teleport non usa una posizione camminabile")
+        checks.require("Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));" in teleport_exec.body, "Spawn teleport non usa direttamente Spawn Points")
+        checks.require("PosisiRuangMuncul" not in teleport_exec.body and "PunyaPosisiMuncul" not in teleport_exec.body, "Spawn teleport usa ancora cache/registrazione")
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")

@@ -91,8 +91,6 @@ variables
 		36: KematianBalasDendam
 		37: KursorTeleportasi
 		38: DaftarTargetTeleportasi
-		39: PosisiRuangMuncul
-		40: PunyaPosisiMuncul
 		41: CalonTargetTeleportasi
 		42: TargetBalasDendamTerkunci
 		43: TargetBalasDendamDipilih
@@ -1140,10 +1138,6 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 	{
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
-		If(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Is In Spawn Room(Global.PemainAktif) == True)));
-			Set Player Variable(Global.PemainAktif, PosisiRuangMuncul, Position Of(Global.PemainAktif));
-			Set Player Variable(Global.PemainAktif, PunyaPosisiMuncul, True);
-		End;
 		If(Global.PemainAktif.Manusia == True);
 		If(Global.PemainAktif.KebalAktif == True);
 		If(Or(Global.PemainAktif.ModeKebal == 2, Is In Spawn Room(Global.PemainAktif) == False) == True);
@@ -2787,11 +2781,11 @@ rule("19e - Teleportasi Jongkok: Primary Fire menjalankan halaman aktif")
 		If(Event Player.JenisTeleportasiTerkunci == 0);
 			If(Is In Spawn Room(Event Player) == True);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("You are already in the Spawn Room. Mission accomplished.") : Event Player.IndeksBahasa == 1 ? Custom String("Kamu sudah di ruang muncul. Misi selesai.") : Custom String("คุณอยู่ในห้องเกิดแล้ว ภารกิจสำเร็จ"));
-			Else If(Event Player.PunyaPosisiMuncul == False);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Spawn Room not registered yet. Visit spawn first.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi ruang muncul belum tersimpan. Masuk ke sana dulu.") : Custom String("ยังไม่ได้บันทึกห้องเกิด กรุณาไปที่ห้องเกิดก่อน"));
+			Else If(Count Of(Spawn Points(Team Of(Event Player))) == 0);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Spawn Room unavailable on this map right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Ruang muncul tidak tersedia di map ini saat ini.") : Custom String("ห้องเกิดยังไม่พร้อมใช้งานบนแผนที่นี้"));
 			Else;
-				Teleport(Event Player, Nearest Walkable Position(Event Player.PosisiRuangMuncul));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Back to the Spawn Room. Tactical retreat complete.") : Event Player.IndeksBahasa == 1 ? Custom String("Kembali ke ruang muncul. Mundur taktis selesai.") : Custom String("กลับสู่ห้องเกิดแล้ว การถอยเชิงกลยุทธ์เสร็จสิ้น"));
+				Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported to your Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport ke ruang muncul timmu.") : Custom String("เทเลพอร์ตไปห้องเกิดของทีมแล้ว"));
 			End;
 		Else If(Event Player.JenisTeleportasiTerkunci == 1);
 			If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
@@ -3246,13 +3240,13 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 			Custom String("lepas {0}: tutup", Input Binding String(Button(Crouch)))) : Custom String("{0}\n{1}", Custom String(
 			"\n{0}: เทเลพอร์ต | {1}: หน้าถัดไป", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("ปล่อย {0}: ปิด", Input Binding String(Button(Crouch)))), Event Player.IndeksBahasa == 0
-			? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> SPAWN ROOM\n{0}", Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY") : Custom String("VISIT SPAWN TO REGISTER IT"))
+			? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> SPAWN ROOM\n{0}", Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Custom String("PRIMARY FIRE: TELEPORT"))
 			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJECTIVE / FLAG\nPRIMARY FIRE: TELEPORT")
 			: Custom String("TELEPORT 3/3\n> ALL PLAYERS\nTARGET: {0}\nAIM AT A VISIBLE NAME", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET"))
-			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> RUANG MUNCUL\n{0}", Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP") : Custom String("MASUK SPAWN UNTUK MENYIMPANNYA"))
+			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> RUANG MUNCUL\n{0}", Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Custom String("PRIMARY FIRE: TELEPORT"))
 			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJEKTIF / BENDERA\nPRIMARY FIRE: TELEPORT")
 			: Custom String("TELEPORT 3/3\n> SEMUA PLAYER\nTARGET: {0}\nARAHKAN KE NAMA YANG TERLIHAT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK"))
-			: Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/3\n> ห้องเกิด\n{0}", Is In Spawn Room(Event Player) ? Custom String("คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อม") : Custom String("ไปห้องเกิดเพื่อบันทึกตำแหน่ง"))
+			: Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/3\n> ห้องเกิด\n{0}", Is In Spawn Room(Event Player) ? Custom String("คุณอยู่ที่นี่แล้ว") : Custom String("ยิงหลัก: เทเลพอร์ต"))
 			: Event Player.KursorTeleportasi == 1 ? Custom String("เทเลพอร์ต 2/3\n> เป้าหมาย / ธง\nยิงหลัก: เทเลพอร์ต")
 			: Custom String("เทเลพอร์ต 3/3\n> ผู้เล่นทั้งหมด\nเป้าหมาย: {0}\nเล็งไปที่ชื่อที่มองเห็น", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 100,
 			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
@@ -3928,8 +3922,6 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KematianBalasDendam = False;
 		Event Player.KursorTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
-		Event Player.PosisiRuangMuncul = Vector(0, 0, 0);
-		Event Player.PunyaPosisiMuncul = False;
 		Event Player.CalonTargetTeleportasi = Null;
 		Event Player.TargetBalasDendamTerkunci = Null;
 		Event Player.TargetBalasDendamDipilih = Null;
