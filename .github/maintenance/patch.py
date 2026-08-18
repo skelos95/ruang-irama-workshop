@@ -53,13 +53,13 @@ validator = replace_once(
 validator = replace_once(
     validator,
     '        checks.require(dummy_eligibility in teleport_refresh.body and human_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici (dummy) e umani privacy OFF")\n',
-    '        checks.require(dummy_eligibility in teleport_refresh.body and bot_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non include dummy, bot automatici e player privacy OFF")\n        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")\n',
+    '        checks.require(dummy_eligibility in teleport_refresh.body and bot_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh: bot pubblici (dummy/automatici) e player privacy OFF richiesti")\n        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")\n',
     "validator refresh eligibility",
 )
 validator = replace_once(
     validator,
     '        checks.require(dummy_eligibility in teleport_global.body and human_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici (dummy) e umani privacy OFF")\n',
-    '        checks.require(dummy_eligibility in teleport_global.body and bot_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non include dummy, bot automatici e player privacy OFF")\n        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale dipende ancora dal classificatore Manusia")\n',
+    '        checks.require(dummy_eligibility in teleport_global.body and bot_eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale: bot pubblici (dummy/automatici) e player privacy OFF richiesti")\n        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_global.body.split("If(And(Global.PemainAktif.TeleportasiJongkokAktif == True", 1)[-1], "Teleport globale dipende ancora dal classificatore Manusia")\n',
     "validator global eligibility",
 )
 VALIDATOR.write_text(validator, encoding="utf-8")
