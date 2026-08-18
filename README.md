@@ -286,3 +286,8 @@ La pagina Crouch Teleport resta memorizzata tra un rilascio di Crouch e il succe
 ### Hotfix Crouch 0.7.2 — target live e HUD puliti
 
 La pagina `All Players` non lascia più che l'Inspection generica sovrascriva `TargetInspeksi`. A 4 Hz viene confrontato il target già mostrato con il nuovo `CalonTargetTeleportasi`; quando cambia, il vecchio In-World Text viene distrutto e ricreato sul nuovo player senza richiedere il rilascio di Crouch. Sono inoltre state convertite 27 sequenze di continuazione `backslash + newline` in newline Workshop normali, eliminando il simbolo `\` visibile dagli HUD/menu interessati.
+
+
+### Hotfix Crouch 0.7.2 — target pubblico dedicato
+
+La pagina `All Players` non usa più `TargetInspeksi`. `04k` aggiorna soltanto `CalonTargetTeleportasi` a 4 Hz; una regola UI dedicata crea un singolo In-World Text rivalutato su Position/String/Color, che segue direttamente il candidato mentre Crouch resta premuto. Dummy bot e bot automatici sono sempre target pubblici; i player reali sono eleggibili soltanto con Crouch Privacy OFF.

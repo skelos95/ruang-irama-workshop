@@ -431,3 +431,8 @@ Il selettore manuale dei player è stato rimosso. Crouch Teleport mantiene solta
 ### Hotfix 0.7.2 — reticle live durante Crouch
 
 Su pagina 3 Teleport, `TargetInspeksi` rappresenta ora davvero il target già renderizzato. `04k` calcola `CalonTargetTeleportasi` senza far passare prima l'Inspection generica; se candidato e target mostrato differiscono, distrugge gli handle `TeksDunia/TeksDiri`, azzera `InspeksiAktif` e lascia alla regola 13 la ricreazione immediata sul nuovo target. Il refresh resta a 4 Hz. Rimossi anche 27 backslash di continuazione visibili dai Custom String HUD/menu, convertendoli in newline Workshop normali.
+
+
+### Hotfix 0.7.2 — separazione Inspection / Teleport
+
+La pagina 3 Teleport è stata separata dall'Inspection generica. `19d` gestisce il world label del candidato e rivaluta direttamente `CalonTargetTeleportasi`; `13` opera solo quando `TeleportasiJongkokAktif == False`. Il filtro target considera validi dummy bot, bot automatici e umani classificati con `PrivasiInspeksiAktif == False`, evitando che una variabile privacy non inizializzata sui bot produca `NO PUBLIC TARGET`.

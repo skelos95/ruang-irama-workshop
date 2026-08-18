@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "e9aa5276178c9355f4460dff643d213dd63c78a7"
+EXPECTED_SOURCE_BLOB = "49a8d2d9c07680061b9d8d76931a1723fdf2ec01"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -146,7 +146,7 @@ def validate(source: str) -> Checks:
         "05b - Menu:", "05c - Menu:", "05d - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
         "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
         "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
-        "19c - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
+        "19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
         "19g - Teleportasi Jongkok:",
     )
     for prefix in each_player_pipelines:
@@ -173,67 +173,47 @@ def validate(source: str) -> Checks:
         "dispatcher Teleport non deve essere nel manager globale",
     )
     teleport_cycle = find_rule(rules, "19c - Teleportasi Jongkok:")
+    teleport_label = find_rule(rules, "19d - Teleportasi Jongkok:")
     teleport_exec = find_rule(rules, "19e - Teleportasi Jongkok:")
     teleport_refresh = find_rule(rules, "98 - Subrutin:")
     teleport_render = find_rule(rules, "91g - Subrutin:")
-    checks.require(find_rule(rules, "19d - Teleportasi Jongkok:") is None, "selector manuale Teleport 19d ancora presente")
-    checks.require("Event Player.PerintahTeleportasi = 3;" not in source, "Teleport usa ancora il terzo comando legacy")
-    if teleport_cycle:
-        checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
-    if teleport_exec:
-        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
-        checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
-    if teleport_refresh:
-        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
-        checks.require("Player Variable(Current Array Element, PrivasiInspeksiAktif) == False" in teleport_refresh.body, "Teleport ignora la privacy")
-        checks.require("Append To Array(Array(Event Player, Null)" not in teleport_refresh.body, "Teleport usa ancora sentinelle Spawn/Objective nella lista player")
-    if teleport_render:
-        checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     teleport_global = find_rule(rules, "04k - Global-first:")
-    if teleport_global:
-        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
-    if teleport_global:
-        checks.require(
-            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" in teleport_global.body,
-            "filtro Teleport globale senza chiusura Set Player Variable completa",
-        )
-    if teleport_refresh:
-        checks.require(
-            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));" in teleport_refresh.body,
-            "filtro Teleport refresh senza chiusura assegnazione completa",
-        )
-        checks.require(
-            "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" not in teleport_refresh.body,
-            "filtro Teleport refresh contiene una parentesi finale di troppo",
-        )
     teleport_open = find_rule(rules, "19 - Teleportasi Jongkok:")
     teleport_close = find_rule(rules, "19g - Teleportasi Jongkok:")
     inspect_rule = find_rule(rules, "13 - Intip Pahlawan:")
+    checks.require("Event Player.PerintahTeleportasi = 3;" not in source, "Teleport usa ancora il terzo comando legacy")
     checks.equal(source.count("Event Player.KursorTeleportasi = 0;"), 1, "reset KursorTeleportasi deve restare solo in SiapkanPemain")
+    checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")
+    if teleport_cycle:
+        checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
+        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_cycle.body, "uscita pagina 3 non rimuove il target world text")
+    if teleport_label:
+        checks.equal(event_type(teleport_label), "Ongoing - Each Player", "19d Teleport target label: scheduler")
+        checks.require("Event Player.TeleportasiJongkokAktif == True;" in teleport_label.body and "Event Player.KursorTeleportasi == 2;" in teleport_label.body, "19d non è limitata alla pagina 3")
+        checks.require("Event Player.CalonTargetTeleportasi" in teleport_label.body and "Visible To Position String and Color" in teleport_label.body, "19d non rivaluta il target live")
+        checks.require("Event Player.InspeksiAktif" not in teleport_label.body and "Event Player.TargetInspeksi" not in teleport_label.body, "19d condivide ancora stato Inspection")
+    if teleport_exec:
+        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
+        checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
+    eligibility = "Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True"
+    privacy = "And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)"
+    if teleport_refresh:
+        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
+        checks.require(eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh non distingue bot pubblici e umani privacy OFF")
+    if teleport_global:
+        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
+        checks.require(eligibility in teleport_global.body and privacy in teleport_global.body, "Teleport globale non distingue bot pubblici e umani privacy OFF")
+        checks.require("Destroy In-World Text(Global.PemainAktif.TeksDunia);" not in teleport_global.body, "manager 4 Hz ricrea ancora il world text ad ogni target")
+    if teleport_render:
+        checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     if teleport_open:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_open.body, "apertura Teleport resetta ancora la pagina")
     if teleport_close:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_close.body, "chiusura Teleport resetta ancora la pagina")
-        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_close.body, "chiusura Teleport non distrugge subito il nome inspection")
-        checks.require("Event Player.InspeksiAktif = False;" in teleport_close.body, "chiusura Teleport non resetta subito Inspection")
+        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_close.body, "chiusura Teleport non distrugge il target world text")
     if inspect_rule:
-        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in inspect_rule.body, "pagina player Teleport non inizializza il target dal reticolo")
-        checks.require("Event Player.TargetInspeksi = Event Player.CalonTargetTeleportasi;" in inspect_rule.body, "nome inspection non è allineato al target Teleport")
-    checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")
-    if teleport_global:
-        checks.require(
-            "If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Global.PemainAktif.KursorTeleportasi != 2));" in teleport_global.body,
-            "Inspection generica sovrascrive ancora il target della pagina 3 Teleport",
-        )
-        checks.require(
-            "Global.PemainAktif.TargetInspeksi != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body,
-            "pagina 3 Teleport non rileva il cambio target sotto il mirino",
-        )
-        checks.require(
-            "Set Player Variable(Global.PemainAktif, InspeksiAktif, False);" in teleport_global.body
-            and "Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body,
-            "pagina 3 Teleport non forza il refresh del nome quando cambia target",
-        )
+        checks.require("Event Player.TeleportasiJongkokAktif == False;" in inspect_rule.body, "Inspection generica entra ancora nel Teleport")
+        checks.require("SegarkanTargetTeleportasi" not in inspect_rule.body and "CalonTargetTeleportasi" not in inspect_rule.body, "Inspection generica condivide ancora il target Teleport")
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")

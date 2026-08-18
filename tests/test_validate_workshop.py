@@ -74,6 +74,18 @@ class GlobalFirst072Tests(unittest.TestCase):
         )
         self.assertTrue(any("closest-to-reticle" in error for error in self.errors(mutated)))
 
+    def test_teleport_bots_remain_public_targets(self) -> None:
+        start = self.source.index('rule("98 - Subrutin:')
+        pos = self.source.index("Is Dummy Bot(Current Array Element) == True", start)
+        mutated = self.source[:pos] + self.source[pos:].replace("Is Dummy Bot(Current Array Element) == True", "Is Dummy Bot(Current Array Element) == False", 1)
+        self.assertTrue(any("bot pubblici" in error for error in self.errors(mutated)))
+
+    def test_teleport_world_label_is_independent_from_inspection(self) -> None:
+        start = self.source.index('rule("19d - Teleportasi Jongkok:')
+        pos = self.source.index("Event Player.CalonTargetTeleportasi", start)
+        mutated = self.source[:pos] + self.source[pos:].replace("Event Player.CalonTargetTeleportasi", "Event Player.TargetInspeksi", 1)
+        self.assertTrue(any("rivaluta il target live" in error or "stato Inspection" in error for error in self.errors(mutated)))
+
     def test_preloaded_submenu_is_required(self) -> None:
         mutated = self.source.replace('rule("91q - SubmenuPreload")', 'rule("91q - X")', 1)
         self.assertTrue(any("SubmenuPreload" in error for error in self.errors(mutated)))
