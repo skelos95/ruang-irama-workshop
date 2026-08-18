@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.7.1
+# Note di progetto — versione 0.7.2
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.7.1.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.7.2.
 
 ## Architettura generale
 
@@ -147,11 +147,9 @@ Non mostra più la percentuale Ultimate. Le nameplate native vengono gestite e r
 
 ## Teleport Crouch
 
-L'overlay Crouch conserva il proprio cursore e può selezionare:
+L'overlay Crouch usa tre pagine fisse: **Spawn Room**, **Objective / Flag**, **All Players**. Secondary Fire avanza ciclicamente tra le tre pagine; Primary Fire esegue il teleport. Interact non seleziona più la destinazione.
 
-- ultima Spawn Room registrata;
-- destinazione obiettivo/modalità;
-- player/bot validi.
+Sulla pagina `All Players`, `DaftarTargetTeleportasi` contiene solo entità diverse dal viewer, esistenti, spawnate, vive e con `PrivasiInspeksiAktif == False`. `CalonTargetTeleportasi` è il primo elemento di un `Sorted Array` ordinato per angolo rispetto al reticolo. Il manager globale `04k` lo aggiorna a 4 Hz e `SegarkanTargetTeleportasi` lo ricalcola immediatamente al click; solo dopo viene copiato in `TargetTeleportasiTerkunci`.
 
 Gestione modalità:
 
@@ -159,8 +157,6 @@ Gestione modalità:
 - CTF → flag nemica;
 - Push → player sull'obiettivo come proxy robot, poi fallback obiettivo;
 - altre modalità → `Objective Position` quando disponibile.
-
-Il target player viene bloccato per identità prima del refresh per evitare retarget accidentali se qualcuno esce.
 
 
 ## Menu 10 — Try Your Luck
@@ -214,9 +210,10 @@ L'audio degli effetti resta personale al player che esegue l'azione.
 Ottimizzazioni correnti:
 
 - `SlotHUDTerakhir` al posto di sort continui nei roster;
-- refresh Camera/Revenge/Teleport passivi a 1 Hz;
+- refresh Camera/Revenge passivi a 1 Hz;
+- target player Teleport closest-to-reticle a 4 Hz solo sulla terza pagina;
 - refresh immediato quando un input usa davvero la lista;
-- inspection a 5 Hz;
+- inspection a 4 Hz;
 - `MenitLobi` ogni 10 s;
 - Spawn Room cache a 1 Hz;
 - RGB unico globale a 8 Hz;
@@ -419,3 +416,8 @@ I poll periodici che non richiedono un `Event Player` di input sono stati consol
 Il lifecycle Bot/Dummy è separato dal percorso umano: i dummy diretti non passano dal classifier né dal cleanup umano e vengono mantenuti da `03c`/`KunciBot`. Il cleanup umano usa un solo yield prima della sezione critica; dopo l'assegnazione degli scratch Global non contiene `Wait`, così due leave/cambi squadra ravvicinati non possono sovrascrivere gli indici condivisi a metà cleanup.
 
 La Camera spectate viene rilasciata anche su target morto/non spawnato. I loop `For Global Variable` di voto e pulizia sono inoltre limitati a `Count Of(...) - 1`.
+
+
+## Audit 0.7.2 — Teleport closest-to-reticle
+
+Il selettore manuale dei player è stato rimosso. Crouch Teleport mantiene soltanto tre pagine, con Secondary Fire per cambiare pagina e Primary Fire per eseguire. La pagina player condivide il ritmo 4 Hz del reticolo, filtra privacy ON e allinea `TargetInspeksi` al `CalonTargetTeleportasi`, così il nome visibile corrisponde al target effettivo. Il vecchio refresh Teleport a 1 Hz e la regola `19d` di navigazione inversa sono stati eliminati.

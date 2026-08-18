@@ -2,7 +2,7 @@
 
 **CHILL Dedicated Server** è un overlay sociale/Arcade per Overwatch 2 pensato per lobby fino a **12 player attivi**.
 
-La versione **0.7.1** identifica lo stato funzionale e tecnico corrente del repository.
+La versione **0.7.2** identifica lo stato funzionale e tecnico corrente del repository.
 
 ## Funzioni principali
 
@@ -87,7 +87,8 @@ Il runtime è stato alleggerito per una lobby piena:
 - cleanup completo join/leave;
 - cache `SlotHUDTerakhir` per evitare sort continui nei roster;
 - inspection Crouch a **4 Hz**;
-- refresh passivi Camera/Revenge/Teleport a **1 Hz**;
+- refresh passivi Camera/Revenge a **1 Hz**;
+- target player Teleport closest-to-reticle a **4 Hz** solo sulla pagina `All Players`;
 - contatore minuti ogni **10 s**;
 - cache Spawn Room a **1 Hz**;
 - un solo loop RGB globale a 8 Hz;
@@ -96,11 +97,9 @@ Il runtime è stato alleggerito per una lobby piena:
 
 ## Teleport Crouch
 
-L'overlay Teleport include:
+L'overlay Teleport ha **tre pagine fisse**: `Spawn Room`, `Objective / Flag` e `All Players`. Tenendo Crouch, **Secondary Fire** passa alla pagina successiva e **Primary Fire** esegue subito il teleport della pagina attiva.
 
-- Spawn Room registrata;
-- obiettivo della modalità quando disponibile;
-- player/bot validi, esclusi i player con **Crouch Privacy ON**.
+Nella pagina `All Players` non esiste più uno scorrimento manuale: il target è il player/bot valido **più vicino al reticolo**, aggiornato a 4 Hz e ricalcolato anche al click. Sono eleggibili solo target vivi/spawnati con **Crouch Privacy OFF**; il nome mostrato dall'inspection corrisponde al target che verrà usato dal teleport.
 
 Escort/Hybrid usano `Payload Position`, CTF usa la flag nemica, Push prova un player sull'obiettivo come proxy del robot e usa il fallback obiettivo quando disponibile.
 
@@ -272,3 +271,8 @@ Il test live della 0.6.22 ha mostrato che i cambi squadra ripetuti sono stabili 
 - I due `Wait(0.050)` del Join/Team Switch e il `Wait(0.050)` del Player Left restano intenzionali: separano gli eventi engine di leave/join durante un cambio squadra.
 
 La validazione resta **statica**: import reale, resa HUD e stress effettivo 12-client vanno comunque confermati nel client Overwatch.
+
+
+### Teleport reticle 0.7.2
+
+Crouch Teleport è stato ridisegnato su tre sole pagine. Secondary Fire cicla `Spawn Room → Objective / Flag → All Players`; Primary Fire teletrasporta immediatamente. La pagina player usa il closest-to-reticle con privacy OFF e non mantiene più cursori manuali per i singoli player. Il calcolo continuo vive nel manager globale 4 Hz e il click esegue un refresh immediato prima di bloccare l'identità del target.

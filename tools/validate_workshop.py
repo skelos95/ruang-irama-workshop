@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static gate for CHILL Dedicated Server 0.7.1 Global-first."""
+"""Static gate for CHILL Dedicated Server 0.7.2 Global-first."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
-CURRENT_VERSION = "0.7.1"
-EXPECTED_SOURCE_BLOB = "c808d7be03f2e7cf2d1f9c05ad39c63ff0cff8b0"
+CURRENT_VERSION = "0.7.2"
+EXPECTED_SOURCE_BLOB = "476f2b08fed274b308480bd22bcb12bcee6740e8"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -128,7 +128,7 @@ def validate(source: str) -> Checks:
     checks.equal({p.name for p in WORKFLOWS.glob("*.yml")}, ALLOWED_WORKFLOWS, "workflow permanenti")
     checks.require(not EXPORTS.exists(), "directory exports temporanea deve essere assente")
     checks.equal(len(rules), len({rule.name for rule in rules}), "titoli regola univoci")
-    checks.require(len(rules) >= 76, "numero regole inatteso")
+    checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
     for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat"):
@@ -146,7 +146,7 @@ def validate(source: str) -> Checks:
         "05b - Menu:", "05c - Menu:", "05d - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
         "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
         "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
-        "19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
+        "19c - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
         "19g - Teleportasi Jongkok:",
     )
     for prefix in each_player_pipelines:
@@ -172,6 +172,26 @@ def validate(source: str) -> Checks:
         and "Global.PemainAktif.PerintahTeleportasi = 3;" not in source,
         "dispatcher Teleport non deve essere nel manager globale",
     )
+    teleport_cycle = find_rule(rules, "19c - Teleportasi Jongkok:")
+    teleport_exec = find_rule(rules, "19e - Teleportasi Jongkok:")
+    teleport_refresh = find_rule(rules, "98 - Subrutin:")
+    teleport_render = find_rule(rules, "91g - Subrutin:")
+    checks.require(find_rule(rules, "19d - Teleportasi Jongkok:") is None, "selector manuale Teleport 19d ancora presente")
+    checks.require("Event Player.PerintahTeleportasi = 3;" not in source, "Teleport usa ancora il terzo comando legacy")
+    if teleport_cycle:
+        checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
+    if teleport_exec:
+        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
+        checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
+    if teleport_refresh:
+        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
+        checks.require("Player Variable(Current Array Element, PrivasiInspeksiAktif) == False" in teleport_refresh.body, "Teleport ignora la privacy")
+        checks.require("Append To Array(Array(Event Player, Null)" not in teleport_refresh.body, "Teleport usa ancora sentinelle Spawn/Objective nella lista player")
+    if teleport_render:
+        checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
+    teleport_global = find_rule(rules, "04k - Global-first:")
+    if teleport_global:
+        checks.require("Global.PemainAktif.KursorTeleportasi == 2" in teleport_global.body and "CalonTargetTeleportasi" in teleport_global.body, "target Teleport non è aggiornato globalmente a 4 Hz")
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")
@@ -206,6 +226,7 @@ def validate(source: str) -> Checks:
     lifecycle = find_rule(rules, "04h - Global-first:")
     if lifecycle:
         checks.require("Is Alive(Global.PemainAktif.TargetKamera) == False" in lifecycle.body, "Camera globale non rilascia target morto")
+        checks.require("Global.PemainAktif.KursorTeleportasi != 2" in lifecycle.body, "Inspection resta visibile fuori dalla pagina player Teleport")
     for rule in rules:
         if event_type(rule) == "Player Died":
             checks.require("Call Subroutine(TutupMenu);" not in rule.body, f"{rule.name}: morte chiude il Menu Arcade")
@@ -239,7 +260,7 @@ def main() -> int:
     source = SOURCE.read_text(encoding="utf-8")
     checks = validate(source)
     checks.finish()
-    print("OK - controlli statici v0.7.0 Global-first superati")
+    print("OK - controlli statici v0.7.2 Global-first superati")
     return 0
 
 

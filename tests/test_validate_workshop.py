@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT))
 from tools import validate_workshop as validator
 
 
-class GlobalFirst071Tests(unittest.TestCase):
+class GlobalFirst072Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = validator.SOURCE.read_text(encoding="utf-8")
@@ -45,6 +45,34 @@ class GlobalFirst071Tests(unittest.TestCase):
         pos = self.source.index("Ongoing - Each Player;", start)
         mutated = self.source[:pos] + self.source[pos:].replace("Ongoing - Each Player;", "Ongoing - Global;", 1)
         self.assertTrue(any("19a - Teleportasi" in error and "scheduler" in error for error in self.errors(mutated)))
+
+    def test_teleport_uses_three_pages(self) -> None:
+        mutated = self.source.replace(
+            "Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;",
+            "Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 2;",
+            1,
+        )
+        self.assertTrue(any("tre pagine" in error for error in self.errors(mutated)))
+
+    def test_teleport_privacy_filter_is_required(self) -> None:
+        start = self.source.index('rule("98 - Subrutin:')
+        pos = self.source.index("Player Variable(Current Array Element, PrivasiInspeksiAktif) == False", start)
+        mutated = self.source[:pos] + self.source[pos:].replace(
+            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
+            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == True",
+            1,
+        )
+        self.assertTrue(any("privacy" in error for error in self.errors(mutated)))
+
+    def test_teleport_closest_to_reticle_is_required(self) -> None:
+        start = self.source.index('rule("98 - Subrutin:')
+        pos = self.source.index("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi", start)
+        mutated = self.source[:pos] + self.source[pos:].replace(
+            "First Of(Sorted Array(Event Player.DaftarTargetTeleportasi",
+            "First Of(Event Player.DaftarTargetTeleportasi",
+            1,
+        )
+        self.assertTrue(any("closest-to-reticle" in error for error in self.errors(mutated)))
 
     def test_preloaded_submenu_is_required(self) -> None:
         mutated = self.source.replace('rule("91q - SubmenuPreload")', 'rule("91q - X")', 1)
