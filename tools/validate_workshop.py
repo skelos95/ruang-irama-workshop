@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "d7ed31444e7ee214b96b44d81bb7fd76f3c98060"
+EXPECTED_SOURCE_BLOB = "b57e518637bc052d7b497d9d698022b8e30b4b82"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -146,7 +146,7 @@ def validate(source: str) -> Checks:
         "05b - Menu:", "05c - Menu:", "05d - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
         "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
         "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
-        "19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
+        "19c - Teleportasi Jongkok:", "19d0 - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
         "19g - Teleportasi Jongkok:",
     )
     for prefix in each_player_pipelines:
@@ -154,7 +154,7 @@ def validate(source: str) -> Checks:
         checks.require(rule is not None, f"pipeline assente: {prefix}")
         if rule:
             checks.equal(event_type(rule), "Ongoing - Each Player", f"{prefix}: scheduler")
-    periodic_global = ("04i - Global-first:", "04j - Global-first:", "04k - Global-first:")
+    periodic_global = ("04i - Global-first:", "04j - Global-first:")
     for prefix in periodic_global:
         rule = find_rule(rules, prefix)
         checks.require(rule is not None, f"scheduler globale periodico assente: {prefix}")
@@ -173,11 +173,13 @@ def validate(source: str) -> Checks:
         "dispatcher Teleport non deve essere nel manager globale",
     )
     teleport_cycle = find_rule(rules, "19c - Teleportasi Jongkok:")
+    teleport_detector = find_rule(rules, "19d0 - Teleportasi Jongkok:")
     teleport_label = find_rule(rules, "19d - Teleportasi Jongkok:")
     teleport_exec = find_rule(rules, "19e - Teleportasi Jongkok:")
     teleport_refresh = find_rule(rules, "98 - Subrutin:")
     teleport_render = find_rule(rules, "91g - Subrutin:")
     teleport_global = find_rule(rules, "04k - Global-first:")
+    checks.require(teleport_global is None, "04k polling Inspection/Teleport deve essere rimosso")
     teleport_open = find_rule(rules, "19 - Teleportasi Jongkok:")
     teleport_close = find_rule(rules, "19g - Teleportasi Jongkok:")
     inspect_rule = find_rule(rules, "13 - Intip Pahlawan:")
@@ -187,13 +189,20 @@ def validate(source: str) -> Checks:
     if teleport_cycle:
         checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
         checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_cycle.body, "uscita pagina 3 non rimuove il target world text dedicato")
+    if teleport_detector:
+        checks.equal(event_type(teleport_detector), "Ongoing - Each Player", "19d0 Teleport detector: scheduler")
+        checks.require("Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in teleport_detector.body, "19d0 non rileva direttamente il cambio closest-to-reticle")
+        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_detector.body, "19d0 non aggiorna il candidate Teleport")
+        checks.require("Wait(" not in teleport_detector.body and "Loop If Condition Is True;" not in teleport_detector.body, "19d0 non deve usare Wait o Loop")
     if teleport_label:
         checks.equal(event_type(teleport_label), "Ongoing - Each Player", "19d Teleport target label: scheduler")
         checks.require("Event Player.TeleportasiJongkokAktif == True;" in teleport_label.body and "Event Player.KursorTeleportasi == 2;" in teleport_label.body, "19d non è limitata alla pagina 3")
-        checks.require("Event Player.CalonTargetTeleportasi" in teleport_label.body and "Visible To Position String and Color" in teleport_label.body, "19d non rivaluta il target live")
+        checks.require("Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non rivaluta il target live")
+        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_label.body and "Create In-World Text(" in teleport_label.body, "19d non distrugge e ricrea il nome")
         checks.require("Event Player.TeksTeleportasi = Last Text ID;" in teleport_label.body, "19d non salva il world text nell handle dedicato")
+        checks.require(teleport_label.body.index("Event Player.TeksTeleportasi = Last Text ID;") < teleport_label.body.index("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;"), "19d aggiorna lo snapshot prima di creare il testo")
+        checks.require("Wait(" not in teleport_label.body and "Loop If Condition Is True;" not in teleport_label.body, "19d non deve usare Wait o Loop")
         checks.require("Event Player.TeksDunia" not in teleport_label.body, "19d condivide ancora l handle TeksDunia con Inspection")
-        checks.require("Event Player.InspeksiAktif" not in teleport_label.body and "Event Player.TargetInspeksi" not in teleport_label.body, "19d condivide ancora stato Inspection")
     if teleport_exec:
         checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
         checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
@@ -205,8 +214,6 @@ def validate(source: str) -> Checks:
         checks.require(dummy_eligibility in teleport_refresh.body and bot_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh: bot pubblici (dummy/automatici) e player privacy OFF richiesti")
         checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")
         checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")
-    if teleport_global:
-        checks.require("DaftarTargetTeleportasi" not in teleport_global.body and "CalonTargetTeleportasi" not in teleport_global.body, "04k gestisce ancora il target Teleport con polling")
     if teleport_render:
         checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
     if teleport_open:
@@ -221,15 +228,13 @@ def validate(source: str) -> Checks:
     fast_manager = find_rule(rules, "04g - Global-first:")
     passive_manager = find_rule(rules, "04i - Global-first:")
     checks.require("PosisiRuangMuncul" not in source and "PunyaPosisiMuncul" not in source, "cache Spawn Room legacy ancora presente")
-    if teleport_global:
-        checks.require("TeksTeleportasi" not in teleport_global.body and "TargetTeleportasiTeks" not in teleport_global.body, "04k gestisce ancora il refresh del nome Teleport")
-    if teleport_label:
-        checks.require("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non rivaluta il target live")
-        checks.require("Eye Position(Event Player.TargetTeleportasiTeks)" in teleport_label.body, "19d non usa il target label dedicato")
-        checks.require("Event Player.TargetTeleportasiTeks != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in teleport_label.body, "19d non rileva direttamente il cambio closest-to-reticle")
-        checks.require(dummy_eligibility in teleport_label.body and bot_eligibility in teleport_label.body and privacy in teleport_label.body, "19d target live: bot pubblici e player privacy OFF richiesti")
-        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_label.body and "Create In-World Text(" in teleport_label.body, "19d non distrugge e ricrea subito il nome al cambio target")
-        checks.require("Wait(" not in teleport_label.body and "Loop If Condition Is True;" not in teleport_label.body, "19d target live non deve usare Wait o Loop")
+    if teleport_detector:
+        checks.require(dummy_eligibility in teleport_detector.body and bot_eligibility in teleport_detector.body and privacy in teleport_detector.body, "19d0 target live: bot pubblici e player privacy OFF richiesti")
+    if inspect_rule:
+        checks.require("Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in inspect_rule.body, "Crouch normale non rileva direttamente il cambio closest-to-reticle")
+        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in inspect_rule.body and "Create In-World Text(" in inspect_rule.body, "Crouch normale non distrugge e ricrea il nome")
+        checks.require("Wait(" not in inspect_rule.body and "Loop If Condition Is True;" not in inspect_rule.body, "Crouch normale non deve usare Wait o Loop")
+        checks.require(dummy_eligibility in inspect_rule.body and bot_eligibility in inspect_rule.body and privacy in inspect_rule.body, "Crouch normale non usa lo stesso filtro pubblico del Teleport")
     if teleport_exec:
         checks.require("Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));" in teleport_exec.body, "Spawn teleport non usa direttamente Spawn Points")
         checks.require("PosisiRuangMuncul" not in teleport_exec.body and "PunyaPosisiMuncul" not in teleport_exec.body, "Spawn teleport usa ancora cache/registrazione")

@@ -99,7 +99,7 @@ class GlobalFirst072Tests(unittest.TestCase):
         self.assertTrue(any("forzare la posizione" in error for error in self.errors(mutated)))
 
     def test_periodic_pollers_are_global(self) -> None:
-        for prefix in ("04i - Global-first:", "04j - Global-first:", "04k - Global-first:"):
+        for prefix in ("04i - Global-first:", "04j - Global-first:"):
             start = self.source.index(f'rule("{prefix}')
             pos = self.source.index("Ongoing - Global;", start)
             mutated = self.source[:pos] + self.source[pos:].replace("Ongoing - Global;", "Ongoing - Each Player;", 1)
