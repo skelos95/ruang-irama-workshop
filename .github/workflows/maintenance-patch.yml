@@ -1,6 +1,6 @@
 name: Apply Maintenance Patch
 
-# 0.7.1 trigger: repository Actions write permissions verified.
+# 0.7.1 retry: validator rule-count threshold corrected.
 on:
   push:
     branches:
