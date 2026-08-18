@@ -1017,6 +1017,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Global.TeksDiriPemain = Append To Array(Global.TeksDiriPemain, 0);
 		Global.SlotHUDPemain = Append To Array(Global.SlotHUDPemain, Event Player.UrutanHUD);
 		Event Player.Manusia = True;
+		Call Subroutine(HitungPilihan);
 	}
 }
 
@@ -3575,7 +3576,17 @@ rule("91p - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
 		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Global.PemainManusia[Global.IndeksVote])));
+			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);
+		End;
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
+			If(And(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih) != Null, Array Contains(Global.PemainManusia,
+				Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih))));
+				Modify Player Variable(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih), JumlahSuara, Add, 1);
+			Else If(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih) != Null);
+				Set Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih, Null);
+			End;
+		End;
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
 			If(Global.PemainManusia[Global.IndeksVote].JumlahSuara > Global.SuaraTerbanyak);
 				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksVote].JumlahSuara;
 				Global.PemimpinSuara = Global.PemainManusia[Global.IndeksVote];

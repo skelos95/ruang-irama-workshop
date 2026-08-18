@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "0ad6bd8f555b008e129b3e3525bae0646ac29a4e"
+EXPECTED_SOURCE_BLOB = "2ed0e0eadf56367719d3065493ebd6078c3f7ffc"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -298,6 +298,15 @@ def validate(source: str) -> Checks:
         checks.require("Call Subroutine(TenangkanPemain);" in leave.body and "Call Subroutine(BersihkanPemain);" in leave.body, "Leave lifecycle incompleto")
         checks.require("Is Dummy Bot(Event Player) == False;" in leave.body, "Leave umano non esclude dummy diretti")
     checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop voto fuori limite Count anziché Count-1")
+    vote_count = find_rule(rules, "91p - Subrutin:")
+    checks.require(vote_count is not None, "subroutine conteggio voti assente")
+    if vote_count:
+        checks.require("Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);" in vote_count.body, "conteggio voti non azzera JumlahSuara prima del recount")
+        checks.require("Modify Player Variable(Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih), JumlahSuara, Add, 1);" in vote_count.body, "conteggio voti non incrementa direttamente il player votato")
+        checks.require("Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih)" not in vote_count.body, "conteggio voti usa ancora il Filtered Array fragile")
+        checks.require("Array Contains(Global.PemainManusia" in vote_count.body, "conteggio voti non valida più il target votato")
+    if classifier:
+        checks.require("Call Subroutine(HitungPilihan);" in classifier.body, "join umano non ricalcola le votazioni")
     checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop cleanup fuori limite Count anziché Count-1")
     cleanup = find_rule(rules, "93c - Subrutin:")
     if cleanup:
