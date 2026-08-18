@@ -421,3 +421,8 @@ La Camera spectate viene rilasciata anche su target morto/non spawnato. I loop `
 ## Audit 0.7.2 — Teleport closest-to-reticle
 
 Il selettore manuale dei player è stato rimosso. Crouch Teleport mantiene soltanto tre pagine, con Secondary Fire per cambiare pagina e Primary Fire per eseguire. La pagina player condivide il ritmo 4 Hz del reticolo, filtra privacy ON e allinea `TargetInspeksi` al `CalonTargetTeleportasi`, così il nome visibile corrisponde al target effettivo. Il vecchio refresh Teleport a 1 Hz e la regola `19d` di navigazione inversa sono stati eliminati.
+
+
+### Hotfix 0.7.2 — persistenza pagina Teleport e cleanup Inspection
+
+`KursorTeleportasi` viene inizializzato a 0 solo in `SiapkanPemain` e non viene più azzerato all'apertura/chiusura dell'overlay. `19g` esegue cleanup immediato di nameplate, `TeksDunia/TeksDiri`, `TargetInspeksi` e `InspeksiAktif`. Quando Crouch parte direttamente sulla pagina 3, la regola Inspection usa prima `SegarkanTargetTeleportasi` e allinea `TargetInspeksi = CalonTargetTeleportasi`, evitando un target generico/stale nel primo frame.

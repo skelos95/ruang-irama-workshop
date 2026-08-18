@@ -2270,7 +2270,12 @@ rule("13 - Intip Pahlawan: Tampilkan ikon, nama, dan kesehatan saat ini")
 		Event Player.InspeksiAktif = True;
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
-		Call Subroutine(SegarkanTargetInspeksi);
+		If(And(Event Player.TeleportasiJongkokAktif == True, Event Player.KursorTeleportasi == 2));
+			Call Subroutine(SegarkanTargetTeleportasi);
+			Event Player.TargetInspeksi = Event Player.CalonTargetTeleportasi;
+		Else;
+			Call Subroutine(SegarkanTargetInspeksi);
+		End;
 		Create In-World Text(Event Player, Event Player.TargetInspeksi == Null ? Custom String("") : And(Player Variable(Event Player.TargetInspeksi, Manusia) == True, And(
 			Player Variable(Event Player.TargetInspeksi, PrivasiInspeksiAktif) == True, Team Of(Event Player.TargetInspeksi) != Team Of(Event Player))) ? Custom String("")
 			: Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(
@@ -2604,7 +2609,6 @@ rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 	{
 		Event Player.TeleportasiJongkokAktif = True;
 		Event Player.PerintahTeleportasi = 0;
-		Event Player.KursorTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;
 		Event Player.JenisTeleportasiTerkunci = -1;
@@ -2796,11 +2800,29 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 		Event Player.HudMenu = Null;
 		Event Player.TeleportasiJongkokAktif = False;
 		Event Player.PerintahTeleportasi = 0;
-		Event Player.KursorTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
+		If(Event Player.PelatNamaDinonaktifkan == True);
+			Enable Nameplates(All Players(All Teams), Event Player);
+			Event Player.PelatNamaDinonaktifkan = False;
+		End;
+		If(Event Player.TeksDunia != Null);
+			Destroy In-World Text(Event Player.TeksDunia);
+		End;
+		If(Event Player.TeksDiri != Null);
+			Destroy In-World Text(Event Player.TeksDiri);
+		End;
+		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
+			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+		End;
+		Event Player.TeksDunia = Null;
+		Event Player.TeksDiri = Null;
+		Event Player.TargetInspeksi = Null;
+		Event Player.DaftarTargetInspeksi = Empty Array;
+		Event Player.InspeksiAktif = False;
 		Allow Button(Event Player, Button(Primary Fire));
 		Allow Button(Event Player, Button(Secondary Fire));
 		Allow Button(Event Player, Button(Interact));

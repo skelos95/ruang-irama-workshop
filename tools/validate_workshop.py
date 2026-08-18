@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "d75a81dd7cf5297b2a326b12a78fd7311592238f"
+EXPECTED_SOURCE_BLOB = "80fd6ea3ae2fc766d36500395955b03d8c7806a4"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -206,6 +206,19 @@ def validate(source: str) -> Checks:
             "And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))))));" not in teleport_refresh.body,
             "filtro Teleport refresh contiene una parentesi finale di troppo",
         )
+    teleport_open = find_rule(rules, "19 - Teleportasi Jongkok:")
+    teleport_close = find_rule(rules, "19g - Teleportasi Jongkok:")
+    inspect_rule = find_rule(rules, "13 - Intip Pahlawan:")
+    checks.equal(source.count("Event Player.KursorTeleportasi = 0;"), 1, "reset KursorTeleportasi deve restare solo in SiapkanPemain")
+    if teleport_open:
+        checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_open.body, "apertura Teleport resetta ancora la pagina")
+    if teleport_close:
+        checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_close.body, "chiusura Teleport resetta ancora la pagina")
+        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_close.body, "chiusura Teleport non distrugge subito il nome inspection")
+        checks.require("Event Player.InspeksiAktif = False;" in teleport_close.body, "chiusura Teleport non resetta subito Inspection")
+    if inspect_rule:
+        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in inspect_rule.body, "pagina player Teleport non inizializza il target dal reticolo")
+        checks.require("Event Player.TargetInspeksi = Event Player.CalonTargetTeleportasi;" in inspect_rule.body, "nome inspection non è allineato al target Teleport")
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")

@@ -276,3 +276,8 @@ La validazione resta **statica**: import reale, resa HUD e stress effettivo 12-c
 ### Teleport reticle 0.7.2
 
 Crouch Teleport è stato ridisegnato su tre sole pagine. Secondary Fire cicla `Spawn Room → Objective / Flag → All Players`; Primary Fire teletrasporta immediatamente. La pagina player usa il closest-to-reticle con privacy OFF e non mantiene più cursori manuali per i singoli player. Il calcolo continuo vive nel manager globale 4 Hz e il click esegue un refresh immediato prima di bloccare l'identità del target.
+
+
+### Hotfix Teleport 0.7.2 — pagina persistente
+
+La pagina Crouch Teleport resta memorizzata tra un rilascio di Crouch e il successivo: se si chiude sulla pagina `All Players`, la riapertura torna direttamente lì. La chiusura rimuove immediatamente il testo Inspection e ripristina le nameplate, evitando nomi residui; sulla pagina player il primo target visualizzato viene inizializzato dalla stessa sorgente privacy-filtered closest-to-reticle usata dal Teleport.
