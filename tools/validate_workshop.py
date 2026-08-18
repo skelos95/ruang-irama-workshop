@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "38929ac945c8571eb2bf4b1f72187f363957a5d1"
+EXPECTED_SOURCE_BLOB = "4fce3ac2585e5d6d5091b9037e7c434fd047d981"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -131,7 +131,7 @@ def validate(source: str) -> Checks:
     checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks"):
+    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
@@ -186,11 +186,13 @@ def validate(source: str) -> Checks:
     checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")
     if teleport_cycle:
         checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
-        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_cycle.body, "uscita pagina 3 non rimuove il target world text")
+        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_cycle.body, "uscita pagina 3 non rimuove il target world text dedicato")
     if teleport_label:
         checks.equal(event_type(teleport_label), "Ongoing - Each Player", "19d Teleport target label: scheduler")
         checks.require("Event Player.TeleportasiJongkokAktif == True;" in teleport_label.body and "Event Player.KursorTeleportasi == 2;" in teleport_label.body, "19d non è limitata alla pagina 3")
         checks.require("Event Player.CalonTargetTeleportasi" in teleport_label.body and "Visible To Position String and Color" in teleport_label.body, "19d non rivaluta il target live")
+        checks.require("Event Player.TeksTeleportasi = Last Text ID;" in teleport_label.body, "19d non salva il world text nell handle dedicato")
+        checks.require("Event Player.TeksDunia" not in teleport_label.body, "19d condivide ancora l handle TeksDunia con Inspection")
         checks.require("Event Player.InspeksiAktif" not in teleport_label.body and "Event Player.TargetInspeksi" not in teleport_label.body, "19d condivide ancora stato Inspection")
     if teleport_exec:
         checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
@@ -214,7 +216,7 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_open.body, "apertura Teleport resetta ancora la pagina")
     if teleport_close:
         checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_close.body, "chiusura Teleport resetta ancora la pagina")
-        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in teleport_close.body, "chiusura Teleport non distrugge il target world text")
+        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_close.body, "chiusura Teleport non distrugge il target world text dedicato")
     if inspect_rule:
         checks.require("Event Player.TeleportasiJongkokAktif == False;" in inspect_rule.body, "Inspection generica entra ancora nel Teleport")
         checks.require("Event Player.TeleportasiJongkokDiaktifkan == False;" in inspect_rule.body, "Inspection generica può vincere il primo frame Crouch")
@@ -224,10 +226,12 @@ def validate(source: str) -> Checks:
     checks.require("PosisiRuangMuncul" not in source and "PunyaPosisiMuncul" not in source, "cache Spawn Room legacy ancora presente")
     if teleport_global:
         checks.require("TargetTeleportasiTeks != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body, "target label Teleport non rileva il cambio sotto il mirino")
-        checks.require("Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body, "target label Teleport non viene invalidato al cambio target")
+        checks.require("Destroy In-World Text(Global.PemainAktif.TeksTeleportasi);" in teleport_global.body, "target label Teleport dedicato non viene invalidato al cambio target")
+        checks.require("Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Null);" in teleport_global.body, "04k non forza la ricreazione del label sul nuovo target")
     if teleport_label:
         checks.require("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non fotografa il target corrente")
         checks.require("Eye Position(Event Player.TargetTeleportasiTeks)" in teleport_label.body, "19d non usa il target label dedicato")
+        checks.require("Event Player.TeksTeleportasi == Null;" in teleport_label.body, "19d non usa l handle dedicato come latch di ricreazione")
     if teleport_exec:
         checks.require("Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));" in teleport_exec.body, "Spawn teleport non usa direttamente Spawn Points")
         checks.require("PosisiRuangMuncul" not in teleport_exec.body and "PunyaPosisiMuncul" not in teleport_exec.body, "Spawn teleport usa ancora cache/registrazione")

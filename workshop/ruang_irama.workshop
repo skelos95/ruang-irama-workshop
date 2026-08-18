@@ -147,6 +147,7 @@ variables
 		94: HalamanMenuTujuan
 		95: HalamanSubmenuPramuat
 		96: TargetTeleportasiTeks
+		97: TeksTeleportasi
 }
 
 subroutines
@@ -1389,15 +1390,18 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 						Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
 				End;
 				If(Global.PemainAktif.TargetTeleportasiTeks != Global.PemainAktif.CalonTargetTeleportasi);
-					If(Global.PemainAktif.TeksDunia != Null);
-						Destroy In-World Text(Global.PemainAktif.TeksDunia);
+					If(Global.PemainAktif.TeksTeleportasi != Null);
+						Destroy In-World Text(Global.PemainAktif.TeksTeleportasi);
 					End;
-					If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
-						Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
-					End;
-					Set Player Variable(Global.PemainAktif, TeksDunia, Null);
-					Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Global.PemainAktif.CalonTargetTeleportasi);
+					Set Player Variable(Global.PemainAktif, TeksTeleportasi, Null);
+					Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Null);
 				End;
+			Else;
+				If(Global.PemainAktif.TeksTeleportasi != Null);
+					Destroy In-World Text(Global.PemainAktif.TeksTeleportasi);
+				End;
+				Set Player Variable(Global.PemainAktif, TeksTeleportasi, Null);
+				Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Null);
 			End;
 		End;
 		Global.PemainAktif = Null;
@@ -2689,13 +2693,10 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 		Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;
 		If(Event Player.KursorTeleportasi != 2);
 			Event Player.CalonTargetTeleportasi = Null;
-			If(Event Player.TeksDunia != Null);
-				Destroy In-World Text(Event Player.TeksDunia);
+			If(Event Player.TeksTeleportasi != Null);
+				Destroy In-World Text(Event Player.TeksTeleportasi);
 			End;
-			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
-			End;
-			Event Player.TeksDunia = Null;
+			Event Player.TeksTeleportasi = Null;
 			Event Player.TargetTeleportasiTeks = Null;
 			If(Event Player.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Event Player);
@@ -2711,8 +2712,12 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 			Event Player.TeksDunia = Null;
 			Event Player.TargetInspeksi = Null;
 			Event Player.InspeksiAktif = False;
+			If(Event Player.TeksTeleportasi != Null);
+				Destroy In-World Text(Event Player.TeksTeleportasi);
+			End;
+			Event Player.TeksTeleportasi = Null;
+			Event Player.TargetTeleportasiTeks = Null;
 			Call Subroutine(SegarkanTargetTeleportasi);
-			Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
 		End;
 	}
 }
@@ -2731,7 +2736,8 @@ rule("19d - Teleportasi Jongkok: Nama target publik mengikuti reticolo")
 		Event Player.Manusia == True;
 		Event Player.TeleportasiJongkokAktif == True;
 		Event Player.KursorTeleportasi == 2;
-		Event Player.TeksDunia == Null;
+		Event Player.TeksTeleportasi == Null;
+		Event Player.CalonTargetTeleportasi != Null;
 		Is Alive(Event Player) == True;
 		Is Button Held(Event Player, Button(Crouch)) == True;
 	}
@@ -2741,17 +2747,14 @@ rule("19d - Teleportasi Jongkok: Nama target publik mengikuti reticolo")
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
 		Call Subroutine(SegarkanTargetTeleportasi);
+		Abort If(Event Player.CalonTargetTeleportasi == Null);
 		Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
-		Abort If(Event Player.TargetTeleportasiTeks == Null);
 		Create In-World Text(Event Player, Custom String("{0} {1} | {2}",
 			Hero Icon String(Is Duplicating(Event Player.TargetTeleportasiTeks) ? Hero Being Duplicated(Event Player.TargetTeleportasiTeks) : Hero Of(Event Player.TargetTeleportasiTeks)),
 			Custom String("{0}", Event Player.TargetTeleportasiTeks), Round To Integer(Health(Event Player.TargetTeleportasiTeks), Down)),
 			Eye Position(Event Player.TargetTeleportasiTeks) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color,
 			Player Variable(Event Player.TargetTeleportasiTeks, Manusia) == True ? Player Variable(Event Player.TargetTeleportasiTeks, WarnaNama) : Color(Orange), Visible Never);
-		Event Player.TeksDunia = Last Text ID;
-		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
-		End;
+		Event Player.TeksTeleportasi = Last Text ID;
 	}
 }
 
@@ -2858,6 +2861,10 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 		Event Player.PerintahTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;
+		If(Event Player.TeksTeleportasi != Null);
+			Destroy In-World Text(Event Player.TeksTeleportasi);
+		End;
+		Event Player.TeksTeleportasi = Null;
 		Event Player.TargetTeleportasiTeks = Null;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
@@ -3758,6 +3765,11 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
+		If(Event Player.TeksTeleportasi != Null);
+			Destroy In-World Text(Event Player.TeksTeleportasi);
+		End;
+		Event Player.TeksTeleportasi = Null;
+		Event Player.TargetTeleportasiTeks = Null;
 		"Satu yield sebelum bagian kritis; setelah scratch Global dipakai, cleanup harus atomik tanpa Wait."
 		Wait(0.016, Ignore Condition);
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);
@@ -3923,6 +3935,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;
+		Event Player.TargetTeleportasiTeks = Null;
+		Event Player.TeksTeleportasi = Null;
 		Event Player.TargetBalasDendamTerkunci = Null;
 		Event Player.TargetBalasDendamDipilih = Null;
 		Event Player.PelatNamaDinonaktifkan = False;
