@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "a17b1bcb4ffd75e9613b87a44d1c95f153c47727"
+EXPECTED_SOURCE_BLOB = "479d89eacf09b081557ec636e79285da48c282e1"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -302,12 +302,14 @@ def validate(source: str) -> Checks:
     vote_count = find_rule(rules, "91p - Subrutin:")
     checks.require(vote_count is not None, "subroutine conteggio voti assente")
     if vote_count:
-        checks.require("Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);" in vote_count.body, "conteggio voti non azzera JumlahSuara prima del recount")
-        checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);" in vote_count.body, "conteggio voti non scorre esplicitamente i votanti")
-        checks.require("Modify Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Add, 1);" in vote_count.body, "conteggio voti non incrementa direttamente il candidato")
-        checks.require("Modify Player Variable(Player Variable(" not in vote_count.body, "conteggio voti usa ancora un player-target indiretto")
-        checks.require("Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, PemainDipilih)" not in vote_count.body, "conteggio voti usa ancora il Filtered Array fragile")
-        checks.require("Array Contains(Global.PemainManusia" in vote_count.body, "conteggio voti non valida più il target votato")
+        checks.require("Set Player Variable(" not in vote_count.body and "Modify Player Variable(" not in vote_count.body, "HitungPilihan non deve più ricontare o modificare JumlahSuara")
+        checks.require("First Of(Sorted Array(Global.PemainManusia" in vote_count.body, "HitungPilihan non seleziona CHILL STAR dai contatori correnti")
+        checks.require("Count Of(Filtered Array(Global.PemainManusia" in vote_count.body, "HitungPilihan non rileva il pareggio dai contatori correnti")
+    if interact:
+        checks.require("Modify Player Variable(Global.PemainManusia[Event Player.KursorPilihan], JumlahSuara, Add, 1);" in interact.body, "voto non incrementa direttamente il nuovo target")
+        checks.require("Modify Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, Subtract, 1);" in interact.body, "cambio voto non sottrae il voto precedente")
+        checks.require("Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];" in interact.body, "voto singolo non salva il nuovo target")
+        checks.require("If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);" in interact.body, "votare di nuovo lo stesso player non è idempotente")
     if classifier:
         checks.require("Call Subroutine(HitungPilihan);" in classifier.body, "join umano non ricalcola le votazioni")
     checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop cleanup fuori limite Count anziché Count-1")

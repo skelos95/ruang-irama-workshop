@@ -2027,8 +2027,15 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 			If(Count Of(Global.PemainManusia) > 0);
 				Event Player.KursorPilihan %= Count Of(Global.PemainManusia);
 				If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);
-					Event Player.PemainDipilih = Null;
+					"Un player possiede un solo voto attivo: togli il precedente, salva il nuovo e aggiungi esattamente un voto. Self-vote consentito."
+					If(And(Event Player.PemainDipilih != Null, Array Contains(Global.PemainManusia, Event Player.PemainDipilih)));
+						Modify Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, Subtract, 1);
+						If(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)].JumlahSuara < 0);
+							Set Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, 0);
+						End;
+					End;
 					Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];
+					Modify Player Variable(Global.PemainManusia[Event Player.KursorPilihan], JumlahSuara, Add, 1);
 					Call Subroutine(HitungPilihan);
 					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Vote registered for {0}.", Event Player.PemainDipilih) : Event Player.IndeksBahasa == 1 ? Custom String("Pilihan untuk {0} tersimpan.", Event Player.PemainDipilih) : Custom String("โหวตให้ {0} แล้ว", Event Player.PemainDipilih));
 				End;
@@ -3573,39 +3580,21 @@ rule("91p - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 
 	actions
 	{
+		"JumlahSuara non viene mai ricostruito qui: è stato transazionale aggiornato esattamente al click del voto."
 		Global.PemimpinSuara = Null;
 		Global.SuaraTerbanyak = 0;
 		Global.SuaraSeri = False;
-
-		"Buang referensi vote yang sudah tidak menunjuk manusia aktif."
-		For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			If(And(Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih) != Null, Array Contains(Global.PemainManusia,
-				Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih)) == False));
-				Set Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih, Null);
-			End;
-		End;
-
-		"Recount deterministico: candidato esterno, votanti interni. L'incremento colpisce sempre direttamente il candidato dell'array."
-		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			Set Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, 0);
-			For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-				If(Player Variable(Global.PemainManusia[Global.IndeksPemilihVote], PemainDipilih) == Global.PemainManusia[Global.IndeksVote]);
-					Modify Player Variable(Global.PemainManusia[Global.IndeksVote], JumlahSuara, Add, 1);
+		If(Count Of(Global.PemainManusia) > 0);
+			Global.PemimpinSuara = First Of(Sorted Array(Global.PemainManusia, 0 - Player Variable(Current Array Element, JumlahSuara)));
+			Global.SuaraTerbanyak = Player Variable(Global.PemimpinSuara, JumlahSuara);
+			If(Global.SuaraTerbanyak > 0);
+				Global.SuaraSeri = Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, JumlahSuara) == Global.SuaraTerbanyak)) > 1;
+				If(Global.SuaraSeri == True);
+					Global.PemimpinSuara = Null;
 				End;
+			Else;
+				Global.PemimpinSuara = Null;
 			End;
-		End;
-
-		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
-			If(Global.PemainManusia[Global.IndeksVote].JumlahSuara > Global.SuaraTerbanyak);
-				Global.SuaraTerbanyak = Global.PemainManusia[Global.IndeksVote].JumlahSuara;
-				Global.PemimpinSuara = Global.PemainManusia[Global.IndeksVote];
-				Global.SuaraSeri = False;
-			Else If(And(Global.PemainManusia[Global.IndeksVote].JumlahSuara == Global.SuaraTerbanyak, Global.SuaraTerbanyak > 0));
-				Global.SuaraSeri = True;
-			End;
-		End;
-		If(Or(Global.SuaraTerbanyak <= 0, Global.SuaraSeri == True));
-			Global.PemimpinSuara = Null;
 		End;
 	}
 }
@@ -3728,6 +3717,12 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Set Melee Enabled(Event Player, True);
 		Enable Game Mode HUD(Event Player);
 		Enable Game Mode In-World UI(Event Player);
+		If(And(Event Player.PemainDipilih != Null, And(Event Player.PemainDipilih != Event Player, Array Contains(Global.PemainManusia, Event Player.PemainDipilih))));
+			Modify Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, Subtract, 1);
+			If(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)].JumlahSuara < 0);
+				Set Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, 0);
+			End;
+		End;
 		Event Player.PemainDipilih = Null;
 		Event Player.JumlahSuara = 0;
 		Event Player.SudahSiap = False;
