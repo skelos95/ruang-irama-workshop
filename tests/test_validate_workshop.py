@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT))
 from tools import validate_workshop as validator
 
 
-class GlobalFirst070Tests(unittest.TestCase):
+class GlobalFirst071Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = validator.SOURCE.read_text(encoding="utf-8")
@@ -57,6 +57,29 @@ class GlobalFirst070Tests(unittest.TestCase):
     def test_try_your_luck_forcing_position_is_rejected(self) -> None:
         mutated = self.source + "\nStart Forcing Player Position(Event Player, Position Of(Event Player), False);\n"
         self.assertTrue(any("forzare la posizione" in error for error in self.errors(mutated)))
+
+    def test_periodic_pollers_are_global(self) -> None:
+        for prefix in ("04i - Global-first:", "04j - Global-first:", "04k - Global-first:"):
+            start = self.source.index(f'rule("{prefix}')
+            pos = self.source.index("Ongoing - Global;", start)
+            mutated = self.source[:pos] + self.source[pos:].replace("Ongoing - Global;", "Ongoing - Each Player;", 1)
+            self.assertTrue(any(prefix in error and "scheduler" in error for error in self.errors(mutated)))
+
+    def test_cleanup_critical_section_has_no_wait(self) -> None:
+        mutated = self.source.replace(
+            "Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);",
+            "Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Event Player);\n\t\tWait(0.016, Ignore Condition);",
+            1,
+        )
+        self.assertTrue(any("scratch Global" in error for error in self.errors(mutated)))
+
+    def test_vote_loop_count_stop_is_rejected(self) -> None:
+        mutated = self.source.replace(
+            "For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);",
+            "For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);",
+            1,
+        )
+        self.assertTrue(any("fuori limite" in error for error in self.errors(mutated)))
 
     def test_live_confirmed_blob_is_pinned(self) -> None:
         mutated = self.source.replace("Global.PemainAktif = Null;", "Global.PemainAktif = Null;\n", 1)

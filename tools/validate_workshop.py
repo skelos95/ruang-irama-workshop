@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static gate for CHILL Dedicated Server 0.7.0 Global-first."""
+"""Static gate for CHILL Dedicated Server 0.7.1 Global-first."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
-CURRENT_VERSION = "0.7.0"
-EXPECTED_SOURCE_BLOB = "f0940e494463c99d395e58ac9de0c67f75b61cb3"
+CURRENT_VERSION = "0.7.1"
+EXPECTED_SOURCE_BLOB = "c808d7be03f2e7cf2d1f9c05ad39c63ff0cff8b0"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -147,13 +147,24 @@ def validate(source: str) -> Checks:
         "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
         "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
         "19c - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
-        "19f - Teleportasi Jongkok:", "19g - Teleportasi Jongkok:",
+        "19g - Teleportasi Jongkok:",
     )
     for prefix in each_player_pipelines:
         rule = find_rule(rules, prefix)
         checks.require(rule is not None, f"pipeline assente: {prefix}")
         if rule:
             checks.equal(event_type(rule), "Ongoing - Each Player", f"{prefix}: scheduler")
+    periodic_global = ("04i - Global-first:", "04j - Global-first:", "04k - Global-first:")
+    for prefix in periodic_global:
+        rule = find_rule(rules, prefix)
+        checks.require(rule is not None, f"scheduler globale periodico assente: {prefix}")
+        if rule:
+            checks.equal(event_type(rule), "Ongoing - Global", f"{prefix}: scheduler")
+            checks.require("For Global Variable(IndeksPemainGlobal" in rule.body, f"{prefix}: loop globale assente")
+            checks.require("Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal]" in rule.body, f"{prefix}: contesto umano globale assente")
+    for prefix in ("02c - Ruang Muncul:", "03 - Waktu:", "07b - Menu kamera:", "07c - Menu Balas Dendam:",
+                   "14 - Intip Pahlawan:", "16 - Kamera:", "19f - Teleportasi Jongkok:"):
+        checks.require(find_rule(rules, prefix) is None, f"poller per-player legacy ancora presente: {prefix}")
     checks.require("Global.PemainAktif.InteraksiKameraDipakai = False;" not in source, "release Camera non deve essere nel manager globale")
     checks.require(
         "Global.PemainAktif.PerintahTeleportasi = 1;" not in source
@@ -191,12 +202,19 @@ def validate(source: str) -> Checks:
         checks.require("Wait(0.500, Abort When False);" in menu_toggle.body, "hold Melee 0,5 s assente")
     if camera_toggle:
         checks.require("Wait(0.500, Abort When False);" in camera_toggle.body, "hold Camera 0,5 s assente")
+        checks.require("Wait(0.016, Ignore Condition);" not in camera_toggle.body, "Camera mantiene un frame Wait superfluo")
+    lifecycle = find_rule(rules, "04h - Global-first:")
+    if lifecycle:
+        checks.require("Is Alive(Global.PemainAktif.TargetKamera) == False" in lifecycle.body, "Camera globale non rilascia target morto")
     for rule in rules:
         if event_type(rule) == "Player Died":
             checks.require("Call Subroutine(TutupMenu);" not in rule.body, f"{rule.name}: morte chiude il Menu Arcade")
     respawn = find_rule(rules, "12f - Bangkit Lompat:")
     if respawn:
         checks.require("MenuTerbuka == False" not in respawn.body, "Jump respawn è bloccato con menu aperto")
+    classifier = find_rule(rules, "02 - Pemain:")
+    if classifier:
+        checks.require("Is Dummy Bot(Event Player) == False;" in classifier.body, "classifier umano non esclude i dummy diretti")
     join = find_rule(rules, "01 - Pemain Masuk")
     leave = find_rule(rules, "04 - Pemain Keluar")
     checks.require(join is not None and leave is not None, "lifecycle Join/Leave assente")
@@ -206,6 +224,14 @@ def validate(source: str) -> Checks:
         checks.equal(join.body.count("Wait(0.050, Ignore Condition);"), 2, "yield cambio team")
     if leave:
         checks.require("Call Subroutine(TenangkanPemain);" in leave.body and "Call Subroutine(BersihkanPemain);" in leave.body, "Leave lifecycle incompleto")
+        checks.require("Is Dummy Bot(Event Player) == False;" in leave.body, "Leave umano non esclude dummy diretti")
+    checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop voto fuori limite Count anziché Count-1")
+    checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop cleanup fuori limite Count anziché Count-1")
+    cleanup = find_rule(rules, "93c - Subrutin:")
+    if cleanup:
+        checks.equal(cleanup.body.count("Wait(0.016, Ignore Condition);"), 1, "yield cleanup")
+        critical = cleanup.body[cleanup.body.index("Global.IndeksKeluar = Index Of Array Value"): ]
+        checks.require("Wait(" not in critical, "cleanup usa Wait mentre scratch Global condiviso è attivo")
     return checks
 
 

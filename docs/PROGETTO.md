@@ -1,6 +1,6 @@
-# Note di progetto — versione 0.6.25
+# Note di progetto — versione 0.7.1
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.25.
+Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.7.1.
 
 ## Architettura generale
 
@@ -179,12 +179,12 @@ Esito rosso:
 
 1. la protezione runtime passa a OFF;
 2. vengono salvati `PosisiNasibTerkunci` e il colore corrente `Global.RGB` in `WarnaNasibTerkunci`;
-3. Move Speed e Knockback Received passano a 0 e parte `Start Forcing Player Position`;
+3. Move Speed passa a 0; il knockback resta normale e la posizione non viene forzata;
 4. vengono creati `Light Shaft` e `Ring` a terra con il colore congelato;
 5. `RadiusNasib` viene inseguito da 4 a 0,25 in 3 secondi mentre scorrono i messaggi 3-2-1;
 6. il player viene ucciso.
 
-Il cleanup su morte, leave e cambio team interrompe il chase, ferma il forcing, ripristina Move Speed/Knockback Received a 100 e distrugge entrambi gli effetti.
+Il cleanup su morte, leave e cambio team interrompe il chase, ripristina Move Speed a 100 e distrugge entrambi gli effetti.
 
 ## Jump respawn
 
@@ -199,7 +199,7 @@ La posizione è geometricamente camminabile, non garantita sicura da nemici/peri
 
 ## RGB ed effetti
 
-Un solo loop globale a 10 Hz aggiorna `Global.RGB` con un ciclo pastel/neon lento. L'incremento è +3 su 1530 step, circa **51 s** per ciclo completo.
+Un solo loop globale a 8 Hz aggiorna `Global.RGB` con un ciclo pastel/neon lento. L'incremento è +3,75 su 1530 step, circa **51 s** per ciclo completo.
 
 Usano questo RGB:
 
@@ -232,7 +232,7 @@ Workflow permanenti:
 - `.github/workflows/validate-workshop.yml`
 - `.github/workflows/maintenance-patch.yml`
 
-La CI esegue 33 unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
+La CI esegue unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
 
 ## Limiti
 
@@ -403,10 +403,19 @@ La fase `TenangkanPemain` è idempotente e volutamente priva di Destroy/Wait/Loo
 La 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.
 
 
-## Menu Arcade a HUD singolo 0.6.25
+## Menu Arcade a HUD singolo 0.7.1
 
 Il test live della 0.6.24 ha isolato il crash: il cambio team funziona se il player non usa Menu Arcade/modifiche, mentre può chiudere il server al primo cambio dopo l'uso del menu. La causa più forte nel sorgente era la cache lazy: scorrendo le dodici voci, `HudMenuArcade` conservava fino a tredici `Create HUD Text` persistenti per player.
 
-La 0.6.25 elimina quella crescita. `HudMenuArcade` e `HalamanHudMenuArcade` restano array per compatibilità del lifecycle, ma contengono al massimo un elemento. Durante il hold Melee viene creato soltanto il Main Menu nascosto; Primary/Secondary sul Main modificano solo `KursorUtama` e colore. Entrando o tornando da un submenu, `GambarHalamanAktif` distrugge l'unico HUD corrente e crea il nuovo renderer senza `Wait`. Le modifiche di valore dentro la stessa pagina continuano a usare il testo dinamico e non ricreano l'HUD.
+La 0.7.1 elimina quella crescita. `HudMenuArcade` e `HalamanHudMenuArcade` restano array per compatibilità del lifecycle, ma contengono al massimo un elemento. Durante il hold Melee viene creato soltanto il Main Menu nascosto; Primary/Secondary sul Main modificano solo `KursorUtama` e colore. Entrando o tornando da un submenu, `GambarHalamanAktif` distrugge l'unico HUD corrente e crea il nuovo renderer senza `Wait`. Le modifiche di valore dentro la stessa pagina continuano a usare il testo dinamico e non ricreano l'HUD.
 
 Di conseguenza `TutupMenu` e `BersihkanPemain` devono distruggere al massimo un HUD Arcade per player. Restano invariati il hold Melee da 0,5 s, il dispatcher input, Try Your Luck, Hero Voice NORMAL, Unkillable 1 HP e il menu visibile da morto.
+
+
+## Audit 0.7.1 — 6v6 / 12 player Global-first
+
+I poll periodici che non richiedono un `Event Player` di input sono stati consolidati: `04i` gestisce a 1 Hz Spawn Room e liste passive Camera/Revenge/Teleport, `04j` aggiorna i minuti ogni 10 s e `04k` aggiorna l'inspection a 4 Hz. Le regole per input, latch e azioni che richiedono realmente il contesto del player restano `Ongoing - Each Player`.
+
+Il lifecycle Bot/Dummy è separato dal percorso umano: i dummy diretti non passano dal classifier né dal cleanup umano e vengono mantenuti da `03c`/`KunciBot`. Il cleanup umano usa un solo yield prima della sezione critica; dopo l'assegnazione degli scratch Global non contiene `Wait`, così due leave/cambi squadra ravvicinati non possono sovrascrivere gli indici condivisi a metà cleanup.
+
+La Camera spectate viene rilasciata anche su target morto/non spawnato. I loop `For Global Variable` di voto e pulizia sono inoltre limitati a `Count Of(...) - 1`.
