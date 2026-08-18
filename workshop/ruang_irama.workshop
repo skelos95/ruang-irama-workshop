@@ -1374,13 +1374,15 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 			Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal];
 			If(And(Global.PemainAktif.InspeksiAktif == True, And(Entity Exists(Global.PemainAktif), And(Is Alive(Global.PemainAktif) == True,
 				And(Global.PemainAktif.MenuTerbuka == False, Is Button Held(Global.PemainAktif, Button(Crouch)) == True)))));
-				Set Player Variable(Global.PemainAktif, DaftarTargetInspeksi, Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif,
-					And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
-				If(Count Of(Global.PemainAktif.DaftarTargetInspeksi) == 0);
-					Set Player Variable(Global.PemainAktif, TargetInspeksi, Null);
-				Else;
-					Set Player Variable(Global.PemainAktif, TargetInspeksi, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi,
-						Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
+				If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Global.PemainAktif.KursorTeleportasi != 2));
+					Set Player Variable(Global.PemainAktif, DaftarTargetInspeksi, Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif,
+						And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))));
+					If(Count Of(Global.PemainAktif.DaftarTargetInspeksi) == 0);
+						Set Player Variable(Global.PemainAktif, TargetInspeksi, Null);
+					Else;
+						Set Player Variable(Global.PemainAktif, TargetInspeksi, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi,
+							Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
+					End;
 				End;
 			End;
 
@@ -1394,8 +1396,21 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 					Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, First Of(Sorted Array(Global.PemainAktif.DaftarTargetTeleportasi,
 						Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
 				End;
-				If(Global.PemainAktif.InspeksiAktif == True);
-					Set Player Variable(Global.PemainAktif, TargetInspeksi, Global.PemainAktif.CalonTargetTeleportasi);
+				If(And(Global.PemainAktif.InspeksiAktif == True, Global.PemainAktif.TargetInspeksi != Global.PemainAktif.CalonTargetTeleportasi));
+					If(Global.PemainAktif.TeksDunia != Null);
+						Destroy In-World Text(Global.PemainAktif.TeksDunia);
+					End;
+					If(Global.PemainAktif.TeksDiri != Null);
+						Destroy In-World Text(Global.PemainAktif.TeksDiri);
+					End;
+					If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
+						Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+						Global.TeksDiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+					End;
+					Set Player Variable(Global.PemainAktif, TeksDunia, Null);
+					Set Player Variable(Global.PemainAktif, TeksDiri, Null);
+					Set Player Variable(Global.PemainAktif, TargetInspeksi, Null);
+					Set Player Variable(Global.PemainAktif, InspeksiAktif, False);
 				End;
 			End;
 		End;
@@ -3176,49 +3191,22 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 		End;
 		Event Player.KursorTeleportasi %= 3;
-		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\
-{1}",
-			Custom String("\
-{0}: teleport | {1}: next page", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-			Custom String("release {0}: close", Input Binding String(Button(Crouch)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\
-{1}",
-			Custom String("\
-{0}: teleport | {1}: halaman berikutnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
-			Custom String("lepas {0}: tutup", Input Binding String(Button(Crouch)))) : Custom String("{0}\
-{1}", Custom String(
-			"\
-{0}: เทเลพอร์ต | {1}: หน้าถัดไป", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}",
+			Custom String("\n{0}: teleport | {1}: next page", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("release {0}: close", Input Binding String(Button(Crouch)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}",
+			Custom String("\n{0}: teleport | {1}: halaman berikutnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
+			Custom String("lepas {0}: tutup", Input Binding String(Button(Crouch)))) : Custom String("{0}\n{1}", Custom String(
+			"\n{0}: เทเลพอร์ต | {1}: หน้าถัดไป", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))),
 			Custom String("ปล่อย {0}: ปิด", Input Binding String(Button(Crouch)))), Event Player.IndeksBahasa == 0
-			? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\
-> SPAWN ROOM\
-{0}", Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY") : Custom String("VISIT SPAWN TO REGISTER IT"))
-			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\
-> OBJECTIVE / FLAG\
-PRIMARY FIRE: TELEPORT")
-			: Custom String("TELEPORT 3/3\
-> ALL PLAYERS\
-TARGET: {0}\
-AIM AT A VISIBLE NAME", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET"))
-			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\
-> RUANG MUNCUL\
-{0}", Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP") : Custom String("MASUK SPAWN UNTUK MENYIMPANNYA"))
-			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\
-> OBJEKTIF / BENDERA\
-PRIMARY FIRE: TELEPORT")
-			: Custom String("TELEPORT 3/3\
-> SEMUA PLAYER\
-TARGET: {0}\
-ARAHKAN KE NAMA YANG TERLIHAT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK"))
-			: Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/3\
-> ห้องเกิด\
-{0}", Is In Spawn Room(Event Player) ? Custom String("คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อม") : Custom String("ไปห้องเกิดเพื่อบันทึกตำแหน่ง"))
-			: Event Player.KursorTeleportasi == 1 ? Custom String("เทเลพอร์ต 2/3\
-> เป้าหมาย / ธง\
-ยิงหลัก: เทเลพอร์ต")
-			: Custom String("เทเลพอร์ต 3/3\
-> ผู้เล่นทั้งหมด\
-เป้าหมาย: {0}\
-เล็งไปที่ชื่อที่มองเห็น", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 100,
+			? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> SPAWN ROOM\n{0}", Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Event Player.PunyaPosisiMuncul ? Custom String("READY") : Custom String("VISIT SPAWN TO REGISTER IT"))
+			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJECTIVE / FLAG\nPRIMARY FIRE: TELEPORT")
+			: Custom String("TELEPORT 3/3\n> ALL PLAYERS\nTARGET: {0}\nAIM AT A VISIBLE NAME", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET"))
+			: Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> RUANG MUNCUL\n{0}", Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Event Player.PunyaPosisiMuncul ? Custom String("SIAP") : Custom String("MASUK SPAWN UNTUK MENYIMPANNYA"))
+			: Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJEKTIF / BENDERA\nPRIMARY FIRE: TELEPORT")
+			: Custom String("TELEPORT 3/3\n> SEMUA PLAYER\nTARGET: {0}\nARAHKAN KE NAMA YANG TERLIHAT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK"))
+			: Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/3\n> ห้องเกิด\n{0}", Is In Spawn Room(Event Player) ? Custom String("คุณอยู่ที่นี่แล้ว") : Event Player.PunyaPosisiMuncul ? Custom String("พร้อม") : Custom String("ไปห้องเกิดเพื่อบันทึกตำแหน่ง"))
+			: Event Player.KursorTeleportasi == 1 ? Custom String("เทเลพอร์ต 2/3\n> เป้าหมาย / ธง\nยิงหลัก: เทเลพอร์ต")
+			: Custom String("เทเลพอร์ต 3/3\n> ผู้เล่นทั้งหมด\nเป้าหมาย: {0}\nเล็งไปที่ชื่อที่มองเห็น", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 100,
 			Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);

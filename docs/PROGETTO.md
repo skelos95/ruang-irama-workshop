@@ -426,3 +426,8 @@ Il selettore manuale dei player è stato rimosso. Crouch Teleport mantiene solta
 ### Hotfix 0.7.2 — persistenza pagina Teleport e cleanup Inspection
 
 `KursorTeleportasi` viene inizializzato a 0 solo in `SiapkanPemain` e non viene più azzerato all'apertura/chiusura dell'overlay. `19g` esegue cleanup immediato di nameplate, `TeksDunia/TeksDiri`, `TargetInspeksi` e `InspeksiAktif`. Quando Crouch parte direttamente sulla pagina 3, la regola Inspection usa prima `SegarkanTargetTeleportasi` e allinea `TargetInspeksi = CalonTargetTeleportasi`, evitando un target generico/stale nel primo frame.
+
+
+### Hotfix 0.7.2 — reticle live durante Crouch
+
+Su pagina 3 Teleport, `TargetInspeksi` rappresenta ora davvero il target già renderizzato. `04k` calcola `CalonTargetTeleportasi` senza far passare prima l'Inspection generica; se candidato e target mostrato differiscono, distrugge gli handle `TeksDunia/TeksDiri`, azzera `InspeksiAktif` e lascia alla regola 13 la ricreazione immediata sul nuovo target. Il refresh resta a 4 Hz. Rimossi anche 27 backslash di continuazione visibili dai Custom String HUD/menu, convertendoli in newline Workshop normali.

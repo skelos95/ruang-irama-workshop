@@ -281,3 +281,8 @@ Crouch Teleport è stato ridisegnato su tre sole pagine. Secondary Fire cicla `S
 ### Hotfix Teleport 0.7.2 — pagina persistente
 
 La pagina Crouch Teleport resta memorizzata tra un rilascio di Crouch e il successivo: se si chiude sulla pagina `All Players`, la riapertura torna direttamente lì. La chiusura rimuove immediatamente il testo Inspection e ripristina le nameplate, evitando nomi residui; sulla pagina player il primo target visualizzato viene inizializzato dalla stessa sorgente privacy-filtered closest-to-reticle usata dal Teleport.
+
+
+### Hotfix Crouch 0.7.2 — target live e HUD puliti
+
+La pagina `All Players` non lascia più che l'Inspection generica sovrascriva `TargetInspeksi`. A 4 Hz viene confrontato il target già mostrato con il nuovo `CalonTargetTeleportasi`; quando cambia, il vecchio In-World Text viene distrutto e ricreato sul nuovo player senza richiedere il rilascio di Crouch. Sono inoltre state convertite 27 sequenze di continuazione `backslash + newline` in newline Workshop normali, eliminando il simbolo `\` visibile dagli HUD/menu interessati.

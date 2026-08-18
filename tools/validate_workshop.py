@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "80fd6ea3ae2fc766d36500395955b03d8c7806a4"
+EXPECTED_SOURCE_BLOB = "e9aa5276178c9355f4460dff643d213dd63c78a7"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -219,6 +219,21 @@ def validate(source: str) -> Checks:
     if inspect_rule:
         checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in inspect_rule.body, "pagina player Teleport non inizializza il target dal reticolo")
         checks.require("Event Player.TargetInspeksi = Event Player.CalonTargetTeleportasi;" in inspect_rule.body, "nome inspection non è allineato al target Teleport")
+    checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")
+    if teleport_global:
+        checks.require(
+            "If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Global.PemainAktif.KursorTeleportasi != 2));" in teleport_global.body,
+            "Inspection generica sovrascrive ancora il target della pagina 3 Teleport",
+        )
+        checks.require(
+            "Global.PemainAktif.TargetInspeksi != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body,
+            "pagina 3 Teleport non rileva il cambio target sotto il mirino",
+        )
+        checks.require(
+            "Set Player Variable(Global.PemainAktif, InspeksiAktif, False);" in teleport_global.body
+            and "Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body,
+            "pagina 3 Teleport non forza il refresh del nome quando cambia target",
+        )
     interact = find_rule(rules, "10 - Menu:")
     reload_rule = find_rule(rules, "11 - Menu:")
     preload = find_rule(rules, "91q - SubmenuPreload")
