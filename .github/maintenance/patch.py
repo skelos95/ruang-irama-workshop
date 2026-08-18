@@ -40,13 +40,11 @@ source = SOURCE.read_text(encoding="utf-8")
 if git_blob_sha(source) != OLD_BLOB:
     raise RuntimeError("unexpected Workshop blob; refusing to patch a moving target")
 
-# Convert every accidental backslash + physical newline inside HUD/menu Custom Strings
-# to the intended Workshop newline escape. This removes the visible '\\' glyph without
-# flattening the HUD layout.
-continuations = source.count("\\\n")
+# Convert accidental backslash + physical newline sequences to the intended Workshop \n escape.
+continuations = source.count(chr(92) + chr(10))
 if continuations == 0:
     raise RuntimeError("no HUD backslash-newline sequences found")
-source = source.replace("\\\n", "\\n")
+source = source.replace(chr(92) + chr(10), chr(92) + "n")
 
 source = replace_rule(source, "04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz", r'''rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 {
@@ -118,7 +116,7 @@ new_blob = git_blob_sha(source)
 validator = VALIDATOR.read_text(encoding="utf-8")
 validator = replace_exact(validator, f'EXPECTED_SOURCE_BLOB = "{OLD_BLOB}"', f'EXPECTED_SOURCE_BLOB = "{new_blob}"')
 anchor = '    interact = find_rule(rules, "10 - Menu:")\n'
-guards = '''    checks.require("\\\\\n" not in source, "HUD/menu contiene ancora backslash visuali a fine riga")\n    if teleport_global:\n        checks.require(\n            "If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Global.PemainAktif.KursorTeleportasi != 2));" in teleport_global.body,\n            "Inspection generica sovrascrive ancora il target della pagina 3 Teleport",\n        )\n        checks.require(\n            "Global.PemainAktif.TargetInspeksi != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body,\n            "pagina 3 Teleport non rileva il cambio target sotto il mirino",\n        )\n        checks.require(\n            "Set Player Variable(Global.PemainAktif, InspeksiAktif, False);" in teleport_global.body\n            and "Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body,\n            "pagina 3 Teleport non forza il refresh del nome quando cambia target",\n        )\n'''
+guards = '''    checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")\n    if teleport_global:\n        checks.require(\n            "If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Global.PemainAktif.KursorTeleportasi != 2));" in teleport_global.body,\n            "Inspection generica sovrascrive ancora il target della pagina 3 Teleport",\n        )\n        checks.require(\n            "Global.PemainAktif.TargetInspeksi != Global.PemainAktif.CalonTargetTeleportasi" in teleport_global.body,\n            "pagina 3 Teleport non rileva il cambio target sotto il mirino",\n        )\n        checks.require(\n            "Set Player Variable(Global.PemainAktif, InspeksiAktif, False);" in teleport_global.body\n            and "Destroy In-World Text(Global.PemainAktif.TeksDunia);" in teleport_global.body,\n            "pagina 3 Teleport non forza il refresh del nome quando cambia target",\n        )\n'''
 validator = replace_exact(validator, anchor, guards + anchor)
 VALIDATOR.write_text(validator, encoding="utf-8")
 
@@ -127,7 +125,7 @@ readme += f'''\n\n### Hotfix Crouch 0.7.2 — target live e HUD puliti\n\nLa pag
 README.write_text(readme, encoding="utf-8")
 
 project = PROJECT.read_text(encoding="utf-8")
-project += f'''\n\n### Hotfix 0.7.2 — reticle live durante Crouch\n\nSu pagina 3 Teleport, `TargetInspeksi` rappresenta ora davvero il target già renderizzato. `04k` calcola `CalonTargetTeleportasi` senza far passare prima l'Inspection generica; se candidato e target mostrato differiscono, distrugge gli handle `TeksDunia/TeksDiri`, azzera `InspeksiAktif` e lascia alla regola 13 la ricreazione immediata sul nuovo target. Il refresh resta a 4 Hz. Rimossi anche {continuations} backslash di continuazione visibili dai Custom String HUD/menu, convertendoli in `\\n`.\n'''
+project += f'''\n\n### Hotfix 0.7.2 — reticle live durante Crouch\n\nSu pagina 3 Teleport, `TargetInspeksi` rappresenta ora davvero il target già renderizzato. `04k` calcola `CalonTargetTeleportasi` senza far passare prima l'Inspection generica; se candidato e target mostrato differiscono, distrugge gli handle `TeksDunia/TeksDiri`, azzera `InspeksiAktif` e lascia alla regola 13 la ricreazione immediata sul nuovo target. Il refresh resta a 4 Hz. Rimossi anche {continuations} backslash di continuazione visibili dai Custom String HUD/menu, convertendoli in newline Workshop normali.\n'''
 PROJECT.write_text(project, encoding="utf-8")
 
 print(f"hotfixed 0.7.2 crouch live target: {OLD_BLOB} -> {new_blob}; cleaned {continuations} HUD continuations")
