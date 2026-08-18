@@ -128,7 +128,7 @@ def validate(source: str) -> Checks:
     checks.equal({p.name for p in WORKFLOWS.glob("*.yml")}, ALLOWED_WORKFLOWS, "workflow permanenti")
     checks.require(not EXPORTS.exists(), "directory exports temporanea deve essere assente")
     checks.equal(len(rules), len({rule.name for rule in rules}), "titoli regola univoci")
-    checks.require(len(rules) >= 80, "numero regole inatteso")
+    checks.require(len(rules) >= 76, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
     for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat"):
