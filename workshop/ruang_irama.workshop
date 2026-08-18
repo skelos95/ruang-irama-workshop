@@ -148,6 +148,7 @@ variables
 		93: PindahTimDiproses
 		94: HalamanMenuTujuan
 		95: HalamanSubmenuPramuat
+		96: TargetTeleportasiTeks
 }
 
 subroutines
@@ -1139,6 +1140,10 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 	{
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
+		If(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Is In Spawn Room(Global.PemainAktif) == True)));
+			Set Player Variable(Global.PemainAktif, PosisiRuangMuncul, Position Of(Global.PemainAktif));
+			Set Player Variable(Global.PemainAktif, PunyaPosisiMuncul, True);
+		End;
 		If(Global.PemainAktif.Manusia == True);
 		If(Global.PemainAktif.KebalAktif == True);
 		If(Or(Global.PemainAktif.ModeKebal == 2, Is In Spawn Room(Global.PemainAktif) == False) == True);
@@ -1285,11 +1290,6 @@ rule("04i - Global-first: Cache dan daftar pasif 1 Hz")
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.PemainManusia) - 1, 1);
 			Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal];
 			If(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
-				If(And(Has Spawned(Global.PemainAktif) == True, Is In Spawn Room(Global.PemainAktif) == True));
-					Set Player Variable(Global.PemainAktif, PosisiRuangMuncul, Position Of(Global.PemainAktif));
-					Set Player Variable(Global.PemainAktif, PunyaPosisiMuncul, True);
-				End;
-
 				If(And(Global.PemainAktif.MenuTerbuka == True, Global.PemainAktif.HalamanMenu == 1));
 					If(And(Global.PemainAktif.KursorKamera >= 2, Global.PemainAktif.KursorKamera - 2 < Count Of(Global.PemainAktif.DaftarTargetKamera)));
 						Set Player Variable(Global.PemainAktif, CalonTargetKamera, Global.PemainAktif.DaftarTargetKamera[Global.PemainAktif.KursorKamera - 2]);
@@ -1393,6 +1393,16 @@ rule("04k - Global-first: Inspeksi dan target teleport terpusat 4 Hz")
 				Else;
 					Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, First Of(Sorted Array(Global.PemainAktif.DaftarTargetTeleportasi,
 						Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
+				End;
+				If(Global.PemainAktif.TargetTeleportasiTeks != Global.PemainAktif.CalonTargetTeleportasi);
+					If(Global.PemainAktif.TeksDunia != Null);
+						Destroy In-World Text(Global.PemainAktif.TeksDunia);
+					End;
+					If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
+						Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+					End;
+					Set Player Variable(Global.PemainAktif, TeksDunia, Null);
+					Set Player Variable(Global.PemainAktif, TargetTeleportasiTeks, Global.PemainAktif.CalonTargetTeleportasi);
 				End;
 			End;
 		End;
@@ -2692,6 +2702,7 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 			End;
 			Event Player.TeksDunia = Null;
+			Event Player.TargetTeleportasiTeks = Null;
 			If(Event Player.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Event Player);
 				Event Player.PelatNamaDinonaktifkan = False;
@@ -2707,6 +2718,7 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 			Event Player.TargetInspeksi = Null;
 			Event Player.InspeksiAktif = False;
 			Call Subroutine(SegarkanTargetTeleportasi);
+			Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
 		End;
 	}
 }
@@ -2735,12 +2747,13 @@ rule("19d - Teleportasi Jongkok: Nama target publik mengikuti reticolo")
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
 		Call Subroutine(SegarkanTargetTeleportasi);
-		Create In-World Text(Event Player, Event Player.CalonTargetTeleportasi == Null ? Custom String("") : Custom String("{0} {1} | {2}",
-			Hero Icon String(Is Duplicating(Event Player.CalonTargetTeleportasi) ? Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : Hero Of(Event Player.CalonTargetTeleportasi)),
-			Custom String("{0}", Event Player.CalonTargetTeleportasi), Round To Integer(Health(Event Player.CalonTargetTeleportasi), Down)),
-			Event Player.CalonTargetTeleportasi == Null ? Eye Position(Event Player) : Eye Position(Event Player.CalonTargetTeleportasi) + Vector(0, 0.450, 0),
-			1.100, Do Not Clip, Visible To Position String and Color, Event Player.CalonTargetTeleportasi == Null ? Color(White)
-			: Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama) : Color(Orange), Visible Never);
+		Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
+		Abort If(Event Player.TargetTeleportasiTeks == Null);
+		Create In-World Text(Event Player, Custom String("{0} {1} | {2}",
+			Hero Icon String(Is Duplicating(Event Player.TargetTeleportasiTeks) ? Hero Being Duplicated(Event Player.TargetTeleportasiTeks) : Hero Of(Event Player.TargetTeleportasiTeks)),
+			Custom String("{0}", Event Player.TargetTeleportasiTeks), Round To Integer(Health(Event Player.TargetTeleportasiTeks), Down)),
+			Eye Position(Event Player.TargetTeleportasiTeks) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color,
+			Player Variable(Event Player.TargetTeleportasiTeks, Manusia) == True ? Player Variable(Event Player.TargetTeleportasiTeks, WarnaNama) : Color(Orange), Visible Never);
 		Event Player.TeksDunia = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
@@ -2777,7 +2790,7 @@ rule("19e - Teleportasi Jongkok: Primary Fire menjalankan halaman aktif")
 			Else If(Event Player.PunyaPosisiMuncul == False);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Spawn Room not registered yet. Visit spawn first.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi ruang muncul belum tersimpan. Masuk ke sana dulu.") : Custom String("ยังไม่ได้บันทึกห้องเกิด กรุณาไปที่ห้องเกิดก่อน"));
 			Else;
-				Teleport(Event Player, Event Player.PosisiRuangMuncul);
+				Teleport(Event Player, Nearest Walkable Position(Event Player.PosisiRuangMuncul));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Back to the Spawn Room. Tactical retreat complete.") : Event Player.IndeksBahasa == 1 ? Custom String("Kembali ke ruang muncul. Mundur taktis selesai.") : Custom String("กลับสู่ห้องเกิดแล้ว การถอยเชิงกลยุทธ์เสร็จสิ้น"));
 			End;
 		Else If(Event Player.JenisTeleportasiTerkunci == 1);
@@ -2851,6 +2864,7 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 		Event Player.PerintahTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;
+		Event Player.TargetTeleportasiTeks = Null;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
 		If(Event Player.PelatNamaDinonaktifkan == True);
