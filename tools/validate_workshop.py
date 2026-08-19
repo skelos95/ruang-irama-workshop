@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "f08a3199b8b700fe49016a7509f0e75c604b71cc"
+EXPECTED_SOURCE_BLOB = "93dac1fb4ca624981842d54df041acb49f824166"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -278,7 +278,7 @@ def validate(source: str) -> Checks:
     if luck:
         checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
         checks.require("Random Integer(1, 10)" in luck.body, "roulette Try Your Luck non usa dieci risultati")
-        for icon in ("Poison 2", "Halo", "Spiral", "Bolt", "Moon", "Eye", "Warning", "Dizzy", "Skull", "Heart"):
+        for icon in ("Poison 2", "Asterisk", "Spiral", "Bolt", "Moon", "Eye", "Arrow: Down", "Dizzy", "Skull", "Heart"):
             checks.require(f", {icon}, Visible To and Position" in luck.body, f"icona Try Your Luck assente: {icon}")
         for token in (
             "Set Status(Event Player, Null, Hacked, 5);",
@@ -293,7 +293,6 @@ def validate(source: str) -> Checks:
             "Set Gravity(Event Player, 10);",
             "Set Projectile Speed(Event Player, 10);",
             "Start Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);",
-            "Set Status(Event Player, Null, Knocked Down, 9999);",
             "Disable Movement Collision With Environment(Event Player, True);",
             "Start Accelerating(Event Player, Event Player.ArahNasib, 50, 25, To World, None);",
             "Kill(Event Player, Null);",
@@ -301,12 +300,15 @@ def validate(source: str) -> Checks:
         ):
             checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
         checks.require("Start Forcing Player Position(" not in luck.body, "Try Your Luck non deve forzare la posizione")
+        checks.require("Set Status(Event Player, Null, Knocked Down" not in luck.body, "Try Your Luck caduta nel vuoto non deve usare Knocked Down")
+        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Halo" not in luck.body, "Try Your Luck riusa ancora Halo di Unkillable")
+        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Warning" not in luck.body, "Try Your Luck riusa ancora Warning di Unkillable")
+        checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
         checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck.body, "Try Your Luck istantaneo non richiede la riapertura dopo il risultato")
     if luck_death:
         for token in (
             "Clear Status(Event Player, Hacked);",
-            "Clear Status(Event Player, Knocked Down);",
             "Stop Accelerating(Event Player);",
             "Stop Forcing Player Outlines(All Players(All Teams), Event Player);",
             "Enable Movement Collision With Environment(Event Player);",
@@ -317,6 +319,8 @@ def validate(source: str) -> Checks:
         ):
             checks.require(token in luck_death.body, f"reset morte Try Your Luck incompleto: {token}")
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
+        checks.require("Call Subroutine(TutupMenu);" in luck_death.body, "morte Try Your Luck non chiude e libera il menu prima della riapertura")
+        checks.require("Event Player.PutaranKartuNasib > 0" in luck_death.body and "Event Player.EfekNasib != 0" in luck_death.body, "reset morte Try Your Luck non copre roulette ed effetto")
     if luck_reopen:
         checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
         checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
@@ -335,6 +339,8 @@ def validate(source: str) -> Checks:
     if inspect_refresh:
         checks.require("Event Player.PrivasiNasibAktif == True" in inspect_refresh.body, "refresh Inspection non rispetta il reveal Try Your Luck")
     checks.require('KartuNasibMerah ? Custom String("RED")' not in source and 'KartuNasibMerah ? Custom String("MERAH")' not in source, "HUD Try Your Luck usa ancora RED/GREEN")
+    checks.require("inspect hero + HP / navigate menus" in source, "HUD sinistro non indica Crouch per navigare i menu")
+    checks.require("0.5s: Camera" in source and "Input Binding String(Button(Interact))" in source, "HUD destro non indica Interact Camera")
     menu_toggle = find_rule(rules, "05 - Menu:")
     camera_toggle = find_rule(rules, "12c - Kamera:")
     if menu_toggle:
@@ -358,12 +364,14 @@ def validate(source: str) -> Checks:
     if camera_toggle:
         checks.require("Wait(0.500, Abort When False);" in camera_toggle.body, "hold Camera 0,5 s assente")
         checks.require("Wait(0.016, Ignore Condition);" not in camera_toggle.body, "Camera mantiene un frame Wait superfluo")
+        checks.require("Event Player.MenuTerbuka == False;" not in camera_toggle.body, "Interact Camera deve funzionare anche con Menu Arcade aperto")
+        checks.require("Is Button Held(Event Player, Button(Crouch)) == False;" in camera_toggle.body, "Interact Camera deve restare separata dalla navigazione Crouch")
     lifecycle = find_rule(rules, "04h - Global-first:")
     if lifecycle:
         checks.require("Is Alive(Global.PemainAktif.TargetKamera) == False" in lifecycle.body, "Camera globale non rilascia target morto")
         checks.require("Global.PemainAktif.KursorTeleportasi != 2" in lifecycle.body, "Inspection resta visibile fuori dalla pagina player Teleport")
     for rule in rules:
-        if event_type(rule) == "Player Died":
+        if event_type(rule) == "Player Died" and not rule.name.startswith("18f - Nasib:"):
             checks.require("Call Subroutine(TutupMenu);" not in rule.body, f"{rule.name}: morte chiude il Menu Arcade")
     respawn = find_rule(rules, "12f - Bangkit Lompat:")
     if respawn:

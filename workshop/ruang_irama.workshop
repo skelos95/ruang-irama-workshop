@@ -708,17 +708,17 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0}: inspect hero + HP", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
-			IndeksBahasa) == 1 ? Custom String("Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String(
-			"กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))), Player Variable(Local Player,
+			"Hold {0}: inspect hero + HP / navigate menus", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0}: cek pahlawan + HP / navigasi menu", Input Binding String(Button(Crouch))) : Custom String(
+			"กด {0} ค้าง: ดูฮีโร่ + HP / นำทางเมนู", Input Binding String(Button(Crouch))), Player Variable(Local Player,
 			IndeksBahasa) == 0 ? Custom String("LOBBY & CHILL TIME\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
 			"LOBI & WAKTU SANTAI\n ") : Custom String("ล็อบบี้ & เวลาชิล\n "), Left, -100,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"Hold {0} 0.5 sec: Arcade Menu", Input Binding String(Button(Melee))) : Player Variable(Local Player,
-			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5 dtk: Menu Arcade", Input Binding String(Button(Melee))) : Custom String(
-			"กด {0} ค้าง 0.5 วิ: เมนูอาร์เคด", Input Binding String(Button(Melee))), Player Variable(Local Player,
+			"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(
+			"กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))), Player Variable(Local Player,
 			IndeksBahasa) == 0 ? Custom String("PLAYER VIBES\n ") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
 			"MUSIK PEMAIN\n ") : Custom String("เพลงของผู้เล่น\n "),
 			Right, -100, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
@@ -2170,7 +2170,7 @@ rule("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 	}
 }
 
-rule("12c - Kamera: Tahan Interact setengah detik untuk beralih di luar menu")
+rule("12c - Kamera: Tahan Interact setengah detik untuk beralih")
 {
 	event
 	{
@@ -2186,7 +2186,6 @@ rule("12c - Kamera: Tahan Interact setengah detik untuk beralih di luar menu")
 		Is Dummy Bot(Event Player) == False;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Event Player.MenuTerbuka == False;
 		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.InteraksiKameraDipakai == False;
 		Is Button Held(Event Player, Button(Crouch)) == False;
@@ -2462,7 +2461,7 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 		If(Event Player.EfekNasib == 1);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Poison 2, Visible To and Position, Custom Color(170, 80, 255, 255), False);
 		Else If(Event Player.EfekNasib == 2);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Halo, Visible To and Position, Custom Color(255, 220, 70, 255), False);
+			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Asterisk, Visible To and Position, Custom Color(255, 220, 70, 255), False);
 		Else If(Event Player.EfekNasib == 3);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Spiral, Visible To and Position, Color(Turquoise), False);
 		Else If(Event Player.EfekNasib == 4);
@@ -2472,7 +2471,7 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 		Else If(Event Player.EfekNasib == 6);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Eye, Visible To and Position, Color(Aqua), False);
 		Else If(Event Player.EfekNasib == 7);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Warning, Visible To and Position, Color(Orange), False);
+			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Arrow: Down, Visible To and Position, Color(Orange), False);
 		Else If(Event Player.EfekNasib == 8);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Dizzy, Visible To and Position, Color(Violet), False);
 		Else If(Event Player.EfekNasib == 9);
@@ -2597,7 +2596,6 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 			Event Player.ModeKebal = 0;
 			Clear Status(Event Player, Unkillable);
 			Set Damage Received(Event Player, 100);
-			Set Status(Event Player, Null, Knocked Down, 9999);
 			Disable Movement Collision With Environment(Event Player, True);
 			Apply Impulse(Event Player, Vector(0, -1, 0), 5, To World, Cancel Contrary Motion);
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: FLOOR REMOVED"));
@@ -2614,6 +2612,7 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 			Set Damage Received(Event Player, 100);
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: SKULL"));
 			Kill(Event Player, Null);
+			Abort;
 		Else;
 			Set Player Health(All Living Players(Team Of(Event Player)), 9999);
 			Small Message(All Living Players(Team Of(Event Player)), Custom String("TRY YOUR LUCK: HEART — TEAM FULL HEAL"));
@@ -2646,11 +2645,13 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 
 	conditions
 	{
-		Event Player.KartuNasibAktif == True;
+		Or(Event Player.KartuNasibAktif == True, Or(Event Player.PutaranKartuNasib > 0, Event Player.EfekNasib != 0)) == True;
 	}
 
 	actions
 	{
+		Event Player.MenuNasibHarusDibuka = False;
+		Call Subroutine(TutupMenu);
 		If(Event Player.IkonKartuNasib != Null);
 			Destroy Icon(Event Player.IkonKartuNasib);
 		End;
@@ -2661,7 +2662,6 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
 		End;
 		Clear Status(Event Player, Hacked);
-		Clear Status(Event Player, Knocked Down);
 		Stop Accelerating(Event Player);
 		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 		Enable Movement Collision With Environment(Event Player);
@@ -3912,7 +3912,6 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 		Enable Movement Collision With Environment(Event Player);
 		Clear Status(Event Player, Hacked);
-		Clear Status(Event Player, Knocked Down);
 		If(Event Player.EfekNasib == 2);
 			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
 		End;
