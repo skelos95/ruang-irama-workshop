@@ -159,6 +159,8 @@ variables
 		105: KategoriTeleportNasib
 		106: HasilNasibTerkunci
 		107: MenuNasibHarusDibuka
+		108: HudEfekNasib
+		109: TeksVisiNasib
 }
 
 subroutines
@@ -2568,10 +2570,8 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: GRAVITY 10% + PROJECTILE SPEED 10% — 20s"));
 		Else If(Event Player.EfekNasib == 6);
 			Event Player.PrivasiNasibAktif = True;
-			Enable Nameplates(All Players(All Teams), Event Player);
-			Event Player.PelatNamaDinonaktifkan = False;
 			Event Player.EfekNasibBerakhir = Total Time Elapsed + 15;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: ALL PLAYERS REVEALED — 15s"));
+			Small Message(Event Player, Custom String("TRY YOUR LUCK: ALL PLAYER / BOT NAMES — 15s"));
 		Else If(Event Player.EfekNasib == 7);
 			Event Player.KebalAktif = False;
 			Event Player.ModeKebal = 0;
@@ -2644,7 +2644,10 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 		End;
 		Clear Status(Event Player, Hacked);
 		Stop Accelerating(Event Player);
-		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
+		If(Event Player.HudEfekNasib != Null);
+			Destroy HUD Text(Event Player.HudEfekNasib);
+		End;
+		Event Player.HudEfekNasib = Null;
 		Enable Movement Collision With Environment(Event Player);
 		Set Move Speed(Event Player, 100);
 		Set Jump Vertical Speed(Event Player, 100);
@@ -2752,7 +2755,10 @@ rule("18h - Nasib: Scadenza effetti temporanei per player")
 		End;
 		Clear Status(Event Player, Hacked);
 		Stop Accelerating(Event Player);
-		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
+		If(Event Player.HudEfekNasib != Null);
+			Destroy HUD Text(Event Player.HudEfekNasib);
+		End;
+		Event Player.HudEfekNasib = Null;
 		Enable Movement Collision With Environment(Event Player);
 		Set Move Speed(Event Player, 100);
 		Set Jump Vertical Speed(Event Player, 100);
@@ -2764,6 +2770,94 @@ rule("18h - Nasib: Scadenza effetti temporanei per player")
 		Event Player.HasilNasibTerkunci = 0;
 		Event Player.KartuNasibAktif = False;
 		Event Player.MenuNasibHarusDibuka = True;
+	}
+}
+
+
+rule("18i - Nasib: Vision crea nomi sopra ogni player e bot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Event Player.TeksVisiNasib == Null, Event Player.TeksVisiNasib == 0) == True;
+		Is Alive(Event Player) == True;
+		Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
+			Player Variable(Current Array Element, PrivasiNasibAktif) == True))) > 0;
+	}
+
+	actions
+	{
+		Create In-World Text(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
+			Player Variable(Current Array Element, PrivasiNasibAktif) == True)), Custom String("{0}", Event Player),
+			Eye Position(Event Player) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color,
+			Event Player.Manusia == True ? Event Player.WarnaNama : Color(Orange), Visible Never);
+		Event Player.TeksVisiNasib = Last Text ID;
+	}
+}
+
+rule("18j - Nasib: Vision pulisce i nomi quando non servono")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		And(Event Player.TeksVisiNasib != Null, Event Player.TeksVisiNasib != 0) == True;
+		Or(Is Alive(Event Player) == False, Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
+			Player Variable(Current Array Element, PrivasiNasibAktif) == True))) == 0) == True;
+	}
+
+	actions
+	{
+		Destroy In-World Text(Event Player.TeksVisiNasib);
+		Event Player.TeksVisiNasib = Null;
+	}
+}
+
+rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.KartuNasibAktif == True;
+		Event Player.PutaranKartuNasib == 0;
+		Or(Event Player.EfekNasibBerakhir > 0, Event Player.EfekNasib == 7) == True;
+		Event Player.HudEfekNasib == Null;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("TRY YOUR LUCK"),
+			Event Player.EfekNasib == 1 ? Custom String("HACKED")
+			: Event Player.EfekNasib == 2 ? Custom String("ULTIMATE ALWAYS READY")
+			: Event Player.EfekNasib == 4 ? Custom String("MOVE / JUMP / PROJECTILE x2")
+			: Event Player.EfekNasib == 5 ? Custom String("GRAVITY 10% / PROJECTILE 10%")
+			: Event Player.EfekNasib == 6 ? Custom String("VISION: ALL PLAYER / BOT NAMES")
+			: Event Player.EfekNasib == 7 ? Custom String("FLOOR REMOVED")
+			: Custom String("AIM-STEERED ACCELERATION"),
+			Event Player.EfekNasib == 7 ? Custom String("UNTIL DEATH") : Custom String("{0}s REMAINING",
+				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up))), Top, 100, Color(White),
+			Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu),
+				Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
+		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
 
@@ -2782,6 +2876,7 @@ rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == False;
+		Event Player.KartuNasibAktif == False;
 		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.TeleportasiJongkokDiaktifkan == True;
 		Has Spawned(Event Player) == True;
@@ -4243,6 +4338,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KategoriTeleportNasib = -1;
 		Event Player.HasilNasibTerkunci = 0;
 		Event Player.MenuNasibHarusDibuka = False;
+		Event Player.HudEfekNasib = Null;
+		Event Player.TeksVisiNasib = Null;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = Event Player.PindahTimDiproses;
 		Event Player.SiklusPemainAktif = False;
