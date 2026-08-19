@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/.github/maintenance/patch.py", line 15, in <module>
+    raise RuntimeError(f"validator scope hotfix match count: {text.count(bad)}")
+RuntimeError: validator scope hotfix match count: 0
