@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import hashlib
 import re
+import subprocess
+import sys
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 VALIDATOR = ROOT / "tools" / "validate_workshop.py"
+ERROR = ROOT / ".github" / "maintenance" / "last-patch-error.txt"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -22,19 +26,17 @@ def git_blob_sha(text: str) -> str:
     return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 
-source = SOURCE.read_text(encoding="utf-8")
-validator = VALIDATOR.read_text(encoding="utf-8")
-
-old_fast_ultimate = '''\t\tIf(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
+def transform(source: str, validator: str) -> tuple[str, str, str]:
+    old_fast_ultimate = '''\t\tIf(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
 \t\t\tIf(And(Global.PemainAktif.EfekNasib == 2, And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed,
 \t\t\t\tAnd(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))));
 \t\t\t\tSet Ultimate Charge(Global.PemainAktif, 100);
 \t\t\tEnd;
 \t\tEnd;
 '''
-source = replace_once(source, old_fast_ultimate, "", "rimozione Ultimate da 04g")
+    source = replace_once(source, old_fast_ultimate, "", "rimozione Ultimate da 04g")
 
-ultimate_rule = '''
+    ultimate_rule = '''
 
 rule("18l - Nasib: Ultimate sempre al 100 globale senza polling")
 {
@@ -60,26 +62,26 @@ rule("18l - Nasib: Ultimate sempre al 100 globale senza polling")
 \t}
 }
 '''
-source = replace_once(
-    source,
-    '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
-    ultimate_rule + '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
-    "inserimento 18l Ultimate globale",
-)
+    source = replace_once(
+        source,
+        '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
+        ultimate_rule + '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
+        "inserimento 18l Ultimate globale",
+    )
 
-validator = replace_once(
-    validator,
-    '    luck_effect_hud = find_rule(rules, "18k - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None, "pipeline Try Your Luck a dieci risultati assente")',
-    '    luck_effect_hud = find_rule(rules, "18k - Nasib:")\n    luck_ultimate_global = find_rule(rules, "18l - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None and luck_ultimate_global is not None, "pipeline Try Your Luck a dieci risultati assente")',
-    "validator pipeline 18l",
-)
+    validator = replace_once(
+        validator,
+        '    luck_effect_hud = find_rule(rules, "18k - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None, "pipeline Try Your Luck a dieci risultati assente")',
+        '    luck_effect_hud = find_rule(rules, "18k - Nasib:")\n    luck_ultimate_global = find_rule(rules, "18l - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None and luck_ultimate_global is not None, "pipeline Try Your Luck a dieci risultati assente")',
+        "validator pipeline 18l",
+    )
 
-old_fast_guard = '''    if fast_manager:
+    old_fast_guard = '''    if fast_manager:
         checks.require("Set Ultimate Charge(Global.PemainAktif, 100);" in fast_manager.body, "Ultimate always-ready non è gestita dal manager globale")
         checks.require("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir" not in fast_manager.body, "04g gestisce ancora la scadenza Try Your Luck condivisa")
         checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" not in fast_manager.body, "04g consegna ancora la riapertura Try Your Luck")
 '''
-new_fast_guard = '''    if luck_ultimate_global:
+    new_fast_guard = '''    if luck_ultimate_global:
         checks.equal(event_type(luck_ultimate_global), "Ongoing - Global", "18l Ultimate sustain: scheduler")
         checks.require(luck_ultimate_global.body.count("Filtered Array(All Players(All Teams)") >= 2, "18l Ultimate sustain non filtra globalmente i player attivi")
         for token in (
@@ -100,13 +102,35 @@ new_fast_guard = '''    if luck_ultimate_global:
         checks.require("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir" not in fast_manager.body, "04g gestisce ancora la scadenza Try Your Luck condivisa")
         checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" not in fast_manager.body, "04g consegna ancora la riapertura Try Your Luck")
 '''
-validator = replace_once(validator, old_fast_guard, new_fast_guard, "validator Ultimate globale")
+    validator = replace_once(validator, old_fast_guard, new_fast_guard, "validator Ultimate globale")
 
-blob = git_blob_sha(source)
-validator, n = re.subn(r'EXPECTED_SOURCE_BLOB = "[0-9a-f]{40}"', f'EXPECTED_SOURCE_BLOB = "{blob}"', validator, count=1)
-if n != 1:
-    raise RuntimeError("EXPECTED_SOURCE_BLOB non aggiornato")
+    blob = git_blob_sha(source)
+    validator, n = re.subn(r'EXPECTED_SOURCE_BLOB = "[0-9a-f]{40}"', f'EXPECTED_SOURCE_BLOB = "{blob}"', validator, count=1)
+    if n != 1:
+        raise RuntimeError("EXPECTED_SOURCE_BLOB non aggiornato")
+    return source, validator, blob
 
-SOURCE.write_text(source, encoding="utf-8")
-VALIDATOR.write_text(validator, encoding="utf-8")
-print(f"patched source blob: {blob}")
+
+def check(cmd: list[str]) -> None:
+    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"command failed: {' '.join(cmd)}\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
+
+
+original_source = SOURCE.read_text(encoding="utf-8")
+original_validator = VALIDATOR.read_text(encoding="utf-8")
+
+try:
+    source, validator, blob = transform(original_source, original_validator)
+    SOURCE.write_text(source, encoding="utf-8")
+    VALIDATOR.write_text(validator, encoding="utf-8")
+    check([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"])
+    check([sys.executable, "tools/validate_workshop.py"])
+    if ERROR.exists():
+        ERROR.unlink()
+    print(f"patched source blob: {blob}")
+except Exception:
+    SOURCE.write_text(original_source, encoding="utf-8")
+    VALIDATOR.write_text(original_validator, encoding="utf-8")
+    ERROR.write_text(traceback.format_exc(), encoding="utf-8")
+    print("candidate patch failed preflight; stable files restored; diagnostic saved")
