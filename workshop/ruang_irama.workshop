@@ -1149,7 +1149,7 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 	}
 	actions
 	{
-		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
 		If(Global.PemainAktif.Manusia == True);
 		If(Global.PemainAktif.KebalAktif == True);
@@ -1245,7 +1245,7 @@ rule("04h - Global-first: Pengatur lifecycle ringan terpusat")
 	}
 	actions
 	{
-		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
 		If(Global.PemainAktif.PindahTimDiproses == True);
 		If(Global.PemainAktif.Manusia == True);
@@ -1326,7 +1326,7 @@ rule("04i - Global-first: Cache dan daftar pasif 1 Hz")
 
 	actions
 	{
-		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.PemainManusia) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.PemainManusia), 1);
 			Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal];
 			If(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
 				If(And(Global.PemainAktif.MenuTerbuka == True, Global.PemainAktif.HalamanMenu == 1));
@@ -1383,7 +1383,7 @@ rule("04j - Global-first: Menit lobi terpusat 10 detik")
 
 	actions
 	{
-		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.PemainManusia) - 1, 1);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.PemainManusia), 1);
 			Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal];
 			If(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
 				Set Player Variable(Global.PemainAktif, MenitLobi, Max(0, Round To Integer((Total Time Elapsed - Global.PemainAktif.WaktuMasuk) / 60, Down)));
@@ -4038,7 +4038,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksKeluar);
 			Global.SlotHUDTerakhir = Count Of(Global.SlotHUDPemain) == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));
 		End;
-		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);
+		For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);
 			If(Global.PemainManusia[Global.IndeksVote].PemainDipilih == Global.PemainPembersihan);
 				Set Player Variable(Global.PemainManusia[Global.IndeksVote], PemainDipilih, Null);
 			End;
@@ -4046,7 +4046,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		End;
 		Call Subroutine(HitungPilihan);
 		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
-		For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia) - 1, 1);
+		For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);
 			Global.IndeksUtangKeluar = Index Of Array Value(Global.PemainManusia[Global.IndeksPembersihan].PembunuhBalasDendam,
 				Global.PemainPembersihan);
 			If(Global.IndeksUtangKeluar >= 0);

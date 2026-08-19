@@ -113,13 +113,21 @@ class GlobalFirst072Tests(unittest.TestCase):
         )
         self.assertTrue(any("scratch Global" in error for error in self.errors(mutated)))
 
-    def test_vote_loop_count_stop_is_rejected(self) -> None:
+    def test_vote_loop_count_minus_one_is_rejected(self) -> None:
         mutated = self.source.replace(
-            "For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);",
             "For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);",
+            "For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);",
             1,
         )
-        self.assertTrue(any("fuori limite" in error for error in self.errors(mutated)))
+        self.assertTrue(any("Range Stop" in error for error in self.errors(mutated)))
+
+    def test_fast_manager_count_minus_one_is_rejected(self) -> None:
+        mutated = self.source.replace(
+            "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);",
+            "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)) - 1, 1);",
+            1,
+        )
+        self.assertTrue(any("Range Stop" in error for error in self.errors(mutated)))
 
     def test_live_confirmed_blob_is_pinned(self) -> None:
         mutated = self.source.replace("Global.PemainAktif = Null;", "Global.PemainAktif = Null;\n", 1)

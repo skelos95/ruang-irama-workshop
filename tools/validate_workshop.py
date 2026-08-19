@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "93dac1fb4ca624981842d54df041acb49f824166"
+EXPECTED_SOURCE_BLOB = "ea8ca635d7baa82ce8c328bf19ef55cab06921c5"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -141,6 +141,7 @@ def validate(source: str) -> Checks:
     for manager in managers:
         checks.equal(event_type(manager), "Ongoing - Global", f"{manager.name}: evento")
         checks.require("For Global Variable(IndeksPemainGlobal" in manager.body, f"{manager.name}: loop player globale assente")
+        checks.require("Count Of(All Players(All Teams)), 1);" in manager.body, f"{manager.name}: Range Stop deve usare Count perché è esclusivo")
         checks.require("Global.PemainAktif = All Players(All Teams)" in manager.body, f"{manager.name}: contesto player assente")
     each_player_pipelines = (
         "05b - Menu:", "05c - Menu:", "05d - Menu:", "05e - Menu:", "05f - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
@@ -161,6 +162,7 @@ def validate(source: str) -> Checks:
         if rule:
             checks.equal(event_type(rule), "Ongoing - Global", f"{prefix}: scheduler")
             checks.require("For Global Variable(IndeksPemainGlobal" in rule.body, f"{prefix}: loop globale assente")
+            checks.require("Count Of(Global.PemainManusia), 1);" in rule.body, f"{prefix}: Range Stop deve usare Count perché è esclusivo")
             checks.require("Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal]" in rule.body, f"{prefix}: contesto umano globale assente")
     for prefix in ("02c - Ruang Muncul:", "03 - Waktu:", "07b - Menu kamera:", "07c - Menu Balas Dendam:",
                    "14 - Intip Pahlawan:", "16 - Kamera:", "19f - Teleportasi Jongkok:"):
@@ -389,8 +391,8 @@ def validate(source: str) -> Checks:
     if leave:
         checks.require("Call Subroutine(TenangkanPemain);" in leave.body and "Call Subroutine(BersihkanPemain);" in leave.body, "Leave lifecycle incompleto")
         checks.require("Is Dummy Bot(Event Player) == False;" in leave.body, "Leave umano non esclude dummy diretti")
-    checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop voto fuori limite Count anziché Count-1")
-    checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop votanti fuori limite Count anziché Count-1")
+    checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop voto usa Count-1 ma Range Stop è esclusivo")
+    checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop votanti usa Count-1 ma Range Stop è esclusivo")
     vote_count = find_rule(rules, "91p - Subrutin:")
     checks.require(vote_count is not None, "subroutine conteggio voti assente")
     if vote_count:
@@ -404,7 +406,7 @@ def validate(source: str) -> Checks:
         checks.require("If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);" in interact.body, "votare di nuovo lo stesso player non è idempotente")
     if classifier:
         checks.require("Call Subroutine(HitungPilihan);" in classifier.body, "join umano non ricalcola le votazioni")
-    checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);" not in source, "loop cleanup fuori limite Count anziché Count-1")
+    checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop cleanup usa Count-1 ma Range Stop è esclusivo")
     cleanup = find_rule(rules, "93c - Subrutin:")
     if cleanup:
         checks.equal(cleanup.body.count("Wait(0.016, Ignore Condition);"), 1, "yield cleanup")
