@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "38d033db93dae7a3fad988f6cdae6f94812805da"
+EXPECTED_SOURCE_BLOB = "f08a3199b8b700fe49016a7509f0e75c604b71cc"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -131,7 +131,7 @@ def validate(source: str) -> Checks:
     checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "HasilNasibTerkunci"):
+    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "HasilNasibTerkunci", "MenuNasibHarusDibuka"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
@@ -273,7 +273,8 @@ def validate(source: str) -> Checks:
 
     luck = find_rule(rules, "18e - Nasib:")
     luck_death = find_rule(rules, "18f - Nasib:")
-    checks.require(luck is not None and luck_death is not None, "pipeline Try Your Luck a dieci risultati assente")
+    luck_reopen = find_rule(rules, "18g - Nasib:")
+    checks.require(luck is not None and luck_death is not None and luck_reopen is not None, "pipeline Try Your Luck a dieci risultati assente")
     if luck:
         checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
         checks.require("Random Integer(1, 10)" in luck.body, "roulette Try Your Luck non usa dieci risultati")
@@ -300,6 +301,8 @@ def validate(source: str) -> Checks:
         ):
             checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
         checks.require("Start Forcing Player Position(" not in luck.body, "Try Your Luck non deve forzare la posizione")
+        checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
+        checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck.body, "Try Your Luck istantaneo non richiede la riapertura dopo il risultato")
     if luck_death:
         for token in (
             "Clear Status(Event Player, Hacked);",
@@ -313,9 +316,19 @@ def validate(source: str) -> Checks:
             "Set Gravity(Event Player, 100);",
         ):
             checks.require(token in luck_death.body, f"reset morte Try Your Luck incompleto: {token}")
+        checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
+    if luck_reopen:
+        checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
+        checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
+        checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body, "18g non riapre la pagina Try Your Luck")
+        checks.require("Event Player.InputMenuDikunci = False;" in luck_reopen.body, "18g non libera il latch input del menu")
+        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
+            checks.require(f"Allow Button(Event Player, Button({button}));" in luck_reopen.body, f"18g non restituisce {button}")
+        checks.require("Disallow Button(Event Player, Button(Crouch));" not in luck_reopen.body and "Disallow Button(Event Player, Button(Jump));" not in luck_reopen.body, "18g non deve bloccare Crouch o Jump")
     if fast_manager:
         checks.require("Set Ultimate Charge(Global.PemainAktif, 100);" in fast_manager.body, "Ultimate always-ready non è gestita dal manager globale")
         checks.require("Global.PemainAktif.EfekNasibBerakhir" in fast_manager.body, "timer Try Your Luck non è Global-first")
+        checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" in fast_manager.body, "scadenza Try Your Luck non consegna la riapertura al player")
     if inspect_rule:
         checks.require("Event Player.PrivasiNasibAktif == True" in inspect_rule.body, "reveal Try Your Luck non bypassa la privacy Inspection")
     inspect_refresh = find_rule(rules, "96 - Subrutin:")

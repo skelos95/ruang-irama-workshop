@@ -158,6 +158,7 @@ variables
 		104: PrivasiNasibAktif
 		105: KategoriTeleportNasib
 		106: HasilNasibTerkunci
+		107: MenuNasibHarusDibuka
 }
 
 subroutines
@@ -1226,6 +1227,7 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 					Set Player Variable(Global.PemainAktif, EfekNasibBerakhir, 0);
 					Set Player Variable(Global.PemainAktif, HasilNasibTerkunci, 0);
 					Set Player Variable(Global.PemainAktif, KartuNasibAktif, False);
+					Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);
 				End;
 			End;
 		End;
@@ -2094,6 +2096,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.PrivasiNasibAktif = False;
 				Event Player.KategoriTeleportNasib = -1;
 				Event Player.HasilNasibTerkunci = 0;
+				Event Player.MenuNasibHarusDibuka = False;
 				If(Event Player.IkonKartuNasib != Null);
 					Destroy Icon(Event Player.IkonKartuNasib);
 				End;
@@ -2513,6 +2516,8 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 			End;
 			Event Player.IkonKebal = Last Created Entity;
 		End;
+		Event Player.MenuNasibHarusDibuka = False;
+		Call Subroutine(TutupMenu);
 		Event Player.EfekNasibBerakhir = 0;
 		Event Player.HasilNasibTerkunci = 0;
 
@@ -2624,8 +2629,8 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 		Event Player.IkonKartuNasibHijau = Null;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
-		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 10));
-			Call Subroutine(GambarMenu);
+		If(Event Player.KartuNasibAktif == False);
+			Event Player.MenuNasibHarusDibuka = True;
 		End;
 	}
 }
@@ -2675,6 +2680,7 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 		Event Player.IkonKartuNasib = Null;
 		Event Player.IkonKartuNasibHijau = Null;
 		Event Player.KartuNasibAktif = False;
+		Event Player.MenuNasibHarusDibuka = True;
 		Event Player.KartuNasibMerah = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
@@ -2700,6 +2706,42 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 10));
 			Call Subroutine(GambarMenu);
 		End;
+	}
+}
+
+
+rule("18g - Nasib: Riapri menu solo quando la funzione finisce")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.MenuNasibHarusDibuka == True;
+		Event Player.KartuNasibAktif == False;
+	}
+
+	actions
+	{
+		Event Player.MenuNasibHarusDibuka = False;
+		Event Player.InputMenuDikunci = False;
+		Event Player.PerintahMenu = 0;
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
+		Event Player.MenuTerbuka = True;
+		Event Player.HalamanMenu = 10;
+		Event Player.HalamanMenuTujuan = 10;
+		Call Subroutine(GambarMenu);
 	}
 }
 
@@ -3946,6 +3988,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.PrivasiNasibAktif = False;
 		Event Player.KategoriTeleportNasib = -1;
 		Event Player.HasilNasibTerkunci = 0;
+		Event Player.MenuNasibHarusDibuka = False;
 		If(Event Player.TeksTeleportasi != Null);
 			Destroy In-World Text(Event Player.TeksTeleportasi);
 		End;
@@ -4173,6 +4216,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PrivasiNasibAktif = False;
 		Event Player.KategoriTeleportNasib = -1;
 		Event Player.HasilNasibTerkunci = 0;
+		Event Player.MenuNasibHarusDibuka = False;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = Event Player.PindahTimDiproses;
 		Event Player.SiklusPemainAktif = False;
