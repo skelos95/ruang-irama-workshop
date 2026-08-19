@@ -47,15 +47,13 @@ source = SOURCE.read_text(encoding="utf-8")
 if blob_sha(source) != OLD_BLOB:
     raise RuntimeError("unexpected Workshop blob; refusing to patch moving target")
 
-# Dedicated one-shot flag. Global managers can set it; an Each Player event
-# owns the actual HUD recreation because GambarMenu depends on Event Player.
 source = one(
     source,
     "\t\t106: HasilNasibTerkunci\n}",
     "\t\t106: HasilNasibTerkunci\n\t\t107: MenuNasibHarusDibuka\n}",
 )
 
-# New roulette starts with no pending reopen request.
+
 def edit_interact(block: str) -> str:
     old = "\t\t\t\tEvent Player.HasilNasibTerkunci = 0;\n"
     if block.count(old) != 1:
@@ -64,8 +62,7 @@ def edit_interact(block: str) -> str:
 
 source = edit_rule(source, "10 - Menu: Interaksi membuka atau menerapkan pilihan", edit_interact)
 
-# End of roulette: close the menu for real. TutupMenu destroys its HUD and,
-# importantly, restores all hero buttons / InputMenuDikunci immediately.
+
 def edit_luck(block: str) -> str:
     old_close = "\t\tEvent Player.EfekNasibBerakhir = 0;\n\t\tEvent Player.HasilNasibTerkunci = 0;\n\n\t\tIf(Event Player.EfekNasib == 1);"
     new_close = "\t\tEvent Player.MenuNasibHarusDibuka = False;\n\t\tCall Subroutine(TutupMenu);\n\t\tEvent Player.EfekNasibBerakhir = 0;\n\t\tEvent Player.HasilNasibTerkunci = 0;\n\n\t\tIf(Event Player.EfekNasib == 1);"
@@ -73,8 +70,6 @@ def edit_luck(block: str) -> str:
         raise RuntimeError("roulette close marker mismatch")
     block = block.replace(old_close, new_close, 1)
 
-    # Instant outcomes (teleport / heart) reach the common tail with
-    # KartuNasibAktif=False. Request reopen only after the final icon linger.
     old_tail = """\t\tEvent Player.PutaranKartuNasib = 0;\n\t\tEvent Player.JedaKartuNasib = 0;\n\t\tIf(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 10));\n\t\t\tCall Subroutine(GambarMenu);\n\t\tEnd;"""
     new_tail = """\t\tEvent Player.PutaranKartuNasib = 0;\n\t\tEvent Player.JedaKartuNasib = 0;\n\t\tIf(Event Player.KartuNasibAktif == False);\n\t\t\tEvent Player.MenuNasibHarusDibuka = True;\n\t\tEnd;"""
     if block.count(old_tail) != 1:
@@ -83,8 +78,7 @@ def edit_luck(block: str) -> str:
 
 source = edit_rule(source, "18e - Nasib: Roulette sepuluh efek dengan hasil terkunci", edit_luck)
 
-# Timed outcomes request reopen at the exact expiry from the existing global
-# 16 ms manager. It does not render HUD itself.
+
 def edit_fast(block: str) -> str:
     old = "\t\t\t\t\tSet Player Variable(Global.PemainAktif, KartuNasibAktif, False);\n"
     if block.count(old) != 1:
@@ -94,8 +88,7 @@ def edit_fast(block: str) -> str:
 
 source = edit_rule(source, "04g - Global-first: Pengatur status cepat terpusat", edit_fast)
 
-# Skull / floor-fall and any other death during an active result reopen only
-# after the complete death reset has restored every modifier.
+
 def edit_death(block: str) -> str:
     old = "\t\tEvent Player.KartuNasibAktif = False;\n"
     if block.count(old) != 1:
@@ -104,8 +97,6 @@ def edit_death(block: str) -> str:
 
 source = edit_rule(source, "18f - Nasib: Reset lengkap semua efek saat pemilik mati", edit_death)
 
-# Single event-driven UI handoff. Crouch and Jump are intentionally untouched;
-# all captured hero buttons are explicitly returned before GambarMenu.
 reopen_rule = r'''rule("18g - Nasib: Riapri menu solo quando la funzione finisce")
 {
 \tevent
@@ -139,11 +130,10 @@ reopen_rule = r'''rule("18g - Nasib: Riapri menu solo quando la funzione finisce
 \t\tEvent Player.HalamanMenuTujuan = 10;
 \t\tCall Subroutine(GambarMenu);
 \t}
-}'''
+}'''.replace("\\t", "\t")
 source = insert_after_rule(source, "18f - Nasib: Reset lengkap semua efek saat pemilik mati", reopen_rule)
 
-# Initialize / cleanup the one-shot flag so join, team switch and leave cannot
-# resurrect an old Try Your Luck menu request.
+
 def add_flag_after_result(block: str, label: str) -> str:
     old = "\t\tEvent Player.HasilNasibTerkunci = 0;\n"
     if block.count(old) != 1:
@@ -151,7 +141,7 @@ def add_flag_after_result(block: str, label: str) -> str:
     return block.replace(old, old + "\t\tEvent Player.MenuNasibHarusDibuka = False;\n", 1)
 
 source = edit_rule(source, "93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim", lambda b: add_flag_after_result(b, "cleanup"))
-source = edit_rule(source, "94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel", lambda b: add_flag_after_result(b, "init"))
+source = edit_rule(source, "94 - Subrutin: Siapkan pemain da ujung rambut sampai variabel" if False else "94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel", lambda b: add_flag_after_result(b, "init"))
 
 SOURCE.write_text(source, encoding="utf-8")
 new_blob = blob_sha(source)
