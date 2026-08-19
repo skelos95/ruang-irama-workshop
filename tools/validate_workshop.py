@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "8d7aa48c96e5c39dae693c62d992fa7adf159c48"
+EXPECTED_SOURCE_BLOB = "690f0a39954976b03ecbac37bb894c7833153900"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -230,6 +230,7 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.TeksDiri = Last Text ID;" not in inspect_rule.body, "Crouch normale mostra ancora il proprio nome")
         checks.require("Destroy In-World Text(Event Player.TeksDiri);" in inspect_rule.body, "Crouch normale non pulisce un eventuale nome personale residuo")
         checks.require("Event Player.TeleportasiJongkokDiaktifkan == False;" in inspect_rule.body, "Inspection generica può vincere il primo frame Crouch")
+        checks.require("If(Event Player.PrivasiNasibAktif == False);" in inspect_rule.body and "Enable Nameplates(All Players(All Teams), Event Player);" in inspect_rule.body, "Vision deve mantenere visibili i nameplate anche durante Crouch Inspection")
         checks.require("SegarkanTargetTeleportasi" not in inspect_rule.body and "CalonTargetTeleportasi" not in inspect_rule.body, "Inspection generica condivide ancora il target Teleport")
     fast_manager = find_rule(rules, "04g - Global-first:")
     passive_manager = find_rule(rules, "04i - Global-first:")
@@ -295,7 +296,8 @@ def validate(source: str) -> Checks:
             "Set Projectile Speed(Event Player, 200);",
             "Set Gravity(Event Player, 10);",
             "Set Projectile Speed(Event Player, 10);",
-            "Start Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);",
+            "Enable Nameplates(All Players(All Teams), Event Player);",
+            "Event Player.PelatNamaDinonaktifkan = False;",
             "Disable Movement Collision With Environment(Event Player, True);",
             "Start Accelerating(Event Player, Event Player.ArahNasib, 50, 25, To World, None);",
             "Kill(Event Player, Null);",
@@ -309,6 +311,7 @@ def validate(source: str) -> Checks:
         checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
         checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck.body, "Try Your Luck istantaneo non richiede la riapertura dopo il risultato")
+        checks.require("Start Forcing Player Outlines(" not in luck.body, "Vision Try Your Luck non deve usare outline")
     if luck_death:
         for token in (
             "Clear Status(Event Player, Hacked);",
@@ -331,6 +334,8 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
         checks.require("Has Spawned(Event Player) == True;" in luck_reopen.body and "Is Alive(Event Player) == True;" in luck_reopen.body, "18g deve attendere il respawn vivo prima di consumare la riapertura")
         checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body, "18g non riapre la pagina Try Your Luck")
+        checks.require("Call Subroutine(GambarNasib);" in luck_reopen.body, "18g riapre lo stato menu ma non rende direttamente HUD Try Your Luck")
+        checks.require(luck_reopen.body.index("Call Subroutine(GambarMenu);") < luck_reopen.body.index("Call Subroutine(GambarNasib);") < luck_reopen.body.index("Event Player.MenuNasibHarusDibuka = False;"), "18g deve renderizzare pagina 10 prima di consumare la riapertura")
         checks.require("Event Player.InputMenuDikunci = False;" in luck_reopen.body, "18g non libera il latch input del menu")
         checks.require("Wait(" not in luck_reopen.body and "Loop If Condition Is True;" not in luck_reopen.body, "18g riapertura al respawn non deve usare Wait o Loop")
         checks.require("Call Subroutine(TutupMenu);" in luck_reopen.body, "18g non forza un redraw fresco al respawn")
