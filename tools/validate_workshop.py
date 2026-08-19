@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "13122f551028c57d91ea29328e46b2e49e949e09"
+EXPECTED_SOURCE_BLOB = "3374baff825e37282bbcf8c957c4fdf29fc59ccc"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -281,7 +281,8 @@ def validate(source: str) -> Checks:
     luck_vision_create = find_rule(rules, "18i - Nasib:")
     luck_vision_cleanup = find_rule(rules, "18j - Nasib:")
     luck_effect_hud = find_rule(rules, "18k - Nasib:")
-    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None, "pipeline Try Your Luck a dieci risultati assente")
+    luck_ultimate_global = find_rule(rules, "18l - Nasib:")
+    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None and luck_ultimate_global is not None, "pipeline Try Your Luck a dieci risultati assente")
     if luck:
         checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
         checks.require("Random Integer(1, 10)" in luck.body, "roulette Try Your Luck non usa dieci risultati")
@@ -412,11 +413,25 @@ def validate(source: str) -> Checks:
             "Event Player.MenuNasibHarusDibuka = False;",
         ):
             checks.require(token in quiet_player.body, f"cambio team non ripulisce Try Your Luck: {token}")
+    if luck_ultimate_global:
+        checks.equal(event_type(luck_ultimate_global), "Ongoing - Global", "18l Ultimate sustain: scheduler")
+        checks.require(luck_ultimate_global.body.count("Filtered Array(All Players(All Teams)") >= 2, "18l Ultimate sustain non filtra globalmente i player attivi")
+        for token in (
+            "Player Variable(Current Array Element, Manusia) == True",
+            "Player Variable(Current Array Element, EfekNasib) == 2",
+            "Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed",
+            "Has Spawned(Current Array Element) == True",
+            "Is Alive(Current Array Element) == True",
+            "Ultimate Charge Percent(Current Array Element) < 100",
+            "Set Ultimate Charge(Filtered Array(All Players(All Teams)",
+        ):
+            checks.require(token in luck_ultimate_global.body, f"18l Ultimate sustain incompleto: {token}")
+        checks.require("KartuNasibAktif" not in luck_ultimate_global.body, "18l Ultimate sustain non deve dipendere dal lifecycle menu/roulette")
+        checks.require("Button(Ultimate)" not in luck_ultimate_global.body, "18l Ultimate sustain non deve dipendere dall input Ultimate")
+        checks.require("Wait(" not in luck_ultimate_global.body and "Loop If Condition Is True;" not in luck_ultimate_global.body and "For Global Variable(" not in luck_ultimate_global.body and "For Player Variable(" not in luck_ultimate_global.body, "18l Ultimate sustain deve essere event-driven senza Wait o Loop")
     if fast_manager:
-        checks.require("Set Ultimate Charge(Global.PemainAktif, 100);" in fast_manager.body, "Ultimate always-ready non è gestita dal manager globale")
-        checks.require("Global.PemainAktif.EfekNasib == 2" in fast_manager.body and "Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed" in fast_manager.body, "Ultimate always-ready non resta legata al timestamp effetto")
-        checks.require("Global.PemainAktif.KartuNasibAktif == True" not in fast_manager.body, "Ultimate always-ready dipende ancora dal flag roulette/menu")
-        checks.require("Has Spawned(Global.PemainAktif) == True" in fast_manager.body and "Is Alive(Global.PemainAktif) == True" in fast_manager.body, "Ultimate always-ready non verifica player vivo e spawnato")
+        checks.require("Set Ultimate Charge(" not in fast_manager.body, "04g non deve più gestire Ultimate Try Your Luck")
+        checks.require("Global.PemainAktif.EfekNasib == 2" not in fast_manager.body, "04g conserva ancora logica Ultimate Try Your Luck")
         checks.require("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir" not in fast_manager.body, "04g gestisce ancora la scadenza Try Your Luck condivisa")
         checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" not in fast_manager.body, "04g consegna ancora la riapertura Try Your Luck")
     if inspect_rule:
