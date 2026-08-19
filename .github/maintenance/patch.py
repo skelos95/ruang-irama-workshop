@@ -6,7 +6,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 VALIDATOR = ROOT / "tools" / "validate_workshop.py"
-TESTS = ROOT / "tests" / "test_validate_workshop.py"
 
 OLD_BLOB = "8d7aa48c96e5c39dae693c62d992fa7adf159c48"
 
@@ -27,8 +26,8 @@ source = SOURCE.read_text(encoding="utf-8")
 if blob_sha(source) != OLD_BLOB:
     raise RuntimeError("unexpected Workshop blob; refusing to patch moving target")
 
-# 18g: GambarMenu only preloads the main HUD when reopening directly into a submenu.
-# Render page 10 explicitly so the menu is not logically open but visually absent.
+# Reopening directly on page 10 needs the page renderer too: GambarMenu alone
+# only recreates the preloaded main HUD, which is invisible while HalamanMenu == 10.
 old_reopen = '''\t\tEvent Player.MenuTerbuka = True;
 \t\tEvent Player.HalamanMenu = 10;
 \t\tEvent Player.HalamanMenuTujuan = 10;
@@ -44,7 +43,7 @@ new_reopen = '''\t\tEvent Player.MenuTerbuka = True;
 '''
 source = one(source, old_reopen, new_reopen)
 
-# Vision: show player names/nameplates, not outlines.
+# Vision shows native player names/nameplates instead of outlines.
 old_vision = '''\t\tElse If(Event Player.EfekNasib == 6);
 \t\t\tEvent Player.PrivasiNasibAktif = True;
 \t\t\tStart Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);
@@ -58,7 +57,7 @@ new_vision = '''\t\tElse If(Event Player.EfekNasib == 6);
 '''
 source = one(source, old_vision, new_vision)
 
-# While Vision is active, crouch inspection must not hide the global nameplates.
+# Crouch inspection must not hide all names while Vision is active.
 old_inspect = '''\t\tIf(Event Player.InspeksiAktif == False);
 \t\t\tEvent Player.InspeksiAktif = True;
 \t\t\tDisable Nameplates(All Players(All Teams), Event Player);
@@ -76,7 +75,7 @@ new_inspect = '''\t\tIf(Event Player.InspeksiAktif == False);
 '''
 source = one(source, old_inspect, new_inspect)
 
-# Same protection for crouch-teleport target rendering.
+# Same rule for the player-target teleport label.
 old_tp = '''\t\tIf(Event Player.CalonTargetTeleportasi == Null);
 \t\t\tEvent Player.TargetTeleportasiTeks = Null;
 \t\t\tAbort;
@@ -100,9 +99,6 @@ new_tp = '''\t\tIf(Event Player.CalonTargetTeleportasi == Null);
 '''
 source = one(source, old_tp, new_tp)
 
-# Outline cleanup is no longer needed because Vision never starts an outline.
-source = source.replace("\t\tStop Forcing Player Outlines(All Players(All Teams), Event Player);\n", "")
-
 SOURCE.write_text(source, encoding="utf-8")
 new_blob = blob_sha(source)
 
@@ -113,7 +109,6 @@ validator = one(
     '            "Start Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);",\n',
     '            "Enable Nameplates(All Players(All Teams), Event Player);",\n            "Event Player.PelatNamaDinonaktifkan = False;",\n',
 )
-validator = validator.replace('            "Stop Forcing Player Outlines(All Players(All Teams), Event Player);",\n', '')
 old_luck_guard = '        checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck.body, "Try Your Luck istantaneo non richiede la riapertura dopo il risultato")\n'
 new_luck_guard = old_luck_guard + '        checks.require("Start Forcing Player Outlines(" not in luck.body, "Vision Try Your Luck non deve usare outline")\n'
 validator = one(validator, old_luck_guard, new_luck_guard)
@@ -124,28 +119,5 @@ old_inspect_guard = '        checks.require("Event Player.TeleportasiJongkokDiak
 new_inspect_guard = old_inspect_guard + '        checks.require("If(Event Player.PrivasiNasibAktif == False);" in inspect_rule.body and "Enable Nameplates(All Players(All Teams), Event Player);" in inspect_rule.body, "Vision deve mantenere visibili i nameplate anche durante Crouch Inspection")\n'
 validator = one(validator, old_inspect_guard, new_inspect_guard)
 VALIDATOR.write_text(validator, encoding="utf-8")
-
-tests = TESTS.read_text(encoding="utf-8")
-anchor = '''    def test_try_your_luck_expiry_is_per_player(self) -> None:
-'''
-new_tests = '''    def test_try_your_luck_reopen_renders_page_10_directly(self) -> None:
-        start = self.source.index('rule(\\"18g - Nasib:')
-        pos = self.source.index("Call Subroutine(GambarNasib);", start)
-        mutated = self.source[:pos] + self.source[pos:].replace("Call Subroutine(GambarNasib);", "Call Subroutine(GambarMenu);", 1)
-        self.assertTrue(any("non rende direttamente HUD Try Your Luck" in error for error in self.errors(mutated)))
-
-    def test_try_your_luck_vision_uses_names_not_outlines(self) -> None:
-        start = self.source.index('rule(\\"18e - Nasib:')
-        pos = self.source.index("Enable Nameplates(All Players(All Teams), Event Player);", start)
-        mutated = self.source[:pos] + self.source[pos:].replace(
-            "Enable Nameplates(All Players(All Teams), Event Player);",
-            "Start Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);",
-            1,
-        )
-        self.assertTrue(any("Vision Try Your Luck non deve usare outline" in error for error in self.errors(mutated)))
-
-'''
-tests = one(tests, anchor, new_tests + anchor)
-TESTS.write_text(tests, encoding="utf-8")
 
 print(f"patched Workshop blob: {new_blob}")
