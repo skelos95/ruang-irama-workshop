@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 VALIDATOR = ROOT / "tools" / "validate_workshop.py"
+TESTS = ROOT / "tests" / "test_validate_workshop.py"
 
 OLD_BLOB = "ab3617a0c2f08e7e435c6bf19ce45258c9f4a7af"
 
@@ -69,5 +70,23 @@ old_reopen_guard = '        checks.require("Event Player.InputMenuDikunci = Fals
 new_reopen_guard = old_reopen_guard + '        checks.require("Wait(" not in luck_reopen.body and "Loop If Condition Is True;" not in luck_reopen.body, "18g riapertura al respawn non deve usare Wait o Loop")\n'
 validator = one(validator, old_reopen_guard, new_reopen_guard)
 VALIDATOR.write_text(validator, encoding="utf-8")
+
+tests = TESTS.read_text(encoding="utf-8")
+old_test = '''    def test_try_your_luck_death_redraw_is_required(self) -> None:
+        start = self.source.index('rule("18f - Nasib:')
+        pos = self.source.index("Wait(0.100, Ignore Condition);", start)
+        mutated = self.source[:pos] + self.source[pos:].replace("Wait(0.100, Ignore Condition);", "Wait(0.200, Ignore Condition);", 1)
+        self.assertTrue(any("death screen" in error or "transizione HUD" in error for error in self.errors(mutated)))
+'''
+new_test = '''    def test_try_your_luck_death_stays_immediate_and_hidden(self) -> None:
+        start = self.source.index('rule("18f - Nasib:')
+        actions = self.source.index("\tactions\n\t{", start) + len("\tactions\n\t{")
+        mutated_wait = self.source[:actions] + "\n\t\tWait(0.100, Ignore Condition);" + self.source[actions:]
+        self.assertTrue(any("senza Wait o Loop" in error for error in self.errors(mutated_wait)))
+        mutated_draw = self.source[:actions] + "\n\t\tEvent Player.MenuTerbuka = True;\n\t\tCall Subroutine(GambarMenu);" + self.source[actions:]
+        self.assertTrue(any("non deve mostrare il menu prima del respawn" in error for error in self.errors(mutated_draw)))
+'''
+tests = one(tests, old_test, new_test)
+TESTS.write_text(tests, encoding="utf-8")
 
 print(f"patched Workshop blob: {new_blob}")
