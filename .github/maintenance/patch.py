@@ -14,9 +14,9 @@ def blob_sha(text: str) -> str:
     return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 
-def replace_once(text: str, old: str, new: str) -> str:
+def one(text: str, old: str, new: str) -> str:
     if text.count(old) != 1:
-        raise RuntimeError(f"expected one match: {old[:120]!r}")
+        raise RuntimeError(f"expected one match: {old[:100]!r}")
     return text.replace(old, new)
 
 
@@ -24,7 +24,7 @@ source = SOURCE.read_text(encoding="utf-8")
 if blob_sha(source) != OLD_BLOB:
     raise RuntimeError("unexpected Workshop blob")
 
-source = replace_once(
+source = one(
     source,
     "\t\t98: InputMenuDikunci\n",
     "\t\t98: InputMenuDikunci\n"
@@ -37,9 +37,9 @@ source = replace_once(
     "\t\t105: KategoriTeleportNasib\n"
     "\t\t106: HasilNasibTerkunci\n",
 )
-source = replace_once(source, "\t30: PramuatSubmenu\n", "\t30: PramuatSubmenu\n\t31: TampilkanIkonNasib\n")
+source = one(source, "\t30: PramuatSubmenu\n", "\t30: PramuatSubmenu\n\t31: TampilkanIkonNasib\n")
 
-icon_rule = r'''
+source = source.rstrip() + r'''
 
 rule("99 - Subrutin: Tampilkan satu ikon Try Your Luck di reticolo")
 {
@@ -79,25 +79,11 @@ rule("99 - Subrutin: Tampilkan satu ikon Try Your Luck di reticolo")
 		Event Player.IkonKartuNasib = Last Created Entity;
 	}
 }
-'''
-source = source.rstrip() + icon_rule + "\n"
+''' + "\n"
 SOURCE.write_text(source, encoding="utf-8")
 new_blob = blob_sha(source)
 
 validator = VALIDATOR.read_text(encoding="utf-8")
-validator = replace_once(validator, f'EXPECTED_SOURCE_BLOB = "{OLD_BLOB}"', f'EXPECTED_SOURCE_BLOB = "{new_blob}"')
-validator = replace_once(
-    validator,
-    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"): ',
-    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "PrivasiNasibAktif"): ',
-) if False else validator
-validator = replace_once(
-    validator,
-    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"):',
-    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "PrivasiNasibAktif"):')
-validator = replace_once(
-    validator,
-    'for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):',
-    'for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu", "TampilkanIkonNasib"):')
+validator = one(validator, f'EXPECTED_SOURCE_BLOB = "{OLD_BLOB}"', f'EXPECTED_SOURCE_BLOB = "{new_blob}"')
 VALIDATOR.write_text(validator, encoding="utf-8")
 print(f"Try Your Luck icon framework: {OLD_BLOB} -> {new_blob}")
