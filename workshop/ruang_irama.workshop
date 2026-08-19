@@ -2724,6 +2724,8 @@ rule("18g - Nasib: Riapri menu solo quando la funzione finisce")
 		Event Player.Manusia == True;
 		Event Player.MenuNasibHarusDibuka == True;
 		Event Player.KartuNasibAktif == False;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
 	}
 
 	actions

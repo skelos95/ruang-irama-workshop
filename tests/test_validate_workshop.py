@@ -98,6 +98,16 @@ class GlobalFirst072Tests(unittest.TestCase):
         mutated = self.source + "\nStart Forcing Player Position(Event Player, Position Of(Event Player), False);\n"
         self.assertTrue(any("forzare la posizione" in error for error in self.errors(mutated)))
 
+    def test_try_your_luck_reopen_waits_for_alive_respawn(self) -> None:
+        start = self.source.index('rule(\"18g - Nasib:')
+        pos = self.source.index("Is Alive(Event Player) == True;", start)
+        mutated = self.source[:pos] + self.source[pos:].replace(
+            "Is Alive(Event Player) == True;",
+            "Is Alive(Event Player) == False;",
+            1,
+        )
+        self.assertTrue(any("respawn vivo" in error for error in self.errors(mutated)))
+
     def test_periodic_pollers_are_global(self) -> None:
         for prefix in ("04i - Global-first:", "04j - Global-first:"):
             start = self.source.index(f'rule("{prefix}')
