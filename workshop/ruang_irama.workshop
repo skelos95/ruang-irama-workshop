@@ -2678,20 +2678,6 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 			Destroy Icon(Event Player.IkonKebal);
 			Event Player.IkonKebal = Null;
 		End;
-		Wait(0.100, Ignore Condition);
-		Event Player.InputMenuDikunci = False;
-		Event Player.PerintahMenu = 0;
-		Allow Button(Event Player, Button(Primary Fire));
-		Allow Button(Event Player, Button(Secondary Fire));
-		Allow Button(Event Player, Button(Interact));
-		Allow Button(Event Player, Button(Reload));
-		Allow Button(Event Player, Button(Ability 1));
-		Allow Button(Event Player, Button(Ability 2));
-		Allow Button(Event Player, Button(Ultimate));
-		Event Player.MenuTerbuka = True;
-		Event Player.HalamanMenu = 10;
-		Event Player.HalamanMenuTujuan = 10;
-		Call Subroutine(GambarMenu);
 	}
 }
 

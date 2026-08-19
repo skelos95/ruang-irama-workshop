@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "ab3617a0c2f08e7e435c6bf19ce45258c9f4a7af"
+EXPECTED_SOURCE_BLOB = "8d7aa48c96e5c39dae693c62d992fa7adf159c48"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -324,14 +324,15 @@ def validate(source: str) -> Checks:
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
         checks.require("Call Subroutine(TutupMenu);" in luck_death.body, "morte Try Your Luck non chiude e libera il menu prima della riapertura")
         checks.require("Event Player.PutaranKartuNasib > 0" in luck_death.body and "Event Player.EfekNasib != 0" in luck_death.body, "reset morte Try Your Luck non copre roulette ed effetto")
-        checks.require("Wait(0.100, Ignore Condition);" in luck_death.body, "morte Try Your Luck non attende la transizione HUD prima del redraw")
-        checks.require("Event Player.HalamanMenu = 10;" in luck_death.body and "Call Subroutine(GambarMenu);" in luck_death.body, "morte Try Your Luck non ridisegna il menu nella death screen")
+        checks.require("Wait(" not in luck_death.body and "Loop If Condition Is True;" not in luck_death.body, "morte Try Your Luck deve resettare subito senza Wait o Loop")
+        checks.require("Call Subroutine(GambarMenu);" not in luck_death.body and "Event Player.MenuTerbuka = True;" not in luck_death.body, "morte Try Your Luck non deve mostrare il menu prima del respawn")
     if luck_reopen:
         checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
         checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
         checks.require("Has Spawned(Event Player) == True;" in luck_reopen.body and "Is Alive(Event Player) == True;" in luck_reopen.body, "18g deve attendere il respawn vivo prima di consumare la riapertura")
         checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body, "18g non riapre la pagina Try Your Luck")
         checks.require("Event Player.InputMenuDikunci = False;" in luck_reopen.body, "18g non libera il latch input del menu")
+        checks.require("Wait(" not in luck_reopen.body and "Loop If Condition Is True;" not in luck_reopen.body, "18g riapertura al respawn non deve usare Wait o Loop")
         checks.require("Call Subroutine(TutupMenu);" in luck_reopen.body, "18g non forza un redraw fresco al respawn")
         checks.require(luck_reopen.body.index("Call Subroutine(GambarMenu);") < luck_reopen.body.index("Event Player.MenuNasibHarusDibuka = False;"), "18g consuma la riapertura prima del redraw")
         for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
