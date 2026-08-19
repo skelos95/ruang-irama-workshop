@@ -1204,31 +1204,6 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 				If(And(Global.PemainAktif.EfekNasib == 2, And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, Is Alive(Global.PemainAktif) == True)));
 					Set Ultimate Charge(Global.PemainAktif, 100);
 				End;
-				If(And(Global.PemainAktif.EfekNasibBerakhir > 0, Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir));
-					If(Global.PemainAktif.EfekNasib == 1);
-						Clear Status(Global.PemainAktif, Hacked);
-					Else If(Global.PemainAktif.EfekNasib == 2);
-						Set Ultimate Charge(Global.PemainAktif, Global.PemainAktif.HasilNasibTerkunci);
-					Else If(Global.PemainAktif.EfekNasib == 4);
-						Set Move Speed(Global.PemainAktif, 100);
-						Set Jump Vertical Speed(Global.PemainAktif, 100);
-						Set Projectile Speed(Global.PemainAktif, 100);
-					Else If(Global.PemainAktif.EfekNasib == 5);
-						Set Gravity(Global.PemainAktif, 100);
-						Set Projectile Speed(Global.PemainAktif, 100);
-					Else If(Global.PemainAktif.EfekNasib == 6);
-						Stop Forcing Player Outlines(All Players(All Teams), Global.PemainAktif);
-						Set Player Variable(Global.PemainAktif, PrivasiNasibAktif, False);
-					Else If(Global.PemainAktif.EfekNasib == 8);
-						Stop Accelerating(Global.PemainAktif);
-						Set Move Speed(Global.PemainAktif, 100);
-					End;
-					Set Player Variable(Global.PemainAktif, EfekNasib, 0);
-					Set Player Variable(Global.PemainAktif, EfekNasibBerakhir, 0);
-					Set Player Variable(Global.PemainAktif, HasilNasibTerkunci, 0);
-					Set Player Variable(Global.PemainAktif, KartuNasibAktif, False);
-					Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);
-				End;
 			End;
 		End;
 		Global.PemainAktif = Null;
@@ -2703,9 +2678,20 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 			Destroy Icon(Event Player.IkonKebal);
 			Event Player.IkonKebal = Null;
 		End;
-		If(And(Event Player.MenuTerbuka == True, Event Player.HalamanMenu == 10));
-			Call Subroutine(GambarMenu);
-		End;
+		Wait(0.100, Ignore Condition);
+		Event Player.InputMenuDikunci = False;
+		Event Player.PerintahMenu = 0;
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
+		Event Player.MenuTerbuka = True;
+		Event Player.HalamanMenu = 10;
+		Event Player.HalamanMenuTujuan = 10;
+		Call Subroutine(GambarMenu);
 	}
 }
 
@@ -2730,7 +2716,7 @@ rule("18g - Nasib: Riapri menu solo quando la funzione finisce")
 
 	actions
 	{
-		Event Player.MenuNasibHarusDibuka = False;
+		Call Subroutine(TutupMenu);
 		Event Player.InputMenuDikunci = False;
 		Event Player.PerintahMenu = 0;
 		Allow Button(Event Player, Button(Primary Fire));
@@ -2744,6 +2730,47 @@ rule("18g - Nasib: Riapri menu solo quando la funzione finisce")
 		Event Player.HalamanMenu = 10;
 		Event Player.HalamanMenuTujuan = 10;
 		Call Subroutine(GambarMenu);
+		Event Player.MenuNasibHarusDibuka = False;
+	}
+}
+
+rule("18h - Nasib: Scadenza effetti temporanei per player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Manusia == True;
+		Event Player.KartuNasibAktif == True;
+		Event Player.PutaranKartuNasib == 0;
+		Event Player.EfekNasibBerakhir > 0;
+		Total Time Elapsed >= Event Player.EfekNasibBerakhir;
+	}
+
+	actions
+	{
+		If(Event Player.EfekNasib == 2);
+			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
+		End;
+		Clear Status(Event Player, Hacked);
+		Stop Accelerating(Event Player);
+		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
+		Enable Movement Collision With Environment(Event Player);
+		Set Move Speed(Event Player, 100);
+		Set Jump Vertical Speed(Event Player, 100);
+		Set Projectile Speed(Event Player, 100);
+		Set Gravity(Event Player, 100);
+		Event Player.PrivasiNasibAktif = False;
+		Event Player.EfekNasib = 0;
+		Event Player.EfekNasibBerakhir = 0;
+		Event Player.HasilNasibTerkunci = 0;
+		Event Player.KartuNasibAktif = False;
+		Event Player.MenuNasibHarusDibuka = True;
 	}
 }
 

@@ -108,6 +108,18 @@ class GlobalFirst072Tests(unittest.TestCase):
         )
         self.assertTrue(any("respawn vivo" in error for error in self.errors(mutated)))
 
+    def test_try_your_luck_expiry_is_per_player(self) -> None:
+        start = self.source.index('rule("18h - Nasib:')
+        pos = self.source.index("Ongoing - Each Player;", start)
+        mutated = self.source[:pos] + self.source[pos:].replace("Ongoing - Each Player;", "Ongoing - Global;", 1)
+        self.assertTrue(any("18h scadenza Try Your Luck" in error for error in self.errors(mutated)))
+
+    def test_try_your_luck_death_redraw_is_required(self) -> None:
+        start = self.source.index('rule("18f - Nasib:')
+        pos = self.source.index("Wait(0.100, Ignore Condition);", start)
+        mutated = self.source[:pos] + self.source[pos:].replace("Wait(0.100, Ignore Condition);", "Wait(0.200, Ignore Condition);", 1)
+        self.assertTrue(any("death screen" in error or "transizione HUD" in error for error in self.errors(mutated)))
+
     def test_periodic_pollers_are_global(self) -> None:
         for prefix in ("04i - Global-first:", "04j - Global-first:"):
             start = self.source.index(f'rule("{prefix}')
