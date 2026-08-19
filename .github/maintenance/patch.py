@@ -10,11 +10,11 @@ SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 VALIDATOR = ROOT / "tools" / "validate_workshop.py"
 
 
-def replace_once(text: str, old: str, new: str, label: str) -> str:
+def replace_exact(text: str, old: str, new: str, label: str, expected: int = 1) -> str:
     count = text.count(old)
-    if count != 1:
-        raise RuntimeError(f"{label}: atteso 1 match, trovati {count}")
-    return text.replace(old, new, 1)
+    if count != expected:
+        raise RuntimeError(f"{label}: attesi {expected} match, trovati {count}")
+    return text.replace(old, new, expected)
 
 
 def git_blob_sha(text: str) -> str:
@@ -25,59 +25,49 @@ def git_blob_sha(text: str) -> str:
 source = SOURCE.read_text(encoding="utf-8")
 validator = VALIDATOR.read_text(encoding="utf-8")
 
-# Player state: one effect HUD handle and one per-target Vision name handle.
-source = replace_once(
+source = replace_exact(
     source,
     "\t\t107: MenuNasibHarusDibuka\n}",
     "\t\t107: MenuNasibHarusDibuka\n\t\t108: HudEfekNasib\n\t\t109: TeksVisiNasib\n}",
-    "variabili Try Your Luck HUD/Vision",
+    "variabili HUD/Vision",
 )
-
-source = replace_once(
+source = replace_exact(
     source,
     "\t\tEvent Player.HasilNasibTerkunci = 0;\n\t\tEvent Player.MenuNasibHarusDibuka = False;\n\t\tEvent Player.PernahDisiapkan = True;",
     "\t\tEvent Player.HasilNasibTerkunci = 0;\n\t\tEvent Player.MenuNasibHarusDibuka = False;\n\t\tEvent Player.HudEfekNasib = Null;\n\t\tEvent Player.TeksVisiNasib = Null;\n\t\tEvent Player.PernahDisiapkan = True;",
-    "inizializzazione HUD/Vision",
+    "init HUD/Vision",
 )
-
-# Vision no longer relies on the built-in nameplate system.
-source = replace_once(
+source = replace_exact(
     source,
     "\t\tElse If(Event Player.EfekNasib == 6);\n\t\t\tEvent Player.PrivasiNasibAktif = True;\n\t\t\tEnable Nameplates(All Players(All Teams), Event Player);\n\t\t\tEvent Player.PelatNamaDinonaktifkan = False;\n\t\t\tEvent Player.EfekNasibBerakhir = Total Time Elapsed + 15;\n\t\t\tSmall Message(Event Player, Custom String(\"TRY YOUR LUCK: ALL PLAYERS REVEALED — 15s\"));",
     "\t\tElse If(Event Player.EfekNasib == 6);\n\t\t\tEvent Player.PrivasiNasibAktif = True;\n\t\t\tEvent Player.EfekNasibBerakhir = Total Time Elapsed + 15;\n\t\t\tSmall Message(Event Player, Custom String(\"TRY YOUR LUCK: ALL PLAYER / BOT NAMES — 15s\"));",
-    "Vision world labels",
+    "Vision custom labels",
 )
 
-# The effect HUD is always destroyed atomically on death and normal expiry.
-for label in ("reset morte", "reset scadenza"):
-    old = (
-        "\t\tClear Status(Event Player, Hacked);\n"
-        "\t\tStop Accelerating(Event Player);\n"
-        "\t\tStop Forcing Player Outlines(All Players(All Teams), Event Player);\n"
-        "\t\tEnable Movement Collision With Environment(Event Player);"
-    )
-    new = (
-        "\t\tClear Status(Event Player, Hacked);\n"
-        "\t\tStop Accelerating(Event Player);\n"
-        "\t\tIf(Event Player.HudEfekNasib != Null);\n"
-        "\t\t\tDestroy HUD Text(Event Player.HudEfekNasib);\n"
-        "\t\tEnd;\n"
-        "\t\tEvent Player.HudEfekNasib = Null;\n"
-        "\t\tEnable Movement Collision With Environment(Event Player);"
-    )
-    if old not in source:
-        raise RuntimeError(f"{label}: blocco cleanup non trovato")
-    source = source.replace(old, new, 1)
+cleanup_old = (
+    "\t\tClear Status(Event Player, Hacked);\n"
+    "\t\tStop Accelerating(Event Player);\n"
+    "\t\tStop Forcing Player Outlines(All Players(All Teams), Event Player);\n"
+    "\t\tEnable Movement Collision With Environment(Event Player);"
+)
+cleanup_new = (
+    "\t\tClear Status(Event Player, Hacked);\n"
+    "\t\tStop Accelerating(Event Player);\n"
+    "\t\tIf(Event Player.HudEfekNasib != Null);\n"
+    "\t\t\tDestroy HUD Text(Event Player.HudEfekNasib);\n"
+    "\t\tEnd;\n"
+    "\t\tEvent Player.HudEfekNasib = Null;\n"
+    "\t\tEnable Movement Collision With Environment(Event Player);"
+)
+source = replace_exact(source, cleanup_old, cleanup_new, "cleanup HUD morte/scadenza", expected=2)
 
-# Crouch Teleport remains configured ON/OFF exactly as the user left it, but cannot open while Try Your Luck is active.
-source = replace_once(
+source = replace_exact(
     source,
     "\t\tEvent Player.MenuTerbuka == False;\n\t\tEvent Player.TeleportasiJongkokAktif == False;\n\t\tEvent Player.TeleportasiJongkokDiaktifkan == True;",
     "\t\tEvent Player.MenuTerbuka == False;\n\t\tEvent Player.KartuNasibAktif == False;\n\t\tEvent Player.TeleportasiJongkokAktif == False;\n\t\tEvent Player.TeleportasiJongkokDiaktifkan == True;",
-    "guard Crouch Teleport durante Try Your Luck",
+    "guard Crouch Teleport",
 )
 
-# Event-driven Vision labels and effect HUD. No Wait/Loop pollers are introduced.
 new_rules = r'''
 
 rule("18i - Nasib: Vision crea nomi sopra ogni player e bot")
@@ -167,69 +157,60 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 \t}
 }
 '''.replace('\\t', '\t')
-
-source = replace_once(
+source = replace_exact(
     source,
     '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
     new_rules + '\nrule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")',
-    "regole Vision/HUD effetto",
+    "insert Vision/HUD rules",
 )
 
-# Validator: declare the new player state.
-validator = replace_once(
+validator = replace_exact(
     validator,
     '"HasilNasibTerkunci", "MenuNasibHarusDibuka"):',
     '"HasilNasibTerkunci", "MenuNasibHarusDibuka", "HudEfekNasib", "TeksVisiNasib"):',
-    "validator variabili HUD/Vision",
+    "validator vars",
 )
-
-# Validator: require the new event-driven rules.
-validator = replace_once(
+validator = replace_exact(
     validator,
     '    luck_expiry = find_rule(rules, "18h - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None, "pipeline Try Your Luck a dieci risultati assente")',
     '    luck_expiry = find_rule(rules, "18h - Nasib:")\n    luck_vision_create = find_rule(rules, "18i - Nasib:")\n    luck_vision_cleanup = find_rule(rules, "18j - Nasib:")\n    luck_effect_hud = find_rule(rules, "18k - Nasib:")\n    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None, "pipeline Try Your Luck a dieci risultati assente")',
-    "validator pipeline Vision/HUD",
+    "validator pipeline",
 )
-
-validator = replace_once(
+validator = replace_exact(
     validator,
     '            "Set Projectile Speed(Event Player, 10);",\n            "Enable Nameplates(All Players(All Teams), Event Player);",\n            "Event Player.PelatNamaDinonaktifkan = False;",\n            "Disable Movement Collision With Environment(Event Player, True);",',
     '            "Set Projectile Speed(Event Player, 10);",\n            "Event Player.PrivasiNasibAktif = True;",\n            "Disable Movement Collision With Environment(Event Player, True);",',
-    "validator Vision non-nameplate",
+    "validator Vision token",
 )
-
-validator = replace_once(
+validator = replace_exact(
     validator,
     '        checks.require("Start Forcing Player Outlines(" not in luck.body, "Vision Try Your Luck non deve usare outline")',
     '        checks.require("Start Forcing Player Outlines(" not in luck.body, "Vision Try Your Luck non deve usare outline")\n        checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in luck.body, "Vision Try Your Luck non deve dipendere dai nameplate standard")',
-    "validator no built-in Vision nameplates",
+    "validator no nameplates",
 )
 
-validator = validator.replace(
-    '            "Stop Forcing Player Outlines(All Players(All Teams), Event Player);",\n',
-    '',
-)
+outline_guard = '            "Stop Forcing Player Outlines(All Players(All Teams), Event Player);",\n'
+validator = replace_exact(validator, outline_guard, '', "rimuovi guard cleanup outline legacy", expected=2)
 
-# Add HUD cleanup as a required part of both death and expiry resets.
-validator = replace_once(
+# Specific reset guards without relying on duplicate tuple matchers.
+death_anchor = '        checks.require("Call Subroutine(GambarMenu);" not in luck_death.body and "Event Player.MenuTerbuka = True;" not in luck_death.body, "morte Try Your Luck non deve mostrare il menu prima del respawn")\n'
+validator = replace_exact(
     validator,
-    '            "Stop Accelerating(Event Player);",\n            "Enable Movement Collision With Environment(Event Player);",',
-    '            "Stop Accelerating(Event Player);",\n            "Destroy HUD Text(Event Player.HudEfekNasib);",\n            "Enable Movement Collision With Environment(Event Player);",',
-    "validator cleanup HUD morte",
+    death_anchor,
+    death_anchor + '        checks.require("Destroy HUD Text(Event Player.HudEfekNasib);" in luck_death.body and "Event Player.HudEfekNasib = Null;" in luck_death.body, "morte Try Your Luck non pulisce HUD effetto")\n',
+    "validator HUD morte",
 )
-validator = replace_once(
+expiry_anchor = '            checks.require(token in luck_expiry.body, f"18h reset scadenza incompleto: {token}")\n'
+validator = replace_exact(
     validator,
-    '            "Stop Accelerating(Event Player);",\n            "Enable Movement Collision With Environment(Event Player);",',
-    '            "Stop Accelerating(Event Player);",\n            "Destroy HUD Text(Event Player.HudEfekNasib);",\n            "Enable Movement Collision With Environment(Event Player);",',
-    "validator cleanup HUD scadenza",
+    expiry_anchor,
+    expiry_anchor + '        checks.require("Destroy HUD Text(Event Player.HudEfekNasib);" in luck_expiry.body and "Event Player.HudEfekNasib = Null;" in luck_expiry.body, "18h non pulisce HUD effetto")\n',
+    "validator HUD expiry",
 )
 
-# Insert behavioral guards after the expiry block and before the fast manager checks.
-anchor = '    if fast_manager:\n'
-extra_checks = '''    if luck_vision_create:\n        checks.equal(event_type(luck_vision_create), "Ongoing - Each Player", "18i Vision labels: scheduler")\n        checks.require("Create In-World Text(" in luck_vision_create.body and 'Custom String("{0}", Event Player)' in luck_vision_create.body, "18i Vision non crea il nome del target")\n        checks.require("Filtered Array(All Players(All Teams)" in luck_vision_create.body and "PrivasiNasibAktif) == True" in luck_vision_create.body, "18i Vision non limita i nomi agli osservatori con Vision")\n        checks.require("Eye Position(Event Player) + Vector(0, 0.450, 0)" in luck_vision_create.body, "18i Vision non segue la posizione del player/bot")\n        checks.require("Wait(" not in luck_vision_create.body and "Loop If Condition Is True;" not in luck_vision_create.body and "For Player Variable(" not in luck_vision_create.body, "18i Vision non deve usare polling o loop per creare i nomi")\n    if luck_vision_cleanup:\n        checks.equal(event_type(luck_vision_cleanup), "Ongoing - Each Player", "18j Vision cleanup: scheduler")\n        checks.require("Destroy In-World Text(Event Player.TeksVisiNasib);" in luck_vision_cleanup.body, "18j Vision non distrugge il nome dedicato")\n        checks.require("Wait(" not in luck_vision_cleanup.body and "Loop If Condition Is True;" not in luck_vision_cleanup.body, "18j Vision cleanup non deve usare Wait o Loop")\n    if luck_effect_hud:\n        checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")\n        checks.require("Create HUD Text(Event Player, Custom String(\\\"TRY YOUR LUCK\\\")" in luck_effect_hud.body, "18k non crea HUD effetto dedicato")\n        checks.require("EfekNasibBerakhir - Total Time Elapsed" in luck_effect_hud.body and "s REMAINING" in luck_effect_hud.body, "18k non mostra il countdown dell effetto")\n        checks.require("UNTIL DEATH" in luck_effect_hud.body, "18k non descrive la durata della caduta nel vuoto")\n        checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait o Loop")\n    if teleport_open:\n        checks.require("Event Player.KartuNasibAktif == False;" in teleport_open.body, "Crouch Teleport deve restare disattivato durante Try Your Luck")\n    if luck and luck_expiry:\n        checks.require("TeleportasiJongkokDiaktifkan =" not in luck.body and "TeleportasiJongkokDiaktifkan =" not in luck_expiry.body, "Try Your Luck non deve cambiare la preferenza ON/OFF di Crouch Teleport")\n'''
-validator = replace_once(validator, anchor, extra_checks + anchor, "validator guard Vision/HUD/Teleport")
+extra = '''    if luck_vision_create:\n        checks.equal(event_type(luck_vision_create), "Ongoing - Each Player", "18i Vision labels: scheduler")\n        checks.require("Create In-World Text(" in luck_vision_create.body and 'Custom String("{0}", Event Player)' in luck_vision_create.body, "18i Vision non crea nomi custom")\n        checks.require("Filtered Array(All Players(All Teams)" in luck_vision_create.body and "PrivasiNasibAktif) == True" in luck_vision_create.body, "18i Vision non limita i nomi agli osservatori Vision")\n        checks.require("Eye Position(Event Player) + Vector(0, 0.450, 0)" in luck_vision_create.body, "18i Vision non segue player/bot")\n        checks.require("Wait(" not in luck_vision_create.body and "Loop If Condition Is True;" not in luck_vision_create.body and "For Player Variable(" not in luck_vision_create.body, "18i Vision non deve usare Wait/Loop")\n    if luck_vision_cleanup:\n        checks.equal(event_type(luck_vision_cleanup), "Ongoing - Each Player", "18j Vision cleanup: scheduler")\n        checks.require("Destroy In-World Text(Event Player.TeksVisiNasib);" in luck_vision_cleanup.body, "18j non distrugge label Vision")\n        checks.require("Wait(" not in luck_vision_cleanup.body and "Loop If Condition Is True;" not in luck_vision_cleanup.body, "18j Vision cleanup non deve usare Wait/Loop")\n    if luck_effect_hud:\n        checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")\n        checks.require('Create HUD Text(Event Player, Custom String("TRY YOUR LUCK")' in luck_effect_hud.body, "18k non crea HUD effetto")\n        checks.require("EfekNasibBerakhir - Total Time Elapsed" in luck_effect_hud.body and "s REMAINING" in luck_effect_hud.body, "18k non mostra countdown")\n        checks.require("UNTIL DEATH" in luck_effect_hud.body, "18k non mostra durata floor removed")\n        checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait/Loop")\n    if teleport_open:\n        checks.require("Event Player.KartuNasibAktif == False;" in teleport_open.body, "Crouch Teleport deve essere disattivato durante Try Your Luck")\n    if luck and luck_expiry:\n        checks.require("TeleportasiJongkokDiaktifkan =" not in luck.body and "TeleportasiJongkokDiaktifkan =" not in luck_expiry.body, "Try Your Luck non deve cambiare la preferenza Crouch Teleport")\n'''
+validator = replace_exact(validator, '    if fast_manager:\n', extra + '    if fast_manager:\n', "validator Vision/HUD/Teleport")
 
-# Pin the final Workshop blob.
 blob = git_blob_sha(source)
 validator, n = re.subn(r'EXPECTED_SOURCE_BLOB = "[0-9a-f]{40}"', f'EXPECTED_SOURCE_BLOB = "{blob}"', validator, count=1)
 if n != 1:
