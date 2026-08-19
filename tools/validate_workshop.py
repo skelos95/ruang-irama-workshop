@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "4848ec9a689ee9ab2d9e6f7ee9c1dc61e4131c3c"
+EXPECTED_SOURCE_BLOB = "b7130b2d9478e3cac2a4934c29dc21f10532d59f"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -131,7 +131,7 @@ def validate(source: str) -> Checks:
     checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi"):
+    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
@@ -143,7 +143,7 @@ def validate(source: str) -> Checks:
         checks.require("For Global Variable(IndeksPemainGlobal" in manager.body, f"{manager.name}: loop player globale assente")
         checks.require("Global.PemainAktif = All Players(All Teams)" in manager.body, f"{manager.name}: contesto player assente")
     each_player_pipelines = (
-        "05b - Menu:", "05c - Menu:", "05d - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
+        "05b - Menu:", "05c - Menu:", "05d - Menu:", "05e - Menu:", "05f - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
         "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
         "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
         "19c - Teleportasi Jongkok:", "19d0 - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
@@ -277,7 +277,22 @@ def validate(source: str) -> Checks:
     camera_toggle = find_rule(rules, "12c - Kamera:")
     if menu_toggle:
         checks.require("Wait(0.500, Abort When False);" in menu_toggle.body, "hold Melee 0,5 s assente")
-        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_toggle.body, "Menu Arcade non deve bloccare Crouch")
+        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_toggle.body and "Disallow Button(Event Player, Button(Jump));" not in menu_toggle.body, "Menu Arcade non deve bloccare Crouch o Jump")
+        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
+            checks.require(f"Disallow Button(Event Player, Button({button}));" not in menu_toggle.body, f"Menu aperto blocca permanentemente {button}")
+    menu_dispatch = find_rule(rules, "05c - Menu:")
+    menu_lock = find_rule(rules, "05e - Menu:")
+    menu_unlock = find_rule(rules, "05f - Menu:")
+    if menu_dispatch:
+        checks.require("Is Button Held(Event Player, Button(Crouch)) == True;" in menu_dispatch.body, "dispatcher menu non richiede Crouch")
+    if menu_lock:
+        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_lock.body and "Disallow Button(Event Player, Button(Jump));" not in menu_lock.body, "navigazione menu blocca Crouch o Jump")
+        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
+            checks.require(f"Disallow Button(Event Player, Button({button}));" in menu_lock.body, f"Crouch menu non cattura {button}")
+    if menu_unlock:
+        checks.require("Is Button Held(Event Player, Button(Crouch)) == False" in menu_unlock.body, "rilascio Crouch non restituisce gli input hero")
+        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
+            checks.require(f"Allow Button(Event Player, Button({button}));" in menu_unlock.body, f"rilascio Crouch non restituisce {button}")
     if camera_toggle:
         checks.require("Wait(0.500, Abort When False);" in camera_toggle.body, "hold Camera 0,5 s assente")
         checks.require("Wait(0.016, Ignore Condition);" not in camera_toggle.body, "Camera mantiene un frame Wait superfluo")
