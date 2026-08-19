@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "690f0a39954976b03ecbac37bb894c7833153900"
+EXPECTED_SOURCE_BLOB = "646e478ed068b38f8195c6ba68fc4d3ac2ca8949"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -299,12 +299,14 @@ def validate(source: str) -> Checks:
             "Enable Nameplates(All Players(All Teams), Event Player);",
             "Event Player.PelatNamaDinonaktifkan = False;",
             "Disable Movement Collision With Environment(Event Player, True);",
-            "Start Accelerating(Event Player, Event Player.ArahNasib, 50, 25, To World, None);",
+            "Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);",
             "Kill(Event Player, Null);",
             "Set Player Health(All Living Players(Team Of(Event Player)), 9999);",
         ):
             checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
         checks.require("Start Forcing Player Position(" not in luck.body, "Try Your Luck non deve forzare la posizione")
+        checks.require("Direction From Angles(Random Real(-180, 180), Random Real(-45, 45))" not in luck.body, "Accelerazione Try Your Luck non deve usare una direzione casuale")
+        checks.require("AIM-STEERED ACCELERATION — 5s" in luck.body, "Accelerazione Try Your Luck non è etichettata come guidata dalla mira")
         checks.require("Set Status(Event Player, Null, Knocked Down" not in luck.body, "Try Your Luck caduta nel vuoto non deve usare Knocked Down")
         checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Halo" not in luck.body, "Try Your Luck riusa ancora Halo di Unkillable")
         checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Warning" not in luck.body, "Try Your Luck riusa ancora Warning di Unkillable")
