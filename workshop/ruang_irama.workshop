@@ -150,6 +150,14 @@ variables
 		96: TargetTeleportasiTeks
 		97: TeksTeleportasi
 		98: InputMenuDikunci
+		99: EfekNasib
+		100: EfekNasibBerakhir
+		101: DaftarTujuanNasib
+		102: TujuanNasib
+		103: ArahNasib
+		104: PrivasiNasibAktif
+		105: KategoriTeleportNasib
+		106: HasilNasibTerkunci
 }
 
 subroutines

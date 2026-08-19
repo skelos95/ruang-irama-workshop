@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "b7130b2d9478e3cac2a4934c29dc21f10532d59f"
+EXPECTED_SOURCE_BLOB = "d1ab0f0537294be81ae7d535635be0122efc0502"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
