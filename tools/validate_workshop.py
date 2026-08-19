@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "04b208dbc86b157345635bb14df31f29c604e0eb"
+EXPECTED_SOURCE_BLOB = "13122f551028c57d91ea29328e46b2e49e949e09"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -378,7 +378,9 @@ def validate(source: str) -> Checks:
         checks.require("Wait(" not in luck_vision_cleanup.body and "Loop If Condition Is True;" not in luck_vision_cleanup.body, "18j Vision cleanup non deve usare Wait/Loop")
     if luck_effect_hud:
         checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")
-        checks.require('Create HUD Text(Event Player, Null, Null, Custom String("TRY YOUR LUCK\\n \\n{0}\\n{1}"' in luck_effect_hud.body, "18k deve usare solo il campo Text con spazio dopo TRY YOUR LUCK")
+        checks.require('Create HUD Text(Event Player, Null, Null, Custom String("\\n{0}\\n{1}"' in luck_effect_hud.body, "18k deve mostrare solo effetto e durata nel campo Text")
+        checks.require('Custom String("TRY YOUR LUCK' not in luck_effect_hud.body, "18k mostra ancora TRY YOUR LUCK")
+        checks.require("Top, -99" in luck_effect_hud.body, "18k non lascia lo spazio sotto CHILL DEDICATED SERVER")
         checks.require("EfekNasibBerakhir - Total Time Elapsed" in luck_effect_hud.body and "s REMAINING" in luck_effect_hud.body, "18k non mostra countdown")
         checks.require("UNTIL DEATH" in luck_effect_hud.body, "18k non mostra durata floor removed")
         checks.require("Color(White), Color(White), Global.RGB, Visible To String and Color" in luck_effect_hud.body, "18k testo effetto non usa Global.RGB")
@@ -412,6 +414,9 @@ def validate(source: str) -> Checks:
             checks.require(token in quiet_player.body, f"cambio team non ripulisce Try Your Luck: {token}")
     if fast_manager:
         checks.require("Set Ultimate Charge(Global.PemainAktif, 100);" in fast_manager.body, "Ultimate always-ready non è gestita dal manager globale")
+        checks.require("Global.PemainAktif.EfekNasib == 2" in fast_manager.body and "Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed" in fast_manager.body, "Ultimate always-ready non resta legata al timestamp effetto")
+        checks.require("Global.PemainAktif.KartuNasibAktif == True" not in fast_manager.body, "Ultimate always-ready dipende ancora dal flag roulette/menu")
+        checks.require("Has Spawned(Global.PemainAktif) == True" in fast_manager.body and "Is Alive(Global.PemainAktif) == True" in fast_manager.body, "Ultimate always-ready non verifica player vivo e spawnato")
         checks.require("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir" not in fast_manager.body, "04g gestisce ancora la scadenza Try Your Luck condivisa")
         checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" not in fast_manager.body, "04g consegna ancora la riapertura Try Your Luck")
     if inspect_rule:

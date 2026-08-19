@@ -1202,10 +1202,9 @@ rule("04g - Global-first: Pengatur status cepat terpusat")
 		End;
 		End;
 		If(And(Global.PemainAktif.Manusia == True, Entity Exists(Global.PemainAktif)));
-			If(And(Global.PemainAktif.KartuNasibAktif == True, Global.PemainAktif.PutaranKartuNasib == 0));
-				If(And(Global.PemainAktif.EfekNasib == 2, And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, Is Alive(Global.PemainAktif) == True)));
-					Set Ultimate Charge(Global.PemainAktif, 100);
-				End;
+			If(And(Global.PemainAktif.EfekNasib == 2, And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed,
+				And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))));
+				Set Ultimate Charge(Global.PemainAktif, 100);
 			End;
 		End;
 		Global.PemainAktif = Null;
@@ -2845,7 +2844,7 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Null, Custom String("TRY YOUR LUCK\n \n{0}\n{1}",
+		Create HUD Text(Event Player, Null, Null, Custom String("\n{0}\n{1}",
 			Event Player.EfekNasib == 1 ? Custom String("HACKED")
 			: Event Player.EfekNasib == 2 ? Custom String("ULTIMATE ALWAYS READY")
 			: Event Player.EfekNasib == 4 ? Custom String("MOVE / JUMP / PROJECTILE x2")
@@ -2854,7 +2853,7 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 			: Event Player.EfekNasib == 7 ? Custom String("FLOOR REMOVED")
 			: Custom String("AIM-STEERED ACCELERATION"),
 			Event Player.EfekNasib == 7 ? Custom String("UNTIL DEATH") : Custom String("{0}s REMAINING",
-				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 100,
+				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, -99,
 			Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
