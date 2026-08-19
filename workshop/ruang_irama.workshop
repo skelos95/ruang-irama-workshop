@@ -2584,8 +2584,8 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 			Event Player.ArahNasib = Facing Direction Of(Event Player);
 			Set Move Speed(Event Player, 1000);
 			Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);
-			Event Player.EfekNasibBerakhir = Total Time Elapsed + 5;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 5s"));
+			Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;
+			Small Message(Event Player, Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s"));
 		Else If(Event Player.EfekNasib == 9);
 			Event Player.KebalAktif = False;
 			Event Player.ModeKebal = 0;
@@ -2845,7 +2845,7 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 
 	actions
 	{
-		Create HUD Text(Event Player, Custom String("TRY YOUR LUCK"),
+		Create HUD Text(Event Player, Null, Null, Custom String("TRY YOUR LUCK\n \n{0}\n{1}",
 			Event Player.EfekNasib == 1 ? Custom String("HACKED")
 			: Event Player.EfekNasib == 2 ? Custom String("ULTIMATE ALWAYS READY")
 			: Event Player.EfekNasib == 4 ? Custom String("MOVE / JUMP / PROJECTILE x2")
@@ -2854,9 +2854,8 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 			: Event Player.EfekNasib == 7 ? Custom String("FLOOR REMOVED")
 			: Custom String("AIM-STEERED ACCELERATION"),
 			Event Player.EfekNasib == 7 ? Custom String("UNTIL DEATH") : Custom String("{0}s REMAINING",
-				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up))), Top, 100, Color(White),
-			Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu),
-				Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
+				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 100,
+			Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
@@ -3993,7 +3992,62 @@ rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 
 	actions
 	{
-		"Hanya variabel: cegah aksi engine menambah beban pada saat pindah tim."
+		"Reset Try Your Luck immediato prima della re-registrazione del team; nessun Wait o Loop in questa sezione."
+		If(Or(Event Player.KartuNasibAktif == True, Or(Event Player.PutaranKartuNasib > 0, Event Player.EfekNasib != 0)) == True);
+			If(Event Player.IkonKartuNasib != Null);
+				Destroy Icon(Event Player.IkonKartuNasib);
+			End;
+			If(Event Player.IkonKartuNasibHijau != Null);
+				Destroy Icon(Event Player.IkonKartuNasibHijau);
+			End;
+			If(Event Player.HudEfekNasib != Null);
+				Destroy HUD Text(Event Player.HudEfekNasib);
+			End;
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+			End;
+			If(Event Player.EfekNasibCahaya != Null);
+				Destroy Effect(Event Player.EfekNasibCahaya);
+			End;
+			If(Event Player.EfekNasibLingkaran != Null);
+				Destroy Effect(Event Player.EfekNasibLingkaran);
+			End;
+			Clear Status(Event Player, Hacked);
+			Clear Status(Event Player, Unkillable);
+			Stop Accelerating(Event Player);
+			Enable Movement Collision With Environment(Event Player);
+			Set Damage Received(Event Player, 100);
+			Set Move Speed(Event Player, 100);
+			Set Jump Vertical Speed(Event Player, 100);
+			Set Projectile Speed(Event Player, 100);
+			Set Gravity(Event Player, 100);
+			Event Player.KebalAktif = False;
+			Event Player.ModeKebal = 0;
+			Event Player.KursorKebal = 0;
+			Event Player.ModeKebalTerakhir = 0;
+			Event Player.IkonKebal = Null;
+			Event Player.IkonKartuNasib = Null;
+			Event Player.IkonKartuNasibHijau = Null;
+			Event Player.HudEfekNasib = Null;
+			Event Player.EfekNasibCahaya = Null;
+			Event Player.EfekNasibLingkaran = Null;
+			Event Player.RadiusNasib = 0;
+			Event Player.GerakNasibDikunci = False;
+			Event Player.KartuNasibAktif = False;
+			Event Player.KartuNasibMerah = False;
+			Event Player.PutaranKartuNasib = 0;
+			Event Player.JedaKartuNasib = 0;
+			Event Player.EfekNasib = 0;
+			Event Player.EfekNasibBerakhir = 0;
+			Event Player.DaftarTujuanNasib = Empty Array;
+			Event Player.TujuanNasib = Vector(0, 0, 0);
+			Event Player.ArahNasib = Vector(0, 0, 0);
+			Event Player.PrivasiNasibAktif = False;
+			Event Player.KategoriTeleportNasib = -1;
+			Event Player.HasilNasibTerkunci = 0;
+			Event Player.MenuNasibHarusDibuka = False;
+		End;
+		"Spegni i trigger prima che Player Left/Joined completi il cleanup e la nuova registrazione."
 		Event Player.SudahSiap = False;
 		Event Player.Manusia = False;
 		Event Player.PerintahMenu = 0;
