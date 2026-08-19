@@ -41,10 +41,9 @@ source = SOURCE.read_text(encoding="utf-8")
 if blob_sha(source) != OLD_BLOB:
     raise RuntimeError("unexpected Workshop blob")
 
-# Dedicated state for Crouch-held menu input capture.
 source = replace_exact(source, "\t\t97: TeksTeleportasi\n", "\t\t97: TeksTeleportasi\n\t\t98: InputMenuDikunci\n")
 
-# Opening the menu no longer disables hero controls permanently.
+
 def menu_open(block: str) -> str:
     for line in (
         "\t\t\tDisallow Button(Event Player, Button(Primary Fire));\n",
@@ -60,7 +59,7 @@ def menu_open(block: str) -> str:
 
 source = edit_rule(source, "05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup", menu_open)
 
-# Dispatcher listens to menu inputs only while Crouch is held.
+
 def dispatcher(block: str) -> str:
     return replace_exact(
         block,
@@ -131,9 +130,10 @@ rule("05f - Menu: Rilascia Crouch e restituisci subito gli input hero")
 }
 
 '''
-source = source[:source.index('rule("06 - Menu:')] + menu_lock_rules + source[source.index('rule("06 - Menu:'):]
+insert = source.index('rule("06 - Menu:')
+source = source[:insert] + menu_lock_rules + source[insert:]
 
-# Player setup and lifecycle always start unlocked.
+
 def setup(block: str) -> str:
     return replace_exact(block, "\t\tEvent Player.TeksTeleportasi = Null;\n", "\t\tEvent Player.TeksTeleportasi = Null;\n\t\tEvent Player.InputMenuDikunci = False;\n")
 source = edit_rule(source, "94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel", setup)
@@ -157,7 +157,12 @@ validator = replace_exact(
     validator,
     'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi"): ',
     'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"): ',
-)
+    expected=0,
+) if False else validator
+validator = replace_exact(
+    validator,
+    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi"):',
+    'for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"):')
 validator = replace_exact(
     validator,
     '"05b - Menu:", "05c - Menu:", "05d - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",',
