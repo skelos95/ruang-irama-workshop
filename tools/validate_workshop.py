@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "d1ab0f0537294be81ae7d535635be0122efc0502"
+EXPECTED_SOURCE_BLOB = "38d033db93dae7a3fad988f6cdae6f94812805da"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -131,7 +131,7 @@ def validate(source: str) -> Checks:
     checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci"):
+    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "HasilNasibTerkunci"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
@@ -264,15 +264,64 @@ def validate(source: str) -> Checks:
     checks.require("If(Health(Global.PemainAktif) >= Max Health(Global.PemainAktif));" in source, "Unkillable 1 HP non usa >= Max Health")
     checks.require("Set Player Health(Global.PemainAktif, 1);" in source, "Unkillable 1 HP non riporta a 1")
     checks.require("Stop Modifying Hero Voice Lines(Event Player);" in source, "Hero Voice NORMAL assente")
-    checks.require("Set Move Speed(Event Player, 0);" in source, "Try Your Luck rosso non blocca la velocità")
     checks.require('Custom String("□")' not in source, "Try Your Luck crea ancora il quadrato della carta")
     checks.require("Start Forcing Player Position(" not in source, "Try Your Luck non deve forzare la posizione")
     if interact:
         checks.require('Custom String("□")' not in interact.body and 'Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck deve mostrare solo l icona senza frame testuale")
         checks.require("Event Player.TeksKartuNasib = Last Text ID;" not in interact.body and "Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora world text della carta")
-        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Skull" in interact.body, "Skull Try Your Luck non resta centrato sul reticolo")
-        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Heart" in interact.body, "Heart Try Your Luck non resta centrato sul reticolo")
-        checks.require("Facing Direction Of(Event Player) * 4 - Vector" not in interact.body, "Try Your Luck mantiene ancora un offset sotto il reticolo")
+        checks.require("Event Player.EfekNasib = Random Integer(1, 10);" in interact.body, "Try Your Luck non inizializza dieci risultati")
+
+    luck = find_rule(rules, "18e - Nasib:")
+    luck_death = find_rule(rules, "18f - Nasib:")
+    checks.require(luck is not None and luck_death is not None, "pipeline Try Your Luck a dieci risultati assente")
+    if luck:
+        checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
+        checks.require("Random Integer(1, 10)" in luck.body, "roulette Try Your Luck non usa dieci risultati")
+        for icon in ("Poison 2", "Halo", "Spiral", "Bolt", "Moon", "Eye", "Warning", "Dizzy", "Skull", "Heart"):
+            checks.require(f", {icon}, Visible To and Position" in luck.body, f"icona Try Your Luck assente: {icon}")
+        for token in (
+            "Set Status(Event Player, Null, Hacked, 5);",
+            "Set Ultimate Charge(Event Player, 100);",
+            "Spawn Points(Team Of(Event Player))",
+            "Objective Position(Objective Index)",
+            "Player Variable(Current Array Element, BotOtomatis) == True",
+            "Filtered Array(Global.PemainManusia",
+            "Set Move Speed(Event Player, 200);",
+            "Set Jump Vertical Speed(Event Player, 200);",
+            "Set Projectile Speed(Event Player, 200);",
+            "Set Gravity(Event Player, 10);",
+            "Set Projectile Speed(Event Player, 10);",
+            "Start Forcing Player Outlines(All Players(All Teams), Event Player, True, Color(White), Always);",
+            "Set Status(Event Player, Null, Knocked Down, 9999);",
+            "Disable Movement Collision With Environment(Event Player, True);",
+            "Start Accelerating(Event Player, Event Player.ArahNasib, 50, 25, To World, None);",
+            "Kill(Event Player, Null);",
+            "Set Player Health(All Living Players(Team Of(Event Player)), 9999);",
+        ):
+            checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
+        checks.require("Start Forcing Player Position(" not in luck.body, "Try Your Luck non deve forzare la posizione")
+    if luck_death:
+        for token in (
+            "Clear Status(Event Player, Hacked);",
+            "Clear Status(Event Player, Knocked Down);",
+            "Stop Accelerating(Event Player);",
+            "Stop Forcing Player Outlines(All Players(All Teams), Event Player);",
+            "Enable Movement Collision With Environment(Event Player);",
+            "Set Move Speed(Event Player, 100);",
+            "Set Jump Vertical Speed(Event Player, 100);",
+            "Set Projectile Speed(Event Player, 100);",
+            "Set Gravity(Event Player, 100);",
+        ):
+            checks.require(token in luck_death.body, f"reset morte Try Your Luck incompleto: {token}")
+    if fast_manager:
+        checks.require("Set Ultimate Charge(Global.PemainAktif, 100);" in fast_manager.body, "Ultimate always-ready non è gestita dal manager globale")
+        checks.require("Global.PemainAktif.EfekNasibBerakhir" in fast_manager.body, "timer Try Your Luck non è Global-first")
+    if inspect_rule:
+        checks.require("Event Player.PrivasiNasibAktif == True" in inspect_rule.body, "reveal Try Your Luck non bypassa la privacy Inspection")
+    inspect_refresh = find_rule(rules, "96 - Subrutin:")
+    if inspect_refresh:
+        checks.require("Event Player.PrivasiNasibAktif == True" in inspect_refresh.body, "refresh Inspection non rispetta il reveal Try Your Luck")
+    checks.require('KartuNasibMerah ? Custom String("RED")' not in source and 'KartuNasibMerah ? Custom String("MERAH")' not in source, "HUD Try Your Luck usa ancora RED/GREEN")
     menu_toggle = find_rule(rules, "05 - Menu:")
     camera_toggle = find_rule(rules, "12c - Kamera:")
     if menu_toggle:
