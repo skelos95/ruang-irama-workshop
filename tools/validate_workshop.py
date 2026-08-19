@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "37032467d7e305c77f82a18d53c23fe56c3aa45f"
+EXPECTED_SOURCE_BLOB = "4848ec9a689ee9ab2d9e6f7ee9c1dc61e4131c3c"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -265,12 +265,14 @@ def validate(source: str) -> Checks:
     checks.require("Set Player Health(Global.PemainAktif, 1);" in source, "Unkillable 1 HP non riporta a 1")
     checks.require("Stop Modifying Hero Voice Lines(Event Player);" in source, "Hero Voice NORMAL assente")
     checks.require("Set Move Speed(Event Player, 0);" in source, "Try Your Luck rosso non blocca la velocità")
-    checks.require('Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 20.000, Do Not Clip' in source, "Try Your Luck card frame non usa la scala 20.000")
+    checks.require('Custom String("□")' not in source, "Try Your Luck crea ancora il quadrato della carta")
     checks.require("Start Forcing Player Position(" not in source, "Try Your Luck non deve forzare la posizione")
     if interact:
-        checks.require('Custom String("□")' in interact.body, "Try Your Luck non usa il quadrato Title unico")
-        checks.require('Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck usa ancora le parentesi della carta")
-        checks.require("Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora un secondo testo laterale")
+        checks.require('Custom String("□")' not in interact.body and 'Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck deve mostrare solo l icona senza frame testuale")
+        checks.require("Event Player.TeksKartuNasib = Last Text ID;" not in interact.body and "Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora world text della carta")
+        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Skull" in interact.body, "Skull Try Your Luck non resta centrato sul reticolo")
+        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Heart" in interact.body, "Heart Try Your Luck non resta centrato sul reticolo")
+        checks.require("Facing Direction Of(Event Player) * 4 - Vector" not in interact.body, "Try Your Luck mantiene ancora un offset sotto il reticolo")
     menu_toggle = find_rule(rules, "05 - Menu:")
     camera_toggle = find_rule(rules, "12c - Kamera:")
     if menu_toggle:

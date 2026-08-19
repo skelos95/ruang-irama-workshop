@@ -2012,13 +2012,12 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				End;
 				Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
 				Event Player.IkonKebal = Last Created Entity;
-				"Satu Header/Title berbentuk kotak menggantikan pasangan [ ]. Ikon Skull/Heart tetap berada di tengah kartu."
-				Create In-World Text(All Players(All Teams), Custom String("□"), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), 20.000, Do Not Clip, Visible To Position String and Color, Event Player.KartuNasibMerah ? Custom Color(255, 70, 70, 255) : Custom Color(70, 255, 110, 255), Visible Never);
-				Event Player.TeksKartuNasib = Last Text ID;
+				"Try Your Luck memakai hanya ikon Skull/Heart tepat di reticolo; tidak ada frame atau world text."
+				Event Player.TeksKartuNasib = Null;
 				Event Player.TeksKartuNasibKanan = Null;
-				Create Icon(Event Player.KartuNasibMerah ? All Players(All Teams) : Empty Array, Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)), Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
+				Create Icon(Event Player.KartuNasibMerah ? All Players(All Teams) : Empty Array, Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
 				Event Player.IkonKartuNasib = Last Created Entity;
-				Create Icon(Event Player.KartuNasibMerah ? Empty Array : All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4 - Vector(0, 0.450, 0)), Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
+				Create Icon(Event Player.KartuNasibMerah ? Empty Array : All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
 				Event Player.IkonKartuNasibHijau = Last Created Entity;
 				Call Subroutine(GambarMenu);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Luck roulette started. Red or green?") : Event Player.IndeksBahasa == 1 ? Custom String("Roulette nasib dimulai. Merah atau hijau?") : Custom String("เริ่มรูเล็ตเสี่ยงโชคแล้ว แดงหรือเขียว?"));
