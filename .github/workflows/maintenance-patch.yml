@@ -1,6 +1,6 @@
 name: Apply Maintenance Patch
 
-# 0.7.1 retry: validator rule-count threshold corrected.
+# 0.7.2 maintenance runner; comment-only retrigger.
 on:
   push:
     branches:
