@@ -2973,7 +2973,7 @@ rule("89c - Subrutin: Proses simpanan pemain 1 Hz")
 				Set Player Variable(Global.PemainAktif, DaftarTargetKamera, Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif,
 					And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Or(
 					Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True,
-					And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))));
+					And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))))));
 				If(And(Global.PemainAktif.CalonTargetKamera != Null, Array Contains(Global.PemainAktif.DaftarTargetKamera,
 					Global.PemainAktif.CalonTargetKamera)));
 					Set Player Variable(Global.PemainAktif, KursorKamera, Index Of Array Value(Global.PemainAktif.DaftarTargetKamera,
@@ -4218,7 +4218,7 @@ rule("95 - Subrutin: Segarkan daftar tontonan, termasuk para bot")
 		Event Player.DaftarTargetKamera = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(
 			Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True,
 			Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True,
-			Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))));
+			Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))));
 		If(And(Event Player.CalonTargetKamera != Null, Array Contains(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera)));
 			Event Player.KursorKamera = Index Of Array Value(Event Player.DaftarTargetKamera, Event Player.CalonTargetKamera) + 2;
 		Else If(Event Player.KursorKamera >= Count Of(Event Player.DaftarTargetKamera) + 2);

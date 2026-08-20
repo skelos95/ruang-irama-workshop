@@ -32,7 +32,7 @@ Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`]
 Accettazione smoke:
 
 - import senza errori parser;
-- nessun errore `Subroutine '<indice>' is too long` o altro rifiuto delle dichiarazioni;
+- nessun errore `Subroutine '<indice>' is too long`, `Expected ')'` o altro rifiuto sintattico/delle dichiarazioni;
 - avvio senza `excessive Workshop script load`;
 - D.Mon può entrare, cambiare eroe, aprire/chiudere menu e usare i sistemi generici senza errori;
 - nessuna collisione evidente con il nuovo Team Status Indicator.

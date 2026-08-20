@@ -26,6 +26,7 @@ Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi 
 Il validatore controlla:
 
 - delimitatori e blocchi Workshop completi;
+- parentesi tonde e quadre bilanciate fuori da stringhe/commenti, incluse tutte le chiamate annidate nelle azioni;
 - indici compatti e dichiarazioni univoche per global, player e subroutine;
 - nomi global, player e subroutine lunghi al massimo 32 byte in UTF-8, per evitare il rifiuto dell'import da parte del client;
 - ogni riferimento risolto alla relativa dichiarazione;
@@ -166,6 +167,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Privacy default OFF, target privato selezionabile o osservatore non sganciato;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
+- parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;
 - esito/durata Try Your Luck mancante o vecchio percorso binario;

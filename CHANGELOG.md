@@ -15,6 +15,7 @@ Stato: **static-ready / live-pending**.
 - Localizzazione runtime completata per English, Bahasa Indonesia e ไทย, incluse icone e località server.
 - Validatore reso semantico e accompagnato da test negativi per le invarianti della release.
 - Corretto il primo errore d'import live: la subroutine 42 è stata abbreviata da un identificatore di 33 byte a `TerapkanTeleportasiJongkok` (26 byte); il gate ora limita ogni identificatore dichiarato a 32 byte UTF-8.
+- Corretto il secondo errore d'import live: aggiunte le due parentesi finali mancanti nei filtri Camera Privacy; il gate ora valida anche i delimitatori delle espressioni e rifiuta chiamate incomplete invece di ignorarle.
 - Corretti i primi riscontri live su spaziatura HUD, duplicazione del promemoria Crouch e icone Try Your Luck non visibili.
 - Menu e Camera condividono ora il latch Interact: cambiare stato di Crouch durante lo stesso hold non può attivare entrambi.
 - Crouch Privacy ora è ON per default, esclude gli umani privati dalla Camera custom e interrompe una Camera già agganciata quando il target attiva la privacy.

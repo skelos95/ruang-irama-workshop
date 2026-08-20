@@ -307,6 +307,52 @@ def event_block(rule: Rule) -> str:
     return rule.body[opening + 1:matching_brace(rule.body, opening)]
 
 
+def rule_block(rule: Rule, name: str) -> str | None:
+    masked = mask_strings(rule.body)
+    match = re.search(rf"\b{re.escape(name)}\s*\{{", masked)
+    if not match:
+        return None
+    opening = masked.find("{", match.start())
+    return rule.body[opening + 1:matching_brace(rule.body, opening)]
+
+
+def delimiter_error(text: str) -> str | None:
+    """Return the first unbalanced ()/[] error outside Workshop strings."""
+    masked = mask_strings(text)
+    pairs = {"(": ")", "[": "]"}
+    closing_to_opening = {closing: opening for opening, closing in pairs.items()}
+    stack: list[tuple[str, int]] = []
+    for index, char in enumerate(masked):
+        if char == ";" and stack:
+            opening, opening_index = stack[-1]
+            line = masked.count("\n", 0, index) + 1
+            opening_line = masked.count("\n", 0, opening_index) + 1
+            return (
+                f"terminatore statement ';' alla riga locale {line} con delimitatore "
+                f"{opening!r} ancora aperto dalla riga locale {opening_line}"
+            )
+        if char in pairs:
+            stack.append((char, index))
+            continue
+        if char not in closing_to_opening:
+            continue
+        line = masked.count("\n", 0, index) + 1
+        if not stack:
+            return f"delimitatore {char!r} inatteso alla riga locale {line}"
+        opening, opening_index = stack.pop()
+        if opening != closing_to_opening[char]:
+            opening_line = masked.count("\n", 0, opening_index) + 1
+            return (
+                f"delimitatore {char!r} non chiude {opening!r} "
+                f"aperto alla riga locale {opening_line}"
+            )
+    if stack:
+        opening, opening_index = stack[-1]
+        opening_line = masked.count("\n", 0, opening_index) + 1
+        return f"delimitatore {opening!r} non chiuso dalla riga locale {opening_line}"
+    return None
+
+
 def event_type(rule: Rule) -> str:
     block = event_block(rule)
     match = re.search(r"([^;\r\n]+);", block)
@@ -702,6 +748,19 @@ def validate_metadata(checks: Checks, root: Path) -> None:
                        "workflow non esegue gli unit test")
         checks.require("git add -A" not in workflow_text and "git push" not in workflow_text,
                        "workflow validazione non deve modificare o pubblicare il repository")
+
+
+def validate_rule_grammar(checks: Checks, rules: list[Rule]) -> None:
+    """Reject malformed condition/action expressions before semantic call parsing."""
+    for rule in rules:
+        for section in ("conditions", "actions"):
+            block = rule_block(rule, section)
+            if block is None:
+                if section == "actions":
+                    checks.require(False, f"{rule.name}: blocco actions assente")
+                continue
+            error = delimiter_error(block)
+            checks.require(error is None, f"{rule.name}: sintassi {section} non bilanciata: {error}")
 
 
 def validate_declarations(checks: Checks, source: str, rules: list[Rule], globals_: list[Declaration],
@@ -1345,14 +1404,29 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False",
         re.DOTALL,
     )
+    privacy_read_total = 0
+    parsed_privacy_filter_total = 0
     for rule in rules:
         privacy_reads = len(privacy_false_pattern.findall(rule.body))
         if privacy_reads:
+            privacy_read_total += privacy_reads
             checks.equal(
                 len(human_public_pattern.findall(rule.body)),
                 privacy_reads,
                 f"{rule.name}: ogni Privacy OFF target richiede Manusia=True",
             )
+            parsed_filters = [
+                call for call in iter_calls(rule.body, "Filtered Array")
+                if privacy_false_pattern.search(call.raw) is not None
+            ]
+            parsed_privacy_filter_total += len(parsed_filters)
+            checks.equal(
+                len(parsed_filters),
+                privacy_reads,
+                f"{rule.name}: filtro Privacy non analizzabile come chiamata bilanciata",
+            )
+    checks.equal(privacy_read_total, 6, "numero filtri Privacy target-aware")
+    checks.equal(parsed_privacy_filter_total, 6, "filtri Privacy strutturalmente analizzabili")
     camera_targets = rule_by_subroutine(rules, "SegarkanTargetKamera")
     checks.require(camera_targets is not None, "SegarkanTargetKamera assente per filtro Privacy")
     if camera_targets:
@@ -1628,6 +1702,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
         largest = max(len(rule.body.encode("utf-8")) for rule in rules)
         checks.require(largest <= 80 * 1024,
                        f"largest rule oltre obiettivo 80 KB: {largest} byte")
+    validate_rule_grammar(checks, rules)
     if include_metadata:
         validate_metadata(checks, root)
     validate_declarations(checks, source, rules, globals_entries, player_entries, sub_entries, declaration_span)

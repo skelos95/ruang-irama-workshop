@@ -85,6 +85,13 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.source.replace("\n\nrule(", "\n\n\nrule(", 1)
         self.assertEqual(self.errors(mutated), [])
 
+    def test_delimiter_scanner_ignores_parentheses_inside_strings(self) -> None:
+        expression = 'Small Message(Event Player, Custom String("literal [ ( ) ]"));'
+        self.assertIsNone(validator.delimiter_error(expression))
+
+    def test_delimiter_scanner_detects_crossed_call_and_index_delimiters(self) -> None:
+        self.assertIsNotNone(validator.delimiter_error("Value In Array(Array(1, 2), 0])"))
+
     def test_declaration_indices_must_be_compact(self) -> None:
         globals_, _, _, _ = validator.declaration_entries(self.source)
         token = f"\t\t{globals_[1].index}: {globals_[1].name}"
@@ -644,6 +651,69 @@ class SemanticWorkshop080Tests(unittest.TestCase):
             "Event Player.KursorPrivasiInspeksi = 0;",
         )
         self.assert_rejected(mutated, "cursore Privacy deve iniziare su ON")
+
+    def test_real_camera_cache_missing_and_excessive_parenthesis_are_rejected(self) -> None:
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        call = next(
+            call for call in validator.iter_calls(cache.body, "Set Player Variable")
+            if len(call.args) >= 3
+            and call.args[1].strip() == "DaftarTargetKamera"
+            and "PrivasiInspeksiAktif" in call.args[2]
+        )
+        absolute_end = cache.start + call.end
+        self.assertEqual(self.source[absolute_end - 1], ")")
+        mutations = {
+            "missing": self.source[:absolute_end - 1] + self.source[absolute_end:],
+            "excessive": self.source[:absolute_end] + ")" + self.source[absolute_end:],
+        }
+        for kind, mutated in mutations.items():
+            with self.subTest(kind=kind):
+                self.assert_rejected(mutated, "sintassi actions non bilanciata")
+
+    def test_parentheses_cannot_be_compensated_across_statement_terminators(self) -> None:
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        call = next(
+            call for call in validator.iter_calls(cache.body, "Set Player Variable")
+            if len(call.args) >= 3
+            and call.args[1].strip() == "DaftarTargetKamera"
+            and "PrivasiInspeksiAktif" in call.args[2]
+        )
+        absolute_end = cache.start + call.end
+        self.assertEqual(self.source[absolute_end - 1], ")")
+        next_if = self.source.index("If(", absolute_end)
+        next_terminator = self.source.index(";", next_if)
+        mutated = (
+            self.source[:absolute_end - 1]
+            + self.source[absolute_end:next_terminator]
+            + ")"
+            + self.source[next_terminator:]
+        )
+        self.assertIsNone(validator.delimiter_error(validator.rule_block(cache, "actions") or ""))
+        mutated_cache = next(
+            rule for rule in validator.extract_rules(mutated)
+            if validator.subroutine_target(rule) == "ProsesCachePemain"
+        )
+        mutated_actions = validator.mask_strings(validator.rule_block(mutated_cache, "actions") or "")
+        self.assertEqual(mutated_actions.count("("), mutated_actions.count(")"))
+        self.assert_rejected(mutated, "terminatore statement")
+
+    def test_all_six_privacy_filters_have_balanced_call_parentheses(self) -> None:
+        privacy_calls: list[tuple[validator.Rule, validator.Call]] = []
+        for rule in validator.extract_rules(self.source):
+            for call in validator.iter_calls(rule.body, "Filtered Array"):
+                if "PrivasiInspeksiAktif" in call.raw:
+                    privacy_calls.append((rule, call))
+        self.assertEqual(len(privacy_calls), 6)
+        for rule, call in privacy_calls:
+            absolute_end = rule.start + call.end
+            self.assertEqual(self.source[absolute_end - 1], ")")
+            mutations = {
+                "missing": self.source[:absolute_end - 1] + self.source[absolute_end:],
+                "excessive": self.source[:absolute_end] + ")" + self.source[absolute_end:],
+            }
+            for kind, mutated in mutations.items():
+                with self.subTest(rule=rule.name, kind=kind):
+                    self.assert_rejected(mutated, "non bilanciata")
 
     def test_camera_target_refresh_excludes_private_humans(self) -> None:
         refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetKamera")
