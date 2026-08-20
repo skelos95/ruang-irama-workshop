@@ -134,13 +134,13 @@ L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita,
 
 ## Navigazione nel gioco
 
-Il menu mostra il genere precedente, quello evidenziato e il successivo.
+Il menu mostra il genere precedente, quello evidenziato e il successivo. Quando il Menu Arcade è aperto, **Crouch è il modificatore obbligatorio** per tutti i comandi del menu:
 
-- `Primary Fire`: genere successivo (`+1`).
-- `Secondary Fire`: genere precedente (`−1`).
-- `Jump`: salto indietro di dieci generi (`−10`).
-- `Crouch`: salto avanti di dieci generi (`+10`).
-- `Interact`: applica il genere evidenziato.
-- `Reload`: torna al menu principale.
+- `Crouch + Primary Fire`: genere successivo (`+1`).
+- `Crouch + Secondary Fire`: genere precedente (`−1`).
+- `Crouch + Ability 1`: salto avanti di dieci generi (`+10`).
+- `Crouch + Ability 2`: salto indietro di dieci generi (`−10`).
+- `Crouch + Interact`: applica il genere evidenziato.
+- `Crouch + Reload`: torna al menu principale.
 
-Tutti gli spostamenti usano il wrap circolare, quindi ogni scelta resta raggiungibile senza creare un elemento HUD per ciascun genere.
+Melee e Jump restano azioni normali dell'eroe. Tutti gli spostamenti usano il wrap circolare, quindi ogni scelta resta raggiungibile con un solo HUD menu attivo e senza creare un elemento per ciascun genere.

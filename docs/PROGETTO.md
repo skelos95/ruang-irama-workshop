@@ -1,29 +1,21 @@
-# Note di progetto — versione 0.7.2
+# Progetto tecnico — CHILL Dedicated Server 0.8.0
 
-Questo documento descrive lo **stato funzionale e tecnico corrente** del Workshop 0.7.2.
+Stato release: **static-ready / live-pending**.
 
-## Architettura generale
+Questo documento descrive il contratto architetturale del sorgente `workshop/ruang_irama.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; import, rendering, carico e concorrenza restano da confermare nel client Overwatch aggiornato al 19 agosto 2026.
 
-CHILL Dedicated Server è un overlay sociale/Arcade. Non contiene un blocco `settings`, quindi non forza mappe, modalità, roster o composizione squadre.
+## Obiettivi
 
-Gli umani registrati vivono in `Global.PemainManusia`; HUD e ID associati sono mantenuti in array paralleli. Gli slot HUD sono limitati a `0..11`, vengono restituiti al pool al leave e possono essere riutilizzati dai nuovi join.
+- Lobby 6v6 con massimo 12 player attivi.
+- Overlay sociale e Arcade che non assegna punteggi o vincitori.
+- Supporto a Push, Flashpoint, Capture the Flag, Control, Clash, Hybrid, Escort e Assault.
+- UI completa in English, Bahasa Indonesia e ไทย.
+- Priorità al lavoro globale condiviso rispetto ai loop per-player.
+- Cleanup deterministico di HUD, In-World Text, effetti e riferimenti.
 
-`Global.SlotHUDTerakhir` memorizza l'ultima riga occupata per evitare `Sorted Array` continui dentro i roster.
+## Contratto stabile
 
-## HUD e roster
-
-HUD principali:
-
-- alto centro: server location + nome server + countdown;
-- sinistra: `icona personale + icona eroe + player + N MIN`;
-- destra: `icona personale + icona eroe + player + genere`;
-- diagnostics sotto l'ultima riga sinistra, host-only.
-
-L'icona personale usa il colore nativo di `Icon String`. Il campo testuale del roster usa il colore selezionato dal player.
-
-## Localizzazione
-
-Lingue disponibili:
+### Lingue e pagine
 
 | Indice | Lingua |
 |---:|---|
@@ -31,408 +23,171 @@ Lingue disponibili:
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-HUD, menu, diagnostics e `Small Message` usano `IndeksBahasa`. Le keyword native Workshop restano in inglese; identificatori, subroutine, regole e commenti personalizzati sono in Bahasa Indonesia.
+Main Menu usa pagina `-1`; le 12 pagine mantengono gli indici `0..11`. Default, effetti e risultati funzionali non cambiano rispetto al contratto della modalità. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
 
-## Main Menu: 12 voci
+### Input
 
-| Indice | Menu | Contenuto |
-|---:|---|---|
-| 0 | Soundtrack / Musik | 100 generi |
-| 1 | Third-Person Camera | OFF / self / target |
-| 2 | Name Color | 32 colori |
-| 3 | HUD Language | EN / ID / TH |
-| 4 | Revenge | debiti kill dirette |
-| 5 | Unkillable / Kebal | OFF / 1 HP / FULL HP |
-| 6 | Hero Voice | 5 preset |
-| 7 | Player Icon | Nothing + 36 icone |
-| 8 | Crouch Teleport | abilita overlay Crouch, default OFF |
-| 9 | Crouch Privacy | ON nasconde l’intero HUD inspection ai nemici; alleati sempre completi; default OFF |
-| 10 | Try Your Luck | roulette 50/50; pagina 10 bloccata durante l'esecuzione, FULL HP temporaneo, verde ripristina l'ultima scelta Unkillable, rosso immobilizza e uccide dopo il countdown |
-| 11 | Vote Player | vota qualsiasi umano della lobby, incluso se stessi; bot esclusi |
+- Tieni Melee per 0,5 s: apre o chiude il Menu Arcade.
+- A menu aperto e da vivi, Crouch è il modificatore obbligatorio per Primary, Secondary, Interact, Reload e Ability 1/2.
+- Primary/Secondary navigano; Interact entra o applica; Reload torna al Main Menu.
+- Nel Soundtrack, Ability 1/2 eseguono `+10/−10`.
+- Melee e Jump restano azioni normali dell'eroe.
+- A menu chiuso, Interact tenuto per 0,5 s cambia Camera.
+- A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
+- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue il respawn custom.
 
-Teleport **non** è una voce del Main Menu: è gestito dall'overlay Crouch.
+Le condizioni di menu aperto/chiuso sono parte del contratto: gli stessi pulsanti non devono alimentare contemporaneamente menu, Camera, inspection o Teleport.
 
-Melee tenuto 0,5 s apre/chiude il Menu Arcade. Primary/Secondary navigano, Interact entra o applica, Reload torna al Main Menu. Nel Soundtrack Jump/Crouch fanno `−10/+10`.
+## Scheduler globale
 
-I cursori persistono tra chiusura e riapertura.
+Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun tick incrementa un contatore e delega a subroutine senza `Wait`:
 
-## Feedback idempotente
+| Frequenza | Responsabilità |
+|---:|---|
+| 20 Hz | controlli rapidi e avanzamento Try Your Luck |
+| 10 Hz | lifecycle reattivo, RGB e refresh visivi |
+| 1 Hz | countdown e cache passive |
+| 0,1 Hz | minuti di permanenza in lobby |
 
-Prima di applicare una scelta viene confrontato il valore corrente con quello selezionato. Se non cambia nulla:
+Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
 
-- niente `Small Message`;
-- niente effetto visuale;
-- niente audio;
-- niente riapplicazione inutile.
+`Ongoing - Each Player` è ammesso soltanto quando l'evento o lo stato è realmente individuale:
 
-Vale per Soundtrack, Camera, Name Color, HUD Language, Unkillable, Hero Voice e Player Icon.
+- lettura input e latch di pressione/hold;
+- classificazione one-shot umano/bot;
+- creazione o rivalutazione di rendering visibile a un singolo player;
+- respawn o cleanup atomico che dipende dall'evento player.
 
-## Colori menu
+## Menu Arcade
 
-Ogni menu ha una palette distinta. Main Menu e relativo sottomenu condividono lo stesso colore principale.
+Ogni player possiede al massimo **un handle HUD Arcade**. Non esistono cache di pagine, preload progressivo o HUD nascosti.
 
-`WarnaMenu` è una Vector RGB animata con `Chase Player Variable Over Time` per circa **0,18 s**. I renderer convertono la vector in `Custom Color(...)`. Questo evita il problema del chase diretto su un valore Color e mantiene la transizione senza loop periodici per-player.
+Il lifecycle del menu è:
 
-## Soundtrack
+1. apertura: crea l'handle della pagina corrente;
+2. Primary/Secondary o modifica della scelta: aggiorna variabili rivalutate senza ricreare l'HUD;
+3. cambio Main Menu ↔ sottomenu: distrugge l'handle precedente e crea la nuova pagina;
+4. chiusura, leave o cambio squadra: distrugge l'handle e azzera il riferimento.
 
-100 generi ordinati da ambient/minimal fino alle categorie più estreme.
+Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
 
-- `IndeksGenre`: scelta applicata;
-- `KursorGenre`: posizione di navigazione.
+Tutti i menu seguono lo stesso layout:
 
-La lista destra mostra soltanto il genere scelto, senza prefisso `soundtrack:`.
+```text
+contenuto e stato
 
-## Name Color
+comandi disponibili
+```
 
-`Global.DaftarWarna` contiene **32 colori**: 20 originali + 12 aggiunte pastel/neon.
+I placeholder devono avere stessa cardinalità nei tre rami linguistici.
 
-Gli array dei nomi EN/ID/TH hanno la stessa lunghezza. `Global.DaftarWarnaRGB` è la tabella Vector parallela usata dalla transizione colore menu.
+## Try Your Luck
 
-## Player Icon
+Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio disattiva Unkillable come nel comportamento 0.8.0 e mantiene la pagina bloccata finché la sequenza non termina.
 
-Menu 7: **37 voci**.
+| Esito | Durata | Comportamento |
+|---|---:|---|
+| Vision | 15 s | crea e poi rimuove l'effetto Vision |
+| Acceleration | 10 s | applica accelerazione orientata dalla mira |
+| Skull | immediato | uccide il player |
+| Team Heal | immediato | porta la squadra alla salute completa |
+| Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s |
+| Hacked | 5 s | applica e poi rimuove Hacked |
 
-- indice 0 = nessuna icona;
-- indici 1..36 = tutte le icone standard disponibili tramite `Icon String`.
+Il tick globale valuta transizioni e scadenze. Morte, leave e cambio squadra annullano stato, accelerazione, status, HUD/IWT ed effetti associati. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
 
-Default: nessuna icona. La scelta appare prima dell'icona eroe nei due roster e non crea oggetti sopra al player.
+## Lifecycle player
 
-## Camera
+### Join
 
-Fuori menu, Interact tenuto 0,5 s alterna terza e prima persona.
+La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
 
-Dal Menu Camera è possibile selezionare:
+### Leave
 
-- OFF;
-- proprio eroe;
-- altro target valido.
+Il cleanup:
 
-La pipeline usa un solo raycast e non mantiene un loop camera server per-frame dedicato. `MulaiKamera` passa direttamente a `Start Camera` senza un `Stop Camera` intermedio: quando si cambia target evita il frame di ritorno alla camera normale che può apparire come micro-scatto. `Stop Camera` resta soltanto nei veri percorsi di disattivazione/cleanup.
+1. interrompe input e sottosistemi persistenti;
+2. rimuove Camera, status ed effetti engine;
+3. distrugge HUD, In-World Text ed effetti posseduti;
+4. libera slot e riferimenti in Camera, Revenge, Teleport, inspection e voti;
+5. ricostruisce soltanto le cache condivise necessarie.
 
-## Revenge
+### Cambio squadra
 
-Revenge registra soltanto le kill dirette ricevute da altri umani. Il target viene bloccato per identità prima dell'azione; la morte Revenge non crea debito reciproco. Join/leave e riferimenti invalidi vengono ripuliti.
+Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da setup fresco. Il reset totale delle preferenze è intenzionale. La sequenza impedisce doppioni anche durante transizioni simultanee o una cascata full-lobby.
 
-## Unkillable: 1 HP
+## HUD, testi ed effetti
 
-Menu 5.
+- `Create HUD Text` deve avere Header `Null`.
+- Sono consentiti Subheader/Text, `Small Message` e gli In-World Text necessari a inspection, Teleport e Vision.
+- `Big Message` e titoli HUD non sono consentiti.
+- Gli handle vengono distrutti prima di essere sovrascritti; le variabili handle tornano a `Null`.
+- Ogni testo operativo, stato, esito, nome icona e località ha rami EN/ID/TH.
+- I 100 generi, `CHILL`, nomi player ed eroi sono nomi propri universali.
+- Identificatori personalizzati, titoli regola, subroutine e commenti Workshop sono in Bahasa Indonesia; keyword native, acronimi tecnici e nomi degli eroi restano invariati.
 
-Quando attivo:
+Il nuovo Team Status Indicator del client non deve essere coperto da blocchi Top/Left/Right: il test live verifica leggibilità, spaziatori e assenza di collisioni.
 
-- applica `Unkillable`;
-- porta la salute a 1 HP;
-- quando la salute torna al massimo, viene riportata a 1 HP.
+## Camera, inspection e Teleport
 
-Non può essere attivato nello Spawn Room e viene disattivato automaticamente entrando nello spawn. Se l'opzione 1 HP viene rifiutata mentre il menu è aperto, il cursore resta sulla voce 2/3 e lo `Small Message` spiega il blocco.
+La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati o inesistenti vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti.
 
-## Hero Voice
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Privacy nasconde ai nemici icona, nome e salute; gli alleati continuano a vedere la riga completa.
 
-Menu 6 con 5 preset:
+La destinazione Teleport viene rivalutata al click:
 
-- Normal;
-- Low 0.50x;
-- Low 0.75x;
-- High 1.25x;
-- High 1.50x.
+| Modalità | Destinazione |
+|---|---|
+| Escort, Hybrid | Payload |
+| Capture the Flag | bandiera nemica valida |
+| Push | proxy valido dell'obiettivo, poi fallback Objective Position |
+| Flashpoint, Control, Clash, Assault | `Objective Position(Objective Index)` |
 
-## Crouch inspection
+La pagina All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy; `Nearest Walkable Position` limita le destinazioni non praticabili.
 
-L'inspection aggiorna il target a **4 Hz** e mostra:
+## Modalità native
 
-- icona eroe;
-- nome player;
-- salute corrente.
+La logica Arcade è neutrale rispetto all'esito della partita. Non chiama azioni custom per assegnare punti, completare round o dichiarare vincitori. La verifica live attraversa tutte le otto modalità:
 
-Non mostra più la percentuale Ultimate. Le nameplate native vengono gestite e ripristinate nei percorsi di cleanup.
+| Modalità | Focus |
+|---|---|
+| Push | proxy robot e fallback obiettivo |
+| Flashpoint | indice obiettivo attivo |
+| Capture the Flag | bandiera nemica |
+| Control | cambio round e obiettivo |
+| Clash | avanzamento tra punti |
+| Hybrid | payload dopo la cattura |
+| Escort | payload |
+| Assault | transizione A/B |
 
-## Teleport Crouch
+Busan, Eichenwalde e Paraíso hanno priorità perché modificati nella patch dell'11 agosto 2026.
 
-L'overlay Crouch usa tre pagine fisse: **Spawn Room**, **Objective / Flag**, **All Players**. Secondary Fire avanza ciclicamente tra le tre pagine; Primary Fire esegue il teleport. Interact non seleziona più la destinazione.
+## Gate di prestazioni
 
-Sulla pagina `All Players`, `DaftarTargetTeleportasi` contiene solo entità diverse dal viewer, esistenti, spawnate, vive e con `PrivasiInspeksiAktif == False`. `CalonTargetTeleportasi` è il primo elemento di un `Sorted Array` ordinato per angolo rispetto al reticolo. Il manager globale `04k` lo aggiorna a 4 Hz e `SegarkanTargetTeleportasi` lo ricalcola immediatamente al click; solo dopo viene copiato in `TargetTeleportasiTerkunci`.
+Target statici:
 
-Gestione modalità:
+- un solo `Loop` globale;
+- massimo 10 `Wait`, ciascuno associato a un percorso autorizzato;
+- un solo raycast Camera;
+- nessuna regola, variabile o subroutine inutilizzata/duplicata;
+- nessun loop o Wait dentro le subroutine chiamate durante una scansione scheduler;
+- un solo handle HUD Arcade attivo per player;
+- sorgente sotto 32.768 elementi, obiettivo massimo 26.000;
+- largest rule sotto 98 KB, obiettivo massimo 80 KB.
 
-- Escort/Hybrid → `Payload Position`;
-- CTF → flag nemica;
-- Push → player sull'obiettivo come proxy robot, poi fallback obiettivo;
-- altre modalità → `Objective Position` quando disponibile.
+Gli ultimi due valori devono essere letti nel client: non sono deducibili con precisione dal solo testo Workshop.
 
+## Repository e release
 
-## Menu 10 — Try Your Luck
+Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso.
 
-Interact avvia una carta pubblica con bracket e Heart/Skull persistenti. La roulette mantiene 20..24 cambi, intervallo iniziale 0,08 s e rallentamento +0,055 s per passaggio. La camera non viene modificata.
+La release 0.8.0 resta **live-pending** finché non vengono registrati:
 
-Durante `KartuNasibAktif == True` il Menu Arcade resta aperto sulla **pagina 10** e il dispatcher non accetta navigazione, back o nuove applicazioni. L'avvio salva la preferenza Unkillable in `ModeKebalTerakhir` e applica soltanto a runtime `ModeKebal = 2`, `KebalAktif = True`, status Unkillable, Damage Received 0% e Max Health. La preferenza del player non viene sovrascritta.
+- import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
+- matrice input/menu/localizzazione;
+- stress join/leave/team switch;
+- matrice sulle otto modalità;
+- soak di almeno 30 minuti con 12 slot;
+- diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
-Esito verde:
-
-- `ModeKebalTerakhir = 0` → OFF, Damage Received 100%, salute piena;
-- `ModeKebalTerakhir = 1` → 1 HP fuori Spawn Room; dentro Spawn Room resta runtime OFF e la preferenza 1 HP resta memorizzata;
-- `ModeKebalTerakhir = 2` → FULL HP con Damage Received 0%, Max Health e Halo RGB.
-
-Esito rosso:
-
-1. la protezione runtime passa a OFF;
-2. vengono salvati `PosisiNasibTerkunci` e il colore corrente `Global.RGB` in `WarnaNasibTerkunci`;
-3. Move Speed passa a 0; il knockback resta normale e la posizione non viene forzata;
-4. vengono creati `Light Shaft` e `Ring` a terra con il colore congelato;
-5. `RadiusNasib` viene inseguito da 4 a 0,25 in 3 secondi mentre scorrono i messaggi 3-2-1;
-6. il player viene ucciso.
-
-Il cleanup su morte, leave e cambio team interrompe il chase, ripristina Move Speed a 100 e distrugge entrambi gli effetti.
-
-## Jump respawn
-
-Alla morte viene salvata la posizione. Con menu chiuso, Jump:
-
-1. calcola una posizione vicina con `Nearest Walkable Position`;
-2. esegue `Respawn`;
-3. attende un frame;
-4. teleporta il player.
-
-La posizione è geometricamente camminabile, non garantita sicura da nemici/pericoli.
-
-## RGB ed effetti
-
-Un solo loop globale a 8 Hz aggiorna `Global.RGB` con un ciclo pastel/neon lento. L'incremento è +3,75 su 1530 step, circa **51 s** per ciclo completo.
-
-Usano questo RGB:
-
-- titolo;
-- timer;
-- effetti visuali applicazione/ripristino.
-
-L'audio degli effetti resta personale al player che esegue l'azione.
-
-## Prestazioni per 12 player
-
-Ottimizzazioni correnti:
-
-- `SlotHUDTerakhir` al posto di sort continui nei roster;
-- refresh Camera/Revenge passivi a 1 Hz;
-- target player Teleport closest-to-reticle a 4 Hz solo sulla terza pagina;
-- refresh immediato quando un input usa davvero la lista;
-- inspection a 4 Hz;
-- `MenitLobi` ogni 10 s;
-- Spawn Room cache a 1 Hz;
-- RGB unico globale a 8 Hz;
-- nessun loop periodico per-player per la transizione menu;
-- cleanup completo degli array e ID al leave.
-
-## GitHub
-
-Branch operativo: `main`.
-
-Workflow permanenti:
-
-- `.github/workflows/validate-workshop.yml`
-- `.github/workflows/maintenance-patch.yml`
-
-La CI esegue unit test e il validatore statico. Il runner di manutenzione elimina `patch.py` prima del commit finale.
-
-## Limiti
-
-La validazione statica non sostituisce il client Overwatch. Restano da testare live:
-
-- import del sorgente;
-- 12 menu EN/ID/TH;
-- 32 Name Color;
-- 37 Player Icon;
-- transizione colori HUD;
-- Crouch inspect/Teleport;
-- Jump respawn;
-- Camera;
-- join/leave ripetuti;
-- stress con 12 player attivi;
-- rendering Thai;
-- Server Load reale.
-
-
-## Menu 8 e 9 — controlli Crouch personali
-
-`Menu 8 - Crouch Teleport` usa `TeleportasiJongkokDiaktifkan`: OFF di default. Solo quando è ON la pressione di Crouch può aprire `GambarTeleportasi`; l'ispezione eroe/salute resta indipendente. `TeleportasiJongkokAktif` continua a rappresentare soltanto l'overlay attualmente aperto.
-
-`Menu 9 - Crouch Privacy` usa `PrivasiInspeksiAktif`: OFF di default. Quando è ON, un viewer della squadra nemica riceve una stringa completamente vuota per quel target, quindi sopra al player non compaiono icona eroe, nome o salute. Un viewer della stessa squadra vede invece sempre la riga completa `icona + nome + salute`, indipendentemente dalla privacy. Con Privacy OFF la riga completa è visibile anche ai nemici. Il testo personale del viewer e i bot non vengono nascosti da questa impostazione.
-
-
-## Unkillable — OFF / 1 HP / FULL HP
-
-`ModeKebal`: 0=OFF, 1=1 HP, 2=FULL HP. FULL HP imposta Damage Received a 0% e ha una guardia che riporta la salute a Max Health se viene ridotta da altre modifiche. Gli indicatori sono distinti e pubblici: 1 HP usa `Warning` rosso, FULL HP usa `Halo` con `Global.RGB`; entrambi restano indipendenti da Crouch Privacy. OFF e Player Left distruggono l'icona. La Spawn Room disattiva esclusivamente ModeKebal=1; ModeKebal=2 resta attivo con Damage Received 0%, Max Health e Halo pubblico.
-
-
-### Transizioni Unkillable esclusive
-
-`ModeKebal` è l'unica modalità applicata: 0=OFF, 1=1 HP, 2=FULL HP. Aprire Menu 5 sincronizza soltanto il cursore e non cambia lo stato. Applicare FULL HP dopo 1 HP imposta prima `ModeKebal=2`, poi Damage Received 0% e Max Health: la regola 1 HP smette immediatamente di essere eleggibile. Applicare 1 HP dopo FULL HP imposta `ModeKebal=1`, Damage Received 100% e salute 1. Dentro Spawn Room 1 HP non può essere applicata e viene disattivata se il player vi entra; FULL HP rimane attiva.
-
-
-### Feedback solo visivo
-
-Tutti i feedback audio delle impostazioni sono rimossi. Le subroutine `EfekTerapkan` e `EfekPulihkan` mantengono una sola chiamata `Play Effect` ciascuna: `Ring Explosion`, visibile a tutti e colorata con `Global.RGB`. `Good Explosion`, `Buff Impact Sound` e `Ring Explosion Sound` non devono comparire nel sorgente. La feature Hero Voice resta indipendente perché modifica le voice line del giocatore e non è un effetto di feedback.
-
-
-## Menu 11 — Vote Player
-
-Ogni umano può mantenere un solo voto attivo verso qualsiasi umano in `Global.PemainManusia`, incluso se stesso; i bot sono esclusi. Il menu mostra tutti gli umani presenti con `JumlahSuara`. `HitungPilihan` ricalcola soltanto su join, leave o cambio voto. Se esiste un leader unico con almeno un voto, compare sotto l'ultimo player del roster sinistro dopo una riga vuota; il diagnostics host-only segue dopo un'altra riga vuota. In caso di parità al massimo `PemimpinSuara = Null` e nessun nome viene mostrato.
-
-
-## Audit lifecycle 0.6.3
-
-`SiapkanPemain` inizializza esplicitamente ogni variabile player dichiarata e il validatore verifica questa proprietà automaticamente. Il Player Left usa un solo percorso di cleanup: distrugge prima tutti gli oggetti temporanei della carta, poi rimuove gli HUD/IWT dagli array paralleli, restituisce lo slot HUD, cancella i voti verso il player uscito e ripulisce riferimenti Camera/Revenge/Teleport/Inspection dei player rimasti. Sono stati eliminati gli handle globali statici `HudInfoKiri/HudInfoKanan`, il legacy `WaktuTercatat` e lo stato Menu 10 non più usato `PosisiKartuNasib/ModeKameraSebelumNasib/TargetKameraSebelumNasib`.
-
-
-## Nomenclatura Bahasa Indonesia 0.6.3
-
-Le dichiarazioni personalizzate non usano più i residui misti `Voto/Voti/Numero/Leader/Max/Pari` o i suffissi `EN/TH`: sono stati sostituiti da `PemimpinSuara`, `SuaraTerbanyak`, `SuaraSeri`, `IndeksHitungSuara`, `KursorPilihan`, `PemainDipilih`, `JumlahSuara`, `NamaWarnaInggris` e `NamaWarnaThai`. Anche `GambarVoto` è diventata `GambarPilihan`. Titoli regola e commenti personalizzati usano Bahasa Indonesia; le keyword e azioni native di Overwatch Workshop restano nella sintassi ufficiale inglese.
-
-
-## Cambio squadra e voto singolo 0.6.3
-
-Un cambio Team viene trattato come un'uscita e un nuovo ingresso logico. `01 - Pemain Masuk atau Pindah Tim` controlla se l'entità è già in `Global.PemainManusia`; in tal caso chiama `BersihkanPemain`, che usa lo stesso percorso del vero `Player Left Match`, e solo dopo richiama `SiapkanPemain`. Il cleanup rimuove il vecchio HUD e tutti gli array paralleli, restituisce lo slot HUD, azzera il voto uscente, annulla i voti degli altri diretti al player, pulisce i riferimenti Camera/Revenge/Teleport/Inspection, ripristina input e modificatori e ricalcola i voti. La registrazione umana contiene anche una seconda guardia anti-duplicato prima dell'allocazione HUD.
-
-Il voto resta una singola variabile `PemainDipilih`, non un array. Scegliendo un player diverso, l'handler esegue esplicitamente `PemainDipilih = Null`, assegna il nuovo player e poi chiama `HitungPilihan`; quindi il voto precedente viene sempre sottratto e il nuovo aggiunto nello stesso aggiornamento.
-
-
-## Hotfix import Workshop 0.6.3
-
-La variabile globale di appoggio del conteggio voti resta nello slot `47`, ma il nome è stato abbreviato da `IndeksHitungSuara` a `IndeksVote`. Il cambio è esclusivamente nominale: tutti i `For Global Variable` e gli accessi al tally usano lo stesso slot e mantengono identica la logica voto. Il validatore blocca il ritorno del vecchio identificatore perché il client Overwatch lo rifiuta in fase di importazione con `Global variable '47' has an invalid name`.
-
-
-## Hotfix Try Your Luck 0.6.5
-
-- lo status Menu 10 distingue READY / ROLLING / RED / GREEN (localizzato EN/ID/TH);
-- morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
-- la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
-- l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.
-
-
-## Hotfix Respawn Jump 0.6.6
-
-Il respawn manuale con `Jump` resta disponibile da morto anche con il Menu Arcade aperto. La morte e il respawn non chiudono il menu; viene rimosso soltanto il guard `MenuTerbuka == False` dalla regola `12f`, mantenendo invariati `TeleportasiJongkokAktif`, il latch `BangkitLompatDipakai`, `Nearest Walkable Position`, `Respawn` e il teleport alla posizione sicura.
-
-
-## Hotfix input da morto 0.6.7
-
-Da morto il Menu Arcade non viene chiuso, ma tutte le regole che eseguono `PerintahMenu == N` richiedono `Is Alive(Event Player) == True`. La regola di morte azzera inoltre `PerintahMenu` e `PerintahTeleportasi` per eliminare input catturati nell'istante della morte. Gli attivatori Crouch inspection/Teleport restano protetti da `Is Alive == True`. `Jump` nella regola `12f` è l'unica eccezione e continua a eseguire il respawn manuale anche con menu aperto.
-
-
-## Ottimizzazione input menu 0.6.8
-
-Il dispatcher resta chord-safe ma il release gate non attende più 0,016 s. Primary/Secondary e i salti Soundtrack sfruttano la rivalutazione live dell'HUD. Interact Camera non inserisce più frame di attesa, mentre i redraw di applicazione restano per non indebolire Voice, Try Your Luck e gli altri cambi di stato. Anche Crouch Teleport usa release immediato e navigazione live. Transizione colore: 0,18 s.
-
-
-## HUD Arcade persistente 0.6.9
-
-`GambarMenu` crea lazy un solo HUD. Le pagine sono rami live selezionati da `HalamanMenu`; Interact/Reload non ricreano più il testo HUD.
-
-
-## Menu split e limite regola 0.6.10
-
-`GambarMenu` non contiene più testi o `Create HUD Text`: chiama i 13 renderer solo quando `HudMenuArcade` è vuoto. I renderer salvano i propri Text ID nell'array e usano rivalutazione `Visible To String and Color` con `MenuTerbuka + HalamanMenu`. Questo mantiene il cambio pagina immediato senza concentrare l'intero menu in una regola da 124 KB.
-
-
-## Lazy loading Menu Arcade 0.6.11
-
-La soglia Melee rimane esattamente 0,5 s. `GambarMenu` non pre-carica più 13 HUD alla prima apertura: verifica `HalamanHudMenuArcade` e crea solo la pagina corrente se non è già presente. L'array degli ID HUD e l'array dei codici pagina vengono svuotati insieme alla chiusura o alla pulizia del giocatore.
-
-
-## Input menu e privacy Teleport 0.6.12
-
-Il Menu Arcade non esegue più `Disallow Button` su Melee e Jump. Il dispatcher Soundtrack usa Ability 1/2 come comandi custom (+10/−10) mentre le abilità reali restano disabilitate dal menu. Crouch non è più usato per il salto +10. La lista Crouch Teleport esclude in fase di refresh ogni entità con `PrivasiInspeksiAktif == True`, mantenendo invariati Spawn Room e obiettivo.
-
-
-## Palette menu 0.6.13
-
-`TransisiWarnaMenu` usa RGB fissi unici per 0,1,3..11; il menu 2 Name Color continua a seguire `Global.DaftarWarnaRGB[Event Player.KursorWarna]`. Main e submenu condividono la stessa identità cromatica e la durata del chase resta 0,18 s.
-
-
-## Preload HUD progressivo 0.6.14
-
-La cache lazy resta la sorgente di verità, ma dopo la creazione del Main Menu (`HalamanHudMenuArcade` non vuoto) la regola 05e prepara le pagine 0..11 in ordine. Ogni iterazione inizia con un wait da 0,016 s e chiama al massimo un renderer, distribuendo la costruzione degli HUD su frame differenti. Le pagine restano nascoste finché `HalamanMenu` non coincide; non viene duplicato alcun `Create HUD Text` dentro il preload.
-
-
-## HUD edge-triggered 0.6.15
-La creazione HUD è separata da timer e loop. 05a prepara Main + pagina selezionata senza attese; 02b crea i due HUD sociali dopo la classificazione, anch’essa senza attese nella regola HUD.
-
-
-## Cambio team senza picchi di script load 0.6.16
-
-Le regole 00a2/00a3 non possono più eseguire `Set Match Time(0)` a raffica durante una selezione eroe in-match: hanno latch globali one-shot e `Is Game In Progress == False`. `02b` possiede inoltre `HudPemainDibuat`, armato prima della creazione HUD, così un ID HUD anomalo durante una transizione non può trasformare la regola Ongoing in una fabbrica HUD per-frame.
-
-
-## Lifecycle cambio team serializzato 0.6.17
-
-`SiklusPemainAktif` impedisce re-entry del percorso cleanup/setup. `PernahDisiapkan` rende 01b un fallback solo di bootstrap. La readiness `SudahSiap` viene impostata esclusivamente al termine di `SiapkanPemain`; fino a quel momento 02 non può partire. `ModeMulaiDiminta` rende one-shot anche `Start Game Mode` e viene riarmato soltanto prima del restart completo.
-
-
-## Team switch senza rebuild 0.6.18
-
-`Player Joined Match` distingue ora il player già registrato dal vero ingresso. Se `Array Contains(Global.PemainManusia, Event Player)` è vero, la regola termina prima di qualsiasi setup e non chiama mai `BersihkanPemain`. Le strutture parallele HUD/slot non vengono mutate durante il cambio team. `BersihkanPemain` rimane associato a `Player Left Match`, dove la rimozione è realmente necessaria.
-
-
-## Rearm roster sociale 0.6.19
-
-Un cambio team non ricostruisce più l'intero lifecycle, ma deve riarmare i soli HUD sociali perché il client elimina le due righe create dal vecchio contesto player. Il ramo per player già presente in `Global.PemainManusia` azzera i due ID paralleli, mette `HudKiri/HudKanan = Null` e `HudPemainDibuat = False`; `02b` ricrea due soli `Create HUD Text` quando il player è di nuovo spawnato. Nessuna preferenza o slot viene riallocato.
-
-
-## Riferimento roster dopo team switch 0.6.20
-
-`IndeksSinkronTim` usa prima l'identità corrente e poi `UrutanHUD/SlotHUDPemain` come chiave di sessione. Il riferimento roster viene sostituito senza riallocare gli array. `AntarmukaModeDiterapkan` sposta la soppressione UI nativa a dopo lo spawn.
-
-
-## Lifecycle team-switch pulito 0.6.21
-
-La strategia in-place 0.6.18–0.6.20 è rimossa. Il player che cambia team viene prima rimosso dalle strutture parallele e da tutti i riferimenti tramite `BersihkanPemain`, poi inizializzato da zero con `SiapkanPemain`. Il cleanup usa direct reference → `UrutanHUD/SlotHUDPemain` → nome visuale per individuare la vecchia riga anche se Overwatch ha già cambiato il contesto entità.
-
-
-## Lifecycle team-switch differito 0.6.22
-
-La 0.6.21 concentrava cleanup e setup nel `Player Joined Match`; il client live ha chiuso la lobby per carico Workshop eccessivo al primo cambio team. La 0.6.22 sfrutta prima il cleanup naturale di `Player Left Match`, attende un yield, esegue `BersihkanPemain` solo se una registrazione vecchia è ancora presente e separa il successivo `SiapkanPemain` con un secondo yield.
-
-
-## Quiescenza prima del cleanup 0.6.23
-
-La fase `TenangkanPemain` è idempotente e volutamente priva di Destroy/Wait/Loop. Disattiva prima tutte le condizioni Ongoing che possono essere state abilitate dal Menu Arcade, rende invisibili gli HUD menu tramite `MenuTerbuka = False` e ferma le modifiche engine persistenti. Solo dopo un yield viene eseguito `BersihkanPemain`, che resta atomico per non lasciare i global scratch `IndeksKeluar/PemainPembersihan` esposti fra più player.
-
-
-## Team switch a carico distribuito 0.6.24
-
-La 0.6.23 è live-failed al primo cambio team. `TenangkanPemain` ora modifica soltanto variabili/latch. I ripristini engine e le distruzioni HUD sono spostati in `BersihkanPemain` e separati da yield da 0,016 s; le 13 pagine Arcade cached vengono distrutte una per frame. I due yield del lifecycle tornano a 0,05 s come nella 0.6.22.
-
-
-## Menu Arcade a HUD singolo 0.7.1
-
-Il test live della 0.6.24 ha isolato il crash: il cambio team funziona se il player non usa Menu Arcade/modifiche, mentre può chiudere il server al primo cambio dopo l'uso del menu. La causa più forte nel sorgente era la cache lazy: scorrendo le dodici voci, `HudMenuArcade` conservava fino a tredici `Create HUD Text` persistenti per player.
-
-La 0.7.1 elimina quella crescita. `HudMenuArcade` e `HalamanHudMenuArcade` restano array per compatibilità del lifecycle, ma contengono al massimo un elemento. Durante il hold Melee viene creato soltanto il Main Menu nascosto; Primary/Secondary sul Main modificano solo `KursorUtama` e colore. Entrando o tornando da un submenu, `GambarHalamanAktif` distrugge l'unico HUD corrente e crea il nuovo renderer senza `Wait`. Le modifiche di valore dentro la stessa pagina continuano a usare il testo dinamico e non ricreano l'HUD.
-
-Di conseguenza `TutupMenu` e `BersihkanPemain` devono distruggere al massimo un HUD Arcade per player. Restano invariati il hold Melee da 0,5 s, il dispatcher input, Try Your Luck, Hero Voice NORMAL, Unkillable 1 HP e il menu visibile da morto.
-
-
-## Audit 0.7.1 — 6v6 / 12 player Global-first
-
-I poll periodici che non richiedono un `Event Player` di input sono stati consolidati: `04i` gestisce a 1 Hz Spawn Room e liste passive Camera/Revenge/Teleport, `04j` aggiorna i minuti ogni 10 s e `04k` aggiorna l'inspection a 4 Hz. Le regole per input, latch e azioni che richiedono realmente il contesto del player restano `Ongoing - Each Player`.
-
-Il lifecycle Bot/Dummy è separato dal percorso umano: i dummy diretti non passano dal classifier né dal cleanup umano e vengono mantenuti da `03c`/`KunciBot`. Il cleanup umano usa un solo yield prima della sezione critica; dopo l'assegnazione degli scratch Global non contiene `Wait`, così due leave/cambi squadra ravvicinati non possono sovrascrivere gli indici condivisi a metà cleanup.
-
-La Camera spectate viene rilasciata anche su target morto/non spawnato. I loop `For Global Variable` di voto e pulizia sono inoltre limitati a `Count Of(...) - 1`.
-
-
-## Audit 0.7.2 — Teleport closest-to-reticle
-
-Il selettore manuale dei player è stato rimosso. Crouch Teleport mantiene soltanto tre pagine, con Secondary Fire per cambiare pagina e Primary Fire per eseguire. La pagina player condivide il ritmo 4 Hz del reticolo, filtra privacy ON e allinea `TargetInspeksi` al `CalonTargetTeleportasi`, così il nome visibile corrisponde al target effettivo. Il vecchio refresh Teleport a 1 Hz e la regola `19d` di navigazione inversa sono stati eliminati.
-
-
-### Hotfix 0.7.2 — persistenza pagina Teleport e cleanup Inspection
-
-`KursorTeleportasi` viene inizializzato a 0 solo in `SiapkanPemain` e non viene più azzerato all'apertura/chiusura dell'overlay. `19g` esegue cleanup immediato di nameplate, `TeksDunia/TeksDiri`, `TargetInspeksi` e `InspeksiAktif`. Quando Crouch parte direttamente sulla pagina 3, la regola Inspection usa prima `SegarkanTargetTeleportasi` e allinea `TargetInspeksi = CalonTargetTeleportasi`, evitando un target generico/stale nel primo frame.
-
-
-### Hotfix 0.7.2 — reticle live durante Crouch
-
-Su pagina 3 Teleport, `TargetInspeksi` rappresenta ora davvero il target già renderizzato. `04k` calcola `CalonTargetTeleportasi` senza far passare prima l'Inspection generica; se candidato e target mostrato differiscono, distrugge gli handle `TeksDunia/TeksDiri`, azzera `InspeksiAktif` e lascia alla regola 13 la ricreazione immediata sul nuovo target. Il refresh resta a 4 Hz. Rimossi anche 27 backslash di continuazione visibili dai Custom String HUD/menu, convertendoli in newline Workshop normali.
-
-
-### Hotfix 0.7.2 — separazione Inspection / Teleport
-
-La pagina 3 Teleport è stata separata dall'Inspection generica. `19d` gestisce il world label del candidato e rivaluta direttamente `CalonTargetTeleportasi`; `13` opera solo quando `TeleportasiJongkokAktif == False`. Il filtro target considera validi dummy bot, bot automatici e umani classificati con `PrivasiInspeksiAktif == False`, evitando che una variabile privacy non inizializzata sui bot produca `NO PUBLIC TARGET`.
+La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md).

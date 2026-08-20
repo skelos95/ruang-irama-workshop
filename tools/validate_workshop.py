@@ -1,23 +1,131 @@
 #!/usr/bin/env python3
-"""Static gate for CHILL Dedicated Server 0.7.2 Global-first."""
+"""Semantic static gate for CHILL Dedicated Server Workshop 0.8.0.
+
+The validator deliberately checks behaviour and ownership boundaries instead of
+pinning the complete Workshop export or rule-number prefixes. It only uses the
+Python standard library so the same gate can run locally and in GitHub Actions.
+"""
 
 from __future__ import annotations
 
-import hashlib
+import ast
 import re
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable, Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
-EXPORTS = ROOT / "exports"
 
-CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "0ea41c5be1c8112fa3a67d398a0b783c08dc1e38"
-ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
+CURRENT_VERSION = "0.8.0"
+ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
+CORE_DOCS = (
+    "README.md",
+    "docs/PROGETTO.md",
+    "docs/VALIDAZIONE.md",
+    "docs/TEST.md",
+)
+
+MENU_ACTION_BUTTONS = {
+    "Primary Fire",
+    "Secondary Fire",
+    "Interact",
+    "Reload",
+    "Ability 1",
+    "Ability 2",
+}
+NATIVE_BUTTONS = {"Melee", "Jump", "Crouch"}
+SCHEDULER_SUBROUTINES = {
+    "ProsesCepatPemain",
+    "ProsesSiklusPemain",
+    "ProsesCachePemain",
+    "ProsesNasibPemain",
+}
+PAGE_APPLY_SUBROUTINES = {
+    "TerapkanHalamanMusik",
+    "TerapkanHalamanKamera",
+    "TerapkanHalamanWarna",
+    "TerapkanHalamanBahasa",
+    "TerapkanHalamanBalasDendam",
+    "TerapkanHalamanKebal",
+    "TerapkanHalamanSuara",
+    "TerapkanHalamanIkon",
+    "TerapkanHalamanTeleportasiJongkok",
+    "TerapkanHalamanPrivasiInspeksi",
+    "TerapkanHalamanNasib",
+    "TerapkanHalamanPilihan",
+}
+LIFECYCLE_SUBROUTINES = {"SiapkanPemain", "TenangkanPemain", "BersihkanPemain"}
+LUCK_TIMESTAMP_VARIABLES = {
+    "WaktuPutaranNasibBerikut",
+    "WaktuIkonNasibBerakhir",
+    "EfekNasibBerakhir",
+    "WaktuBakarNasibBerikut",
+}
+LOCALIZED_ARRAY_SIZES = {
+    "NamaIkonInggris": 37,
+    "NamaIkonIndonesia": 37,
+    "NamaIkonThai": 37,
+    "NamaLokasiInggris": 26,
+    "NamaLokasiIndonesia": 26,
+    "NamaLokasiThai": 26,
+}
+GAME_MODES = (
+    "Push",
+    "Flashpoint",
+    "Capture The Flag",
+    "Control",
+    "Clash",
+    "Hybrid",
+    "Escort",
+    "Assault",
+)
+FORBIDDEN_LEGACY_IDENTIFIERS = {
+    "HudMenuArcade",
+    "HalamanHudMenuArcade",
+    "HalamanMenuTujuan",
+    "HalamanSubmenuPramuat",
+    "PramuatSubmenu",
+    "IndeksVote",
+    "TickBurnNasib",
+    "TeksKartuNasib",
+    "TeksKartuNasibKanan",
+    "TeksDiri",
+    "TeksDiriPemain",
+    "IkonKartuNasibHijau",
+    "ModeKebalTerakhir",
+    "PosisiNasibTerkunci",
+    "WarnaNasibTerkunci",
+    "EfekNasibCahaya",
+    "EfekNasibLingkaran",
+    "RadiusNasib",
+    "GerakNasibDikunci",
+    "DaftarTujuanNasib",
+    "TujuanNasib",
+    "ArahNasib",
+    "KategoriTeleportNasib",
+}
+FORBIDDEN_PROSE = re.compile(
+    r"\b(?:rilascia|restituisci|reticolo|senza|roulette|sei effetti|risultato|"
+    r"reset completo|alla morte|riapri|solo quando|scadenza|temporanei|pulisce|"
+    r"proporzionale|aggiorna|distruggi|ricrea|menu ?render|target ?page ?render|"
+    r"submenu ?preload|preload|cleanup|english comment|italian comment)\b",
+    re.IGNORECASE,
+)
+FORBIDDEN_RESULT_ACTIONS = (
+    "Declare Match Draw(",
+    "Declare Player Victory(",
+    "Declare Round Victory(",
+    "Declare Team Victory(",
+    "Set Team Score(",
+    "Modify Team Score(",
+    "Disable Built-In Game Mode Completion;",
+    "Disable Built-In Game Mode Scoring;",
+)
 
 
 @dataclass(frozen=True)
@@ -25,6 +133,22 @@ class Rule:
     name: str
     body: str
     start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class Call:
+    name: str
+    raw: str
+    args: tuple[str, ...]
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class Declaration:
+    index: int
+    name: str
 
 
 class Checks:
@@ -48,63 +172,156 @@ class Checks:
         raise SystemExit(1)
 
 
-def git_blob_sha(text: str) -> str:
-    data = text.encode("utf-8")
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
-
-
-def matching_brace(text: str, opening: int) -> int:
+def matching_delimiter(text: str, opening: int, opener: str, closer: str) -> int:
     depth = 1
     in_string = False
     escaped = False
-    for i in range(opening + 1, len(text)):
-        ch = text[i]
+    for index in range(opening + 1, len(text)):
+        char = text[index]
         if in_string:
             if escaped:
                 escaped = False
-            elif ch == "\\":
+            elif char == "\\":
                 escaped = True
-            elif ch == '"':
+            elif char == '"':
                 in_string = False
             continue
-        if ch == '"':
+        if char == '"':
             in_string = True
-        elif ch == "{":
+        elif char == opener:
             depth += 1
-        elif ch == "}":
+        elif char == closer:
             depth -= 1
             if depth == 0:
-                return i
-    raise ValueError("graffa non chiusa")
+                return index
+    raise ValueError(f"delimitatore {opener}{closer} non chiuso")
+
+
+def matching_brace(text: str, opening: int) -> int:
+    return matching_delimiter(text, opening, "{", "}")
+
+
+def matching_parenthesis(text: str, opening: int) -> int:
+    return matching_delimiter(text, opening, "(", ")")
+
+
+def mask_strings(text: str) -> str:
+    chars = list(text)
+    in_string = False
+    escaped = False
+    for index, char in enumerate(text):
+        if in_string:
+            if char not in "\r\n":
+                chars[index] = " "
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            chars[index] = " "
+            in_string = True
+    return "".join(chars)
+
+
+def split_top_level(text: str, delimiter: str = ",") -> list[str]:
+    parts: list[str] = []
+    start = 0
+    round_depth = square_depth = brace_depth = 0
+    in_string = False
+    escaped = False
+    ternary_depth = 0
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "(":
+            round_depth += 1
+        elif char == ")":
+            round_depth -= 1
+        elif char == "[":
+            square_depth += 1
+        elif char == "]":
+            square_depth -= 1
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth -= 1
+        elif char == "?" and round_depth == square_depth == brace_depth == 0:
+            ternary_depth += 1
+        elif char == ":" and round_depth == square_depth == brace_depth == 0 and ternary_depth:
+            ternary_depth -= 1
+        elif char == delimiter and round_depth == square_depth == brace_depth == ternary_depth == 0:
+            parts.append(text[start:index].strip())
+            start = index + 1
+    parts.append(text[start:].strip())
+    return parts
+
+
+def iter_calls(text: str, name: str, *, masked_text: str | None = None) -> Iterator[Call]:
+    pattern = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*\(")
+    masked_text = mask_strings(text) if masked_text is None else masked_text
+    for match in pattern.finditer(masked_text):
+        opening = text.find("(", match.start())
+        try:
+            closing = matching_parenthesis(text, opening)
+        except ValueError:
+            continue
+        raw = text[match.start():closing + 1]
+        yield Call(name, raw, tuple(split_top_level(text[opening + 1:closing])), match.start(), closing + 1)
 
 
 def extract_rules(text: str) -> list[Rule]:
     found: list[Rule] = []
-    for match in re.finditer(r'^rule\("([^"]+)"\)\s*\{', text, re.MULTILINE):
+    for match in re.finditer(r'^rule\("([^"\r\n]+)"\)\s*\{', text, re.MULTILINE):
         opening = text.find("{", match.start())
         closing = matching_brace(text, opening)
-        found.append(Rule(match.group(1), text[match.start(): closing + 1], match.start()))
+        found.append(Rule(match.group(1), text[match.start():closing + 1], match.start(), closing + 1))
     return found
 
 
+def event_block(rule: Rule) -> str:
+    match = re.search(r"\bevent\s*\{", rule.body)
+    if not match:
+        return ""
+    opening = rule.body.find("{", match.start())
+    return rule.body[opening + 1:matching_brace(rule.body, opening)]
+
+
 def event_type(rule: Rule) -> str:
-    match = re.search(r"\bevent\s*\{\s*([^;\n]+);", rule.body, re.DOTALL)
+    block = event_block(rule)
+    match = re.search(r"([^;\r\n]+);", block)
     return match.group(1).strip() if match else ""
 
 
-def find_rule(rules: list[Rule], prefix: str) -> Rule | None:
-    return next((rule for rule in rules if rule.name.startswith(prefix)), None)
+def subroutine_target(rule: Rule) -> str | None:
+    if event_type(rule) != "Subroutine":
+        return None
+    statements = [part.strip() for part in event_block(rule).split(";") if part.strip()]
+    return statements[1] if len(statements) > 1 else None
 
 
-def declaration_names(text: str) -> tuple[list[str], list[str], list[str]]:
-    variables = re.search(r"variables\s*\{(.*?)\}\s*subroutines", text, re.DOTALL)
-    subroutines = re.search(r"subroutines\s*\{(.*?)\}\s*rule\(", text, re.DOTALL)
+def declaration_entries(text: str) -> tuple[list[Declaration], list[Declaration], list[Declaration], tuple[int, int]]:
+    variables = re.search(r"\bvariables\s*\{", text)
+    subroutines = re.search(r"\bsubroutines\s*\{", text)
     if not variables or not subroutines:
         raise ValueError("dichiarazioni variables/subroutines assenti")
-    global_names: list[str] = []
-    player_names: list[str] = []
+    variables_open = text.find("{", variables.start())
+    variables_close = matching_brace(text, variables_open)
+    sub_open = text.find("{", subroutines.start())
+    sub_close = matching_brace(text, sub_open)
+    global_entries: list[Declaration] = []
+    player_entries: list[Declaration] = []
     section: str | None = None
-    for raw in variables.group(1).splitlines():
+    for raw in text[variables_open + 1:variables_close].splitlines():
         line = raw.strip()
         if line == "global:":
             section = "global"
@@ -112,351 +329,892 @@ def declaration_names(text: str) -> tuple[list[str], list[str], list[str]]:
         if line == "player:":
             section = "player"
             continue
-        match = re.match(r"\d+:\s*([A-Za-z0-9_]+)", line)
-        if match:
-            (global_names if section == "global" else player_names).append(match.group(1))
-    sub_names = [m.group(1) for m in re.finditer(r"(?m)^\s*\d+:\s*([A-Za-z0-9_]+)", subroutines.group(1))]
-    return global_names, player_names, sub_names
+        match = re.fullmatch(r"(\d+):\s*([A-Za-z][A-Za-z0-9_]*)", line)
+        if match and section:
+            entry = Declaration(int(match.group(1)), match.group(2))
+            (global_entries if section == "global" else player_entries).append(entry)
+    sub_entries = [
+        Declaration(int(match.group(1)), match.group(2))
+        for match in re.finditer(r"(?m)^\s*(\d+):\s*([A-Za-z][A-Za-z0-9_]*)\s*$", text[sub_open + 1:sub_close])
+    ]
+    return global_entries, player_entries, sub_entries, (variables.start(), sub_close + 1)
 
 
-def validate(source: str) -> Checks:
-    checks = Checks()
-    rules = extract_rules(source)
-    globals_, players, subroutines = declaration_names(source)
-    checks.equal(VERSION.read_text(encoding="utf-8").strip(), CURRENT_VERSION, "VERSION")
-    checks.equal(git_blob_sha(source), EXPECTED_SOURCE_BLOB, "blob sorgente live-confirmato")
-    checks.equal({p.name for p in WORKFLOWS.glob("*.yml")}, ALLOWED_WORKFLOWS, "workflow permanenti")
-    checks.require(not EXPORTS.exists(), "directory exports temporanea deve essere assente")
-    checks.equal(len(rules), len({rule.name for rule in rules}), "titoli regola univoci")
-    checks.require(len(rules) >= 75, "numero regole inatteso")
-    for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
-        checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "TickBurnNasib", "MenuNasibHarusDibuka", "HudEfekNasib", "TeksVisiNasib"):
-        checks.require(name in players, f"variabile preload menu assente: {name}")
-    for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
-        checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
-    checks.require("For Global Variable(Global." not in source, "sintassi For Global Variable(Global.*) non valida")
-    checks.require('Custom String("{0}    {1}\\n ", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer)' in source, "HUD centro non è separato dal blocco successivo")
-    for token in (
-        'Custom String("{0} - {1} MIN\\n ", Event Player, Event Player.MenitLobi)',
-        'Custom String("{0} - {1} MENIT\\n ", Event Player, Event Player.MenitLobi)',
-        'Custom String("{0} - {1} นาที\\n ", Event Player, Event Player.MenitLobi)',
-        'Custom String("{0} - {1}\\n ", Event Player,',
-    ):
-        checks.require(token in source, f"HUD player non separato: {token}")
-    managers = [r for r in rules if r.name.startswith("04g - Global-first") or r.name.startswith("04h - Global-first")]
-    checks.equal(len(managers), 2, "manager Global-first")
-    for manager in managers:
-        checks.equal(event_type(manager), "Ongoing - Global", f"{manager.name}: evento")
-        checks.require("For Global Variable(IndeksPemainGlobal" in manager.body, f"{manager.name}: loop player globale assente")
-        checks.require("Count Of(All Players(All Teams)), 1);" in manager.body, f"{manager.name}: Range Stop deve usare Count perché è esclusivo")
-        checks.require("Global.PemainAktif = All Players(All Teams)" in manager.body, f"{manager.name}: contesto player assente")
-    each_player_pipelines = (
-        "05b - Menu:", "05c - Menu:", "05d - Menu:", "05e - Menu:", "05f - Menu:", "06 - Menu:", "07 - Menu:", "08 - Menu 0:", "09 - Menu 0:",
-        "10 - Menu:", "11 - Menu:", "12c - Kamera:", "12d - Kamera:",
-        "19 - Teleportasi Jongkok:", "19a - Teleportasi Jongkok:", "19b - Teleportasi Jongkok:",
-        "19c - Teleportasi Jongkok:", "19d0 - Teleportasi Jongkok:", "19d - Teleportasi Jongkok:", "19e - Teleportasi Jongkok:",
-        "19g - Teleportasi Jongkok:",
-    )
-    for prefix in each_player_pipelines:
-        rule = find_rule(rules, prefix)
-        checks.require(rule is not None, f"pipeline assente: {prefix}")
-        if rule:
-            checks.equal(event_type(rule), "Ongoing - Each Player", f"{prefix}: scheduler")
-    periodic_global = ("04i - Global-first:", "04j - Global-first:")
-    for prefix in periodic_global:
-        rule = find_rule(rules, prefix)
-        checks.require(rule is not None, f"scheduler globale periodico assente: {prefix}")
-        if rule:
-            checks.equal(event_type(rule), "Ongoing - Global", f"{prefix}: scheduler")
-            checks.require("For Global Variable(IndeksPemainGlobal" in rule.body, f"{prefix}: loop globale assente")
-            checks.require("Count Of(Global.PemainManusia), 1);" in rule.body, f"{prefix}: Range Stop deve usare Count perché è esclusivo")
-            checks.require("Global.PemainAktif = Global.PemainManusia[Global.IndeksPemainGlobal]" in rule.body, f"{prefix}: contesto umano globale assente")
-    for prefix in ("02c - Ruang Muncul:", "03 - Waktu:", "07b - Menu kamera:", "07c - Menu Balas Dendam:",
-                   "14 - Intip Pahlawan:", "16 - Kamera:", "19f - Teleportasi Jongkok:"):
-        checks.require(find_rule(rules, prefix) is None, f"poller per-player legacy ancora presente: {prefix}")
-    checks.require("Global.PemainAktif.InteraksiKameraDipakai = False;" not in source, "release Camera non deve essere nel manager globale")
-    checks.require(
-        "Global.PemainAktif.PerintahTeleportasi = 1;" not in source
-        and "Global.PemainAktif.PerintahTeleportasi = 2;" not in source
-        and "Global.PemainAktif.PerintahTeleportasi = 3;" not in source,
-        "dispatcher Teleport non deve essere nel manager globale",
-    )
-    teleport_cycle = find_rule(rules, "19c - Teleportasi Jongkok:")
-    teleport_detector = find_rule(rules, "19d0 - Teleportasi Jongkok:")
-    teleport_label = find_rule(rules, "19d - Teleportasi Jongkok:")
-    teleport_exec = find_rule(rules, "19e - Teleportasi Jongkok:")
-    teleport_refresh = find_rule(rules, "98 - Subrutin:")
-    teleport_render = find_rule(rules, "91g - Subrutin:")
-    teleport_global = find_rule(rules, "04k - Global-first:")
-    checks.require(teleport_global is None, "04k polling Inspection/Teleport deve essere rimosso")
-    teleport_open = find_rule(rules, "19 - Teleportasi Jongkok:")
-    teleport_close = find_rule(rules, "19g - Teleportasi Jongkok:")
-    inspect_rule = find_rule(rules, "13 - Intip Pahlawan:")
-    checks.require("Event Player.PerintahTeleportasi = 3;" not in source, "Teleport usa ancora il terzo comando legacy")
-    checks.equal(source.count("Event Player.KursorTeleportasi = 0;"), 1, "reset KursorTeleportasi deve restare solo in SiapkanPemain")
-    checks.require((chr(92) + chr(10)) not in source, "HUD/menu contiene ancora backslash visuali a fine riga")
-    if teleport_cycle:
-        checks.require("Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;" in teleport_cycle.body, "Teleport non cicla tre pagine con Secondary")
-        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_cycle.body, "uscita pagina 3 non rimuove il target world text dedicato")
-    if teleport_detector:
-        checks.equal(event_type(teleport_detector), "Ongoing - Each Player", "19d0 Teleport detector: scheduler")
-        checks.require("Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in teleport_detector.body, "19d0 non rileva direttamente il cambio closest-to-reticle")
-        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_detector.body, "19d0 non aggiorna il candidate Teleport")
-        checks.require("Wait(" not in teleport_detector.body and "Loop If Condition Is True;" not in teleport_detector.body, "19d0 non deve usare Wait o Loop")
-    if teleport_label:
-        checks.equal(event_type(teleport_label), "Ongoing - Each Player", "19d Teleport target label: scheduler")
-        checks.require("Event Player.TeleportasiJongkokAktif == True;" in teleport_label.body and "Event Player.KursorTeleportasi == 2;" in teleport_label.body, "19d non è limitata alla pagina 3")
-        checks.require("Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in teleport_label.body, "19d non rivaluta il target live")
-        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_label.body and "Create In-World Text(" in teleport_label.body, "19d non distrugge e ricrea il nome")
-        checks.require("Event Player.TeksTeleportasi = Last Text ID;" in teleport_label.body, "19d non salva il world text nell handle dedicato")
-        checks.require(teleport_label.body.index("Event Player.TeksTeleportasi = Last Text ID;") < teleport_label.body.index("Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;"), "19d aggiorna lo snapshot prima di creare il testo")
-        checks.require("Wait(" not in teleport_label.body and "Loop If Condition Is True;" not in teleport_label.body, "19d non deve usare Wait o Loop")
-        checks.require("Event Player.TeksDunia" not in teleport_label.body, "19d condivide ancora l handle TeksDunia con Inspection")
-    if teleport_exec:
-        checks.require("Call Subroutine(SegarkanTargetTeleportasi);" in teleport_exec.body, "Primary Teleport non aggiorna il target al click")
-        checks.require("TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;" in teleport_exec.body, "Primary Teleport non blocca il closest-to-reticle")
-    dummy_eligibility = "Is Dummy Bot(Current Array Element) == True"
-    bot_eligibility = "Player Variable(Current Array Element, BotOtomatis) == True"
-    privacy = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"
-    if teleport_refresh:
-        checks.require("First Of(Sorted Array(Event Player.DaftarTargetTeleportasi" in teleport_refresh.body, "Teleport non usa closest-to-reticle")
-        checks.require(dummy_eligibility in teleport_refresh.body and bot_eligibility in teleport_refresh.body and privacy in teleport_refresh.body, "Teleport refresh: bot pubblici (dummy/automatici) e player privacy OFF richiesti")
-        checks.require("Player Variable(Current Array Element, Manusia) == True" not in teleport_refresh.body, "Teleport refresh dipende ancora dal classificatore Manusia")
-        checks.require("Has Spawned(Current Array Element)" not in teleport_refresh.body, "Teleport refresh esclude dummy tramite Has Spawned")
-    if teleport_render:
-        checks.require("Event Player.KursorTeleportasi %= 3;" in teleport_render.body and "ALL PLAYERS" in teleport_render.body, "HUD Teleport non espone tre pagine")
-    if teleport_open:
-        checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_open.body, "apertura Teleport resetta ancora la pagina")
-        checks.require("Event Player.MenuTerbuka == False;" in teleport_open.body, "Crouch Teleport deve restare disattivato mentre il Menu Arcade è aperto")
-    if teleport_close:
-        checks.require("Event Player.KursorTeleportasi = 0;" not in teleport_close.body, "chiusura Teleport resetta ancora la pagina")
-        checks.require("Destroy In-World Text(Event Player.TeksTeleportasi);" in teleport_close.body, "chiusura Teleport non distrugge il target world text dedicato")
-    if inspect_rule:
-        checks.require("Event Player.MenuTerbuka == False;" in inspect_rule.body, "Crouch Inspection deve restare disattivata mentre il Menu Arcade è aperto")
-        checks.require("Event Player.TeleportasiJongkokAktif == False;" in inspect_rule.body, "Inspection generica entra ancora nel Teleport")
-        checks.require("Event Player.TeksDiri = Last Text ID;" not in inspect_rule.body, "Crouch normale mostra ancora il proprio nome")
-        checks.require("Destroy In-World Text(Event Player.TeksDiri);" in inspect_rule.body, "Crouch normale non pulisce un eventuale nome personale residuo")
-        checks.require("Event Player.TeleportasiJongkokDiaktifkan == False;" in inspect_rule.body, "Inspection generica può vincere il primo frame Crouch")
-        checks.require("If(Event Player.PrivasiNasibAktif == False);" in inspect_rule.body and "Enable Nameplates(All Players(All Teams), Event Player);" in inspect_rule.body, "Vision deve mantenere visibili i nameplate anche durante Crouch Inspection")
-        checks.require("SegarkanTargetTeleportasi" not in inspect_rule.body and "CalonTargetTeleportasi" not in inspect_rule.body, "Inspection generica condivide ancora il target Teleport")
-    fast_manager = find_rule(rules, "04g - Global-first:")
-    passive_manager = find_rule(rules, "04i - Global-first:")
-    checks.require("PosisiRuangMuncul" not in source and "PunyaPosisiMuncul" not in source, "cache Spawn Room legacy ancora presente")
-    if teleport_detector:
-        checks.require(dummy_eligibility in teleport_detector.body and bot_eligibility in teleport_detector.body and privacy in teleport_detector.body, "19d0 target live: bot pubblici e player privacy OFF richiesti")
-    if inspect_rule:
-        checks.require("Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(All Players(All Teams)" in inspect_rule.body, "Crouch normale non rileva direttamente il cambio closest-to-reticle")
-        checks.require("Destroy In-World Text(Event Player.TeksDunia);" in inspect_rule.body and "Create In-World Text(" in inspect_rule.body, "Crouch normale non distrugge e ricrea il nome")
-        checks.require("Wait(" not in inspect_rule.body and "Loop If Condition Is True;" not in inspect_rule.body, "Crouch normale non deve usare Wait o Loop")
-        checks.require(dummy_eligibility in inspect_rule.body and bot_eligibility in inspect_rule.body and privacy in inspect_rule.body, "Crouch normale non usa lo stesso filtro pubblico del Teleport")
-    if teleport_exec:
-        checks.require("Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));" in teleport_exec.body, "Spawn teleport non usa direttamente Spawn Points")
-        checks.require("PosisiRuangMuncul" not in teleport_exec.body and "PunyaPosisiMuncul" not in teleport_exec.body, "Spawn teleport usa ancora cache/registrazione")
-    interact = find_rule(rules, "10 - Menu:")
-    reload_rule = find_rule(rules, "11 - Menu:")
-    preload = find_rule(rules, "91q - SubmenuPreload")
-    checks.require(preload is not None, "SubmenuPreload assente")
-    if preload:
-        checks.require("Count Of(Event Player.HudMenuArcade) > 1" in preload.body, "preload non limita Main + 1 submenu")
-        checks.require("Destroy HUD Text(Event Player.HudMenuArcade[1]);" in preload.body, "preload non sostituisce il submenu")
-        checks.require("Call Subroutine(GambarHalamanAktif);" in preload.body, "preload non prepara la pagina selezionata")
-    for label, rule in (("Interact", interact), ("Reload", reload_rule)):
-        if rule:
-            checks.require("Create HUD Text(" not in rule.body, f"{label} ricrea HUD durante cambio pagina")
-            checks.require("Destroy HUD Text(" not in rule.body, f"{label} distrugge HUD durante cambio pagina")
-    if reload_rule:
-        checks.require("Event Player.HalamanMenu = -1;" in reload_rule.body, "Reload non torna al Main")
-    checks.equal(source.count("Append To Array(Event Player.HudMenuArcade, Event Player.HudMenu)"), 13, "renderer HUD Arcade")
-    for rule in rules:
-        if "Create HUD Text(" in rule.body:
-            checks.require("Wait(" not in rule.body, f"{rule.name}: Create HUD con Wait")
-            checks.require("Loop If Condition Is True;" not in rule.body, f"{rule.name}: Create HUD con Loop")
-    checks.require("If(Health(Global.PemainAktif) >= Max Health(Global.PemainAktif));" in source, "Unkillable 1 HP non usa >= Max Health")
-    checks.require("Set Player Health(Global.PemainAktif, 1);" in source, "Unkillable 1 HP non riporta a 1")
-    checks.require("Stop Modifying Hero Voice Lines(Event Player);" in source, "Hero Voice NORMAL assente")
-    checks.require('Custom String("□")' not in source, "Try Your Luck crea ancora il quadrato della carta")
-    checks.require("Start Forcing Player Position(" not in source, "Try Your Luck non deve forzare la posizione")
-    if interact:
-        checks.require('Custom String("□")' not in interact.body and 'Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck deve mostrare solo l icona senza frame testuale")
-        checks.require("Event Player.TeksKartuNasib = Last Text ID;" not in interact.body and "Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora world text della carta")
-        checks.require("Event Player.EfekNasib = Random Integer(1, 6);" in interact.body, "Try Your Luck non inizializza sei risultati")
-        for token in ("Event Player.KebalAktif = False;", "Event Player.ModeKebal = 0;", "Event Player.KursorKebal = 0;", "Event Player.ModeKebalTerakhir = 0;", "Clear Status(Event Player, Unkillable);", "Set Damage Received(Event Player, 100);", "Set Player Health(Event Player, Max Health(Event Player));"):
-            checks.require(token in interact.body, f"avvio Try Your Luck non disattiva Unkillable: {token}")
-        checks.require("Try Your Luck spegne definitivamente 1 HP / FULL HP" in interact.body, "avvio Try Your Luck non documenta Unkillable persistente OFF")
+def rule_by_subroutine(rules: Iterable[Rule], name: str) -> Rule | None:
+    return next((rule for rule in rules if subroutine_target(rule) == name), None)
 
-    anran_death = find_rule(rules, "16a - Anran:")
-    checks.require(anran_death is not None, "regola morte Anran assente")
-    if anran_death:
-        checks.equal(event_type(anran_death), "Player Died", "Anran morte: evento")
-        checks.require("Hero Of(Event Player) == Hero(Anran);" in anran_death.body, "Anran morte non filtra Hero(Anran)")
-        checks.require("Set Ultimate Charge(Event Player, 100);" in anran_death.body, "Anran morte non porta Ultimate al 100%")
-        checks.require("Wait(" not in anran_death.body and "Loop If Condition Is True;" not in anran_death.body, "Anran morte non deve usare Wait o Loop")
 
-    luck = find_rule(rules, "18e - Nasib:")
-    luck_death = find_rule(rules, "18f - Nasib:")
-    luck_reopen = find_rule(rules, "18g - Nasib:")
-    luck_expiry = find_rule(rules, "18h - Nasib:")
-    luck_vision_create = find_rule(rules, "18i - Nasib:")
-    luck_vision_cleanup = find_rule(rules, "18j - Nasib:")
-    luck_effect_hud = find_rule(rules, "18k - Nasib:")
-    luck_burn_global = find_rule(rules, "18l - Nasib:")
-    checks.require(all(x is not None for x in (luck, luck_death, luck_reopen, luck_expiry, luck_vision_create, luck_vision_cleanup, luck_effect_hud, luck_burn_global)), "pipeline Try Your Luck a sei risultati assente")
-    if luck:
-        checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
-        checks.require("Random Integer(1, 6)" in luck.body and "Random Integer(1, 5)" not in luck.body and "Random Integer(1, 10)" not in luck.body, "roulette Try Your Luck non usa sei risultati")
-        for icon in ("Eye", "Dizzy", "Skull", "Heart", "Fire", "Poison 2"):
-            checks.require(f", {icon}, Visible To and Position" in luck.body, f"icona Try Your Luck assente: {icon}")
-        for removed in ("Asterisk", "Spiral", "Bolt", "Moon", "Arrow: Down"):
-            checks.require(f", {removed}, Visible To and Position" not in luck.body, f"vecchio effetto Try Your Luck ancora presente: {removed}")
-        for token in (
-            "Event Player.PrivasiNasibAktif = True;",
-            "Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);",
-            "Kill(Event Player, Null);",
-            "Set Player Health(All Living Players(Team Of(Event Player)), 9999);",
-            "Set Status(Event Player, Null, Burning, 10);",
-            "Event Player.TickBurnNasib = Total Time Elapsed;",
-            "Set Status(Event Player, Null, Hacked, 5);",
-            "Event Player.EfekNasibBerakhir = Total Time Elapsed + 5;",
+def rules_with_event(rules: Iterable[Rule], kind: str) -> list[Rule]:
+    return [rule for rule in rules if event_type(rule) == kind]
+
+
+def action_loop_count(text: str) -> int:
+    return len(re.findall(r"(?m)^\s*Loop(?: If Condition Is (?:True|False))?;\s*$", mask_strings(text)))
+
+
+def wait_calls(text: str) -> list[Call]:
+    return list(iter_calls(text, "Wait"))
+
+
+def for_spans(rule: Rule) -> list[str]:
+    """Return balanced Workshop For blocks, including nested If blocks."""
+    stack: list[tuple[str, int]] = []
+    spans: list[str] = []
+    offset = 0
+    for line in rule.body.splitlines(keepends=True):
+        stripped = mask_strings(line).strip()
+        if re.match(r"For (?:Global|Player) Variable", stripped):
+            stack.append(("for", offset))
+        elif stripped.startswith("If("):
+            stack.append(("if", offset))
+        elif stripped == "End;" and stack:
+            kind, start = stack.pop()
+            if kind == "for":
+                spans.append(rule.body[start:offset + len(line)])
+        offset += len(line)
+    return spans
+
+
+def normalized_rule_body(rule: Rule) -> str:
+    body = re.sub(r'^rule\("[^"\r\n]+"\)', 'rule("")', rule.body, count=1)
+    return re.sub(r"\s+", "", body)
+
+
+def is_read_reference(code: str, name: str, *, masked_code: str | None = None) -> bool:
+    masked = mask_strings(code) if masked_code is None else masked_code
+    for match in re.finditer(rf"\b{re.escape(name)}\b", masked):
+        start, end = match.span()
+        suffix = masked[end:end + 80]
+        prefix = masked[max(0, start - 160):start]
+        if re.match(r"\s*(?:\[[^\]\r\n]+\])?\s*=(?!=)", suffix):
+            continue
+        # Property syntax (Global.X / Event Player.X / player-expression.X)
+        # is unambiguous. A property in the value argument of Set Player
+        # Variable is still a read and must not be hidden by that outer call.
+        if start > 0 and masked[start - 1] == ".":
+            return True
+        if re.search(
+            r"(?:Set|Modify|Chase|Stop Chasing) (?:Global|Player) Variable(?: At Index)?\([^;\r\n]*$",
+            prefix,
         ):
-            checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
-        for removed in ("Set Ultimate Charge(", "RANDOM TELEPORT", "Set Jump Vertical Speed(Event Player, 200)", "Set Gravity(Event Player, 10)", "Disable Movement Collision With Environment(Event Player, True)"):
-            checks.require(removed not in luck.body, f"vecchio effetto Try Your Luck non eliminato: {removed}")
-        checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
-        checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
-        checks.require("Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" not in luck.body and "Set Status(Event Player, Null, Unkillable, 9999);" not in luck.body, "18e ripristina ancora Unkillable automaticamente")
-        for token in ("Event Player.KebalAktif = False;", "Event Player.ModeKebal = 0;", "Event Player.KursorKebal = 0;", "Event Player.ModeKebalTerakhir = 0;", "Set Damage Received(Event Player, 100);"):
-            checks.require(token in luck.body, f"18e non mantiene Unkillable OFF: {token}")
-    if luck_death:
-        for token in ("Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);"):
-            checks.require(token in luck_death.body, f"morte Try Your Luck cleanup incompleto: {token}")
-        checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
-        checks.require("Call Subroutine(TutupMenu);" in luck_death.body, "morte Try Your Luck non chiude e libera il menu prima della riapertura")
-        checks.require("Wait(" not in luck_death.body and "Loop If Condition Is True;" not in luck_death.body, "morte Try Your Luck deve resettare subito senza Wait o Loop")
-        checks.require("Call Subroutine(GambarMenu);" not in luck_death.body and "Event Player.MenuTerbuka = True;" not in luck_death.body, "morte Try Your Luck non deve mostrare il menu prima del respawn")
-        checks.require("Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" not in luck_death.body and "Set Status(Event Player, Null, Unkillable, 9999);" not in luck_death.body, "morte Try Your Luck ripristina ancora Unkillable")
-    if luck_reopen:
-        checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
-        checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
-        checks.require("Has Spawned(Event Player) == True;" in luck_reopen.body and "Is Alive(Event Player) == True;" in luck_reopen.body, "18g deve attendere il respawn vivo prima di consumare la riapertura")
-        checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body and "Call Subroutine(GambarNasib);" in luck_reopen.body, "18g non riapre visivamente la pagina Try Your Luck")
-        checks.require("Wait(" not in luck_reopen.body and "Loop If Condition Is True;" not in luck_reopen.body, "18g riapertura al respawn non deve usare Wait o Loop")
-    if luck_expiry:
-        checks.equal(event_type(luck_expiry), "Ongoing - Each Player", "18h scadenza Try Your Luck: scheduler")
-        checks.require("Event Player.EfekNasibBerakhir > 0;" in luck_expiry.body and "Total Time Elapsed >= Event Player.EfekNasibBerakhir;" in luck_expiry.body, "18h non scade sul timestamp per-player")
-        checks.require("Wait(" not in luck_expiry.body and "Loop If Condition Is True;" not in luck_expiry.body, "18h scadenza Try Your Luck non deve usare Wait o Loop")
-        for token in ("Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);", "Event Player.PrivasiNasibAktif = False;", "Event Player.TickBurnNasib = 0;", "Event Player.KartuNasibAktif = False;", "Event Player.MenuNasibHarusDibuka = True;"):
-            checks.require(token in luck_expiry.body, f"18h reset scadenza incompleto: {token}")
-        checks.require("ModeKebalTerakhir" not in luck_expiry.body and "Set Status(Event Player, Null, Unkillable" not in luck_expiry.body, "18h non deve riattivare Unkillable")
-    if luck_vision_create:
-        checks.equal(event_type(luck_vision_create), "Ongoing - Each Player", "18i Vision labels: scheduler")
-        checks.require("Create In-World Text(" in luck_vision_create.body and 'Custom String("{0}", Event Player)' in luck_vision_create.body, "18i Vision non crea nomi custom")
-        checks.require("PrivasiNasibAktif) == True" in luck_vision_create.body, "18i Vision non limita i nomi agli osservatori Vision")
-    if luck_vision_cleanup:
-        checks.equal(event_type(luck_vision_cleanup), "Ongoing - Each Player", "18j Vision cleanup: scheduler")
-        checks.require("Destroy In-World Text(Event Player.TeksVisiNasib);" in luck_vision_cleanup.body, "18j non distrugge label Vision")
-    if luck_effect_hud:
-        checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")
-        for token in ("VISION: ALL PLAYER / BOT NAMES", "AIM-STEERED ACCELERATION", "BURNING: 5% MAX HP / SEC", "HACKED", "EfekNasibBerakhir - Total Time Elapsed", "Global.RGB"):
-            checks.require(token in luck_effect_hud.body, f"18k HUD effetto incompleto: {token}")
-        for removed in ("ULTIMATE ALWAYS READY", "MOVE / JUMP / PROJECTILE x2", "GRAVITY 10%", "FLOOR REMOVED"):
-            checks.require(removed not in luck_effect_hud.body, f"18k mostra ancora vecchio effetto: {removed}")
-        checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait/Loop")
-    if luck_burn_global:
-        checks.equal(event_type(luck_burn_global), "Ongoing - Global", "18l Burning globale: scheduler")
-        for token in ("Player Variable(Current Array Element, EfekNasib) == 5", "Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed", "Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);", "Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);", "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);"):
-            checks.require(token in luck_burn_global.body, f"18l Burning globale incompleto: {token}")
-        checks.require("Wait(" not in luck_burn_global.body and "Loop If Condition Is True;" not in luck_burn_global.body, "18l Burning globale non deve usare Wait o Loop")
-        checks.require("Ongoing - Each Player" not in luck_burn_global.body, "18l Burning non deve diventare Each Player")
-        checks.require(luck_burn_global.body.count("(") == luck_burn_global.body.count(")"), "18l Burning contiene parentesi sbilanciate")
-    if teleport_open:
-        checks.require("Event Player.KartuNasibAktif == False;" in teleport_open.body, "Crouch Teleport deve essere disattivato durante Try Your Luck")
-    quiet_player = find_rule(rules, "93b2 - Subrutin:")
-    checks.require(quiet_player is not None, "TenangkanPemain assente")
-    if quiet_player:
-        checks.require("Wait(" not in quiet_player.body and "Loop If Condition Is True;" not in quiet_player.body, "TenangkanPemain deve pulire il cambio team senza Wait o Loop")
-        for token in ("Destroy Icon(Event Player.IkonKartuNasib);", "Destroy HUD Text(Event Player.HudEfekNasib);", "Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Clear Status(Event Player, Unkillable);", "Stop Accelerating(Event Player);", "Event Player.KartuNasibAktif = False;", "Event Player.EfekNasib = 0;", "Event Player.TickBurnNasib = 0;", "Event Player.MenuNasibHarusDibuka = False;"):
-            checks.require(token in quiet_player.body, f"cambio team non ripulisce Try Your Luck: {token}")
-    if fast_manager:
-        checks.require("Set Ultimate Charge(" not in fast_manager.body, "04g contiene ancora Ultimate Try Your Luck rimossa")
-        checks.require("Global.PemainAktif.EfekNasib ==" not in fast_manager.body, "04g non deve più gestire effetti Try Your Luck")
-    if inspect_rule:
-        checks.require("Event Player.PrivasiNasibAktif == True" in inspect_rule.body, "reveal Try Your Luck non bypassa la privacy Inspection")
-    inspect_refresh = find_rule(rules, "96 - Subrutin:")
-    if inspect_refresh:
-        checks.require("Event Player.PrivasiNasibAktif == True" in inspect_refresh.body, "refresh Inspection non rispetta il reveal Try Your Luck")
-    checks.require('KartuNasibMerah ? Custom String("RED")' not in source and 'KartuNasibMerah ? Custom String("MERAH")' not in source, "HUD Try Your Luck usa ancora RED/GREEN")
-    checks.require("inspect hero + HP / navigate menus" in source, "HUD sinistro non indica Crouch per navigare i menu")
-    checks.require("0.5s: Camera" in source and "Input Binding String(Button(Interact))" in source, "HUD destro non indica Interact Camera")
-    menu_toggle = find_rule(rules, "05 - Menu:")
-    camera_toggle = find_rule(rules, "12c - Kamera:")
-    if menu_toggle:
-        checks.require("Wait(0.500, Abort When False);" in menu_toggle.body, "hold Melee 0,5 s assente")
-        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_toggle.body and "Disallow Button(Event Player, Button(Jump));" not in menu_toggle.body, "Menu Arcade non deve bloccare Crouch o Jump")
-        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
-            checks.require(f"Disallow Button(Event Player, Button({button}));" not in menu_toggle.body, f"Menu aperto blocca permanentemente {button}")
-    menu_dispatch = find_rule(rules, "05c - Menu:")
-    menu_lock = find_rule(rules, "05e - Menu:")
-    menu_unlock = find_rule(rules, "05f - Menu:")
-    if menu_dispatch:
-        checks.require("Is Button Held(Event Player, Button(Crouch)) == True;" in menu_dispatch.body, "dispatcher menu non richiede Crouch")
-    if menu_lock:
-        checks.require("Disallow Button(Event Player, Button(Crouch));" not in menu_lock.body and "Disallow Button(Event Player, Button(Jump));" not in menu_lock.body, "navigazione menu blocca Crouch o Jump")
-        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
-            checks.require(f"Disallow Button(Event Player, Button({button}));" in menu_lock.body, f"Crouch menu non cattura {button}")
-    if menu_unlock:
-        checks.require("Is Button Held(Event Player, Button(Crouch)) == False" in menu_unlock.body, "rilascio Crouch non restituisce gli input hero")
-        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
-            checks.require(f"Allow Button(Event Player, Button({button}));" in menu_unlock.body, f"rilascio Crouch non restituisce {button}")
-    if camera_toggle:
-        checks.require("Wait(0.500, Abort When False);" in camera_toggle.body, "hold Camera 0,5 s assente")
-        checks.require("Wait(0.016, Ignore Condition);" not in camera_toggle.body, "Camera mantiene un frame Wait superfluo")
-        checks.require("Event Player.MenuTerbuka == False;" not in camera_toggle.body, "Interact Camera deve funzionare anche con Menu Arcade aperto")
-        checks.require("Is Button Held(Event Player, Button(Crouch)) == False;" in camera_toggle.body, "Interact Camera deve restare separata dalla navigazione Crouch")
-    lifecycle = find_rule(rules, "04h - Global-first:")
-    if lifecycle:
-        checks.require("Is Alive(Global.PemainAktif.TargetKamera) == False" in lifecycle.body, "Camera globale non rilascia target morto")
-        checks.require("Global.PemainAktif.KursorTeleportasi != 2" in lifecycle.body, "Inspection resta visibile fuori dalla pagina player Teleport")
+            continue
+        if re.search(r"For (?:Global|Player) Variable\([^;\r\n]*$", prefix):
+            continue
+        return True
+    return False
+
+
+def no_op_assignments(source: str, *, masked_source: str | None = None) -> list[str]:
+    masked = mask_strings(source) if masked_source is None else masked_source
+    found: list[str] = []
+    for match in re.finditer(
+        r"\b(Global|Event Player)\.([A-Za-z][A-Za-z0-9_]*)\s*=\s*\1\.\2\s*;",
+        masked,
+    ):
+        found.append(source[match.start():match.end()].strip())
+    for scope, action in (
+        ("player", "Set Player Variable"),
+        ("global", "Set Global Variable"),
+    ):
+        for call in iter_calls(source, action, masked_text=masked):
+            if scope == "player" and len(call.args) >= 3:
+                player, name, value = (argument.strip() for argument in call.args[:3])
+                if value == f"{player}.{name}":
+                    found.append(call.raw)
+            elif scope == "global" and len(call.args) >= 2:
+                name, value = (argument.strip() for argument in call.args[:2])
+                if value == f"Global.{name}":
+                    found.append(call.raw)
+    return found
+
+
+def custom_reference_errors(source: str, globals_: set[str], players: set[str]) -> list[str]:
+    """Find custom variable references that have no matching declaration."""
+    masked = mask_strings(source)
+    errors: set[str] = set()
+    for name in re.findall(r"\bGlobal\.([A-Za-z][A-Za-z0-9_]*)", masked):
+        if name not in globals_:
+            errors.add(f"riferimento Global non dichiarato: {name}")
+    for name in re.findall(r"\bEvent Player\.([A-Za-z][A-Za-z0-9_]*)", masked):
+        if name not in players:
+            errors.add(f"riferimento player non dichiarato: {name}")
+    # Properties after a known player-bearing global are player variables too.
+    for name in re.findall(r"\bGlobal\.(?:PemainAktif|PemainPembersihan)\.([A-Za-z][A-Za-z0-9_]*)", masked):
+        if name not in players:
+            errors.add(f"riferimento player non dichiarato: {name}")
+
+    player_actions = (
+        "Player Variable",
+        "Set Player Variable",
+        "Set Player Variable At Index",
+        "Modify Player Variable",
+        "Modify Player Variable At Index",
+        "Chase Player Variable At Rate",
+        "Chase Player Variable Over Time",
+        "Stop Chasing Player Variable",
+        "For Player Variable",
+    )
+    for action in player_actions:
+        for call in iter_calls(source, action, masked_text=masked):
+            if len(call.args) >= 2:
+                name = call.args[1].strip()
+                if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) and name not in players:
+                    errors.add(f"riferimento player non dichiarato: {name}")
+
+    global_actions = (
+        "Set Global Variable",
+        "Set Global Variable At Index",
+        "Modify Global Variable",
+        "Modify Global Variable At Index",
+        "Chase Global Variable At Rate",
+        "Chase Global Variable Over Time",
+        "Stop Chasing Global Variable",
+        "For Global Variable",
+    )
+    for action in global_actions:
+        for call in iter_calls(source, action, masked_text=masked):
+            if call.args:
+                name = call.args[0].strip()
+                if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) and name not in globals_:
+                    errors.add(f"riferimento Global non dichiarato: {name}")
+    return sorted(errors)
+
+
+def parse_literal(argument: str) -> str | None:
+    argument = argument.strip()
+    if not argument.startswith('"'):
+        return None
+    escaped = False
+    for index in range(1, len(argument)):
+        char = argument[index]
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == '"':
+            try:
+                return ast.literal_eval(argument[:index + 1])
+            except (SyntaxError, ValueError):
+                return None
+    return None
+
+
+def placeholder_signature(text: str) -> tuple[int, ...]:
+    return tuple(sorted(int(value) for value in re.findall(r"(?<!\{)\{(\d+)\}(?!\})", text)))
+
+
+def format_signatures(expression: str) -> Counter[tuple[int, ...]]:
+    signatures: Counter[tuple[int, ...]] = Counter()
+    for call in iter_calls(expression, "Custom String"):
+        if not call.args:
+            continue
+        literal = parse_literal(call.args[0])
+        if literal is not None:
+            signatures[placeholder_signature(literal)] += 1
+    return signatures
+
+
+def outer_format_signature(expression: str) -> tuple[int, ...] | None:
+    """Return the format of a branch's outer Custom String, if it has one."""
+    expression = trim_outer_parentheses(expression)
+    match = re.match(r"Custom String\s*\(", expression)
+    if not match:
+        return None
+    opening = expression.find("(", match.start())
+    try:
+        closing = matching_parenthesis(expression, opening)
+    except ValueError:
+        return None
+    if expression[closing + 1:].strip():
+        return None
+    args = split_top_level(expression[opening + 1:closing])
+    literal = parse_literal(args[0]) if args else None
+    return placeholder_signature(literal) if literal is not None else None
+
+
+def trim_outer_parentheses(expression: str) -> str:
+    expression = expression.strip()
+    while expression.startswith("("):
+        try:
+            closing = matching_parenthesis(expression, 0)
+        except ValueError:
+            break
+        if closing != len(expression) - 1:
+            break
+        expression = expression[1:-1].strip()
+    return expression
+
+
+def parse_top_level_ternary(expression: str) -> tuple[str, str, str] | None:
+    expression = trim_outer_parentheses(expression)
+    in_string = False
+    escaped = False
+    round_depth = square_depth = brace_depth = 0
+    question: int | None = None
+    nested = 0
+    for index, char in enumerate(expression):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "(":
+            round_depth += 1
+        elif char == ")":
+            round_depth -= 1
+        elif char == "[":
+            square_depth += 1
+        elif char == "]":
+            square_depth -= 1
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth -= 1
+        elif round_depth == square_depth == brace_depth == 0:
+            if char == "?":
+                if question is None:
+                    question = index
+                else:
+                    nested += 1
+            elif char == ":" and question is not None:
+                if nested:
+                    nested -= 1
+                else:
+                    return expression[:question].strip(), expression[question + 1:index].strip(), expression[index + 1:].strip()
+    return None
+
+
+def language_triads(expression: str) -> list[tuple[str, str, str]]:
+    found: list[tuple[str, str, str]] = []
+    visited: set[str] = set()
+
+    def visit(part: str) -> None:
+        part = trim_outer_parentheses(part)
+        if not part or part in visited:
+            return
+        visited.add(part)
+        ternary = parse_top_level_ternary(part)
+        if ternary:
+            condition, when_true, when_false = ternary
+            second = parse_top_level_ternary(when_false)
+            if re.search(r"IndeksBahasa\)?\s*==\s*0\b", condition) and second and re.search(
+                r"IndeksBahasa\)?\s*==\s*1\b", second[0]
+            ):
+                found.append((when_true, second[1], second[2]))
+                visit(when_true)
+                visit(second[1])
+                visit(second[2])
+                return
+            visit(when_true)
+            visit(when_false)
+        # Descend once through an outer function call. Iterating every nested
+        # call again at every level makes the large menu expressions quadratic.
+        match = re.match(r"[A-Za-z][A-Za-z0-9 ]*\s*\(", mask_strings(part))
+        if match:
+            opening = part.find("(", match.start())
+            try:
+                closing = matching_parenthesis(part, opening)
+            except ValueError:
+                return
+            if not part[closing + 1:].strip():
+                for argument in split_top_level(part[opening + 1:closing]):
+                    visit(argument)
+
+    visit(expression)
+    return found
+
+
+def array_assignment_items(source: str, name: str) -> list[str] | None:
+    masked = mask_strings(source)
+    match = re.search(rf"Global\.{re.escape(name)}\s*=\s*Array\s*\(", masked)
+    if not match:
+        return None
+    opening = source.find("(", match.start())
+    closing = matching_parenthesis(source, opening)
+    return split_top_level(source[opening + 1:closing])
+
+
+def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
+    body = rule.body
+    if scheduler is not None and rule.start == scheduler.start:
+        return "scheduler"
+    if event_type(rule) in {"Player Joined Match", "Player Left Match"}:
+        return "join/leave ordering"
+    if "Abort When False" in body and ("Button(Melee)" in body or "Button(Interact)" in body):
+        return "hold input"
+    if "SudahDiperiksa" in body and "Is Dummy Bot" in body:
+        return "bot classification"
+    if "Respawn(" in body or "BangkitLompat" in body:
+        return "respawn"
+    if subroutine_target(rule) == "BersihkanPemain":
+        return "atomic cleanup"
+    return None
+
+
+def validate_metadata(checks: Checks, root: Path) -> None:
+    version_file = root / "VERSION"
+    checks.require(version_file.is_file(), "VERSION assente")
+    if version_file.is_file():
+        checks.equal(version_file.read_text(encoding="utf-8").strip(), CURRENT_VERSION, "VERSION")
+
+    for relative in CORE_DOCS:
+        path = root / relative
+        checks.require(path.is_file(), f"documento obbligatorio assente: {relative}")
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            checks.require(CURRENT_VERSION in text, f"documento non allineato a {CURRENT_VERSION}: {relative}")
+
+    combined_docs = "\n".join(
+        (root / relative).read_text(encoding="utf-8")
+        for relative in CORE_DOCS
+        if (root / relative).is_file()
+    ).lower()
+    checks.require("static-ready" in combined_docs and "live-pending" in combined_docs,
+                   "documentazione deve dichiarare static-ready / live-pending")
+
+    workflows = root / ".github" / "workflows"
+    found = {path.name for path in workflows.glob("*.yml")} | {path.name for path in workflows.glob("*.yaml")}
+    checks.equal(found, ALLOWED_WORKFLOWS, "workflow permanenti")
+    validation = workflows / "validate-workshop.yml"
+    if validation.is_file():
+        workflow_text = validation.read_text(encoding="utf-8")
+        checks.require(re.search(r"(?m)^\s*push\s*:", workflow_text) is not None,
+                       "workflow validazione deve attivarsi su push")
+        checks.require("tools/validate_workshop.py" in workflow_text,
+                       "workflow non esegue il validatore semantico")
+        checks.require("unittest" in workflow_text,
+                       "workflow non esegue gli unit test")
+        checks.require("git add -A" not in workflow_text and "git push" not in workflow_text,
+                       "workflow validazione non deve modificare o pubblicare il repository")
+
+
+def validate_declarations(checks: Checks, source: str, rules: list[Rule], globals_: list[Declaration],
+                          players: list[Declaration], subroutines: list[Declaration], declaration_span: tuple[int, int]) -> None:
+    for label, entries in (("global", globals_), ("player", players), ("subroutine", subroutines)):
+        indices = [entry.index for entry in entries]
+        checks.equal(indices, list(range(len(entries))), f"indici {label} compatti")
+        names = [entry.name for entry in entries]
+        checks.equal(len(names), len(set(names)), f"nomi {label} univoci")
+
+    all_names = {entry.name for entry in globals_ + players + subroutines}
+    for legacy in sorted(FORBIDDEN_LEGACY_IDENTIFIERS):
+        checks.require(legacy not in all_names and re.search(rf"\b{re.escape(legacy)}\b", mask_strings(source)) is None,
+                       f"identificatore legacy o non indonesiano presente: {legacy}")
+
+    code = source[:declaration_span[0]] + source[declaration_span[1]:]
+    masked_code = mask_strings(code)
+    for entry in globals_ + players:
+        checks.require(re.search(rf"\b{re.escape(entry.name)}\b", masked_code) is not None,
+                       f"variabile dichiarata ma mai riferita: {entry.name}")
+        checks.require(is_read_reference(code, entry.name, masked_code=masked_code),
+                       f"variabile soltanto inizializzata/pulita e mai letta: {entry.name}")
+
+    global_names = {entry.name for entry in globals_}
+    player_names = {entry.name for entry in players}
+    for error in custom_reference_errors(code, global_names, player_names):
+        checks.require(False, error)
+    for assignment in no_op_assignments(code, masked_source=masked_code):
+        checks.require(False, f"self-assignment no-op vietato: {assignment}")
+
+    declarations = {entry.name for entry in subroutines}
+    calls = [call.args[0].strip() for call in iter_calls(source, "Call Subroutine") if call.args]
+    implementations = [subroutine_target(rule) for rule in rules if subroutine_target(rule)]
+    for name in sorted(declarations):
+        checks.equal(implementations.count(name), 1, f"implementazione subroutine {name}")
+        checks.require(name in calls, f"subroutine dichiarata ma mai chiamata: {name}")
+    for name in sorted(set(calls) - declarations):
+        checks.require(False, f"chiamata a subroutine non dichiarata: {name}")
+    for name in sorted(set(implementations) - declarations):
+        checks.require(False, f"implementazione di subroutine non dichiarata: {name}")
+
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    checks.require(setup is not None, "SiapkanPemain assente per verifica inizializzazione")
+    if setup:
+        setup_masked = mask_strings(setup.body)
+        setup_action_vars = {
+            call.args[1].strip()
+            for call in iter_calls(setup.body, "Set Player Variable", masked_text=setup_masked)
+            if len(call.args) >= 2 and call.args[0].strip() == "Event Player"
+        }
+        for entry in players:
+            direct = re.search(rf"\bEvent Player\.{re.escape(entry.name)}\s*=(?!=)", setup_masked)
+            via_action = entry.name in setup_action_vars
+            checks.require(bool(direct or via_action),
+                           f"variabile player non inizializzata in SiapkanPemain: {entry.name}")
+
+
+def validate_localization(checks: Checks, source: str, globals_: set[str]) -> None:
+    for name, expected_size in LOCALIZED_ARRAY_SIZES.items():
+        checks.require(name in globals_, f"array localizzato dichiarato assente: {name}")
+        items = array_assignment_items(source, name)
+        checks.require(items is not None, f"array localizzato non inizializzato: {name}")
+        if items is not None:
+            checks.equal(len(items), expected_size, f"numero voci {name}")
+    checks.require("Global.NamaIkonInggris" in source and "Global.NamaIkonIndonesia" in source and "Global.NamaIkonThai" in source,
+                   "selettore runtime EN/ID/TH per i 37 nomi icona incompleto")
+    checks.require("Global.NamaLokasiInggris" in source and "Global.NamaLokasiIndonesia" in source and "Global.NamaLokasiThai" in source,
+                   "selettore runtime EN/ID/TH per le 26 località incompleto")
+
+    setting_specs = (
+        ("Workshop Setting Integer", "duration", "durasi"),
+        ("Workshop Setting Combo", "location", "lokasi"),
+        ("Workshop Setting Toggle", "diagnostics", "diagnostik"),
+    )
+    for action, english, indonesian in setting_specs:
+        calls = list(iter_calls(source, action))
+        checks.equal(len(calls), 1, f"numero {action}")
+        if calls and len(calls[0].args) >= 2:
+            label_call = next(iter(iter_calls(calls[0].args[1], "Custom String")), None)
+            label = parse_literal(label_call.args[0]) if label_call and label_call.args else None
+            normalized = (label or "").lower()
+            checks.require(
+                english in normalized and indonesian in normalized and re.search(r"[\u0e00-\u0e7f]", normalized) is not None,
+                f"label {action} non contiene EN/ID/TH",
+            )
+
+    for call in iter_calls(source, "Custom String"):
+        if not call.args:
+            checks.require(False, "Custom String senza formato")
+            continue
+        literal = parse_literal(call.args[0])
+        if literal is None:
+            continue
+        signature = placeholder_signature(literal)
+        argument_count = len(call.args) - 1
+        if signature:
+            checks.require(max(signature) < argument_count,
+                           f"placeholder fuori intervallo in Custom String: {literal!r}")
+            checks.require(set(signature) == set(range(max(signature) + 1)),
+                           f"placeholder non contigui in Custom String: {literal!r}")
+        checks.require(argument_count == (max(signature) + 1 if signature else 0),
+                       f"numero argomenti/placeholder incoerente in Custom String: {literal!r}")
+
+    triads: list[tuple[str, str, str]] = []
+    for call in iter_calls(source, "Small Message"):
+        checks.require(len(call.args) >= 2, "Small Message malformato")
+        if len(call.args) < 2:
+            continue
+        found = language_triads(call.args[1])
+        checks.require(bool(found), "Small Message senza traduzione EN/ID/TH")
+        triads.extend(found)
+
+    for call in iter_calls(source, "Create HUD Text"):
+        if len(call.args) < 4:
+            checks.require(False, "Create HUD Text malformato")
+            continue
+        visible_text = call.args[2] + "\n" + call.args[3]
+        if "Custom String" in visible_text and re.search(r"[A-Za-z\u0e00-\u0e7f]", visible_text):
+            found = language_triads(visible_text)
+            selectors = (
+                re.search(r"IndeksBahasa\)?\s*==\s*0\b", visible_text) is not None
+                and re.search(r"IndeksBahasa\)?\s*==\s*1\b", visible_text) is not None
+                and (re.search(r"[\u0e00-\u0e7f]", visible_text) is not None or "Thai" in visible_text)
+            )
+            checks.require(bool(found) or selectors, "Create HUD Text con testo non tradotto EN/ID/TH")
+            triads.extend(found)
+
+    for call in iter_calls(source, "Create In-World Text"):
+        if len(call.args) < 2:
+            continue
+        literals = [parse_literal(custom.args[0]) for custom in iter_calls(call.args[1], "Custom String") if custom.args]
+        prose = [literal for literal in literals if literal and re.search(r"[A-Za-z]{3,}", literal) and literal not in {"{0}", "{0} HP", "HP"}]
+        if prose:
+            found = language_triads(call.args[1])
+            checks.require(bool(found), "Create In-World Text con prosa non tradotta EN/ID/TH")
+            triads.extend(found)
+
+    checks.require(bool(triads), "nessuna terna di localizzazione EN/ID/TH rilevata")
+    for english, indonesian, thai in triads:
+        checks.require("ไทย" in thai or "Thai" in thai or re.search(r"[\u0e00-\u0e7f]", thai) is not None,
+                       "ramo Thai assente o non riconoscibile")
+        signatures = (outer_format_signature(english), outer_format_signature(indonesian), outer_format_signature(thai))
+        if all(signature is not None for signature in signatures):
+            checks.equal(signatures[0], signatures[1], "parità placeholder EN/ID")
+            checks.equal(signatures[0], signatures[2], "parità placeholder EN/TH")
+
+    localized_families = (
+        ("icone", "NamaIkonInggris", "NamaIkonIndonesia", "NamaIkonThai"),
+        ("località", "NamaLokasiInggris", "NamaLokasiIndonesia", "NamaLokasiThai"),
+    )
+    for label, english_name, indonesian_name, thai_name in localized_families:
+        names = (english_name, indonesian_name, thai_name)
+        relevant = [
+            branches
+            for branches in triads
+            if all(any(f"Global.{name}" in branch for name in names) for branch in branches)
+        ]
+        checks.require(bool(relevant),
+                       f"array {label} mai selezionati nei rami runtime IndeksBahasa 0/1/2")
+        for english, indonesian, thai in relevant:
+            checks.require(
+                f"Global.{english_name}" in english
+                and f"Global.{indonesian_name}" not in english
+                and f"Global.{thai_name}" not in english,
+                f"ramo IndeksBahasa 0 usa array {label} errato",
+            )
+            checks.require(
+                f"Global.{indonesian_name}" in indonesian
+                and f"Global.{english_name}" not in indonesian
+                and f"Global.{thai_name}" not in indonesian,
+                f"ramo IndeksBahasa 1 usa array {label} errato",
+            )
+            checks.require(
+                f"Global.{thai_name}" in thai
+                and f"Global.{english_name}" not in thai
+                and f"Global.{indonesian_name}" not in thai,
+                f"ramo IndeksBahasa 2 usa array {label} errato",
+            )
+
+
+def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
+    checks.require("Big Message(" not in mask_strings(source), "Big Message/titolo vietato")
+    hud_calls = list(iter_calls(source, "Create HUD Text"))
+    checks.require(bool(hud_calls), "nessun HUD testuale trovato")
+    for call in hud_calls:
+        checks.require(len(call.args) >= 4, "Create HUD Text malformato")
+        if len(call.args) >= 2:
+            checks.equal(call.args[1].strip(), "Null", "Header Create HUD Text deve essere Null")
+
+    checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
+    checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
+                   "router menu GambarMenu/GambarHalamanAktif assente")
+    menu_renderers = [
+        rule for rule in rules
+        if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
+    ]
+    arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
+    checks.equal(len(arcade_renderers), 13, "renderer menu principale + pagine 0..11")
+    for rule in menu_renderers:
+        calls = list(iter_calls(rule.body, "Create HUD Text"))
+        checks.equal(len(calls), 1, f"{subroutine_target(rule)}: un solo Create HUD")
+        if calls:
+            checks.equal(calls[0].args[0].strip(), "Event Player",
+                         f"{subroutine_target(rule)}: HUD menu non deve essere nascosto/precaricato")
+            checks.require("\\n" in calls[0].args[2],
+                           f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
+            checks.require(calls[0].args[3].strip() != "Null",
+                           f"{subroutine_target(rule)}: contenuto menu assente")
+
+    checks.require("Append To Array(Event Player.HudMenu" not in source,
+                   "HudMenu non deve diventare un array di handle")
+    checks.require("HudMenuArcade" not in source and "PramuatSubmenu" not in source,
+                   "preload/array di HUD menu ancora presente")
     for rule in rules:
-        if event_type(rule) == "Player Died" and not rule.name.startswith("18f - Nasib:"):
-            checks.require("Call Subroutine(TutupMenu);" not in rule.body, f"{rule.name}: morte chiude il Menu Arcade")
-    respawn = find_rule(rules, "12f - Bangkit Lompat:")
+        if ("Button(Primary Fire)" in rule.body or "Button(Secondary Fire)" in rule.body) and "PerintahMenu" in rule.body and event_type(rule) != "Subroutine":
+            checks.require("Create HUD Text(" not in rule.body and "Destroy HUD Text(" not in rule.body,
+                           f"{rule.name}: Primary/Secondary non devono ricreare HUD")
+
+    router = rule_by_subroutine(rules, "GambarHalamanAktif")
+    checks.require(router is not None, "subroutine router pagine assente")
+    if router:
+        for page in range(12):
+            checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
+                           f"router menu non copre pagina {page}")
+
+    checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
+                   "dispatcher Interact non suddiviso nelle 12 subroutine pagina")
+    for name in sorted(PAGE_APPLY_SUBROUTINES):
+        rule = rule_by_subroutine(rules, name)
+        if rule:
+            checks.require(not wait_calls(rule.body) and action_loop_count(rule.body) == 0,
+                           f"{name}: handler pagina deve essere senza Wait/Loop")
+            checks.require("Create HUD Text(" not in rule.body and "Destroy HUD Text(" not in rule.body,
+                           f"{name}: applicare una preferenza non deve ricreare HUD")
+
+
+def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
+    menu_toggle = next((rule for rule in rules if "Button(Melee)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "MenuTerbuka" in rule.body), None)
+    checks.require(menu_toggle is not None, "hold Melee 0,5 s per apertura/chiusura menu assente")
+    if menu_toggle:
+        checks.equal(event_type(menu_toggle), "Ongoing - Each Player", "hold Melee: evento")
+
+    dispatcher = next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and all(f"Button({button})" in rule.body for button in MENU_ACTION_BUTTONS)), None)
+    checks.require(dispatcher is not None, "dispatcher input menu completo assente")
+    if dispatcher:
+        checks.require("Is Button Held(Event Player, Button(Crouch)) == True;" in dispatcher.body,
+                       "azioni menu non protette dal modificatore Crouch")
+        checks.require("Is Alive(Event Player) == True;" in dispatcher.body,
+                       "menu morto non è congelato")
+
+    lock_rule = next((rule for rule in rules if "Disallow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body), None)
+    unlock_rule = next((rule for rule in rules if "Allow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body and "Crouch" in rule.body), None)
+    checks.require(lock_rule is not None and unlock_rule is not None, "coppia lock/unlock input menu assente")
+    if lock_rule and unlock_rule:
+        disallowed = set(re.findall(r"Disallow Button\(Event Player, Button\(([^)]+)\)\);", lock_rule.body))
+        allowed = set(re.findall(r"Allow Button\(Event Player, Button\(([^)]+)\)\);", unlock_rule.body))
+        checks.require(MENU_ACTION_BUTTONS <= disallowed, "lock Crouch non cattura tutti gli input menu")
+        checks.equal(disallowed, allowed, "simmetria Disallow/Allow input menu")
+        checks.require(not (NATIVE_BUTTONS & disallowed), "Melee, Jump e Crouch non devono essere bloccati")
+
+    camera = next((rule for rule in rules if "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body), None)
+    checks.require(camera is not None, "hold Interact 0,5 s camera assente")
+    if camera:
+        checks.require("Event Player.MenuTerbuka == False;" in camera.body,
+                       "camera Interact deve funzionare soltanto a menu chiuso")
+        checks.require("Is Button Held(Event Player, Button(Crouch)) == False;" in camera.body,
+                       "camera Interact interferisce con il modificatore Crouch")
+
+    crouch_features = [rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Crouch)" in rule.body and ("InspeksiAktif = True" in rule.body or "TeleportasiJongkokAktif = True" in rule.body)]
+    checks.require(bool(crouch_features), "inspection/teleport Crouch assenti")
+    for rule in crouch_features:
+        checks.require("Event Player.MenuTerbuka == False;" in rule.body,
+                       f"{rule.name}: Crouch inspection/teleport deve essere disattivato col menu")
+
+    for rule in rules_with_event(rules, "Player Died"):
+        checks.require("Call Subroutine(TutupMenu);" not in rule.body,
+                       f"{rule.name}: la morte non deve chiudere il menu")
+        checks.require("Destroy HUD Text(Event Player.HudMenu);" not in rule.body,
+                       f"{rule.name}: la morte non deve nascondere il menu")
+    respawn = next((rule for rule in rules if "Respawn(Event Player)" in rule.body and "Button(Jump)" in rule.body), None)
+    checks.require(respawn is not None, "respawn da morto con Jump assente")
     if respawn:
-        checks.require("MenuTerbuka == False" not in respawn.body, "Jump respawn è bloccato con menu aperto")
-    classifier = find_rule(rules, "02 - Pemain:")
+        checks.require("MenuTerbuka == False" not in respawn.body,
+                       "Jump respawn deve funzionare anche col menu visibile")
+
+
+def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
+    masked = mask_strings(source)
+    checks.equal(action_loop_count(source), 1, "numero Loop Workshop")
+    scheduler_candidates = [rule for rule in rules if action_loop_count(rule.body) == 1]
+    checks.equal(len(scheduler_candidates), 1, "scheduler periodico unico")
+    scheduler = scheduler_candidates[0] if len(scheduler_candidates) == 1 else None
+    checks.require("LangkahPenjadwal" in globals_, "contatore scheduler LangkahPenjadwal assente")
+    if scheduler:
+        checks.equal(event_type(scheduler), "Ongoing - Global", "scheduler 20 Hz: evento")
+        checks.require("Wait(0.050, Ignore Condition);" in scheduler.body,
+                       "scheduler non gira a 20 Hz")
+        checks.require("Global.LangkahPenjadwal" in scheduler.body,
+                       "scheduler non incrementa LangkahPenjadwal")
+        for name in sorted(SCHEDULER_SUBROUTINES):
+            checks.require(f"Call Subroutine({name});" in scheduler.body,
+                           f"scheduler non chiama {name}")
+        for cadence in (2, 20):
+            checks.require(re.search(rf"LangkahPenjadwal\s*%\s*{cadence}\b", scheduler.body) is not None,
+                           f"cadenza scheduler %{cadence} assente")
+        checks.require("Global.LangkahPenjadwal == 0" in scheduler.body,
+                       "cadenza scheduler 10 secondi assente")
+
+    waits = wait_calls(source)
+    checks.require(len(waits) <= 10, f"Wait oltre il massimo consentito: {len(waits)} > 10")
+    for rule in rules:
+        calls = wait_calls(rule.body)
+        if not calls:
+            continue
+        checks.require(wait_role(rule, scheduler) is not None, f"Wait non allowlisted in regola: {rule.name}")
+    for rule in rules:
+        for span in for_spans(rule):
+            checks.require("Wait(" not in mask_strings(span),
+                           f"{rule.name}: yield durante scansione For")
+
+    for name in sorted(SCHEDULER_SUBROUTINES):
+        checks.require(name in subroutines, f"subroutine scheduler assente: {name}")
+        rule = rule_by_subroutine(rules, name)
+        if rule:
+            checks.require(not wait_calls(rule.body) and action_loop_count(rule.body) == 0,
+                           f"{name}: subroutine scheduler deve essere senza Wait/Loop")
+
+    if scheduler:
+        for rule in rules:
+            if rule.start == scheduler.start:
+                continue
+            writes_active = re.findall(r"Global\.PemainAktif\s*=(?!=)\s*([^;]+);", mask_strings(rule.body))
+            checks.require(not writes_active or (writes_active == ["Null"] and "Global.Siap = True;" in rule.body),
+                           f"{rule.name}: scrittura PemainAktif fuori dallo scheduler")
+            checks.require("For Global Variable(IndeksPemainGlobal" not in rule.body,
+                           f"{rule.name}: IndeksPemainGlobal posseduto solo dallo scheduler")
+    checks.require("For Global Variable(Global." not in masked,
+                   "sintassi For Global Variable(Global.*) non valida")
+
+
+def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], players: set[str]) -> None:
+    for name in sorted(LUCK_TIMESTAMP_VARIABLES):
+        checks.require(name in players, f"timestamp Try Your Luck assente: {name}")
+    checks.require(re.search(r"EfekNasib\s*=\s*Random Integer\(1,\s*6\)", source) is not None or
+                   "Set Player Variable(Event Player, EfekNasib, Random Integer(1, 6));" in source,
+                   "Try Your Luck non estrae esattamente sei esiti")
+    for outcome in range(1, 6):
+        checks.require(re.search(rf"EfekNasib\s*==\s*{outcome}\b", source) is not None,
+                       f"Try Your Luck esito {outcome} assente")
+    checks.require("Else;" in (rule_by_subroutine(rules, "ProsesNasibPemain") or Rule("", "", 0, 0)).body,
+                   "Try Your Luck esito 6/fallback assente")
+    for token, label in (
+        ("Start Accelerating(", "accelerazione 10 s"),
+        ("Set Player Health(All Living Players(Team Of(Global.PemainAktif)), 9999)", "cura completa team"),
+        ("Burning", "Burning 10 s"),
+        ("Hacked", "Hacked 5 s"),
+        ("PrivasiNasibAktif", "Vision 15 s"),
+    ):
+        checks.require(token in source, f"Try Your Luck esito mancante: {label}")
+    checks.require("Clear Status(Event Player, Unkillable);" in source,
+                   "Try Your Luck non disattiva Unkillable all'avvio")
+    checks.require("Start Forcing Player Position(" not in source,
+                   "Try Your Luck non deve forzare la posizione")
+    checks.require("Custom String(\"□\")" not in source,
+                   "Try Your Luck non deve creare una carta testuale")
+    for rule in rules:
+        if any(token in rule.body for token in ("KartuNasibAktif", "PutaranKartuNasib", "EfekNasib")):
+            checks.require(action_loop_count(rule.body) == 0,
+                           f"{rule.name}: Try Your Luck deve essere a stati, senza Loop")
+            if subroutine_target(rule) == "ProsesNasibPemain":
+                checks.require(not wait_calls(rule.body), "ProsesNasibPemain deve usare timestamp, non Wait")
+    state_machine = rule_by_subroutine(rules, "ProsesNasibPemain")
+    checks.require(state_machine is not None, "macchina a stati ProsesNasibPemain assente")
+    if state_machine:
+        checks.equal(
+            state_machine.body.count("Kill(Global.PemainAktif, Null);"),
+            1,
+            "Skull deve uccidere esattamente Global.PemainAktif nella macchina Coba Nasib",
+        )
+        checks.require("Total Time Elapsed" in state_machine.body,
+                       "macchina Try Your Luck non confronta timestamp")
+    for duration in (15, 10, 5):
+        checks.require(re.search(rf"(?:Total Time Elapsed\s*\+\s*{duration}\b|(?:Burning|Hacked),\s*{duration}\))", source) is not None,
+                       f"durata Try Your Luck {duration} s assente")
+
+
+def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str]) -> None:
+    checks.require(LIFECYCLE_SUBROUTINES <= subroutines,
+                   "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
+    joined = rules_with_event(rules, "Player Joined Match")
+    left = rules_with_event(rules, "Player Left Match")
+    checks.equal(len(joined), 1, "regola Player Joined Match unica")
+    checks.equal(len(left), 1, "regola Player Left Match unica")
+    if joined:
+        body = joined[0].body
+        for token in ("Event Player.PindahTimDiproses == False;", "SiklusPemainAktif", "Array Contains(Global.PemainManusia, Event Player)"):
+            checks.require(token in body, f"join/team switch senza guardia duplicati: {token}")
+        for name in ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain"):
+            checks.require(f"Call Subroutine({name});" in body, f"join/team switch non chiama {name}")
+    if left:
+        body = left[0].body
+        checks.require("Call Subroutine(TenangkanPemain);" in body and "Call Subroutine(BersihkanPemain);" in body,
+                       "leave non esegue quiete + cleanup")
+    classifier = next((rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body), None)
+    checks.require(classifier is not None, "registrazione roster umano assente")
     if classifier:
-        checks.require("Is Dummy Bot(Event Player) == False;" in classifier.body, "classifier umano non esclude i dummy diretti")
-    join = find_rule(rules, "01 - Pemain Masuk")
-    leave = find_rule(rules, "04 - Pemain Keluar")
-    checks.require(join is not None and leave is not None, "lifecycle Join/Leave assente")
-    if join:
-        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);", "Call Subroutine(SiapkanPemain);"):
-            checks.require(token in join.body, f"Join lifecycle incompleto: {token}")
-        checks.equal(join.body.count("Wait(0.050, Ignore Condition);"), 2, "yield cambio team")
-    if leave:
-        checks.require("Call Subroutine(TenangkanPemain);" in leave.body and "Call Subroutine(BersihkanPemain);" in leave.body, "Leave lifecycle incompleto")
-        checks.require("Is Dummy Bot(Event Player) == False;" in leave.body, "Leave umano non esclude dummy diretti")
-    checks.require("For Global Variable(IndeksVote, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop voto usa Count-1 ma Range Stop è esclusivo")
-    checks.require("For Global Variable(IndeksPemilihVote, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop votanti usa Count-1 ma Range Stop è esclusivo")
-    vote_count = find_rule(rules, "91p - Subrutin:")
-    checks.require(vote_count is not None, "subroutine conteggio voti assente")
-    if vote_count:
-        checks.require("Set Player Variable(" not in vote_count.body and "Modify Player Variable(" not in vote_count.body, "HitungPilihan non deve più ricontare o modificare JumlahSuara")
-        checks.require("First Of(Sorted Array(Global.PemainManusia" in vote_count.body, "HitungPilihan non seleziona CHILL STAR dai contatori correnti")
-        checks.require("Count Of(Filtered Array(Global.PemainManusia" in vote_count.body, "HitungPilihan non rileva il pareggio dai contatori correnti")
-    if interact:
-        checks.require("Modify Player Variable(Global.PemainManusia[Event Player.KursorPilihan], JumlahSuara, Add, 1);" in interact.body, "voto non incrementa direttamente il nuovo target")
-        checks.require("Modify Player Variable(Global.PemainManusia[Index Of Array Value(Global.PemainManusia, Event Player.PemainDipilih)], JumlahSuara, Subtract, 1);" in interact.body, "cambio voto non sottrae il voto precedente")
-        checks.require("Event Player.PemainDipilih = Global.PemainManusia[Event Player.KursorPilihan];" in interact.body, "voto singolo non salva il nuovo target")
-        checks.require("If(Event Player.PemainDipilih != Global.PemainManusia[Event Player.KursorPilihan]);" in interact.body, "votare di nuovo lo stesso player non è idempotente")
-    if classifier:
-        checks.require("Call Subroutine(HitungPilihan);" in classifier.body, "join umano non ricalcola le votazioni")
-    checks.require("For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia) - 1, 1);" not in source, "loop cleanup usa Count-1 ma Range Stop è esclusivo")
-    cleanup = find_rule(rules, "93c - Subrutin:")
+        checks.require("Abort If(Array Contains(Global.PemainManusia, Event Player));" in classifier.body,
+                       "join duplicato può aggiungere due volte il roster")
+
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    checks.require(setup is not None, "SiapkanPemain assente")
+    if setup:
+        reset_tokens = (
+            "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
+            "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
+            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
+            "KartuNasibAktif = False;", "HudMenu = Null;",
+        )
+        for token in reset_tokens:
+            checks.require(token in setup.body, f"reset completo cambio squadra mancante: {token}")
+    quiet = rule_by_subroutine(rules, "TenangkanPemain")
+    cleanup = rule_by_subroutine(rules, "BersihkanPemain")
+    if quiet:
+        checks.require(not wait_calls(quiet.body) and action_loop_count(quiet.body) == 0,
+                       "TenangkanPemain deve essere atomica e senza Wait/Loop")
     if cleanup:
-        checks.equal(cleanup.body.count("Wait(0.016, Ignore Condition);"), 1, "yield cleanup")
-        critical = cleanup.body[cleanup.body.index("Global.IndeksKeluar = Index Of Array Value"): ]
-        checks.require("Wait(" not in critical, "cleanup usa Wait mentre scratch Global condiviso è attivo")
+        critical = cleanup.body[cleanup.body.find("Global.IndeksKeluar ="):]
+        checks.require("Wait(" not in critical,
+                       "cleanup usa Wait dopo l'acquisizione scratch Global")
+        checks.require("Remove From Array By Index" in critical,
+                       "cleanup non compatta roster/handle paralleli")
+
+    cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    checks.require(cycle is not None, "ProsesSiklusPemain assente")
+    if setup:
+        checks.require("Event Player.PindahTimDiproses = False;" not in setup.body,
+                       "SiapkanPemain rilascia troppo presto il lock team-switch")
+    if cycle:
+        human_stable = (
+            r"Global\.PemainAktif\.Manusia\s*==\s*True.*?"
+            r"Has Spawned\(\s*Global\.PemainAktif\s*\)\s*==\s*True.*?"
+            r"Global\.PemainAktif\.HudPemainDibuat\s*==\s*True"
+        )
+        bot_stable = (
+            r"Global\.PemainAktif\.BotOtomatis\s*==\s*True.*?"
+            r"Global\.PemainAktif\.SudahDiperiksa\s*==\s*True.*?"
+            r"Has Spawned\(\s*Global\.PemainAktif\s*\)\s*==\s*True.*?"
+            r"Is Alive\(\s*Global\.PemainAktif\s*\)\s*==\s*True.*?"
+            r"Global\.PemainAktif\.KunciBotAktif\s*==\s*True"
+        )
+        stable_patterns = (
+            (r"Global\.PemainAktif\.PindahTimDiproses\s*==\s*True", "PindahTimDiproses == True"),
+            (human_stable, "registrazione umana Manusia/Spawn/HUD"),
+            (bot_stable, "registrazione bot BotOtomatis/SudahDiperiksa/Spawn/Alive/KunciBotAktif"),
+            (r"Global\.PemainAktif\.PindahTimDiproses\s*=\s*False;", "rilascio PindahTimDiproses"),
+        )
+        for pattern, label in stable_patterns:
+            checks.require(re.search(pattern, cycle.body, re.DOTALL) is not None,
+                           f"rilascio stabile lock team-switch incompleto: {label}")
+
+
+def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
+    objective_rule = next((rule for rule in rules if "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)
+    checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
+    if objective_rule:
+        for mode in GAME_MODES:
+            checks.require(f"Game Mode({mode})" in objective_rule.body,
+                           f"destinazione obiettivo non copre {mode}")
+        checks.require("Is On Objective(" in objective_rule.body,
+                       "Push non usa proxy robot/fallback obiettivo")
+        checks.require("Nearest Walkable Position(" in objective_rule.body,
+                       "teleport obiettivo non verifica una posizione percorribile")
+        checks.require("Button(Primary Fire)" in objective_rule.body or "PerintahTeleportasi == 1" in objective_rule.body or event_type(objective_rule) == "Subroutine",
+                       "destinazione teleport non viene valutata al click")
+    for token in FORBIDDEN_RESULT_ACTIONS:
+        checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
+    checks.equal(source.count("Ray Cast Hit Position("), 1, "raycast Camera")
+
+
+def validate_indonesian_and_duplicates(checks: Checks, source: str, rules: list[Rule]) -> None:
+    names = [rule.name for rule in rules]
+    checks.equal(len(names), len(set(names)), "titoli regola univoci")
+    bodies = [normalized_rule_body(rule) for rule in rules]
+    checks.require(not [body for body, count in Counter(bodies).items() if count > 1],
+                   "regole duplicate con corpo identico")
+    for rule in rules:
+        checks.require(FORBIDDEN_PROSE.search(rule.name) is None,
+                       f"titolo regola non interamente indonesiano: {rule.name}")
+    standalone_comments = re.findall(r'(?m)^\s*"((?:[^"\\]|\\.)*)"\s*$', source)
+    for comment in standalone_comments:
+        checks.require(FORBIDDEN_PROSE.search(comment) is None,
+                       f"commento Workshop non interamente indonesiano: {comment[:80]}")
+
+
+def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -> Checks:
+    checks = Checks()
+    try:
+        rules = extract_rules(source)
+        globals_entries, player_entries, sub_entries, declaration_span = declaration_entries(source)
+    except ValueError as error:
+        checks.require(False, f"sorgente Workshop non analizzabile: {error}")
+        return checks
+
+    checks.require(bool(rules), "nessuna regola Workshop trovata")
+    checks.require(re.search(r"(?im)^\s*disabled\s*(?:\r?\n\s*)?rule\s*\(", source) is None,
+                   "disabled rule vietata: rimuovere codice morto")
+    if rules:
+        largest = max(len(rule.body.encode("utf-8")) for rule in rules)
+        checks.require(largest <= 80 * 1024,
+                       f"largest rule oltre obiettivo 80 KB: {largest} byte")
+    if include_metadata:
+        validate_metadata(checks, root)
+    validate_declarations(checks, source, rules, globals_entries, player_entries, sub_entries, declaration_span)
+    globals_ = {entry.name for entry in globals_entries}
+    players = {entry.name for entry in player_entries}
+    subroutines = {entry.name for entry in sub_entries}
+    validate_localization(checks, source, globals_)
+    validate_hud_and_menu(checks, source, rules, players, subroutines)
+    validate_input_contract(checks, rules)
+    validate_scheduler(checks, source, rules, globals_, subroutines)
+    validate_try_your_luck(checks, source, rules, players)
+    validate_lifecycle(checks, rules, subroutines)
+    validate_modes_and_camera(checks, source, rules)
+    validate_indonesian_and_duplicates(checks, source, rules)
     return checks
 
 
@@ -464,7 +1222,11 @@ def main() -> int:
     source = SOURCE.read_text(encoding="utf-8")
     checks = validate(source)
     checks.finish()
-    print("OK - controlli statici v0.7.2 Global-first superati")
+    rules = extract_rules(source)
+    print(
+        "OK - gate semantici v0.8.0 superati "
+        f"({len(rules)} regole, {len(wait_calls(source))} Wait, {action_loop_count(source)} Loop)"
+    )
     return 0
 
 

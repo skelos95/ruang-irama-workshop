@@ -1,402 +1,267 @@
-# Piano di test — versione 0.6.25
+# Piano di test — versione 0.8.0
 
-Questa matrice descrive lo **stato funzionale e tecnico corrente** del Workshop 0.6.25.
+Stato atteso dopo i gate repository: **static-ready / live-pending**. Nessun risultato live è presunto: import, input simultanei, rendering e stabilità devono essere registrati dal client Overwatch aggiornato al 19 agosto 2026.
 
-## Gate statico
+## 1. Gate statici
 
-Da eseguire dalla radice del repository:
+Eseguire dalla radice del repository:
 
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
 ```
 
-Esito atteso:
+Accettazione:
+
+- tutti gli unit test verdi;
+- validatore semantico verde;
+- nessuna dipendenza Python esterna;
+- nessun errore da `git diff --check`;
+- un solo workflow permanente, `validate-workshop.yml`.
+
+Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`](VALIDAZIONE.md).
+
+## 2. Preparazione client
+
+1. Aggiornare Overwatch alla build del **19 agosto 2026**.
+2. Importare da zero `workshop/ruang_irama.workshop`; non riutilizzare un replay precedente alla patch.
+3. Annotare codice import, build client, regione, data/ora e piattaforma.
+4. Abilitare la diagnostica host quando si acquisiscono le metriche.
+5. Preparare 12 slot. I dummy sono sufficienti per il soak; la prova di input simultanei richiede più utenti reali.
+
+Accettazione smoke:
+
+- import senza errori parser;
+- avvio senza `excessive Workshop script load`;
+- D.Mon può entrare, cambiare eroe, aprire/chiudere menu e usare i sistemi generici senza errori;
+- nessuna collisione evidente con il nuovo Team Status Indicator.
+
+## 3. Contratto input
+
+Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Reload, Ability 1/2, Interact e Crouch.
+
+| Stato | Prova | Esito atteso |
+|---|---|---|
+| Vivo, menu chiuso | Tieni Melee 0,5 s | il menu si apre una volta |
+| Vivo, menu aperto | Tieni Melee 0,5 s | il menu si chiude una volta |
+| Menu aperto | Primary/Secondary senza Crouch | nessun comando menu |
+| Menu aperto | Crouch + Primary/Secondary | una sola navigazione per pressione |
+| Menu aperto | Interact/Reload senza Crouch | nessun comando menu |
+| Menu aperto | Crouch + Interact/Reload | entra/applica o torna indietro |
+| Soundtrack | Crouch + Ability 1/2 | `+10/−10` con wrap |
+| Menu aperto | Melee e Jump | azioni normali dell'eroe non disabilitate |
+| Menu chiuso | Tieni Interact 0,5 s | alterna Camera, una volta per hold |
+| Menu chiuso | Tieni Crouch | inspection/Teleport disponibili |
+| Menu aperto | Tieni Interact o Crouch | Camera/inspection/Teleport non partono |
+| Morto | Menu già aperto | resta visibile ma congelato |
+| Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
+| Morto | Jump | respawn vicino alla morte; menu ancora visibile |
+
+Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
+
+## 4. Menu e localizzazione
+
+Verificare esattamente 12 voci, indici e contenuti:
+
+1. Soundtrack — 100 generi.
+2. Third-Person Camera — OFF, self e target valido.
+3. Name Color — 32 colori.
+4. HUD Language — English, Bahasa Indonesia, ไทย.
+5. Revenge — debiti da kill dirette.
+6. Unkillable — OFF, 1 HP, FULL HP.
+7. Hero Voice — 5 preset.
+8. Player Icon — Nothing + 36 icone.
+9. Crouch Teleport — OFF/ON.
+10. Crouch Privacy — OFF/ON.
+11. Try Your Luck — sei esiti.
+12. Vote Player — umani, self-vote incluso.
+
+Per ogni pagina e per ciascuna lingua EN/ID/TH:
+
+- aprire, navigare avanti/indietro, applicare, tornare e riaprire;
+- verificare testo, stato, feedback e comando localizzati;
+- verificare una riga vuota tra contenuto e comandi;
+- controllare glifi Thai, wrapping, allineamento Top/Left/Right e assenza di sovrapposizioni;
+- confermare che non compaiano titoli HUD o `Big Message`;
+- verificare che una scelta invariata non ripeta Small Message, audio o effetto;
+- controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura.
+
+Focus dati:
+
+- tutti i 100 generi, wrap `0 ↔ 99` e salti `±10`;
+- tutti i 32 colori;
+- 37 icone con nome localizzato e indice 0 `Nothing`;
+- 26 località server nello stesso ordine;
+- roster con `MIN`, `MENIT` e `นาที` corretti;
+- CHILL, generi, nomi player ed eroi invariati come nomi propri.
+
+## 5. Try Your Luck
+
+Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
+
+| Esito | Verifica |
+|---|---|
+| Vision | effetto e testo EN/ID/TH; cleanup dopo 15 s |
+| Acceleration | direzione coerente con la mira; cleanup dopo 10 s |
+| Skull | morte immediata e cleanup completo |
+| Team Heal | salute completa per la squadra, nessun effetto persistente |
+| Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; stop alla scadenza/morte |
+| Hacked | stato per 5 s, poi rimozione |
+
+Per ciascun esito:
+
+- Unkillable viene disattivato all'avvio;
+- il menu non accetta comandi incompatibili durante lo stato bloccato;
+- il countdown non salta o duplica tick;
+- morte, leave, hero swap e cambio squadra annullano stato, status ed effetti;
+- nessuna seconda roulette per lo stesso player parte mentre la prima è attiva;
+- chiusure e riaperture non duplicano HUD, In-World Text o effetti.
+
+## 6. Camera, inspection e Teleport
+
+### Camera
+
+- Alternare Camera rapida self/first-person con Interact 0,5 s a menu chiuso.
+- Dal Menu Camera provare OFF, self e target diversi.
+- Cambiare rapidamente target senza frame di Camera concorrenti.
+- Uccidere, far uscire o despawnare il target: il riferimento deve tornare valido.
+- Verificare collisione pareti e pitch estremo.
+- Confermare che esista un solo raycast Camera dal punto di vista funzionale.
+
+### Inspection e Privacy
+
+- Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
+- Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
+- Privacy OFF: il nemico vede la riga completa.
+- Privacy ON: il nemico non vede la riga; l'alleato continua a vederla.
+- Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
+
+### Teleport
+
+- Nuovo player: Menu 8 OFF, nessun overlay Teleport.
+- Attivare Menu 8, chiudere menu e tenere Crouch.
+- Crouch + Secondary cambia pagina; Crouch + Primary teletrasporta.
+- Spawn Room usa un punto valido della squadra.
+- All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy.
+- Ricalcolare il target al click; morte/leave tra preview e click deve annullare o scegliere soltanto un fallback esplicito.
+- Destinazione finale sempre camminabile o annullata in sicurezza.
+
+## 7. Lifecycle e reset squadra
+
+Eseguire con HUD, menu, Camera, inspection, Teleport, Unkillable, Revenge, voto e Try Your Luck in combinazioni diverse.
+
+### Join/leave
+
+- join umano e bot;
+- evento Join duplicato o classificazione tardiva;
+- leave con menu aperto e chiuso;
+- leave durante ciascun sottosistema;
+- rientro nello stesso slot.
+
+Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/leave e nessun target stale.
+
+### Cambio squadra
+
+- almeno **20 cambi squadra singoli** Team 1 ↔ Team 2;
+- almeno **10 transizioni simultanee** di due o più player;
+- una cascata di cambio squadra a lobby piena.
+
+Dopo ogni cambio:
+
+- nessun doppione roster o handle;
+- Camera, status, effetti, voti e riferimenti precedenti rimossi;
+- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport e Privacy;
+- Text Count ed Entity Count tornano al baseline;
+- nessun `excessive Workshop script load`.
+
+## 8. Matrice modalità
+
+Lo script non deve assegnare punti o vincitori. Eseguire almeno un round o segmento significativo per riga:
+
+| Modalità | Objective/Teleport | Transizioni da verificare |
+|---|---|---|
+| Push | proxy obiettivo + fallback Objective Position | robot/obiettivo, overtime |
+| Flashpoint | Objective Position dell'indice attivo | rotazione punti |
+| Capture the Flag | bandiera nemica valida | presa, caduta, ritorno, score |
+| Control | Objective Position | cambio round e lato |
+| Clash | Objective Position | avanzamento/ritiro punti |
+| Hybrid | Payload dopo la cattura | cattura → scorta |
+| Escort | Payload | checkpoint e overtime |
+| Assault | Objective Position | punto A → punto B |
+
+Priorità mappe:
+
+- Busan — modifiche dell'11 agosto;
+- Eichenwalde — modifiche dell'11 agosto;
+- Paraíso — modifiche dell'11 agosto.
+
+In ogni modalità usare contemporaneamente Menu, Camera, inspection, Teleport e Try Your Luck senza alterare il risultato nativo.
+
+## 9. Soak 12 slot
+
+Durata minima: **30 minuti** con 12 slot occupati.
+
+Durante il soak:
+
+- alternare combattimento e respawn;
+- aprire/chiudere e navigare menu su più player;
+- usare Camera, inspection, Teleport e Try Your Luck;
+- eseguire join/leave e alcuni cambi squadra;
+- cambiare eroe, includendo D.Mon;
+- lasciare attivi i dummy per il carico di base;
+- usare più utenti reali per la fase di input simultanei.
+
+Accettazione:
+
+- server fluido e input reattivi;
+- nessun warning persistente di script load;
+- nessuna crescita progressiva di HUD, In-World Text o effetti;
+- countdown, RGB e minuti continuano con frequenze regolari;
+- nessun conflitto con Team Status Indicator.
+
+## 10. Diagnostica
+
+Registrare baseline a lobby vuota, dopo 12 join, durante picco concorrente e dopo cleanup completo.
+
+| Metrica | Limite | Obiettivo |
+|---|---:|---:|
+| Element Count | `< 32.768` | `≤ 26.000` |
+| Largest Rule | `< 98 KB` | `≤ 80 KB` |
+| Text Count | ritorno al baseline | nessuna crescita |
+| Entity Count | ritorno al baseline | nessuna crescita |
+
+Annotare anche Server Load corrente/medio/picco se disponibile. L'assenza di leak è più importante di un singolo picco transitorio: dopo chiusure, morti, leave e cambi squadra i contatori devono stabilizzarsi al baseline atteso per i player rimasti.
+
+## 11. Rapporto da restituire
+
+Usare questo schema:
 
 ```text
-Ran 33 tests
-OK
+Build client:
+Codice import:
+Piattaforma/regione:
+Data e durata:
+Slot umani/dummy:
+
+Import: PASS/FAIL
+D.Mon: PASS/FAIL
+EN/ID/TH e 12 menu: PASS/FAIL
+Input simultanei: PASS/FAIL
+Join/leave: PASS/FAIL
+20 cambi singoli: PASS/FAIL
+10 cambi simultanei: PASS/FAIL
+Cascata full-lobby: PASS/FAIL
+8 modalità: PASS/FAIL
+Soak 30 min: PASS/FAIL
+
+Element Count max:
+Largest Rule:
+Text Count baseline/max/finale:
+Entity Count baseline/max/finale:
+Server Load avg/max:
+
+Screenshot/video:
+Note e riproduzione problemi:
 ```
 
-## Smoke test import
-
-- Importare `workshop/ruang_irama.workshop` nel client Overwatch.
-- Verificare che non compaiano errori parser.
-- Confermare che il server parta senza countdown nativo lungo.
-
-## 12 menu Arcade
-
-Aprire il Menu Arcade con Melee 0,5 s e verificare esattamente 12 voci:
-
-1. Soundtrack
-2. Third-Person Camera
-3. Name Color
-4. HUD Language
-5. Revenge
-6. Unkillable (OFF / 1 HP / FULL HP)
-7. Hero Voice
-8. Player Icon
-9. Crouch Teleport
-10. Crouch Privacy
-11. Try Your Luck
-12. Vote Player
-
-Teleport operativo resta nell'overlay Crouch; Menu 8 abilita/disabilita soltanto quell'overlay.
-
-## Navigazione menu
-
-- Primary / Secondary: avanti/indietro.
-- Interact: entra/applica.
-- Reload: torna al Main Menu.
-- Soundtrack: Jump/Crouch fanno `−10/+10`.
-- Chiudere e riaprire menu e sottomenu: i cursori devono restare sulla posizione precedente.
-
-## Transizione colori menu
-
-- Scorrere rapidamente tra tutte le 12 voci.
-- Il colore principale deve sfumare in circa 0,18 s senza scatti.
-- Entrando nel sottomenu, il colore principale deve restare coerente con la voce del Main Menu.
-- Gli input devono mantenere il proprio colore fisso.
-- Nessun contenuto principale HUD deve sparire durante la transizione.
-
-## Feedback idempotente
-
-Per Soundtrack, Camera, Name Color, HUD Language, Unkillable, Hero Voice e Player Icon:
-
-1. applicare una scelta;
-2. premere di nuovo Interact senza cambiare selezione;
-3. verificare che non partano nuovi Small Message, suoni o effetti;
-4. cambiare scelta e verificare un solo feedback.
-
-## Soundtrack
-
-- Scorrere i 100 generi.
-- Verificare wrap 99 → 0 e 0 → 99.
-- Testare salti ±10.
-- Applicare più generi.
-- La lista destra deve mostrare solo il genere scelto, senza prefisso `soundtrack:`.
-
-## Name Color — 32 colori
-
-- Scorrere tutte le 32 tonalità.
-- Verificare i 20 colori originali e le 12 aggiunte pastel/neon.
-- Applicare colori diversi.
-- Il cursore deve persistere tra chiusura e riapertura.
-- La preview menu deve seguire la tonalità selezionata.
-
-## Player Icon — 37 voci
-
-- Verificare 37 voci totali.
-- Indice 0 = Nothing / nessuna icona.
-- Default = Nothing.
-- Verificare wrap 0 ↔ 36.
-- Applicare Heart, Skull, Warning e altre icone.
-- L'icona deve apparire prima dell'icona eroe nei due roster.
-- Nessuna icona deve essere creata sopra il player.
-- Il colore deve restare quello nativo di `Icon String`.
-
-## HUD roster
-
-Lista sinistra:
-
-- icona personale opzionale;
-- icona eroe;
-- nome player;
-- EN: `N MIN`;
-- ID: `N MENIT`;
-- TH: `N นาที`.
-
-Lista destra:
-
-- icona personale opzionale;
-- icona eroe;
-- nome player;
-- genere scelto.
-
-Verificare che non compaiano i vecchi prefissi `CHILL for` e `soundtrack:`.
-
-## Localizzazione EN / ID / TH
-
-Cambiare `HUD Language` tra:
-
-- English
-- Bahasa Indonesia
-- ไทย
-
-Per ogni lingua verificare:
-
-- HUD superiore;
-- roster;
-- tutti i 12 menu;
-- diagnostics;
-- Small Message Camera;
-- Soundtrack;
-- Name Color;
-- Revenge;
-- Unkillable/Kebal;
-- Hero Voice;
-- Player Icon;
-- Jump respawn;
-- Teleport Crouch.
-
-Controllare soprattutto wrapping e glifi Thai.
-
-## Camera
-
-- Fuori menu, tenere Interact 0,5 s: terza persona self.
-- Ripetere: ritorno alla prima persona.
-- Dal Menu Camera provare OFF, self e target remoti.
-- Target morti/non spawnati non devono essere proposti; se il target selezionato esce, la camera deve tornare a uno stato valido.
-- Verificare collisione pareti e pitch estremo.
-- Passare rapidamente self → target → altro target: non deve comparire un frame in prima persona fra due `Start Camera`.
-
-## Crouch inspection
-
-- Tenere Crouch su diversi target.
-- Il testo deve mostrare icona eroe, nome e salute.
-- Non deve mostrare percentuale Ultimate.
-- Verificare target dietro ostacoli secondo il comportamento previsto dalla selezione attuale.
-- Verificare cleanup al rilascio Crouch, apertura menu, morte, despawn e cambio camera.
-- Il refresh a 4 Hz deve risultare visivamente reattivo.
-
-## Teleport Crouch
-
-- Tenere Crouch e aprire l'overlay Teleport.
-- Verificare cursore persistente.
-- Spawn Room: disponibile solo dopo registrazione posizione.
-- Escort/Hybrid: vicino al payload.
-- CTF: vicino alla flag nemica solo quando la posizione della flag è valida.
-- Push: proxy robot quando disponibile, fallback obiettivo altrimenti.
-- Player target: posizione camminabile vicina al target; player/bot morti o non spawnati non devono comparire nell'elenco.
-- Se il target esce o muore durante l'azione, il teleport deve annullarsi senza retarget accidentale.
-
-## Unkillable — OFF / 1 HP / FULL HP
-
-- Non deve essere attivabile nello Spawn Room.
-- Fuori spawn: applicare ON e verificare 1 HP + status Unkillable.
-- Curare fino al massimo: la salute deve tornare a 1 HP.
-- Entrare nello Spawn Room: auto-disattivazione e ripristino salute/status.
-- OFF manuale: ripristino corretto.
-- FULL HP deve restare attivo anche nello Spawn Room, con Halo RGB e salute piena.
-
-## Hero Voice
-
-Testare i 5 preset:
-
-- Normal
-- Low 0.50x
-- Low 0.75x
-- High 1.25x
-- High 1.50x
-
-Verificare che la stessa scelta non riproduca feedback ripetuto.
-
-## Jump respawn
-
-- Morire con menu chiuso.
-- Premere il tasto Jump mostrato dal binding.
-- Verificare respawn vicino al punto di morte.
-- Verificare fallback `Nearest Walkable Position`.
-
-## Join/leave stress — 12 player
-
-Con lobby piena o quasi piena:
-
-- far entrare/uscire player ripetutamente;
-- verificare riuso slot HUD;
-- nessuna riga duplicata o orfana;
-- diagnostics sempre sotto l'ultima riga sinistra;
-- target Camera/Revenge/Teleport/Inspect senza riferimenti stale;
-- nessuna crescita permanente di HUD/IWT.
-
-## Stress menu concorrenti
-
-Con 12 player attivi:
-
-- più player aprono menu contemporaneamente;
-- alcuni usano Camera;
-- altri Crouch inspection/Teleport;
-- altri cambiano Name Color, Voice e Player Icon.
-
-Verificare:
-
-- input reattivi;
-- nessun HUD perso;
-- nessun menu duplicato;
-- nessun warning server persistente.
-
-## Diagnostica
-
-Con `Performance diagnostics` ON sull'host:
-
-- LOAD corrente;
-- AVG;
-- MAX;
-- HUD count;
-- IWT count.
-
-Obiettivi live consigliati:
-
-- `Server Load Average < 80%`;
-- `Server Load Peak < 100%`;
-- nessuna crescita permanente dopo join/leave.
-
-## Stato finale
-
-Il repository può essere classificato **static-ready** quando unit test e validatore passano. La dicitura **live-ready** richiede invece il completamento della matrice sopra nel client Overwatch con 12 player reali/simulati.
-
-- **Menu 8 Crouch Teleport:** nuovo player = OFF; Crouch non deve aprire Teleport. Attivare dal menu 8, chiudere il menu e tenere Crouch: HUD Teleport visibile. Disattivare: torna a non aprirsi.
-
-- **Menu 9 Crouch Privacy:** nuovo player = OFF e un nemico vede icona + nome + salute. Attivare Privacy: un nemico non deve vedere assolutamente nulla sopra al target; un alleato deve continuare a vedere sempre icona + nome + salute. Disattivare Privacy: anche il nemico torna a vedere la riga completa.
-
-- **10 menu:** scorrere Main Menu avanti/indietro e verificare wrap `0..9`, cursori persistenti e sfumatura colore anche tra menu 7/8/9.
-
-- **Unkillable 1 HP:** attivare 1 HP, verificare salute a 1, ritorno a 1 quando raggiunge il massimo e Warning rosso visibile a tutti anche con Crouch Privacy ON.
-
-- **Unkillable FULL HP:** attivare FULL HP, subire danni normali e verificare che la salute non scenda; Halo visibile a tutti. Passare 1 HP ↔ FULL HP senza duplicare l’icona.
-
-- **Unkillable cleanup:** OFF, Spawn Room e Player Left devono rimuovere Halo; OFF/Spawn devono ripristinare Damage Received a 100%.
-
-- **Unkillable 1 HP → FULL HP:** attivare 1 HP, poi selezionare FULL HP senza passare da OFF; verificare Mode FULL HP, salute massima, Damage Received 0%, nessun ritorno a 1 HP e un solo Halo.
-
-- **Unkillable FULL HP → 1 HP:** fuori Spawn Room passare direttamente da FULL HP a 1 HP; verificare Damage Received 100%, salute 1 e nessun comportamento FULL HP residuo.
-
-- **FULL HP in Spawn Room:** entrare nello spawn con FULL HP attiva; verificare che ModeKebal resti FULL HP, salute massima, Damage Received 0%, Unkillable e Halo restino attivi.
-
-- **1 HP in Spawn Room:** entrare nello spawn con 1 HP attiva; verificare reset a OFF, salute massima, Damage Received 100%, status e Halo rimossi. Provare anche a selezionare 1 HP mentre si è già nello spawn: non deve sostituire OFF/FULL HP.
-
-- **Feedback senza audio:** applicare e ripristinare più impostazioni del Menu Arcade; non deve essere riprodotto alcun effetto sonoro di conferma.
-
-- **Ring RGB unico:** applicazione e ripristino devono mostrare solo `Ring Explosion` RGB sul giocatore; nessuna Good Explosion o altra forma visiva di feedback.
-
-
-## Menu 10 / 11
-
-- Try Your Luck: l'attivazione lascia il menu aperto e bloccato sulla pagina 10, forza temporaneamente FULL HP e non cambia la camera. Verde deve ripristinare l'ultima scelta Unkillable. Rosso deve passare runtime a OFF, bloccare movimento/knockback, forzare la posizione, creare Light Shaft + Ring con l'RGB congelato, restringere il Ring durante 3-2-1 e poi uccidere il player. Morte/leave/team switch devono ripristinare movimento/knockback, fermare forcing/chase e distruggere bracket, Heart/Skull, Light Shaft e Ring senza oggetti orfani.
-- Vote Player: lista soli umani, self-vote consentito, conteggi aggiornati nel Menu 11; pareggio al primo posto = nessuna CHILL STAR; leave del target cancella i voti verso di lui e ricalcola.
-- Ripetere join/leave mentre Menu 11 è aperto e verificare cursori validi e nessun riferimento stale.
-
-
-## Cambio squadra
-
-- Con un player già registrato, passare Team 1 → Team 2 → Team 1 più volte. Deve esistere sempre una sola riga roster per quel player e un solo elemento corrispondente in `Global.PemainManusia`.
-- Se il player aveva votato A, dopo il cambio squadra il suo voto deve essere `NONE/BELUM ADA/ยังไม่ได้โหวต` e il totale di A deve diminuire di uno.
-- Anche tutti i voti ricevuti dal player che cambia squadra devono essere eliminati, come in un vero leave/rejoin.
-- Menu, Crouch Teleport, camera, Unkillable, voce, cursori e HUD temporanei devono ripartire dai valori iniziali.
-- Votare A e poi B senza cambiare Team: A deve perdere immediatamente un voto e B deve guadagnarne uno; il votante non può contribuire a due target contemporaneamente.
-
-
-## Import Workshop - slot globale 47
-
-- Incollare l'intero sorgente nel Workshop: non deve comparire `Global variable '47' has an invalid name`.
-- La tabella `variables` deve mostrare `47: IndeksVote`.
-- Aprire Menu 11 e verificare che conteggio, cambio voto e cleanup su cambio squadra continuino a funzionare senza differenze rispetto alla 0.6.2.
-
-
-## Hotfix Try Your Luck 0.6.5
-
-- lo status Menu 10 distingue READY / ROLLING / RED / GREEN (localizzato EN/ID/TH);
-- morte durante la roulette = reset immediato della carta e ripristino di `ModeKebalTerakhir`;
-- la morte non chiude più automaticamente un Menu Arcade già aperto, né tramite evento `Player Died` né tramite controllo `Is Alive == False`;
-- l'esito rosso usa soltanto `Set Move Speed(..., 0)`: nessun `Start Forcing Player Position` e nessun blocco knockback; Ring/Light Shaft e countdown restano invariati.
-
-
-## Hotfix Respawn Jump 0.6.6
-
-Verifica live obbligatoria: aprire il Menu Arcade, morire lasciandolo aperto, premere `Jump` e confermare che il player rinasca vicino al punto di morte senza che il menu venga chiuso. Ripetere sia dal Main Menu sia da un sottomenu.
-
-
-## Hotfix input da morto 0.6.7
-
-Verifica live obbligatoria: con Menu Arcade aperto, morire e provare Primary Fire, Secondary Fire, Interact, Reload, Crouch e Melee; nessuno deve modificare o chiudere il menu e Crouch non deve aprire inspection/Teleport. Premere quindi `Jump`: deve essere l'unico comando custom efficace, effettuare il respawn vicino al punto di morte e lasciare il menu aperto. Dopo il respawn, verificare che tutti i comandi menu tornino immediatamente disponibili.
-
-
-## Menu fluido 0.6.8
-
-Verifica live: scorrere rapidamente Main Menu e ogni submenu con Primary/Secondary; applicare con Interact, tornare con Reload e usare Jump/Crouch nel Soundtrack. Camera dal menu non deve mostrare il precedente frame di attesa. Verificare Hero Voice NORMAL e Try Your Luck READY->ROLLING. Ripetere nell'overlay Crouch Teleport. Melee 0,5 s resta volutamente invariato.
-
-
-## Cambio pagina immediato 0.6.9
-
-Con Menu Arcade aperto, premere ripetutamente `Interact` e `Reload`: Main/submenu deve cambiare senza flash e senza la pausa percepita di circa mezzo secondo.
-
-
-## Diagnostica limiti Workshop 0.6.10
-
-Dopo l'importazione aprire `Script Diagnostics`: **Size of Largest Rule deve risultare sotto 98 KB** e il Total Element Count deve rimanere sotto 32.768. Poi aprire il Menu Arcade e provare rapidamente Primary/Secondary -> Interact -> Reload su tutte le pagine: il cambio pagina deve restare immediato e senza flash. Chiudere/riaprire il menu più volte per verificare che gli HUD non si accumulino.
-
-
-## Hold Melee 0,5 s / lazy loading 0.6.11
-
-Test live con cronometro percepito: da menu chiuso tenere Melee; il Main Menu deve comparire appena termina il mezzo secondo, senza la pausa aggiuntiva vista in 0.6.10. Rilasciare Melee, aprire una pagina con Interact: al primo accesso viene creato solo quel renderer. Tornare con Reload e riaprire la stessa pagina: nessun nuovo HUD deve essere creato e la risposta deve restare immediata. Verificare inoltre Script Diagnostics: il margine ottenuto in 0.6.10 non deve regredire in modo significativo.
-
-
-## Input menu / Soundtrack / privacy Teleport 0.6.12
-
-Test live: aprire il Menu Arcade e verificare che un tap Melee esegua il normale attacco, mentre un hold di 0,5 s continui a chiudere il menu; Jump deve saltare normalmente e, da morto, continuare a fare respawn manuale. Nel Soundtrack Ability 1 deve avanzare di 10 generi e Ability 2 arretrare di 10 senza attivare le abilità dell'eroe. Attivare Crouch Privacy su un secondo player: quel player non deve comparire nel Crouch Teleport; disattivando privacy deve ricomparire al refresh successivo.
-
-
-## Palette menu 0.6.13
-
-Scorrere tutte le 12 voci: 0,1,3..11 devono avere tonalità chiaramente diverse con transizione sfumata. Aprire ogni submenu e verificare che mantenga il colore della voce. Name Color deve invece seguire il colore evidenziato.
-
-
-## Preload progressivo sottomenu 0.6.14
-
-Test live: aprire il Menu Arcade e attendere circa 0,2–0,3 s senza entrare in un sottomenu; poi visitare rapidamente tutte le pagine con Interact/Reload. Nessuna pagina dovrebbe più comparire con il precedente pop di creazione al primo accesso. Ripetere chiudendo e riaprendo il menu più volte, verificando che il Main continui ad apparire subito dopo 0,5 s e che Script Diagnostics non mostri regressioni rilevanti. Come stress test, aprire immediatamente un sottomenu appena appare il Main: il router lazy deve continuare a garantire la corretta visualizzazione anche se il preload non è ancora arrivato a quella pagina.
-
-
-## Timing HUD 0.6.15
-Verificare che il Main compaia esattamente alla soglia Melee di 0,5 s, che i sottomenu non abbiano pop al primo accesso e che i due HUD sociali compaiano dopo la classificazione senza ritardo aggiuntivo.
-
-
-## Cambio team 0.6.16
-
-Test live prioritario: durante una partita in corso cambiare Team 1 → Team 2 e viceversa, restare alcuni secondi nella schermata scelta eroe e poi scegliere un eroe. Il server non deve più mostrare `The server closed due to excessive Workshop script load`. Gli HUD sociali devono ricomparire una sola volta dopo lo spawn. Ripetere il cambio team più volte e controllare Script Diagnostics/server load se disponibile.
-
-
-## Cambio team ripetuto 0.6.17
-
-Test live prioritario: effettuare almeno cinque cambi consecutivi Team 1 ↔ Team 2, aspettando lo spawn fra un cambio e il successivo. Il primo, secondo e successivi cambi devono completarsi senza `excessive Workshop script load`; gli HUD sociali devono essere distrutti e ricreati una sola volta per ciclo. Ripetere anche un cambio rapido durante la schermata eroe per verificare che il lock impedisca doppie inizializzazioni.
-
-
-## Team switch leggero 0.6.18
-
-Test live prioritario: effettuare almeno dieci cambi Team 1 ↔ Team 2 sullo stesso player. Gli HUD sociali e le preferenze devono restare gli stessi, senza nuova welcome message e senza ricreazione del Menu Arcade. Il server non deve mostrare `excessive Workshop script load`. Poi uscire realmente dalla lobby e rientrare: il vero `Player Left Match` deve ancora pulire correttamente slot, HUD e riferimenti prima della nuova registrazione.
-
-
-## Roster dopo cambio team 0.6.19
-
-Test live prioritario: con almeno un player visibile nelle liste, alternare Team 1 ↔ Team 2 almeno dieci volte. Dopo ogni cambio devono ricomparire entrambe le righe sociali con nome, icona eroe, minuti e soundtrack; colore/icona personale/lingua devono restare invariati. Non deve comparire una nuova welcome message e non deve esserci `excessive Workshop script load`. Verificare anche un vero leave/rejoin, che continua invece a usare il cleanup completo.
-
-
-## Team switch: roster + hero-select 0.6.20
-
-Alternare Team 1 ↔ Team 2 più volte. Dopo lo spawn le righe sociali devono tornare nello stesso slot con nome/icona/minuti/soundtrack. Nella schermata scelta eroe non deve più comparire il riquadro anomalo `0`. Il server deve restare stabile senza excessive Workshop script load.
-
-
-## Team switch clean rejoin 0.6.21
-
-Test live: cambiare Team 1 ↔ Team 2 almeno dieci volte. Ogni cambio deve comportarsi come una nuova entrata: schermata eroe nativa pulita, nessun riquadro `0`, roster precedente rimosso, welcome/tempo/preferenze ripartono come per un rejoin e dopo lo spawn compare una sola nuova riga per lato con il nome corretto. Nessun `excessive Workshop script load` e nessuna riga duplicata/stale deve accumularsi.
-
-
-## Regressione team switch 0.6.22
-
-La 0.6.21 è live-failed: al primo cambio team il server ha mostrato `The server closed due to excessive Workshop script load.` Per la 0.6.22 provare Team 1 ↔ Team 2 almeno dieci volte. Non deve apparire alcuna chiusura per script load; ogni transizione deve rimuovere la vecchia riga e ricreare una sola registrazione/HUD dopo lo spawn.
-
-
-## Team switch con menu/modifiche 0.6.23
-
-La 0.6.22 è live-confirmed stabile per cambi ripetuti nello stato default, ma fallisce se il player cambia team con Menu Arcade aperto o dopo modifiche effettuate dal menu. Test 0.6.23: ripetere cambi Team 1 ↔ Team 2 con menu aperto su varie pagine e, separatamente, dopo avere applicato Soundtrack, Camera 3P, Name Color, Language, Unkillable 1 HP/FULL HP, Hero Voice, Icon, Crouch Teleport, Privacy e Vote. Provare anche Try Your Luck durante/alla fine del ciclo. Nessun caso deve produrre `excessive Workshop script load`; dopo lo spawn deve esistere una sola registrazione pulita.
-
-
-## Team switch 0.6.24
-
-La 0.6.23 è live-failed al primo cambio team. Provare prima Team 1 → Team 2 senza aprire il Menu Arcade, poi almeno 10 cambi alternati. Ripetere dopo avere visitato tutte le 12 pagine del menu e dopo Camera, Unkillable, Hero Voice, Crouch e Try Your Luck. Nessun `excessive Workshop script load` e una sola registrazione roster dopo ogni spawn.
-
-
-## Test live cache HUD singola 0.6.25
-
-La 0.6.24 è live-parzialmente confermata: cambio team senza usare il Menu Arcade funziona, ma dopo l'uso del menu il primo cambio può ancora chiudere il server per carico Workshop eccessivo. Per la 0.6.25 aprire il menu, scorrere tutte e dodici le voci del Main senza entrarci, quindi cambiare team: il server deve restare attivo. Ripetere entrando in ogni submenu uno alla volta, tornando al Main con Reload e cambiando team dopo ogni pagina.
-
-Poi applicare Camera 3P, Name Color, Language, Unkillable, Hero Voice, Player Icon, Crouch Teleport/Privacy, Vote e Try Your Luck, chiudere il menu e fare almeno dieci cambi Team 1 ↔ Team 2. Interact/Reload devono restare immediati: è ammesso al massimo un singolo frame di sostituzione visiva fra Main e submenu, mai il vecchio ritardo da circa 0,5 s. Stato 0.6.25: static-ready dopo gate, live-pending fino a questa prova.
+La release diventa **live-ready** soltanto quando tutti i test obbligatori sono PASS, le metriche rispettano i limiti e ogni anomalia riproducibile è stata corretta e rivalidata.

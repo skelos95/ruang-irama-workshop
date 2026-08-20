@@ -1,187 +1,201 @@
-# Rapporto di validazione — versione 0.6.25
+# Rapporto di validazione — versione 0.8.0
 
-Data: 2026-08-17
+Data: 2026-08-20
 
-Release tecnica: **CHILL Dedicated Server 0.6.25**
+Release tecnica: **CHILL Dedicated Server 0.8.0**
 
-Stato corrente: **static-ready, live-pending**.
+Stato: **static-ready / live-pending**
 
-## Revisione Workshop
+Il gate 0.8.0 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
-Blob Git del sorgente Workshop validato:
+## Esecuzione
 
-```text
-393f4aa1e68633b9702566fd813eb2a0324b0891
+Dalla radice del repository:
+
+```powershell
+python -m unittest discover -s tests -p 'test_*.py'
+python tools/validate_workshop.py
 ```
 
-## Audit 0.6.5
+Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente. `maintenance-patch.yml` è stato rimosso: la validazione non modifica, non committa e non pubblica file.
 
-- team-switch trattato come leave + fresh join con cleanup riutilizzabile e guardia anti-duplicato roster;
-- voto singolo certificato: cambio scelta azzera il target precedente prima di assegnare il nuovo;
+## Gate semantici
+
+### Struttura e riferimenti
+
+Il validatore controlla:
+
+- delimitatori e blocchi Workshop completi;
+- indici compatti e dichiarazioni univoche per global, player e subroutine;
+- ogni riferimento risolto alla relativa dichiarazione;
+- nessuna variabile soltanto dichiarata, inizializzata o pulita;
+- nessuna regola o subroutine inutilizzata o duplicata;
+- ogni player variable inizializzata nel setup e ripulita dove necessario;
+- assenza della vecchia roulette binaria e degli handle di preload.
+
+Non esiste una lista rigida dell'intero blob: le invarianti vengono ricavate dai blocchi e dalle azioni effettive.
+
+### Nomenclatura
+
+Identificatori personalizzati, titoli regola, nomi subroutine e commenti Workshop devono essere in Bahasa Indonesia. Restano ammessi:
+
+- keyword e azioni native Workshop;
+- contenuto del ramo HUD English e ไทย;
+- acronimi tecnici;
+- `CHILL`, generi musicali, nomi degli eroi e player.
+
+Il gate rifiuta residui noti italiano/inglese negli elementi personalizzati e i vecchi alias rimossi.
+
+### Localizzazione EN/ID/TH
 
 Il gate verifica:
 
-- struttura Workshop, delimitatori, dichiarazioni e titoli regola senza duplicati;
-- inizializzazione esplicita in `SiapkanPemain` di ogni variabile player dichiarata;
-- un solo percorso Player Left con cleanup degli array HUD/IWT, slot HUD, voti e riferimenti Camera/Revenge/Teleport/Inspection;
-- assenza dello stato morto rimosso (`HudInfoKiri`, `HudInfoKanan`, `WaktuTercatat`, `PosisiKartuNasib`, `ModeKameraSebelumNasib`, `TargetKameraSebelumNasib`);
-- 100 generi, 12 menu (`0..11`), 32 Name Color e 37 Player Icon;
-- HUD e Small Message EN / Bahasa Indonesia / ไทย, inclusi minuti roster `MIN / MENIT / นาที`;
-- titoli regola personalizzati in Bahasa Indonesia;
-- Menu 5 OFF / 1 HP / FULL HP: Warning rosso per 1 HP, Halo RGB per FULL HP, Spawn Room reset solo 1 HP;
-- Menu 10: bracket + Heart/Skull persistenti, menu bloccato in pagina 10, FULL HP temporaneo senza perdere l'ultima scelta, verde = ripristino scelta, rosso = OFF + velocità 0 + Light Shaft/Ring RGB in chiusura + morte, senza forcing posizione o knockback lock; morte durante roulette = reset e menu lasciato aperto; cleanup completo leave/team switch;
-- Menu 11: soli umani, self-vote, conteggio event-driven, pareggio = nessuna CHILL STAR;
-- Camera con un solo raycast, target list limitata a entità esistenti/spawnate/vive e `MulaiKamera` senza `Stop Camera` immediatamente prima del nuovo `Start Camera`;
-- refresh passivi Camera/Revenge/Teleport a 1 Hz, Spawn cache a 1 Hz, minuti lobby a 0,1 Hz, inspection a 4 Hz, RGB globale a 8 Hz;
-- workflow consentiti limitati ai due permanenti e nessuna automazione legacy.
+- rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
+- 12 menu e tutte le pagine operative;
+- 37 nomi Player Icon in tre array allineati;
+- 26 località server in tre array allineati;
+- equivalenza di placeholder e argomenti tra le traduzioni;
+- minuti roster `MIN / MENIT / นาที`;
+- riga vuota coerente tra contenuto e comandi.
 
-## Unit test
+I 100 generi restano nomi internazionali e non richiedono traduzione.
 
-```text
-Ran 36 tests
-OK
-```
+### HUD e rendering
 
-## Esito validatore registrato
+Ogni azione `Create HUD Text` deve:
 
-```text
-OK - controlli statici v0.6.25 superati
-```
+- avere Header `Null`;
+- usare soltanto Subheader/Text;
+- registrare l'handle previsto per il cleanup.
 
-## GitHub
+Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi.
 
-Branch operativo e sorgente canonico: `main`.
+Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
 
-Workflow permanenti:
+### Input
 
-- `validate-workshop.yml`
-- `maintenance-patch.yml`
+Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore richiede:
 
-Non risultano tag o release legacy da sincronizzare. `.github/maintenance/patch.py` è temporaneo e viene eliminato dal workflow di manutenzione dopo il commit validato.
+- hold Melee 0,5 s per apertura/chiusura;
+- Crouch come modificatore di Primary, Secondary, Interact, Reload e Ability 1/2 a menu aperto;
+- nessuna disabilitazione custom di Melee o Jump da vivi;
+- Camera con Interact 0,5 s soltanto a menu chiuso;
+- inspection e Teleport soltanto a menu chiuso e da vivi;
+- menu congelato da morti e Jump come unico input custom di respawn;
+- latch rilasciati senza doppie attivazioni.
 
-## Verifiche live ancora obbligatorie
+### Scheduler e prestazioni statiche
 
-- importazione nel client Overwatch;
-- tutti i 12 menu in EN / ID / TH;
-- join/leave ripetuti e stress con 12 player;
-- Camera self/target e cambi target rapidi senza micro-scatto;
-- Crouch inspection/Teleport, inclusi target morti/non spawnati e disponibilità obiettivo per Escort/Hybrid/CTF/Push;
-- Try Your Luck verde/rosso durante movimento e camera 3P, inclusi velocità 0 senza forcing, Ring/Light Shaft, countdown, morte anticipata e menu che resta aperto;
-- Vote Player con join/leave e pareggi;
-- Server Load Average/Peak reale e assenza di crescita permanente HUD/IWT.
+Il gate richiede:
+
+- un solo scheduler `Ongoing - Global` a 20 Hz;
+- un solo `Loop` nel sorgente;
+- massimo 10 `Wait`, ognuno in una categoria consentita e riconoscibile;
+- subroutine scheduler senza `Wait`;
+- nessun yield durante una scansione del roster;
+- proprietà esclusiva dello scratch player/indice globale allo scheduler;
+- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi;
+- `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
+- un solo raycast Camera;
+- nessuna regola HUD contenente `Wait` o `Loop`.
+
+Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, respawn e cleanup atomico. Qualsiasi Wait fuori allowlist o secondo Loop fa fallire il gate.
+
+### Try Your Luck
+
+Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il vecchio percorso binario:
+
+| Esito | Invariante |
+|---|---|
+| Vision | durata 15 s e cleanup effetto/IWT |
+| Acceleration | durata 10 s e controllo guidato dalla mira |
+| Skull | morte immediata |
+| Team Heal | cura completa del team |
+| Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s |
+| Hacked | durata 5 s e cleanup status |
+
+L'avvio disattiva Unkillable. Morte, leave e cambio squadra devono annullare timestamp, status, modificatori ed effetti. Un loop o Wait per-player associato alla roulette è vietato.
+
+### Lifecycle
+
+Il gate controlla:
+
+- guardia anti-duplicato prima della registrazione roster;
+- un solo setup e un solo set di handle per player;
+- cleanup completo su leave;
+- cambio squadra implementato come cleanup + setup fresco;
+- reset completo delle preferenze dopo il cambio squadra;
+- rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
+- ordine atomico delle operazioni sensibili e rilascio dei latch;
+- cleanup di HUD, In-World Text, effetti, status e slot.
+
+### Otto modalità
+
+Il sorgente e la documentazione devono coprire esplicitamente:
+
+1. Push;
+2. Flashpoint;
+3. Capture the Flag;
+4. Control;
+5. Clash;
+6. Hybrid;
+7. Escort;
+8. Assault.
+
+Il gate controlla il routing Teleport: Payload per Escort/Hybrid, flag nemica per CTF, proxy/fallback per Push e Objective Position per Flashpoint/Control/Clash/Assault. Sono vietate azioni custom che assegnano punti o vincitore al posto della modalità nativa.
+
+## Test negativi
+
+La suite crea mutazioni isolate e richiede il fallimento del validatore per almeno queste famiglie:
+
+- traduzione o ramo lingua mancante;
+- placeholder EN/ID/TH non allineati;
+- Header diverso da `Null`, `Big Message` o secondo handle menu;
+- preload/HUD nascosto reintrodotto;
+- input senza Crouch o Camera disponibile a menu aperto;
+- dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
+- secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
+- secondo raycast Camera;
+- esito/durata Try Your Luck mancante o vecchio percorso binario;
+- guardia Join, cleanup Leave o reset team-switch rimosso;
+- una delle otto modalità o un ramo Teleport mancante;
+- workflow di scrittura o automazione di commit reintrodotto.
+
+Ogni mutazione deve fallire per la propria causa, così il test evita un falso positivo dovuto a un'altra invariante già rotta.
+
+## Limiti della validazione statica
+
+Il parser testuale non può certificare:
+
+- importazione reale nel client;
+- Element Count compilato e dimensione Largest Rule;
+- fluidità a 12 slot e input simultanei;
+- layout effettivo EN/ID/TH e glifi Thai;
+- comportamento su D.Mon o sulle mappe modificate;
+- leak osservabili soltanto tramite Text Count ed Entity Count;
+- interferenze con Team Status Indicator.
+
+Per questo la release resta `live-pending` anche con gate verde.
+
+## Contesto patch
+
+La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
+
+## Gate live ancora aperto
+
+La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
+
+- import e D.Mon smoke test;
+- 12 menu e input in EN/ID/TH;
+- morte/respawn, hero swap, spectator, join/leave e team switch;
+- 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;
+- tutte le otto modalità;
+- soak minimo 30 minuti a 12 slot;
+- Element Count `< 32.768` con obiettivo `≤ 26.000`;
+- Largest Rule `< 98 KB` con obiettivo `≤ 80 KB`;
+- Text Count ed Entity Count di ritorno al baseline;
+- nessuna crescita di HUD/IWT/effects e nessun conflitto con Team Status Indicator.
 
 ## Decisione
 
-Il repository è **static-ready, live-pending**: il gate certifica coerenza strutturale e invarianti automatiche, mentre fluidità reale e stress 12-client restano prove da eseguire nel client Overwatch.
-
-
-### Hotfix import 0.6.3
-
-- lo slot globale `47` è dichiarato come `IndeksVote`;
-- `IndeksHitungSuara` è vietato dal validatore;
-- il cambio è nominale e non modifica il tally delle votazioni.
-
-## Hotfix Try Your Luck 0.6.5
-
-Lo status Menu 10 ora mostra lo stato reale della roulette; la morte interrompe e resetta la funzione senza chiudere il menu. Il rosso mantiene Ring/Light Shaft e countdown ma immobilizza esclusivamente tramite velocità a 0, senza forcing posizione né knockback lock.
-
-
-## Hotfix Respawn Jump 0.6.6
-
-Il gate verifica che la regola `12f - Bangkit Lompat` esista una sola volta e non contenga `Event Player.MenuTerbuka == False;`. In questo modo il respawn con `Jump` resta disponibile anche con Menu Arcade aperto, che deve restare visibile durante morte e respawn.
-
-
-## Hotfix input da morto 0.6.7
-
-Il gate statico richiede `Is Alive(Event Player) == True` su tutte le regole che eseguono comandi `PerintahMenu == N`, richiede l'azzeramento di `PerintahMenu`/`PerintahTeleportasi` alla morte e certifica che i due attivatori Crouch (inspection e Teleport) siano disponibili solo da vivi. La regola Jump respawn resta invece utilizzabile da morto anche con Menu Arcade aperto.
-
-
-## Ottimizzazione menu 0.6.8
-
-Il gate verifica release immediato, assenza dei Wait da 0,016 s nel percorso Interact Camera, navigazione primaria senza ricreazione HUD, Crouch Teleport senza redraw per ogni cursor step e transizione colore a 0,18 s. I redraw applicativi Interact restano intenzionalmente disponibili.
-
-
-## HUD persistente 0.6.9
-
-Il gate richiede un solo HUD runtime dentro `GambarMenu`, creazione lazy e nessuna chiamata ai renderer per-pagina dal router.
-
-
-## Limite regola Workshop 0.6.10
-
-Il gate impedisce il ritorno del renderer monolitico: `GambarMenu` non può contenere `Create HUD Text` o testi delle pagine, deve restare sotto 12 KB di sorgente e deve inizializzare i 13 renderer split. Ogni renderer deve avere visibilità rivalutata sulla propria `HalamanMenu` e registrare il Text ID in `HudMenuArcade`; `TutupMenu` deve distruggere tutte le 13 pagine. Il valore definitivo del limite compilato resta da verificare nel `Script Diagnostics` del client Overwatch.
-
-
-## Hold Melee e cache lazy 0.6.11
-
-Il gate richiede un unico opener Melee con `Wait(0.500, Abort When False)` e nessun secondo `Wait` nella stessa regola. `GambarMenu` deve usare `HalamanHudMenuArcade` + `Array Contains` e non può più usare il gate eager `Count Of(HudMenuArcade) == 0` che pre-caricava tutte le pagine. Ogni renderer registra ID e codice pagina nella cache; la chiusura svuota entrambe.
-
-
-## Controlli input e privacy 0.6.12
-
-Il gate certifica che l'apertura Menu non disabiliti Melee/Jump, che Ability 1/2 restino disabilitate come abilità reali e siano gli unici comandi ±10 del Soundtrack, che il dispatcher/release gate non usino più Jump/Crouch e che il renderer Soundtrack mostri i binding aggiornati. `SegarkanTargetTeleportasi` deve includere il filtro `PrivasiInspeksiAktif == False`.
-
-
-## Palette menu 0.6.13
-
-Il gate richiede 11 RGB fissi tutti diversi, mantiene Name Color dinamico e conserva `0.180, Destination and Duration`.
-
-
-## Preload progressivo 0.6.14
-
-Il gate richiede una sola regola 05e di preload, attiva soltanto con Menu Arcade aperto e cache già iniziata, con `Count Of(HalamanHudMenuArcade) < 13`, un `Wait(0.016, Abort When False)` prima di ogni iterazione e 12 renderer delegati senza `Create HUD Text` diretto. `GambarUtama` non può essere richiamato dal preload e il router lazy resta presente come fallback.
-
-
-## Audit HUD 0.6.15
-Il gate rifiuta qualsiasi regola `Create HUD Text` che contenga `Wait` o `Loop If Condition Is True`.
-
-
-## Gate cambio team 0.6.16
-
-Il validatore richiede latch one-shot e guardia `Is Game In Progress == False` per Assemble Heroes/Setup, reset dei latch prima del vero restart, protezione one-shot `HudPemainDibuat` prima di ogni creazione HUD sociale e guardie di transizione nella classificazione umano/bot. Resta valida l'invariante 0.6.15: nessuna regola che contiene `Create HUD Text` può contenere `Wait` o `Loop If Condition Is True`.
-
-
-## Gate lifecycle ripetuto 0.6.17
-
-Il validatore impone il lock `SiklusPemainAktif` sul Player Joined, limita 01b a `PernahDisiapkan == False`, richiede che `SudahSiap = True` sia l'ultima assegnazione player di `SiapkanPemain`, blocca la classificazione durante il setup e rende one-shot `Start Game Mode`. Restano valide le invarianti zero-Wait/zero-Loop per ogni regola che crea HUD.
-
-
-## Gate team switch leggero 0.6.18
-
-Il validatore vieta `BersihkanPemain`, `Create HUD Text` e `Destroy HUD Text` nella regola `Player Joined Match`. Un player già presente nel roster deve terminare il percorso prima di `SiapkanPemain`; il cleanup completo resta obbligatorio sull'evento `Player Left Match`.
-
-
-## Gate roster team-switch 0.6.19
-
-Il gate vieta ancora cleanup completo e `Create/Destroy HUD Text` diretto nella regola `Player Joined Match`. Per il ramo di un player già registrato richiede invece il rearm dei due soli HUD sociali: ID globali a `0`, `HudKiri/HudKanan = Null` e `HudPemainDibuat = False` prima dell'`Abort`. Un nuovo test negativo rimuove il rearm e deve essere intercettato dal validatore.
-
-
-## Gate sincronizzazione team 0.6.20
-
-Il gate richiede lookup diretto + fallback slot, sostituzione in-place del riferimento roster, rearm HUD sociali e UI nativa solo post-spawn.
-
-
-## Gate clean team rejoin 0.6.21
-
-Il validator richiede `PindahTimDiproses` prima del cleanup, ordine `BersihkanPemain → SiapkanPemain`, rilascio del lock solo dopo roster HUD stabile e lookup cleanup direct → slot HUD → nome. Sono vietate le vecchie modifiche in-place del roster e il workaround UI 02d della 0.6.20.
-
-
-## Gate team-switch differito 0.6.22
-
-Il validator richiede due `Wait(0.050, Ignore Condition)` nel `Player Joined Match`, cleanup fallback singolo e condizionale dopo il primo yield, controllo stale tramite riferimento/slot/nome, guardia `Entity Exists` dopo i yield e setup soltanto dopo il secondo yield. Il fallimento live 0.6.21 resta documentato e la 0.6.22 richiede nuova conferma nel client.
-
-
-## Gate quiescenza team-switch 0.6.23
-
-Il validator richiede `TenangkanPemain` sia sul Player Left sia sul Player Joined prima di qualsiasi cleanup, timing 0,10/0,20/0,10 s, stop esplicito dei sottosistemi persistenti e assenza di Destroy/Wait/Loop nella fase di quiescenza. Un test negativo rimuove la chiamata dal Player Joined e deve essere intercettato. La conferma completa resta live-pending per i casi con Menu Arcade/modifiche attive.
-
-
-## Gate team-switch 0.6.24
-
-`TenangkanPemain` deve essere variable-only. `BersihkanPemain` deve distribuire ripristini engine, 13 distruzioni HUD Arcade, IWT e pulizia riferimenti con yield da 0,016 s. Stato: static-ready solo a gate verde; live-pending fino al nuovo test Overwatch.
-
-
-## Gate cache Menu Arcade 0.6.25
-
-Il gate richiede tredici renderer separati ma una sola istanza HUD attiva per player: ogni renderer assegna `HudMenuArcade = Array(HudMenu)` e `HalamanHudMenuArcade = Array(pagina)`, mentre `Append To Array(HudMenuArcade, ...)` è vietato. `GambarHalamanAktif` deve distruggere solo indice 0, svuotare la cache e instradare il renderer della nuova pagina senza Wait/Loop. Il Main Menu non può più pre-caricare submenu durante Primary/Secondary.
-
-`TutupMenu` e il cleanup team-switch possono distruggere un solo HUD Arcade. Restano obbligatorie le invarianti globali: nessuna regola con `Create HUD Text` può contenere Wait o Loop, e il test live Overwatch resta necessario per dichiarare risolto il crash.
+La versione 0.8.0 è **static-ready / live-pending**: il repository può essere pubblicato come candidata statica dopo unit test e validatore verdi. Il tag finale `v0.8.0` e la dicitura **live-ready** restano sospesi finché i risultati client non vengono registrati e ogni eventuale correzione non supera nuovamente entrambi i gate.
