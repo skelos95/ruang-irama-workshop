@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "8a6e832b748f4eaee0c20c1a2b2f0c5194d95714"
+EXPECTED_SOURCE_BLOB = "d50ff5270d866d39ccc55d4872a4dbc28b540668"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -352,6 +352,7 @@ def validate(source: str) -> Checks:
             checks.require(token in luck_burn_global.body, f"18l Burning globale incompleto: {token}")
         checks.require("Wait(" not in luck_burn_global.body and "Loop If Condition Is True;" not in luck_burn_global.body, "18l Burning globale non deve usare Wait o Loop")
         checks.require("Ongoing - Each Player" not in luck_burn_global.body, "18l Burning non deve diventare Each Player")
+        checks.require(luck_burn_global.body.count("(") == luck_burn_global.body.count(")"), "18l Burning contiene parentesi sbilanciate")
     if teleport_open:
         checks.require("Event Player.KartuNasibAktif == False;" in teleport_open.body, "Crouch Teleport deve essere disattivato durante Try Your Luck")
     quiet_player = find_rule(rules, "93b2 - Subrutin:")

@@ -2738,27 +2738,32 @@ rule("18l - Nasib: Burning proporzionale globale a tick")
 
 	conditions
 	{
-		Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
-			And(Player Variable(Current Array Element, EfekNasib) == 5, And(Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed,
-			And(Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed,
-			And(Has Spawned(Current Array Element) == True, Is Alive(Current Array Element) == True)))))) > 0;
+		Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, EfekNasib) == 5,
+			Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed))) > 0;
 	}
 
 	actions
 	{
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
 			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
-			If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.EfekNasib == 5,
-				And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, And(Global.PemainAktif.TickBurnNasib <= Total Time Elapsed,
-				And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)))));
-				Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);
-				Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);
+			If(Global.PemainAktif.Manusia == True);
+				If(Global.PemainAktif.EfekNasib == 5);
+					If(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed);
+						If(Global.PemainAktif.TickBurnNasib <= Total Time Elapsed);
+							If(Has Spawned(Global.PemainAktif) == True);
+								If(Is Alive(Global.PemainAktif) == True);
+									Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);
+									Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);
+								End;
+							End;
+						End;
+					End;
+				End;
 			End;
 		End;
 		Global.PemainAktif = Null;
 	}
 }
-
 
 rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 {
