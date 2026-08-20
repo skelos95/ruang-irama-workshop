@@ -62,13 +62,13 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 | Esito | Durata | Effetto |
 |---|---:|---|
 | Vision | 15 s | visione speciale |
-| Acceleration | 10 s | accelerazione guidata dalla mira |
+| Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
 | Skull | immediato | morte del player |
 | Team Heal | immediato | cura completa dei player umani della squadra |
 | Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s |
 | Hacked | 5 s | stato Hacked |
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette vengono create da valori già risolti, senza dipendere dallo scratch globale dello scheduler, e restano segnalate anche quando lo snapshot esce dallo schermo. Menu, morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette catturano una volta l'identità del beneficiario e seguono ogni frame il suo occhio e la sua mira, restando visibili a tutto il roster umano anche fuori schermo; non dipendono dallo scratch globale mentre questo passa al player successivo. L'accelerazione usa la stessa identità stabile e spinge automaticamente lungo la direzione completa della visuale. Menu, morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
 
 ## Runtime 0.8.0
 

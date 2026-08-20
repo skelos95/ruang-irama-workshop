@@ -470,19 +470,50 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(machine, "Wait(1, Ignore Condition);")
         self.assert_rejected(mutated, "timestamp, non Wait")
 
-    def test_roulette_icons_cannot_reevaluate_scheduler_scratch(self) -> None:
+    def test_roulette_icons_capture_scheduler_identity_before_position_reevaluation(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
-        mutated = self.replace_call_argument(absolute, 3, "Visible To and Position")
-        self.assert_rejected(mutated, "scratch Global.PemainAktif rivalutato")
+        naked_position = call.args[1].replace("Evaluate Once(Global.PemainAktif)", "Global.PemainAktif", 1)
+        self.assertNotEqual(naked_position, call.args[1])
+        mutated = self.replace_call_argument(absolute, 1, naked_position)
+        self.assert_rejected(mutated, "scratch Global.PemainAktif dinamico senza Evaluate Once")
 
-    def test_roulette_icon_position_must_be_a_fixed_snapshot(self) -> None:
+    def test_roulette_icon_position_must_update_every_frame(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
-        mutated = self.replace_call_argument(absolute, 1, f"Update Every Frame({call.args[1]})")
-        self.assert_rejected(mutated, "posizione deve essere uno snapshot")
+        dynamic = next(iter(validator.iter_calls(call.args[1], "Update Every Frame")))
+        mutated = self.replace_call_argument(absolute, 1, dynamic.args[0])
+        self.assert_rejected(mutated, "posizione fluida Update Every Frame")
+
+    def test_roulette_icon_position_tracks_eye_and_facing_direction(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        changed_position, count = re.subn(
+            r"Facing Direction Of\(\s*Evaluate Once\(Global\.PemainAktif\)\s*\)",
+            "Vector(0, 0, 1)",
+            call.args[1],
+            count=1,
+        )
+        self.assertEqual(count, 1)
+        mutated = self.replace_call_argument(absolute, 1, changed_position)
+        self.assert_rejected(mutated, "ancoraggio fluido a occhio e mirino")
+
+    def test_roulette_icon_cannot_freeze_the_whole_position_expression(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        dynamic = next(iter(validator.iter_calls(call.args[1], "Update Every Frame")))
+        naked_inner = re.sub(
+            r"Evaluate Once\(Global\.PemainAktif\)",
+            "Global.PemainAktif",
+            dynamic.args[0],
+        )
+        frozen_position = f"Update Every Frame(Evaluate Once({naked_inner}))"
+        mutated = self.replace_call_argument(absolute, 1, frozen_position)
+        self.assert_rejected(mutated, "catture identità player")
 
     def test_roulette_icons_are_visible_only_to_humans(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -491,6 +522,13 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 0, "All Players(All Teams)")
         self.assert_rejected(mutated, "visibilità riservata agli umani")
 
+    def test_roulette_icons_reevaluate_position_only(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 3, "None")
+        self.assert_rejected(mutated, "reevaluation deve essere Position")
+
     def test_roulette_icons_remain_visible_when_offscreen(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
@@ -498,6 +536,209 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
         mutated = self.replace_call_argument(absolute, 5, "False")
         self.assert_rejected(mutated, "Show When Offscreen deve essere True")
+
+    def test_roulette_icons_cover_each_outcome_once(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, "Skull")
+        self.assert_rejected(mutated, "icone roulette univoche")
+
+    def test_roulette_icon_types_cannot_be_swapped_between_outcomes(self) -> None:
+        self.assertIn("), Eye, Position", self.source)
+        self.assertIn("), Skull, Position", self.source)
+        mutated = self.source.replace("), Eye, Position", "), IkonSementara, Position", 1)
+        mutated = mutated.replace("), Skull, Position", "), Eye, Position", 1)
+        mutated = mutated.replace("), IkonSementara, Position", "), Skull, Position", 1)
+        self.assert_rejected(mutated, "ordine tipi icona per esiti roulette 1..6")
+
+    def test_roulette_icon_is_destroyed_before_each_replacement(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(machine, "Destroy Icon(Global.PemainAktif.IkonKartuNasib);", "")
+        self.assert_rejected(mutated, "destroy-before-replace icona roulette")
+
+    def test_roulette_icon_handle_is_stored_immediately_after_creation(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        store = "Global.PemainAktif.IkonKartuNasib = Last Created Entity;"
+        mutated = self.replace_in_rule(
+            machine,
+            store,
+            "Global.PemainAktif.WaktuIkonNasibBerakhir = 0;\n\t\t\t\t" + store,
+        )
+        self.assert_rejected(mutated, "handle roulette non salvato immediatamente")
+
+    def test_roulette_icon_handle_store_cannot_be_removed(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(
+            machine,
+            "Global.PemainAktif.IkonKartuNasib = Last Created Entity;",
+            "",
+        )
+        self.assert_rejected(mutated, "salvataggio handle della nuova icona roulette")
+
+    def test_roulette_final_timer_destroys_and_clears_the_icon_handle(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        final_destroy = machine.body.rfind("Destroy Icon(Global.PemainAktif.IkonKartuNasib);")
+        self.assertGreaterEqual(final_destroy, 0)
+        changed = machine.body[:final_destroy] + machine.body[final_destroy:].replace(
+            "Destroy Icon(Global.PemainAktif.IkonKartuNasib);", "", 1
+        )
+        mutated = self.source[:machine.start] + changed + self.source[machine.end:]
+        self.assert_rejected(mutated, "cleanup finale icona roulette incompleto: Destroy Icon")
+
+        final_null = machine.body.rfind("Global.PemainAktif.IkonKartuNasib = Null;")
+        self.assertGreaterEqual(final_null, 0)
+        changed = machine.body[:final_null] + machine.body[final_null:].replace(
+            "Global.PemainAktif.IkonKartuNasib = Null;", "", 1
+        )
+        mutated = self.source[:machine.start] + changed + self.source[machine.end:]
+        self.assert_rejected(mutated, "cleanup finale icona roulette incompleto: azzeramento handle")
+
+    def test_roulette_rendering_cannot_move_to_an_each_player_rule(self) -> None:
+        extra_rule = r'''
+
+rule("999x - Nasib: Renderer pemain tambahan")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Icon(Global.PemainManusia, Event Player, Eye, Position, Color(Aqua), True);
+		Event Player.IkonKartuNasib = Last Created Entity;
+	}
+}
+'''
+        self.assert_rejected(self.source + extra_rule, "global-first, senza regole Each Player")
+
+    def test_luck_acceleration_captures_scheduler_identity(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        naked_direction = call.args[1].replace("Evaluate Once(Global.PemainAktif)", "Global.PemainAktif", 1)
+        self.assertNotEqual(naked_direction, call.args[1])
+        mutated = self.replace_call_argument(absolute, 1, naked_direction)
+        self.assert_rejected(mutated, "direzione accelerazione usa scratch Global.PemainAktif senza Evaluate Once")
+
+    def test_luck_acceleration_cannot_freeze_the_facing_vector(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(
+            absolute,
+            1,
+            "Evaluate Once(Facing Direction Of(Global.PemainAktif))",
+        )
+        self.assert_rejected(mutated, "accelerazione automatica 3D nella Facing Direction")
+
+    def test_luck_acceleration_uses_automatic_facing_direction(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, "Vector(0, 0, 1)")
+        self.assert_rejected(mutated, "accelerazione automatica 3D nella Facing Direction")
+
+    def test_luck_acceleration_cannot_depend_on_directional_input(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, "Throttle Of(Evaluate Once(Global.PemainAktif))")
+        self.assert_rejected(mutated, "dipende da input/impulsi: Throttle Of(")
+
+    def test_luck_acceleration_requires_world_space_and_dynamic_direction(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 4, "To Player")
+        self.assert_rejected(mutated, "accelerazione automatica 3D nella Facing Direction")
+        mutated = self.replace_call_argument(absolute, 5, "None")
+        self.assert_rejected(mutated, "accelerazione automatica 3D nella Facing Direction")
+
+    def test_luck_acceleration_cannot_use_apply_impulse(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.inject_action(
+            machine,
+            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 1, To World, Cancel Contrary Motion);",
+        )
+        self.assert_rejected(mutated, "non deve simulare l'accelerazione con Apply Impulse")
+
+    def test_luck_acceleration_is_globally_unique(self) -> None:
+        quick = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.inject_action(
+            quick,
+            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);",
+        )
+        self.assert_rejected(mutated, "Start Accelerating globale unico")
+
+    def test_luck_acceleration_call_cannot_be_shadowed_by_a_comment(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Start Accelerating")))
+        start = machine.start + call.start
+        end = machine.start + call.end
+        self.assertEqual(self.source[end], ";")
+        mutated = self.source[:start] + '"Start Accelerating(Global.PemainAktif, ...)"' + self.source[end + 1:]
+        self.assert_rejected(mutated, "Start Accelerating globale unico")
+
+    def test_luck_acceleration_has_its_own_ten_second_timestamp(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(
+            machine,
+            "Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;",
+            "Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 9;",
+        )
+        self.assert_rejected(mutated, "timestamp esatto di 10 secondi")
+
+    def test_luck_expiry_condition_cannot_be_shadowed_by_a_comment(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        condition = "Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir"
+        self.assertIn(condition, machine.body)
+        changed = machine.body.replace(condition, "False", 1)
+        closing = changed.rfind("\n\t}")
+        self.assertGreater(closing, 0)
+        changed = changed[:closing] + f'\n\t\t"{condition}"' + changed[closing:]
+        mutated = self.source[:machine.start] + changed + self.source[machine.end:]
+        self.assert_rejected(mutated, "cleanup timestamp Try Your Luck non analizzabile")
+
+    def test_luck_acceleration_expiry_restores_speed_and_stops_acceleration(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(machine, "Stop Accelerating(Global.PemainAktif);", "")
+        self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: Stop Accelerating")
+        mutated = self.replace_in_rule(machine, "Set Move Speed(Global.PemainAktif, 100);", "")
+        self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: ripristino Move Speed 100")
+
+    def test_luck_acceleration_stop_cannot_be_shadowed_by_a_comment(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(
+            machine,
+            "Stop Accelerating(Global.PemainAktif);",
+            '"Stop Accelerating(Global.PemainAktif);"',
+        )
+        self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: Stop Accelerating")
+
+    def test_luck_acceleration_is_stopped_on_death(self) -> None:
+        death_cleanup = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died" and "KartuNasibAktif" in rule.body
+        )
+        mutated = self.replace_in_rule(death_cleanup, "Stop Accelerating(Event Player);", "")
+        self.assert_rejected(mutated, "cleanup accelerazione morte: Stop Accelerating assente")
+
+    def test_roulette_icon_is_destroyed_and_cleared_on_all_lifecycle_paths(self) -> None:
+        cleanup_rules = (
+            (self.rule(lambda rule: validator.event_type(rule) == "Player Died" and "KartuNasibAktif" in rule.body), "morte"),
+            (self.rule(lambda rule: validator.subroutine_target(rule) == "TenangkanPemain"), "quiete lifecycle"),
+            (self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain"), "cleanup lifecycle"),
+        )
+        for rule, label in cleanup_rules:
+            with self.subTest(path=label, mutation="destroy"):
+                mutated = self.replace_in_rule(rule, "Destroy Icon(Event Player.IkonKartuNasib);", "")
+                self.assert_rejected(mutated, f"cleanup icona roulette {label}: Destroy Icon assente")
+            with self.subTest(path=label, mutation="null"):
+                mutated = self.replace_in_rule(rule, "Event Player.IkonKartuNasib = Null;", "")
+                self.assert_rejected(mutated, f"cleanup icona roulette {label}: azzeramento handle assente")
 
     def test_heart_heal_excludes_bot_and_dummy_players(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")

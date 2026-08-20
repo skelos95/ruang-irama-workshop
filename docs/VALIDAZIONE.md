@@ -112,7 +112,7 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 | Esito | Invariante |
 |---|---|
 | Vision | durata 15 s e cleanup effetto/IWT |
-| Acceleration | durata 10 s e controllo guidato dalla mira |
+| Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
 | Skull | morte immediata |
 | Team Heal | cura completa dei soli player umani del team |
 | Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s |
@@ -120,7 +120,7 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 
 L'avvio disattiva Unkillable. Morte, leave e cambio squadra devono annullare timestamp, status, modificatori ed effetti. Un loop o Wait per-player associato alla roulette è vietato.
 
-Le sei icone devono essere visibili soltanto al roster umano, usare una posizione valutata al momento della creazione, non rivalutare lo scratch globale dello scheduler e mantenere l'indicatore off-screen.
+Le sei icone devono essere visibili soltanto al roster umano, catturare con `Evaluate Once` l'identità del beneficiario e rivalutare con `Update Every Frame` soltanto occhio e direzione. La posizione usa la reevaluation `Position`, mantiene l'indicatore off-screen e non può leggere direttamente lo scratch globale dopo la creazione. Anche `Start Accelerating` deve catturare l'identità dentro `Facing Direction Of`, lasciando dinamica la direzione completa della visuale per tutti i 10 secondi; sono vietati throttle e impulsi ripetuti.
 
 ### Lifecycle
 
@@ -163,7 +163,8 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
-- icona roulette rivalutata tramite scratch globale o resa visibile ai bot;
+- icona roulette senza aggiornamento ogni frame, con identità/snapshot catturati nel punto sbagliato, rivalutata tramite scratch globale nudo o resa visibile ai bot;
+- accelerazione legata al player scratch corrente, direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
 - Privacy default OFF, target privato selezionabile o osservatore non sganciato;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;

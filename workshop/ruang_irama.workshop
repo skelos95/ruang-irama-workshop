@@ -3023,23 +3023,23 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 				End;
 				Global.PemainAktif.EfekNasib = Random Integer(1, 6);
 				If(Global.PemainAktif.EfekNasib == 1);
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Eye, None, Color(Aqua), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Eye, Position, Color(Aqua), True);
 				Else If(Global.PemainAktif.EfekNasib == 2);
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Dizzy, None, Color(Violet), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Dizzy, Position, Color(Violet), True);
 				Else If(Global.PemainAktif.EfekNasib == 3);
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Skull, None, Custom Color(255, 70, 70, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Skull, Position, Custom Color(255, 70, 70, 255), True);
 				Else If(Global.PemainAktif.EfekNasib == 4);
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Heart, None, Custom Color(70, 255, 110, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Heart, Position, Custom Color(70, 255, 110, 255), True);
 				Else If(Global.PemainAktif.EfekNasib == 5);
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Fire, None, Color(Orange), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Fire, Position, Color(Orange), True);
 				Else;
-					Create Icon(Global.PemainManusia, Eye Position(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 4,
-						Poison 2, None, Custom Color(170, 80, 255, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(
+						Evaluate Once(Global.PemainAktif)) * 4), Poison 2, Position, Custom Color(170, 80, 255, 255), True);
 				End;
 				Global.PemainAktif.IkonKartuNasib = Last Created Entity;
 				Modify Player Variable(Global.PemainAktif, PutaranKartuNasib, Subtract, 1);
@@ -3079,7 +3079,8 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 						"COBA NASIB: NAMA SEMUA PEMAIN / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่น / บอตทั้งหมด — 15 วินาที"));
 				Else If(Global.PemainAktif.EfekNasib == 2);
 					Set Move Speed(Global.PemainAktif, 1000);
-					Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 50, 25, To World, Direction Rate and Max Speed);
+					Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World,
+						Direction Rate and Max Speed);
 					Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String(
 						"TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String(

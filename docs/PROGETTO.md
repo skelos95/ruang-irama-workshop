@@ -88,7 +88,7 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 | Esito | Durata | Comportamento |
 |---|---:|---|
 | Vision | 15 s | crea e poi rimuove l'effetto Vision |
-| Acceleration | 10 s | applica accelerazione orientata dalla mira |
+| Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
 | Skull | immediato | uccide il player |
 | Team Heal | immediato | porta i player umani della squadra alla salute completa |
 | Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s |
@@ -96,7 +96,9 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 
 Il tick globale valuta transizioni e scadenze. Morte, leave e cambio squadra annullano stato, accelerazione, status, HUD/IWT ed effetti associati. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
 
-Le icone della roulette sono visibili soltanto agli umani e ricevono posizione e tipo già valutati al momento della creazione. Non rivalutano lo scratch `Global.PemainAktif`, che viene azzerato al termine di ogni scansione scheduler; l'indicatore off-screen resta abilitato se movimento o rotazione portano lo snapshot fuori visuale.
+Le icone della roulette sono visibili soltanto agli umani. Ogni creazione cattura una volta l'identità del beneficiario, poi rivaluta ogni frame il suo occhio e la sua direzione: l'icona resta così agganciata al mirino senza seguire lo scratch `Global.PemainAktif`, che continua a cambiare durante la scansione scheduler. La sola posizione viene rivalutata e l'indicatore off-screen resta abilitato.
+
+L'accelerazione cattura allo stesso modo l'identità del beneficiario ma lascia dinamica `Facing Direction Of`: la spinta nativa continua quindi a seguire davanti, alto e basso anche con throttle nullo. Il tick globale conserva soltanto avvio, timestamp e cleanup; non vengono aggiunti loop, impulsi periodici o regole per-player.
 
 ## Lifecycle player
 

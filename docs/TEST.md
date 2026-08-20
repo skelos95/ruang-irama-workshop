@@ -108,7 +108,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Esito | Verifica |
 |---|---|
 | Vision | effetto e testo EN/ID/TH; cleanup dopo 15 s |
-| Acceleration | direzione coerente con la mira; cleanup dopo 10 s |
+| Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | morte immediata e cleanup completo |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
 | Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; stop alla scadenza/morte |
@@ -116,7 +116,8 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 Per ciascun esito:
 
-- durante ogni passaggio della roulette l'icona corrente è visibile agli umani davanti al player che l'ha attivata; muoversi e ruotare deve mantenere almeno l'indicatore off-screen;
+- durante ogni passaggio della roulette l'icona corrente è visibile a tutto il roster umano e resta agganciata al mirino del player che l'ha attivata; provare movimento, rotazione continua e inversione di 180° senza scatti o salti verso altri player;
+- con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che la spinta segua continuamente la direzione 3D corrente;
 - Unkillable viene disattivato all'avvio;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;

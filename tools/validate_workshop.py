@@ -1232,26 +1232,227 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
     state_machine = rule_by_subroutine(rules, "ProsesNasibPemain")
     checks.require(state_machine is not None, "macchina a stati ProsesNasibPemain assente")
     if state_machine:
+        masked_state_machine = mask_strings(state_machine.body)
+
+        def if_block_containing(condition_fragment: str) -> str | None:
+            condition_position = masked_state_machine.find(condition_fragment)
+            if condition_position < 0:
+                return None
+            starts = list(re.finditer(r"(?m)^\s*If\(", masked_state_machine[:condition_position]))
+            if not starts:
+                return None
+            start = starts[-1].start()
+            depth = 0
+            offset = start
+            for line in masked_state_machine[start:].splitlines(keepends=True):
+                stripped = line.strip()
+                if stripped.startswith("If("):
+                    depth += 1
+                elif stripped == "End;":
+                    depth -= 1
+                    if depth == 0:
+                        return state_machine.body[start:offset + len(line)]
+                offset += len(line)
+            return None
+
         roulette_icons = list(iter_calls(state_machine.body, "Create Icon"))
         checks.equal(len(roulette_icons), 6, "numero icone dei sei esiti roulette")
+        expected_icon_types = ("Eye", "Dizzy", "Skull", "Heart", "Fire", "Poison 2")
+        actual_icon_types: list[str] = []
         for index, icon in enumerate(roulette_icons, start=1):
             checks.require(len(icon.args) >= 6, f"icona roulette {index} malformata")
             if len(icon.args) >= 6:
+                actual_icon_types.append(icon.args[2].strip())
                 checks.equal(icon.args[0].strip(), "Global.PemainManusia",
                              f"icona roulette {index}: visibilità riservata agli umani")
-                checks.require("Update Every Frame(" not in icon.args[1],
-                               f"icona roulette {index}: posizione deve essere uno snapshot")
-                checks.equal(icon.args[3].strip(), "None",
-                             f"icona roulette {index}: reevaluation deve essere None")
+                dynamic_positions = list(iter_calls(icon.args[1], "Update Every Frame"))
+                checks.equal(len(dynamic_positions), 1,
+                             f"icona roulette {index}: posizione fluida Update Every Frame")
+                dynamic_position = dynamic_positions[0] if len(dynamic_positions) == 1 else None
+                if dynamic_position:
+                    checks.equal(dynamic_position.raw.strip(), icon.args[1].strip(),
+                                 f"icona roulette {index}: Update Every Frame deve racchiudere tutta la posizione")
+                    captures = list(iter_calls(dynamic_position.args[0], "Evaluate Once")) if dynamic_position.args else []
+                    checks.equal(len(captures), 2,
+                                 f"icona roulette {index}: catture identità player")
+                    for capture in captures:
+                        checks.equal(
+                            tuple(argument.strip() for argument in capture.args),
+                            ("Global.PemainAktif",),
+                            f"icona roulette {index}: Evaluate Once deve catturare Global.PemainAktif",
+                        )
+                    compact_position = re.sub(r"\s+", "", dynamic_position.args[0]) if dynamic_position.args else ""
+                    expected_position = (
+                        "EyePosition(EvaluateOnce(Global.PemainAktif))+"
+                        "FacingDirectionOf(EvaluateOnce(Global.PemainAktif))*4"
+                    )
+                    checks.equal(compact_position, expected_position,
+                                 f"icona roulette {index}: ancoraggio fluido a occhio e mirino del beneficiario")
+                    uncaptured = re.sub(
+                        r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
+                        "",
+                        dynamic_position.args[0] if dynamic_position.args else "",
+                    )
+                    checks.require("Global.PemainAktif" not in uncaptured,
+                                   f"icona roulette {index}: scratch Global.PemainAktif dinamico senza Evaluate Once")
+                checks.equal(icon.args[3].strip(), "Position",
+                             f"icona roulette {index}: reevaluation deve essere Position")
                 checks.equal(icon.args[5].strip(), "True",
                              f"icona roulette {index}: Show When Offscreen deve essere True")
-                checks.require(
-                    not (
-                        "Global.PemainAktif" in icon.args[1]
-                        and ("Update Every Frame(" in icon.args[1] or "Position" in icon.args[3])
-                    ),
-                    f"icona roulette {index} dipende dallo scratch Global.PemainAktif rivalutato dopo lo scheduler",
+        checks.equal(tuple(actual_icon_types), expected_icon_types,
+                     "ordine tipi icona per esiti roulette 1..6")
+        checks.equal(len(actual_icon_types), len(set(actual_icon_types)),
+                     "icone roulette univoche per i sei esiti")
+
+        rolling_block = if_block_containing("Global.PemainAktif.PutaranKartuNasib > 0")
+        checks.require(rolling_block is not None, "blocco sostituzione icona roulette non analizzabile")
+        if rolling_block:
+            rolling_masked = mask_strings(rolling_block)
+            rolling_icons = list(iter_calls(rolling_block, "Create Icon"))
+            rolling_destroys = list(iter_calls(rolling_block, "Destroy Icon"))
+            checks.equal(len(rolling_icons), 6, "icone create nel blocco di sostituzione roulette")
+            checks.equal(len(rolling_destroys), 1, "destroy-before-replace icona roulette")
+            if rolling_icons and len(rolling_destroys) == 1:
+                checks.equal(
+                    tuple(argument.strip() for argument in rolling_destroys[0].args),
+                    ("Global.PemainAktif.IkonKartuNasib",),
+                    "destroy-before-replace usa l'handle roulette corrente",
                 )
+                checks.require(rolling_destroys[0].end < rolling_icons[0].start,
+                               "handle roulette distrutto dopo la creazione sostitutiva")
+                guard_position = rolling_masked.find("If(Global.PemainAktif.IkonKartuNasib != Null);")
+                checks.require(0 <= guard_position < rolling_destroys[0].start,
+                               "destroy-before-replace icona roulette non protetto da handle non-Null")
+            store_token = "Global.PemainAktif.IkonKartuNasib = Last Created Entity;"
+            checks.equal(rolling_masked.count(store_token), 1,
+                         "salvataggio handle della nuova icona roulette")
+            store_position = rolling_masked.find(store_token)
+            if rolling_icons and store_position >= 0:
+                between_create_and_store = mask_strings(rolling_block[rolling_icons[-1].end:store_position])
+                checks.require(
+                    re.fullmatch(r"\s*;\s*End;\s*", between_create_and_store) is not None,
+                    "handle roulette non salvato immediatamente dopo la creazione",
+                )
+
+        player_bound_roulette_rules = [
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and ("IkonKartuNasib" in rule.body or "EfekNasib" in rule.body)
+            and ("Create Icon(" in rule.body or "Start Accelerating(" in rule.body)
+        ]
+        checks.require(not player_bound_roulette_rules,
+                       "icone/accelerazione roulette devono restare global-first, senza regole Each Player")
+
+        global_acceleration_calls = list(iter_calls(source, "Start Accelerating"))
+        checks.equal(len(global_acceleration_calls), 1, "Start Accelerating globale unico")
+        acceleration_calls = list(iter_calls(state_machine.body, "Start Accelerating"))
+        checks.equal(len(acceleration_calls), 1, "accelerazione Try Your Luck unica")
+        if len(acceleration_calls) == 1:
+            acceleration = acceleration_calls[0]
+            checks.equal(len(acceleration.args), 6, "accelerazione Try Your Luck: numero argomenti")
+            if len(acceleration.args) == 6:
+                expected_acceleration = (
+                    "Global.PemainAktif",
+                    "FacingDirectionOf(EvaluateOnce(Global.PemainAktif))",
+                    "50",
+                    "25",
+                    "ToWorld",
+                    "DirectionRateandMaxSpeed",
+                )
+                compact_acceleration = tuple(re.sub(r"\s+", "", argument) for argument in acceleration.args)
+                checks.equal(compact_acceleration, expected_acceleration,
+                             "accelerazione automatica 3D nella Facing Direction del beneficiario")
+                uncaptured_direction = re.sub(
+                    r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
+                    "",
+                    acceleration.args[1],
+                )
+                checks.require("Global.PemainAktif" not in uncaptured_direction,
+                               "direzione accelerazione usa scratch Global.PemainAktif senza Evaluate Once")
+
+            branch_start = state_machine.body.rfind(
+                "Else If(Global.PemainAktif.EfekNasib == 2);", 0, acceleration.start
+            )
+            branch_end = state_machine.body.find(
+                "Else If(Global.PemainAktif.EfekNasib == 3);", acceleration.end
+            )
+            checks.require(branch_start >= 0 and branch_end > branch_start,
+                           "ramo esito 2 dell'accelerazione non analizzabile")
+            if branch_start >= 0 and branch_end > branch_start:
+                acceleration_branch = state_machine.body[branch_start:branch_end]
+                acceleration_branch_masked = mask_strings(acceleration_branch)
+                checks.require("Set Move Speed(Global.PemainAktif, 1000);" in acceleration_branch_masked,
+                               "accelerazione esito 2 non imposta Move Speed 1000")
+                checks.require(
+                    "Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;" in acceleration_branch_masked,
+                    "accelerazione esito 2 non usa timestamp esatto di 10 secondi",
+                )
+                for forbidden_input in ("Throttle Of(", "Is Button Held(", "Button(", "Apply Impulse("):
+                    checks.require(forbidden_input not in acceleration_branch_masked,
+                                   f"accelerazione esito 2 dipende da input/impulsi: {forbidden_input}")
+
+        checks.require("Apply Impulse(" not in mask_strings(state_machine.body),
+                       "Try Your Luck non deve simulare l'accelerazione con Apply Impulse")
+        checks.require("AkselerasiNasibAktif" not in mask_strings(source),
+                       "accelerazione global-first non richiede latch/player variable dedicata")
+
+        expiry_cleanup = if_block_containing("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir")
+        checks.require(expiry_cleanup is not None, "cleanup timestamp Try Your Luck non analizzabile")
+        if expiry_cleanup:
+            expiry_cleanup_masked = mask_strings(expiry_cleanup)
+            for token, label in (
+                ("Stop Accelerating(Global.PemainAktif);", "Stop Accelerating"),
+                ("Set Move Speed(Global.PemainAktif, 100);", "ripristino Move Speed 100"),
+                ("Global.PemainAktif.EfekNasib = 0;", "reset effetto"),
+                ("Global.PemainAktif.EfekNasibBerakhir = 0;", "reset timestamp"),
+            ):
+                checks.require(token in expiry_cleanup_masked,
+                               f"cleanup scadenza accelerazione incompleto: {label}")
+
+        final_icon_cleanup = if_block_containing("Global.PemainAktif.WaktuIkonNasibBerakhir > 0")
+        checks.require(final_icon_cleanup is not None, "cleanup finale handle icona roulette non analizzabile")
+        if final_icon_cleanup:
+            final_icon_cleanup_masked = mask_strings(final_icon_cleanup)
+            destroy_token = "Destroy Icon(Global.PemainAktif.IkonKartuNasib);"
+            null_token = "Global.PemainAktif.IkonKartuNasib = Null;"
+            timer_token = "Global.PemainAktif.WaktuIkonNasibBerakhir = 0;"
+            for token, label in (
+                (destroy_token, "Destroy Icon"),
+                (null_token, "azzeramento handle"),
+                (timer_token, "azzeramento timer"),
+            ):
+                checks.require(token in final_icon_cleanup_masked,
+                               f"cleanup finale icona roulette incompleto: {label}")
+            if destroy_token in final_icon_cleanup_masked and null_token in final_icon_cleanup_masked:
+                checks.require(final_icon_cleanup_masked.index(destroy_token) < final_icon_cleanup_masked.index(null_token),
+                               "cleanup finale azzera handle roulette prima di distruggerlo")
+
+        death_cleanup = next(
+            (rule for rule in rules_with_event(rules, "Player Died") if "KartuNasibAktif" in rule.body),
+            None,
+        )
+        checks.require(death_cleanup is not None, "cleanup accelerazione alla morte assente")
+        for cleanup_rule, label in (
+            (death_cleanup, "morte"),
+            (rule_by_subroutine(rules, "TenangkanPemain"), "quiete lifecycle"),
+            (rule_by_subroutine(rules, "BersihkanPemain"), "cleanup lifecycle"),
+        ):
+            checks.require(cleanup_rule is not None, f"cleanup accelerazione {label} assente")
+            if cleanup_rule:
+                cleanup_masked = mask_strings(cleanup_rule.body)
+                checks.require("Stop Accelerating(Event Player);" in cleanup_masked,
+                               f"cleanup accelerazione {label}: Stop Accelerating assente")
+                checks.require("Set Move Speed(Event Player, 100);" in cleanup_masked,
+                               f"cleanup accelerazione {label}: Move Speed 100 assente")
+                destroy_icon = "Destroy Icon(Event Player.IkonKartuNasib);"
+                null_icon = "Event Player.IkonKartuNasib = Null;"
+                checks.require(destroy_icon in cleanup_masked,
+                               f"cleanup icona roulette {label}: Destroy Icon assente")
+                checks.require(null_icon in cleanup_masked,
+                               f"cleanup icona roulette {label}: azzeramento handle assente")
+                if destroy_icon in cleanup_masked and null_icon in cleanup_masked:
+                    checks.require(cleanup_masked.index(destroy_icon) < cleanup_masked.index(null_icon),
+                                   f"cleanup icona roulette {label}: handle azzerato prima del destroy")
 
         health_calls = [
             call for call in iter_calls(state_machine.body, "Set Player Health")
