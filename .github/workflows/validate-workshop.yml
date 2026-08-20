@@ -43,9 +43,7 @@ jobs:
           rm -f .github/maintenance/patch.py
           rm -f .github/maintenance/five_effects_impl.py
           rm -f .github/maintenance/last-patch-error.txt
-          git checkout origin/main -- .github/workflows/validate-workshop.yml
-          git checkout c7609a2c11e328f32890e3ea600b6a48a8b4e28c -- .github/workflows/maintenance-patch.yml
-          git add -A
+          git add -A -- workshop tools .github/maintenance
           git diff --cached --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
