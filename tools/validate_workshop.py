@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "a57453a570977a41e435701b26e753635f094d40"
+EXPECTED_SOURCE_BLOB = "8a6e832b748f4eaee0c20c1a2b2f0c5194d95714"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -272,7 +272,10 @@ def validate(source: str) -> Checks:
     if interact:
         checks.require('Custom String("□")' not in interact.body and 'Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck deve mostrare solo l icona senza frame testuale")
         checks.require("Event Player.TeksKartuNasib = Last Text ID;" not in interact.body and "Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora world text della carta")
-        checks.require("Event Player.EfekNasib = Random Integer(1, 5);" in interact.body, "Try Your Luck non inizializza cinque risultati")
+        checks.require("Event Player.EfekNasib = Random Integer(1, 6);" in interact.body, "Try Your Luck non inizializza sei risultati")
+        for token in ("Event Player.KebalAktif = False;", "Event Player.ModeKebal = 0;", "Event Player.KursorKebal = 0;", "Event Player.ModeKebalTerakhir = 0;", "Clear Status(Event Player, Unkillable);", "Set Damage Received(Event Player, 100);", "Set Player Health(Event Player, Max Health(Event Player));"):
+            checks.require(token in interact.body, f"avvio Try Your Luck non disattiva Unkillable: {token}")
+        checks.require("Try Your Luck spegne definitivamente 1 HP / FULL HP" in interact.body, "avvio Try Your Luck non documenta Unkillable persistente OFF")
 
     luck = find_rule(rules, "18e - Nasib:")
     luck_death = find_rule(rules, "18f - Nasib:")
@@ -282,35 +285,40 @@ def validate(source: str) -> Checks:
     luck_vision_cleanup = find_rule(rules, "18j - Nasib:")
     luck_effect_hud = find_rule(rules, "18k - Nasib:")
     luck_burn_global = find_rule(rules, "18l - Nasib:")
-    checks.require(all(x is not None for x in (luck, luck_death, luck_reopen, luck_expiry, luck_vision_create, luck_vision_cleanup, luck_effect_hud, luck_burn_global)), "pipeline Try Your Luck a cinque risultati assente")
+    checks.require(all(x is not None for x in (luck, luck_death, luck_reopen, luck_expiry, luck_vision_create, luck_vision_cleanup, luck_effect_hud, luck_burn_global)), "pipeline Try Your Luck a sei risultati assente")
     if luck:
         checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
-        checks.require("Random Integer(1, 5)" in luck.body and "Random Integer(1, 10)" not in luck.body, "roulette Try Your Luck non usa cinque risultati")
-        for icon in ("Eye", "Dizzy", "Skull", "Heart", "Fire"):
+        checks.require("Random Integer(1, 6)" in luck.body and "Random Integer(1, 5)" not in luck.body and "Random Integer(1, 10)" not in luck.body, "roulette Try Your Luck non usa sei risultati")
+        for icon in ("Eye", "Dizzy", "Skull", "Heart", "Fire", "Poison 2"):
             checks.require(f", {icon}, Visible To and Position" in luck.body, f"icona Try Your Luck assente: {icon}")
-        for removed in ("Poison 2", "Asterisk", "Spiral", "Bolt", "Moon", "Arrow: Down"):
+        for removed in ("Asterisk", "Spiral", "Bolt", "Moon", "Arrow: Down"):
             checks.require(f", {removed}, Visible To and Position" not in luck.body, f"vecchio effetto Try Your Luck ancora presente: {removed}")
         for token in (
             "Event Player.PrivasiNasibAktif = True;",
             "Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);",
-            "Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;",
             "Kill(Event Player, Null);",
             "Set Player Health(All Living Players(Team Of(Event Player)), 9999);",
             "Set Status(Event Player, Null, Burning, 10);",
             "Event Player.TickBurnNasib = Total Time Elapsed;",
+            "Set Status(Event Player, Null, Hacked, 5);",
+            "Event Player.EfekNasibBerakhir = Total Time Elapsed + 5;",
         ):
             checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
-        for removed in ("Hacked", "Set Ultimate Charge(", "RANDOM TELEPORT", "Set Jump Vertical Speed(Event Player, 200)", "Set Gravity(Event Player, 10)", "Disable Movement Collision With Environment(Event Player, True)"):
+        for removed in ("Set Ultimate Charge(", "RANDOM TELEPORT", "Set Jump Vertical Speed(Event Player, 200)", "Set Gravity(Event Player, 10)", "Disable Movement Collision With Environment(Event Player, True)"):
             checks.require(removed not in luck.body, f"vecchio effetto Try Your Luck non eliminato: {removed}")
         checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
         checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
+        checks.require("Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" not in luck.body and "Set Status(Event Player, Null, Unkillable, 9999);" not in luck.body, "18e ripristina ancora Unkillable automaticamente")
+        for token in ("Event Player.KebalAktif = False;", "Event Player.ModeKebal = 0;", "Event Player.KursorKebal = 0;", "Event Player.ModeKebalTerakhir = 0;", "Set Damage Received(Event Player, 100);"):
+            checks.require(token in luck.body, f"18e non mantiene Unkillable OFF: {token}")
     if luck_death:
-        checks.require("Clear Status(Event Player, Burning);" in luck_death.body, "morte Try Your Luck non pulisce Burning")
-        checks.require("Stop Accelerating(Event Player);" in luck_death.body and "Set Move Speed(Event Player, 100);" in luck_death.body, "morte Try Your Luck non pulisce accelerazione")
+        for token in ("Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);"):
+            checks.require(token in luck_death.body, f"morte Try Your Luck cleanup incompleto: {token}")
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
         checks.require("Call Subroutine(TutupMenu);" in luck_death.body, "morte Try Your Luck non chiude e libera il menu prima della riapertura")
         checks.require("Wait(" not in luck_death.body and "Loop If Condition Is True;" not in luck_death.body, "morte Try Your Luck deve resettare subito senza Wait o Loop")
         checks.require("Call Subroutine(GambarMenu);" not in luck_death.body and "Event Player.MenuTerbuka = True;" not in luck_death.body, "morte Try Your Luck non deve mostrare il menu prima del respawn")
+        checks.require("Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" not in luck_death.body and "Set Status(Event Player, Null, Unkillable, 9999);" not in luck_death.body, "morte Try Your Luck ripristina ancora Unkillable")
     if luck_reopen:
         checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
         checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
@@ -321,9 +329,9 @@ def validate(source: str) -> Checks:
         checks.equal(event_type(luck_expiry), "Ongoing - Each Player", "18h scadenza Try Your Luck: scheduler")
         checks.require("Event Player.EfekNasibBerakhir > 0;" in luck_expiry.body and "Total Time Elapsed >= Event Player.EfekNasibBerakhir;" in luck_expiry.body, "18h non scade sul timestamp per-player")
         checks.require("Wait(" not in luck_expiry.body and "Loop If Condition Is True;" not in luck_expiry.body, "18h scadenza Try Your Luck non deve usare Wait o Loop")
-        for token in ("Clear Status(Event Player, Burning);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);", "Event Player.PrivasiNasibAktif = False;", "Event Player.TickBurnNasib = 0;", "Event Player.KartuNasibAktif = False;", "Event Player.MenuNasibHarusDibuka = True;"):
+        for token in ("Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);", "Event Player.PrivasiNasibAktif = False;", "Event Player.TickBurnNasib = 0;", "Event Player.KartuNasibAktif = False;", "Event Player.MenuNasibHarusDibuka = True;"):
             checks.require(token in luck_expiry.body, f"18h reset scadenza incompleto: {token}")
-        checks.require("Event Player.EfekNasib == 5" in luck_expiry.body and "Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" in luck_expiry.body, "18h non ripristina Unkillable dopo Burning")
+        checks.require("ModeKebalTerakhir" not in luck_expiry.body and "Set Status(Event Player, Null, Unkillable" not in luck_expiry.body, "18h non deve riattivare Unkillable")
     if luck_vision_create:
         checks.equal(event_type(luck_vision_create), "Ongoing - Each Player", "18i Vision labels: scheduler")
         checks.require("Create In-World Text(" in luck_vision_create.body and 'Custom String("{0}", Event Player)' in luck_vision_create.body, "18i Vision non crea nomi custom")
@@ -333,9 +341,9 @@ def validate(source: str) -> Checks:
         checks.require("Destroy In-World Text(Event Player.TeksVisiNasib);" in luck_vision_cleanup.body, "18j non distrugge label Vision")
     if luck_effect_hud:
         checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")
-        for token in ("VISION: ALL PLAYER / BOT NAMES", "AIM-STEERED ACCELERATION", "BURNING: 5% MAX HP / SEC", "EfekNasibBerakhir - Total Time Elapsed", "Global.RGB"):
+        for token in ("VISION: ALL PLAYER / BOT NAMES", "AIM-STEERED ACCELERATION", "BURNING: 5% MAX HP / SEC", "HACKED", "EfekNasibBerakhir - Total Time Elapsed", "Global.RGB"):
             checks.require(token in luck_effect_hud.body, f"18k HUD effetto incompleto: {token}")
-        for removed in ("HACKED", "ULTIMATE ALWAYS READY", "MOVE / JUMP / PROJECTILE x2", "GRAVITY 10%", "FLOOR REMOVED"):
+        for removed in ("ULTIMATE ALWAYS READY", "MOVE / JUMP / PROJECTILE x2", "GRAVITY 10%", "FLOOR REMOVED"):
             checks.require(removed not in luck_effect_hud.body, f"18k mostra ancora vecchio effetto: {removed}")
         checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait/Loop")
     if luck_burn_global:
@@ -350,7 +358,7 @@ def validate(source: str) -> Checks:
     checks.require(quiet_player is not None, "TenangkanPemain assente")
     if quiet_player:
         checks.require("Wait(" not in quiet_player.body and "Loop If Condition Is True;" not in quiet_player.body, "TenangkanPemain deve pulire il cambio team senza Wait o Loop")
-        for token in ("Destroy Icon(Event Player.IkonKartuNasib);", "Destroy HUD Text(Event Player.HudEfekNasib);", "Clear Status(Event Player, Burning);", "Clear Status(Event Player, Unkillable);", "Stop Accelerating(Event Player);", "Event Player.KartuNasibAktif = False;", "Event Player.EfekNasib = 0;", "Event Player.TickBurnNasib = 0;", "Event Player.MenuNasibHarusDibuka = False;"):
+        for token in ("Destroy Icon(Event Player.IkonKartuNasib);", "Destroy HUD Text(Event Player.HudEfekNasib);", "Clear Status(Event Player, Burning);", "Clear Status(Event Player, Hacked);", "Clear Status(Event Player, Unkillable);", "Stop Accelerating(Event Player);", "Event Player.KartuNasibAktif = False;", "Event Player.EfekNasib = 0;", "Event Player.TickBurnNasib = 0;", "Event Player.MenuNasibHarusDibuka = False;"):
             checks.require(token in quiet_player.body, f"cambio team non ripulisce Try Your Luck: {token}")
     if fast_manager:
         checks.require("Set Ultimate Charge(" not in fast_manager.body, "04g contiene ancora Ultimate Try Your Luck rimossa")
