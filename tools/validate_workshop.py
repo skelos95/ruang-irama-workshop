@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "3374baff825e37282bbcf8c957c4fdf29fc59ccc"
+EXPECTED_SOURCE_BLOB = "a57453a570977a41e435701b26e753635f094d40"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -131,7 +131,7 @@ def validate(source: str) -> Checks:
     checks.require(len(rules) >= 75, "numero regole inatteso")
     for name in ("PemainAktif", "IndeksPemainGlobal", "IndeksPemilihVote"):
         checks.require(name in globals_, f"variabile Global-first assente: {name}")
-    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "HasilNasibTerkunci", "MenuNasibHarusDibuka", "HudEfekNasib", "TeksVisiNasib"):
+    for name in ("HalamanMenuTujuan", "HalamanSubmenuPramuat", "TargetTeleportasiTeks", "TeksTeleportasi", "InputMenuDikunci", "EfekNasib", "EfekNasibBerakhir", "DaftarTujuanNasib", "TujuanNasib", "ArahNasib", "PrivasiNasibAktif", "KategoriTeleportNasib", "TickBurnNasib", "MenuNasibHarusDibuka", "HudEfekNasib", "TeksVisiNasib"):
         checks.require(name in players, f"variabile preload menu assente: {name}")
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
@@ -272,7 +272,7 @@ def validate(source: str) -> Checks:
     if interact:
         checks.require('Custom String("□")' not in interact.body and 'Custom String("[")' not in interact.body and 'Custom String("]")' not in interact.body, "Try Your Luck deve mostrare solo l icona senza frame testuale")
         checks.require("Event Player.TeksKartuNasib = Last Text ID;" not in interact.body and "Event Player.TeksKartuNasibKanan = Last Text ID;" not in interact.body, "Try Your Luck crea ancora world text della carta")
-        checks.require("Event Player.EfekNasib = Random Integer(1, 10);" in interact.body, "Try Your Luck non inizializza dieci risultati")
+        checks.require("Event Player.EfekNasib = Random Integer(1, 5);" in interact.body, "Try Your Luck non inizializza cinque risultati")
 
     luck = find_rule(rules, "18e - Nasib:")
     luck_death = find_rule(rules, "18f - Nasib:")
@@ -281,159 +281,80 @@ def validate(source: str) -> Checks:
     luck_vision_create = find_rule(rules, "18i - Nasib:")
     luck_vision_cleanup = find_rule(rules, "18j - Nasib:")
     luck_effect_hud = find_rule(rules, "18k - Nasib:")
-    luck_ultimate_global = find_rule(rules, "18l - Nasib:")
-    checks.require(luck is not None and luck_death is not None and luck_reopen is not None and luck_expiry is not None and luck_vision_create is not None and luck_vision_cleanup is not None and luck_effect_hud is not None and luck_ultimate_global is not None, "pipeline Try Your Luck a dieci risultati assente")
+    luck_burn_global = find_rule(rules, "18l - Nasib:")
+    checks.require(all(x is not None for x in (luck, luck_death, luck_reopen, luck_expiry, luck_vision_create, luck_vision_cleanup, luck_effect_hud, luck_burn_global)), "pipeline Try Your Luck a cinque risultati assente")
     if luck:
         checks.equal(event_type(luck), "Ongoing - Each Player", "18e Try Your Luck: scheduler")
-        checks.require("Random Integer(1, 10)" in luck.body, "roulette Try Your Luck non usa dieci risultati")
-        for icon in ("Poison 2", "Asterisk", "Spiral", "Bolt", "Moon", "Eye", "Arrow: Down", "Dizzy", "Skull", "Heart"):
+        checks.require("Random Integer(1, 5)" in luck.body and "Random Integer(1, 10)" not in luck.body, "roulette Try Your Luck non usa cinque risultati")
+        for icon in ("Eye", "Dizzy", "Skull", "Heart", "Fire"):
             checks.require(f", {icon}, Visible To and Position" in luck.body, f"icona Try Your Luck assente: {icon}")
+        for removed in ("Poison 2", "Asterisk", "Spiral", "Bolt", "Moon", "Arrow: Down"):
+            checks.require(f", {removed}, Visible To and Position" not in luck.body, f"vecchio effetto Try Your Luck ancora presente: {removed}")
         for token in (
-            "Set Status(Event Player, Null, Hacked, 5);",
-            "Set Ultimate Charge(Event Player, 100);",
-            "Spawn Points(Team Of(Event Player))",
-            "Objective Position(Objective Index)",
-            "Player Variable(Current Array Element, BotOtomatis) == True",
-            "Filtered Array(Global.PemainManusia",
-            "Set Move Speed(Event Player, 200);",
-            "Set Jump Vertical Speed(Event Player, 200);",
-            "Set Projectile Speed(Event Player, 200);",
-            "Set Gravity(Event Player, 10);",
-            "Set Projectile Speed(Event Player, 10);",
             "Event Player.PrivasiNasibAktif = True;",
-            "Disable Movement Collision With Environment(Event Player, True);",
             "Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);",
+            "Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;",
             "Kill(Event Player, Null);",
             "Set Player Health(All Living Players(Team Of(Event Player)), 9999);",
+            "Set Status(Event Player, Null, Burning, 10);",
+            "Event Player.TickBurnNasib = Total Time Elapsed;",
         ):
             checks.require(token in luck.body, f"Try Your Luck risultato incompleto: {token}")
-        checks.require("Start Forcing Player Position(" not in luck.body, "Try Your Luck non deve forzare la posizione")
-        checks.require("Direction From Angles(Random Real(-180, 180), Random Real(-45, 45))" not in luck.body, "Accelerazione Try Your Luck non deve usare una direzione casuale")
-        checks.require("AIM-STEERED ACCELERATION — 10s" in luck.body and "Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;" in luck.body, "Accelerazione Try Your Luck non dura 10 secondi o non è guidata dalla mira")
-        checks.require("Set Status(Event Player, Null, Knocked Down" not in luck.body, "Try Your Luck caduta nel vuoto non deve usare Knocked Down")
-        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Halo" not in luck.body, "Try Your Luck riusa ancora Halo di Unkillable")
-        checks.require("Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Warning" not in luck.body, "Try Your Luck riusa ancora Warning di Unkillable")
-        checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
+        for removed in ("Hacked", "Set Ultimate Charge(", "RANDOM TELEPORT", "Set Jump Vertical Speed(Event Player, 200)", "Set Gravity(Event Player, 10)", "Disable Movement Collision With Environment(Event Player, True)"):
+            checks.require(removed not in luck.body, f"vecchio effetto Try Your Luck non eliminato: {removed}")
         checks.require("Call Subroutine(TutupMenu);" in luck.body, "Try Your Luck non chiude il menu alla fine della roulette")
-        checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck.body, "Try Your Luck istantaneo non richiede la riapertura dopo il risultato")
-        checks.require("Start Forcing Player Outlines(" not in luck.body, "Vision Try Your Luck non deve usare outline")
-        checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in luck.body, "Vision Try Your Luck non deve dipendere dai nameplate standard")
+        checks.require("Kill(Event Player, Null);\n\t\t\tAbort;" in luck.body, "Skull Try Your Luck non interrompe subito la pipeline dopo la morte")
     if luck_death:
-        for token in (
-            "Clear Status(Event Player, Hacked);",
-            "Stop Accelerating(Event Player);",
-            "Enable Movement Collision With Environment(Event Player);",
-            "Set Move Speed(Event Player, 100);",
-            "Set Jump Vertical Speed(Event Player, 100);",
-            "Set Projectile Speed(Event Player, 100);",
-            "Set Gravity(Event Player, 100);",
-        ):
-            checks.require(token in luck_death.body, f"reset morte Try Your Luck incompleto: {token}")
+        checks.require("Clear Status(Event Player, Burning);" in luck_death.body, "morte Try Your Luck non pulisce Burning")
+        checks.require("Stop Accelerating(Event Player);" in luck_death.body and "Set Move Speed(Event Player, 100);" in luck_death.body, "morte Try Your Luck non pulisce accelerazione")
         checks.require("Event Player.MenuNasibHarusDibuka = True;" in luck_death.body, "morte Try Your Luck non richiede la riapertura dopo il reset")
         checks.require("Call Subroutine(TutupMenu);" in luck_death.body, "morte Try Your Luck non chiude e libera il menu prima della riapertura")
-        checks.require("Event Player.PutaranKartuNasib > 0" in luck_death.body and "Event Player.EfekNasib != 0" in luck_death.body, "reset morte Try Your Luck non copre roulette ed effetto")
         checks.require("Wait(" not in luck_death.body and "Loop If Condition Is True;" not in luck_death.body, "morte Try Your Luck deve resettare subito senza Wait o Loop")
         checks.require("Call Subroutine(GambarMenu);" not in luck_death.body and "Event Player.MenuTerbuka = True;" not in luck_death.body, "morte Try Your Luck non deve mostrare il menu prima del respawn")
-        checks.require("Destroy HUD Text(Event Player.HudEfekNasib);" in luck_death.body and "Event Player.HudEfekNasib = Null;" in luck_death.body, "morte Try Your Luck non pulisce HUD effetto")
     if luck_reopen:
         checks.equal(event_type(luck_reopen), "Ongoing - Each Player", "18g riapertura Try Your Luck: scheduler")
         checks.require("Event Player.KartuNasibAktif == False;" in luck_reopen.body, "18g riapre il menu prima che la funzione sia finita")
         checks.require("Has Spawned(Event Player) == True;" in luck_reopen.body and "Is Alive(Event Player) == True;" in luck_reopen.body, "18g deve attendere il respawn vivo prima di consumare la riapertura")
-        checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body, "18g non riapre la pagina Try Your Luck")
-        checks.require("Call Subroutine(GambarNasib);" in luck_reopen.body, "18g riapre lo stato menu ma non rende direttamente HUD Try Your Luck")
-        checks.require(luck_reopen.body.index("Call Subroutine(GambarMenu);") < luck_reopen.body.index("Call Subroutine(GambarNasib);") < luck_reopen.body.index("Event Player.MenuNasibHarusDibuka = False;"), "18g deve renderizzare pagina 10 prima di consumare la riapertura")
-        checks.require("Event Player.InputMenuDikunci = False;" in luck_reopen.body, "18g non libera il latch input del menu")
+        checks.require("Event Player.HalamanMenu = 10;" in luck_reopen.body and "Call Subroutine(GambarMenu);" in luck_reopen.body and "Call Subroutine(GambarNasib);" in luck_reopen.body, "18g non riapre visivamente la pagina Try Your Luck")
         checks.require("Wait(" not in luck_reopen.body and "Loop If Condition Is True;" not in luck_reopen.body, "18g riapertura al respawn non deve usare Wait o Loop")
-        checks.require("Call Subroutine(TutupMenu);" in luck_reopen.body, "18g non forza un redraw fresco al respawn")
-        checks.require(luck_reopen.body.index("Call Subroutine(GambarMenu);") < luck_reopen.body.index("Event Player.MenuNasibHarusDibuka = False;"), "18g consuma la riapertura prima del redraw")
-        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
-            checks.require(f"Allow Button(Event Player, Button({button}));" in luck_reopen.body, f"18g non restituisce {button}")
-        checks.require("Disallow Button(Event Player, Button(Crouch));" not in luck_reopen.body and "Disallow Button(Event Player, Button(Jump));" not in luck_reopen.body, "18g non deve bloccare Crouch o Jump")
     if luck_expiry:
         checks.equal(event_type(luck_expiry), "Ongoing - Each Player", "18h scadenza Try Your Luck: scheduler")
         checks.require("Event Player.EfekNasibBerakhir > 0;" in luck_expiry.body and "Total Time Elapsed >= Event Player.EfekNasibBerakhir;" in luck_expiry.body, "18h non scade sul timestamp per-player")
         checks.require("Wait(" not in luck_expiry.body and "Loop If Condition Is True;" not in luck_expiry.body, "18h scadenza Try Your Luck non deve usare Wait o Loop")
-        for token in (
-            "Clear Status(Event Player, Hacked);",
-            "Stop Accelerating(Event Player);",
-            "Enable Movement Collision With Environment(Event Player);",
-            "Set Move Speed(Event Player, 100);",
-            "Set Jump Vertical Speed(Event Player, 100);",
-            "Set Projectile Speed(Event Player, 100);",
-            "Set Gravity(Event Player, 100);",
-            "Event Player.PrivasiNasibAktif = False;",
-            "Event Player.KartuNasibAktif = False;",
-            "Event Player.MenuNasibHarusDibuka = True;",
-        ):
+        for token in ("Clear Status(Event Player, Burning);", "Stop Accelerating(Event Player);", "Set Move Speed(Event Player, 100);", "Event Player.PrivasiNasibAktif = False;", "Event Player.TickBurnNasib = 0;", "Event Player.KartuNasibAktif = False;", "Event Player.MenuNasibHarusDibuka = True;"):
             checks.require(token in luck_expiry.body, f"18h reset scadenza incompleto: {token}")
-        checks.require("Destroy HUD Text(Event Player.HudEfekNasib);" in luck_expiry.body and "Event Player.HudEfekNasib = Null;" in luck_expiry.body, "18h non pulisce HUD effetto")
+        checks.require("Event Player.EfekNasib == 5" in luck_expiry.body and "Event Player.ModeKebal = Event Player.ModeKebalTerakhir;" in luck_expiry.body, "18h non ripristina Unkillable dopo Burning")
     if luck_vision_create:
         checks.equal(event_type(luck_vision_create), "Ongoing - Each Player", "18i Vision labels: scheduler")
         checks.require("Create In-World Text(" in luck_vision_create.body and 'Custom String("{0}", Event Player)' in luck_vision_create.body, "18i Vision non crea nomi custom")
-        checks.require("Filtered Array(All Players(All Teams)" in luck_vision_create.body and "PrivasiNasibAktif) == True" in luck_vision_create.body, "18i Vision non limita i nomi agli osservatori Vision")
-        checks.require("Eye Position(Event Player) + Vector(0, 0.450, 0)" in luck_vision_create.body, "18i Vision non segue player/bot")
-        checks.require("Wait(" not in luck_vision_create.body and "Loop If Condition Is True;" not in luck_vision_create.body and "For Player Variable(" not in luck_vision_create.body, "18i Vision non deve usare Wait/Loop")
+        checks.require("PrivasiNasibAktif) == True" in luck_vision_create.body, "18i Vision non limita i nomi agli osservatori Vision")
     if luck_vision_cleanup:
         checks.equal(event_type(luck_vision_cleanup), "Ongoing - Each Player", "18j Vision cleanup: scheduler")
         checks.require("Destroy In-World Text(Event Player.TeksVisiNasib);" in luck_vision_cleanup.body, "18j non distrugge label Vision")
-        checks.require("Wait(" not in luck_vision_cleanup.body and "Loop If Condition Is True;" not in luck_vision_cleanup.body, "18j Vision cleanup non deve usare Wait/Loop")
     if luck_effect_hud:
         checks.equal(event_type(luck_effect_hud), "Ongoing - Each Player", "18k HUD effetto: scheduler")
-        checks.require('Create HUD Text(Event Player, Null, Null, Custom String("\\n{0}\\n{1}"' in luck_effect_hud.body, "18k deve mostrare solo effetto e durata nel campo Text")
-        checks.require('Custom String("TRY YOUR LUCK' not in luck_effect_hud.body, "18k mostra ancora TRY YOUR LUCK")
-        checks.require("Top, -99" in luck_effect_hud.body, "18k non lascia lo spazio sotto CHILL DEDICATED SERVER")
-        checks.require("EfekNasibBerakhir - Total Time Elapsed" in luck_effect_hud.body and "s REMAINING" in luck_effect_hud.body, "18k non mostra countdown")
-        checks.require("UNTIL DEATH" in luck_effect_hud.body, "18k non mostra durata floor removed")
-        checks.require("Color(White), Color(White), Global.RGB, Visible To String and Color" in luck_effect_hud.body, "18k testo effetto non usa Global.RGB")
+        for token in ("VISION: ALL PLAYER / BOT NAMES", "AIM-STEERED ACCELERATION", "BURNING: 5% MAX HP / SEC", "EfekNasibBerakhir - Total Time Elapsed", "Global.RGB"):
+            checks.require(token in luck_effect_hud.body, f"18k HUD effetto incompleto: {token}")
+        for removed in ("HACKED", "ULTIMATE ALWAYS READY", "MOVE / JUMP / PROJECTILE x2", "GRAVITY 10%", "FLOOR REMOVED"):
+            checks.require(removed not in luck_effect_hud.body, f"18k mostra ancora vecchio effetto: {removed}")
         checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait/Loop")
+    if luck_burn_global:
+        checks.equal(event_type(luck_burn_global), "Ongoing - Global", "18l Burning globale: scheduler")
+        for token in ("Player Variable(Current Array Element, EfekNasib) == 5", "Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed", "Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);", "Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);", "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);"):
+            checks.require(token in luck_burn_global.body, f"18l Burning globale incompleto: {token}")
+        checks.require("Wait(" not in luck_burn_global.body and "Loop If Condition Is True;" not in luck_burn_global.body, "18l Burning globale non deve usare Wait o Loop")
+        checks.require("Ongoing - Each Player" not in luck_burn_global.body, "18l Burning non deve diventare Each Player")
     if teleport_open:
         checks.require("Event Player.KartuNasibAktif == False;" in teleport_open.body, "Crouch Teleport deve essere disattivato durante Try Your Luck")
-    if luck and luck_expiry:
-        checks.require("TeleportasiJongkokDiaktifkan =" not in luck.body and "TeleportasiJongkokDiaktifkan =" not in luck_expiry.body, "Try Your Luck non deve cambiare la preferenza Crouch Teleport")
     quiet_player = find_rule(rules, "93b2 - Subrutin:")
     checks.require(quiet_player is not None, "TenangkanPemain assente")
     if quiet_player:
         checks.require("Wait(" not in quiet_player.body and "Loop If Condition Is True;" not in quiet_player.body, "TenangkanPemain deve pulire il cambio team senza Wait o Loop")
-        for token in (
-            "Destroy Icon(Event Player.IkonKartuNasib);",
-            "Destroy HUD Text(Event Player.HudEfekNasib);",
-            "Clear Status(Event Player, Hacked);",
-            "Clear Status(Event Player, Unkillable);",
-            "Stop Accelerating(Event Player);",
-            "Enable Movement Collision With Environment(Event Player);",
-            "Set Damage Received(Event Player, 100);",
-            "Set Move Speed(Event Player, 100);",
-            "Set Jump Vertical Speed(Event Player, 100);",
-            "Set Projectile Speed(Event Player, 100);",
-            "Set Gravity(Event Player, 100);",
-            "Event Player.KebalAktif = False;",
-            "Event Player.ModeKebal = 0;",
-            "Event Player.KartuNasibAktif = False;",
-            "Event Player.EfekNasib = 0;",
-            "Event Player.MenuNasibHarusDibuka = False;",
-        ):
+        for token in ("Destroy Icon(Event Player.IkonKartuNasib);", "Destroy HUD Text(Event Player.HudEfekNasib);", "Clear Status(Event Player, Burning);", "Clear Status(Event Player, Unkillable);", "Stop Accelerating(Event Player);", "Event Player.KartuNasibAktif = False;", "Event Player.EfekNasib = 0;", "Event Player.TickBurnNasib = 0;", "Event Player.MenuNasibHarusDibuka = False;"):
             checks.require(token in quiet_player.body, f"cambio team non ripulisce Try Your Luck: {token}")
-    if luck_ultimate_global:
-        checks.equal(event_type(luck_ultimate_global), "Ongoing - Global", "18l Ultimate sustain: scheduler")
-        checks.require(luck_ultimate_global.body.count("Filtered Array(All Players(All Teams)") >= 2, "18l Ultimate sustain non filtra globalmente i player attivi")
-        for token in (
-            "Player Variable(Current Array Element, Manusia) == True",
-            "Player Variable(Current Array Element, EfekNasib) == 2",
-            "Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed",
-            "Has Spawned(Current Array Element) == True",
-            "Is Alive(Current Array Element) == True",
-            "Ultimate Charge Percent(Current Array Element) < 100",
-            "Set Ultimate Charge(Filtered Array(All Players(All Teams)",
-        ):
-            checks.require(token in luck_ultimate_global.body, f"18l Ultimate sustain incompleto: {token}")
-        checks.require("KartuNasibAktif" not in luck_ultimate_global.body, "18l Ultimate sustain non deve dipendere dal lifecycle menu/roulette")
-        checks.require("Button(Ultimate)" not in luck_ultimate_global.body, "18l Ultimate sustain non deve dipendere dall input Ultimate")
-        checks.require("Wait(" not in luck_ultimate_global.body and "Loop If Condition Is True;" not in luck_ultimate_global.body and "For Global Variable(" not in luck_ultimate_global.body and "For Player Variable(" not in luck_ultimate_global.body, "18l Ultimate sustain deve essere event-driven senza Wait o Loop")
     if fast_manager:
-        checks.require("Set Ultimate Charge(" not in fast_manager.body, "04g non deve più gestire Ultimate Try Your Luck")
-        checks.require("Global.PemainAktif.EfekNasib == 2" not in fast_manager.body, "04g conserva ancora logica Ultimate Try Your Luck")
-        checks.require("Total Time Elapsed >= Global.PemainAktif.EfekNasibBerakhir" not in fast_manager.body, "04g gestisce ancora la scadenza Try Your Luck condivisa")
-        checks.require("Set Player Variable(Global.PemainAktif, MenuNasibHarusDibuka, True);" not in fast_manager.body, "04g consegna ancora la riapertura Try Your Luck")
+        checks.require("Set Ultimate Charge(" not in fast_manager.body, "04g contiene ancora Ultimate Try Your Luck rimossa")
+        checks.require("Global.PemainAktif.EfekNasib ==" not in fast_manager.body, "04g non deve più gestire effetti Try Your Luck")
     if inspect_rule:
         checks.require("Event Player.PrivasiNasibAktif == True" in inspect_rule.body, "reveal Try Your Luck non bypassa la privacy Inspection")
     inspect_refresh = find_rule(rules, "96 - Subrutin:")
