@@ -707,7 +707,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 
 		Create HUD Text(Global.PemainManusia, Null,
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("SERVER LOCATION: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer]) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOKASI SERVER: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer]) : Custom String("ตำแหน่งเซิร์ฟเวอร์: {0}", Global.DaftarLokasiServer[Global.IndeksLokasiServer]),
-			Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
+			Custom String("{0}    {1}\n ", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer),
 			Top, -100, Color(White), Custom Color(80, 235, 255, 255), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0}: inspect hero + HP / navigate menus", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
@@ -1062,7 +1062,7 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.HudPemainDibuat = True;
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinSuara != Null
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN\n ", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT\n ", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที\n ", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinSuara != Null
 			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Global.PemimpinSuara)
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.PemimpinSuara)
 			: Custom String("\n \nCHILL STAR: {0}", Global.PemimpinSuara) : Custom String("\n ") : Custom String("")),
@@ -1080,7 +1080,7 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.HudKiri = Last Text ID;
 		Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}", Global.DaftarIkon[Event Player.IndeksIkon],
-			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player,
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}\n ", Event Player,
 			Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Custom String("\n ") : Custom String("")), Null, Right, -99 + Event Player.UrutanHUD,
 			Color(White), Event Player.WarnaNama, Color(White), Visible To String and Color, Visible Never);
@@ -2332,6 +2332,27 @@ rule("13 - Intip Pahlawan: Nama mengikuti target reticolo senza Wait")
 	}
 }
 
+
+rule("16a - Anran: Ultimate al 100 percento ad ogni morte")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Anran);
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 100);
+	}
+}
+
 rule("17 - Balas Dendam: Catat hanya pembunuh langsung")
 {
 	event
@@ -2752,7 +2773,7 @@ rule("18l - Nasib: Burning proporzionale globale a tick")
 						If(Global.PemainAktif.TickBurnNasib <= Total Time Elapsed);
 							If(Has Spawned(Global.PemainAktif) == True);
 								If(Is Alive(Global.PemainAktif) == True);
-									Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);
+									Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);
 									Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);
 								End;
 							End;

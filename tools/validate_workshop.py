@@ -16,7 +16,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 EXPORTS = ROOT / "exports"
 
 CURRENT_VERSION = "0.7.2"
-EXPECTED_SOURCE_BLOB = "d50ff5270d866d39ccc55d4872a4dbc28b540668"
+EXPECTED_SOURCE_BLOB = "0ea41c5be1c8112fa3a67d398a0b783c08dc1e38"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml", "maintenance-patch.yml"}
 
 
@@ -136,6 +136,14 @@ def validate(source: str) -> Checks:
     for name in ("GambarMenu", "GambarHalamanAktif", "PramuatSubmenu"):
         checks.require(name in subroutines, f"subroutine 0.7.0 assente: {name}")
     checks.require("For Global Variable(Global." not in source, "sintassi For Global Variable(Global.*) non valida")
+    checks.require('Custom String("{0}    {1}\\n ", Custom String("CHILL DEDICATED SERVER"), Global.TeksWaktuServer)' in source, "HUD centro non è separato dal blocco successivo")
+    for token in (
+        'Custom String("{0} - {1} MIN\\n ", Event Player, Event Player.MenitLobi)',
+        'Custom String("{0} - {1} MENIT\\n ", Event Player, Event Player.MenitLobi)',
+        'Custom String("{0} - {1} นาที\\n ", Event Player, Event Player.MenitLobi)',
+        'Custom String("{0} - {1}\\n ", Event Player,',
+    ):
+        checks.require(token in source, f"HUD player non separato: {token}")
     managers = [r for r in rules if r.name.startswith("04g - Global-first") or r.name.startswith("04h - Global-first")]
     checks.equal(len(managers), 2, "manager Global-first")
     for manager in managers:
@@ -277,6 +285,14 @@ def validate(source: str) -> Checks:
             checks.require(token in interact.body, f"avvio Try Your Luck non disattiva Unkillable: {token}")
         checks.require("Try Your Luck spegne definitivamente 1 HP / FULL HP" in interact.body, "avvio Try Your Luck non documenta Unkillable persistente OFF")
 
+    anran_death = find_rule(rules, "16a - Anran:")
+    checks.require(anran_death is not None, "regola morte Anran assente")
+    if anran_death:
+        checks.equal(event_type(anran_death), "Player Died", "Anran morte: evento")
+        checks.require("Hero Of(Event Player) == Hero(Anran);" in anran_death.body, "Anran morte non filtra Hero(Anran)")
+        checks.require("Set Ultimate Charge(Event Player, 100);" in anran_death.body, "Anran morte non porta Ultimate al 100%")
+        checks.require("Wait(" not in anran_death.body and "Loop If Condition Is True;" not in anran_death.body, "Anran morte non deve usare Wait o Loop")
+
     luck = find_rule(rules, "18e - Nasib:")
     luck_death = find_rule(rules, "18f - Nasib:")
     luck_reopen = find_rule(rules, "18g - Nasib:")
@@ -348,7 +364,7 @@ def validate(source: str) -> Checks:
         checks.require("Wait(" not in luck_effect_hud.body and "Loop If Condition Is True;" not in luck_effect_hud.body, "18k HUD effetto non deve usare Wait/Loop")
     if luck_burn_global:
         checks.equal(event_type(luck_burn_global), "Ongoing - Global", "18l Burning globale: scheduler")
-        for token in ("Player Variable(Current Array Element, EfekNasib) == 5", "Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed", "Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);", "Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);", "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);"):
+        for token in ("Player Variable(Current Array Element, EfekNasib) == 5", "Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed", "Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);", "Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);", "For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);"):
             checks.require(token in luck_burn_global.body, f"18l Burning globale incompleto: {token}")
         checks.require("Wait(" not in luck_burn_global.body and "Loop If Condition Is True;" not in luck_burn_global.body, "18l Burning globale non deve usare Wait o Loop")
         checks.require("Ongoing - Each Player" not in luck_burn_global.body, "18l Burning non deve diventare Each Player")
