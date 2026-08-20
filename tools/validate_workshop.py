@@ -23,6 +23,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 CURRENT_VERSION = "0.8.0"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
+MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
     "README.md",
     "docs/PROGETTO.md",
@@ -54,7 +55,7 @@ PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanKebal",
     "TerapkanHalamanSuara",
     "TerapkanHalamanIkon",
-    "TerapkanHalamanTeleportasiJongkok",
+    "TerapkanTeleportasiJongkok",
     "TerapkanHalamanPrivasiInspeksi",
     "TerapkanHalamanNasib",
     "TerapkanHalamanPilihan",
@@ -700,6 +701,13 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
         checks.equal(indices, list(range(len(entries))), f"indici {label} compatti")
         names = [entry.name for entry in entries]
         checks.equal(len(names), len(set(names)), f"nomi {label} univoci")
+        for entry in entries:
+            encoded_size = len(entry.name.encode("utf-8"))
+            checks.require(
+                encoded_size <= MAX_DECLARATION_NAME_BYTES,
+                f"nome {label} oltre {MAX_DECLARATION_NAME_BYTES} byte UTF-8: "
+                f"indice {entry.index}, {entry.name} ({encoded_size} byte)",
+            )
 
     all_names = {entry.name for entry in globals_ + players + subroutines}
     for legacy in sorted(FORBIDDEN_LEGACY_IDENTIFIERS):

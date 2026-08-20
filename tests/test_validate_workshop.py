@@ -77,6 +77,34 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_once(token, f"\t\t{globals_[1].index + 1}: {globals_[1].name}")
         self.assert_rejected(mutated, "indici global compatti")
 
+    def test_subroutine_name_over_32_utf8_bytes_is_rejected(self) -> None:
+        valid_name = "TerapkanTeleportasiJongkok"
+        overlong_name = "TerapkanHalamanTeleportasiJongkok"
+        self.assertLessEqual(len(valid_name.encode("utf-8")), validator.MAX_DECLARATION_NAME_BYTES)
+        self.assertGreater(len(overlong_name.encode("utf-8")), validator.MAX_DECLARATION_NAME_BYTES)
+        mutated = self.source.replace(valid_name, overlong_name)
+        self.assert_rejected(
+            mutated,
+            "nome subroutine oltre 32 byte UTF-8: indice 42, TerapkanHalamanTeleportasiJongkok",
+        )
+
+    def test_player_variable_name_over_32_utf8_bytes_is_rejected(self) -> None:
+        valid_name = "DaftarTargetTeleportasi"
+        overlong_name = "DaftarTargetTeleportasiSekarangXX"
+        self.assertEqual(len(overlong_name.encode("utf-8")), validator.MAX_DECLARATION_NAME_BYTES + 1)
+        mutated = self.source.replace(valid_name, overlong_name)
+        self.assert_rejected(
+            mutated,
+            "nome player oltre 32 byte UTF-8: indice 36, DaftarTargetTeleportasiSekarangXX",
+        )
+
+    def test_declaration_name_at_32_utf8_bytes_is_accepted(self) -> None:
+        valid_name = "DaftarTargetTeleportasi"
+        boundary_name = "DaftarTargetTeleportasiSekarangX"
+        self.assertEqual(len(boundary_name.encode("utf-8")), validator.MAX_DECLARATION_NAME_BYTES)
+        mutated = self.source.replace(valid_name, boundary_name)
+        self.assertEqual(self.errors(mutated), [])
+
     def test_write_only_variable_is_rejected(self) -> None:
         mutated = self.source.replace("Global.PemainAktif.WaktuMasuk", "Total Time Elapsed")
         self.assert_rejected(mutated, "soltanto inizializzata")

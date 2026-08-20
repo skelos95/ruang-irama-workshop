@@ -191,7 +191,7 @@ subroutines
 	39: TerapkanHalamanKebal
 	40: TerapkanHalamanSuara
 	41: TerapkanHalamanIkon
-	42: TerapkanHalamanTeleportasiJongkok
+	42: TerapkanTeleportasiJongkok
 	43: TerapkanHalamanPrivasiInspeksi
 	44: TerapkanHalamanNasib
 	45: TerapkanHalamanPilihan
@@ -1593,7 +1593,7 @@ rule("10 - Menu: Terapkan halaman aktif")
 		Else If(Event Player.HalamanMenu == 7);
 			Call Subroutine(TerapkanHalamanIkon);
 		Else If(Event Player.HalamanMenu == 8);
-			Call Subroutine(TerapkanHalamanTeleportasiJongkok);
+			Call Subroutine(TerapkanTeleportasiJongkok);
 		Else If(Event Player.HalamanMenu == 9);
 			Call Subroutine(TerapkanHalamanPrivasiInspeksi);
 		Else If(Event Player.HalamanMenu == 10);
@@ -1906,7 +1906,7 @@ rule("99i - Subrutin: Terapkan halaman teleportasi Jongkok")
 	event
 	{
 		Subroutine;
-		TerapkanHalamanTeleportasiJongkok;
+		TerapkanTeleportasiJongkok;
 	}
 
 	actions

@@ -27,6 +27,7 @@ Il validatore controlla:
 
 - delimitatori e blocchi Workshop completi;
 - indici compatti e dichiarazioni univoche per global, player e subroutine;
+- nomi global, player e subroutine lunghi al massimo 32 byte in UTF-8, per evitare il rifiuto dell'import da parte del client;
 - ogni riferimento risolto alla relativa dichiarazione;
 - nessuna variabile soltanto dichiarata, inizializzata o pulita;
 - nessuna regola o subroutine inutilizzata o duplicata;

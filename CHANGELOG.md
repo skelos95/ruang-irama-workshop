@@ -14,6 +14,7 @@ Stato: **static-ready / live-pending**.
 - Identificatori personalizzati, regole, subroutine e commenti Workshop uniformati in Bahasa Indonesia.
 - Localizzazione runtime completata per English, Bahasa Indonesia e ไทย, incluse icone e località server.
 - Validatore reso semantico e accompagnato da test negativi per le invarianti della release.
+- Corretto il primo errore d'import live: la subroutine 42 è stata abbreviata da un identificatore di 33 byte a `TerapkanTeleportasiJongkok` (26 byte); il gate ora limita ogni identificatore dichiarato a 32 byte UTF-8.
 - Documentazione sincronizzata con le otto modalità native supportate e con le patch client di agosto 2026.
 - Rimosso il workflow di manutenzione che generava commit automatici; resta un solo workflow di validazione senza dipendenze Python esterne.
 
