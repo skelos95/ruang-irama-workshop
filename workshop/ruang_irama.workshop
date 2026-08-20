@@ -157,7 +157,7 @@ variables
 		103: ArahNasib
 		104: PrivasiNasibAktif
 		105: KategoriTeleportNasib
-		106: HasilNasibTerkunci
+		106: TickBurnNasib
 		107: MenuNasibHarusDibuka
 		108: HudEfekNasib
 		109: TeksVisiNasib
@@ -2055,7 +2055,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Try Your Luck is still active. Wait for it to finish.") : Event Player.IndeksBahasa == 1 ? Custom String("Try Your Luck masih aktif. Tunggu sampai selesai.") : Custom String("Try Your Luck ยังทำงานอยู่ รอให้จบก่อน"));
 			Else;
 				Event Player.KartuNasibAktif = True;
-				Event Player.EfekNasib = Random Integer(1, 10);
+				Event Player.EfekNasib = Random Integer(1, 5);
 				Event Player.PutaranKartuNasib = Random Integer(20, 24);
 				Event Player.JedaKartuNasib = 0.080;
 				Event Player.KartuNasibMerah = False;
@@ -2065,7 +2065,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Event Player.ArahNasib = Vector(0, 0, 0);
 				Event Player.PrivasiNasibAktif = False;
 				Event Player.KategoriTeleportNasib = -1;
-				Event Player.HasilNasibTerkunci = 0;
+				Event Player.TickBurnNasib = 0;
 				Event Player.MenuNasibHarusDibuka = False;
 				If(Event Player.IkonKartuNasib != Null);
 					Destroy Icon(Event Player.IkonKartuNasib);
@@ -2088,7 +2088,7 @@ rule("10 - Menu: Interaksi membuka atau menerapkan pilihan")
 				Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
 				Event Player.IkonKebal = Last Created Entity;
 				Call Subroutine(GambarMenu);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Try Your Luck: ten outcomes are rolling.") : Event Player.IndeksBahasa == 1 ? Custom String("Try Your Luck: sepuluh hasil sedang diacak.") : Custom String("Try Your Luck: กำลังสุ่มสิบผลลัพธ์"));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Try Your Luck: five outcomes are rolling.") : Event Player.IndeksBahasa == 1 ? Custom String("Try Your Luck: lima hasil sedang diacak.") : Custom String("Try Your Luck: กำลังสุ่มห้าผลลัพธ์"));
 			End;
 		Else;
 			If(Count Of(Global.PemainManusia) > 0);
@@ -2409,7 +2409,7 @@ rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Ruang Muncul")
 
 
 
-rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
+rule("18e - Nasib: Roulette lima effetti con risultato bloccato")
 {
 	event
 	{
@@ -2432,27 +2432,17 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 		If(Event Player.IkonKartuNasib != Null);
 			Destroy Icon(Event Player.IkonKartuNasib);
 		End;
-		Event Player.EfekNasib = Random Integer(1, 10);
+		Event Player.EfekNasib = Random Integer(1, 5);
 		If(Event Player.EfekNasib == 1);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Poison 2, Visible To and Position, Custom Color(170, 80, 255, 255), False);
-		Else If(Event Player.EfekNasib == 2);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Asterisk, Visible To and Position, Custom Color(255, 220, 70, 255), False);
-		Else If(Event Player.EfekNasib == 3);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Spiral, Visible To and Position, Color(Turquoise), False);
-		Else If(Event Player.EfekNasib == 4);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Bolt, Visible To and Position, Color(Yellow), False);
-		Else If(Event Player.EfekNasib == 5);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Moon, Visible To and Position, Color(Sky Blue), False);
-		Else If(Event Player.EfekNasib == 6);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Eye, Visible To and Position, Color(Aqua), False);
-		Else If(Event Player.EfekNasib == 7);
-			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Arrow: Down, Visible To and Position, Color(Orange), False);
-		Else If(Event Player.EfekNasib == 8);
+		Else If(Event Player.EfekNasib == 2);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Dizzy, Visible To and Position, Color(Violet), False);
-		Else If(Event Player.EfekNasib == 9);
+		Else If(Event Player.EfekNasib == 3);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Skull, Visible To and Position, Custom Color(255, 70, 70, 255), False);
-		Else;
+		Else If(Event Player.EfekNasib == 4);
 			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Heart, Visible To and Position, Custom Color(70, 255, 110, 255), False);
+		Else;
+			Create Icon(All Players(All Teams), Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 4), Fire, Visible To and Position, Color(Orange), False);
 		End;
 		Event Player.IkonKartuNasib = Last Created Entity;
 		Wait(Event Player.JedaKartuNasib, Abort When False);
@@ -2493,105 +2483,48 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 		Event Player.MenuNasibHarusDibuka = False;
 		Call Subroutine(TutupMenu);
 		Event Player.EfekNasibBerakhir = 0;
-		Event Player.HasilNasibTerkunci = 0;
+		Event Player.TickBurnNasib = 0;
 
 		If(Event Player.EfekNasib == 1);
-			Set Status(Event Player, Null, Hacked, 5);
-			Event Player.EfekNasibBerakhir = Total Time Elapsed + 5;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: HACKED — 5s"));
-		Else If(Event Player.EfekNasib == 2);
-			Event Player.HasilNasibTerkunci = Ultimate Charge Percent(Event Player);
-			Set Ultimate Charge(Event Player, 100);
-			Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: ULTIMATE ALWAYS READY — 10s"));
-		Else If(Event Player.EfekNasib == 3);
-			Event Player.DaftarTujuanNasib = Empty Array;
-			If(Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Player Variable(Current Array Element, BotOtomatis) == True)))))) > 0);
-				Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 0);
-			End;
-			If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-				If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
-					Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 1);
-				End;
-			Else If(Current Game Mode == Game Mode(Capture The Flag));
-				If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
-					Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 1);
-				End;
-			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 1);
-			End;
-			If(Count Of(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), Is Alive(Current Array Element))))) > 0);
-				Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 2);
-			End;
-			If(Count Of(Spawn Points(Team Of(Event Player))) > 0);
-				Event Player.DaftarTujuanNasib = Append To Array(Event Player.DaftarTujuanNasib, 3);
-			End;
-			If(Count Of(Event Player.DaftarTujuanNasib) == 0);
-				Small Message(Event Player, Custom String("TRY YOUR LUCK: no random teleport destination available."));
-			Else;
-				Event Player.KategoriTeleportNasib = Random Value In Array(Event Player.DaftarTujuanNasib);
-				If(Event Player.KategoriTeleportNasib == 0);
-					Event Player.TujuanNasib = Position Of(Random Value In Array(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Player Variable(Current Array Element, BotOtomatis) == True)))))));
-				Else If(Event Player.KategoriTeleportNasib == 1);
-					If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-						Event Player.TujuanNasib = Payload Position;
-					Else If(Current Game Mode == Game Mode(Capture The Flag));
-						Event Player.TujuanNasib = Flag Position(Opposite Team Of(Team Of(Event Player)));
-					Else;
-						Event Player.TujuanNasib = Objective Position(Objective Index);
-					End;
-				Else If(Event Player.KategoriTeleportNasib == 2);
-					Event Player.TujuanNasib = Position Of(Random Value In Array(Filtered Array(Global.PemainManusia, And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), Is Alive(Current Array Element))))));
-				Else;
-					Event Player.TujuanNasib = Position Of(Random Value In Array(Spawn Points(Team Of(Event Player))));
-				End;
-				Teleport(Event Player, Nearest Walkable Position(Event Player.TujuanNasib));
-				Small Message(Event Player, Custom String("TRY YOUR LUCK: RANDOM TELEPORT"));
-			End;
-			Event Player.EfekNasib = 0;
-			Event Player.KartuNasibAktif = False;
-		Else If(Event Player.EfekNasib == 4);
-			Set Move Speed(Event Player, 200);
-			Set Jump Vertical Speed(Event Player, 200);
-			Set Projectile Speed(Event Player, 200);
-			Event Player.EfekNasibBerakhir = Total Time Elapsed + 15;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: MOVE / JUMP / PROJECTILE x2 — 15s"));
-		Else If(Event Player.EfekNasib == 5);
-			Set Gravity(Event Player, 10);
-			Set Projectile Speed(Event Player, 10);
-			Event Player.EfekNasibBerakhir = Total Time Elapsed + 20;
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: GRAVITY 10% + PROJECTILE SPEED 10% — 20s"));
-		Else If(Event Player.EfekNasib == 6);
 			Event Player.PrivasiNasibAktif = True;
 			Event Player.EfekNasibBerakhir = Total Time Elapsed + 15;
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: ALL PLAYER / BOT NAMES — 15s"));
-		Else If(Event Player.EfekNasib == 7);
-			Event Player.KebalAktif = False;
-			Event Player.ModeKebal = 0;
-			Clear Status(Event Player, Unkillable);
-			Set Damage Received(Event Player, 100);
-			Disable Movement Collision With Environment(Event Player, True);
-			Apply Impulse(Event Player, Vector(0, -1, 0), 5, To World, Cancel Contrary Motion);
-			Small Message(Event Player, Custom String("TRY YOUR LUCK: FLOOR REMOVED"));
-		Else If(Event Player.EfekNasib == 8);
-			Event Player.ArahNasib = Facing Direction Of(Event Player);
+		Else If(Event Player.EfekNasib == 2);
 			Set Move Speed(Event Player, 1000);
 			Start Accelerating(Event Player, Facing Direction Of(Event Player), 50, 25, To World, Direction Rate and Max Speed);
 			Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s"));
-		Else If(Event Player.EfekNasib == 9);
+		Else If(Event Player.EfekNasib == 3);
 			Event Player.KebalAktif = False;
 			Event Player.ModeKebal = 0;
 			Clear Status(Event Player, Unkillable);
 			Set Damage Received(Event Player, 100);
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
 			Small Message(Event Player, Custom String("TRY YOUR LUCK: SKULL"));
 			Kill(Event Player, Null);
 			Abort;
-		Else;
+		Else If(Event Player.EfekNasib == 4);
 			Set Player Health(All Living Players(Team Of(Event Player)), 9999);
 			Small Message(All Living Players(Team Of(Event Player)), Custom String("TRY YOUR LUCK: HEART — TEAM FULL HEAL"));
 			Event Player.EfekNasib = 0;
 			Event Player.KartuNasibAktif = False;
+		Else;
+			"Burning deve poter danneggiare anche chi aveva Unkillable FULL HP: sospendi la protezione e ripristinala alla scadenza."
+			Event Player.KebalAktif = False;
+			Event Player.ModeKebal = 0;
+			Clear Status(Event Player, Unkillable);
+			Set Damage Received(Event Player, 100);
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
+			Set Status(Event Player, Null, Burning, 10);
+			Event Player.EfekNasibBerakhir = Total Time Elapsed + 10;
+			Event Player.TickBurnNasib = Total Time Elapsed;
+			Small Message(Event Player, Custom String("TRY YOUR LUCK: BURNING — 5% MAX HP / SEC — 10s"));
 		End;
 
 		Wait(1, Ignore Condition);
@@ -2608,7 +2541,7 @@ rule("18e - Nasib: Roulette sepuluh efek dengan hasil terkunci")
 	}
 }
 
-rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
+rule("18f - Nasib: Reset completo effetti alla morte")
 {
 	event
 	{
@@ -2632,28 +2565,17 @@ rule("18f - Nasib: Reset lengkap semua efek saat pemilik mati")
 		If(Event Player.IkonKartuNasibHijau != Null);
 			Destroy Icon(Event Player.IkonKartuNasibHijau);
 		End;
-		If(Event Player.EfekNasib == 2);
-			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
-		End;
-		Clear Status(Event Player, Hacked);
+		Clear Status(Event Player, Burning);
 		Stop Accelerating(Event Player);
 		If(Event Player.HudEfekNasib != Null);
 			Destroy HUD Text(Event Player.HudEfekNasib);
 		End;
 		Event Player.HudEfekNasib = Null;
-		Enable Movement Collision With Environment(Event Player);
 		Set Move Speed(Event Player, 100);
-		Set Jump Vertical Speed(Event Player, 100);
-		Set Projectile Speed(Event Player, 100);
-		Set Gravity(Event Player, 100);
 		Event Player.PrivasiNasibAktif = False;
 		Event Player.EfekNasib = 0;
 		Event Player.EfekNasibBerakhir = 0;
-		Event Player.DaftarTujuanNasib = Empty Array;
-		Event Player.TujuanNasib = Vector(0, 0, 0);
-		Event Player.ArahNasib = Vector(0, 0, 0);
-		Event Player.KategoriTeleportNasib = -1;
-		Event Player.HasilNasibTerkunci = 0;
+		Event Player.TickBurnNasib = 0;
 		Event Player.IkonKartuNasib = Null;
 		Event Player.IkonKartuNasibHijau = Null;
 		Event Player.KartuNasibAktif = False;
@@ -2743,24 +2665,53 @@ rule("18h - Nasib: Scadenza effetti temporanei per player")
 
 	actions
 	{
-		If(Event Player.EfekNasib == 2);
-			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
-		End;
-		Clear Status(Event Player, Hacked);
+		Clear Status(Event Player, Burning);
 		Stop Accelerating(Event Player);
 		If(Event Player.HudEfekNasib != Null);
 			Destroy HUD Text(Event Player.HudEfekNasib);
 		End;
 		Event Player.HudEfekNasib = Null;
-		Enable Movement Collision With Environment(Event Player);
 		Set Move Speed(Event Player, 100);
-		Set Jump Vertical Speed(Event Player, 100);
-		Set Projectile Speed(Event Player, 100);
-		Set Gravity(Event Player, 100);
 		Event Player.PrivasiNasibAktif = False;
+		If(Event Player.EfekNasib == 5);
+			"Ripristina l Unkillable che Burning aveva sospeso."
+			Clear Status(Event Player, Unkillable);
+			Event Player.ModeKebal = Event Player.ModeKebalTerakhir;
+			Event Player.KursorKebal = Event Player.ModeKebalTerakhir;
+			If(Event Player.ModeKebalTerakhir == 0);
+				Event Player.KebalAktif = False;
+				Set Damage Received(Event Player, 100);
+			Else;
+				Event Player.KebalAktif = True;
+				Set Status(Event Player, Null, Unkillable, 9999);
+				If(Event Player.ModeKebalTerakhir == 1);
+					Set Damage Received(Event Player, 100);
+					If(Is Alive(Event Player) == True);
+						Set Player Health(Event Player, 1);
+					End;
+				Else;
+					Set Damage Received(Event Player, 0);
+					If(Is Alive(Event Player) == True);
+						Set Player Health(Event Player, Max Health(Event Player));
+					End;
+				End;
+			End;
+			If(Event Player.IkonKebal != Null);
+				Destroy Icon(Event Player.IkonKebal);
+				Event Player.IkonKebal = Null;
+			End;
+			If(Event Player.KebalAktif == True);
+				If(Event Player.ModeKebal == 1);
+					Create Icon(All Players(All Teams), Event Player, Warning, Visible To and Position, Custom Color(255, 80, 80, 255), True);
+				Else;
+					Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Global.RGB, True);
+				End;
+				Event Player.IkonKebal = Last Created Entity;
+			End;
+		End;
 		Event Player.EfekNasib = 0;
 		Event Player.EfekNasibBerakhir = 0;
-		Event Player.HasilNasibTerkunci = 0;
+		Event Player.TickBurnNasib = 0;
 		Event Player.KartuNasibAktif = False;
 		Event Player.MenuNasibHarusDibuka = True;
 	}
@@ -2831,7 +2782,7 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 		Event Player.Manusia == True;
 		Event Player.KartuNasibAktif == True;
 		Event Player.PutaranKartuNasib == 0;
-		Or(Event Player.EfekNasibBerakhir > 0, Event Player.EfekNasib == 7) == True;
+		Event Player.EfekNasibBerakhir > 0;
 		Event Player.HudEfekNasib == Null;
 		Is Alive(Event Player) == True;
 	}
@@ -2839,22 +2790,17 @@ rule("18k - Nasib: HUD effetto e durata mentre il menu e chiuso")
 	actions
 	{
 		Create HUD Text(Event Player, Null, Null, Custom String("\n{0}\n{1}",
-			Event Player.EfekNasib == 1 ? Custom String("HACKED")
-			: Event Player.EfekNasib == 2 ? Custom String("ULTIMATE ALWAYS READY")
-			: Event Player.EfekNasib == 4 ? Custom String("MOVE / JUMP / PROJECTILE x2")
-			: Event Player.EfekNasib == 5 ? Custom String("GRAVITY 10% / PROJECTILE 10%")
-			: Event Player.EfekNasib == 6 ? Custom String("VISION: ALL PLAYER / BOT NAMES")
-			: Event Player.EfekNasib == 7 ? Custom String("FLOOR REMOVED")
-			: Custom String("AIM-STEERED ACCELERATION"),
-			Event Player.EfekNasib == 7 ? Custom String("UNTIL DEATH") : Custom String("{0}s REMAINING",
-				Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, -99,
+			Event Player.EfekNasib == 1 ? Custom String("VISION: ALL PLAYER / BOT NAMES")
+			: Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION")
+			: Custom String("BURNING: 5% MAX HP / SEC"),
+			Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, -99,
 			Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
 
 
-rule("18l - Nasib: Ultimate sempre al 100 globale senza polling")
+rule("18l - Nasib: Burning proporzionale globale a tick")
 {
 	event
 	{
@@ -2864,19 +2810,26 @@ rule("18l - Nasib: Ultimate sempre al 100 globale senza polling")
 	conditions
 	{
 		Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
-			And(Player Variable(Current Array Element, EfekNasib) == 2, And(Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed,
-			And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True,
-			Ultimate Charge Percent(Current Array Element) < 100))))))) > 0;
+			And(Player Variable(Current Array Element, EfekNasib) == 5, And(Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed,
+			And(Player Variable(Current Array Element, TickBurnNasib) <= Total Time Elapsed,
+			And(Has Spawned(Current Array Element) == True, Is Alive(Current Array Element) == True)))))) > 0;
 	}
 
 	actions
 	{
-		Set Ultimate Charge(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, Manusia) == True,
-			And(Player Variable(Current Array Element, EfekNasib) == 2, And(Player Variable(Current Array Element, EfekNasibBerakhir) > Total Time Elapsed,
-			And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True,
-			Ultimate Charge Percent(Current Array Element) < 100)))))), 100);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
+			Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];
+			If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.EfekNasib == 5,
+				And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, And(Global.PemainAktif.TickBurnNasib <= Total Time Elapsed,
+				And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)))));
+				Damage(Global.PemainAktif, Null, Max Health(Global.PemainAktif) * 0.025);
+				Set Player Variable(Global.PemainAktif, TickBurnNasib, Total Time Elapsed + 0.500);
+			End;
+		End;
+		Global.PemainAktif = Null;
 	}
 }
+
 
 rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 {
@@ -4030,7 +3983,7 @@ rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 			If(Event Player.EfekNasibLingkaran != Null);
 				Destroy Effect(Event Player.EfekNasibLingkaran);
 			End;
-			Clear Status(Event Player, Hacked);
+			Clear Status(Event Player, Burning);
 			Clear Status(Event Player, Unkillable);
 			Stop Accelerating(Event Player);
 			Enable Movement Collision With Environment(Event Player);
@@ -4062,7 +4015,7 @@ rule("93b2 - Subrutin: Tenangkan trigger sebelum cleanup")
 			Event Player.ArahNasib = Vector(0, 0, 0);
 			Event Player.PrivasiNasibAktif = False;
 			Event Player.KategoriTeleportNasib = -1;
-			Event Player.HasilNasibTerkunci = 0;
+			Event Player.TickBurnNasib = 0;
 			Event Player.MenuNasibHarusDibuka = False;
 		End;
 		"Spegni i trigger prima che Player Left/Joined completi il cleanup e la nuova registrazione."
@@ -4105,10 +4058,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Stop Accelerating(Event Player);
 		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
 		Enable Movement Collision With Environment(Event Player);
-		Clear Status(Event Player, Hacked);
-		If(Event Player.EfekNasib == 2);
-			Set Ultimate Charge(Event Player, Event Player.HasilNasibTerkunci);
-		End;
+		Clear Status(Event Player, Burning);
 		Stop Modifying Hero Voice Lines(Event Player);
 		Allow Button(Event Player, Button(Melee));
 		Allow Button(Event Player, Button(Jump));
@@ -4180,7 +4130,7 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.ArahNasib = Vector(0, 0, 0);
 		Event Player.PrivasiNasibAktif = False;
 		Event Player.KategoriTeleportNasib = -1;
-		Event Player.HasilNasibTerkunci = 0;
+		Event Player.TickBurnNasib = 0;
 		Event Player.MenuNasibHarusDibuka = False;
 		If(Event Player.TeksTeleportasi != Null);
 			Destroy In-World Text(Event Player.TeksTeleportasi);
@@ -4408,7 +4358,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.ArahNasib = Vector(0, 0, 0);
 		Event Player.PrivasiNasibAktif = False;
 		Event Player.KategoriTeleportNasib = -1;
-		Event Player.HasilNasibTerkunci = 0;
+		Event Player.TickBurnNasib = 0;
 		Event Player.MenuNasibHarusDibuka = False;
 		Event Player.HudEfekNasib = Null;
 		Event Player.TeksVisiNasib = Null;
