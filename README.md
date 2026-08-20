@@ -14,7 +14,7 @@ I gate automatici controllano struttura, localizzazione e invarianti del sorgent
 - Roster sinistro con icona, eroe, player e minuti; roster destro con genere musicale.
 - 12 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
-- Camera in terza persona, Crouch inspection e Teleport fuori dal menu.
+- Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
@@ -32,7 +32,7 @@ I gate automatici controllano struttura, localizzazione e invarianti del sorgent
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
-| 9 | Crouch Privacy | OFF / ON, default OFF |
+| 9 | Crouch Privacy | OFF / ON, default ON |
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
 
@@ -48,12 +48,12 @@ Gli indici restano invariati: Main Menu `-1`, sottomenu `0..11`. I default e i c
 | Sottomenu | Crouch + Interact | applica la scelta |
 | Sottomenu | Crouch + Reload | torna al Main Menu |
 | Soundtrack | Crouch + Ability 1 / Ability 2 | `+10` / `−10` generi |
-| Menu chiuso | Tieni Interact 0,5 s | alterna la Camera rapida |
+| Menu aperto o chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna la Camera rapida |
 | Menu chiuso | Tieni Crouch | inspection e, se abilitato, overlay Teleport |
 | Overlay Teleport | Crouch + Secondary / Primary | cambia pagina / teletrasporta |
 | Morto | Jump | respawn vicino al punto di morte |
 
-Crouch è il modificatore obbligatorio degli input menu. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva il respawn.
+Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva il respawn.
 
 ## Try Your Luck
 
@@ -64,11 +64,11 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 | Vision | 15 s | visione speciale |
 | Acceleration | 10 s | accelerazione guidata dalla mira |
 | Skull | immediato | morte del player |
-| Team Heal | immediato | cura completa della squadra |
+| Team Heal | immediato | cura completa dei player umani della squadra |
 | Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s |
 | Hacked | 5 s | stato Hacked |
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Menu, morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette vengono create da valori già risolti, senza dipendere dallo scratch globale dello scheduler, e restano segnalate anche quando lo snapshot esce dallo schermo. Menu, morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
 
 ## Runtime 0.8.0
 
@@ -91,6 +91,7 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
 - Menu e liste separano contenuto e comandi con una riga vuota e placeholder equivalenti nelle tre lingue.
+- Il promemoria del modificatore resta nei menu; l'HUD globale mostra soltanto il comando di inspection, senza duplicarlo e senza spaziatori iniziali superflui.
 
 Le liste canoniche sono in [`docs/GENERI.md`](docs/GENERI.md) e [`docs/SERVER_LOCATIONS.md`](docs/SERVER_LOCATIONS.md).
 
@@ -103,7 +104,7 @@ La modalità nativa assegna punti e vincitore; lo script non sostituisce il risu
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
-La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy.
+La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom da alcun osservatore; dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 
 ## Validazione
 

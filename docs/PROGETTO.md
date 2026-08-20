@@ -32,11 +32,11 @@ Main Menu usa pagina `-1`; le 12 pagine mantengono gli indici `0..11`. Default, 
 - Primary/Secondary navigano; Interact entra o applica; Reload torna al Main Menu.
 - Nel Soundtrack, Ability 1/2 eseguono `+10/−10`.
 - Melee e Jump restano azioni normali dell'eroe.
-- A menu chiuso, Interact tenuto per 0,5 s cambia Camera.
+- A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
 - Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue il respawn custom.
 
-Le condizioni di menu aperto/chiuso sono parte del contratto: gli stessi pulsanti non devono alimentare contemporaneamente menu, Camera, inspection o Teleport.
+Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
 
 ## Scheduler globale
 
@@ -90,17 +90,21 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 | Vision | 15 s | crea e poi rimuove l'effetto Vision |
 | Acceleration | 10 s | applica accelerazione orientata dalla mira |
 | Skull | immediato | uccide il player |
-| Team Heal | immediato | porta la squadra alla salute completa |
+| Team Heal | immediato | porta i player umani della squadra alla salute completa |
 | Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s |
 | Hacked | 5 s | applica e poi rimuove Hacked |
 
 Il tick globale valuta transizioni e scadenze. Morte, leave e cambio squadra annullano stato, accelerazione, status, HUD/IWT ed effetti associati. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
+
+Le icone della roulette sono visibili soltanto agli umani e ricevono posizione e tipo già valutati al momento della creazione. Non rivalutano lo scratch `Global.PemainAktif`, che viene azzerato al termine di ogni scansione scheduler; l'indicatore off-screen resta abilitato se movimento o rotazione portano lo snapshot fuori visuale.
 
 ## Lifecycle player
 
 ### Join
 
 La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
+
+Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto.
 
 ### Leave
 
@@ -130,9 +134,9 @@ Il nuovo Team Status Indicator del client non deve essere coperto da blocchi Top
 
 ## Camera, inspection e Teleport
 
-La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati o inesistenti vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti.
+La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Privacy nasconde ai nemici icona, nome e salute; gli alleati continuano a vedere la riga completa.
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Privacy è ON per default: nasconde icona, nome e salute agli altri player e impedisce a qualunque osservatore di scegliere l'umano come target della Camera custom. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
 
 La destinazione Teleport viene rivalutata al click:
 

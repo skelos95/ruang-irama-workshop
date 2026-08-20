@@ -58,6 +58,7 @@ Il gate verifica:
 - equivalenza di placeholder e argomenti tra le traduzioni;
 - minuti roster `MIN / MENIT / นาที`;
 - riga vuota coerente tra contenuto e comandi.
+- promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
 
 I 100 generi restano nomi internazionali e non richiedono traduzione.
 
@@ -80,7 +81,8 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - hold Melee 0,5 s per apertura/chiusura;
 - Crouch come modificatore di Primary, Secondary, Interact, Reload e Ability 1/2 a menu aperto;
 - nessuna disabilitazione custom di Melee o Jump da vivi;
-- Camera con Interact 0,5 s soltanto a menu chiuso;
+- Camera con Interact 0,5 s a menu aperto o chiuso, ma soltanto con Crouch rilasciato;
+- latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di respawn;
 - latch rilasciati senza doppie attivazioni.
@@ -111,11 +113,13 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 | Vision | durata 15 s e cleanup effetto/IWT |
 | Acceleration | durata 10 s e controllo guidato dalla mira |
 | Skull | morte immediata |
-| Team Heal | cura completa del team |
+| Team Heal | cura completa dei soli player umani del team |
 | Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s |
 | Hacked | durata 5 s e cleanup status |
 
 L'avvio disattiva Unkillable. Morte, leave e cambio squadra devono annullare timestamp, status, modificatori ed effetti. Un loop o Wait per-player associato alla roulette è vietato.
+
+Le sei icone devono essere visibili soltanto al roster umano, usare una posizione valutata al momento della creazione, non rivalutare lo scratch globale dello scheduler e mantenere l'indicatore off-screen.
 
 ### Lifecycle
 
@@ -129,6 +133,8 @@ Il gate controlla:
 - rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
+- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom e sgancio degli osservatori già attivi;
+- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player.
 
 ### Otto modalità
 
@@ -153,7 +159,12 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - placeholder EN/ID/TH non allineati;
 - Header diverso da `Null`, `Big Message` o secondo handle menu;
 - preload/HUD nascosto reintrodotto;
-- input senza Crouch o Camera disponibile a menu aperto;
+- input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
+- latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
+- promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
+- icona roulette rivalutata tramite scratch globale o resa visibile ai bot;
+- Privacy default OFF, target privato selezionabile o osservatore non sganciato;
+- guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;

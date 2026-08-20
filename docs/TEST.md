@@ -51,14 +51,18 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Crouch + Interact/Reload | entra/applica o torna indietro |
 | Soundtrack | Crouch + Ability 1/2 | `+10/−10` con wrap |
 | Menu aperto | Melee e Jump | azioni normali dell'eroe non disabilitate |
-| Menu chiuso | Tieni Interact 0,5 s | alterna Camera, una volta per hold |
+| Menu chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna Camera, una volta per hold |
+| Menu aperto, Crouch rilasciato | Tieni Interact 0,5 s | alterna Camera, senza applicare il menu |
 | Menu chiuso | Tieni Crouch | inspection/Teleport disponibili |
-| Menu aperto | Tieni Interact o Crouch | Camera/inspection/Teleport non partono |
+| Menu aperto | Crouch + Interact | esegue soltanto il comando menu; Camera non parte |
+| Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
 | Morto | Jump | respawn vicino alla morte; menu ancora visibile |
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
+
+Verificare inoltre entrambe le transizioni senza rilasciare `Interact`: dopo `Crouch + Interact`, rilasciare soltanto Crouch e continuare l'hold oltre 0,5 s non deve attivare la Camera; dopo un hold Camera completato, premere Crouch mantenendo Interact non deve applicare il menu. Entrambi i sistemi si riarmano soltanto dopo il rilascio di Interact.
 
 ## 4. Menu e localizzazione
 
@@ -86,6 +90,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura.
+- verificare che il promemoria `Crouch + command` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server.
 
 Focus dati:
 
@@ -105,12 +110,13 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Vision | effetto e testo EN/ID/TH; cleanup dopo 15 s |
 | Acceleration | direzione coerente con la mira; cleanup dopo 10 s |
 | Skull | morte immediata e cleanup completo |
-| Team Heal | salute completa per la squadra, nessun effetto persistente |
+| Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
 | Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; stop alla scadenza/morte |
 | Hacked | stato per 5 s, poi rimozione |
 
 Per ciascun esito:
 
+- durante ogni passaggio della roulette l'icona corrente è visibile agli umani davanti al player che l'ha attivata; muoversi e ruotare deve mantenere almeno l'indicatore off-screen;
 - Unkillable viene disattivato all'avvio;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
@@ -122,7 +128,8 @@ Per ciascun esito:
 
 ### Camera
 
-- Alternare Camera rapida self/first-person con Interact 0,5 s a menu chiuso.
+- Alternare Camera rapida self/first-person con Interact 0,5 s sia a menu chiuso sia a menu aperto, sempre con Crouch rilasciato.
+- A menu aperto provare `Crouch + Interact`: deve agire soltanto sul menu e non sulla Camera.
 - Dal Menu Camera provare OFF, self e target diversi.
 - Cambiare rapidamente target senza frame di Camera concorrenti.
 - Uccidere, far uscire o despawnare il target: il riferimento deve tornare valido.
@@ -133,8 +140,10 @@ Per ciascun esito:
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
-- Privacy OFF: il nemico vede la riga completa.
-- Privacy ON: il nemico non vede la riga; l'alleato continua a vederla.
+- Nuovo player e player dopo cambio squadra: Privacy ON e cursore ON per default.
+- Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom.
+- Privacy ON: gli altri player non vedono la riga e nessun osservatore può scegliere il player nella Camera custom.
+- Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
 - Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
 
 ### Teleport
@@ -160,6 +169,13 @@ Eseguire con HUD, menu, Camera, inspection, Teleport, Unkillable, Revenge, voto 
 - rientro nello stesso slot.
 
 Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/leave e nessun target stale.
+
+### Bot e dummy
+
+- verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
+- confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
+- verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
+- mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
 
 ### Cambio squadra
 

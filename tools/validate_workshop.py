@@ -40,6 +40,16 @@ MENU_ACTION_BUTTONS = {
     "Ability 2",
 }
 NATIVE_BUTTONS = {"Melee", "Jump", "Crouch"}
+GLOBAL_MODIFIER_CLAUSES = (
+    "in menu: modifier for every command",
+    "di menu: pengubah semua perintah",
+    "ในเมนู: ใช้ร่วมกับทุกคำสั่ง",
+)
+MENU_CROUCH_INSTRUCTIONS = (
+    "Hold CROUCH + command",
+    "Tahan JONGKOK + perintah",
+    "กด ย่อ + คำสั่ง",
+)
 SCHEDULER_SUBROUTINES = {
     "ProsesCepatPemain",
     "ProsesSiklusPemain",
@@ -881,12 +891,39 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
 
 def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
     checks.require("Big Message(" not in mask_strings(source), "Big Message/titolo vietato")
+    lowered_source = source.lower()
+    for clause in GLOBAL_MODIFIER_CLAUSES:
+        checks.require(
+            clause.lower() not in lowered_source,
+            f"clausola modifier Crouch duplicata nell'HUD globale: {clause}",
+        )
     hud_calls = list(iter_calls(source, "Create HUD Text"))
     checks.require(bool(hud_calls), "nessun HUD testuale trovato")
     for call in hud_calls:
         checks.require(len(call.args) >= 4, "Create HUD Text malformato")
         if len(call.args) >= 2:
             checks.equal(call.args[1].strip(), "Null", "Header Create HUD Text deve essere Null")
+
+    server_title = next(
+        (
+            call for call in hud_calls
+            if len(call.args) >= 4
+            and "CHILL DEDICATED SERVER" in call.args[3]
+            and "Global.TeksWaktuServer" in call.args[3]
+        ),
+        None,
+    )
+    checks.require(server_title is not None, "HUD titolo CHILL e timer server assente")
+    if server_title:
+        title_literals = [
+            parse_literal(custom.args[0])
+            for custom in iter_calls(server_title.args[3], "Custom String")
+            if custom.args
+        ]
+        checks.require(
+            not any(literal is not None and literal.endswith("\n ") for literal in title_literals),
+            "HUD titolo CHILL conserva una riga vuota finale prima del menu",
+        )
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
     checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
@@ -907,6 +944,37 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
             checks.require(calls[0].args[3].strip() != "Null",
                            f"{subroutine_target(rule)}: contenuto menu assente")
+            if rule in arcade_renderers:
+                for instruction in MENU_CROUCH_INSTRUCTIONS:
+                    checks.require(
+                        instruction in calls[0].args[2],
+                        f"{subroutine_target(rule)}: istruzione Crouch menu assente: {instruction}",
+                    )
+                instruction_literals = [
+                    parse_literal(custom.args[0])
+                    for custom in iter_calls(calls[0].args[2], "Custom String")
+                    if custom.args
+                ]
+                checks.require(
+                    not any(literal is not None and literal.startswith("\n") for literal in instruction_literals),
+                    f"{subroutine_target(rule)}: sottotitolo menu inizia con una riga vuota artificiale",
+                )
+
+    revenge_renderer = rule_by_subroutine(rules, "GambarBalasDendam")
+    checks.require(revenge_renderer is not None, "renderer Revenge assente")
+    if revenge_renderer:
+        revenge_calls = list(iter_calls(revenge_renderer.body, "Create HUD Text"))
+        no_target_branch = parse_top_level_ternary(revenge_calls[0].args[2]) if revenge_calls else None
+        checks.require(no_target_branch is not None, "renderer Revenge senza ramo no-target")
+        if no_target_branch:
+            condition, empty_targets, _ = no_target_branch
+            checks.require("Count Of(Event Player.DaftarTargetBalasDendam) == 0" in condition,
+                           "renderer Revenge non identifica il ramo no-target")
+            for instruction in MENU_CROUCH_INSTRUCTIONS:
+                checks.require(
+                    instruction in empty_targets,
+                    f"Revenge no-target senza istruzione Crouch: {instruction}",
+                )
 
     checks.require("Append To Array(Event Player.HudMenu" not in source,
                    "HudMenu non deve diventare un array di handle")
@@ -948,6 +1016,19 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                        "azioni menu non protette dal modificatore Crouch")
         checks.require("Is Alive(Event Player) == True;" in dispatcher.body,
                        "menu morto non è congelato")
+        checks.require("Event Player.InteraksiKameraDipakai == False;" in dispatcher.body,
+                       "dispatcher menu non blocca Interact già consumato dalla Camera")
+        interact_branch = re.search(
+            r"If\(Is Button Held\(Event Player, Button\(Interact\)\)\);(.*?)Else If",
+            dispatcher.body,
+            re.DOTALL,
+        )
+        checks.require(interact_branch is not None, "ramo Interact del dispatcher menu assente")
+        if interact_branch:
+            checks.require("Event Player.PerintahMenu = 1;" in interact_branch.group(1),
+                           "ramo Interact del dispatcher non seleziona PerintahMenu 1")
+            checks.require("Event Player.InteraksiKameraDipakai = True;" in interact_branch.group(1),
+                           "ramo Interact del dispatcher non acquisisce il latch Camera")
 
     lock_rule = next((rule for rule in rules if "Disallow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body), None)
     unlock_rule = next((rule for rule in rules if "Allow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body and "Crouch" in rule.body), None)
@@ -962,10 +1043,30 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
     camera = next((rule for rule in rules if "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body), None)
     checks.require(camera is not None, "hold Interact 0,5 s camera assente")
     if camera:
-        checks.require("Event Player.MenuTerbuka == False;" in camera.body,
-                       "camera Interact deve funzionare soltanto a menu chiuso")
+        checks.require("MenuTerbuka" not in mask_strings(camera.body),
+                       "camera Interact non deve dipendere dallo stato aperto/chiuso del menu")
         checks.require("Is Button Held(Event Player, Button(Crouch)) == False;" in camera.body,
                        "camera Interact interferisce con il modificatore Crouch")
+        checks.require("Event Player.InteraksiKameraDipakai == False;" in camera.body,
+                       "camera Interact non verifica il latch condiviso col menu")
+        checks.require("Event Player.InteraksiKameraDipakai = True;" in camera.body,
+                       "camera Interact non acquisisce il latch dopo il hold")
+        if dispatcher:
+            checks.require(camera.start != dispatcher.start,
+                           "camera hold e dispatcher Crouch+Interact non devono condividere la stessa regola")
+
+    camera_release = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.InteraksiKameraDipakai == True;" in rule.body
+            and "Is Button Held(Event Player, Button(Interact)) == False;" in rule.body
+            and "Event Player.InteraksiKameraDipakai = False;" in rule.body
+        ),
+        None,
+    )
+    checks.require(camera_release is not None,
+                   "rilascio Interact non azzera il latch condiviso menu/Camera")
 
     crouch_features = [rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Crouch)" in rule.body and ("InspeksiAktif = True" in rule.body or "TeleportasiJongkokAktif = True" in rule.body)]
     checks.require(bool(crouch_features), "inspection/teleport Crouch assenti")
@@ -1052,7 +1153,6 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                    "Try Your Luck esito 6/fallback assente")
     for token, label in (
         ("Start Accelerating(", "accelerazione 10 s"),
-        ("Set Player Health(All Living Players(Team Of(Global.PemainAktif)), 9999)", "cura completa team"),
         ("Burning", "Burning 10 s"),
         ("Hacked", "Hacked 5 s"),
         ("PrivasiNasibAktif", "Vision 15 s"),
@@ -1073,6 +1173,50 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
     state_machine = rule_by_subroutine(rules, "ProsesNasibPemain")
     checks.require(state_machine is not None, "macchina a stati ProsesNasibPemain assente")
     if state_machine:
+        roulette_icons = list(iter_calls(state_machine.body, "Create Icon"))
+        checks.equal(len(roulette_icons), 6, "numero icone dei sei esiti roulette")
+        for index, icon in enumerate(roulette_icons, start=1):
+            checks.require(len(icon.args) >= 6, f"icona roulette {index} malformata")
+            if len(icon.args) >= 6:
+                checks.equal(icon.args[0].strip(), "Global.PemainManusia",
+                             f"icona roulette {index}: visibilità riservata agli umani")
+                checks.require("Update Every Frame(" not in icon.args[1],
+                               f"icona roulette {index}: posizione deve essere uno snapshot")
+                checks.equal(icon.args[3].strip(), "None",
+                             f"icona roulette {index}: reevaluation deve essere None")
+                checks.equal(icon.args[5].strip(), "True",
+                             f"icona roulette {index}: Show When Offscreen deve essere True")
+                checks.require(
+                    not (
+                        "Global.PemainAktif" in icon.args[1]
+                        and ("Update Every Frame(" in icon.args[1] or "Position" in icon.args[3])
+                    ),
+                    f"icona roulette {index} dipende dallo scratch Global.PemainAktif rivalutato dopo lo scheduler",
+                )
+
+        health_calls = [
+            call for call in iter_calls(state_machine.body, "Set Player Health")
+            if len(call.args) >= 2 and call.args[1].strip() == "9999"
+        ]
+        checks.equal(len(health_calls), 1, "cura completa team della roulette")
+        def human_recipient(expression: str) -> bool:
+            return "Global.PemainManusia" in expression or re.search(
+                r"Filtered Array\(.*?Player Variable\(Current Array Element,\s*Manusia\)\s*==\s*True",
+                expression,
+                re.DOTALL,
+            ) is not None
+        if health_calls:
+            checks.require(human_recipient(health_calls[0].args[0]),
+                           "Heart roulette cura anche bot/dummy invece dei soli umani")
+        heart_messages = [
+            call for call in iter_calls(state_machine.body, "Small Message")
+            if len(call.args) >= 2 and "HEART" in call.args[1]
+        ]
+        checks.equal(len(heart_messages), 1, "messaggio Heart roulette")
+        if heart_messages:
+            checks.require(human_recipient(heart_messages[0].args[0]),
+                           "Heart roulette invia HUD anche a bot/dummy")
+
         checks.equal(
             state_machine.body.count("Kill(Global.PemainAktif, Null);"),
             1,
@@ -1114,7 +1258,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         reset_tokens = (
             "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
-            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
+            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = True;",
+            "KursorPrivasiInspeksi = 1;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
         for token in reset_tokens:
@@ -1158,6 +1303,280 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for pattern, label in stable_patterns:
             checks.require(re.search(pattern, cycle.body, re.DOTALL) is not None,
                            f"rilascio stabile lock team-switch incompleto: {label}")
+
+
+def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    checks.require(setup is not None, "SiapkanPemain assente per default privacy")
+    if setup:
+        checks.require("Event Player.PrivasiInspeksiAktif = True;" in setup.body,
+                       "Privacy deve essere ON di default per ogni umano")
+        checks.require("Event Player.KursorPrivasiInspeksi = 1;" in setup.body,
+                       "cursore Privacy deve iniziare su ON (1)")
+
+    privacy_filter_tokens = (
+        "Is Dummy Bot(Current Array Element) == True",
+        "Player Variable(Current Array Element, BotOtomatis) == True",
+        "Player Variable(Current Array Element, Manusia) == True",
+        "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
+    )
+    human_public_pattern_text = (
+        r"And\(\s*Player Variable\(\s*Current Array Element\s*,\s*Manusia\)\s*==\s*True\s*,\s*"
+        r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False\s*\)"
+    )
+    human_public_pattern = re.compile(human_public_pattern_text, re.DOTALL)
+    public_target_pattern = re.compile(
+        r"Or\(\s*Is Dummy Bot\(Current Array Element\)\s*==\s*True\s*,\s*"
+        r"Or\(\s*Player Variable\(\s*Current Array Element\s*,\s*BotOtomatis\)\s*==\s*True\s*,\s*"
+        + human_public_pattern_text
+        + r"\s*\)\s*\)",
+        re.DOTALL,
+    )
+    vision_target_pattern = re.compile(
+        r"Or\(\s*Is Dummy Bot\(Current Array Element\)\s*==\s*True\s*,\s*"
+        r"Or\(\s*Player Variable\(\s*Current Array Element\s*,\s*BotOtomatis\)\s*==\s*True\s*,\s*"
+        r"Or\(\s*Event Player\.PrivasiNasibAktif\s*==\s*True\s*,\s*"
+        + human_public_pattern_text
+        + r"\s*\)\s*\)\s*\)",
+        re.DOTALL,
+    )
+
+    privacy_false_pattern = re.compile(
+        r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False",
+        re.DOTALL,
+    )
+    for rule in rules:
+        privacy_reads = len(privacy_false_pattern.findall(rule.body))
+        if privacy_reads:
+            checks.equal(
+                len(human_public_pattern.findall(rule.body)),
+                privacy_reads,
+                f"{rule.name}: ogni Privacy OFF target richiede Manusia=True",
+            )
+    camera_targets = rule_by_subroutine(rules, "SegarkanTargetKamera")
+    checks.require(camera_targets is not None, "SegarkanTargetKamera assente per filtro Privacy")
+    if camera_targets:
+        checks.require("Filtered Array(" in camera_targets.body,
+                       "lista target Camera non usa un filtro")
+        for token in privacy_filter_tokens:
+            checks.require(token in camera_targets.body,
+                           f"lista target Camera non esclude umani privati: {token}")
+        checks.require(public_target_pattern.search(camera_targets.body) is not None,
+                       "lista target Camera non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    cache = rule_by_subroutine(rules, "ProsesCachePemain")
+    checks.require(cache is not None, "ProsesCachePemain assente per cache Camera")
+    if cache:
+        for token in privacy_filter_tokens:
+            checks.require(token in cache.body,
+                           f"cache target Camera non esclude umani privati: {token}")
+        checks.require(public_target_pattern.search(cache.body) is not None,
+                       "cache target Camera non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    inspection_refresh = rule_by_subroutine(rules, "SegarkanTargetInspeksi")
+    checks.require(inspection_refresh is not None, "SegarkanTargetInspeksi assente per filtro Privacy")
+    if inspection_refresh:
+        checks.require(vision_target_pattern.search(inspection_refresh.body) is not None,
+                       "inspection non usa Dummy OR iBot OR Vision OR (umano AND Privacy OFF)")
+
+    inspection_live = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+        ),
+        None,
+    )
+    checks.require(inspection_live is not None, "aggiornamento live inspection assente")
+    if inspection_live:
+        checks.require(vision_target_pattern.search(inspection_live.body) is not None,
+                       "inspection live non usa Dummy OR iBot OR Vision OR (umano AND Privacy OFF)")
+
+    teleport_refresh = rule_by_subroutine(rules, "SegarkanTargetTeleportasi")
+    checks.require(teleport_refresh is not None, "SegarkanTargetTeleportasi assente per filtro Privacy")
+    if teleport_refresh:
+        checks.require(public_target_pattern.search(teleport_refresh.body) is not None,
+                       "teleport non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    teleport_live = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(" in rule.body
+        ),
+        None,
+    )
+    checks.require(teleport_live is not None, "aggiornamento live teleport assente")
+    if teleport_live:
+        checks.require(public_target_pattern.search(teleport_live.body) is not None,
+                       "teleport live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    checks.require(cycle is not None, "ProsesSiklusPemain assente per stop osservatore Privacy")
+    if cycle:
+        privacy_guard = re.search(
+            r"Global\.PemainAktif\.ModeKamera\s*==\s*2.*?"
+            r"Global\.PemainAktif\.TargetKamera\.Manusia\s*==\s*True.*?"
+            r"Global\.PemainAktif\.TargetKamera\.PrivasiInspeksiAktif\s*==\s*True.*?"
+            r"Stop Camera\(Global\.PemainAktif\);",
+            cycle.body,
+            re.DOTALL,
+        )
+        checks.require(privacy_guard is not None,
+                       "osservatore attivo non viene fermato quando il target umano abilita Privacy")
+        mode_reset = (
+            "Set Player Variable(Global.PemainAktif, ModeKamera, 0);" in cycle.body
+            or "Global.PemainAktif.ModeKamera = 0;" in cycle.body
+        )
+        target_reset = (
+            "Set Player Variable(Global.PemainAktif, TargetKamera, Null);" in cycle.body
+            or "Global.PemainAktif.TargetKamera = Null;" in cycle.body
+        )
+        checks.require(mode_reset and target_reset,
+                       "stop osservatore Privacy non ripristina ModeKamera e TargetKamera")
+
+
+def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
+    def require_human_guards(rule: Rule | None, label: str, *, triple: bool) -> None:
+        checks.require(rule is not None, f"entrypoint umano assente: {label}")
+        if not rule:
+            return
+        tokens = ["Event Player.Manusia == True;"]
+        if triple:
+            tokens.extend((
+                "Event Player.BotOtomatis == False;",
+                "Is Dummy Bot(Event Player) == False;",
+            ))
+        for token in tokens:
+            checks.require(token in rule.body, f"{label} non isola bot/dummy: {token}")
+
+    classifier = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Start Forcing Dummy Bot Name(Event Player" in rule.body
+            and "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+        ),
+        None,
+    )
+    bot_abort = None
+    checks.require(classifier is not None, "classificatore dedicato umano/iBot assente")
+    if classifier:
+        checks.require("Is Dummy Bot(Event Player) == False;" in classifier.body,
+                       "classificatore umano/iBot non esclude i dummy nativi")
+        bot_abort = re.search(
+            r"If\(Event Player\.BotOtomatis\s*==\s*True\);.*?"
+            r"Call Subroutine\(KunciBot\);.*?Abort;.*?End;",
+            classifier.body,
+            re.DOTALL,
+        )
+        roster_append = classifier.body.find("Append To Array(Global.PemainManusia, Event Player)")
+        checks.require(
+            bot_abort is not None and roster_append >= 0 and bot_abort.end() < roster_append,
+            "iBot può raggiungere il roster umano prima dell'Abort dedicato",
+        )
+
+    human_writers = [
+        rule for rule in rules
+        if re.search(r"Event Player\.Manusia\s*=\s*True;", mask_strings(rule.body)) is not None
+        or "Set Player Variable(Event Player, Manusia, True);" in rule.body
+    ]
+    checks.equal(len(human_writers), 1, "numero writer di Manusia=True")
+    if human_writers and classifier:
+        checks.equal(human_writers[0].start, classifier.start,
+                     "Manusia=True scritto fuori dal classificatore umano/iBot")
+        human_write = max(
+            classifier.body.find("Event Player.Manusia = True;"),
+            classifier.body.find("Set Player Variable(Event Player, Manusia, True);"),
+        )
+        checks.require(
+            bot_abort is not None and human_write > bot_abort.end(),
+            "Manusia=True viene scritto prima dell'Abort iBot",
+        )
+
+    roster_writers = [
+        rule for rule in rules
+        if "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+    ]
+    checks.equal(len(roster_writers), 1, "numero regole che inseriscono nel roster umano")
+    if roster_writers and classifier:
+        checks.equal(roster_writers[0].start, classifier.start,
+                     "roster umano scritto fuori dal classificatore dedicato")
+
+    joined = rules_with_event(rules, "Player Joined Match")
+    if joined:
+        checks.require("Is Dummy Bot(Event Player) == False;" in joined[0].body,
+                       "join/team-switch umano non esclude dummy nativi")
+        checks.require("Event Player.BotOtomatis == False;" in joined[0].body,
+                       "join/team-switch umano può riattivare il lifecycle di un iBot")
+    left = rules_with_event(rules, "Player Left Match")
+    if left:
+        for token in (
+            "Is Dummy Bot(Event Player) == False;",
+            "Event Player.BotOtomatis == False;",
+            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
+        ):
+            checks.require(token in left[0].body,
+                           f"leave/cleanup umano può essere eseguito da bot/dummy: {token}")
+
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    if setup:
+        checks.require("Abort If(Is Dummy Bot(Event Player));" in setup.body,
+                       "SiapkanPemain non interrompe immediatamente i dummy nativi")
+
+    entrypoints = (
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "HudPemainDibuat" in rule.body and "Create HUD Text(" in rule.body), None), "HUD player", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Melee)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "Call Subroutine(GambarMenu);" in rule.body), None), "toggle menu", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and all(f"Button({button})" in rule.body for button in MENU_ACTION_BUTTONS)), None), "dispatcher menu", False),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body), None), "toggle Camera", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "InspeksiAktif = True;" in rule.body and "Button(Crouch)" in rule.body), None), "inspection Crouch", False),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "TeleportasiJongkokAktif = True;" in rule.body and "Button(Crouch)" in rule.body), None), "teleport Crouch", True),
+        (next((rule for rule in rules if event_type(rule) == "Player Died" and "Hero(Anran)" in rule.body and "Set Ultimate Charge(Event Player, 100);" in rule.body), None), "passiva Anran", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Respawn(Event Player);" in rule.body and "Button(Jump)" in rule.body), None), "respawn Jump", True),
+    )
+    for rule, label, triple in entrypoints:
+        require_human_guards(rule, label, triple=triple)
+
+    player_hud_calls = list(iter_calls("\n".join(rule.body for rule in rules), "Create HUD Text"))
+    for call in player_hud_calls:
+        if call.args:
+            checks.require(
+                call.args[0].strip() in {"Global.PemainManusia", "Event Player"},
+                f"Create HUD Text visibile a bot/dummy: {call.args[0].strip()}",
+            )
+
+    bot_rule = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Or(Is Dummy Bot(Event Player), Event Player.BotOtomatis) == True;" in rule.body
+            and "Call Subroutine(KunciBot);" in rule.body
+        ),
+        None,
+    )
+    checks.require(bot_rule is not None, "regola dedicata di lock bot/dummy assente")
+    if bot_rule:
+        checks.require(not any(token in bot_rule.body for token in ("Create HUD Text(", "Small Message(", "GambarMenu", "Start Camera(", "Respawn(")),
+                       "regola dedicata bot/dummy avvia HUD/menu/funzioni umane")
+
+    bot_lock = rule_by_subroutine(rules, "KunciBot")
+    checks.require(bot_lock is not None, "subroutine dedicata KunciBot assente")
+    if bot_lock:
+        checks.require(not any(token in bot_lock.body for token in ("Create HUD Text(", "Create In-World Text(", "Small Message(", "Start Camera(", "Teleport(", "Respawn(")),
+                       "KunciBot crea HUD/menu/funzioni per bot/dummy")
+        for token in (
+            "Set Primary Fire Enabled(Event Player, False);",
+            "Set Secondary Fire Enabled(Event Player, False);",
+            "Set Ability 1 Enabled(Event Player, False);",
+            "Set Ability 2 Enabled(Event Player, False);",
+            "Set Ultimate Ability Enabled(Event Player, False);",
+            "Set Melee Enabled(Event Player, False);",
+            "Disallow Button(Event Player, Button(Interact));",
+            "Set Damage Dealt(Event Player, 0);",
+            "Set Healing Dealt(Event Player, 0);",
+            "Set Knockback Dealt(Event Player, 0);",
+        ):
+            checks.require(token in bot_lock.body, f"KunciBot incompleto: {token}")
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
@@ -1221,6 +1640,8 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_scheduler(checks, source, rules, globals_, subroutines)
     validate_try_your_luck(checks, source, rules, players)
     validate_lifecycle(checks, rules, subroutines)
+    validate_privacy(checks, rules)
+    validate_bot_isolation(checks, rules)
     validate_modes_and_camera(checks, source, rules)
     validate_indonesian_and_duplicates(checks, source, rules)
     return checks

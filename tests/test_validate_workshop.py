@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,10 +37,23 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         changed = rule.body.replace(old, new, 1)
         return self.source[:rule.start] + changed + self.source[rule.end:]
 
+    def replace_regex_in_rule(self, rule: validator.Rule, pattern: str, replacement: str) -> str:
+        changed, count = re.subn(pattern, replacement, rule.body, count=1, flags=re.DOTALL)
+        self.assertEqual(count, 1, f"rule fixture pattern not found: {pattern}")
+        return self.source[:rule.start] + changed + self.source[rule.end:]
+
     def inject_action(self, rule: validator.Rule, action: str) -> str:
         closing = rule.body.rfind("\n\t}")
         self.assertGreater(closing, 0)
         changed = rule.body[:closing] + f"\n\t\t{action}" + rule.body[closing:]
+        return self.source[:rule.start] + changed + self.source[rule.end:]
+
+    def inject_condition(self, rule: validator.Rule, condition: str) -> str:
+        match = re.search(r"\bconditions\s*\{", rule.body)
+        self.assertIsNotNone(match, "rule fixture has no conditions block")
+        opening = rule.body.find("{", match.start())  # type: ignore[union-attr]
+        closing = validator.matching_brace(rule.body, opening)
+        changed = rule.body[:closing] + f"\n\t\t{condition}" + rule.body[closing:]
         return self.source[:rule.start] + changed + self.source[rule.end:]
 
     def replace_call_argument(self, call: validator.Call, index: int, value: str) -> str:
@@ -254,6 +268,50 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute_call, 0, "Empty Array")
         self.assert_rejected(mutated, "nascosto/precaricato")
 
+    def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
+        mutated = self.replace_once(
+            '"Hold {0}: inspect hero + HP"',
+            '"Hold {0}: inspect hero + HP | in menu: modifier for every command"',
+        )
+        self.assert_rejected(mutated, "clausola modifier Crouch duplicata")
+
+    def test_every_menu_keeps_the_trilingual_crouch_instruction(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "Hold DUCK + command")
+        self.assert_rejected(mutated, "istruzione Crouch menu assente")
+
+    def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "\\nHold CROUCH + command")
+        self.assert_rejected(mutated, "riga vuota artificiale")
+
+    def test_revenge_no_target_branch_keeps_trilingual_crouch_help(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarBalasDendam")
+        call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
+        branches = validator.parse_top_level_ternary(call.args[2])
+        self.assertIsNotNone(branches)
+        _, no_targets, _ = branches  # type: ignore[misc]
+        changed_branch = no_targets.replace("Hold CROUCH + command", "Hold DUCK + command", 1)
+        self.assertNotEqual(changed_branch, no_targets)
+        changed_argument = call.args[2].replace(no_targets, changed_branch, 1)
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, changed_argument)
+        self.assert_rejected(mutated, "Revenge no-target senza istruzione Crouch")
+
+    def test_chill_title_cannot_end_with_a_blank_spacer_line(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 4
+            and "CHILL DEDICATED SERVER" in call.args[3]
+            and "Global.TeksWaktuServer" in call.args[3]
+        )
+        mutated = self.replace_call_argument(
+            call,
+            3,
+            f'Custom String("{{0}}\\n ", {call.args[3]})',
+        )
+        self.assert_rejected(mutated, "riga vuota finale prima del menu")
+
     def test_primary_secondary_must_not_redraw_menu(self) -> None:
         rule = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Primary Fire)" in rule.body)
         mutated = self.inject_action(rule, "Destroy HUD Text(Event Player.HudMenu);")
@@ -273,6 +331,24 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_in_rule(dispatcher, "Is Button Held(Event Player, Button(Crouch)) == True;", "Is Button Held(Event Player, Button(Crouch)) == False;")
         self.assert_rejected(mutated, "modificatore Crouch")
 
+    def test_menu_dispatch_rejects_interact_already_consumed_by_camera(self) -> None:
+        dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Ability 2)" in rule.body)
+        mutated = self.replace_in_rule(
+            dispatcher,
+            "Event Player.InteraksiKameraDipakai == False;",
+            "Event Player.InteraksiKameraDipakai == True;",
+        )
+        self.assert_rejected(mutated, "non blocca Interact già consumato")
+
+    def test_menu_interact_acquires_the_shared_camera_latch(self) -> None:
+        dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Ability 2)" in rule.body)
+        mutated = self.replace_in_rule(
+            dispatcher,
+            "Event Player.InteraksiKameraDipakai = True;",
+            "Event Player.InteraksiKameraDipakai = False;",
+        )
+        self.assert_rejected(mutated, "non acquisisce il latch Camera")
+
     def test_dead_menu_is_frozen(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Ability 2)" in rule.body)
         mutated = self.replace_in_rule(dispatcher, "Is Alive(Event Player) == True;", "Is Alive(Event Player) == False;")
@@ -288,10 +364,33 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(lock, "Disallow Button(Event Player, Button(Jump));")
         self.assert_rejected(mutated, "Melee, Jump e Crouch")
 
-    def test_camera_requires_menu_closed(self) -> None:
+    def test_camera_is_available_with_the_menu_open_or_closed(self) -> None:
         camera = self.rule(lambda rule: "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body)
-        mutated = self.replace_in_rule(camera, "Event Player.MenuTerbuka == False;", "Event Player.MenuTerbuka == True;")
-        self.assert_rejected(mutated, "menu chiuso")
+        self.assertNotIn("MenuTerbuka", validator.mask_strings(camera.body))
+        mutated = self.inject_condition(camera, "Event Player.MenuTerbuka == False;")
+        self.assert_rejected(mutated, "non deve dipendere dallo stato aperto/chiuso")
+
+    def test_camera_requires_crouch_released_to_avoid_menu_interact_collision(self) -> None:
+        camera = self.rule(lambda rule: "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body)
+        mutated = self.replace_in_rule(
+            camera,
+            "Is Button Held(Event Player, Button(Crouch)) == False;",
+            "Is Button Held(Event Player, Button(Crouch)) == True;",
+        )
+        self.assert_rejected(mutated, "interferisce con il modificatore Crouch")
+
+    def test_interact_release_resets_the_shared_menu_camera_latch(self) -> None:
+        release = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.InteraksiKameraDipakai == True;" in rule.body
+            and "Is Button Held(Event Player, Button(Interact)) == False;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            release,
+            "Event Player.InteraksiKameraDipakai = False;",
+            "Event Player.InteraksiKameraDipakai = True;",
+        )
+        self.assert_rejected(mutated, "rilascio Interact non azzera")
 
     def test_crouch_inspection_requires_menu_closed(self) -> None:
         inspection = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "InspeksiAktif = True" in rule.body and "Button(Crouch)" in rule.body)
@@ -364,15 +463,137 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(machine, "Wait(1, Ignore Condition);")
         self.assert_rejected(mutated, "timestamp, non Wait")
 
+    def test_roulette_icons_cannot_reevaluate_scheduler_scratch(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 3, "Visible To and Position")
+        self.assert_rejected(mutated, "scratch Global.PemainAktif rivalutato")
+
+    def test_roulette_icon_position_must_be_a_fixed_snapshot(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, f"Update Every Frame({call.args[1]})")
+        self.assert_rejected(mutated, "posizione deve essere uno snapshot")
+
+    def test_roulette_icons_are_visible_only_to_humans(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 0, "All Players(All Teams)")
+        self.assert_rejected(mutated, "visibilità riservata agli umani")
+
+    def test_roulette_icons_remain_visible_when_offscreen(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
+        self.assertGreaterEqual(len(call.args), 6)
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 5, "False")
+        self.assert_rejected(mutated, "Show When Offscreen deve essere True")
+
+    def test_heart_heal_excludes_bot_and_dummy_players(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(
+            call for call in validator.iter_calls(machine.body, "Set Player Health")
+            if len(call.args) >= 2 and call.args[1].strip() == "9999"
+        )
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 0, "All Living Players(Team Of(Global.PemainAktif))")
+        self.assert_rejected(mutated, "cura anche bot/dummy")
+
+    def test_heart_message_excludes_bot_and_dummy_players(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        call = next(
+            call for call in validator.iter_calls(machine.body, "Small Message")
+            if len(call.args) >= 2 and "HEART" in call.args[1]
+        )
+        absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
+        mutated = self.replace_call_argument(absolute, 0, "All Living Players(Team Of(Global.PemainAktif))")
+        self.assert_rejected(mutated, "invia HUD anche a bot/dummy")
+
     def test_join_requires_duplicate_guard(self) -> None:
         joined = self.rule(lambda rule: validator.event_type(rule) == "Player Joined Match")
         mutated = self.replace_in_rule(joined, "Event Player.PindahTimDiproses == False;", "Event Player.PindahTimDiproses == True;")
         self.assert_rejected(mutated, "PindahTimDiproses")
 
+    def test_team_switch_lifecycle_excludes_classified_ibots(self) -> None:
+        joined = self.rule(lambda rule: validator.event_type(rule) == "Player Joined Match")
+        mutated = self.replace_in_rule(joined, "Event Player.BotOtomatis == False;", "Event Player.BotOtomatis == True;")
+        self.assert_rejected(mutated, "join/team-switch umano può riattivare")
+
+    def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        mutated = self.replace_in_rule(
+            left,
+            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
+            "Event Player.Manusia == False;",
+        )
+        self.assert_rejected(mutated, "leave/cleanup umano può essere eseguito")
+
     def test_roster_append_is_idempotent(self) -> None:
         classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
         mutated = self.replace_in_rule(classifier, "Abort If(Array Contains(Global.PemainManusia, Event Player));", "")
         self.assert_rejected(mutated, "due volte il roster")
+
+    def test_ibot_aborts_before_human_roster_append(self) -> None:
+        classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+        mutated = self.replace_in_rule(
+            classifier,
+            "Call Subroutine(KunciBot);\n\t\t\tAbort;",
+            "Call Subroutine(KunciBot);",
+        )
+        self.assert_rejected(mutated, "iBot può raggiungere il roster umano")
+
+    def test_human_menu_dispatcher_has_all_bot_guards(self) -> None:
+        dispatcher = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "PerintahMenu" in rule.body
+            and "Button(Ability 2)" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            dispatcher,
+            "Event Player.Manusia == True;",
+            "Event Player.Manusia == False;",
+        )
+        self.assert_rejected(mutated, "dispatcher menu non isola bot/dummy")
+
+    def test_only_classifier_can_mark_a_player_as_human(self) -> None:
+        camera = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Button(Interact)" in rule.body
+            and "Wait(0.500, Abort When False)" in rule.body
+            and "ModeKamera" in rule.body
+        )
+        mutated = self.inject_action(camera, "Event Player.Manusia = True;")
+        self.assert_rejected(mutated, "numero writer di Manusia=True")
+
+    def test_anran_passive_has_all_bot_guards(self) -> None:
+        anran = self.rule(lambda rule: validator.event_type(rule) == "Player Died" and "Hero(Anran)" in rule.body)
+        mutated = self.replace_in_rule(anran, "Is Dummy Bot(Event Player) == False;", "Is Dummy Bot(Event Player) == True;")
+        self.assert_rejected(mutated, "passiva Anran non isola bot/dummy")
+
+    def test_dedicated_bot_rule_is_required(self) -> None:
+        bot_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Or(Is Dummy Bot(Event Player), Event Player.BotOtomatis) == True;" in rule.body
+            and "Call Subroutine(KunciBot);" in rule.body
+        )
+        mutated = self.replace_in_rule(bot_rule, "Call Subroutine(KunciBot);", "")
+        self.assert_rejected(mutated, "regola dedicata di lock bot/dummy assente")
+
+    def test_bot_lock_neutralizes_player_interference(self) -> None:
+        bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
+        mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
+        self.assert_rejected(mutated, "KunciBot incompleto")
+
+    def test_player_hud_is_never_visible_to_bot_or_dummy_players(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if call.args and call.args[0].strip() == "Global.PemainManusia"
+        )
+        mutated = self.replace_call_argument(call, 0, "All Players(All Teams)")
+        self.assert_rejected(mutated, "Create HUD Text visibile a bot/dummy")
 
     def test_team_switch_performs_full_preferences_reset(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
@@ -405,6 +626,91 @@ class SemanticWorkshop080Tests(unittest.TestCase):
             "Global.PemainAktif.SudahDiperiksa == False",
         )
         self.assert_rejected(mutated, "registrazione bot BotOtomatis/SudahDiperiksa")
+
+    def test_privacy_is_on_by_default(self) -> None:
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        mutated = self.replace_in_rule(
+            setup,
+            "Event Player.PrivasiInspeksiAktif = True;",
+            "Event Player.PrivasiInspeksiAktif = False;",
+        )
+        self.assert_rejected(mutated, "Privacy deve essere ON di default")
+
+    def test_privacy_cursor_defaults_to_on(self) -> None:
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        mutated = self.replace_in_rule(
+            setup,
+            "Event Player.KursorPrivasiInspeksi = 1;",
+            "Event Player.KursorPrivasiInspeksi = 0;",
+        )
+        self.assert_rejected(mutated, "cursore Privacy deve iniziare su ON")
+
+    def test_camera_target_refresh_excludes_private_humans(self) -> None:
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetKamera")
+        mutated = self.replace_in_rule(
+            refresh,
+            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
+            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == True",
+        )
+        self.assert_rejected(mutated, "lista target Camera non esclude umani privati")
+
+    def test_unclassified_human_is_not_treated_as_a_public_camera_target(self) -> None:
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetKamera")
+        mutated = self.replace_in_rule(
+            refresh,
+            "Player Variable(Current Array Element, Manusia) == True",
+            "True",
+        )
+        self.assert_rejected(mutated, "Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    def test_all_inspection_and_teleport_filters_require_a_classified_human(self) -> None:
+        protected_rules = (
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi"),
+            self.rule(
+                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+            ),
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetTeleportasi"),
+            self.rule(
+                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                and "Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(" in rule.body
+            ),
+        )
+        for rule in protected_rules:
+            with self.subTest(rule=rule.name):
+                mutated = self.replace_regex_in_rule(
+                    rule,
+                    r"Player Variable\(\s*Current Array Element\s*,\s*Manusia\)\s*==\s*True",
+                    "True",
+                )
+                self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
+
+    def test_inspection_keeps_the_explicit_vision_bypass(self) -> None:
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi")
+        mutated = self.replace_in_rule(
+            refresh,
+            "Event Player.PrivasiNasibAktif == True",
+            "Event Player.PrivasiNasibAktif == False",
+        )
+        self.assert_rejected(mutated, "inspection non usa Dummy OR iBot OR Vision")
+
+    def test_camera_target_cache_excludes_private_humans(self) -> None:
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        mutated = self.replace_in_rule(
+            cache,
+            "Player Variable(Current Array Element, BotOtomatis) == True",
+            "Player Variable(Current Array Element, BotOtomatis) == False",
+        )
+        self.assert_rejected(mutated, "cache target Camera non esclude umani privati")
+
+    def test_active_observer_is_stopped_when_target_turns_private(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Global.PemainAktif.TargetKamera.PrivasiInspeksiAktif == True",
+            "Global.PemainAktif.TargetKamera.PrivasiInspeksiAktif == False",
+        )
+        self.assert_rejected(mutated, "osservatore attivo non viene fermato")
 
     def test_workshop_setting_labels_are_trilingual(self) -> None:
         call = next(iter(validator.iter_calls(self.source, "Workshop Setting Integer")))
