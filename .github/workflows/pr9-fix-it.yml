@@ -1,0 +1,183 @@
+name: Temporary PR 9 Italian Import Fix
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.pull_request.number == 9 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/italian-import-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/italian-import-fix
+          persist-credentials: true
+
+      - name: Check out pinned OverPy localization database
+        uses: actions/checkout@v4
+        with:
+          repository: Zezombye/overpy
+          ref: d854bf01fc7bbf3b2169f67408c07a8da8989ad6
+          path: .overpy
+          persist-credentials: false
+
+      - name: Regenerate conservative it-IT Workshop source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from collections import defaultdict
+          from pathlib import Path
+          import json
+          import re
+          import shutil
+
+          root = Path('.overpy/src/data')
+          english_path = Path('workshop/ruang_irama.workshop')
+          italian_path = Path('workshop/ruang_irama.it-IT.workshop')
+          fixture_path = Path('tests/fixtures/semantic_reference.txt')
+          manifest_path = Path('workshop/ruang_irama.it-IT.manifest')
+          source = english_path.read_text(encoding='utf-8')
+
+          candidates: dict[str, set[str]] = defaultdict(set)
+          locale_line = re.compile(
+              r'^(?P<indent>\s*)"(?P<locale>en-US|it-IT)"\s*:\s*'
+              r'(?P<value>"(?:[^"\\]|\\.)*")\s*,?\s*$'
+          )
+
+          for path in sorted(root.glob('*.ts')):
+              lines = path.read_text(encoding='utf-8').splitlines()
+              i = 0
+              while i < len(lines):
+                  m = locale_line.match(lines[i])
+                  if not m or m.group('locale') != 'en-US':
+                      i += 1
+                      continue
+                  indent = len(m.group('indent'))
+                  en = json.loads(m.group('value'))
+                  targets = []
+                  j = i + 1
+                  while j < len(lines):
+                      m2 = locale_line.match(lines[j])
+                      stripped = lines[j].strip()
+                      leading = len(lines[j]) - len(lines[j].lstrip())
+                      if m2 and len(m2.group('indent')) == indent and m2.group('locale') == 'it-IT':
+                          targets.append(json.loads(m2.group('value')))
+                          break
+                      if stripped.startswith('}') and leading < indent:
+                          break
+                      j += 1
+                  if isinstance(en, str) and en:
+                      candidates[en].add(targets[0] if targets else en)
+                  i += 1
+
+          # Workshop strings are payload data, not grammar. Preserve all quoted
+          # text (rule names, comments, Custom String contents) byte-for-byte.
+          quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
+
+          # Preserve Color literal calls exactly as authored in the known-good
+          # en-US source. Current Italian client rejects localized options such
+          # as Color(Bianco) even though older localization data contains them.
+          color_call = re.compile(r'\bColor\(([^()]+)\)')
+          protected_colors: dict[str, str] = {}
+          color_counter = 0
+
+          def protect_colors(segment: str) -> str:
+              nonlocal_color = [0]
+              def repl(match: re.Match[str]) -> str:
+                  global color_counter
+                  key = f'__CHILL_COLOR_LITERAL_{color_counter}__'
+                  color_counter += 1
+                  protected_colors[key] = match.group(0)
+                  return key
+              return color_call.sub(repl, segment)
+
+          # Build a conservative longest-token translator. A spelling is only
+          # localized automatically when every OverPy table agrees on the same
+          # it-IT form. Ambiguous/context-dependent spellings remain English.
+          all_tokens = sorted(candidates, key=lambda item: (-len(item), item))
+          token_re = re.compile(
+              r'(?<![A-Za-z0-9_])(?:'
+              + '|'.join(re.escape(item) for item in all_tokens)
+              + r')(?![A-Za-z0-9_])'
+          )
+
+          def translate_code(segment: str) -> tuple[str, int]:
+              segment = protect_colors(segment)
+              count = 0
+              def repl(match: re.Match[str]) -> str:
+                  nonlocal count
+                  en = match.group(0)
+                  targets = candidates[en]
+                  if len(targets) == 1:
+                      target = next(iter(targets))
+                      if target != en:
+                          count += 1
+                      return target
+                  return en
+              translated = token_re.sub(repl, segment)
+
+              # Explicit context-specific mappings used by this project.
+              translated, n = re.subn(r'(?<![A-Za-z0-9_])Damage(?=\s*\()', 'Danneggia', translated)
+              count += n
+              translated, n = re.subn(r'Game Mode\(Escort\)', 'Game Mode(Trasporto)', translated)
+              count += n
+              translated, n = re.subn(r'(?m)^(\s*)All;(\s*)$', r'\1Tutti;\2', translated)
+              count += n
+
+              for key, original in protected_colors.items():
+                  translated = translated.replace(key, original)
+              return translated, count
+
+          out: list[str] = []
+          cursor = 0
+          replacements = 0
+          for m in quoted.finditer(source):
+              translated, n = translate_code(source[cursor:m.start()])
+              replacements += n
+              out.append(translated)
+              out.append(m.group(0))
+              cursor = m.end()
+          translated, n = translate_code(source[cursor:])
+          replacements += n
+          out.append(translated)
+          output = ''.join(out)
+
+          if not output.lstrip().startswith('variabili\n{'):
+              raise SystemExit('Italian structural grammar was not generated')
+          if 'Color(Bianco)' in output or 'Color(Giallo)' in output:
+              raise SystemExit('Localized Color literal survived regeneration')
+          original_colors = color_call.findall(source)
+          generated_colors = color_call.findall(output)
+          if original_colors != generated_colors:
+              raise SystemExit('Color literal sequence changed during localization')
+          if 'Ongoing - Globale;' in output:
+              raise SystemExit('Partial localization survived: Ongoing - Globale')
+
+          italian_path.write_text(output, encoding='utf-8')
+          fixture_path.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(english_path, fixture_path)
+          english_path.unlink()
+          if manifest_path.exists():
+              manifest_path.unlink()
+
+          print(f'Applied {replacements} conservative replacements')
+          print(f'Preserved {len(original_colors)} Color literal options in en-US form')
+          PY
+
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+      - name: Commit corrected source and cleanup
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- workshop tests/fixtures
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix Italian Workshop literal localization'
+          git push origin HEAD:chatgpt/italian-import-fix
