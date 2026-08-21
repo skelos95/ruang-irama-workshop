@@ -48,7 +48,12 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertIn("Button(Secondary Fire)", self.italian)
         without_custom_colors = self.italian.replace("Custom Color(", "")
         self.assertNotIn("Color(", without_custom_colors)
+        self.assertNotIn("Danneggia(", self.italian)
+        self.assertIn("Damage(", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5", self.italian)
+        self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.PutaranKartuNasib == 0, And(Globale.PemainAktif.EfekNasibBerakhir > 0", self.italian)
+        self.assertNotIn("If(And(Globale.PemainAktif.WaktuIkonNasibBerakhir > 0", self.italian)
+        self.assertNotIn("If(And(Globale.PemainAktif.KartuNasibAktif == False, Globale.PemainAktif.MenuTerbuka == False", self.italian)
 
     def test_english_and_italian_have_same_rule_count(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
