@@ -44,8 +44,24 @@ jobs:
       - name: Generate it-IT Workshop clipboard source
         shell: bash
         run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          source = Path('workshop/ruang_irama.workshop').read_text(encoding='utf-8')
+          standalone_comment = re.compile(r'^\s*"(?:[^"\\]|\\.)*"\s*$')
+          cleaned_lines = [
+              line for line in source.splitlines()
+              if not standalone_comment.match(line)
+          ]
+          Path('/tmp/ruang_irama.overpy-input.workshop').write_text(
+              '\n'.join(cleaned_lines) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
           node .overpy/out/overpy_cli.js decompile \
-            -i workshop/ruang_irama.workshop \
+            -i /tmp/ruang_irama.overpy-input.workshop \
             -o /tmp/ruang_irama.opy \
             -l en-US
           node .overpy/out/overpy_cli.js compile \
