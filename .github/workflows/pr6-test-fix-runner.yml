@@ -1,0 +1,47 @@
+name: Temporary PR 6 Test Fix Runner
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.number == 6 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/workshop-ui-luck-vote'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chatgpt/workshop-ui-luck-vote
+          persist-credentials: true
+
+      - name: Move completion test into source test class
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/test_validate_workshop.py')
+          text = path.read_text(encoding='utf-8')
+          block = '''    def test_builtin_completion_is_disabled_exactly_once(self) -> None:\n        token = "Disable Built-In Game Mode Completion;"\n        self.assertEqual(self.source.count(token), 1)\n        mutated = self.source.replace(token, "", 1)\n        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")\n        mutated = self.source.replace(token, token + "\\n\\t\\t" + token, 1)\n        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")\n\n'''
+          assert text.count(block) == 1
+          text = text.replace(block, '', 1)
+          anchor = '\n\nclass RepositoryMetadataTests(unittest.TestCase):\n'
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, '\n\n' + block + 'class RepositoryMetadataTests(unittest.TestCase):\n', 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit test fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- tests/test_validate_workshop.py
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix custom completion test placement'
+          git push origin HEAD:chatgpt/workshop-ui-luck-vote
