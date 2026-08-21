@@ -44,11 +44,11 @@ jobs:
       - name: Generate it-IT Workshop clipboard source
         shell: bash
         run: |
-          node .overpy/out/cli.js decompile \
+          node .overpy/out/overpy_cli.js decompile \
             -i workshop/ruang_irama.workshop \
             -o /tmp/ruang_irama.opy \
             -l en-US
-          node .overpy/out/cli.js compile \
+          node .overpy/out/overpy_cli.js compile \
             -i /tmp/ruang_irama.opy \
             -o workshop/ruang_irama.it-IT.workshop \
             -l it-IT
