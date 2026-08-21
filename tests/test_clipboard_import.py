@@ -43,6 +43,11 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertIn("\n\tcondizioni\n", self.italian)
         self.assertIn("\n\tazioni\n", self.italian)
 
+    def test_italian_identity_tokens_are_not_partially_localized(self) -> None:
+        self.assertIn("Ongoing - Global;", self.italian)
+        self.assertNotIn("Ongoing - Globale;", self.italian)
+        self.assertIn("Button(Secondary Fire)", self.italian)
+
     def test_english_and_italian_have_same_rule_count(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
         italian = clipboard.check_path(self.italian_path, "it-IT")
