@@ -90,8 +90,8 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 
 - Testi runtime, stati, effetti, 37 nomi icona e 26 località sono disponibili in EN/ID/TH.
 - I 100 generi, `CHILL`, nomi player ed eroi restano nomi propri universali.
-- Identificatori, regole, subroutine e commenti personalizzati Workshop sono in Bahasa Indonesia.
-- **Il client Overwatch in italiano non richiede la traduzione della sintassi Workshop:** keyword, azioni e valori di programmazione restano in inglese nel testo da incollare.
+- Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia in entrambe le varianti clipboard.
+- Il **linguaggio del clipboard Workshop è localizzato**: il sorgente canonico usa `en-US`, mentre il client italiano deve ricevere la variante `it-IT`. Alcuni token cambiano (`variables → variabili`, `rule → regola`, `event → evento`), mentre altri restano identici in italiano (`Ongoing - Global`, `Button(Secondary Fire)`).
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
 - Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
@@ -113,9 +113,15 @@ La pagina All Players sceglie un target valido vicino al reticolo e rispetta Cro
 
 ## Importazione tramite copia/incolla
 
-Il sorgente canonico da incollare è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop). Copiare solo il contenuto del file, dalla prima riga `variables` fino alla graffa finale, senza fence Markdown o testo aggiuntivo.
+Il sorgente funzionale canonico è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop), in grammatica `en-US`. Serve per manutenzione e validazione semantica.
 
-Con client in italiano **non tradurre** `variables`, `subroutines`, `rule`, `event`, `conditions`, `actions` o i nomi delle azioni/valori Workshop. La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
+Con Overwatch impostato in **italiano**, il file da copiare è invece:
+
+[`workshop/ruang_irama.it-IT.workshop`](workshop/ruang_irama.it-IT.workshop)
+
+Apri la vista Raw di quel file e copia tutto, dalla prima riga `variabili` fino alla graffa finale. La variante italiana è generata dal canonico usando le tabelle di localizzazione di OverPy 9.7.13 e un manifest SHA-256 impedisce che diventi stale rispetto al sorgente principale.
+
+Se si copia il file `en-US` nel client italiano, il sintomo può essere proprio quello osservato nel test live: **il pulsante arancione per incollare le regole non compare**. La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
 
 Dallo screenshot client del 21 agosto 2026 i limiti da verificare dopo il paste sono:
 
@@ -124,7 +130,7 @@ Dallo screenshot client del 21 agosto 2026 i limiti da verificare dopo il paste 
 - combinazioni eroe/modello: `12`;
 - dummy bot extra-slot: `0` nella configurazione mostrata.
 
-I valori `0 elementi` e `0 KB` dello screenshot corrispondono allo script vuoto e non misurano ancora questo progetto. Element Count e Largest Rule compilato devono essere letti nuovamente dopo l'import.
+I valori `0 elementi` e `0 KB` dello screenshot con Workshop vuoto non misurano il progetto. Element Count e Largest Rule compilato devono essere letti nuovamente dopo un import riuscito.
 
 ## Validazione
 
@@ -133,10 +139,11 @@ Da eseguire dalla radice del repository, senza dipendenze Python esterne:
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
-python tools/check_clipboard_import.py
+python tools/check_clipboard_import.py workshop/ruang_irama.workshop --language en-US
+python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 ```
 
-`check_clipboard_import.py` verifica il formato testuale di paste (UTF-8/BOM, delimitatori, keyword strutturali English, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
+`check_clipboard_import.py` verifica il formato testuale di paste per entrambi i profili (UTF-8/BOM, delimitatori, grammatica strutturale, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
 
 Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue la suite `unittest` e il validatore semantico su push e pull request; i test del preflight clipboard sono inclusi automaticamente nella suite. Non esiste un workflow permanente che modifica o committa automaticamente il repository.
 
