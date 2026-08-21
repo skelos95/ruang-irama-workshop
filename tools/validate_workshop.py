@@ -134,7 +134,6 @@ FORBIDDEN_RESULT_ACTIONS = (
     "Declare Team Victory(",
     "Set Team Score(",
     "Modify Team Score(",
-    "Disable Built-In Game Mode Completion;",
     "Disable Built-In Game Mode Scoring;",
 )
 
@@ -980,8 +979,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if custom.args
         ]
         checks.require(
-            not any(literal is not None and literal.endswith("\n ") for literal in title_literals),
-            "HUD titolo CHILL conserva una riga vuota finale prima del menu",
+            any(literal is not None and literal.endswith("\n ") for literal in title_literals),
+            "HUD titolo CHILL deve mantenere una riga vuota prima del menu",
         )
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
@@ -1869,6 +1868,7 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                        "destinazione teleport non viene valutata al click")
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
+    checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
     checks.equal(source.count("Ray Cast Hit Position("), 1, "raycast Camera")
 
 
