@@ -2959,7 +2959,7 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 					If(Globale.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed);
 						If(Has Spawned(Globale.PemainAktif) == True);
 							If(Is Alive(Globale.PemainAktif) == True);
-								Danneggia(Globale.PemainAktif, Globale.PemainAktif, Max Health(Globale.PemainAktif) * 0.025);
+								Damage(Globale.PemainAktif, Globale.PemainAktif, Max Health(Globale.PemainAktif) * 0.025);
 								Globale.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;
 							End;
 						End;

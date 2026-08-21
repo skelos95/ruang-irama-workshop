@@ -48,6 +48,8 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertIn("Button(Secondary Fire)", self.italian)
         without_custom_colors = self.italian.replace("Custom Color(", "")
         self.assertNotIn("Color(", without_custom_colors)
+        self.assertNotIn("Danneggia(", self.italian)
+        self.assertIn("Damage(", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.PutaranKartuNasib == 0, And(Globale.PemainAktif.EfekNasibBerakhir > 0", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.WaktuIkonNasibBerakhir > 0", self.italian)
