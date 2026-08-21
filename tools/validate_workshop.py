@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
+SOURCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
