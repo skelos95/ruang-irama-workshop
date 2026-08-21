@@ -36,10 +36,14 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_dummy_respawn_is_30_seconds(self):
         self.assertIn("Set Respawn Max Time(Event Player, 30);", self.it)
 
-    def test_spawn_teleport_targets_objective(self):
+    def test_spawn_teleport_uses_safe_mode_specific_destinations(self):
         self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
-        self.assertIn("All Players On Objective(All Teams)", self.it)
-        self.assertIn("Objective Position(Objective Index)", self.it)
+        self.assertIn("Payload Position", self.it)
+        self.assertIn("Flag Position(Opposite Team Of(Team Of(Event Player)))", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Cattura la Bandiera)", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Scorta)", self.it)
+        self.assertIn("Nearest Walkable Position", self.it)
+        self.assertNotIn("Teleport(Event Player, Objective Position(Objective Index));", self.it)
 
     def test_dummy_faces_nearest_living_human_without_extra_loop(self):
         self.assertIn("Start Facing(Event Player", self.it)
