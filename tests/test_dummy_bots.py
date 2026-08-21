@@ -3,7 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Live regression: dummy bots must use a walkable mode-specific destination.
+# Live regression: dummy bots must use a walkable, mode-specific destination.
 class DummyBotFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
