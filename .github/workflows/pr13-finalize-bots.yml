@@ -1,0 +1,68 @@
+name: Temporary PR 13 Finalize Bots
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.number == 13 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/hud-dummy-bots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/hud-dummy-bots
+          persist-credentials: true
+
+      - name: Finalize rule titles and objective fallback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('workshop/ruang_irama.it-IT.workshop'),
+              Path('tests/fixtures/semantic_reference.txt'),
+          ]
+          replacements = {
+              '03d - Bot/Dummy: Buat satu bot acak untuk Squadra 1': '03d - Bot/Dummy: Buat satu bot acak untuk Tim 1',
+              '03e - Bot/Dummy: Buat satu bot acak untuk Squadra 2': '03e - Bot/Dummy: Buat satu bot acak untuk Tim 2',
+              "03f - Bot/Dummy: Teletrasporta dalla spawn all'obiettivo": '03f - Bot/Dummy: Teleport dari ruang spawn ke objektif',
+              '03g - Bot/Dummy: Guarda sempre il giocatore vivo piu vicino': '03g - Bot/Dummy: Selalu hadap pemain hidup terdekat',
+              '03h - Bot/Dummy: Ferma lo sguardo senza giocatori vivi': '03h - Bot/Dummy: Hentikan arah saat tidak ada pemain hidup',
+              '03i - Bot/Dummy: Ferma lo sguardo alla morte': '03i - Bot/Dummy: Hentikan arah saat bot mati',
+              'Objective Position(0)': 'Objective Position(Objective Index)',
+          }
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              for old, new in replacements.items():
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{path}: expected one {old!r}, found {count}')
+                  text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+
+          test = Path('tests/test_dummy_bots.py')
+          text = test.read_text(encoding='utf-8')
+          if text.count('Objective Position(0)') != 1:
+              raise SystemExit('Expected one Objective Position(0) assertion')
+          text = text.replace('Objective Position(0)', 'Objective Position(Objective Index)', 1)
+          test.write_text(text, encoding='utf-8')
+          PY
+          python tools/check_clipboard_import.py
+          python -m unittest tests.test_dummy_bots tests.test_clipboard_import
+
+      - name: Commit finalization
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py
+          git diff --cached --quiet && exit 0
+          git commit -m 'Finalize dummy bot rules for Workshop validation'
+          git push origin HEAD:chatgpt/hud-dummy-bots
