@@ -46,10 +46,8 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertIn("Ongoing - Global;", self.italian)
         self.assertNotIn("Ongoing - Globale;", self.italian)
         self.assertIn("Button(Secondary Fire)", self.italian)
-        self.assertIn("Color(White)", self.italian)
-        self.assertNotIn("Color(Bianco)", self.italian)
-        self.assertIn("Color(Yellow)", self.italian)
-        self.assertNotIn("Color(Giallo)", self.italian)
+        without_custom_colors = self.italian.replace("Custom Color(", "")
+        self.assertNotIn("Color(", without_custom_colors)
 
     def test_english_and_italian_have_same_rule_count(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
