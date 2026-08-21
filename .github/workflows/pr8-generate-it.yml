@@ -76,46 +76,22 @@ jobs:
                       candidates[en].add(it)
                   index += 1
 
+          # Quoted Workshop text is data, not grammar: preserve rule titles,
+          # comments and Custom String payloads byte-for-byte.
           quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
-          cursor = 0
-          code_segments = []
-          for match in quoted.finditer(source):
-              code_segments.append(source[cursor:match.start()])
-              cursor = match.end()
-          code_segments.append(source[cursor:])
-          code_only = '\n'.join(code_segments)
 
-          resolved: dict[str, str] = {}
-          conflicts = {}
+          # Build a conservative global mapping. If an English spelling maps to
+          # two genuinely different Italian spellings in different type tables,
+          # leave it for the explicit contextual rules below.
+          mapping: dict[str, str] = {}
+          ambiguous: dict[str, set[str]] = {}
           for en, targets in candidates.items():
               localized = {target for target in targets if target != en}
-              if len(localized) == 0:
-                  resolved[en] = en
-              elif len(localized) == 1:
-                  # If one category keeps the English spelling and another has a
-                  # real it-IT spelling, the localized spelling is the one needed
-                  # for the native Workshop grammar occurrence.
-                  resolved[en] = next(iter(localized))
-              else:
-                  boundary = rf'(?<![A-Za-z0-9_]){re.escape(en)}(?![A-Za-z0-9_])'
-                  if re.search(boundary, code_only):
-                      contexts = [
-                          line.strip()
-                          for line in source.splitlines()
-                          if re.search(boundary, quoted.sub('', line))
-                      ][:12]
-                      conflicts[en] = (sorted(localized), contexts)
+              if len(localized) == 1:
+                  mapping[en] = next(iter(localized))
+              elif len(localized) > 1:
+                  ambiguous[en] = localized
 
-          if conflicts:
-              for en, (targets, contexts) in sorted(conflicts.items()):
-                  print(f'AMBIGUOUS: {en!r} -> {targets}')
-                  for context in contexts:
-                      print(f'  USE: {context}')
-              raise SystemExit('Context-dependent localized tokens remain')
-
-          mapping = {
-              en: target for en, target in resolved.items() if target != en
-          }
           ordered = sorted(mapping, key=lambda item: (-len(item), item))
           if not ordered:
               raise SystemExit('No OverPy localization mappings found')
@@ -126,32 +102,76 @@ jobs:
               + r')(?![A-Za-z0-9_])'
           )
 
-          out = []
+          def translate_code(segment: str) -> tuple[str, int]:
+              # Longest native spellings are translated first. This consumes
+              # expressions such as Set Damage Received / Set Ability 1 Enabled
+              # before the shorter ambiguous words Damage / Enabled are seen.
+              translated, count = token_re.subn(
+                  lambda found: mapping[found.group(0)], segment
+              )
+
+              # Context-dependent tokens used by this project:
+              # - bare Damage(...) is the Damage action -> Danneggia;
+              # - Escort occurs only as a Game Mode literal -> Trasporto;
+              # - bare All; lines are event team/player selectors -> Tutti;
+              # - ButtonLiteral Secondary Fire intentionally stays English in
+              #   OverPy's it-IT table, so it is left untouched.
+              translated, n = re.subn(
+                  r'(?<![A-Za-z0-9_])Damage(?=\s*\()',
+                  'Danneggia',
+                  translated,
+              )
+              count += n
+              translated, n = re.subn(
+                  r'(?<![A-Za-z0-9_])Escort(?![A-Za-z0-9_])',
+                  'Trasporto',
+                  translated,
+              )
+              count += n
+              translated, n = re.subn(
+                  r'(?m)^(\s*)All;(\s*)$',
+                  r'\1Tutti;\2',
+                  translated,
+              )
+              count += n
+              return translated, count
+
+          out: list[str] = []
           cursor = 0
           replacement_count = 0
           for match in quoted.finditer(source):
-              code = source[cursor:match.start()]
-              translated, count = token_re.subn(
-                  lambda found: mapping[found.group(0)], code
-              )
+              translated, count = translate_code(source[cursor:match.start()])
               replacement_count += count
               out.append(translated)
               out.append(match.group(0))
               cursor = match.end()
-          tail, count = token_re.subn(
-              lambda found: mapping[found.group(0)], source[cursor:]
-          )
+          translated, count = translate_code(source[cursor:])
           replacement_count += count
-          out.append(tail)
+          out.append(translated)
           output = ''.join(out)
 
           if output == source or replacement_count == 0:
               raise SystemExit('Localization produced no changes')
 
+          # Safety assertions for the exact context-dependent cases above.
+          outside_strings = quoted.sub('', output)
+          forbidden_remaining = {
+              'bare event All': r'(?m)^\s*All;\s*$',
+              'Damage action': r'(?<![A-Za-z0-9_])Damage(?=\s*\()',
+              'Escort game mode literal': r'(?<![A-Za-z0-9_])Escort(?![A-Za-z0-9_])',
+          }
+          for label, pattern in forbidden_remaining.items():
+              if re.search(pattern, outside_strings):
+                  raise SystemExit(f'Unlocalized contextual token remains: {label}')
+
+          if 'Button(Secondary Fire)' not in output:
+              raise SystemExit('ButtonLiteral Secondary Fire was translated unexpectedly')
+
           output_path.write_text(output, encoding='utf-8')
           print(
               f'Loaded {len(candidates)} localized spellings; '
-              f'applied {replacement_count} replacements'
+              f'applied {replacement_count} replacements; '
+              f'{len(ambiguous)} context-dependent spellings left out of global mapping'
           )
           PY
 
