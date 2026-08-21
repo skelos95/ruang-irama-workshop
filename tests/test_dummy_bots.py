@@ -10,8 +10,8 @@ class DummyBotFeatureTests(unittest.TestCase):
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
     def test_player_vibes_title_is_shifted_right(self):
-        self.assertIn("\\n \\n     PLAYER VIBES", self.it)
-        self.assertIn("\\n \\n     MUSIK PEMAIN", self.it)
+        self.assertIn("\\n     PLAYER VIBES", self.it)
+        self.assertIn("\\n     MUSIK PEMAIN", self.it)
 
     def test_exactly_one_creation_rule_per_team(self):
         self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);"), 1)

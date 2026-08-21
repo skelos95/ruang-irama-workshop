@@ -843,16 +843,16 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			"Hold {0}: inspect hero + HP", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String(
 			"กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("\n \nLOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"\n \nLOBI & WAKTU SANTAI") : Custom String("\n \nล็อบบี้ & เวลาชิล"), Left, -100,
+			IndeksBahasa) == 0 ? Custom String("\nLOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"\nLOBI & WAKTU SANTAI") : Custom String("\nล็อบบี้ & เวลาชิล"), Left, -100,
 			Custom Color(255, 255, 255, 255), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(
 			"กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("\n \n     PLAYER VIBES") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"\n \n     MUSIK PEMAIN") : Custom String("\n \n     เพลงของผู้เล่น"),
+			IndeksBahasa) == 0 ? Custom String("\n     PLAYER VIBES") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"\n     MUSIK PEMAIN") : Custom String("\n     เพลงของผู้เล่น"),
 			Right, -100, Custom Color(255, 255, 255, 255), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
 		Globale.Siap = True;
