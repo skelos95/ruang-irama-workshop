@@ -1050,6 +1050,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "corpo identico")
 
 
+    def test_builtin_completion_is_disabled_exactly_once(self) -> None:
+        token = "Disable Built-In Game Mode Completion;"
+        self.assertEqual(self.source.count(token), 1)
+        mutated = self.source.replace(token, "", 1)
+        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
+        mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
+        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
+
 class RepositoryMetadataTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:
         (root / ".github" / "workflows").mkdir(parents=True)
@@ -1097,14 +1105,6 @@ class RepositoryMetadataTests(unittest.TestCase):
             workflow = root / ".github" / "workflows" / "validate-workshop.yml"
             workflow.write_text(workflow.read_text(encoding="utf-8") + "      - run: git push\n", encoding="utf-8")
             self.assertTrue(any("non deve modificare" in error for error in self.metadata_errors(root)))
-
-    def test_builtin_completion_is_disabled_exactly_once(self) -> None:
-        token = "Disable Built-In Game Mode Completion;"
-        self.assertEqual(self.source.count(token), 1)
-        mutated = self.source.replace(token, "", 1)
-        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
-        mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
-        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
 
 
 if __name__ == "__main__":
