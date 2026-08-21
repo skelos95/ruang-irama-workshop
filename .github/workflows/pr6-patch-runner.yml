@@ -34,6 +34,8 @@ jobs:
 
           rule_start = source.index('rule("98 - Subrutin: Cari target teleport publik terdekat dari bidikan")')
           next_rule = source.find('\nrule("', rule_start + 1)
+          if next_rule < 0:
+              next_rule = len(source)
           assert next_rule > rule_start
           segment = source[rule_start:next_rule]
           line_start = segment.index('\t\tEvent Player.DaftarTargetTeleportasi = Filtered Array')
