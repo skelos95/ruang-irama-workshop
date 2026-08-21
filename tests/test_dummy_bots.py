@@ -9,9 +9,13 @@ class DummyBotFeatureTests(unittest.TestCase):
         cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
-    def test_player_vibes_title_is_shifted_right(self):
+    def test_hold_sections_use_one_newline_before_labels(self):
+        self.assertIn("\\nLOBBY & CHILL TIME", self.it)
+        self.assertIn("\\nLOBI & WAKTU SANTAI", self.it)
         self.assertIn("\\n     PLAYER VIBES", self.it)
         self.assertIn("\\n     MUSIK PEMAIN", self.it)
+        self.assertNotIn("\\n \\nLOBBY & CHILL TIME", self.it)
+        self.assertNotIn("\\n \\n     PLAYER VIBES", self.it)
 
     def test_exactly_one_creation_rule_per_team(self):
         self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);"), 1)
