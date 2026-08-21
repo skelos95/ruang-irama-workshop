@@ -1,12 +1,12 @@
 # CHILL Dedicated Server — Overwatch Workshop
 
-Overlay sociale e Arcade per lobby Overwatch 2 **6v6 fino a 12 player**, progettato per convivere con il risultato nativo di Push, Flashpoint, Capture the Flag, Control, Clash, Hybrid, Escort e Assault.
+Overlay sociale e Arcade per lobby Overwatch 2 **6v6 fino a 12 player**, progettato per convivere con punteggi e obiettivi nativi di Push, Flashpoint, Capture the Flag, Control, Clash, Hybrid, Escort e Assault, mentre la conclusione automatica della partita è governata dal timer CHILL.
 
 Versione: **0.8.0**
 
 Stato: **static-ready / live-pending**
 
-I gate automatici controllano struttura, localizzazione e invarianti del sorgente. La dicitura `live-ready` verrà usata soltanto dopo import, matrice modalità e soak test nel client aggiornato al 19 agosto 2026.
+I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. La dicitura `live-ready` verrà usata soltanto dopo import, diagnostica client, matrice modalità e soak test nel client aggiornato.
 
 ## Funzioni
 
@@ -18,6 +18,7 @@ I gate automatici controllano struttura, localizzazione e invarianti del sorgent
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
+- Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
 ## I 12 menu
 
@@ -28,7 +29,7 @@ I gate automatici controllano struttura, localizzazione e invarianti del sorgent
 | 2 | Name Color | 32 colori |
 | 3 | HUD Language | English, Bahasa Indonesia, ไทย |
 | 4 | Revenge | debiti da kill dirette ricevute |
-| 5 | Unkillable | OFF, 1 HP, FULL HP |
+| 5 | Unkillable | OFF, 1 HP curabile, FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
@@ -61,14 +62,16 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 
 | Esito | Durata | Effetto |
 |---|---:|---|
-| Vision | 15 s | visione speciale |
+| Vision | 15 s | mostra i nomi degli altri player e bot, escludendo il beneficiario stesso |
 | Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
 | Skull | immediato | morte del player |
 | Team Heal | immediato | cura completa dei player umani della squadra |
 | Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s |
 | Hacked | 5 s | stato Hacked |
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette catturano una volta l'identità del beneficiario e seguono ogni frame il suo occhio e la sua mira, restando visibili a tutto il roster umano anche fuori schermo; non dipendono dallo scratch globale mentre questo passa al player successivo. L'accelerazione usa la stessa identità stabile e spinge automaticamente lungo la direzione completa della visuale. Menu, morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu.
+
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette catturano una volta l'identità del beneficiario e seguono ogni frame il suo occhio e la sua mira, restando visibili a tutto il roster umano anche fuori schermo; non dipendono dallo scratch globale mentre questo passa al player successivo. L'accelerazione usa la stessa identità stabile e spinge automaticamente lungo la direzione completa della visuale. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
 
 ## Runtime 0.8.0
 
@@ -88,16 +91,18 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 - Testi runtime, stati, effetti, 37 nomi icona e 26 località sono disponibili in EN/ID/TH.
 - I 100 generi, `CHILL`, nomi player ed eroi restano nomi propri universali.
 - Identificatori, regole, subroutine e commenti personalizzati Workshop sono in Bahasa Indonesia.
+- **Il client Overwatch in italiano non richiede la traduzione della sintassi Workshop:** keyword, azioni e valori di programmazione restano in inglese nel testo da incollare.
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
-- Menu e liste separano contenuto e comandi con una riga vuota e placeholder equivalenti nelle tre lingue.
-- Il promemoria del modificatore resta nei menu; l'HUD globale mostra soltanto il comando di inspection, senza duplicarlo e senza spaziatori iniziali superflui.
+- Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
 
 Le liste canoniche sono in [`docs/GENERI.md`](docs/GENERI.md) e [`docs/SERVER_LOCATIONS.md`](docs/SERVER_LOCATIONS.md).
 
-## Modalità e Teleport
+## Modalità, timer e Teleport
 
-La modalità nativa assegna punti e vincitore; lo script non sostituisce il risultato. La destinazione Objective/Flag viene valutata al click:
+Punteggio e obiettivi restano responsabilità del game mode nativo, ma `Disable Built-In Game Mode Completion` impedisce alla modalità di terminare automaticamente per i propri criteri. Quando il countdown CHILL raggiunge zero, una guardia one-shot esegue `Restart Match`.
+
+La destinazione Objective/Flag viene valutata al click:
 
 - Escort e Hybrid: `Payload Position`;
 - Capture the Flag: bandiera nemica valida;
@@ -106,6 +111,21 @@ La modalità nativa assegna punti e vincitore; lo script non sostituisce il risu
 
 La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom da alcun osservatore; dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 
+## Importazione tramite copia/incolla
+
+Il sorgente canonico da incollare è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop). Copiare solo il contenuto del file, dalla prima riga `variables` fino alla graffa finale, senza fence Markdown o testo aggiuntivo.
+
+Con client in italiano **non tradurre** `variables`, `subroutines`, `rule`, `event`, `conditions`, `actions` o i nomi delle azioni/valori Workshop. La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
+
+Dallo screenshot client del 21 agosto 2026 i limiti da verificare dopo il paste sono:
+
+- Element Count: massimo `32768`;
+- Largest Rule: `< 98 KB`;
+- combinazioni eroe/modello: `12`;
+- dummy bot extra-slot: `0` nella configurazione mostrata.
+
+I valori `0 elementi` e `0 KB` dello screenshot corrispondono allo script vuoto e non misurano ancora questo progetto. Element Count e Largest Rule compilato devono essere letti nuovamente dopo l'import.
+
 ## Validazione
 
 Da eseguire dalla radice del repository, senza dipendenze Python esterne:
@@ -113,19 +133,23 @@ Da eseguire dalla radice del repository, senza dipendenze Python esterne:
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
+python tools/check_clipboard_import.py
 ```
 
-Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue gli stessi comandi su push e pull request. Non esiste più un workflow che modifica o committa automaticamente il repository.
+`check_clipboard_import.py` verifica il formato testuale di paste (UTF-8/BOM, delimitatori, keyword strutturali English, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
+
+Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue la suite `unittest` e il validatore semantico su push e pull request; i test del preflight clipboard sono inclusi automaticamente nella suite. Non esiste un workflow permanente che modifica o committa automaticamente il repository.
 
 Documentazione operativa:
 
 - [`docs/PROGETTO.md`](docs/PROGETTO.md) — architettura e invarianti;
 - [`docs/TEST.md`](docs/TEST.md) — matrice statica e live;
 - [`docs/VALIDAZIONE.md`](docs/VALIDAZIONE.md) — copertura del gate e stato release;
+- [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md) — copia/incolla con client italiano e diagnostica;
 - [`CHANGELOG.md`](CHANGELOG.md) — cronologia essenziale.
 
 ## Contesto client agosto 2026
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) richiede un nuovo import e rende inutilizzabili i replay precedenti, pur senza dichiarare modifiche Workshop. La matrice comprende inoltre D.Mon, il nuovo Team Status Indicator e le modifiche a Busan, Eichenwalde e Paraíso della [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11).
 
-Finché questi test non sono registrati, la release resta **static-ready / live-pending**.
+Finché i risultati reali della Diagnostica script e gli altri test live non sono registrati, la release resta **static-ready / live-pending**.
