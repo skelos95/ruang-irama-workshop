@@ -25,7 +25,7 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_spawn_teleport_targets_objective(self):
         self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
         self.assertIn("All Players On Objective(All Teams)", self.it)
-        self.assertIn("Objective Position(0)", self.it)
+        self.assertIn("Objective Position(Objective Index)", self.it)
 
     def test_dummy_faces_nearest_living_human_without_extra_loop(self):
         self.assertIn("Start Facing(Event Player", self.it)

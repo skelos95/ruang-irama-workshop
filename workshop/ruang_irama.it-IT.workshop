@@ -1185,7 +1185,7 @@ regola("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 	}
 }
 
-regola("03d - Bot/Dummy: Buat satu bot acak untuk Squadra 1")
+regola("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
 {
 	evento
 	{
@@ -1206,7 +1206,7 @@ regola("03d - Bot/Dummy: Buat satu bot acak untuk Squadra 1")
 	}
 }
 
-regola("03e - Bot/Dummy: Buat satu bot acak untuk Squadra 2")
+regola("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
 {
 	evento
 	{
@@ -1227,7 +1227,7 @@ regola("03e - Bot/Dummy: Buat satu bot acak untuk Squadra 2")
 	}
 }
 
-regola("03f - Bot/Dummy: Teletrasporta dalla spawn all'obiettivo")
+regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 {
 	evento
 	{
@@ -1250,12 +1250,12 @@ regola("03f - Bot/Dummy: Teletrasporta dalla spawn all'obiettivo")
 		If(Count Of(All Players On Objective(All Teams)) > 0);
 			Teleport(Event Player, Position Of(First Of(All Players On Objective(All Teams))));
 		Else;
-			Teleport(Event Player, Objective Position(0));
+			Teleport(Event Player, Objective Position(Objective Index));
 		End;
 	}
 }
 
-regola("03g - Bot/Dummy: Guarda sempre il giocatore vivo piu vicino")
+regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")
 {
 	evento
 	{
@@ -1279,7 +1279,7 @@ regola("03g - Bot/Dummy: Guarda sempre il giocatore vivo piu vicino")
 	}
 }
 
-regola("03h - Bot/Dummy: Ferma lo sguardo senza giocatori vivi")
+regola("03h - Bot/Dummy: Hentikan arah saat tidak ada pemain hidup")
 {
 	evento
 	{
@@ -1301,7 +1301,7 @@ regola("03h - Bot/Dummy: Ferma lo sguardo senza giocatori vivi")
 	}
 }
 
-regola("03i - Bot/Dummy: Ferma lo sguardo alla morte")
+regola("03i - Bot/Dummy: Hentikan arah saat bot mati")
 {
 	evento
 	{
