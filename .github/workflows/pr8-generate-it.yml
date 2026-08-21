@@ -11,7 +11,7 @@ jobs:
   generate:
     if: github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/italian-workshop-clipboard'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Check out PR head
         uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
           ref: chatgpt/italian-workshop-clipboard
           persist-credentials: true
 
-      - name: Check out pinned OverPy
+      - name: Check out pinned OverPy localization database
         uses: actions/checkout@v4
         with:
           repository: Zezombye/overpy
@@ -27,47 +27,114 @@ jobs:
           path: .overpy
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build OverPy CLI
-        shell: bash
-        run: |
-          npm install --global pnpm@10.18.0
-          cd .overpy
-          pnpm install --frozen-lockfile
-          pnpm run compile-standalone
-          pnpm run compile-cli
-
       - name: Generate it-IT Workshop clipboard source
         shell: bash
         run: |
           python - <<'PY'
+          from collections import defaultdict
           from pathlib import Path
+          import json
           import re
 
-          source = Path('workshop/ruang_irama.workshop').read_text(encoding='utf-8')
-          standalone_comment = re.compile(r'^\s*"(?:[^"\\]|\\.)*"\s*$')
-          cleaned_lines = [
-              line for line in source.splitlines()
-              if not standalone_comment.match(line)
-          ]
-          Path('/tmp/ruang_irama.overpy-input.workshop').write_text(
-              '\n'.join(cleaned_lines) + '\n',
-              encoding='utf-8',
+          root = Path('.overpy/src/data')
+          source_path = Path('workshop/ruang_irama.workshop')
+          output_path = Path('workshop/ruang_irama.it-IT.workshop')
+          source = source_path.read_text(encoding='utf-8')
+
+          # Generated OverPy data blocks are valid JSON between these markers.
+          candidates: dict[str, set[str]] = defaultdict(set)
+
+          def visit(value):
+              if isinstance(value, dict):
+                  en = value.get('en-US')
+                  if isinstance(en, str):
+                      it = value.get('it-IT', en)
+                      if isinstance(it, str) and en:
+                          candidates[en].add(it)
+                  for child in value.values():
+                      visit(child)
+              elif isinstance(value, list):
+                  for child in value:
+                      visit(child)
+
+          for path in sorted(root.glob('*.ts')):
+              text = path.read_text(encoding='utf-8')
+              for block in re.findall(
+                  r'//begin-json\s*(.*?)\s*//end-json', text, flags=re.S
+              ):
+                  try:
+                      visit(json.loads(block))
+                  except json.JSONDecodeError as exc:
+                      raise SystemExit(f'Invalid OverPy JSON block in {path}: {exc}')
+
+          # Never translate the contents of Workshop quoted strings. This preserves
+          # rule titles, Custom String payloads, player-facing text and comments.
+          quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
+          pieces = []
+          cursor = 0
+          code_segments = []
+          for match in quoted.finditer(source):
+              code_segments.append(source[cursor:match.start()])
+              cursor = match.end()
+          code_segments.append(source[cursor:])
+          code_only = '\n'.join(code_segments)
+
+          # Ambiguous native spellings are unsafe only if they actually occur in
+          # this source. Refuse to guess in that case.
+          conflicts = {}
+          for en, targets in candidates.items():
+              if len(targets) <= 1:
+                  continue
+              boundary = rf'(?<![A-Za-z0-9_]){re.escape(en)}(?![A-Za-z0-9_])'
+              if re.search(boundary, code_only):
+                  conflicts[en] = sorted(targets)
+          if conflicts:
+              for en, targets in sorted(conflicts.items()):
+                  print(f'AMBIGUOUS: {en!r} -> {targets}')
+              raise SystemExit('Ambiguous localized tokens are used by the Workshop source')
+
+          mapping = {
+              en: next(iter(targets))
+              for en, targets in candidates.items()
+              if len(targets) == 1 and next(iter(targets)) != en
+          }
+
+          # Match longest native tokens first and only at identifier boundaries.
+          ordered = sorted(mapping, key=lambda item: (-len(item), item))
+          if not ordered:
+              raise SystemExit('No OverPy localization mappings found')
+          token_re = re.compile(
+              r'(?<![A-Za-z0-9_])(?:'
+              + '|'.join(re.escape(item) for item in ordered)
+              + r')(?![A-Za-z0-9_])'
           )
+
+          def translate_code(segment: str) -> str:
+              return token_re.sub(lambda match: mapping[match.group(0)], segment)
+
+          out = []
+          cursor = 0
+          replacements = 0
+          for match in quoted.finditer(source):
+              code = source[cursor:match.start()]
+              translated = translate_code(code)
+              replacements += code != translated
+              out.append(translated)
+              out.append(match.group(0))
+              cursor = match.end()
+          tail = source[cursor:]
+          translated_tail = translate_code(tail)
+          replacements += tail != translated_tail
+          out.append(translated_tail)
+          output = ''.join(out)
+
+          if output == source:
+              raise SystemExit('Localization produced no changes')
+
+          output_path.write_text(output, encoding='utf-8')
+          print(f'Loaded {len(candidates)} localized spellings; translated source segments: {replacements}')
           PY
 
-          node .overpy/out/overpy_cli.js decompile \
-            -i /tmp/ruang_irama.overpy-input.workshop \
-            -o /tmp/ruang_irama.opy \
-            -l en-US
-          node .overpy/out/overpy_cli.js compile \
-            -i /tmp/ruang_irama.opy \
-            -o workshop/ruang_irama.it-IT.workshop \
-            -l it-IT
           python tools/check_clipboard_import.py \
             workshop/ruang_irama.it-IT.workshop --language it-IT
 
@@ -83,7 +150,8 @@ jobs:
           manifest.write_text(
               'source_sha256=' + sha256(source.read_bytes()).hexdigest() + '\n'
               'language=it-IT\n'
-              'overpy_ref=d854bf01fc7bbf3b2169f67408c07a8da8989ad6\n',
+              'overpy_ref=d854bf01fc7bbf3b2169f67408c07a8da8989ad6\n'
+              'generator=lexical-localization-tables\n',
               encoding='utf-8',
           )
           PY
