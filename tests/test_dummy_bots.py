@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Live regression: dummy bots must never use a raw/zero objective teleport.
 class DummyBotFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
