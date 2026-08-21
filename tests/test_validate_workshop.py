@@ -305,19 +305,17 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 2, changed_argument)
         self.assert_rejected(mutated, "Revenge no-target senza istruzione Crouch")
 
-    def test_chill_title_cannot_end_with_a_blank_spacer_line(self) -> None:
+    def test_chill_title_requires_a_blank_spacer_line(self) -> None:
         call = next(
             call for call in validator.iter_calls(self.source, "Create HUD Text")
             if len(call.args) >= 4
             and "CHILL DEDICATED SERVER" in call.args[3]
             and "Global.TeksWaktuServer" in call.args[3]
         )
-        mutated = self.replace_call_argument(
-            call,
-            3,
-            f'Custom String("{{0}}\\n ", {call.args[3]})',
-        )
-        self.assert_rejected(mutated, "riga vuota finale prima del menu")
+        changed_argument = call.args[3].replace(r"\n ", "", 1)
+        self.assertNotEqual(changed_argument, call.args[3])
+        mutated = self.replace_call_argument(call, 3, changed_argument)
+        self.assert_rejected(mutated, "riga vuota prima del menu")
 
     def test_primary_secondary_must_not_redraw_menu(self) -> None:
         rule = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Primary Fire)" in rule.body)
@@ -1099,6 +1097,14 @@ class RepositoryMetadataTests(unittest.TestCase):
             workflow = root / ".github" / "workflows" / "validate-workshop.yml"
             workflow.write_text(workflow.read_text(encoding="utf-8") + "      - run: git push\n", encoding="utf-8")
             self.assertTrue(any("non deve modificare" in error for error in self.metadata_errors(root)))
+
+    def test_builtin_completion_is_disabled_exactly_once(self) -> None:
+        token = "Disable Built-In Game Mode Completion;"
+        self.assertEqual(self.source.count(token), 1)
+        mutated = self.source.replace(token, "", 1)
+        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
+        mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
+        self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
 
 
 if __name__ == "__main__":

@@ -826,10 +826,11 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.LangkahPenjadwal = 0;
 		Global.RGBFase = 0;
 		Global.RGB = Custom Color(255, 80, 80, 255);
-		"Skrip tidak memberi skor atau pemenang; Push, Flashpoint, Capture The Flag, Control, Clash, Hybrid, Escort, dan Assault tetap memakai hasil mode asli."
+		"Skor dan objektif tetap milik mode asli; penyelesaian pertandingan ditahan sampai penghitung waktu CHILL habis."
 		"Mode dibuat tenang dan bersih tanpa penyiar serta musik bawaan mode."
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
+		Disable Built-In Game Mode Completion;
 		If(Global.DiagnostikPerforma == False);
 			Disable Inspector Recording;
 		End;
@@ -3848,7 +3849,7 @@ rule("98 - Subrutin: Cari target teleport publik terdekat dari bidikan")
 
 	actions
 	{
-		Event Player.DaftarTargetTeleportasi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))));
+		Event Player.DaftarTargetTeleportasi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))));
 		If(Count Of(Event Player.DaftarTargetTeleportasi) == 0);
 			Event Player.CalonTargetTeleportasi = Null;
 		Else;
