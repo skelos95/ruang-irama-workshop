@@ -1,0 +1,70 @@
+name: Temporary PR 13 Spacing Finalizer
+
+on:
+  push:
+    branches:
+      - chatgpt/hud-dummy-bots
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/hud-dummy-bots
+          persist-credentials: true
+
+      - name: Reduce HUD spacing and validate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = [
+              ('\\n \\nLOBBY & CHILL TIME', '\\nLOBBY & CHILL TIME'),
+              ('\\n \\nLOBI & WAKTU SANTAI', '\\nLOBI & WAKTU SANTAI'),
+              ('\\n \\nล็อบบี้ & เวลาชิล', '\\nล็อบบี้ & เวลาชิล'),
+              ('\\n \\n     PLAYER VIBES', '\\n     PLAYER VIBES'),
+              ('\\n \\n     MUSIK PEMAIN', '\\n     MUSIK PEMAIN'),
+              ('\\n \\n     เพลงของผู้เล่น', '\\n     เพลงของผู้เล่น'),
+          ]
+
+          for path in [Path('workshop/ruang_irama.it-IT.workshop'), Path('tests/fixtures/semantic_reference.txt')]:
+              text = path.read_text(encoding='utf-8')
+              for old, new in replacements:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{path}: expected one {old!r}, found {count}')
+                  text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+
+          test = Path('tests/test_dummy_bots.py')
+          text = test.read_text(encoding='utf-8')
+          for old, new in [
+              ('\\\\n \\\\n     PLAYER VIBES', '\\\\n     PLAYER VIBES'),
+              ('\\\\n \\\\n     MUSIK PEMAIN', '\\\\n     MUSIK PEMAIN'),
+          ]:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{test}: expected one {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+          test.write_text(text, encoding='utf-8')
+          PY
+
+          python tools/check_clipboard_import.py
+          python -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Commit final spacing and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/pr13-spacing-final.yml
+          git add -- workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py
+          git commit -m 'Tighten HUD spacing before merge'
+          git push origin HEAD:chatgpt/hud-dummy-bots
