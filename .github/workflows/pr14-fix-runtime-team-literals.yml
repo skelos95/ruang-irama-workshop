@@ -1,0 +1,56 @@
+name: Temporary PR 14 Runtime Team Literal Fixer
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.ref == 'chatgpt/fix-it-runtime-team-literals' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fix-it-runtime-team-literals
+          persist-credentials: true
+
+      - name: Fix runtime team literals
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('workshop/ruang_irama.it-IT.workshop')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'Number Of Slots(Squadra 1)': 'Number Of Slots(Team 1)',
+              'Number Of Slots(Squadra 2)': 'Number Of Slots(Team 2)',
+              'All Players(Squadra 1)': 'All Players(Team 1)',
+              'All Players(Squadra 2)': 'All Players(Team 2)',
+              'Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);': 'Create Dummy Bot(Tutti gli eroi, Team 1, -1, Null, Null);',
+              'Create Dummy Bot(Tutti gli eroi, Squadra 2, -1, Null, Null);': 'Create Dummy Bot(Tutti gli eroi, Team 2, -1, Null, Null);',
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected one {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          python tools/check_clipboard_import.py
+          python -m unittest tests.test_dummy_bots tests.test_clipboard_import
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- workshop/ruang_irama.it-IT.workshop tests/test_dummy_bots.py
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix Italian runtime team literals'
+          git push origin HEAD:chatgpt/fix-it-runtime-team-literals
