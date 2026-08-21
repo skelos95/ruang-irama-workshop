@@ -843,16 +843,16 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			"Hold {0}: inspect hero + HP", Input Binding String(Button(Crouch))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String(
 			"กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("\n \nLOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"\n \nLOBI & WAKTU SANTAI") : Custom String("\n \nล็อบบี้ & เวลาชิล"), Left, -100,
+			IndeksBahasa) == 0 ? Custom String("\nLOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"\nLOBI & WAKTU SANTAI") : Custom String("\nล็อบบี้ & เวลาชิล"), Left, -100,
 			Custom Color(255, 255, 255, 255), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(
 			"กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))), Player Variable(Local Player,
-			IndeksBahasa) == 0 ? Custom String("\n \nPLAYER VIBES") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"\n \nMUSIK PEMAIN") : Custom String("\n \nเพลงของผู้เล่น"),
+			IndeksBahasa) == 0 ? Custom String("\n     PLAYER VIBES") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"\n     MUSIK PEMAIN") : Custom String("\n     เพลงของผู้เล่น"),
 			Right, -100, Custom Color(255, 255, 255, 255), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
 		Globale.Siap = True;
@@ -1179,6 +1179,145 @@ regola("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 	azioni
 	{
 		Call Subroutine(KunciBot);
+		If(Is Dummy Bot(Event Player) == True);
+			Set Respawn Max Time(Event Player, 30);
+		End;
+	}
+}
+
+regola("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
+{
+	evento
+	{
+		Ongoing - Global;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Game In Progress == True;
+		Number Of Slots(Squadra 1) > 0;
+		Count Of(Filtered Array(All Players(Squadra 1), Is Dummy Bot(Current Array Element) == True)) == 0;
+	}
+
+	azioni
+	{
+		Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);
+	}
+}
+
+regola("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
+{
+	evento
+	{
+		Ongoing - Global;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Game In Progress == True;
+		Number Of Slots(Squadra 2) > 0;
+		Count Of(Filtered Array(All Players(Squadra 2), Is Dummy Bot(Current Array Element) == True)) == 0;
+	}
+
+	azioni
+	{
+		Create Dummy Bot(Tutti gli eroi, Squadra 2, -1, Null, Null);
+	}
+}
+
+regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
+{
+	evento
+	{
+		Ongoing - Each Player;
+		Tutti;
+		Tutti;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Dummy Bot(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Is In Spawn Room(Event Player) == True;
+	}
+
+	azioni
+	{
+		If(Count Of(All Players On Objective(All Teams)) > 0);
+			Teleport(Event Player, Position Of(First Of(All Players On Objective(All Teams))));
+		Else;
+			Teleport(Event Player, Objective Position(Objective Index));
+		End;
+	}
+}
+
+regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")
+{
+	evento
+	{
+		Ongoing - Each Player;
+		Tutti;
+		Tutti;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Dummy Bot(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Count Of(Filtered Array(Globale.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))) > 0;
+	}
+
+	azioni
+	{
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(First Of(Sorted Array(Filtered Array(Globale.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))), Distance Between(Event Player, Current Array Element))))), 1000, To World, Direction and Turn Rate);
+	}
+}
+
+regola("03h - Bot/Dummy: Hentikan arah saat tidak ada pemain hidup")
+{
+	evento
+	{
+		Ongoing - Each Player;
+		Tutti;
+		Tutti;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Dummy Bot(Event Player) == True;
+		Count Of(Filtered Array(Globale.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))) == 0;
+	}
+
+	azioni
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+regola("03i - Bot/Dummy: Hentikan arah saat bot mati")
+{
+	evento
+	{
+		Player Died;
+		Tutti;
+		Tutti;
+	}
+
+	condizioni
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	azioni
+	{
+		Stop Facing(Event Player);
 	}
 }
 
