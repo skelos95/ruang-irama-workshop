@@ -1,1 +1,0 @@
-Temporary note for PR #14: the Italian clipboard runtime team literal must remain `Team 1` / `Team 2` in Workshop expressions such as `Number Of Slots`, `All Players`, and `Create Dummy Bot`. This file will be removed before merge.
