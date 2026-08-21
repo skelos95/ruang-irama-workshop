@@ -1,38 +1,98 @@
 # Importazione Workshop con client Overwatch in italiano
 
-Questa guida riguarda l'importazione tramite **copia/incolla del testo Workshop** contenuto in `workshop/ruang_irama.workshop`.
+Questa guida riguarda l'importazione tramite **copia/incolla del testo Workshop** nel client Overwatch con lingua testo impostata su Italiano (`it-IT`).
 
-## Regola fondamentale: la sintassi resta in inglese
+## Correzione importante: il clipboard Workshop è localizzato
 
-Anche con Overwatch impostato in italiano, Blizzard mantiene in inglese i vocaboli di programmazione e la sintassi del Workshop. L'interfaccia e le descrizioni possono essere tradotte, ma nel testo da incollare devono rimanere token come:
+Il sorgente canonico del progetto resta in `workshop/ruang_irama.workshop` e usa il formato `en-US`, ma **non è il file da incollare nel client italiano**.
 
-- `variables`
-- `subroutines`
-- `rule`
-- `event`
-- `conditions`
-- `actions`
-- `Ongoing - Global`
-- `Create HUD Text`
-- `Filtered Array`
-- `Restart Match`
-- `Disable Built-In Game Mode Completion`
+Il parser del clipboard Workshop usa token localizzati. Per `it-IT`, OverPy espone per esempio queste corrispondenze:
 
-Non trasformare questi token in `variabili`, `regola`, `evento`, `azioni`, ecc.
+| en-US | it-IT |
+|---|---|
+| `variables` | `variabili` |
+| `subroutines` | `subroutine` |
+| `rule` | `regola` |
+| `event` | `evento` |
+| `conditions` | `condizioni` |
+| `actions` | `azioni` |
+| `global` | `globale` |
+| `player` | `giocatore` |
 
-I testi mostrati ai giocatori dentro `Custom String(...)` possono invece essere in qualsiasi lingua prevista dal progetto. Anche i nomi personalizzati delle variabili/subroutine restano quelli del sorgente.
+Anche azioni, valori, enum, eventi e nomi che fanno parte del linguaggio Workshop possono avere una rappresentazione localizzata. Per questo una semplice sostituzione manuale di poche parole non è affidabile.
+
+Il sintomo tipico di una lingua clipboard non compatibile è esattamente quello osservato nel client: **il pulsante arancione di incolla non compare** anche se il testo è presente negli appunti.
+
+## File corretto da copiare
+
+Con client italiano, copia il contenuto di:
+
+`workshop/ruang_irama.it-IT.workshop`
+
+Il file deve iniziare con:
+
+```text
+variabili
+{
+```
+
+e deve contenere regole introdotte da `regola("...")`.
+
+Non copiare `workshop/ruang_irama.workshop` direttamente nel client italiano: quello è il sorgente canonico `en-US` usato per manutenzione e validazione semantica.
 
 ## Procedura di copia/incolla
 
-1. Apri `workshop/ruang_irama.workshop` dal repository.
-2. Copia **solo il contenuto del file**, dalla prima riga `variables` fino all'ultima graffa finale.
-3. Non copiare delimitatori Markdown come ``` e non aggiungere testo prima di `variables`.
-4. Nel client Overwatch italiano apri la Partita personalizzata e il relativo editor Workshop.
-5. Incolla il testo completo nell'editor con `Ctrl+V`.
-6. Se il client rifiuta il paste, non tradurre la sintassi: controlla prima che il testo sia completo e senza virgolette tipografiche/BOM.
-7. Dopo l'import, apri **Diagnostica script** e registra i valori effettivi del client.
+1. Apri `workshop/ruang_irama.it-IT.workshop` dal repository.
+2. Apri la vista **Raw** di GitHub, oppure seleziona esclusivamente il contenuto del file.
+3. Copia tutto, dalla prima riga `variabili` fino alla graffa finale.
+4. Non copiare fence Markdown, numeri di riga o testo della pagina GitHub.
+5. In Overwatch: Partita personalizzata > Impostazioni > Workshop.
+6. Con il testo italiano negli appunti, il pulsante arancione **Incolla regole** deve comparire nella barra superiore.
+7. Premi il pulsante arancione e attendi che il client elabori tutto il file.
+8. Apri **Diagnostica script** e registra `Numero totale elementi` e `Regola più grande`.
 
-Il file canonico è UTF-8 senza BOM. Il checker accetta sia terminatori LF sia CRLF, quindi il passaggio attraverso la clipboard di Windows non deve richiedere conversioni manuali.
+Se il pulsante arancione non compare nemmeno con il file `it-IT`, fai uno screenshot e conserva il contenuto esatto degli appunti: a quel punto si tratta di un token non riconosciuto o di un errore di sintassi/localizzazione da isolare.
+
+## Come viene mantenuto sincronizzato
+
+`workshop/ruang_irama.it-IT.workshop` è un artefatto generato dal sorgente canonico tramite OverPy, con:
+
+- input: `workshop/ruang_irama.workshop` (`en-US`);
+- decompilazione: OverPy con lingua `en-US`;
+- ricompilazione: OverPy con lingua `it-IT`;
+- output: `workshop/ruang_irama.it-IT.workshop`.
+
+Il file `workshop/ruang_irama.it-IT.manifest` registra l'hash SHA-256 del sorgente canonico e il commit OverPy usato. I test falliscono se il sorgente canonico cambia senza rigenerare la variante italiana.
+
+Non modificare manualmente il file `it-IT`: le modifiche funzionali vanno fatte sul sorgente canonico e poi rigenerate.
+
+## Preflight automatico
+
+Per il sorgente canonico:
+
+```powershell
+python tools/check_clipboard_import.py workshop/ruang_irama.workshop --language en-US
+```
+
+Per il file italiano:
+
+```powershell
+python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+```
+
+Il checker controlla:
+
+- UTF-8 senza BOM;
+- nessun byte NUL;
+- nessun fence Markdown;
+- parentesi, graffe e quadre bilanciate;
+- stringhe chiuse;
+- grammatica strutturale coerente con `en-US` oppure `it-IT`;
+- nessun miscuglio di token strutturali tra i due profili;
+- assenza di virgolette tipografiche o NBSP fuori dalle stringhe;
+- dimensione testuale di ogni regola, con target statico massimo di 80 KB.
+
+Questo preflight non sostituisce la compilazione reale del client.
 
 ## Limiti mostrati dal client italiano
 
@@ -45,50 +105,24 @@ Dallo screenshot del client del 21/08/2026:
 | Combinazioni massime di eroi unici e modelli | `12` | non introdurre dipendenze che richiedano più combinazioni simultanee |
 | Bot di prova massimi non in slot giocatore | `0` nella configurazione mostrata | il progetto non deve dipendere da dummy bot extra-slot |
 
-I primi due numeri devono essere verificati **dopo il paste**, perché Element Count e Largest Rule sono metriche compilate dal client e non possono essere certificate con precisione dal parser testuale del repository.
-
-Lo screenshot con sorgente vuoto mostra `0` elementi e `0 KB`: non è ancora una misura del progetto importato.
-
-## Preflight automatico
-
-Prima del test live puoi eseguire:
-
-```powershell
-python tools/check_clipboard_import.py
-```
-
-Il comando controlla:
-
-- UTF-8 senza BOM;
-- nessun byte NUL;
-- nessun fence Markdown;
-- parentesi, graffe e quadre bilanciate;
-- stringhe chiuse;
-- blocchi strutturali Workshop in inglese;
-- assenza di keyword strutturali italiane nel codice;
-- assenza di virgolette tipografiche o NBSP fuori dalle stringhe;
-- sorgente che inizia direttamente da `variables`;
-- dimensione testuale di ogni `rule`, con target statico massimo di 80 KB.
-
-Le parole italiane dentro `Custom String(...)` sono permesse e non vengono confuse con la sintassi.
+`Numero totale elementi` e `Regola più grande` sono metriche compilate dal client e devono essere lette **dopo** un import riuscito.
 
 ## Se l'import fallisce
 
-Controllare in quest'ordine:
+Controlla nell'ordine:
 
-1. il testo copiato inizia con `variables` e termina con la graffa finale dell'ultima rule;
-2. non ci sono ``` o testo della pagina GitHub nel clipboard;
-3. `rule`, `event`, `conditions`, `actions` e le azioni native sono rimaste in inglese;
-4. non sono comparse virgolette “tipografiche” al posto di `"`;
-5. il file non contiene BOM o caratteri invisibili introdotti da un editor;
-6. eseguire `python tools/check_clipboard_import.py`;
-7. se il preflight è verde ma Overwatch rifiuta ancora il paste, annotare l'errore del client o fare uno screenshot della finestra di importazione.
+1. stai copiando `workshop/ruang_irama.it-IT.workshop`, non il canonico `en-US`;
+2. il clipboard inizia con `variabili`;
+3. non ci sono ``` o testo della pagina GitHub;
+4. non ci sono virgolette tipografiche o caratteri invisibili;
+5. esegui il preflight `--language it-IT`;
+6. se il checker è verde ma il pulsante arancione non compare, invia uno screenshot e ispezioneremo il primo token non accettato dal client.
 
 ## Dopo un import riuscito
 
-Inviare o registrare almeno questi due valori dalla schermata **Diagnostica script**:
+Inviare o registrare almeno:
 
 - `Numero totale elementi`;
 - `Regola più grande`.
 
-Sono i dati necessari per chiudere il gate live rispetto ai limiti reali del client.
+Sono i dati necessari per verificare i limiti reali del client e decidere se serve ulteriore ottimizzazione.
