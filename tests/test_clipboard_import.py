@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
+import sys
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "tools" / "check_clipboard_import.py"
-SPEC = importlib.util.spec_from_file_location("check_clipboard_import", MODULE_PATH)
-assert SPEC is not None and SPEC.loader is not None
-clipboard = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(clipboard)
+sys.path.insert(0, str(ROOT / "tools"))
+import check_clipboard_import as clipboard  # noqa: E402
 
 
 class ClipboardImportTests(unittest.TestCase):
