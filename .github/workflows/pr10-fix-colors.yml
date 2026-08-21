@@ -1,0 +1,103 @@
+name: Temporary PR 10 Color Literal Fix
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.pull_request.number == 10 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/italian-color-literals'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/italian-color-literals
+          persist-credentials: true
+
+      - name: Check out pinned OverPy palette
+        uses: actions/checkout@v4
+        with:
+          repository: Zezombye/overpy
+          ref: d854bf01fc7bbf3b2169f67408c07a8da8989ad6
+          path: .overpy
+          persist-credentials: false
+
+      - name: Replace named Color literals with RGB
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          constants = Path('.overpy/src/data/constants.ts').read_text(encoding='utf-8')
+          payload = constants.split('//begin-json', 1)[1].split('//end-json', 1)[0].strip()
+          data = json.loads(payload)
+          colors = data['ColorLiteral']
+
+          palette = {}
+          for item in colors.values():
+              name = item.get('en-US')
+              if not name:
+                  continue
+              if not all(key in item for key in ('red', 'green', 'blue')):
+                  continue
+              palette[name] = (
+                  int(item['red']),
+                  int(item['green']),
+                  int(item['blue']),
+                  int(item.get('alpha', 255)),
+              )
+
+          path = Path('workshop/ruang_irama.it-IT.workshop')
+          source = path.read_text(encoding='utf-8')
+          pattern = re.compile(r'(?<!Custom )\bColor\(([^()\n]+)\)')
+          names = pattern.findall(source)
+          unknown = sorted(set(names) - set(palette))
+          if unknown:
+              raise SystemExit(f'Unknown named Color literals: {unknown}')
+
+          def repl(match: re.Match[str]) -> str:
+              r, g, b, a = palette[match.group(1)]
+              return f'Custom Color({r}, {g}, {b}, {a})'
+
+          output, count = pattern.subn(repl, source)
+          if pattern.search(output):
+              raise SystemExit('Named Color literal survived conversion')
+          if count == 0:
+              raise SystemExit('No named Color literals found to convert')
+          path.write_text(output, encoding='utf-8')
+
+          tests = Path('tests/test_clipboard_import.py')
+          text = tests.read_text(encoding='utf-8')
+          old = '''        self.assertIn("Color(White)", self.italian)\n        self.assertNotIn("Color(Bianco)", self.italian)\n        self.assertIn("Color(Yellow)", self.italian)\n        self.assertNotIn("Color(Giallo)", self.italian)\n'''
+          new = '''        without_custom_colors = self.italian.replace("Custom Color(", "")\n        self.assertNotIn("Color(", without_custom_colors)\n'''
+          if old not in text:
+              raise SystemExit('Expected Color assertions not found')
+          tests.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          marker = Path('docs/ITALIAN_COLOR_LITERAL_FIX.md')
+          if marker.exists():
+              marker.unlink()
+
+          print(f'Converted {count} named Color literals to explicit RGBA values')
+          print('Names converted:', ', '.join(sorted(set(names))))
+          PY
+
+          python tools/check_clipboard_import.py
+          python -m unittest tests.test_clipboard_import
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- workshop/ruang_irama.it-IT.workshop tests/test_clipboard_import.py docs/ITALIAN_COLOR_LITERAL_FIX.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'Replace named Workshop colors with explicit RGBA'
+          git push origin HEAD:chatgpt/italian-color-literals
