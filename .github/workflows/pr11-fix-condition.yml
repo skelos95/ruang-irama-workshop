@@ -1,0 +1,73 @@
+name: Temporary PR 11 Condition Fix
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.pull_request.number == 11 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/fix-italian-condition-line-2957'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fix-italian-condition-line-2957
+          persist-credentials: true
+
+      - name: Rewrite deep Burning condition
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = [
+              (
+                  Path('workshop/ruang_irama.it-IT.workshop'),
+                  '''\t\tIf(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5, And(Globale.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, And(Globale.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed, And(Has Spawned(Globale.PemainAktif) == True, Is Alive(Globale.PemainAktif) == True))))));\n\t\t\tDanneggia(Globale.PemainAktif, Globale.PemainAktif, Max Health(Globale.PemainAktif) * 0.025);\n\t\t\tGlobale.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;\n\t\tEnd;''',
+                  '''\t\tIf(Globale.PemainAktif.Manusia == True);\n\t\t\tIf(Globale.PemainAktif.EfekNasib == 5);\n\t\t\t\tIf(Globale.PemainAktif.EfekNasibBerakhir > Total Time Elapsed);\n\t\t\t\t\tIf(Globale.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed);\n\t\t\t\t\t\tIf(Has Spawned(Globale.PemainAktif) == True);\n\t\t\t\t\t\t\tIf(Is Alive(Globale.PemainAktif) == True);\n\t\t\t\t\t\t\t\tDanneggia(Globale.PemainAktif, Globale.PemainAktif, Max Health(Globale.PemainAktif) * 0.025);\n\t\t\t\t\t\t\t\tGlobale.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;\n\t\t\t\t\t\t\tEnd;\n\t\t\t\t\t\tEnd;\n\t\t\t\t\tEnd;\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;''',
+              ),
+              (
+                  Path('tests/fixtures/semantic_reference.txt'),
+                  '''\t\tIf(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.EfekNasib == 5, And(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed, And(Global.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))))));\n\t\t\tDamage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);\n\t\t\tGlobal.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;\n\t\tEnd;''',
+                  '''\t\tIf(Global.PemainAktif.Manusia == True);\n\t\t\tIf(Global.PemainAktif.EfekNasib == 5);\n\t\t\t\tIf(Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed);\n\t\t\t\t\tIf(Global.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed);\n\t\t\t\t\t\tIf(Has Spawned(Global.PemainAktif) == True);\n\t\t\t\t\t\t\tIf(Is Alive(Global.PemainAktif) == True);\n\t\t\t\t\t\t\t\tDamage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);\n\t\t\t\t\t\t\t\tGlobal.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;\n\t\t\t\t\t\t\tEnd;\n\t\t\t\t\t\tEnd;\n\t\t\t\t\tEnd;\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;''',
+              ),
+          ]
+
+          for path, old, new in replacements:
+              text = path.read_text(encoding='utf-8')
+              if text.count(old) != 1:
+                  raise SystemExit(f'Expected exactly one deep condition block in {path}, found {text.count(old)}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          tests = Path('tests/test_clipboard_import.py')
+          text = tests.read_text(encoding='utf-8')
+          anchor = '        self.assertNotIn("Color(", without_custom_colors)\n'
+          addition = '        self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5", self.italian)\n'
+          if addition not in text:
+              if anchor not in text:
+                  raise SystemExit('Clipboard test anchor not found')
+              text = text.replace(anchor, anchor + addition, 1)
+          tests.write_text(text, encoding='utf-8')
+
+          marker = Path('docs/ITALIAN_CONDITION_FIX.md')
+          if marker.exists():
+              marker.unlink()
+          PY
+
+          python tools/check_clipboard_import.py
+          python -m unittest tests.test_clipboard_import
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_clipboard_import.py docs/ITALIAN_CONDITION_FIX.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'Rewrite deep Burning condition for Italian parser'
+          git push origin HEAD:chatgpt/fix-italian-condition-line-2957
