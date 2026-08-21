@@ -19,65 +19,110 @@ jobs:
           ref: chatgpt/italian-import-fix
           persist-credentials: true
 
-      - name: Align validator and clipboard tests
+      - name: Align documentation
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
-          validator = Path('tools/validate_workshop.py')
-          text = validator.read_text(encoding='utf-8')
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8')
           text = text.replace(
-              'SOURCE = ROOT / "workshop" / "ruang_irama.workshop"',
-              'SOURCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"',
+              '- Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia in entrambe le varianti clipboard.\n- Il **linguaggio del clipboard Workshop è localizzato**: il sorgente canonico usa `en-US`, mentre il client italiano deve ricevere la variante `it-IT`. Alcuni token cambiano (`variables → variabili`, `rule → regola`, `event → evento`), mentre altri restano identici in italiano (`Ongoing - Global`, `Button(Secondary Fire)`).',
+              '- Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia.\n- Il repository espone un solo file Workshop da copiare: `workshop/ruang_irama.it-IT.workshop`. La grammatica strutturale è `it-IT`, mentre alcuni literal contestuali restano inglesi quando il parser italiano lo richiede, per esempio `Color(White)` e `Ongoing - Global`.',
           )
-          validator.write_text(text, encoding='utf-8')
+          start = text.index('## Importazione tramite copia/incolla')
+          end = text.index('\n## Validazione', start)
+          section = '''## Importazione tramite copia/incolla
 
-          checker = Path('tools/check_clipboard_import.py')
-          text = checker.read_text(encoding='utf-8')
-          text = text.replace(
-              'DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.workshop"',
-              'DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"',
-          )
-          checker.write_text(text, encoding='utf-8')
+Con Overwatch impostato in **italiano**, l'unico file Workshop da copiare è:
 
-          tests = Path('tests/test_clipboard_import.py')
-          text = tests.read_text(encoding='utf-8')
+[`workshop/ruang_irama.it-IT.workshop`](workshop/ruang_irama.it-IT.workshop)
+
+Apri la vista **Raw** e copia tutto, dalla prima riga `variabili` fino alla graffa finale. La cartella `workshop/` non contiene altre varianti da scegliere.
+
+Il test live del 21 agosto 2026 ha mostrato che il parser italiano accetta la grammatica strutturale localizzata ma non necessariamente ogni literal tradotto: `Color(Bianco)` genera `richiesta un'opzione dopo 'Color('`, mentre `Color(White)` è la forma corretta nel clipboard. La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
+
+Dagli screenshot client i limiti da verificare dopo il paste sono:
+
+- Element Count: massimo `32768`;
+- Largest Rule: `< 98 KB`;
+- combinazioni eroe/modello: `12`;
+- dummy bot extra-slot: `0` nella configurazione mostrata.
+
+I valori `0 elementi` e `0 KB` con Workshop vuoto non misurano il progetto. Element Count e Largest Rule compilato devono essere letti nuovamente dopo un import riuscito.
+'''
+          text = text[:start] + section + text[end:]
           text = text.replace(
-              'cls.source_path = ROOT / "workshop" / "ruang_irama.workshop"',
-              'cls.source_path = ROOT / "tests" / "fixtures" / "semantic_reference.txt"',
+              "python tools/check_clipboard_import.py workshop/ruang_irama.workshop --language en-US\npython tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT",
+              "python tools/check_clipboard_import.py",
           )
           text = text.replace(
-              '        cls.manifest_path = ROOT / "workshop" / "ruang_irama.it-IT.manifest"\n',
-              '',
+              '`check_clipboard_import.py` verifica il formato testuale di paste per entrambi i profili',
+              '`check_clipboard_import.py` verifica il formato testuale del file italiano',
           )
-          text = re.sub(
-              r'\n    def test_generated_italian_manifest_matches_canonical_source\(self\) -> None:\n(?:        .*\n)+?(?=\n    def )',
-              '\n',
-              text,
-          )
-          old = '        self.assertIn("Button(Secondary Fire)", self.italian)\n'
-          new = (
-              old
-              + '        self.assertIn("Color(White)", self.italian)\n'
-              + '        self.assertNotIn("Color(Bianco)", self.italian)\n'
-              + '        self.assertIn("Color(Yellow)", self.italian)\n'
-              + '        self.assertNotIn("Color(Giallo)", self.italian)\n'
-          )
-          if old in text and 'Color(Bianco)' not in text:
-              text = text.replace(old, new, 1)
-          tests.write_text(text, encoding='utf-8')
+          readme.write_text(text, encoding='utf-8')
+
+          guide = Path('docs/IMPORTAZIONE_ITALIANO.md')
+          guide.write_text('''# Importazione Workshop con client Overwatch in italiano
+
+L'unico file Workshop da copiare è:
+
+`workshop/ruang_irama.it-IT.workshop`
+
+## Procedura
+
+1. Apri `workshop/ruang_irama.it-IT.workshop` su GitHub.
+2. Premi **Raw**.
+3. Copia tutto con `Ctrl+A` e `Ctrl+C`.
+4. In Overwatch apri Partita personalizzata > Impostazioni > Workshop.
+5. Deve comparire il pulsante arancione **Incolla regole**.
+6. Premi il pulsante e attendi l'elaborazione.
+7. Apri **Diagnostica script** e registra `Numero totale elementi` e `Regola più grande`.
+
+## Literal contestuali
+
+La grammatica del clipboard italiano usa token come `variabili`, `regola`, `evento`, `condizioni` e `azioni`. Non tutti i literal interni devono però essere tradotti.
+
+Nel test live del 21/08/2026 il client ha rifiutato `Color(Bianco)` con l'errore `richiesta un'opzione dopo 'Color('`. Il sorgente corretto conserva quindi i colori standard nella forma accettata dal parser, per esempio `Color(White)` e `Color(Yellow)`.
+
+Allo stesso modo vengono preservati token identitari come `Ongoing - Global` quando il parser `it-IT` li richiede.
+
+## Preflight
+
+Dalla radice del repository:
+
+```powershell
+python tools/check_clipboard_import.py
+```
+
+Il checker controlla UTF-8/BOM, delimitatori, stringhe, grammatica strutturale `it-IT`, formato misto e dimensione testuale delle regole.
+
+## Limiti client
+
+- Numero totale elementi: massimo `32768`.
+- Regola più grande: `< 98 KB`.
+- Combinazioni massime eroe/modello: `12`.
+- Dummy bot extra-slot: `0` nella configurazione mostrata.
+
+Queste metriche vanno lette dopo un import riuscito; il preflight statico non sostituisce la Diagnostica script del client.
+''', encoding='utf-8')
+
+          for path in Path('docs').glob('*.md'):
+              if path == guide:
+                  continue
+              doc = path.read_text(encoding='utf-8')
+              doc = doc.replace('workshop/ruang_irama.workshop', 'workshop/ruang_irama.it-IT.workshop')
+              doc = doc.replace('workshop/ruang_irama.it-IT.manifest', 'workshop/ruang_irama.it-IT.workshop')
+              path.write_text(doc, encoding='utf-8')
           PY
 
-          python tools/check_clipboard_import.py --language it-IT
-
-      - name: Commit alignment
+      - name: Commit docs
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/validate_workshop.py tools/check_clipboard_import.py tests/test_clipboard_import.py
+          git add README.md docs
           git diff --cached --quiet && exit 0
-          git commit -m 'Align validation with Italian-only Workshop folder'
+          git commit -m 'Document Italian-only Workshop import'
           git push origin HEAD:chatgpt/italian-import-fix
