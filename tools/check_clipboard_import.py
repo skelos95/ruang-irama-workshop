@@ -16,7 +16,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.workshop"
+DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
 ITALIAN_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
 
 CLIENT_LARGEST_RULE_LIMIT_BYTES = 98_000

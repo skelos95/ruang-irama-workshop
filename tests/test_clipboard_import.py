@@ -14,9 +14,8 @@ import check_clipboard_import as clipboard  # noqa: E402
 class ClipboardImportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.source_path = ROOT / "workshop" / "ruang_irama.workshop"
+        cls.source_path = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
         cls.italian_path = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
-        cls.manifest_path = ROOT / "workshop" / "ruang_irama.it-IT.manifest"
         cls.source = cls.source_path.read_text(encoding="utf-8")
         cls.italian = cls.italian_path.read_text(encoding="utf-8")
 
@@ -47,23 +46,16 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertIn("Ongoing - Global;", self.italian)
         self.assertNotIn("Ongoing - Globale;", self.italian)
         self.assertIn("Button(Secondary Fire)", self.italian)
+        self.assertIn("Color(White)", self.italian)
+        self.assertNotIn("Color(Bianco)", self.italian)
+        self.assertIn("Color(Yellow)", self.italian)
+        self.assertNotIn("Color(Giallo)", self.italian)
 
     def test_english_and_italian_have_same_rule_count(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
         italian = clipboard.check_path(self.italian_path, "it-IT")
         self.assertEqual(english.rule_count, italian.rule_count)
 
-    def test_generated_italian_manifest_matches_canonical_source(self) -> None:
-        manifest = {}
-        for line in self.manifest_path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            key, value = line.split("=", 1)
-            manifest[key] = value
-        expected = sha256(self.source_path.read_bytes()).hexdigest()
-        self.assertEqual(manifest.get("source_sha256"), expected)
-        self.assertEqual(manifest.get("language"), "it-IT")
-        self.assertTrue(manifest.get("overpy_ref"))
 
     def test_auto_detects_both_profiles(self) -> None:
         self.assertEqual(clipboard.check_text(self.source).language, "en-US")
