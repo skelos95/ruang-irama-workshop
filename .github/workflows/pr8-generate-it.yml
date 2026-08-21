@@ -1,0 +1,83 @@
+name: Temporary PR 8 Italian Generator
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/italian-workshop-clipboard'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/italian-workshop-clipboard
+          persist-credentials: true
+
+      - name: Check out pinned OverPy
+        uses: actions/checkout@v4
+        with:
+          repository: Zezombye/overpy
+          ref: d854bf01fc7bbf3b2169f67408c07a8da8989ad6
+          path: .overpy
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build OverPy CLI
+        shell: bash
+        run: |
+          npm install --global pnpm@10.18.0
+          cd .overpy
+          pnpm install --frozen-lockfile
+          pnpm run compile-standalone
+          pnpm run compile-cli
+
+      - name: Generate it-IT Workshop clipboard source
+        shell: bash
+        run: |
+          node .overpy/out/cli.js decompile \
+            -i workshop/ruang_irama.workshop \
+            -o /tmp/ruang_irama.opy \
+            -l en-US
+          node .overpy/out/cli.js compile \
+            -i /tmp/ruang_irama.opy \
+            -o workshop/ruang_irama.it-IT.workshop \
+            -l it-IT
+          python tools/check_clipboard_import.py \
+            workshop/ruang_irama.it-IT.workshop --language it-IT
+
+      - name: Write generation manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+
+          source = Path('workshop/ruang_irama.workshop')
+          manifest = Path('workshop/ruang_irama.it-IT.manifest')
+          manifest.write_text(
+              'source_sha256=' + sha256(source.read_bytes()).hexdigest() + '\n'
+              'language=it-IT\n'
+              'overpy_ref=d854bf01fc7bbf3b2169f67408c07a8da8989ad6\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Commit generated Italian source
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- workshop/ruang_irama.it-IT.workshop workshop/ruang_irama.it-IT.manifest
+          git diff --cached --quiet && exit 0
+          git commit -m 'Generate Italian Workshop clipboard source'
+          git push origin HEAD:chatgpt/italian-workshop-clipboard
