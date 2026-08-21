@@ -1196,13 +1196,13 @@ regola("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
-		Number Of Slots(Squadra 1) > 0;
-		Count Of(Filtered Array(All Players(Squadra 1), Is Dummy Bot(Current Array Element) == True)) == 0;
+		Number Of Slots(Team 1) > 0;
+		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
 
 	azioni
 	{
-		Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);
+		Create Dummy Bot(Tutti gli eroi, Team 1, -1, Null, Null);
 	}
 }
 
@@ -1217,13 +1217,13 @@ regola("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
-		Number Of Slots(Squadra 2) > 0;
-		Count Of(Filtered Array(All Players(Squadra 2), Is Dummy Bot(Current Array Element) == True)) == 0;
+		Number Of Slots(Team 2) > 0;
+		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
 
 	azioni
 	{
-		Create Dummy Bot(Tutti gli eroi, Squadra 2, -1, Null, Null);
+		Create Dummy Bot(Tutti gli eroi, Team 2, -1, Null, Null);
 	}
 }
 

@@ -18,10 +18,20 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertNotIn("\\n \\n     PLAYER VIBES", self.it)
 
     def test_exactly_one_creation_rule_per_team(self):
-        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Squadra 1, -1, Null, Null);"), 1)
-        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Squadra 2, -1, Null, Null);"), 1)
+        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Team 1, -1, Null, Null);"), 1)
+        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Team 2, -1, Null, Null);"), 1)
         self.assertEqual(self.en.count("Create Dummy Bot(All Heroes, Team 1, -1, Null, Null);"), 1)
         self.assertEqual(self.en.count("Create Dummy Bot(All Heroes, Team 2, -1, Null, Null);"), 1)
+
+    def test_runtime_team_literals_stay_english_in_it_clipboard(self):
+        self.assertIn("Number Of Slots(Team 1)", self.it)
+        self.assertIn("Number Of Slots(Team 2)", self.it)
+        self.assertIn("All Players(Team 1)", self.it)
+        self.assertIn("All Players(Team 2)", self.it)
+        self.assertNotIn("Number Of Slots(Squadra 1)", self.it)
+        self.assertNotIn("Number Of Slots(Squadra 2)", self.it)
+        self.assertNotIn("All Players(Squadra 1)", self.it)
+        self.assertNotIn("All Players(Squadra 2)", self.it)
 
     def test_dummy_respawn_is_30_seconds(self):
         self.assertIn("Set Respawn Max Time(Event Player, 30);", self.it)
