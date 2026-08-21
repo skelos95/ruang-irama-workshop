@@ -47,8 +47,6 @@ jobs:
               r'(?P<value>"(?:[^"\\]|\\.)*")\s*,?\s*$'
           )
 
-          # Extract only locale string pairs from the generated TypeScript data.
-          # This avoids having to parse the surrounding TS metadata as JSON.
           for path in sorted(root.glob('*.ts')):
               lines = path.read_text(encoding='utf-8').splitlines()
               index = 0
@@ -78,8 +76,6 @@ jobs:
                       candidates[en].add(it)
                   index += 1
 
-          # Never translate quoted Workshop text. Rule titles, comments and
-          # Custom String payloads are data, not Workshop grammar.
           quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
           cursor = 0
           code_segments = []
@@ -89,22 +85,36 @@ jobs:
           code_segments.append(source[cursor:])
           code_only = '\n'.join(code_segments)
 
+          resolved: dict[str, str] = {}
           conflicts = {}
           for en, targets in candidates.items():
-              if len(targets) <= 1:
-                  continue
-              boundary = rf'(?<![A-Za-z0-9_]){re.escape(en)}(?![A-Za-z0-9_])'
-              if re.search(boundary, code_only):
-                  conflicts[en] = sorted(targets)
+              localized = {target for target in targets if target != en}
+              if len(localized) == 0:
+                  resolved[en] = en
+              elif len(localized) == 1:
+                  # If one category keeps the English spelling and another has a
+                  # real it-IT spelling, the localized spelling is the one needed
+                  # for the native Workshop grammar occurrence.
+                  resolved[en] = next(iter(localized))
+              else:
+                  boundary = rf'(?<![A-Za-z0-9_]){re.escape(en)}(?![A-Za-z0-9_])'
+                  if re.search(boundary, code_only):
+                      contexts = [
+                          line.strip()
+                          for line in source.splitlines()
+                          if re.search(boundary, quoted.sub('', line))
+                      ][:12]
+                      conflicts[en] = (sorted(localized), contexts)
+
           if conflicts:
-              for en, targets in sorted(conflicts.items()):
+              for en, (targets, contexts) in sorted(conflicts.items()):
                   print(f'AMBIGUOUS: {en!r} -> {targets}')
-              raise SystemExit('Ambiguous localized tokens are used by the Workshop source')
+                  for context in contexts:
+                      print(f'  USE: {context}')
+              raise SystemExit('Context-dependent localized tokens remain')
 
           mapping = {
-              en: next(iter(targets))
-              for en, targets in candidates.items()
-              if len(targets) == 1 and next(iter(targets)) != en
+              en: target for en, target in resolved.items() if target != en
           }
           ordered = sorted(mapping, key=lambda item: (-len(item), item))
           if not ordered:
@@ -115,9 +125,6 @@ jobs:
               + '|'.join(re.escape(item) for item in ordered)
               + r')(?![A-Za-z0-9_])'
           )
-
-          def translate_code(segment: str) -> str:
-              return token_re.sub(lambda match: mapping[match.group(0)], segment)
 
           out = []
           cursor = 0
