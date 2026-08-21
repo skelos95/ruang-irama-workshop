@@ -1,0 +1,136 @@
+name: Temporary PR 15 Dummy Objective Fixer
+
+on:
+  pull_request:
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.number == 15 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'chatgpt/fix-dummy-objective-teleport'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fix-dummy-objective-teleport
+          persist-credentials: true
+
+      - name: Replace unsafe dummy objective teleport
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          it_path = Path('workshop/ruang_irama.it-IT.workshop')
+          it = it_path.read_text(encoding='utf-8')
+          start = it.index('regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")')
+          end = it.index('regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', start)
+          it_rule = '''regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
+{
+\tevento
+\t{
+\t\tOngoing - Each Player;
+\t\tTutti;
+\t\tTutti;
+\t}
+
+\tcondizioni
+\t{
+\t\tGlobale.Siap == True;
+\t\tIs Dummy Bot(Event Player) == True;
+\t\tHas Spawned(Event Player) == True;
+\t\tIs Alive(Event Player) == True;
+\t\tIs In Spawn Room(Event Player) == True;
+\t}
+
+\tazioni
+\t{
+\t\tIf(Or(Current Game Mode == Game Mode(Trasporto), Current Game Mode == Game Mode(Ibrida)));
+\t\t\tIf(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Cattura la Bandiera));
+\t\t\tIf(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Scorta));
+\t\t\tIf(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
+\t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+\t\t\tEnd;
+\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+\t\tEnd;
+\t}
+}
+
+'''
+          it = it[:start] + it_rule + it[end:]
+          it_path.write_text(it, encoding='utf-8')
+
+          en_path = Path('tests/fixtures/semantic_reference.txt')
+          en = en_path.read_text(encoding='utf-8')
+          start = en.index('rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")')
+          end = en.index('rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', start)
+          en_rule = '''rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
+{
+\tevent
+\t{
+\t\tOngoing - Each Player;
+\t\tAll;
+\t\tAll;
+\t}
+
+\tconditions
+\t{
+\t\tGlobal.Siap == True;
+\t\tIs Dummy Bot(Event Player) == True;
+\t\tHas Spawned(Event Player) == True;
+\t\tIs Alive(Event Player) == True;
+\t\tIs In Spawn Room(Event Player) == True;
+\t}
+
+\tactions
+\t{
+\t\tIf(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
+\t\t\tIf(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Capture The Flag));
+\t\t\tIf(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Push));
+\t\t\tIf(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
+\t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+\t\t\tEnd;
+\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+\t\tEnd;
+\t}
+}
+
+'''
+          en = en[:start] + en_rule + en[end:]
+          en_path.write_text(en, encoding='utf-8')
+          PY
+
+          python tools/check_clipboard_import.py
+          python -m unittest tests.test_dummy_bots tests.test_clipboard_import
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt
+          git diff --cached --quiet && exit 0
+          git commit -m 'Use safe objective destinations for dummy bots'
+          git push origin HEAD:chatgpt/fix-dummy-objective-teleport
