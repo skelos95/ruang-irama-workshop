@@ -46,7 +46,6 @@ jobs:
           path.write_text(source, encoding='utf-8')
           print(f'Replaced {count} Danneggia( occurrence(s) with Damage(')
 
-          # Add regression protection.
           tests = Path('tests/test_clipboard_import.py')
           text = tests.read_text(encoding='utf-8')
           anchor = '        self.assertNotIn("Color(", without_custom_colors)\n'
@@ -57,7 +56,6 @@ jobs:
               text = text.replace(anchor, anchor + addition, 1)
           tests.write_text(text, encoding='utf-8')
 
-          # Build the set of strings that OverPy explicitly declares valid for it-IT.
           localized = set()
           lang_re = re.compile(r'"it-IT"\s*:\s*"((?:\\.|[^"\\])*)"')
           for data_file in Path('.overpy/src/data').rglob('*.ts'):
@@ -68,13 +66,14 @@ jobs:
                   except json.JSONDecodeError:
                       pass
 
-          # Ignore user-visible strings and rule titles, then inspect callable names.
           code = re.sub(r'"(?:\\.|[^"\\])*"', '""', source)
           callable_re = re.compile(r'(?<![A-Za-zÀ-ÿ0-9_])([A-ZÀ-Ü][A-Za-zÀ-ÿ0-9]*(?: [A-ZÀ-Ü][A-Za-zÀ-ÿ0-9]*)*)\s*\(')
           callables = set(callable_re.findall(code))
           syntax_allow = {
               'If', 'Else If', 'And', 'Or', 'Not', 'Array', 'Vector',
               'Custom String', 'Custom Color', 'Button', 'Game Mode',
+              # Regex fragments from longer official tokens containing digits/hyphens.
+              'Enabled', 'World Text', 'World UI',
           }
           unknown = sorted(name for name in callables if name not in localized and name not in syntax_allow)
           print('Callable token count:', len(callables))
