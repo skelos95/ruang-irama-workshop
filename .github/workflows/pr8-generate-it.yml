@@ -41,36 +41,46 @@ jobs:
           output_path = Path('workshop/ruang_irama.it-IT.workshop')
           source = source_path.read_text(encoding='utf-8')
 
-          # Generated OverPy data blocks are valid JSON between these markers.
           candidates: dict[str, set[str]] = defaultdict(set)
+          locale_line = re.compile(
+              r'^(?P<indent>\s*)"(?P<locale>en-US|it-IT)"\s*:\s*'
+              r'(?P<value>"(?:[^"\\]|\\.)*")\s*,?\s*$'
+          )
 
-          def visit(value):
-              if isinstance(value, dict):
-                  en = value.get('en-US')
-                  if isinstance(en, str):
-                      it = value.get('it-IT', en)
-                      if isinstance(it, str) and en:
-                          candidates[en].add(it)
-                  for child in value.values():
-                      visit(child)
-              elif isinstance(value, list):
-                  for child in value:
-                      visit(child)
-
+          # Extract only locale string pairs from the generated TypeScript data.
+          # This avoids having to parse the surrounding TS metadata as JSON.
           for path in sorted(root.glob('*.ts')):
-              text = path.read_text(encoding='utf-8')
-              for block in re.findall(
-                  r'//begin-json\s*(.*?)\s*//end-json', text, flags=re.S
-              ):
-                  try:
-                      visit(json.loads(block))
-                  except json.JSONDecodeError as exc:
-                      raise SystemExit(f'Invalid OverPy JSON block in {path}: {exc}')
+              lines = path.read_text(encoding='utf-8').splitlines()
+              index = 0
+              while index < len(lines):
+                  match = locale_line.match(lines[index])
+                  if not match or match.group('locale') != 'en-US':
+                      index += 1
+                      continue
 
-          # Never translate the contents of Workshop quoted strings. This preserves
-          # rule titles, Custom String payloads, player-facing text and comments.
+                  indent = len(match.group('indent'))
+                  en = json.loads(match.group('value'))
+                  it = en
+                  probe = index + 1
+                  while probe < len(lines):
+                      candidate = locale_line.match(lines[probe])
+                      stripped = lines[probe].strip()
+                      leading = len(lines[probe]) - len(lines[probe].lstrip())
+                      if candidate and len(candidate.group('indent')) == indent:
+                          if candidate.group('locale') == 'it-IT':
+                              it = json.loads(candidate.group('value'))
+                              break
+                      if stripped.startswith('}') and leading < indent:
+                          break
+                      probe += 1
+
+                  if isinstance(en, str) and isinstance(it, str) and en:
+                      candidates[en].add(it)
+                  index += 1
+
+          # Never translate quoted Workshop text. Rule titles, comments and
+          # Custom String payloads are data, not Workshop grammar.
           quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
-          pieces = []
           cursor = 0
           code_segments = []
           for match in quoted.finditer(source):
@@ -79,8 +89,6 @@ jobs:
           code_segments.append(source[cursor:])
           code_only = '\n'.join(code_segments)
 
-          # Ambiguous native spellings are unsafe only if they actually occur in
-          # this source. Refuse to guess in that case.
           conflicts = {}
           for en, targets in candidates.items():
               if len(targets) <= 1:
@@ -98,11 +106,10 @@ jobs:
               for en, targets in candidates.items()
               if len(targets) == 1 and next(iter(targets)) != en
           }
-
-          # Match longest native tokens first and only at identifier boundaries.
           ordered = sorted(mapping, key=lambda item: (-len(item), item))
           if not ordered:
               raise SystemExit('No OverPy localization mappings found')
+
           token_re = re.compile(
               r'(?<![A-Za-z0-9_])(?:'
               + '|'.join(re.escape(item) for item in ordered)
@@ -114,25 +121,31 @@ jobs:
 
           out = []
           cursor = 0
-          replacements = 0
+          replacement_count = 0
           for match in quoted.finditer(source):
               code = source[cursor:match.start()]
-              translated = translate_code(code)
-              replacements += code != translated
+              translated, count = token_re.subn(
+                  lambda found: mapping[found.group(0)], code
+              )
+              replacement_count += count
               out.append(translated)
               out.append(match.group(0))
               cursor = match.end()
-          tail = source[cursor:]
-          translated_tail = translate_code(tail)
-          replacements += tail != translated_tail
-          out.append(translated_tail)
+          tail, count = token_re.subn(
+              lambda found: mapping[found.group(0)], source[cursor:]
+          )
+          replacement_count += count
+          out.append(tail)
           output = ''.join(out)
 
-          if output == source:
+          if output == source or replacement_count == 0:
               raise SystemExit('Localization produced no changes')
 
           output_path.write_text(output, encoding='utf-8')
-          print(f'Loaded {len(candidates)} localized spellings; translated source segments: {replacements}')
+          print(
+              f'Loaded {len(candidates)} localized spellings; '
+              f'applied {replacement_count} replacements'
+          )
           PY
 
           python tools/check_clipboard_import.py \
