@@ -55,7 +55,6 @@ jobs:
                   if not match or match.group('locale') != 'en-US':
                       index += 1
                       continue
-
                   indent = len(match.group('indent'))
                   en = json.loads(match.group('value'))
                   it = en
@@ -71,31 +70,29 @@ jobs:
                       if stripped.startswith('}') and leading < indent:
                           break
                       probe += 1
-
                   if isinstance(en, str) and isinstance(it, str) and en:
                       candidates[en].add(it)
                   index += 1
 
-          # Quoted Workshop text is data, not grammar: preserve rule titles,
-          # comments and Custom String payloads byte-for-byte.
           quoted = re.compile(r'"(?:[^"\\]|\\.)*"')
 
-          # Build a conservative global mapping. If an English spelling maps to
-          # two genuinely different Italian spellings in different type tables,
-          # leave it for the explicit contextual rules below.
+          # Identity translations are deliberately kept in the token table.
+          # They protect a long native phrase such as "Ongoing - Global" from
+          # being broken by a shorter localized token such as "Global".
           mapping: dict[str, str] = {}
           ambiguous: dict[str, set[str]] = {}
           for en, targets in candidates.items():
               localized = {target for target in targets if target != en}
-              if len(localized) == 1:
+              if len(localized) == 0:
+                  mapping[en] = en
+              elif len(localized) == 1:
                   mapping[en] = next(iter(localized))
-              elif len(localized) > 1:
+              else:
                   ambiguous[en] = localized
 
           ordered = sorted(mapping, key=lambda item: (-len(item), item))
           if not ordered:
               raise SystemExit('No OverPy localization mappings found')
-
           token_re = re.compile(
               r'(?<![A-Za-z0-9_])(?:'
               + '|'.join(re.escape(item) for item in ordered)
@@ -103,35 +100,21 @@ jobs:
           )
 
           def translate_code(segment: str) -> tuple[str, int]:
-              # Longest native spellings are translated first. This consumes
-              # expressions such as Set Damage Received / Set Ability 1 Enabled
-              # before the shorter ambiguous words Damage / Enabled are seen.
               translated, count = token_re.subn(
                   lambda found: mapping[found.group(0)], segment
               )
-
-              # Context-dependent tokens used by this project:
-              # - bare Damage(...) is the Damage action -> Danneggia;
-              # - Escort occurs only as a Game Mode literal -> Trasporto;
-              # - bare All; lines are event team/player selectors -> Tutti;
-              # - ButtonLiteral Secondary Fire intentionally stays English in
-              #   OverPy's it-IT table, so it is left untouched.
               translated, n = re.subn(
                   r'(?<![A-Za-z0-9_])Damage(?=\s*\()',
-                  'Danneggia',
-                  translated,
+                  'Danneggia', translated,
               )
               count += n
               translated, n = re.subn(
                   r'(?<![A-Za-z0-9_])Escort(?![A-Za-z0-9_])',
-                  'Trasporto',
-                  translated,
+                  'Trasporto', translated,
               )
               count += n
               translated, n = re.subn(
-                  r'(?m)^(\s*)All;(\s*)$',
-                  r'\1Tutti;\2',
-                  translated,
+                  r'(?m)^(\s*)All;(\s*)$', r'\1Tutti;\2', translated,
               )
               count += n
               return translated, count
@@ -150,28 +133,33 @@ jobs:
           out.append(translated)
           output = ''.join(out)
 
-          if output == source or replacement_count == 0:
+          if output == source:
               raise SystemExit('Localization produced no changes')
 
-          # Safety assertions for the exact context-dependent cases above.
           outside_strings = quoted.sub('', output)
           forbidden_remaining = {
               'bare event All': r'(?m)^\s*All;\s*$',
               'Damage action': r'(?<![A-Za-z0-9_])Damage(?=\s*\()',
               'Escort game mode literal': r'(?<![A-Za-z0-9_])Escort(?![A-Za-z0-9_])',
+              'partially localized global event': r'Ongoing\s*-\s*Globale',
           }
           for label, pattern in forbidden_remaining.items():
               if re.search(pattern, outside_strings):
-                  raise SystemExit(f'Unlocalized contextual token remains: {label}')
+                  raise SystemExit(f'Invalid localized token remains: {label}')
 
-          if 'Button(Secondary Fire)' not in output:
-              raise SystemExit('ButtonLiteral Secondary Fire was translated unexpectedly')
+          required = (
+              'variabili', 'subroutine', 'regola(', 'evento', 'condizioni', 'azioni',
+              'Ongoing - Global;', 'Button(Secondary Fire)',
+          )
+          for token in required:
+              if token not in output:
+                  raise SystemExit(f'Required it-IT token/identity missing: {token}')
 
           output_path.write_text(output, encoding='utf-8')
           print(
               f'Loaded {len(candidates)} localized spellings; '
-              f'applied {replacement_count} replacements; '
-              f'{len(ambiguous)} context-dependent spellings left out of global mapping'
+              f'matched {replacement_count} native tokens; '
+              f'{len(ambiguous)} context-dependent spellings excluded'
           )
           PY
 
@@ -184,10 +172,8 @@ jobs:
           python - <<'PY'
           from hashlib import sha256
           from pathlib import Path
-
           source = Path('workshop/ruang_irama.workshop')
-          manifest = Path('workshop/ruang_irama.it-IT.manifest')
-          manifest.write_text(
+          Path('workshop/ruang_irama.it-IT.manifest').write_text(
               'source_sha256=' + sha256(source.read_bytes()).hexdigest() + '\n'
               'language=it-IT\n'
               'overpy_ref=d854bf01fc7bbf3b2169f67408c07a8da8989ad6\n'
@@ -203,5 +189,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- workshop/ruang_irama.it-IT.workshop workshop/ruang_irama.it-IT.manifest
           git diff --cached --quiet && exit 0
-          git commit -m 'Generate Italian Workshop clipboard source'
+          git commit -m 'Regenerate Italian Workshop clipboard source'
           git push origin HEAD:chatgpt/italian-workshop-clipboard
