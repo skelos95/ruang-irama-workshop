@@ -32,27 +32,65 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import json
           import re
 
           constants = Path('.overpy/src/data/constants.ts').read_text(encoding='utf-8')
-          payload = constants.split('//begin-json', 1)[1].split('//end-json', 1)[0].strip()
-          data = json.loads(payload)
-          colors = data['ColorLiteral']
 
+          def matching_brace(text: str, opening: int) -> int:
+              depth = 0
+              in_string = False
+              escaped = False
+              for i in range(opening, len(text)):
+                  ch = text[i]
+                  if in_string:
+                      if escaped:
+                          escaped = False
+                      elif ch == '\\':
+                          escaped = True
+                      elif ch == '"':
+                          in_string = False
+                      continue
+                  if ch == '"':
+                      in_string = True
+                  elif ch == '{':
+                      depth += 1
+                  elif ch == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+              raise RuntimeError('unclosed brace in constants.ts')
+
+          marker = constants.index('"ColorLiteral"')
+          opening = constants.index('{', marker)
+          closing = matching_brace(constants, opening)
+          block = constants[opening + 1:closing]
+
+          field = lambda body, key: re.search(
+              rf'"{re.escape(key)}"\s*:\s*("(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?)',
+              body,
+          )
+          entry_re = re.compile(r'"([A-Z0-9_]+)"\s*:\s*\{')
           palette = {}
-          for item in colors.values():
-              name = item.get('en-US')
-              if not name:
-                  continue
-              if not all(key in item for key in ('red', 'green', 'blue')):
-                  continue
-              palette[name] = (
-                  int(item['red']),
-                  int(item['green']),
-                  int(item['blue']),
-                  int(item.get('alpha', 255)),
-              )
+          pos = 0
+          while True:
+              m = entry_re.search(block, pos)
+              if not m:
+                  break
+              entry_open = block.index('{', m.start(), m.end())
+              entry_close = matching_brace(block, entry_open)
+              body = block[entry_open + 1:entry_close]
+              name_m = field(body, 'en-US')
+              red_m = field(body, 'red')
+              green_m = field(body, 'green')
+              blue_m = field(body, 'blue')
+              alpha_m = field(body, 'alpha')
+              if name_m and red_m and green_m and blue_m:
+                  name = bytes(name_m.group(1)[1:-1], 'utf-8').decode('unicode_escape')
+                  palette[name] = (
+                      red_m.group(1), green_m.group(1), blue_m.group(1),
+                      alpha_m.group(1) if alpha_m else '255',
+                  )
+              pos = entry_close + 1
 
           path = Path('workshop/ruang_irama.it-IT.workshop')
           source = path.read_text(encoding='utf-8')
@@ -60,7 +98,7 @@ jobs:
           names = pattern.findall(source)
           unknown = sorted(set(names) - set(palette))
           if unknown:
-              raise SystemExit(f'Unknown named Color literals: {unknown}')
+              raise SystemExit(f'Unknown named Color literals: {unknown}; palette has {sorted(palette)}')
 
           def repl(match: re.Match[str]) -> str:
               r, g, b, a = palette[match.group(1)]
@@ -81,9 +119,9 @@ jobs:
               raise SystemExit('Expected Color assertions not found')
           tests.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-          marker = Path('docs/ITALIAN_COLOR_LITERAL_FIX.md')
-          if marker.exists():
-              marker.unlink()
+          marker_file = Path('docs/ITALIAN_COLOR_LITERAL_FIX.md')
+          if marker_file.exists():
+              marker_file.unlink()
 
           print(f'Converted {count} named Color literals to explicit RGBA values')
           print('Names converted:', ', '.join(sorted(set(names))))
