@@ -57,7 +57,7 @@ jobs:
           tests = test_path.read_text(encoding='utf-8')
           if 'def test_dummy_receives_normal_damage' not in tests:
               marker = '    def test_dummy_faces_nearest_living_human_without_extra_loop(self):\n'
-              method = '''    def test_dummy_receives_normal_damage(self):\n        self.assertEqual(self.it.count("Set Damage Received(Event Player, 100);"), 1)\n        self.assertEqual(self.en.count("Set Damage Received(Event Player, 100);"), 1)\n        self.assertNotIn("Set Damage Received(Event Player, 0);", self.it)\n        self.assertNotIn("Set Damage Received(Event Player, 0);", self.en)\n\n'''
+              method = '''    def test_dummy_receives_normal_damage(self):\n        it_lock = self.it.split('regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 1)[1].split('regola("91o - Subrutin: Gambar menu pilihan pemain")', 1)[0]\n        en_lock = self.en.split('rule("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 1)[1].split('rule("91o - Subrutin: Gambar menu pilihan pemain")', 1)[0]\n        self.assertEqual(it_lock.count("Set Damage Received(Event Player, 100);"), 1)\n        self.assertEqual(en_lock.count("Set Damage Received(Event Player, 100);"), 1)\n        self.assertNotIn("Set Damage Received(Event Player, 0);", it_lock)\n        self.assertNotIn("Set Damage Received(Event Player, 0);", en_lock)\n\n'''
               if marker not in tests:
                   raise SystemExit('dummy test insertion marker missing')
               tests = tests.replace(marker, method + marker, 1)
