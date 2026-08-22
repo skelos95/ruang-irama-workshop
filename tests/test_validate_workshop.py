@@ -1035,7 +1035,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "modalità nativa")
 
     def test_camera_has_exactly_one_raycast(self) -> None:
-        mutated = self.source + "\nRay Cast Hit Position(Eye Position(Event Player), Vector(0, 0, 0), Null, Null, False);\n"
+        camera_rule = validator.rule_by_subroutine(validator.extract_rules(self.source), "MulaiKamera")
+        self.assertIsNotNone(camera_rule)
+        assert camera_rule is not None
+        mutated_body = camera_rule.body.replace(
+            "Ray Cast Hit Position(",
+            "Ray Cast Hit Position(Eye Position(Event Player), Vector(0, 0, 0), Empty Array, Empty Array, False) + Ray Cast Hit Position(",
+            1,
+        )
+        mutated = self.source[:camera_rule.start] + mutated_body + self.source[camera_rule.end:]
         self.assert_rejected(mutated, "raycast Camera")
 
     def test_foreign_custom_rule_title_is_rejected(self) -> None:

@@ -1854,7 +1854,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
-    objective_rule = next((rule for rule in rules if "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)
+    objective_rule = next((rule for rule in rules if "PerintahTeleportasi == 1" in rule.body and "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)
     checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
     if objective_rule:
         for mode in GAME_MODES:
@@ -1869,7 +1869,10 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
-    checks.equal(source.count("Ray Cast Hit Position("), 1, "raycast Camera")
+    camera_rule = rule_by_subroutine(rules, "MulaiKamera")
+    checks.require(camera_rule is not None, "subroutine Camera assente")
+    if camera_rule:
+        checks.equal(camera_rule.body.count("Ray Cast Hit Position("), 1, "raycast Camera")
 
 
 def validate_indonesian_and_duplicates(checks: Checks, source: str, rules: list[Rule]) -> None:
