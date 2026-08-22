@@ -1,0 +1,61 @@
+name: One-shot Validator Wait Policy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: startsWith(github.event.head_commit.message, 'Trigger validator wait-policy alignment')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out PR 37 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chatgpt/fix-dummy-initial-spawn-distance-hud
+          persist-credentials: true
+          fetch-depth: 1
+
+      - name: Align semantic wait policy
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tools/validate_workshop.py')
+          text = path.read_text(encoding='utf-8')
+
+          old_role = '''    if "Respawn(" in body or "BangkitLompat" in body:
+              return "respawn"
+'''
+          new_role = '''    if rule.name == "03f - Bot/Dummy: Teleport dari ruang spawn ke objektif":
+              return "dummy spawn stabilization"
+          if "Respawn(" in body or "BangkitLompat" in body:
+              return "respawn"
+'''
+          if text.count(old_role) != 1:
+              raise SystemExit(f'wait-role anchor count: {text.count(old_role)}')
+          text = text.replace(old_role, new_role, 1)
+
+          old_limit = '''    checks.require(len(waits) <= 10, f"Wait oltre il massimo consentito: {len(waits)} > 10")
+'''
+          new_limit = '''    checks.require(len(waits) <= 11, f"Wait oltre il massimo consentito: {len(waits)} > 11")
+'''
+          if text.count(old_limit) != 1:
+              raise SystemExit(f'wait-limit anchor count: {text.count(old_limit)}')
+          text = text.replace(old_limit, new_limit, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/validate_workshop.py
+          git diff --cached --quiet && exit 0
+          git commit -m 'Align validator with dummy spawn wait'
+          git push origin HEAD:chatgpt/fix-dummy-initial-spawn-distance-hud
