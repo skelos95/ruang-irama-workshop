@@ -54,6 +54,14 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100", self.it)
         self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)
 
+    def test_dummy_receives_normal_damage(self):
+        it_lock = self.it.split('regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 1)[1].split('regola("91o - Subrutin: Gambar menu pilihan pemain")', 1)[0]
+        en_lock = self.en.split('rule("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 1)[1].split('rule("91o - Subrutin: Gambar menu pilihan pemain")', 1)[0]
+        self.assertEqual(it_lock.count("Set Damage Received(Event Player, 100);"), 1)
+        self.assertEqual(en_lock.count("Set Damage Received(Event Player, 100);"), 1)
+        self.assertNotIn("Set Damage Received(Event Player, 0);", it_lock)
+        self.assertNotIn("Set Damage Received(Event Player, 0);", en_lock)
+
     def test_dummy_faces_nearest_living_human_without_extra_loop(self):
         self.assertIn("Start Facing(Event Player", self.it)
         self.assertIn("Sorted Array(Filtered Array(Globale.PemainManusia", self.it)

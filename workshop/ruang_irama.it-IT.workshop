@@ -3549,6 +3549,7 @@ regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")
 		Set Damage Dealt(Event Player, 0);
 		Set Healing Dealt(Event Player, 0);
 		Set Knockback Dealt(Event Player, 0);
+		Set Damage Received(Event Player, 100);
 		Set Move Speed(Event Player, 10);
 		Event Player.PahlawanBotTerakhir = Hero Of(Event Player);
 		Event Player.KunciBotAktif = True;
