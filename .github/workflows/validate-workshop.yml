@@ -6,79 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync-pr20-fixture:
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 20
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out PR 20 branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: chatgpt/fix-dummy-objective-final
-          persist-credentials: true
-
-      - name: Synchronize dummy teleport semantic fixture
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('tests/fixtures/semantic_reference.txt')
-          text = path.read_text(encoding='utf-8')
-          old = '''\tactions
-\t{
-\t\tIf(Count Of(All Players On Objective(All Teams)) > 0);
-\t\t\tTeleport(Event Player, Position Of(First Of(All Players On Objective(All Teams))));
-\t\tElse;
-\t\t\tTeleport(Event Player, Objective Position(Objective Index));
-\t\tEnd;
-\t}
-'''
-          new = '''\tactions
-\t{
-\t\tIf(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-\t\t\tIf(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
-\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
-\t\t\tEnd;
-\t\tElse If(Current Game Mode == Game Mode(Capture The Flag));
-\t\t\tIf(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
-\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
-\t\t\tEnd;
-\t\tElse If(Current Game Mode == Game Mode(Push));
-\t\t\tIf(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
-\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
-\t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-\t\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
-\t\t\tEnd;
-\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-\t\t\tTeleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
-\t\tEnd;
-\t}
-'''
-          if old in text:
-              if text.count(old) != 1:
-                  raise SystemExit('expected exactly one old dummy teleport block')
-              path.write_text(text.replace(old, new, 1), encoding='utf-8')
-          elif 'Game Mode(Capture The Flag)' not in text:
-              raise SystemExit('safe dummy teleport block not found')
-          PY
-
-          python tools/check_clipboard_import.py tests/fixtures/semantic_reference.txt --language en-US
-          python -m unittest tests.test_dummy_bots tests.test_clipboard_import
-
-      - name: Commit synchronized fixture
-        shell: bash
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- tests/fixtures/semantic_reference.txt
-          git diff --cached --quiet && exit 0
-          git commit -m 'Synchronize dummy teleport semantic fixture'
-          git push origin HEAD:chatgpt/fix-dummy-objective-final
-
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -98,3 +28,6 @@ jobs:
 
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
+
+      - name: Preflight Italian clipboard source
+        run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
