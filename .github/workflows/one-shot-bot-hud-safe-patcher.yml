@@ -19,11 +19,12 @@ jobs:
           ref: chatgpt/fix-bot-teleport-hud-order
           persist-credentials: true
 
-      - name: Patch Workshop, semantic fixture, tests and docs
+      - name: Patch Workshop, semantic gates, tests and docs
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           def replace_between(text, start_marker, end_marker, replacement, label):
               start = text.find(start_marker)
@@ -37,13 +38,14 @@ jobs:
           it_path = Path('workshop/ruang_irama.it-IT.workshop')
           en_path = Path('tests/fixtures/semantic_reference.txt')
           test_path = Path('tests/test_dummy_bots.py')
+          validator_path = Path('tools/validate_workshop.py')
+          validator_test_path = Path('tests/test_validate_workshop.py')
           project_path = Path('docs/PROGETTO.md')
           changelog_path = Path('CHANGELOG.md')
 
           it = it_path.read_text(encoding='utf-8')
           en = en_path.read_text(encoding='utf-8')
 
-          # Center HUD: title/time -> server location -> MENU, matching the reference layout.
           it_hud_start = '\t\tCreate HUD Text(Globale.PemainManusia, Null,\n\t\t\tPlayer Variable(Local Player, IndeksBahasa) == 0 ? Custom String("SERVER LOCATION:'
           it_hud_end = '\n\t\tCreate HUD Text(Globale.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(\n\t\t\t"Hold {0}: inspect hero + HP"'
           it_hud = '''\t\tCreate HUD Text(Globale.PemainManusia,
@@ -62,7 +64,6 @@ jobs:
 \t\t\tTop, -100, Global.RGB, Custom Color(80, 235, 255, 255), Color(White), Visible To String and Color, Visible Never);'''
           en = replace_between(en, en_hud_start, en_hud_end, en_hud, 'English center HUD')
 
-          # Dummy spawn exit: mode-specific target + navmesh proximity + real floor hit.
           it_rule = '''regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 {
 \tevento
@@ -89,7 +90,9 @@ jobs:
 \t\t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Payload Position + Vector(2, 0, 0));
 \t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Payload Position + Vector(2, 0, 0)) <= 12);
 \t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
-\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tEnd;
 \t\t\t\t\tEnd;
 \t\t\t\tEnd;
 \t\t\tEnd;
@@ -98,7 +101,9 @@ jobs:
 \t\t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0));
 \t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)) <= 12);
 \t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
-\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tEnd;
 \t\t\t\t\tEnd;
 \t\t\t\tEnd;
 \t\t\tEnd;
@@ -107,14 +112,18 @@ jobs:
 \t\t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0));
 \t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)) <= 12);
 \t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
-\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tEnd;
 \t\t\t\t\tEnd;
 \t\t\t\tEnd;
 \t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
 \t\t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Objective Position(Objective Index));
 \t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12);
 \t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
-\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tEnd;
 \t\t\t\t\tEnd;
 \t\t\t\tEnd;
 \t\t\tEnd;
@@ -122,7 +131,9 @@ jobs:
 \t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Objective Position(Objective Index));
 \t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12);
 \t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
-\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\tEnd;
 \t\t\t\tEnd;
 \t\t\tEnd;
 \t\tEnd;
@@ -131,29 +142,138 @@ jobs:
 
 '''
           it = replace_between(it, 'regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', it_rule, 'Italian 03f')
-
           en_rule = it_rule.replace('regola(', 'rule(').replace('\n\tevento\n', '\n\tevent\n').replace('\n\tcondizioni\n', '\n\tconditions\n').replace('\n\tazioni\n', '\n\tactions\n').replace('\t\tTutti;', '\t\tAll;').replace('Globale.', 'Global.').replace('Game Mode(Trasporto)', 'Game Mode(Escort)').replace('Game Mode(Ibrida)', 'Game Mode(Hybrid)').replace('Game Mode(Cattura la Bandiera)', 'Game Mode(Capture The Flag)').replace('Game Mode(Scorta)', 'Game Mode(Push)')
           en = replace_between(en, 'rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', en_rule, 'English 03f')
-
           it_path.write_text(it, encoding='utf-8')
           en_path.write_text(en, encoding='utf-8')
 
           tests = test_path.read_text(encoding='utf-8')
-          old = '''    def test_spawn_teleport_uses_safe_mode_specific_destinations(self):\n        self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)\n        self.assertIn("Current Game Mode == Game Mode(Trasporto)", self.it)\n        self.assertIn("Current Game Mode == Game Mode(Ibrida)", self.it)\n        self.assertIn("Current Game Mode == Game Mode(Cattura la Bandiera)", self.it)\n        self.assertIn("Current Game Mode == Game Mode(Scorta)", self.it)\n        self.assertIn("Payload Position", self.it)\n        self.assertIn("Flag Position(Opposite Team Of(Team Of(Event Player)))", self.it)\n        self.assertIn("Is On Objective(Current Array Element) == True", self.it)\n        self.assertIn("Nearest Walkable Position", self.it)\n        self.assertNotIn("All Players On Objective(All Teams)", self.it)\n        self.assertNotIn("Teleport(Event Player, Objective Position(Objective Index));", self.it)\n'''
-          new = old + '''        self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position", self.it)\n        self.assertIn("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)", self.it)\n        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12", self.it)\n        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)\n\n    def test_center_hud_matches_reference_order(self):\n        title = self.it.index('Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Globale.TeksWaktuServer)')\n        location = self.it.index('Custom String("SERVER LOCATION: {0}"', title)\n        menu = self.it.index('Custom String("\\\\nMENU")', location)\n        self.assertLess(title, location)\n        self.assertLess(location, menu)\n        self.assertIn('Top, -100, Globale.RGB, Custom Color(80, 235, 255, 255)', self.it)\n'''
+          old = '''    def test_spawn_teleport_uses_safe_mode_specific_destinations(self):
+        self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Trasporto)", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Ibrida)", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Cattura la Bandiera)", self.it)
+        self.assertIn("Current Game Mode == Game Mode(Scorta)", self.it)
+        self.assertIn("Payload Position", self.it)
+        self.assertIn("Flag Position(Opposite Team Of(Team Of(Event Player)))", self.it)
+        self.assertIn("Is On Objective(Current Array Element) == True", self.it)
+        self.assertIn("Nearest Walkable Position", self.it)
+        self.assertNotIn("All Players On Objective(All Teams)", self.it)
+        self.assertNotIn("Teleport(Event Player, Objective Position(Objective Index));", self.it)
+'''
+          new = old + '''        self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position", self.it)
+        self.assertIn("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)", self.it)
+        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12", self.it)
+        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100", self.it)
+        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)
+
+    def test_center_hud_matches_reference_order(self):
+        title = self.it.index('Custom String("{0}    {1}", Custom String("CHILL DEDICATED SERVER"), Globale.TeksWaktuServer)')
+        location = self.it.index('Custom String("SERVER LOCATION: {0}"', title)
+        menu = self.it.index('Custom String("\\\\nMENU")', location)
+        self.assertLess(title, location)
+        self.assertLess(location, menu)
+        self.assertIn('Top, -100, Globale.RGB, Custom Color(80, 235, 255, 255)', self.it)
+'''
           if old not in tests:
               raise SystemExit('dummy bot test anchor missing')
           tests = tests.replace(old, new, 1)
           test_path.write_text(tests, encoding='utf-8')
 
+          validator = validator_path.read_text(encoding='utf-8')
+          hud_start = validator.index('    hud_calls = list(iter_calls(source, "Create HUD Text"))')
+          hud_end = validator.index('\n    checks.require("HudMenu" in players', hud_start)
+          hud_block = '''    hud_calls = list(iter_calls(source, "Create HUD Text"))
+    checks.require(bool(hud_calls), "nessun HUD testuale trovato")
+    for call in hud_calls:
+        checks.require(len(call.args) >= 4, "Create HUD Text malformato")
+
+    server_title = next(
+        (
+            call for call in hud_calls
+            if len(call.args) >= 9
+            and "CHILL DEDICATED SERVER" in call.args[1]
+            and "Global.TeksWaktuServer" in call.args[1]
+        ),
+        None,
+    )
+    checks.require(server_title is not None, "HUD titolo CHILL e timer server assente")
+    if server_title:
+        checks.require("SERVER LOCATION" in server_title.args[2] and "Global.NamaLokasiInggris" in server_title.args[2],
+                       "HUD centro deve mostrare SERVER LOCATION sotto titolo/timer")
+        checks.require(r"\\nMENU" in server_title.args[3],
+                       "HUD centro deve mostrare MENU sotto la location")
+        checks.equal(server_title.args[4].strip(), "Top", "HUD centro: posizione")
+        checks.equal(server_title.args[5].strip(), "-100", "HUD centro: sort order")
+'''
+          validator = validator[:hud_start] + hud_block + validator[hud_end:]
+          old_selector = '    objective_rule = next((rule for rule in rules if "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)'
+          new_selector = '''    objective_rule = next(
+        (
+            rule for rule in rules
+            if "Payload Position" in rule.body
+            and "Flag Position(" in rule.body
+            and "Objective Position(Objective Index)" in rule.body
+            and ("Button(Primary Fire)" in rule.body or "PerintahTeleportasi == 1" in rule.body or event_type(rule) == "Subroutine")
+        ),
+        None,
+    )'''
+          if old_selector not in validator:
+              raise SystemExit('objective dispatcher selector anchor missing')
+          validator = validator.replace(old_selector, new_selector, 1)
+          old_raycast = '    checks.equal(source.count("Ray Cast Hit Position("), 1, "raycast Camera")'
+          new_raycast = '''    camera_rule = rule_by_subroutine(rules, "MulaiKamera")
+    checks.require(camera_rule is not None, "subroutine Camera MulaiKamera assente")
+    if camera_rule:
+        checks.equal(camera_rule.body.count("Ray Cast Hit Position("), 1, "raycast Camera")
+    dummy_spawn = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Is In Spawn Room(Event Player) == True;" in rule.body
+            and "Event Player.PosisiBangkitAman" in rule.body
+            and "Ray Cast Hit Position(" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_spawn is not None, "teleport dummy dalla spawn senza verifica pavimento")
+    if dummy_spawn:
+        checks.require("Nearest Walkable Position(" in dummy_spawn.body,
+                       "teleport dummy non usa posizione camminabile")
+        checks.require("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100" in dummy_spawn.body,
+                       "teleport dummy può usare l'origine del mondo")
+        checks.require("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)" in dummy_spawn.body,
+                       "teleport dummy non conferma il pavimento sotto la destinazione")'''
+          if old_raycast not in validator:
+              raise SystemExit('raycast validator anchor missing')
+          validator = validator.replace(old_raycast, new_raycast, 1)
+          validator_path.write_text(validator, encoding='utf-8')
+
+          vt = validator_test_path.read_text(encoding='utf-8')
+          start = vt.index('    def test_chill_title_requires_a_blank_spacer_line(self) -> None:')
+          end = vt.index('\n    def test_primary_secondary_must_not_redraw_menu', start)
+          replacement = '''    def test_chill_center_hud_keeps_reference_order(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 9
+            and "CHILL DEDICATED SERVER" in call.args[1]
+            and "Global.TeksWaktuServer" in call.args[1]
+        )
+        self.assertIn("SERVER LOCATION", call.args[2])
+        self.assertIn(r"\\nMENU", call.args[3])
+        mutated = self.replace_call_argument(call, 3, "Null")
+        self.assert_rejected(mutated, "HUD centro deve mostrare MENU")
+'''
+          vt = vt[:start] + replacement + vt[end:]
+          validator_test_path.write_text(vt, encoding='utf-8')
+
           project = project_path.read_text(encoding='utf-8')
           doc_marker = '### Dummy bot: uscita sicura dalla spawn'
           if doc_marker not in project:
-              project += '''\n\n### Dummy bot: uscita sicura dalla spawn\n\n- massimo un dummy per squadra, eroe casuale e respawn massimo di 30 secondi;\n- il dummy guarda continuamente il giocatore umano vivo più vicino;\n- l'uscita dalla spawn sceglie payload, bandiera avversaria, Push/objective o obiettivo corrente in base alla modalità;\n- prima del teleport il punto deve restare entro 12 m dalla destinazione logica e un ray cast verticale deve confermare pavimento entro 6 m;\n- se una destinazione non supera i controlli, il dummy resta in spawn e riprova invece di essere teletrasportato fuori mappa.\n\n### Ordine HUD principale\n\nIl centro HUD segue l'ordine `CHILL DEDICATED SERVER + TIME` → `SERVER LOCATION` → `MENU`. A sinistra e a destra le istruzioni `Hold` restano sopra `LOBBY & CHILL TIME` e `PLAYER VIBES`, con una sola riga di separazione prima delle liste.\n'''
+              project += '''\n\n### Dummy bot: uscita sicura dalla spawn\n\n- massimo un dummy per squadra, eroe casuale e respawn massimo di 30 secondi;\n- il dummy guarda continuamente il giocatore umano vivo più vicino;\n- l'uscita dalla spawn sceglie payload, bandiera avversaria, Push/objective o obiettivo corrente in base alla modalità;\n- prima del teleport il punto deve restare entro 12 m dalla destinazione logica, essere diverso dall'origine del mondo e un ray cast verticale deve confermare pavimento entro 6 m;\n- se una destinazione non supera i controlli, il dummy resta in spawn e riprova invece di essere teletrasportato fuori mappa.\n\n### Ordine HUD principale\n\nIl centro HUD segue l'ordine `CHILL DEDICATED SERVER + TIME` → `SERVER LOCATION` → `MENU`. A sinistra e a destra le istruzioni `Hold` restano sopra `LOBBY & CHILL TIME` e `PLAYER VIBES`, con una sola riga di separazione prima delle liste.\n'''
               project_path.write_text(project, encoding='utf-8')
-
           changelog = changelog_path.read_text(encoding='utf-8')
-          note = '- Fixed dummy spawn teleport to reject off-map/navmesh destinations using proximity and floor-ray validation; restored the reference HUD ordering.\n'
+          note = '- Fixed dummy spawn teleport to reject off-map/navmesh destinations using proximity, origin and floor-ray validation; restored the reference HUD ordering.\n'
           if note not in changelog:
               changelog_path.write_text(note + changelog, encoding='utf-8')
           PY
@@ -169,6 +289,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py docs/PROGETTO.md CHANGELOG.md
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py tools/validate_workshop.py tests/test_validate_workshop.py docs/PROGETTO.md CHANGELOG.md
           git commit -m "Fix bot objective teleport and HUD order"
           git push origin HEAD:chatgpt/fix-bot-teleport-hud-order
