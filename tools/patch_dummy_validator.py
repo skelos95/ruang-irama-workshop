@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Final one-shot alignment helper; self-deletes after a successful patch.
 from pathlib import Path
 
 path = Path("tools/validate_workshop.py")
