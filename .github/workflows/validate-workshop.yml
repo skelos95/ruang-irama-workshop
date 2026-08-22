@@ -31,3 +31,42 @@ jobs:
 
       - name: Preflight Italian clipboard source
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+  patch-pr21:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chatgpt/fix-first-dummy-spawn-hud'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out patcher from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: .patcher
+          persist-credentials: false
+
+      - name: Check out PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chatgpt/fix-first-dummy-spawn-hud
+          path: work
+          fetch-depth: 0
+
+      - name: Apply, verify and commit PR21 patch
+        shell: bash
+        run: |
+          if [ ! -f work/.github/pr21-hud-dummy-trigger ]; then
+            echo "PR21 patch already applied."
+            exit 0
+          fi
+          python .patcher/.github/pr21_patch.py work
+          cd work
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix first dummy spawn and primary HUD layout"
+          git push origin HEAD:chatgpt/fix-first-dummy-spawn-hud
