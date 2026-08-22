@@ -6,41 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-robust-dummy:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chatgpt/robust-dummy-teleport'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out target branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: chatgpt/robust-dummy-teleport
-          persist-credentials: true
-
-      - name: Apply robust dummy teleport patch
-        run: python tools/patch_robust_dummy_teleport.py
-
-      - name: Run regression checks
-        run: |
-          python -m unittest discover -s tests -p 'test_*.py'
-          python tools/validate_workshop.py
-          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
-
-      - name: Commit patched source
-        shell: bash
-        run: |
-          if git diff --quiet && git diff --cached --quiet; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Guard dummy teleports with floor validation"
-          git push origin HEAD:chatgpt/robust-dummy-teleport
-
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
