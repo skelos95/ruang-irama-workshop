@@ -1,15 +1,17 @@
 name: One-shot Dummy Objective Patcher
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches:
-      - chatgpt/fix-dummy-objective-main
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.head_ref == 'chatgpt/fix-dummy-objective-main'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
