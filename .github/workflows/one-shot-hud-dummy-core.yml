@@ -1,0 +1,149 @@
+name: One-shot HUD Dummy Core
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Trigger HUD dummy core patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chatgpt/hud-dummy-stability
+          persist-credentials: true
+
+      - name: Patch Workshop and semantic fixture
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 anchor, got {count}')
+              return text.replace(old, new, 1)
+
+          def between(text, start_marker, end_marker, replacement, label):
+              start = text.find(start_marker)
+              end = text.find(end_marker, start + 1)
+              if start < 0 or end < 0:
+                  raise SystemExit(f'{label}: markers missing')
+              return text[:start] + replacement + text[end:]
+
+          it_path = Path('workshop/ruang_irama.it-IT.workshop')
+          en_path = Path('tests/fixtures/semantic_reference.txt')
+          it = it_path.read_text(encoding='utf-8')
+          en = en_path.read_text(encoding='utf-8')
+
+          for old, new in (
+              ('\\n     PLAYER VIBES', '\\nPLAYER VIBES'),
+              ('\\n     MUSIK PEMAIN', '\\nMUSIK PEMAIN'),
+              ('\\n     เพลงของผู้เล่น', '\\nเพลงของผู้เล่น'),
+          ):
+              it = once(it, old, new, 'it HUD')
+              en = once(en, old, new, 'en HUD')
+
+          old_lock = '\t\tSet Knockback Dealt(Event Player, 0);\n\t\tSet Move Speed(Event Player, 10);\n'
+          new_lock = ('\t\tSet Knockback Dealt(Event Player, 0);\n'
+                      '\t\tSet Damage Received(Event Player, 0);\n'
+                      '\t\tSet Knockback Received(Event Player, 0);\n'
+                      '\t\tClear Status(Event Player, Unkillable);\n'
+                      '\t\tSet Status(Event Player, Null, Unkillable, 9999);\n'
+                      '\t\tSet Move Speed(Event Player, 0);\n')
+          it = once(it, old_lock, new_lock, 'it lock')
+          en = once(en, old_lock, new_lock, 'en lock')
+          melee = '\t\tDisallow Button(Event Player, Button(Melee));\n'
+          it = once(it, melee, melee + '\t\tDisallow Button(Event Player, Button(Jump));\n', 'it jump')
+          en = once(en, melee, melee + '\t\tDisallow Button(Event Player, Button(Jump));\n', 'en jump')
+          it = once(it, 'regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 'regola("92 - Subrutin: Kunci bot/dummy tetap diam dan aman")', 'it title')
+          en = once(en, 'rule("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 'rule("92 - Subrutin: Kunci bot/dummy tetap diam dan aman")', 'en title')
+
+          it_rule = '''regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
+{
+\tevento
+\t{
+\t\tOngoing - Each Player;
+\t\tTutti;
+\t\tTutti;
+\t}
+
+\tcondizioni
+\t{
+\t\tGlobale.Siap == True;
+\t\tIs Dummy Bot(Event Player) == True;
+\t\tHas Spawned(Event Player) == True;
+\t\tIs Alive(Event Player) == True;
+\t\tIs In Spawn Room(Event Player) == True;
+\t\tCount Of(Spawn Points(Team Of(Event Player))) > 0;
+\t}
+
+\tazioni
+\t{
+\t\tEvent Player.PosisiMati = Vector(0, 0, 0);
+\t\tEvent Player.PosisiBangkitAman = Vector(0, 0, 0);
+\t\tIf(Or(Current Game Mode == Game Mode(Trasporto), Current Game Mode == Game Mode(Ibrida)));
+\t\t\tIf(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+\t\t\t\tEvent Player.PosisiMati = Payload Position;
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Cattura la Bandiera));
+\t\t\tIf(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tEvent Player.PosisiMati = Flag Position(Opposite Team Of(Team Of(Event Player)));
+\t\t\tEnd;
+\t\tElse If(Current Game Mode == Game Mode(Scorta));
+\t\t\tIf(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
+\t\t\t\tEvent Player.PosisiMati = Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))));
+\t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\t\tEvent Player.PosisiMati = Objective Position(Objective Index);
+\t\t\tEnd;
+\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+\t\t\tEvent Player.PosisiMati = Objective Position(Objective Index);
+\t\tEnd;
+\t\tIf(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) > 0.100);
+\t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10);
+\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6);
+\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 16);
+\t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+\t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+\t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+\t\t\t\t\t\tEnd;
+\t\t\t\t\tEnd;
+\t\t\t\tEnd;
+\t\t\tEnd;
+\t\tEnd;
+\t}
+}
+
+'''
+          en_rule = (it_rule.replace('regola(', 'rule(')
+              .replace('\n\tevento\n', '\n\tevent\n')
+              .replace('\n\tcondizioni\n', '\n\tconditions\n')
+              .replace('\n\tazioni\n', '\n\tactions\n')
+              .replace('\t\tTutti;', '\t\tAll;')
+              .replace('Globale.', 'Global.')
+              .replace('Game Mode(Trasporto)', 'Game Mode(Escort)')
+              .replace('Game Mode(Ibrida)', 'Game Mode(Hybrid)')
+              .replace('Game Mode(Cattura la Bandiera)', 'Game Mode(Capture The Flag)')
+              .replace('Game Mode(Scorta)', 'Game Mode(Push)'))
+
+          it = between(it, 'regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', it_rule, 'it 03f')
+          en = between(en, 'rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', en_rule, 'en 03f')
+          it_path.write_text(it, encoding='utf-8')
+          en_path.write_text(en, encoding='utf-8')
+          PY
+
+          git diff --check
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt
+          git commit -m "Patch HUD and dummy core behavior"
+          git push origin HEAD:chatgpt/hud-dummy-stability
