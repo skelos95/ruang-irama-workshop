@@ -291,3 +291,8 @@ Note e riproduzione problemi:
 ```
 
 La release diventa **live-ready** soltanto quando tutti i test obbligatori sono PASS, le metriche rispettano i limiti e ogni anomalia riproducibile è stata corretta e rivalidata.
+
+
+### Dummy spawn iniziale
+
+Verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa; dopo circa 1 s devono essere spostati a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 30 s e la stessa uscita sicura deve ripetersi.

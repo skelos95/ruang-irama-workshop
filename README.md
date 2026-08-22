@@ -17,7 +17,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
-- Un dummy nativo per squadra quando esiste uno slot libero, respawn massimo 30 s e uscita dalla Spawn Room verso una destinazione mode-specific percorribile.
+- Un dummy nativo per squadra quando esiste uno slot e uno Spawn Point valido: nasce direttamente nella propria spawn, respawn massimo 30 s e uscita dalla Spawn Room verso una destinazione mode-specific percorribile.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
@@ -111,7 +111,7 @@ La destinazione Objective/Flag viene valutata al click:
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
-I dummy nativi usano lo stesso principio per uscire dalla Spawn Room: payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Ogni destinazione passa da `Nearest Walkable Position`; se il punto richiesto non è disponibile, il dummy resta in spawn e la regola riprova senza teletrasportarlo a coordinate nulle.
+I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento; se non esiste un punto valido, il dummy resta in spawn e riprova.
 
 La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom da alcun osservatore; dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 

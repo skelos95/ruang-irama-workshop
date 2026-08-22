@@ -201,3 +201,8 @@ La release 0.8.0 resta **live-pending** finché non vengono registrati:
 - diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
 La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md).
+
+
+### Dummy bot: spawn e distanza sicura
+
+I dummy vengono creati soltanto quando esiste uno Spawn Point della squadra e la posizione iniziale è quello Spawn Point, non `Null`. L'uscita automatica dalla spawn attende 1 secondo, cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. I bot restano passivi e fermi, ricevono danno normale e guardano continuamente l'umano vivo più vicino.
