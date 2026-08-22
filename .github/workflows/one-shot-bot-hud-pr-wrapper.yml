@@ -2,7 +2,7 @@ name: One-shot Bot HUD PR Wrapper
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: write
@@ -42,7 +42,6 @@ jobs:
           from pathlib import Path
           import re
 
-          # Never accept world origin as a walkable fallback for dummy teleports.
           for path_name, start_marker, end_marker in (
               ('workshop/ruang_irama.it-IT.workshop', 'regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")'),
               ('tests/fixtures/semantic_reference.txt', 'rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")'),
@@ -75,7 +74,6 @@ jobs:
 
           validator_path = Path('tools/validate_workshop.py')
           validator = validator_path.read_text(encoding='utf-8')
-
           hud_start = validator.index('    hud_calls = list(iter_calls(source, "Create HUD Text"))')
           hud_end = validator.index('\n    checks.require("HudMenu" in players', hud_start)
           hud_block = '''    hud_calls = list(iter_calls(source, "Create HUD Text"))
