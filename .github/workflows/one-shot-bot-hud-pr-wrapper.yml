@@ -1,0 +1,48 @@
+name: One-shot Bot HUD PR Wrapper
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.ref == 'chatgpt/trigger-bot-hud-pr-patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out main to extract one-shot patch script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Extract embedded patch script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/one-shot-bot-hud-safe-patcher.yml').read_text(encoding='utf-8')
+          start = text.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
+          end = text.index("\n          PY\n", start)
+          lines = text[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/patch_bot_hud.py').write_text(script, encoding='utf-8')
+          PY
+
+      - name: Patch target branch
+        run: |
+          git fetch origin chatgpt/fix-bot-teleport-hud-order
+          git checkout -B chatgpt/fix-bot-teleport-hud-order origin/chatgpt/fix-bot-teleport-hud-order
+          python /tmp/patch_bot_hud.py
+          python -m unittest tests.test_dummy_bots
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py docs/PROGETTO.md CHANGELOG.md
+          git commit -m "Fix bot objective teleport and HUD order"
+          git push origin HEAD:chatgpt/fix-bot-teleport-hud-order
