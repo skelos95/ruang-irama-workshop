@@ -2,7 +2,7 @@
 
 Stato release: **static-ready / live-pending**.
 
-Questo documento descrive il contratto architetturale del sorgente `workshop/ruang_irama.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; import, rendering, carico e concorrenza restano da confermare nel client Overwatch aggiornato al 19 agosto 2026.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; import, rendering, carico e concorrenza restano da confermare nel client Overwatch aggiornato al 19 agosto 2026. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente.
 
 ## Obiettivi
 
@@ -108,6 +108,8 @@ La registrazione verifica prima l'esistenza del player nel roster. Un evento Joi
 
 Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto.
 
+Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2 quando esiste uno slot libero. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, la regola di uscita sceglie una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo.
+
 ### Leave
 
 Il cleanup:
@@ -151,6 +153,8 @@ La destinazione Teleport viene rivalutata al click:
 
 La pagina All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy; `Nearest Walkable Position` limita le destinazioni non praticabili.
 
+La stessa matrice viene riutilizzata dalla regola di uscita Spawn dei dummy: Escort/Hybrid → payload, CTF → bandiera nemica, Push → proxy/fallback obiettivo, altre modalità → obiettivo corrente. A differenza del Teleport manuale, in assenza di una destinazione valida il dummy non riceve un fallback arbitrario: resta in Spawn Room e riprova.
+
 ## Modalità native
 
 La logica Arcade è neutrale rispetto all'esito della partita. Non chiama azioni custom per assegnare punti, completare round o dichiarare vincitori. La verifica live attraversa tutte le otto modalità:
@@ -185,14 +189,14 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 ## Repository e release
 
-Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso.
+Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. In `workshop/` viene mantenuto un solo file destinato all'importazione: `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` per uso interno.
 
 La release 0.8.0 resta **live-pending** finché non vengono registrati:
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;
 - stress join/leave/team switch;
-- matrice sulle otto modalità;
+- matrice sulle otto modalità, compresa l'uscita Spawn dei dummy;
 - soak di almeno 30 minuti con 12 slot;
 - diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
