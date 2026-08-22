@@ -1,0 +1,213 @@
+name: One-shot HUD Dummy Stability
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Trigger HUD dummy stability patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chatgpt/hud-dummy-stability
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Patch HUD and dummy stability
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'missing anchor: {label}')
+              if text.count(old) != 1:
+                  raise SystemExit(f'non-unique anchor: {label} ({text.count(old)})')
+              return text.replace(old, new, 1)
+
+          def replace_between(text, start_marker, end_marker, replacement, label):
+              start = text.find(start_marker)
+              if start < 0:
+                  raise SystemExit(f'missing start marker: {label}')
+              end = text.find(end_marker, start)
+              if end < 0:
+                  raise SystemExit(f'missing end marker: {label}')
+              return text[:start] + replacement + text[end:]
+
+          it_path = Path('workshop/ruang_irama.it-IT.workshop')
+          en_path = Path('tests/fixtures/semantic_reference.txt')
+          tests_path = Path('tests/test_dummy_bots.py')
+          readme_path = Path('README.md')
+          project_path = Path('docs/PROGETTO.md')
+          testdoc_path = Path('docs/TEST.md')
+          changelog_path = Path('CHANGELOG.md')
+
+          it = it_path.read_text(encoding='utf-8')
+          en = en_path.read_text(encoding='utf-8')
+
+          # HUD: same left/right indentation, one newline, no manual spaces on the right label.
+          for old, new in (
+              ('\\n     PLAYER VIBES', '\\nPLAYER VIBES'),
+              ('\\n     MUSIK PEMAIN', '\\nMUSIK PEMAIN'),
+              ('\\n     เพลงของผู้เล่น', '\\nเพลงของผู้เล่น'),
+          ):
+              it = replace_once(it, old, new, f'it HUD {old}')
+              en = replace_once(en, old, new, f'en HUD {old}')
+
+          # Passive dummy lock: no movement, normal combat damage or knockback.
+          old_lock = '''\t\tSet Knockback Dealt(Event Player, 0);\n\t\tSet Move Speed(Event Player, 10);\n'''
+          new_lock = '''\t\tSet Knockback Dealt(Event Player, 0);\n\t\tSet Damage Received(Event Player, 0);\n\t\tSet Knockback Received(Event Player, 0);\n\t\tClear Status(Event Player, Unkillable);\n\t\tSet Status(Event Player, Null, Unkillable, 9999);\n\t\tSet Move Speed(Event Player, 0);\n'''
+          it = replace_once(it, old_lock, new_lock, 'it dummy lock')
+          en = replace_once(en, old_lock, new_lock, 'en dummy lock')
+          jump_anchor = '\t\tDisallow Button(Event Player, Button(Melee));\n'
+          jump_new = jump_anchor + '\t\tDisallow Button(Event Player, Button(Jump));\n'
+          it = replace_once(it, jump_anchor, jump_new, 'it dummy jump lock')
+          en = replace_once(en, jump_anchor, jump_new, 'en dummy jump lock')
+          it = replace_once(it, 'regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 'regola("92 - Subrutin: Kunci bot/dummy tetap diam dan aman")', 'it lock title')
+          en = replace_once(en, 'rule("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 'rule("92 - Subrutin: Kunci bot/dummy tetap diam dan aman")', 'en lock title')
+
+          it_rule = '''regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
+          {
+          \tevento
+          \t{
+          \t\tOngoing - Each Player;
+          \t\tTutti;
+          \t\tTutti;
+          \t}
+
+          \tcondizioni
+          \t{
+          \t\tGlobale.Siap == True;
+          \t\tIs Dummy Bot(Event Player) == True;
+          \t\tHas Spawned(Event Player) == True;
+          \t\tIs Alive(Event Player) == True;
+          \t\tIs In Spawn Room(Event Player) == True;
+          \t\tCount Of(Spawn Points(Team Of(Event Player))) > 0;
+          \t}
+
+          \tazioni
+          \t{
+          \t\tEvent Player.PosisiMati = Vector(0, 0, 0);
+          \t\tEvent Player.PosisiBangkitAman = Vector(0, 0, 0);
+          \t\tIf(Or(Current Game Mode == Game Mode(Trasporto), Current Game Mode == Game Mode(Ibrida)));
+          \t\t\tIf(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+          \t\t\t\tEvent Player.PosisiMati = Payload Position;
+          \t\t\tEnd;
+          \t\tElse If(Current Game Mode == Game Mode(Cattura la Bandiera));
+          \t\t\tIf(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+          \t\t\t\tEvent Player.PosisiMati = Flag Position(Opposite Team Of(Team Of(Event Player)));
+          \t\t\tEnd;
+          \t\tElse If(Current Game Mode == Game Mode(Scorta));
+          \t\t\tIf(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
+          \t\t\t\tEvent Player.PosisiMati = Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))));
+          \t\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+          \t\t\t\tEvent Player.PosisiMati = Objective Position(Objective Index);
+          \t\t\tEnd;
+          \t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+          \t\t\tEvent Player.PosisiMati = Objective Position(Objective Index);
+          \t\tEnd;
+          \t\tIf(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) > 0.100);
+          \t\t\tEvent Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10);
+          \t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6);
+          \t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 16);
+          \t\t\t\t\tIf(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+          \t\t\t\t\t\tIf(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+          \t\t\t\t\t\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);
+          \t\t\t\t\t\tEnd;
+          \t\t\t\t\tEnd;
+          \t\t\t\tEnd;
+          \t\t\tEnd;
+          \t\tEnd;
+          \t}
+          }
+
+          '''
+          it_rule = '\n'.join(line[10:] if line.startswith('          ') else line for line in it_rule.splitlines()) + '\n'
+          en_rule = (it_rule.replace('regola(', 'rule(')
+              .replace('\n\tevento\n', '\n\tevent\n')
+              .replace('\n\tcondizioni\n', '\n\tconditions\n')
+              .replace('\n\tazioni\n', '\n\tactions\n')
+              .replace('\t\tTutti;', '\t\tAll;')
+              .replace('Globale.', 'Global.')
+              .replace('Game Mode(Trasporto)', 'Game Mode(Escort)')
+              .replace('Game Mode(Ibrida)', 'Game Mode(Hybrid)')
+              .replace('Game Mode(Cattura la Bandiera)', 'Game Mode(Capture The Flag)')
+              .replace('Game Mode(Scorta)', 'Game Mode(Push)'))
+
+          it = replace_between(it, 'regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', it_rule, 'Italian 03f')
+          en = replace_between(en, 'rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")', en_rule, 'English 03f')
+
+          it_path.write_text(it, encoding='utf-8')
+          en_path.write_text(en, encoding='utf-8')
+
+          tests = tests_path.read_text(encoding='utf-8')
+          tests = replace_once(tests, '        self.assertIn("\\\\n     PLAYER VIBES", self.it)\n        self.assertIn("\\\\n     MUSIK PEMAIN", self.it)\n', '        self.assertIn("\\\\nPLAYER VIBES", self.it)\n        self.assertIn("\\\\nMUSIK PEMAIN", self.it)\n        self.assertNotIn("\\\\n     PLAYER VIBES", self.it)\n', 'HUD test expectations')
+          tests = replace_once(tests, '        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)\n', '        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)\n        self.assertIn("Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10", self.it)\n        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6", self.it)\n        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 16", self.it)\n', 'dummy distance tests')
+          insert_before = '    def test_dummy_faces_nearest_living_human_without_extra_loop(self):\n'
+          protection_test = '''    def test_dummy_is_stationary_and_protected(self):
+              self.assertIn("Set Damage Received(Event Player, 0);", self.it)
+              self.assertIn("Set Knockback Received(Event Player, 0);", self.it)
+              self.assertIn("Set Status(Event Player, Null, Unkillable, 9999);", self.it)
+              self.assertIn("Set Move Speed(Event Player, 0);", self.it)
+              self.assertIn("Disallow Button(Event Player, Button(Jump));", self.it)
+
+          '''
+          protection_test = '\n'.join(line[10:] if line.startswith('          ') else line for line in protection_test.splitlines()) + '\n'
+          tests = replace_once(tests, insert_before, protection_test + insert_before, 'dummy protection test')
+          tests_path.write_text(tests, encoding='utf-8')
+
+          readme = readme_path.read_text(encoding='utf-8')
+          readme = replace_once(readme,
+              '- Un dummy nativo per squadra quando esiste uno slot libero, respawn massimo 30 s e uscita dalla Spawn Room verso una destinazione mode-specific percorribile.',
+              '- Un dummy nativo per squadra quando esiste uno slot libero: passivo e fermo, protetto da danno/knockback, respawn massimo 30 s, orientato verso l’umano vivo più vicino e posizionato a circa 10 m dalla destinazione mode-specific.',
+              'README dummy feature')
+          readme = replace_once(readme,
+              'I dummy nativi usano lo stesso principio per uscire dalla Spawn Room: payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell\'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Ogni destinazione passa da `Nearest Walkable Position`; se il punto richiesto non è disponibile, il dummy resta in spawn e la regola riprova senza teletrasportarlo a coordinate nulle.',
+              'I dummy nativi usano lo stesso principio per uscire dalla Spawn Room: payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell\'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Il punto finale viene cercato circa 10 m verso la spawn della propria squadra, accettato solo se resta tra 6 e 16 m dal target, è camminabile e ha terreno sotto; altrimenti il dummy resta in spawn e riprova. Dopo il posizionamento resta fermo, non riceve danno o knockback normale e continua a guardare l’umano vivo più vicino.',
+              'README dummy routing')
+          readme_path.write_text(readme, encoding='utf-8')
+
+          project = project_path.read_text(encoding='utf-8')
+          project = replace_once(project,
+              'Per i dummy nativi il runtime mantiene al massimo un\'istanza per Team 1 e una per Team 2 quando esiste uno slot libero. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, la regola di uscita sceglie una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo.',
+              'Per i dummy nativi il runtime mantiene al massimo un\'istanza per Team 1 e una per Team 2 quando esiste uno slot libero. Il tempo massimo di respawn resta 30 secondi come fallback, ma durante il normale gameplay il lock li rende passivi: movimento a 0, danno ricevuto e knockback ricevuto a 0, status `Unkillable`, nessun attacco/abilità e orientamento continuo verso l’umano vivo più vicino. Quando un dummy vivo si trova nella Spawn Room, la regola sceglie il target mode-specific, cerca un punto camminabile circa 10 m verso la spawn della propria squadra e lo accetta solo tra 6 e 16 m dal target con terreno valido sotto; se una verifica fallisce, non esegue alcun teleport e riprova al ciclo successivo.',
+              'PROGETTO dummy contract')
+          project_path.write_text(project, encoding='utf-8')
+
+          testdoc = testdoc_path.read_text(encoding='utf-8')
+          testdoc = replace_once(testdoc,
+              '- uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi;\n- confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;\n- a ogni spawn verificare che il dummy esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;',
+              '- verificare che il combattimento normale non possa uccidere né spostare con knockback i dummy e che restino fermi dopo il teleport;\n- forzare una morte amministrativa/scriptata e verificare che il fallback di respawn resti entro 30 secondi;\n- confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;\n- a ogni spawn verificare che il dummy esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità, a circa 10 m e comunque tra 6 e 16 m dal target; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;',
+              'TEST dummy live plan')
+          testdoc_path.write_text(testdoc, encoding='utf-8')
+
+          changelog = changelog_path.read_text(encoding='utf-8')
+          changelog = replace_once(changelog,
+              '- Il teleport automatico dei dummy verifica inoltre che il punto camminabile resti vicino al target e che un ray cast verso il basso trovi terreno prima di spostare il bot; se il controllo fallisce, il bot resta in spawn e riprova.\n',
+              '- Il teleport automatico dei dummy verifica inoltre che il punto camminabile resti vicino al target e che un ray cast verso il basso trovi terreno prima di spostare il bot; se il controllo fallisce, il bot resta in spawn e riprova.\n- I dummy passivi vengono ora collocati circa 10 m verso la propria spawn (accettazione 6–16 m), restano fermi, ignorano danno/knockback normale e mantengono lo sguardo sull’umano vivo più vicino; `PLAYER VIBES` usa la stessa indentazione del blocco sinistro.\n',
+              'CHANGELOG stability entry')
+          changelog_path.write_text(changelog, encoding='utf-8')
+          PY
+
+          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/validate_workshop.py
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py README.md docs/PROGETTO.md docs/TEST.md CHANGELOG.md
+          git commit -m "Align HUD and stabilize dummy placement"
+          git push origin HEAD:chatgpt/hud-dummy-stability
