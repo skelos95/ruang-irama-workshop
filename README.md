@@ -17,6 +17,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
+- Un dummy nativo per squadra quando esiste uno slot libero, respawn massimo 30 s e uscita dalla Spawn Room verso una destinazione mode-specific percorribile.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
@@ -90,8 +91,9 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 
 - Testi runtime, stati, effetti, 37 nomi icona e 26 località sono disponibili in EN/ID/TH.
 - I 100 generi, `CHILL`, nomi player ed eroi restano nomi propri universali.
-- Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia in entrambe le varianti clipboard.
-- Il **linguaggio del clipboard Workshop è localizzato**: il sorgente canonico usa `en-US`, mentre il client italiano deve ricevere la variante `it-IT`. Alcuni token cambiano (`variables → variabili`, `rule → regola`, `event → evento`), mentre altri restano identici in italiano (`Ongoing - Global`, `Button(Secondary Fire)`).
+- Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia.
+- Il file Workshop destinato al client italiano usa la grammatica clipboard `it-IT`: alcuni token cambiano (`variables → variabili`, `rule → regola`, `event → evento`), mentre altri restano identici (`Ongoing - Global`, `Button(Secondary Fire)`).
+- La fixture `tests/fixtures/semantic_reference.txt` usa grammatica `en-US` soltanto per il gate semantico e i test: **non è un file da importare nel client**.
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
 - Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
@@ -109,19 +111,21 @@ La destinazione Objective/Flag viene valutata al click:
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
+I dummy nativi usano lo stesso principio per uscire dalla Spawn Room: payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Ogni destinazione passa da `Nearest Walkable Position`; se il punto richiesto non è disponibile, il dummy resta in spawn e la regola riprova senza teletrasportarlo a coordinate nulle.
+
 La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom da alcun osservatore; dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 
 ## Importazione tramite copia/incolla
 
-Il sorgente funzionale canonico è [`workshop/ruang_irama.workshop`](workshop/ruang_irama.workshop), in grammatica `en-US`. Serve per manutenzione e validazione semantica.
-
-Con Overwatch impostato in **italiano**, il file da copiare è invece:
+Nel repository esiste **un solo file `.workshop` destinato all'utente**:
 
 [`workshop/ruang_irama.it-IT.workshop`](workshop/ruang_irama.it-IT.workshop)
 
-Apri la vista Raw di quel file e copia tutto, dalla prima riga `variabili` fino alla graffa finale. La variante italiana è generata dal canonico usando le tabelle di localizzazione di OverPy 9.7.13 e un manifest SHA-256 impedisce che diventi stale rispetto al sorgente principale.
+Con Overwatch impostato in italiano, apri la vista Raw di quel file e copia tutto, dalla prima riga `variabili` fino alla graffa finale. Il parser clipboard è sensibile alla localizzazione e alcuni literal contestuali devono restare nella forma effettivamente accettata dal client; per questo il file pubblicato viene mantenuto e testato direttamente come sorgente `it-IT`.
 
-Se si copia il file `en-US` nel client italiano, il sintomo può essere proprio quello osservato nel test live: **il pulsante arancione per incollare le regole non compare**. La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
+Il vecchio `workshop/ruang_irama.workshop` e il relativo manifest non fanno più parte del repository. La grammatica `en-US` necessaria ai test semantici vive esclusivamente nella fixture interna `tests/fixtures/semantic_reference.txt`, che non deve essere copiata in Overwatch.
+
+La guida completa è in [`docs/IMPORTAZIONE_ITALIANO.md`](docs/IMPORTAZIONE_ITALIANO.md).
 
 Dallo screenshot client del 21 agosto 2026 i limiti da verificare dopo il paste sono:
 
@@ -139,11 +143,10 @@ Da eseguire dalla radice del repository, senza dipendenze Python esterne:
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
-python tools/check_clipboard_import.py workshop/ruang_irama.workshop --language en-US
 python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 ```
 
-`check_clipboard_import.py` verifica il formato testuale di paste per entrambi i profili (UTF-8/BOM, delimitatori, grammatica strutturale, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
+`check_clipboard_import.py` verifica il formato testuale del paste (UTF-8/BOM, delimitatori, grammatica strutturale, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Il checker supporta anche il profilo `en-US` usato dalla fixture interna; per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
 
 Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue la suite `unittest` e il validatore semantico su push e pull request; i test del preflight clipboard sono inclusi automaticamente nella suite. Non esiste un workflow permanente che modifica o committa automaticamente il repository.
 

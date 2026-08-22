@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Static preflight for Workshop text copied into Overwatch.
 
-Overwatch's Workshop clipboard grammar is localized. The canonical project source
-is kept in en-US syntax, while the Italian client must receive the generated
-it-IT clipboard variant. This checker validates either profile without pretending
-to reproduce the client's compiled Element Count or Largest Rule metrics.
+Overwatch's Workshop clipboard grammar is localized. The user-facing project
+source is the it-IT Workshop file; the en-US profile is retained only for the
+internal semantic fixture and regression tests. This checker validates either
+profile without pretending to reproduce the client's compiled Element Count or
+Largest Rule metrics.
 """
 
 from __future__ import annotations

@@ -2,11 +2,9 @@
 
 Questa guida riguarda l'importazione tramite **copia/incolla del testo Workshop** nel client Overwatch con lingua testo impostata su Italiano (`it-IT`).
 
-## Correzione importante: il clipboard Workshop è localizzato
+## Il clipboard Workshop è localizzato
 
-Il sorgente canonico del progetto resta in `workshop/ruang_irama.workshop` e usa il formato `en-US`, ma **non è il file da incollare nel client italiano**.
-
-Il parser del clipboard Workshop usa token localizzati. Per `it-IT`, OverPy espone per esempio queste corrispondenze:
+Il parser del clipboard Workshop usa token localizzati. Per `it-IT` alcune corrispondenze strutturali sono, per esempio:
 
 | en-US | it-IT |
 |---|---|
@@ -19,13 +17,13 @@ Il parser del clipboard Workshop usa token localizzati. Per `it-IT`, OverPy espo
 | `global` | `globale` |
 | `player` | `giocatore` |
 
-Anche azioni, valori, enum, eventi e nomi che fanno parte del linguaggio Workshop possono avere una rappresentazione localizzata. Per questo una semplice sostituzione manuale di poche parole non è affidabile.
+Non tutto però viene tradotto nello stesso modo: diversi token ed enum restano nella forma inglese accettata dal parser italiano. I test live hanno già mostrato, per esempio, che una localizzazione troppo aggressiva dei literal di `Color(...)` può produrre un errore anche quando la struttura generale è riconosciuta.
 
-Il sintomo tipico di una lingua clipboard non compatibile è esattamente quello osservato nel client: **il pulsante arancione di incolla non compare** anche se il testo è presente negli appunti.
+Per questo il progetto mantiene direttamente il file clipboard italiano e non applica sostituzioni manuali indiscriminate.
 
-## File corretto da copiare
+## Unico file da copiare
 
-Con client italiano, copia il contenuto di:
+Con client italiano, copia esclusivamente:
 
 `workshop/ruang_irama.it-IT.workshop`
 
@@ -38,7 +36,7 @@ variabili
 
 e deve contenere regole introdotte da `regola("...")`.
 
-Non copiare `workshop/ruang_irama.workshop` direttamente nel client italiano: quello è il sorgente canonico `en-US` usato per manutenzione e validazione semantica.
+Nel repository non esistono più un secondo `.workshop` inglese né un manifest da scegliere. La fixture `tests/fixtures/semantic_reference.txt` usa grammatica `en-US` soltanto per i test e il validatore semantico: **non è un file destinato all'importazione nel client**.
 
 ## Procedura di copia/incolla
 
@@ -51,33 +49,27 @@ Non copiare `workshop/ruang_irama.workshop` direttamente nel client italiano: qu
 7. Premi il pulsante arancione e attendi che il client elabori tutto il file.
 8. Apri **Diagnostica script** e registra `Numero totale elementi` e `Regola più grande`.
 
-Se il pulsante arancione non compare nemmeno con il file `it-IT`, fai uno screenshot e conserva il contenuto esatto degli appunti: a quel punto si tratta di un token non riconosciuto o di un errore di sintassi/localizzazione da isolare.
+Se il pulsante arancione non compare, oppure compare un errore con numero di riga, conserva lo screenshot e la riga indicata: il client resta l'autorità finale per i token contestuali che non possono essere certificati completamente dal controllo statico.
 
-## Come viene mantenuto sincronizzato
+## Manutenzione del sorgente
 
-`workshop/ruang_irama.it-IT.workshop` è un artefatto generato dal sorgente canonico tramite OverPy, con:
+`workshop/ruang_irama.it-IT.workshop` è il sorgente Workshop pubblicato e destinato al client italiano. Le modifiche funzionali devono essere applicate a questo file e accompagnate da test che ne verificano le invarianti rilevanti.
 
-- input: `workshop/ruang_irama.workshop` (`en-US`);
-- decompilazione: OverPy con lingua `en-US`;
-- ricompilazione: OverPy con lingua `it-IT`;
-- output: `workshop/ruang_irama.it-IT.workshop`.
-
-Il file `workshop/ruang_irama.it-IT.manifest` registra l'hash SHA-256 del sorgente canonico e il commit OverPy usato. I test falliscono se il sorgente canonico cambia senza rigenerare la variante italiana.
-
-Non modificare manualmente il file `it-IT`: le modifiche funzionali vanno fatte sul sorgente canonico e poi rigenerate.
+La fixture `tests/fixtures/semantic_reference.txt` è una rappresentazione interna in grammatica `en-US` usata dal validatore semantico. Serve a controllare struttura, ownership e invarianti del progetto, ma non viene presentata come file clipboard utente e non sostituisce il test del sorgente italiano.
 
 ## Preflight automatico
 
-Per il sorgente canonico:
-
-```powershell
-python tools/check_clipboard_import.py workshop/ruang_irama.workshop --language en-US
-```
-
-Per il file italiano:
+Per il file destinato al client:
 
 ```powershell
 python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+```
+
+La suite completa esegue anche i controlli sul profilo interno `en-US`:
+
+```powershell
+python -m unittest discover -s tests -p 'test_*.py'
+python tools/validate_workshop.py
 ```
 
 Il checker controlla:
@@ -87,8 +79,8 @@ Il checker controlla:
 - nessun fence Markdown;
 - parentesi, graffe e quadre bilanciate;
 - stringhe chiuse;
-- grammatica strutturale coerente con `en-US` oppure `it-IT`;
-- nessun miscuglio di token strutturali tra i due profili;
+- grammatica strutturale coerente con il profilo selezionato;
+- nessun miscuglio di token strutturali tra `en-US` e `it-IT`;
 - assenza di virgolette tipografiche o NBSP fuori dalle stringhe;
 - dimensione testuale di ogni regola, con target statico massimo di 80 KB.
 
@@ -111,12 +103,12 @@ Dallo screenshot del client del 21/08/2026:
 
 Controlla nell'ordine:
 
-1. stai copiando `workshop/ruang_irama.it-IT.workshop`, non il canonico `en-US`;
+1. stai copiando `workshop/ruang_irama.it-IT.workshop` dalla vista Raw;
 2. il clipboard inizia con `variabili`;
 3. non ci sono ``` o testo della pagina GitHub;
 4. non ci sono virgolette tipografiche o caratteri invisibili;
 5. esegui il preflight `--language it-IT`;
-6. se il checker è verde ma il pulsante arancione non compare, invia uno screenshot e ispezioneremo il primo token non accettato dal client.
+6. se il checker è verde ma il client segnala una riga, invia lo screenshot con il numero esatto: il token contestuale va confrontato con la forma realmente accettata dal parser italiano.
 
 ## Dopo un import riuscito
 

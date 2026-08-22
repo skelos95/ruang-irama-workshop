@@ -1247,10 +1247,22 @@ regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 
 	azioni
 	{
-		If(Count Of(All Players On Objective(All Teams)) > 0);
-			Teleport(Event Player, Position Of(First Of(All Players On Objective(All Teams))));
-		Else;
-			Teleport(Event Player, Objective Position(Objective Index));
+		If(Or(Current Game Mode == Game Mode(Trasporto), Current Game Mode == Game Mode(Ibrida)));
+			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+				Teleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
+			End;
+		Else If(Current Game Mode == Game Mode(Cattura la Bandiera));
+			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+				Teleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
+			End;
+		Else If(Current Game Mode == Game Mode(Scorta));
+			If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
+				Teleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
+			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+				Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+			End;
+		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+			Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
 		End;
 	}
 }
