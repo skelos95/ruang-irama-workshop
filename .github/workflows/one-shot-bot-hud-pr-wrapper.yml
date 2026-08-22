@@ -2,7 +2,7 @@ name: One-shot Bot HUD PR Wrapper
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: write
@@ -37,12 +37,141 @@ jobs:
           git fetch origin chatgpt/fix-bot-teleport-hud-order
           git checkout -B chatgpt/fix-bot-teleport-hud-order origin/chatgpt/fix-bot-teleport-hud-order
           python /tmp/patch_bot_hud.py
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # Never accept world origin as a walkable fallback for dummy teleports.
+          for path_name, start_marker, end_marker in (
+              ('workshop/ruang_irama.it-IT.workshop', 'regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'regola("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")'),
+              ('tests/fixtures/semantic_reference.txt', 'rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 'rule("03g - Bot/Dummy: Selalu hadap pemain hidup terdekat")'),
+          ):
+              path = Path(path_name)
+              text = path.read_text(encoding='utf-8')
+              start = text.index(start_marker)
+              end = text.index(end_marker, start)
+              block = text[start:end]
+              if 'Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100' not in block:
+                  block, count = re.subn(
+                      r'(?m)^(\s*)Teleport\(Event Player, Event Player\.PosisiBangkitAman\);$',
+                      r'\1If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);\n\1\tTeleport(Event Player, Event Player.PosisiBangkitAman);\n\1End;',
+                      block,
+                  )
+                  if count != 5:
+                      raise SystemExit(f'{path_name}: expected 5 guarded dummy teleports, got {count}')
+                  text = text[:start] + block + text[end:]
+                  path.write_text(text, encoding='utf-8')
+
+          tests_path = Path('tests/test_dummy_bots.py')
+          tests = tests_path.read_text(encoding='utf-8')
+          guard_assert = '        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100", self.it)\n'
+          if guard_assert not in tests:
+              anchor = '        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)\n'
+              if anchor not in tests:
+                  raise SystemExit('dummy test teleport anchor missing')
+              tests = tests.replace(anchor, anchor + guard_assert, 1)
+              tests_path.write_text(tests, encoding='utf-8')
+
+          validator_path = Path('tools/validate_workshop.py')
+          validator = validator_path.read_text(encoding='utf-8')
+
+          hud_start = validator.index('    hud_calls = list(iter_calls(source, "Create HUD Text"))')
+          hud_end = validator.index('\n    checks.require("HudMenu" in players', hud_start)
+          hud_block = '''    hud_calls = list(iter_calls(source, "Create HUD Text"))
+    checks.require(bool(hud_calls), "nessun HUD testuale trovato")
+    for call in hud_calls:
+        checks.require(len(call.args) >= 4, "Create HUD Text malformato")
+
+    server_title = next(
+        (
+            call for call in hud_calls
+            if len(call.args) >= 9
+            and "CHILL DEDICATED SERVER" in call.args[1]
+            and "Global.TeksWaktuServer" in call.args[1]
+        ),
+        None,
+    )
+    checks.require(server_title is not None, "HUD titolo CHILL e timer server assente")
+    if server_title:
+        checks.require("SERVER LOCATION" in server_title.args[2] and "Global.NamaLokasiInggris" in server_title.args[2],
+                       "HUD centro deve mostrare SERVER LOCATION sotto titolo/timer")
+        checks.require(r"\\nMENU" in server_title.args[3],
+                       "HUD centro deve mostrare MENU sotto la location")
+        checks.equal(server_title.args[4].strip(), "Top", "HUD centro: posizione")
+        checks.equal(server_title.args[5].strip(), "-100", "HUD centro: sort order")
+'''
+          validator = validator[:hud_start] + hud_block + validator[hud_end:]
+
+          old_selector = '    objective_rule = next((rule for rule in rules if "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)'
+          new_selector = '''    objective_rule = next(
+        (
+            rule for rule in rules
+            if "Payload Position" in rule.body
+            and "Flag Position(" in rule.body
+            and "Objective Position(Objective Index)" in rule.body
+            and ("Button(Primary Fire)" in rule.body or "PerintahTeleportasi == 1" in rule.body or event_type(rule) == "Subroutine")
+        ),
+        None,
+    )'''
+          if old_selector not in validator:
+              raise SystemExit('objective dispatcher selector anchor missing')
+          validator = validator.replace(old_selector, new_selector, 1)
+
+          old_raycast = '    checks.equal(source.count("Ray Cast Hit Position("), 1, "raycast Camera")'
+          new_raycast = '''    camera_rule = rule_by_subroutine(rules, "MulaiKamera")
+    checks.require(camera_rule is not None, "subroutine Camera MulaiKamera assente")
+    if camera_rule:
+        checks.equal(camera_rule.body.count("Ray Cast Hit Position("), 1, "raycast Camera")
+    dummy_spawn = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Is In Spawn Room(Event Player) == True;" in rule.body
+            and "Event Player.PosisiBangkitAman" in rule.body
+            and "Ray Cast Hit Position(" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_spawn is not None, "teleport dummy dalla spawn senza verifica pavimento")
+    if dummy_spawn:
+        checks.require("Nearest Walkable Position(" in dummy_spawn.body,
+                       "teleport dummy non usa posizione camminabile")
+        checks.require("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100" in dummy_spawn.body,
+                       "teleport dummy può usare l'origine del mondo")
+        checks.require("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)" in dummy_spawn.body,
+                       "teleport dummy non conferma il pavimento sotto la destinazione")'''
+          if old_raycast not in validator:
+              raise SystemExit('raycast validator anchor missing')
+          validator = validator.replace(old_raycast, new_raycast, 1)
+          validator_path.write_text(validator, encoding='utf-8')
+
+          vt_path = Path('tests/test_validate_workshop.py')
+          vt = vt_path.read_text(encoding='utf-8')
+          start = vt.index('    def test_chill_title_requires_a_blank_spacer_line(self) -> None:')
+          end = vt.index('\n    def test_primary_secondary_must_not_redraw_menu', start)
+          replacement = '''    def test_chill_center_hud_keeps_reference_order(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 9
+            and "CHILL DEDICATED SERVER" in call.args[1]
+            and "Global.TeksWaktuServer" in call.args[1]
+        )
+        self.assertIn("SERVER LOCATION", call.args[2])
+        self.assertIn(r"\\nMENU", call.args[3])
+        mutated = self.replace_call_argument(call, 3, "Null")
+        self.assert_rejected(mutated, "HUD centro deve mostrare MENU")
+'''
+          vt = vt[:start] + replacement + vt[end:]
+          vt_path.write_text(vt, encoding='utf-8')
+          PY
+
           python -m unittest tests.test_dummy_bots
           python -m unittest discover -s tests -p 'test_*.py'
           python tools/validate_workshop.py
           python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py docs/PROGETTO.md CHANGELOG.md
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_dummy_bots.py tools/validate_workshop.py tests/test_validate_workshop.py docs/PROGETTO.md CHANGELOG.md
           git commit -m "Fix bot objective teleport and HUD order"
           git push origin HEAD:chatgpt/fix-bot-teleport-hud-order
