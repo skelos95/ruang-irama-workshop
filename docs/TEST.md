@@ -9,12 +9,14 @@ Eseguire dalla radice del repository:
 ```powershell
 python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
+python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 ```
 
 Accettazione:
 
 - tutti gli unit test verdi;
 - validatore semantico verde;
+- preflight clipboard `it-IT` verde;
 - nessuna dipendenza Python esterna;
 - nessun errore da `git diff --check`;
 - un solo workflow permanente, `validate-workshop.yml`.
@@ -24,7 +26,7 @@ Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`]
 ## 2. Preparazione client
 
 1. Aggiornare Overwatch alla build del **19 agosto 2026**.
-2. Importare da zero `workshop/ruang_irama.workshop`; non riutilizzare un replay precedente alla patch.
+2. Impostare la lingua testo del client su Italiano e importare da zero `workshop/ruang_irama.it-IT.workshop` dalla vista Raw; non riutilizzare un replay precedente alla patch.
 3. Annotare codice import, build client, regione, data/ora e piattaforma.
 4. Abilitare la diagnostica host quando si acquisiscono le metriche.
 5. Preparare 12 slot. I dummy sono sufficienti per il soak; la prova di input simultanei richiede più utenti reali.
@@ -89,7 +91,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - controllare glifi Thai, wrapping, allineamento Top/Left/Right e assenza di sovrapposizioni;
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
-- controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura.
+- controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
 - verificare che il promemoria `Crouch + command` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server.
 
 Focus dati:
@@ -174,7 +176,10 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 ### Bot e dummy
 
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
+- confermare al massimo un dummy nativo per squadra quando è disponibile uno slot;
+- uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
+- a ogni spawn verificare che il dummy esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
 - verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
 - mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
 
@@ -196,7 +201,7 @@ Dopo ogni cambio:
 
 Lo script non deve assegnare punti o vincitori. Eseguire almeno un round o segmento significativo per riga:
 
-| Modalità | Objective/Teleport | Transizioni da verificare |
+| Modalità | Objective/Teleport e uscita Spawn dummy | Transizioni da verificare |
 |---|---|---|
 | Push | proxy obiettivo + fallback Objective Position | robot/obiettivo, overtime |
 | Flashpoint | Objective Position dell'indice attivo | rotazione punti |
@@ -206,6 +211,8 @@ Lo script non deve assegnare punti o vincitori. Eseguire almeno un round o segme
 | Hybrid | Payload dopo la cattura | cattura → scorta |
 | Escort | Payload | checkpoint e overtime |
 | Assault | Objective Position | punto A → punto B |
+
+Per ogni riga verificare sia il Teleport manuale sia l'uscita Spawn dei dummy: il punto finale deve essere percorribile, il fallback deve restare nella stessa famiglia di obiettivo e l'assenza temporanea della posizione non deve causare teleport a `Vector(0, 0, 0)` o nel vuoto.
 
 Priorità mappe:
 
@@ -266,6 +273,7 @@ D.Mon: PASS/FAIL
 EN/ID/TH e 12 menu: PASS/FAIL
 Input simultanei: PASS/FAIL
 Join/leave: PASS/FAIL
+Dummy objective routing: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
 Cascata full-lobby: PASS/FAIL
