@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from hashlib import sha256
 from pathlib import Path
 import sys
 import unittest
@@ -19,19 +18,24 @@ class ClipboardImportTests(unittest.TestCase):
         cls.source = cls.source_path.read_text(encoding="utf-8")
         cls.italian = cls.italian_path.read_text(encoding="utf-8")
 
-    def test_canonical_english_source_is_clipboard_safe(self) -> None:
+    def test_internal_semantic_fixture_is_clipboard_safe(self) -> None:
         report = clipboard.check_path(self.source_path, "en-US")
         self.assertEqual(report.language, "en-US")
         self.assertGreater(report.rule_count, 0)
         self.assertLess(report.largest_rule.bytes_utf8, clipboard.CLIENT_LARGEST_RULE_LIMIT_BYTES)
         self.assertLessEqual(report.largest_rule.bytes_utf8, clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
 
-    def test_generated_italian_source_is_clipboard_safe(self) -> None:
+    def test_italian_clipboard_source_is_clipboard_safe(self) -> None:
         report = clipboard.check_path(self.italian_path, "it-IT")
         self.assertEqual(report.language, "it-IT")
         self.assertGreater(report.rule_count, 0)
         self.assertLess(report.largest_rule.bytes_utf8, clipboard.CLIENT_LARGEST_RULE_LIMIT_BYTES)
         self.assertLessEqual(report.largest_rule.bytes_utf8, clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
+
+    def test_only_italian_workshop_is_user_facing(self) -> None:
+        self.assertTrue(self.italian_path.is_file())
+        self.assertFalse((ROOT / "workshop" / "ruang_irama.workshop").exists())
+        self.assertFalse((ROOT / "workshop" / "ruang_irama.it-IT.manifest").exists())
 
     def test_italian_source_uses_localized_structural_grammar(self) -> None:
         stripped = self.italian.lstrip()
@@ -55,11 +59,10 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertNotIn("If(And(Globale.PemainAktif.WaktuIkonNasibBerakhir > 0", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.KartuNasibAktif == False, Globale.PemainAktif.MenuTerbuka == False", self.italian)
 
-    def test_english_and_italian_have_same_rule_count(self) -> None:
+    def test_semantic_fixture_and_italian_have_same_rule_count(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
         italian = clipboard.check_path(self.italian_path, "it-IT")
         self.assertEqual(english.rule_count, italian.rule_count)
-
 
     def test_auto_detects_both_profiles(self) -> None:
         self.assertEqual(clipboard.check_text(self.source).language, "en-US")
