@@ -49,6 +49,10 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Nearest Walkable Position", self.it)
         self.assertNotIn("All Players On Objective(All Teams)", self.it)
         self.assertNotIn("Teleport(Event Player, Objective Position(Objective Index));", self.it)
+        self.assertIn("Event Player.PosisiBangkitAman = Vector(0, 0, 0);", self.it)
+        self.assertIn("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)", self.it)
+        self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100", self.it)
+        self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)
 
     def test_dummy_faces_nearest_living_human_without_extra_loop(self):
         self.assertIn("Start Facing(Event Player", self.it)

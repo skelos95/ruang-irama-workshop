@@ -1247,22 +1247,58 @@ regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 
 	azioni
 	{
+		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 		If(Or(Current Game Mode == Game Mode(Trasporto), Current Game Mode == Game Mode(Ibrida)));
 			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
-				Teleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
+				Event Player.PosisiBangkitAman = Nearest Walkable Position(Payload Position + Vector(2, 0, 0));
+				If(Distance Between(Event Player.PosisiBangkitAman, Payload Position + Vector(2, 0, 0)) <= 12);
+					If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+						If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+							Teleport(Event Player, Event Player.PosisiBangkitAman);
+						End;
+					End;
+				End;
 			End;
 		Else If(Current Game Mode == Game Mode(Cattura la Bandiera));
 			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
-				Teleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
+				Event Player.PosisiBangkitAman = Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0));
+				If(Distance Between(Event Player.PosisiBangkitAman, Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)) <= 12);
+					If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+						If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+							Teleport(Event Player, Event Player.PosisiBangkitAman);
+						End;
+					End;
+				End;
 			End;
 		Else If(Current Game Mode == Game Mode(Scorta));
 			If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
-				Teleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
+				Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0));
+				If(Distance Between(Event Player.PosisiBangkitAman, Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)) <= 12);
+					If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+						If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+							Teleport(Event Player, Event Player.PosisiBangkitAman);
+						End;
+					End;
+				End;
 			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+				Event Player.PosisiBangkitAman = Nearest Walkable Position(Objective Position(Objective Index));
+				If(Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12);
+					If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+						If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+							Teleport(Event Player, Event Player.PosisiBangkitAman);
+						End;
+					End;
+				End;
 			End;
 		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-			Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Objective Position(Objective Index));
+			If(Distance Between(Event Player.PosisiBangkitAman, Objective Position(Objective Index)) <= 12);
+				If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
+					If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+						Teleport(Event Player, Event Player.PosisiBangkitAman);
+					End;
+				End;
+			End;
 		End;
 	}
 }
