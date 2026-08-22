@@ -22,6 +22,9 @@ Stato: **static-ready / live-pending**.
 - Menu e Camera condividono ora il latch Interact: cambiare stato di Crouch durante lo stesso hold non può attivare entrambi.
 - Crouch Privacy ora è ON per default, esclude gli umani privati dalla Camera custom e interrompe una Camera già agganciata quando il target attiva la privacy.
 - Rafforzata la separazione bot/dummy: lifecycle, HUD, menu, input e funzioni player non attraversano più il percorso bot dedicato.
+- I dummy nativi ora escono dalla Spawn Room usando destinazioni mode-specific percorribili: payload per Escort/Hybrid, bandiera nemica per CTF, proxy/fallback obiettivo per Push e obiettivo corrente negli altri casi; una destinazione non valida non produce più un teleport nel vuoto.
+- Confermati massimo un dummy nativo per squadra e respawn massimo 30 secondi, con regressioni statiche dedicate al routing dalla Spawn Room.
+- Repository semplificato a un solo file `.workshop` destinato all'utente (`workshop/ruang_irama.it-IT.workshop`); la grammatica `en-US` resta esclusivamente come fixture interna di validazione e la documentazione non cita più sorgenti/manifest rimossi.
 - Documentazione sincronizzata con le otto modalità native supportate e con le patch client di agosto 2026.
 - Rimosso il workflow di manutenzione che generava commit automatici; resta un solo workflow di validazione senza dipendenze Python esterne.
 
