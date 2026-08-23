@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   validate:
@@ -24,7 +25,54 @@ jobs:
           python-version: '3.12'
 
       - name: Run validator unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+        id: unit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -p 'test_*.py' 2>&1 | tee unit-test.log
+
+      - name: Publish temporary diagnostics
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          lines = [line.strip() for line in Path('unit-test.log').read_text(encoding='utf-8', errors='replace').splitlines() if line.strip()]
+          tail = lines[-12:] if lines else ['unit-test.log empty']
+          for index, line in enumerate(tail):
+              description = line[:140]
+              payload = json.dumps({
+                  'state': 'failure',
+                  'context': f'pr37-diagnostic/{index:02d}',
+                  'description': description,
+              }).encode('utf-8')
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/skelos95/ruang-irama-workshop/statuses/{os.environ['HEAD_SHA']}",
+                  data=payload,
+                  headers={
+                      'Authorization': f"Bearer {os.environ['GITHUB_TOKEN']}",
+                      'Accept': 'application/vnd.github+json',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                      'User-Agent': 'pr37-diagnostics',
+                      'Content-Type': 'application/json',
+                  },
+                  method='POST',
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  print(response.status, description)
+          PY
+
+      - name: Fail if unit tests failed
+        if: steps.unit.outcome != 'success'
+        run: exit 1
 
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
