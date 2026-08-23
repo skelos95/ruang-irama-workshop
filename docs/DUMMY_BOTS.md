@@ -7,14 +7,16 @@ Comportamento atteso:
 - eroe casuale;
 - respawn massimo di 30 secondi;
 - nessun menu Arcade, HUD personale o input offensivo;
+- velocità di movimento fissata al **20%** per bot AI e dummy;
 - `Damage Dealt = 0`, quindi il dummy non danneggia i player;
 - `Damage Received = 100`, quindi i player avversari possono danneggiarlo e ucciderlo normalmente;
 - quando entra nella Spawn Room, registra una scadenza a 1 secondo; il controllo periodico attende il timestamp senza usare `Wait`, poi cerca una destinazione mode-specific vicina all'obiettivo o alla bandiera e teletrasporta soltanto verso una posizione percorribile con terreno valido;
 - se la destinazione non è valida, resta in spawn e riprova invece di usare coordinate nulle;
-- guarda continuamente il player umano vivo più vicino;
-- alla morte interrompe il facing e rientra nel normale ciclo di respawn.
+- fuori dalla Spawn Room guarda il player umano vivo più vicino e avanza automaticamente nella propria direzione `Forward`, senza dipendere da input direzionali;
+- se non esiste un umano vivo interrompe sia facing sia throttle;
+- alla morte interrompe facing e throttle, azzera il timestamp e rientra nel normale ciclo di respawn.
 
-Il timestamp viene azzerato alla morte, riarmato al respawn e ripianificato dopo ogni tentativo; quando il dummy viene rimosso scompare con la sua entità. La separazione tra guardia di creazione e guardia di rimozione evita il ciclo crea/distruggi quando una squadra oscilla vicino al limite.
+Il throttle automatico è riservato ai dummy Workshop; gli iBot conservano la propria navigazione AI nativa, limitata al 20%. Il timestamp viene azzerato alla morte, riarmato al respawn e ripianificato dopo ogni tentativo. Prima di rimuovere un dummy vengono fermati facing e throttle, poi l'entità viene distrutta. La separazione tra guardia di creazione e guardia di rimozione evita il ciclo crea/distruggi quando una squadra oscilla vicino al limite.
 
 ## Destinazioni dalla Spawn Room
 

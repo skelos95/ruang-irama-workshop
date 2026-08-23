@@ -90,7 +90,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - aprire, navigare avanti/indietro, applicare, tornare e riaprire;
 - verificare testo, stato, feedback e comando localizzati;
 - verificare una riga vuota tra contenuto e comandi;
-- controllare glifi Thai, wrapping, allineamento Top/Left/Right e assenza di sovrapposizioni;
+- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left/Right `-2/-1/0` + roster `1..12`, senza righe fantasma o sovrapposizioni;
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
@@ -184,7 +184,9 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - riempire la squadra: il dummy deve essere rimosso per rendere disponibile la capacità di 6 umani; ripetere ingressi e uscite vicino al limite e verificare assenza di cicli crea/distruggi o spam `Create Dummy Bot`;
 - uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
+- verificare `Move Speed = 20%` sia per bot AI sia per dummy; gli iBot devono continuare a usare la propria navigazione nativa;
 - a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
+- fuori dalla Spawn Room e con almeno un umano vivo, lasciare il dummy senza input e verificare che avanzi automaticamente verso il target seguendo il facing; eliminare tutti i target, uccidere il dummy e riempire il team, controllando in ogni caso che il throttle si arresti;
 - verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
 - mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
 

@@ -10,14 +10,14 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 
 ## Funzioni
 
-- HUD centrale con nome server, countdown e località configurabile.
+- HUD centrale con nome server, countdown e località configurabile, allineato su slot Top/Left/Right deterministici.
 - Roster sinistro con icona, eroe, player e minuti; roster destro con genere musicale.
 - 12 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
-- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, libera il posto quando la squadra è piena e mantiene disponibile la capacità per 6 umani per team.
+- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, libera il posto quando la squadra è piena, si muove automaticamente al 20% verso l'umano vivo più vicino e mantiene disponibile la capacità per 6 umani per team.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
@@ -99,6 +99,7 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
 - Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
+- La griglia fissa usa nove handle: Top `0/1/2`, Left `-2/-1/0` e Right `-2/-1/0`; roster e menu occupano rispettivamente gli slot `1..12` e `Top 3`, senza newline di compensazione.
 
 Le liste canoniche sono in [`docs/GENERI.md`](docs/GENERI.md) e [`docs/SERVER_LOCATIONS.md`](docs/SERVER_LOCATIONS.md).
 
@@ -113,7 +114,7 @@ La destinazione Objective/Flag viene valutata al click:
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
-I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova.
+I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; il dummy riceve inoltre un throttle `Forward` rivalutato che lo fa avanzare automaticamente verso l'umano vivo più vicino e viene fermato su morte, assenza target o rimozione.
 
 La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom e Vision/inspection non ne mostrano nome o nameplate. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 

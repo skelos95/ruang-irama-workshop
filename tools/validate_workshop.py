@@ -894,6 +894,15 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
             checks.require(False, "Create HUD Text malformato")
             continue
         visible_text = call.args[2] + "\n" + call.args[3]
+        visible_literals = [
+            parse_literal(custom.args[0])
+            for custom in iter_calls(visible_text, "Custom String")
+            if custom.args
+        ]
+        if visible_literals and not any(literal and literal.strip() for literal in visible_literals):
+            continue
+        if "CHILL DEDICATED SERVER" in visible_text and "Global.TeksWaktuServer" in visible_text:
+            continue
         if "Custom String" in visible_text and re.search(r"[A-Za-z\u0e00-\u0e7f]", visible_text):
             found = language_triads(visible_text)
             selectors = (
@@ -983,15 +992,132 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     )
     checks.require(server_title is not None, "HUD titolo CHILL e timer server assente")
     if server_title:
-        title_literals = [
-            parse_literal(custom.args[0])
-            for custom in iter_calls(server_title.args[3], "Custom String")
-            if custom.args
+        checks.equal(server_title.args[2].strip(), "Null", "HUD titolo CHILL: Subheader")
+        checks.equal(server_title.args[4].strip(), "Top", "HUD titolo CHILL: posizione")
+        checks.equal(server_title.args[5].strip(), "0", "HUD titolo CHILL: ordinamento")
+        checks.require('Custom String("{0} [{1}]"' in server_title.args[3],
+                       "HUD titolo CHILL deve mostrare il timer tra parentesi quadre")
+        checks.require("\\n" not in server_title.args[3],
+                       "HUD titolo CHILL non deve contenere spaziatura incorporata")
+
+    init_rule = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Global"
+            and "CHILL DEDICATED SERVER" in rule.body
+            and "Global.Siap = True;" in rule.body
+        ),
+        None,
+    )
+    checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
+    if init_rule:
+        init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
+        checks.equal(len(init_hud_calls), 9, "numero HUD fissi nella regola iniziale")
+
+    global_hud_calls = [
+        call for call in hud_calls
+        if call.args and call.args[0].strip() == "Global.PemainManusia"
+    ]
+    checks.equal(len(global_hud_calls), 11, "numero HUD globali: nove fissi e due roster")
+
+    fixed_slots = {
+        ("Left", "-2"),
+        ("Left", "-1"),
+        ("Left", "0"),
+        ("Right", "-2"),
+        ("Right", "-1"),
+        ("Right", "0"),
+        ("Top", "0"),
+        ("Top", "1"),
+        ("Top", "2"),
+    }
+    fixed_hud: dict[tuple[str, str], Call] = {}
+    for slot in sorted(fixed_slots):
+        matches = [
+            call for call in hud_calls
+            if len(call.args) >= 6
+            and call.args[0].strip() == "Global.PemainManusia"
+            and call.args[4].strip() == slot[0]
+            and call.args[5].strip() == slot[1]
         ]
-        checks.require(
-            any(literal is not None and literal.endswith("\n ") for literal in title_literals),
-            "HUD titolo CHILL deve mantenere una riga vuota prima del menu",
-        )
+        checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
+        if matches:
+            fixed_hud[slot] = matches[0]
+    checks.equal(len(fixed_hud), 9, "griglia HUD fissa Top/Left/Right")
+
+    field_contract = {
+        ("Left", "-2"): ("subheader", "Button(Crouch)"),
+        ("Left", "-1"): ("subheader", 'Custom String(" ")'),
+        ("Left", "0"): ("text", "LOBBY TIME"),
+        ("Right", "-2"): ("subheader", "Button(Melee)"),
+        ("Right", "-1"): ("text", 'Custom String("  ")'),
+        ("Right", "0"): ("text", "PLAYER VIBES"),
+        ("Top", "0"): ("text", "CHILL DEDICATED SERVER"),
+        ("Top", "1"): ("subheader", "SERVER LOCATION"),
+        ("Top", "2"): ("text", 'Custom String("  ")'),
+    }
+    for slot, (field, token) in field_contract.items():
+        call = fixed_hud.get(slot)
+        if not call:
+            continue
+        field_index = 2 if field == "subheader" else 3
+        other_index = 3 if field == "subheader" else 2
+        checks.require(token in call.args[field_index],
+                       f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
+        checks.equal(call.args[other_index].strip(), "Null",
+                     f"HUD fisso {slot[0]} sort {slot[1]}: campo non usato")
+
+    for slot, expected_labels in {
+        ("Left", "-2"): ("HOLD {0}:", "TAHAN {0}:", "กด {0} ค้าง:"),
+        ("Left", "0"): ("LOBBY TIME", "WAKTU LOBI", "เวลาในล็อบบี้"),
+        ("Right", "-2"): ("HOLD {0} 0.5 SEC", "TAHAN {0} 0,5 DTK", "กด {0} ค้าง 0.5 วิ"),
+        ("Right", "0"): ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น"),
+    }.items():
+        call = fixed_hud.get(slot)
+        if not call:
+            continue
+        localized_field = call.args[2] if slot[1] == "-2" else call.args[3]
+        for label in expected_labels:
+            checks.require(label in localized_field,
+                           f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
+
+    checks.require("9 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
+                   "diagnostica HUD non include i nove handle fissi")
+
+    roster_rule = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.HudPemainDibuat = True;" in rule.body
+            and "Event Player.HudKiri = Last Text ID;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
+        ),
+        None,
+    )
+    checks.require(roster_rule is not None, "renderer HUD roster umano assente")
+    if roster_rule:
+        roster_calls = list(iter_calls(roster_rule.body, "Create HUD Text"))
+        checks.equal(len(roster_calls), 2, "renderer HUD roster: numero handle")
+        for side in ("Left", "Right"):
+            side_calls = [call for call in roster_calls if len(call.args) >= 6 and call.args[4].strip() == side]
+            checks.equal(len(side_calls), 1, f"renderer HUD roster {side}")
+            if not side_calls:
+                continue
+            call = side_calls[0]
+            checks.equal(call.args[5].strip(), "1 + Event Player.UrutanHUD",
+                         f"renderer HUD roster {side}: ordinamento")
+            row_literals = [
+                parse_literal(custom.args[0])
+                for custom in iter_calls(call.args[2], "Custom String")
+                if custom.args
+            ]
+            checks.require(not any(literal is not None and literal.endswith("\n ") for literal in row_literals),
+                           f"renderer HUD roster {side}: riga fantasma incorporata")
+            if side == "Left":
+                checks.require(re.search(r":\s*Null\s*$", call.args[3], re.DOTALL) is not None,
+                               "renderer HUD roster Left: fallback diagnostica deve essere Null")
+            else:
+                checks.equal(call.args[3].strip(), "Null", "renderer HUD roster Right: Text")
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
     checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
@@ -1012,6 +1138,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
             checks.require(calls[0].args[3].strip() != "Null",
                            f"{subroutine_target(rule)}: contenuto menu assente")
+            checks.equal(calls[0].args[4].strip(), "Top",
+                         f"{subroutine_target(rule)}: posizione HUD menu")
+            checks.equal(calls[0].args[5].strip(), "3",
+                         f"{subroutine_target(rule)}: ordinamento HUD menu")
             if rule in arcade_renderers:
                 for instruction in MENU_CROUCH_INSTRUCTIONS:
                     checks.require(
@@ -1027,6 +1157,23 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     not any(literal is not None and literal.startswith("\n") for literal in instruction_literals),
                     f"{subroutine_target(rule)}: sottotitolo menu inizia con una riga vuota artificiale",
                 )
+
+    luck_hud_rule = next((rule for rule in rules if "Event Player.HudEfekNasib = Last Text ID;" in rule.body), None)
+    checks.require(luck_hud_rule is not None, "HUD effetto Try Your Luck assente")
+    if luck_hud_rule:
+        luck_calls = list(iter_calls(luck_hud_rule.body, "Create HUD Text"))
+        checks.equal(len(luck_calls), 1, "HUD effetto Try Your Luck: numero handle")
+        if luck_calls:
+            luck_call = luck_calls[0]
+            checks.equal(luck_call.args[4].strip(), "Top", "HUD effetto Try Your Luck: posizione")
+            checks.equal(luck_call.args[5].strip(), "3", "HUD effetto Try Your Luck: ordinamento")
+            effect_literals = [
+                parse_literal(custom.args[0])
+                for custom in iter_calls(luck_call.args[3], "Custom String")
+                if custom.args
+            ]
+            checks.require(not any(literal is not None and literal.startswith("\n") for literal in effect_literals),
+                           "HUD effetto Try Your Luck inizia con una riga vuota artificiale")
 
     revenge_renderer = rule_by_subroutine(rules, "GambarBalasDendam")
     checks.require(revenge_renderer is not None, "renderer Revenge assente")
@@ -1916,6 +2063,13 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             "Set Knockback Dealt(Event Player, 0);",
         ):
             checks.require(token in bot_lock.body, f"KunciBot incompleto: {token}")
+        move_speed_calls = list(iter_calls(bot_lock.body, "Set Move Speed"))
+        checks.equal(len(move_speed_calls), 1, "KunciBot: numero impostazioni velocità")
+        if move_speed_calls:
+            checks.equal(move_speed_calls[0].args[0].strip(), "Event Player",
+                         "KunciBot: destinatario velocità")
+            checks.equal(move_speed_calls[0].args[1].strip(), "20",
+                         "KunciBot: velocità bot/dummy")
 
     for team in ("Team 1", "Team 2"):
         create_rules = [
@@ -1943,8 +2097,47 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                 f"Number Of Players({team}) >= Number Of Slots({team});",
                 f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
                 "Destroy In-World Text(Player Variable(",
+                "Stop Throttle In Direction(First Of(Filtered Array(",
             ):
                 checks.require(token in release_rule.body, f"rilascio dummy {team} incompleto: {token}")
+
+    dummy_movement = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Start Facing(Event Player," in rule.body
+            and "Start Throttle In Direction(Event Player," in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_movement is not None, "movimento automatico dummy assente")
+    if dummy_movement:
+        for token in (
+            "Is Dummy Bot(Event Player) == True;",
+            "Has Spawned(Event Player) == True;",
+            "Is Alive(Event Player) == True;",
+            "Sorted Array(Filtered Array(Global.PemainManusia",
+            "Start Throttle In Direction(Event Player, Forward, Is In Spawn Room(Event Player) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);",
+        ):
+            checks.require(token in dummy_movement.body, f"movimento automatico dummy incompleto: {token}")
+        checks.require(not wait_calls(dummy_movement.body) and action_loop_count(dummy_movement.body) == 0,
+                       "movimento automatico dummy non deve usare Wait/Loop")
+
+    no_target_cleanup = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Is Dummy Bot(Event Player) == True;" in rule.body
+            and "Count Of(Filtered Array(Global.PemainManusia" in rule.body
+            and ")) == 0;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+        ),
+        None,
+    )
+    checks.require(no_target_cleanup is not None, "cleanup movimento dummy senza target assente")
+    if no_target_cleanup:
+        checks.require("Stop Throttle In Direction(Event Player);" in no_target_cleanup.body,
+                       "cleanup movimento dummy senza target non ferma il throttle")
 
     dummy_arming = next(
         (
@@ -1995,6 +2188,8 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_death is not None, "cleanup morte dummy assente")
     if dummy_death:
+        checks.require("Stop Throttle In Direction(Event Player);" in dummy_death.body,
+                       "cleanup morte dummy non ferma il throttle")
         checks.require("Event Player.WaktuTeleportasiDummy = 0;" in dummy_death.body,
                        "morte dummy non riarma il delay del prossimo spawn")
 

@@ -10,13 +10,22 @@ class DummyBotFeatureTests(unittest.TestCase):
         cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
-    def test_hold_sections_use_one_newline_before_labels(self):
-        self.assertIn("\\nLOBBY & CHILL TIME", self.it)
-        self.assertIn("\\nLOBI & WAKTU SANTAI", self.it)
-        self.assertIn("\\nPLAYER VIBES", self.it)
-        self.assertIn("\\nMUSIK PEMAIN", self.it)
-        self.assertNotIn("\\n \\nLOBBY & CHILL TIME", self.it)
-        self.assertNotIn("\\n     PLAYER VIBES", self.it)
+    def test_static_hud_uses_the_reference_grid_without_embedded_label_spacing(self):
+        for source in (self.it, self.en):
+            self.assertIn('Custom String("{0} [{1}]", Custom String("CHILL DEDICATED SERVER")', source)
+            self.assertIn('"HOLD {0}:"', source)
+            self.assertIn('"HOLD {0} 0.5 SEC"', source)
+            self.assertIn("Input Binding String(Button(Crouch))", source)
+            self.assertIn("Input Binding String(Button(Melee))", source)
+            self.assertIn('"LOBBY TIME"', source)
+            self.assertIn('"PLAYER VIBES"', source)
+            self.assertIn("9 + Count Of(Filtered Array(", source)
+            self.assertIn("1 + Event Player.UrutanHUD", source)
+            self.assertNotIn("-99 + Event Player.UrutanHUD", source)
+            self.assertNotIn("\\nLOBBY & CHILL TIME", source)
+            self.assertNotIn("\\nPLAYER VIBES", source)
+            self.assertNotIn(", Top, 100,", source)
+            self.assertNotIn(", Top, -99,", source)
 
     def test_exactly_one_creation_rule_per_team(self):
         self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Team 1, -1, Position Of(First Of(Spawn Points(Team 1))), Vector(0, 0, 1));"), 1)
@@ -84,7 +93,10 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertNotIn("Set Damage Received(Event Player, 0);", it_lock)
         self.assertNotIn("Set Damage Received(Event Player, 0);", en_lock)
         self.assertIn("Set Knockback Received(Event Player, 0);", it_lock)
-        self.assertIn("Set Move Speed(Event Player, 0);", it_lock)
+        self.assertEqual(it_lock.count("Set Move Speed(Event Player, 20);"), 1)
+        self.assertEqual(en_lock.count("Set Move Speed(Event Player, 20);"), 1)
+        self.assertNotIn("Set Move Speed(Event Player, 0);", it_lock)
+        self.assertNotIn("Set Move Speed(Event Player, 0);", en_lock)
 
     def test_dummy_faces_nearest_living_human_without_extra_loop(self):
         self.assertIn("Start Facing(Event Player", self.it)
@@ -92,6 +104,23 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Direction and Turn Rate", self.it)
         self.assertIn("Stop Facing(Event Player);", self.it)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
+
+    def test_native_dummy_walks_forward_automatically_and_stops_cleanly(self):
+        throttle = (
+            "Start Throttle In Direction(Event Player, Forward, Is In Spawn Room(Event Player) ? 0 : 1, "
+            "To Player, Replace Existing Throttle, Direction and Magnitude);"
+        )
+        for source in (self.it, self.en):
+            self.assertEqual(source.count(throttle), 1)
+            self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 2)
+            self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 2)
+
+        movement = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati pemain hidup terdekat")', 1)[1].split(
+            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada pemain hidup")', 1
+        )[0]
+        self.assertIn("Is Dummy Bot(Event Player) == True;", movement)
+        self.assertNotIn("Event Player.BotOtomatis", movement)
+        self.assertNotIn("Wait(", movement)
 
 
 if __name__ == "__main__":

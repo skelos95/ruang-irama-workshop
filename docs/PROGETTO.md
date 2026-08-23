@@ -136,6 +136,16 @@ Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da 
 - I 100 generi, `CHILL`, nomi player ed eroi sono nomi propri universali.
 - Identificatori personalizzati, titoli regola, subroutine e commenti Workshop sono in Bahasa Indonesia; keyword native, acronimi tecnici e nomi degli eroi restano invariati.
 
+La griglia HUD usa nove handle globali fissi e slot dinamici separati:
+
+| Area | Slot fissi | Slot dinamici |
+|---|---|---|
+| Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
+| Left | comando `-2`, spaziatore `-1`, label `0` | roster/minuti `1..12` |
+| Right | comando `-2`, spaziatore `-1`, label `0` | roster/musica `1..12` |
+
+Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include i nove handle fissi; fuori dai tre spaziatori dedicati, un campo senza contenuto usa `Null`, non una stringa di spazio che produrrebbe una riga fantasma.
+
 Il nuovo Team Status Indicator del client non deve essere coperto da blocchi Top/Left/Right: il test live verifica leggibilità, spaziatori e assenza di collisioni.
 
 ## Camera, inspection e Teleport
@@ -208,4 +218,4 @@ La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto
 
 ### Dummy bot: spawn e distanza sicura
 
-I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. I bot restano passivi e fermi, ricevono danno normale e guardano continuamente l'umano vivo più vicino.
+I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi. Il dummy Workshop guarda l'umano vivo più vicino e avanza automaticamente in `Forward`; morte, assenza di target e rimozione fermano sempre facing e throttle.

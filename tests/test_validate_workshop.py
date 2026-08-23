@@ -277,8 +277,8 @@ class SemanticWorkshop080Tests(unittest.TestCase):
 
     def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
         mutated = self.replace_once(
-            '"Hold {0}: inspect hero + HP"',
-            '"Hold {0}: inspect hero + HP | in menu: modifier for every command"',
+            '"HOLD {0}:"',
+            '"HOLD {0}: in menu: modifier for every command"',
         )
         self.assert_rejected(mutated, "clausola modifier Crouch duplicata")
 
@@ -305,17 +305,55 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 2, changed_argument)
         self.assert_rejected(mutated, "Revenge no-target senza istruzione Crouch")
 
-    def test_chill_title_requires_a_blank_spacer_line(self) -> None:
+    def test_chill_grid_requires_a_dedicated_top_spacer(self) -> None:
         call = next(
             call for call in validator.iter_calls(self.source, "Create HUD Text")
             if len(call.args) >= 4
-            and "CHILL DEDICATED SERVER" in call.args[3]
-            and "Global.TeksWaktuServer" in call.args[3]
+            and call.args[4].strip() == "Top"
+            and call.args[5].strip() == "2"
         )
-        changed_argument = call.args[3].replace(r"\n ", "", 1)
-        self.assertNotEqual(changed_argument, call.args[3])
-        mutated = self.replace_call_argument(call, 3, changed_argument)
-        self.assert_rejected(mutated, "riga vuota prima del menu")
+        mutated = self.replace_call_argument(call, 3, "Null")
+        self.assert_rejected(mutated, "HUD fisso Top sort 2: contenuto text errato")
+
+    def test_chill_grid_rejects_a_tenth_fixed_hud(self) -> None:
+        init = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Global"
+            and "CHILL DEDICATED SERVER" in rule.body
+            and "Global.Siap = True;" in rule.body
+        )
+        extra = (
+            'Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Top, 4, '
+            'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
+        )
+        mutated = self.inject_action(init, extra)
+        self.assert_rejected(mutated, "numero HUD fissi nella regola iniziale")
+
+    def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
+        token = "9 + Count Of(Filtered Array(Global.HudKiriPemain"
+        mutated = self.replace_once(token, "8 + Count Of(Filtered Array(Global.HudKiriPemain")
+        comment_anchor = '"Urutan ini sengaja bergerak dari paling tenang ke paling kacau. Jangan diacak tanpa alasan yang sangat musikal."'
+        self.assertIn(comment_anchor, mutated)
+        mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
+        self.assert_rejected(mutated, "diagnostica HUD non include i nove handle fissi")
+
+    def test_roster_rows_start_immediately_below_their_labels(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
+        mutated = self.replace_in_rule(renderer, "1 + Event Player.UrutanHUD", "2 + Event Player.UrutanHUD")
+        self.assert_rejected(mutated, "renderer HUD roster Left: ordinamento")
+
+    def test_menu_renderers_use_the_top_three_slot(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 5, "100")
+        self.assert_rejected(mutated, "GambarUtama: ordinamento HUD menu")
+
+    def test_luck_effect_uses_the_same_top_three_slot_without_a_leading_gap(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudEfekNasib = Last Text ID;" in rule.body)
+        call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 5, "-99")
+        self.assert_rejected(mutated, "HUD effetto Try Your Luck: ordinamento")
 
     def test_primary_secondary_must_not_redraw_menu(self) -> None:
         rule = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Primary Fire)" in rule.body)
@@ -832,6 +870,25 @@ rule("999x - Nasib: Renderer pemain tambahan")
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
         mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
         self.assert_rejected(mutated, "KunciBot incompleto")
+
+    def test_bot_lock_requires_exactly_twenty_percent_move_speed(self) -> None:
+        bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
+        mutated = self.replace_in_rule(bot_lock, "Set Move Speed(Event Player, 20);", "Set Move Speed(Event Player, 0);")
+        self.assert_rejected(mutated, "KunciBot: velocità bot/dummy")
+
+    def test_native_dummy_requires_automatic_forward_throttle(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement, "Start Throttle In Direction(Event Player,", "Start Throttle Towards Player(Event Player,")
+        self.assert_rejected(mutated, "movimento automatico dummy assente")
+
+    def test_native_dummy_stops_throttle_when_no_target_remains(self) -> None:
+        cleanup = self.rule(
+            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
+            and ")) == 0;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+        )
+        mutated = self.replace_in_rule(cleanup, "Stop Throttle In Direction(Event Player);", "")
+        self.assert_rejected(mutated, "cleanup movimento dummy senza target non ferma il throttle")
 
     def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
         create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
