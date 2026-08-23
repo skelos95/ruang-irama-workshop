@@ -846,28 +846,32 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Top, 2,
 			Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"HOLD {0}:", Input Binding String(Button(Crouch))) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"TAHAN {0}:", Input Binding String(Button(Crouch))) : Custom String("กด {0} ค้าง:", Input Binding String(Button(Crouch))), Null,
+			"Hold {0}: inspect hero + HP", Input Binding String(Button(Crouch))) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
+			"Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String("กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))), Null,
 			Left, -2, Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Custom String(" "), Null, Left, -1,
 			Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"LOBBY TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("WAKTU LOBI") : Custom String("เวลาในล็อบบี้"),
+			"LOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOBI & WAKTU SANTAI") : Custom String("ล็อบบี้ & เวลาชิล"),
 			Left, 0, Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
-			"HOLD {0} 0.5 SEC", Input Binding String(Button(Melee))) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
-			"TAHAN {0} 0,5 DTK", Input Binding String(Button(Melee))) : Custom String("กด {0} ค้าง 0.5 วิ", Input Binding String(Button(Melee))), Null,
-			Right, -2, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
+			"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
+			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(
+			"กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))), Null,
+			Right, -16, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
-		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Right, -1,
+		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Right, -15,
 			Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"PLAYER VIBES") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("MUSIK PEMAIN") : Custom String("เพลงของผู้เล่น"),
-			Right, 0, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
+			Right, -14, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
+			Visible To and String, Visible Never);
+		Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Right, -1,
+			Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255),
 			Visible To and String, Visible Never);
 		Global.Siap = True;
 	}
@@ -1136,24 +1140,24 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 	{
 		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
 		Event Player.HudPemainDibuat = True;
-		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
+		Create HUD Text(Global.PemainManusia, Null, Custom String("{0}{1}{2}", Custom String("{0} {1} {2}",
 			Global.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Global.SlotHUDTerakhir ? Global.PemimpinPilihan != Null
 			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Global.PemimpinPilihan)
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.PemimpinPilihan)
-			: Custom String("\n \nCHILL STAR: {0}", Global.PemimpinPilihan) : Custom String("") : Custom String("")),
+			: Custom String("\n \nCHILL STAR: {0}", Global.PemimpinPilihan) : Custom String("") : Custom String(""),
 			And(Global.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player.UrutanHUD == Global.SlotHUDTerakhir)) ? Custom String("{0}\n{1}",
 			Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load,
 			Server Load Average, Server Load Peak) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
 			"\n \nBEBAN {0}% | RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String(
 			"\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}",
-			9 + Count Of(Filtered Array(Global.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.HudKananPemain,
+			10 + Count Of(Filtered Array(Global.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Global.HudKananPemain,
 			Current Array Element != 0)) + Count Of(Filtered Array(Global.HudMenuPemain, Current Array Element != 0)) + Count Of(
 			Filtered Array(Global.PemainManusia, And(Player Variable(Current Array Element, HudEfekNasib) != Null, Player Variable(
 			Current Array Element, HudEfekNasib) != 0))), Count Of(Filtered Array(Global.TeksDuniaPemain, Current Array Element != 0)) + Count Of(
 			Filtered Array(Global.PemainManusia, And(Player Variable(Current Array Element, TeksTeleportasi) != Null, Player Variable(
 			Current Array Element, TeksTeleportasi) != 0))) + Count Of(Filtered Array(All Players(All Teams), And(Player Variable(
-			Current Array Element, TeksVisiNasib) != Null, Player Variable(Current Array Element, TeksVisiNasib) != 0))))) : Null, Left,
+			Current Array Element, TeksVisiNasib) != Null, Player Variable(Current Array Element, TeksVisiNasib) != 0))))) : Custom String("")), Null, Left,
 			1 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
@@ -1161,7 +1165,7 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0} {1} {2}", Global.DaftarIkon[Event Player.IndeksIkon],
 			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player,
 			Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Null, Right, 1 + Event Player.UrutanHUD,
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Null, Right, -13 + Event Player.UrutanHUD,
 			Color(White), Event Player.WarnaNama, Color(White), Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
 		Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;

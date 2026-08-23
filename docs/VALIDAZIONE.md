@@ -75,7 +75,7 @@ Ogni azione `Create HUD Text` deve:
 - usare soltanto Subheader/Text;
 - registrare l'handle previsto per il cleanup.
 
-Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi. Il gate richiede esattamente nove HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0` e Right `-2/-1/0`; i roster devono iniziare da `1 + UrutanHUD`, mentre menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
+Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi. Il gate richiede esattamente dieci HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
 
 Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
 
@@ -176,7 +176,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - velocità bot/dummy diversa dal 20%, throttle automatico assente o cleanup throttle incompleto;
-- slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, oppure riga fantasma reintrodotta tramite newline/spazio di fallback;
+- slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, spaziatore finale Right rimosso, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;

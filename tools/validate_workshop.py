@@ -1012,21 +1012,34 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 9, "numero HUD fissi nella regola iniziale")
+        checks.equal(len(init_hud_calls), 10, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
         if call.args and call.args[0].strip() == "Global.PemainManusia"
     ]
-    checks.equal(len(global_hud_calls), 11, "numero HUD globali: nove fissi e due roster")
+    checks.equal(len(global_hud_calls), 12, "numero HUD globali: dieci fissi e due roster")
+
+    slot_assignments = re.findall(
+        r"Global\.SlotHUDTersedia\s*=\s*Array\(([^;]*)\);",
+        mask_strings(source),
+    )
+    checks.equal(len(slot_assignments), 1, "inizializzazione slot HUD roster")
+    if slot_assignments:
+        try:
+            roster_slots = [int(value.strip()) for value in slot_assignments[0].split(",")]
+        except ValueError:
+            roster_slots = []
+        checks.equal(roster_slots, list(range(12)), "slot HUD roster devono essere esattamente 0..11")
 
     fixed_slots = {
         ("Left", "-2"),
         ("Left", "-1"),
         ("Left", "0"),
-        ("Right", "-2"),
+        ("Right", "-16"),
+        ("Right", "-15"),
+        ("Right", "-14"),
         ("Right", "-1"),
-        ("Right", "0"),
         ("Top", "0"),
         ("Top", "1"),
         ("Top", "2"),
@@ -1043,15 +1056,16 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
         if matches:
             fixed_hud[slot] = matches[0]
-    checks.equal(len(fixed_hud), 9, "griglia HUD fissa Top/Left/Right")
+    checks.equal(len(fixed_hud), 10, "griglia HUD fissa Top/Left/Right")
 
     field_contract = {
         ("Left", "-2"): ("subheader", "Button(Crouch)"),
         ("Left", "-1"): ("subheader", 'Custom String(" ")'),
-        ("Left", "0"): ("text", "LOBBY TIME"),
-        ("Right", "-2"): ("subheader", "Button(Melee)"),
+        ("Left", "0"): ("text", "LOBBY & CHILL TIME"),
+        ("Right", "-16"): ("subheader", "Button(Interact)"),
+        ("Right", "-15"): ("text", 'Custom String("  ")'),
+        ("Right", "-14"): ("text", "PLAYER VIBES"),
         ("Right", "-1"): ("text", 'Custom String("  ")'),
-        ("Right", "0"): ("text", "PLAYER VIBES"),
         ("Top", "0"): ("text", "CHILL DEDICATED SERVER"),
         ("Top", "1"): ("subheader", "SERVER LOCATION"),
         ("Top", "2"): ("text", 'Custom String("  ")'),
@@ -1062,27 +1076,74 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             continue
         field_index = 2 if field == "subheader" else 3
         other_index = 3 if field == "subheader" else 2
-        checks.require(token in call.args[field_index],
-                       f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
+        if slot in {("Left", "-1"), ("Right", "-15"), ("Right", "-1"), ("Top", "2")}:
+            checks.equal(call.args[field_index].strip(), token,
+                         f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
+        else:
+            checks.require(token in call.args[field_index],
+                           f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
         checks.equal(call.args[other_index].strip(), "Null",
                      f"HUD fisso {slot[0]} sort {slot[1]}: campo non usato")
 
-    for slot, expected_labels in {
-        ("Left", "-2"): ("HOLD {0}:", "TAHAN {0}:", "กด {0} ค้าง:"),
-        ("Left", "0"): ("LOBBY TIME", "WAKTU LOBI", "เวลาในล็อบบี้"),
-        ("Right", "-2"): ("HOLD {0} 0.5 SEC", "TAHAN {0} 0,5 DTK", "กด {0} ค้าง 0.5 วิ"),
-        ("Right", "0"): ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น"),
+    for slot, (field, expected_labels) in {
+        ("Left", "-2"): ("subheader", ("Hold {0}: inspect hero + HP", "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
+        ("Left", "0"): ("text", ("LOBBY & CHILL TIME", "LOBI & WAKTU SANTAI", "ล็อบบี้ & เวลาชิล")),
+        ("Right", "-16"): ("subheader", ("Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", "Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", "กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง")),
+        ("Right", "-14"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
     }.items():
         call = fixed_hud.get(slot)
         if not call:
             continue
-        localized_field = call.args[2] if slot[1] == "-2" else call.args[3]
+        localized_field = call.args[2] if field == "subheader" else call.args[3]
         for label in expected_labels:
             checks.require(label in localized_field,
                            f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
 
-    checks.require("9 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
-                   "diagnostica HUD non include i nove handle fissi")
+    def full_custom_string(expression: str) -> Call | None:
+        expression = expression.strip()
+        return next(
+            (
+                call for call in iter_calls(expression, "Custom String")
+                if call.start == 0 and call.end == len(expression)
+            ),
+            None,
+        )
+
+    left_help = fixed_hud.get(("Left", "-2"))
+    if left_help:
+        left_help_triads = language_triads(left_help.args[2])
+        checks.equal(len(left_help_triads), 1, "HUD comando Left: triade lingua")
+        if left_help_triads:
+            for language, branch in zip(("EN", "ID", "TH"), left_help_triads[0]):
+                custom = full_custom_string(branch)
+                checks.require(custom is not None, f"HUD comando Left {language}: Custom String esterna")
+                if custom:
+                    checks.equal(
+                        custom.args[1:] if len(custom.args) >= 1 else (),
+                        ("Input Binding String(Button(Crouch))",),
+                        f"HUD comando Left {language}: binding Crouch ordinato",
+                    )
+
+    right_help = fixed_hud.get(("Right", "-16"))
+    if right_help:
+        right_help_triads = language_triads(right_help.args[2])
+        checks.equal(len(right_help_triads), 1, "HUD comando Right: triade lingua")
+        if right_help_triads:
+            for language, branch in zip(("EN", "ID", "TH"), right_help_triads[0]):
+                custom = full_custom_string(branch)
+                checks.require(custom is not None, f"HUD comando Right {language}: Custom String esterna")
+                if custom:
+                    checks.equal(
+                        custom.args[1:] if len(custom.args) >= 1 else (),
+                        (
+                            "Input Binding String(Button(Melee))",
+                            "Input Binding String(Button(Interact))",
+                        ),
+                        f"HUD comando Right {language}: binding Melee/Interact ordinati",
+                    )
+
+    checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
+                   "diagnostica HUD non include i dieci handle fissi")
 
     roster_rule = next(
         (
@@ -1098,13 +1159,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if roster_rule:
         roster_calls = list(iter_calls(roster_rule.body, "Create HUD Text"))
         checks.equal(len(roster_calls), 2, "renderer HUD roster: numero handle")
+        roster_orders = {
+            "Left": "1 + Event Player.UrutanHUD",
+            "Right": "-13 + Event Player.UrutanHUD",
+        }
         for side in ("Left", "Right"):
             side_calls = [call for call in roster_calls if len(call.args) >= 6 and call.args[4].strip() == side]
             checks.equal(len(side_calls), 1, f"renderer HUD roster {side}")
             if not side_calls:
                 continue
             call = side_calls[0]
-            checks.equal(call.args[5].strip(), "1 + Event Player.UrutanHUD",
+            checks.equal(call.args[5].strip(), roster_orders[side],
                          f"renderer HUD roster {side}: ordinamento")
             row_literals = [
                 parse_literal(custom.args[0])
@@ -1114,8 +1179,34 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.require(not any(literal is not None and literal.endswith("\n ") for literal in row_literals),
                            f"renderer HUD roster {side}: riga fantasma incorporata")
             if side == "Left":
-                checks.require(re.search(r":\s*Null\s*$", call.args[3], re.DOTALL) is not None,
-                               "renderer HUD roster Left: fallback diagnostica deve essere Null")
+                checks.equal(call.args[3].strip(), "Null",
+                             "renderer HUD roster Left: Text deve essere Null per evitare lo zero client")
+                outer_rows = [
+                    custom for custom in iter_calls(call.args[2], "Custom String")
+                    if custom.args and parse_literal(custom.args[0]) == "{0}{1}{2}"
+                ]
+                checks.equal(len(outer_rows), 1,
+                             "renderer HUD roster Left: diagnostica non integrata nel Subheader")
+                if outer_rows:
+                    checks.equal(len(outer_rows[0].args), 4,
+                                 "renderer HUD roster Left: segmenti Subheader")
+                    if len(outer_rows[0].args) == 4:
+                        diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[3])
+                        checks.require(diagnostic_branches is not None,
+                                       "renderer HUD roster Left: ternario diagnostica assente")
+                        if diagnostic_branches:
+                            diagnostic_condition, diagnostic_text, diagnostic_fallback = diagnostic_branches
+                            for token in (
+                                "Global.DiagnostikPerforma == True",
+                                "Local Player == Host Player",
+                                "Event Player.UrutanHUD == Global.SlotHUDTerakhir",
+                            ):
+                                checks.require(token in diagnostic_condition,
+                                               f"renderer HUD roster Left: guardia diagnostica assente: {token}")
+                            checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
+                                           "renderer HUD roster Left: conteggio diagnostica non nel ramo visibile")
+                            checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
+                                         "renderer HUD roster Left: fallback diagnostica deve essere stringa vuota")
             else:
                 checks.equal(call.args[3].strip(), "Null", "renderer HUD roster Right: Text")
 

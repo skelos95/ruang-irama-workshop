@@ -136,17 +136,17 @@ Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da 
 - I 100 generi, `CHILL`, nomi player ed eroi sono nomi propri universali.
 - Identificatori personalizzati, titoli regola, subroutine e commenti Workshop sono in Bahasa Indonesia; keyword native, acronimi tecnici e nomi degli eroi restano invariati.
 
-La griglia HUD usa nove handle globali fissi e slot dinamici separati:
+La griglia HUD usa dieci handle globali fissi e slot dinamici separati:
 
 | Area | Slot fissi | Slot dinamici |
 |---|---|---|
 | Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
-| Left | comando `-2`, spaziatore `-1`, label `0` | roster/minuti `1..12` |
-| Right | comando `-2`, spaziatore `-1`, label `0` | roster/musica `1..12` |
+| Left | comando completo `-2`, spaziatore `-1`, `LOBBY & CHILL TIME` `0` | roster/minuti `1..12` |
+| Right | comando completo `-16`, spaziatore superiore `-15`, `PLAYER VIBES` `-14`, spaziatore finale `-1` | roster/musica `-13..-2` |
 
-Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include i nove handle fissi; fuori dai tre spaziatori dedicati, un campo senza contenuto usa `Null`, non una stringa di spazio che produrrebbe una riga fantasma.
+Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include i dieci handle fissi. La diagnostica opzionale è il terzo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`.
 
-Il nuovo Team Status Indicator del client non deve essere coperto da blocchi Top/Left/Right: il test live verifica leggibilità, spaziatori e assenza di collisioni.
+Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. Il test live con 1, 6 e 12 player deve confermare il confine effettivo con indicatore e kill feed.
 
 ## Camera, inspection e Teleport
 

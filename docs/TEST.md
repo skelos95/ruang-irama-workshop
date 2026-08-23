@@ -90,7 +90,9 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - aprire, navigare avanti/indietro, applicare, tornare e riaprire;
 - verificare testo, stato, feedback e comando localizzati;
 - verificare una riga vuota tra contenuto e comandi;
-- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left/Right `-2/-1/0` + roster `1..12`, senza righe fantasma o sovrapposizioni;
+- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0` + roster `1..12`, Right `-16/-15/-14`, roster `-13..-2` e spaziatore finale `-1`;
+- verificare con 1, 6 e 12 player che il Team Status Indicator e il kill feed nativi seguano l'ultimo nome Right dopo una riga vuota, senza inserirsi fra `PLAYER VIBES` e il roster;
+- confermare che sotto il roster Left non compaia uno `0` isolato con diagnostica disattivata e che i promemoria completi/`LOBBY & CHILL TIME` siano corretti in EN/ID/TH;
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;

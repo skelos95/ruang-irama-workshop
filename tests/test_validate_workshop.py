@@ -277,8 +277,8 @@ class SemanticWorkshop080Tests(unittest.TestCase):
 
     def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
         mutated = self.replace_once(
-            '"HOLD {0}:"',
-            '"HOLD {0}: in menu: modifier for every command"',
+            '"Hold {0}: inspect hero + HP"',
+            '"Hold {0}: inspect hero + HP | in menu: modifier for every command"',
         )
         self.assert_rejected(mutated, "clausola modifier Crouch duplicata")
 
@@ -315,7 +315,14 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(call, 3, "Null")
         self.assert_rejected(mutated, "HUD fisso Top sort 2: contenuto text errato")
 
-    def test_chill_grid_rejects_a_tenth_fixed_hud(self) -> None:
+    def test_roster_hud_slots_are_exactly_zero_through_eleven(self) -> None:
+        mutated = self.replace_once(
+            "Global.SlotHUDTersedia = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);",
+            "Global.SlotHUDTersedia = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12);",
+        )
+        self.assert_rejected(mutated, "slot HUD roster devono essere esattamente 0..11")
+
+    def test_chill_grid_rejects_an_eleventh_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
             and "CHILL DEDICATED SERVER" in rule.body
@@ -328,18 +335,123 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(init, extra)
         self.assert_rejected(mutated, "numero HUD fissi nella regola iniziale")
 
+    def test_chill_grid_rejects_a_thirteenth_global_hud_outside_initialization(self) -> None:
+        scheduler = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Global"
+            and "Global.LangkahPenjadwal" in rule.body
+        )
+        extra = (
+            'Create HUD Text(Global.PemainManusia, Null, Null, Custom String("  "), Top, 99, '
+            'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
+        )
+        mutated = self.inject_action(scheduler, extra)
+        self.assert_rejected(mutated, "numero HUD globali: dieci fissi e due roster")
+
     def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
-        token = "9 + Count Of(Filtered Array(Global.HudKiriPemain"
-        mutated = self.replace_once(token, "8 + Count Of(Filtered Array(Global.HudKiriPemain")
+        token = "10 + Count Of(Filtered Array(Global.HudKiriPemain"
+        mutated = self.replace_once(token, "9 + Count Of(Filtered Array(Global.HudKiriPemain")
         comment_anchor = '"Urutan ini sengaja bergerak dari paling tenang ke paling kacau. Jangan diacak tanpa alasan yang sangat musikal."'
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
-        self.assert_rejected(mutated, "diagnostica HUD non include i nove handle fissi")
+        self.assert_rejected(mutated, "diagnostica HUD non include i dieci handle fissi")
 
-    def test_roster_rows_start_immediately_below_their_labels(self) -> None:
+    def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
         mutated = self.replace_in_rule(renderer, "1 + Event Player.UrutanHUD", "2 + Event Player.UrutanHUD")
         self.assert_rejected(mutated, "renderer HUD roster Left: ordinamento")
+
+    def test_right_roster_stays_before_the_native_team_status_indicator(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudKanan = Last Text ID;" in rule.body)
+        mutated = self.replace_in_rule(renderer, "-13 + Event Player.UrutanHUD", "1 + Event Player.UrutanHUD")
+        self.assert_rejected(mutated, "renderer HUD roster Right: ordinamento")
+
+    def test_right_grid_requires_the_post_roster_spacer(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 6
+            and call.args[4].strip() == "Right"
+            and call.args[5].strip() == "-1"
+        )
+        mutated = self.replace_call_argument(call, 3, "Null")
+        self.assert_rejected(mutated, "HUD fisso Right sort -1: contenuto text errato")
+
+    def test_right_post_roster_spacer_must_be_unconditional(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 6
+            and call.args[4].strip() == "Right"
+            and call.args[5].strip() == "-1"
+        )
+        mutated = self.replace_call_argument(call, 3, 'True ? Custom String("  ") : Null')
+        self.assert_rejected(mutated, "HUD fisso Right sort -1: contenuto text errato")
+
+    def test_left_roster_text_cannot_reintroduce_the_client_zero(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
+        call = next(
+            call for call in validator.iter_calls(renderer.body, "Create HUD Text")
+            if len(call.args) >= 6 and call.args[4].strip() == "Left"
+        )
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(
+            absolute,
+            3,
+            'Global.DiagnostikPerforma == True ? Custom String("diagnostics") : Null',
+        )
+        self.assert_rejected(mutated, "Text deve essere Null per evitare lo zero client")
+
+    def test_left_diagnostics_remain_inside_the_subheader(self) -> None:
+        mutated = self.replace_once('Custom String("{0}{1}{2}"', 'Custom String("{0}{1}"')
+        self.assert_rejected(mutated, "diagnostica non integrata nel Subheader")
+
+    def test_left_diagnostic_fallback_is_an_empty_string_not_null(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
+        call = next(
+            call for call in validator.iter_calls(renderer.body, "Create HUD Text")
+            if len(call.args) >= 6 and call.args[4].strip() == "Left"
+        )
+        outer = next(
+            custom for custom in validator.iter_calls(call.args[2], "Custom String")
+            if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}"
+        )
+        diagnostic = outer.args[3]
+        self.assertTrue(diagnostic.rstrip().endswith('Custom String("")'))
+        changed_diagnostic = diagnostic.rsplit('Custom String("")', 1)[0] + "Null"
+        changed_subheader = call.args[2][:outer.start] + outer.raw.replace(diagnostic, changed_diagnostic, 1) + call.args[2][outer.end:]
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, changed_subheader)
+        self.assert_rejected(mutated, "fallback diagnostica deve essere stringa vuota")
+
+    def test_complete_global_control_help_is_required(self) -> None:
+        mutated = self.replace_once("Hold {0}: inspect hero + HP", "Hold {0}:")
+        self.assert_rejected(mutated, "testo localizzato assente: Hold {0}: inspect hero + HP")
+
+    def test_left_global_control_help_keeps_its_crouch_binding_in_every_language(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 6
+            and call.args[4].strip() == "Left"
+            and call.args[5].strip() == "-2"
+        )
+        changed_subheader = call.args[2].replace("Button(Crouch)", "Button(Melee)", 1)
+        self.assertNotEqual(changed_subheader, call.args[2])
+        mutated = self.replace_call_argument(call, 2, changed_subheader)
+        self.assert_rejected(mutated, "HUD comando Left EN: binding Crouch ordinato")
+
+    def test_right_global_control_help_keeps_both_bindings(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 6
+            and call.args[4].strip() == "Right"
+            and call.args[5].strip() == "-16"
+        )
+        changed_subheader = call.args[2].replace(
+            "Input Binding String(Button(Melee)), Input Binding String(Button(Interact))",
+            "Input Binding String(Button(Interact)), Input Binding String(Button(Melee))",
+            1,
+        )
+        self.assertNotEqual(changed_subheader, call.args[2])
+        mutated = self.replace_call_argument(call, 2, changed_subheader)
+        self.assert_rejected(mutated, "HUD comando Right EN: binding Melee/Interact ordinati")
 
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")

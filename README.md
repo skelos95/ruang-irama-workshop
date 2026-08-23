@@ -98,8 +98,8 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 - La fixture `tests/fixtures/semantic_reference.txt` usa grammatica `en-US` soltanto per il gate semantico e i test: **non è un file da importare nel client**. Il gate canonicalizza entrambi i formati e richiede parità semantica con il vero clipboard `it-IT`, così una modifica funzionale non può essere applicata a una sola copia.
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
-- Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
-- La griglia fissa usa nove handle: Top `0/1/2`, Left `-2/-1/0` e Right `-2/-1/0`; roster e menu occupano rispettivamente gli slot `1..12` e `Top 3`, senza newline di compensazione.
+- Menu e liste separano contenuto e comandi con la spaziatura HUD prevista; i promemoria globali descrivono per intero inspection, Menu Arcade e Camera, mentre il blocco sinistro usa `LOBBY & CHILL TIME`.
+- La griglia fissa usa dieci handle: Top `0/1/2`, Left `-2/-1/0` e Right `-16/-15/-14/-1`. Il roster sinistro usa `1..12`, quello destro `-13..-2`; lo spaziatore Right `-1` riserva una riga dopo il roster nell'area condivisa con Team Status Indicator/kill feed nativo, da confermare nel client con 1, 6 e 12 player. Menu ed effetti condividono `Top 3`.
 
 Le liste canoniche sono in [`docs/GENERI.md`](docs/GENERI.md) e [`docs/SERVER_LOCATIONS.md`](docs/SERVER_LOCATIONS.md).
 
