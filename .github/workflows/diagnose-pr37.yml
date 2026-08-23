@@ -1,0 +1,33 @@
+name: Diagnose PR 37
+
+on:
+  push:
+    branches:
+      - chatgpt/fix-dummy-initial-spawn-distance-hud
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Capture diagnostics
+        shell: bash
+        run: |
+          set +e
+          python -m unittest discover -s tests -p 'test_*.py' > diagnostic.log 2>&1
+          echo "UNIT_EXIT=$?" >> diagnostic.log
+          python tools/validate_workshop.py >> diagnostic.log 2>&1
+          echo "VALIDATOR_EXIT=$?" >> diagnostic.log
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT >> diagnostic.log 2>&1
+          echo "PREFLIGHT_EXIT=$?" >> diagnostic.log
+          cat diagnostic.log
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr37-diagnostic
+          path: diagnostic.log
