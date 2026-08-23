@@ -113,9 +113,9 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 | Esito | Verifica |
 |---|---|
-| Vision | effetto e testo EN/ID/TH; nessun nome/nameplate per umani con Privacy ON; cleanup dopo 15 s |
+| Vision | icona eroe, nome e salute live in EN/ID/TH; nessun target umano con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
-| Skull | morte immediata e cleanup completo |
+| Skull | D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
 | Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; stop alla scadenza/morte |
 | Hacked | stato per 5 s, poi rimozione |
@@ -123,14 +123,25 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 Per ciascun esito:
 
 - durante ogni passaggio della roulette l'icona corrente deve restare agganciata a occhio/mirino con aggiornamento ogni frame; eseguire movimento, rotazione continua e inversione di 180° senza scatti o salti verso altri player;
+- quando Skull compare soltanto come icona intermedia, il player deve restare vivo; il retry può iniziare esclusivamente se Skull è l'esito finale;
 - durante la stessa roulette eseguire join/leave di un umano: la reevaluation `Visible To and Position` deve rendere tutte le sei icone visibili al roster umano corrente, senza includere bot;
 - con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed` segua continuamente la direzione 3D corrente;
 - Unkillable viene disattivato all'avvio;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
 - morte, leave, hero swap e cambio squadra annullano stato, status ed effetti;
+- rimuovere un iBot vivo durante Vision e verificare che il suo IWT sparisca senza creare roster, HUD o lifecycle umano;
 - nessuna seconda roulette per lo stesso player parte mentre la prima è attiva;
 - chiusure e riaperture non duplicano HUD, In-World Text o effetti.
+
+### Revenge e morte completa
+
+- Con D.Va bersaglio, verificare che il debito resti invariato al demech e scenda di uno soltanto alla morte della pilota.
+- Durante il demech non devono comparire il prompt Jump né una falsa posizione di morte; entrambi devono essere registrati soltanto alla morte completa.
+- Con Echo duplicata, verificare che la fine della copia non consumi il debito e che il retry prosegua fino alla morte della forma base.
+- Un secondo claimant sullo stesso target deve essere rifiutato; se un altro attacker completa la kill, il primo claimant non consuma alcun debito e la morte viene registrata normalmente.
+- Leave o cambio squadra di claimant/target e timeout di 5 s devono annullare il pending, liberare il menu e non mostrare il messaggio di successo.
+- Mercy, Torbjörn e altre forme/armi alternative non devono essere trattate come casi speciali: il criterio terminale resta esclusivamente `Is Alive == False`.
 
 ## 6. Camera, inspection e Teleport
 
@@ -184,7 +195,7 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
 - con due o più slot liberi, confermare al massimo un dummy nativo per squadra; con un solo slot libero, confermare che non venga creato;
 - riempire la squadra: il dummy deve essere rimosso per rendere disponibile la capacità di 6 umani; ripetere ingressi e uscite vicino al limite e verificare assenza di cicli crea/distruggi o spam `Create Dummy Bot`;
-- uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi;
+- uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi; con D.Va/D.Mon, il de-mech non deve fermare definitivamente facing/throttle prima della morte completa;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
 - verificare `Move Speed = 20%` sia per bot AI sia per dummy; gli iBot devono continuare a usare la propria navigazione nativa;
 - a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;

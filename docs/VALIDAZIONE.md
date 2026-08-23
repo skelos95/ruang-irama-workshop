@@ -89,7 +89,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - Camera con Interact 0,5 s a menu aperto o chiuso, ma soltanto con Crouch rilasciato;
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
-- menu congelato da morti e Jump come unico input custom di respawn;
+- menu congelato da morti e Jump come unico input custom di respawn; posizione e prompt vengono registrati soltanto con `Is Alive == False`;
 - latch rilasciati senza doppie attivazioni.
 
 ### Scheduler e prestazioni statiche
@@ -115,9 +115,9 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 
 | Esito | Invariante |
 |---|---|
-| Vision | durata 15 s e cleanup effetto/IWT |
+| Vision | durata 15 s, IWT con icona/nome/salute live e blocco/cleanup di inspection e Teleport Crouch |
 | Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
-| Skull | morte immediata |
+| Skull | trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
 | Team Heal | cura completa dei soli player umani del team |
 | Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s |
 | Hacked | durata 5 s e cleanup status |
@@ -136,14 +136,15 @@ Il gate controlla:
 - cambio squadra implementato come cleanup + setup fresco;
 - reset completo delle preferenze dopo il cambio squadra;
 - rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
+- Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
-- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi e assenza di nome/nameplate in Vision e inspection;
-- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player;
+- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato e nessun HUD Crouch sovrapposto durante Vision;
+- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
 - velocità bot/dummy esattamente al 20%; soltanto il dummy nativo disabilita le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono le collisioni native;
-- filtro di movimento limitato agli umani vivi della squadra opposta, throttle `Forward` rivalutato con magnitudine `0` entro 4 m e `1` oltre la soglia, più stop obbligatorio su assenza target, morte e rimozione.
+- filtro di movimento limitato agli umani vivi della squadra opposta, throttle `Forward` rivalutato con magnitudine `0` entro 4 m e `1` oltre la soglia, più stop obbligatorio su assenza target, morte completa e rimozione; de-mech/transizioni ancora vive non possono eseguire lo stop terminale.
 
 ### Otto modalità
 
@@ -173,7 +174,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
 - accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
-- Privacy default OFF, target privato selezionabile, osservatore non sganciato o nome/nameplate privato esposto da Vision/inspection;
+- Privacy default OFF, target privato selezionabile, osservatore non sganciato, Vision priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - velocità bot/dummy diversa dal 20%, collisione ambientale applicata agli iBot o con `Include Floors = True`, target alleato accettato, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
@@ -182,7 +183,8 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;
-- esito/durata Try Your Luck mancante o vecchio percorso binario;
+- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline o cleanup eseguito prima della morte completa;
+- Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker o pending non ripulito su timeout/leave/team switch;
 - guardia Join, cleanup Leave o reset team-switch rimosso;
 - una delle otto modalità o un ramo Teleport mancante;
 - divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;

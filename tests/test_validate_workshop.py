@@ -603,11 +603,139 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.source.replace("Random Integer(1, 6)", "Random Integer(1, 5)")
         self.assert_rejected(mutated, "sei esiti")
 
-    def test_try_your_luck_skull_kill_is_inside_state_machine(self) -> None:
+    def test_try_your_luck_skull_arms_full_death_machine(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
-        mutated = self.replace_in_rule(machine, "Kill(Global.PemainAktif, Null);", "")
-        self.assertIn("Kill(Event Player.TargetBalasDendamTerkunci, Event Player);", mutated)
-        self.assert_rejected(mutated, "Skull deve uccidere esattamente Global.PemainAktif")
+        mutated = self.replace_in_rule(
+            machine,
+            "Global.PemainAktif.WaktuPaksaBerakhir = Total Time Elapsed + 5;",
+            "Global.PemainAktif.WaktuPaksaBerakhir = 0;",
+        )
+        self.assert_rejected(mutated, "Skull non arma deadline anti-blocco")
+
+    def test_full_death_machine_owns_the_only_kill(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        kill = next(iter(validator.iter_calls(processor.body, "Kill")))
+        absolute = validator.Call(kill.name, kill.raw, kill.args, processor.start + kill.start, processor.start + kill.end)
+        mutated = self.source[:absolute.start] + "" + self.source[absolute.end:]
+        self.assert_rejected(mutated, "un solo Kill nel processor globale")
+
+    def test_full_death_kill_branch_requires_a_live_target(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            processor,
+            "Else If(And(Has Spawned(Global.PemainAktif) == True, "
+            "And(Is Alive(Global.PemainAktif) == True, "
+            "Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerikut)));",
+            "Else If(And(Has Spawned(Global.PemainAktif) == True, "
+            "And(Is Alive(Global.PemainAktif) == False, "
+            "Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerikut)));",
+        )
+        self.assert_rejected(mutated, "retry soltanto se ancora vivo nello stesso ramo di Kill")
+
+    def test_revenge_timeout_clears_the_pending_flag(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            processor,
+            "Set Player Variable(Global.PemainAktif.PenagihBalasDendam, "
+            "TargetBalasDendamTerkunci, Null);\n"
+            "\t\t\t\t\tGlobal.PemainAktif.KematianBalasDendam = False;",
+            "Set Player Variable(Global.PemainAktif.PenagihBalasDendam, "
+            "TargetBalasDendamTerkunci, Null);",
+        )
+        self.assert_rejected(mutated, "timeout Revenge non azzera flag pending")
+
+    def test_skull_timeout_destroys_the_roulette_icon(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            processor,
+            "\n\t\t\t\t\t\tDestroy Icon(Global.PemainAktif.IkonKartuNasib);",
+            "",
+        )
+        self.assert_rejected(mutated, "timeout Skull deve distruggere l'icona")
+
+    def test_skull_cannot_trigger_from_a_transient_roulette_icon(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            processor,
+            "And(Global.PemainAktif.PutaranKartuNasib == 0, Global.PemainAktif.WaktuPaksaBerakhir > 0)",
+            "True",
+        )
+        self.assert_rejected(mutated, "Skull finale armato dopo la roulette")
+
+    def test_revenge_cannot_consume_debt_at_click(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanBalasDendam")
+        mutated = self.inject_action(
+            apply,
+            "Modify Player Variable At Index(Event Player, JumlahBalasDendam, Event Player.IndeksBalasDendam, Subtract, 1);",
+        )
+        self.assert_rejected(mutated, "non deve consumare il debito prima della morte completa")
+
+    def test_revenge_commit_requires_actual_death(self) -> None:
+        recorder = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "PenagihBalasDendam" in rule.body
+            and "PembunuhBalasDendam" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            recorder,
+            "If(Is Alive(Event Player) == False);",
+            "If(Is Alive(Event Player) == True);",
+        )
+        self.assert_rejected(mutated, "conferma Is Alive falso")
+
+    def test_revenge_recomputes_debt_index_at_commit(self) -> None:
+        recorder = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "PenagihBalasDendam" in rule.body
+            and "PembunuhBalasDendam" in rule.body
+        )
+        recompute = (
+            "Index Of Array Value(Player Variable(Event Player.PenagihBalasDendam, "
+            "PembunuhBalasDendam), Event Player)"
+        )
+        mutated = self.replace_in_rule(recorder, recompute, "Event Player.IndeksBalasDendam")
+        self.assert_rejected(mutated, "ricalcolo indice debito al commit")
+
+    def test_revenge_commit_aborts_before_the_natural_recorder(self) -> None:
+        recorder = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "PenagihBalasDendam" in rule.body
+            and "PembunuhBalasDendam" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            recorder,
+            "Event Player.WaktuPaksaBerakhir = 0;\n\t\t\t\t\tAbort;",
+            "Event Player.WaktuPaksaBerakhir = 0;",
+        )
+        self.assert_rejected(mutated, "Abort prima del recorder naturale")
+
+    def test_try_your_luck_cleanup_waits_for_full_death(self) -> None:
+        cleanup = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Destroy Icon(Event Player.IkonKartuNasib);" in rule.body
+            and "Event Player.KartuNasibAktif = False;" in rule.body
+        )
+        mutated = self.replace_in_rule(cleanup, "\n\t\tIs Alive(Event Player) == False;", "")
+        self.assert_rejected(mutated, "deve attendere la morte completa")
+
+    def test_jump_respawn_prompt_waits_for_full_death(self) -> None:
+        death_prompt = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
+            and "Event Player.BangkitLompatDipakai = False;" in rule.body
+        )
+        mutated = self.replace_in_rule(death_prompt, "\n\t\tIs Alive(Event Player) == False;", "")
+        self.assert_rejected(mutated, "Bangkit Lompat deve attendere la morte completa")
+
+    def test_dummy_death_stop_waits_for_full_death(self) -> None:
+        dummy_death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Is Dummy Bot(Event Player) == True;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+            and "Stop Throttle In Direction(Event Player);" in rule.body
+        )
+        mutated = self.replace_in_rule(dummy_death, "\n\t\tIs Alive(Event Player) == False;", "")
+        self.assert_rejected(mutated, "arresto dummy morto deve attendere la morte completa")
 
     def test_try_your_luck_requires_all_timestamp_state(self) -> None:
         mutated = self.source.replace("WaktuBakarNasibBerikut", "WaktuBakarLegacy")
@@ -922,10 +1050,43 @@ rule("999x - Nasib: Renderer pemain tambahan")
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
         mutated = self.replace_in_rule(
             left,
-            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
-            "Event Player.Manusia == False;",
+            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player))",
+            "Event Player.Manusia == False",
         )
-        self.assert_rejected(mutated, "leave/cleanup umano può essere eseguito")
+        self.assert_rejected(mutated, "Player Left Match deve includere gli iBot e gli umani registrati")
+
+    def test_player_left_match_includes_classified_ibots(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        mutated = self.replace_in_rule(
+            left,
+            "Or(Event Player.BotOtomatis == True, "
+            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player))) == True;",
+            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
+        )
+        self.assert_rejected(mutated, "Player Left Match deve includere gli iBot")
+
+    def test_ibot_leave_destroys_vision_text_before_human_lifecycle(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        mutated = self.replace_in_rule(
+            left,
+            "\n\t\t\t\tDestroy In-World Text(Event Player.TeksVisiNasib);",
+            "",
+        )
+        self.assert_rejected(mutated, "leave iBot deve distruggere TeksVisiNasib")
+
+    def test_ibot_leave_clears_vision_handle_before_human_lifecycle(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        mutated = self.replace_in_rule(
+            left,
+            "\n\t\t\tEvent Player.TeksVisiNasib = Null;",
+            "",
+        )
+        self.assert_rejected(mutated, "leave iBot deve distruggere TeksVisiNasib")
+
+    def test_ibot_leave_aborts_before_human_lifecycle(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        mutated = self.replace_in_rule(left, "\n\t\t\tAbort;", "")
+        self.assert_rejected(mutated, "leave iBot deve distruggere TeksVisiNasib")
 
     def test_roster_append_is_idempotent(self) -> None:
         classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
@@ -1218,7 +1379,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             and "WaktuTeleportasiDummy = 0;" in rule.body
         )
         mutated = self.inject_condition(death, "False == True;")
-        self.assert_rejected(mutated, "cleanup morte dummy: condizione esatta e raggiungibile")
+        self.assert_rejected(mutated, "cleanup morte dummy: condizioni esatte dopo la morte completa")
 
     def test_dummy_death_cleanup_cannot_abort_before_stopping(self) -> None:
         death = self.rule(
@@ -1425,6 +1586,83 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Event Player.PrivasiInspeksiAktif == True",
         )
         self.assert_rejected(mutated, "Vision mostra un umano con Privacy ON")
+
+    def test_vision_shows_hero_icon_name_and_live_health(self) -> None:
+        vision = self.rule(
+            lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        )
+        call = next(iter(validator.iter_calls(vision.body, "Create In-World Text")))
+        absolute = validator.Call(call.name, call.raw, call.args, vision.start + call.start, vision.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, 'Custom String("{0}", Event Player)')
+        self.assert_rejected(mutated, "Vision non mostra icona eroe")
+
+    def test_vision_recipients_are_only_other_humans_with_vision_active(self) -> None:
+        vision = self.rule(
+            lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        )
+        call = next(iter(validator.iter_calls(vision.body, "Create In-World Text")))
+        absolute = validator.Call(call.name, call.raw, call.args, vision.start + call.start, vision.start + call.end)
+        mutated = self.replace_call_argument(absolute, 0, "All Players(All Teams)")
+        self.assert_rejected(mutated, "destinatari Vision devono essere gli altri umani")
+
+    def test_vision_text_keeps_icon_name_health_order(self) -> None:
+        vision = self.rule(
+            lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        )
+        call = next(iter(validator.iter_calls(vision.body, "Create In-World Text")))
+        outer = next(
+            nested for nested in validator.iter_calls(call.args[1], "Custom String")
+            if nested.start == 0 and nested.end == len(call.args[1])
+        )
+        swapped = list(outer.args)
+        swapped[1], swapped[2] = swapped[2], swapped[1]
+        changed_text = "Custom String(" + ", ".join(swapped) + ")"
+        absolute = validator.Call(call.name, call.raw, call.args, vision.start + call.start, vision.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, changed_text)
+        self.assert_rejected(mutated, "ordine icona, nome e salute")
+
+    def test_inspection_crouch_is_blocked_during_vision(self) -> None:
+        inspection = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+        )
+        mutated = self.replace_in_rule(inspection, "\n\t\tEvent Player.PrivasiNasibAktif == False;", "")
+        self.assert_rejected(mutated, "inspection Crouch non è bloccata durante Vision")
+
+    def test_teleport_crouch_is_blocked_during_vision(self) -> None:
+        teleport = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TeleportasiJongkokAktif = True;" in rule.body
+            and "Button(Crouch)" in rule.body
+        )
+        mutated = self.replace_in_rule(teleport, "\n\t\tEvent Player.PrivasiNasibAktif == False;", "")
+        self.assert_rejected(mutated, "Teleport Crouch non è bloccato durante Vision")
+
+    def test_inspection_cleanup_runs_when_vision_starts(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Global.PemainAktif.PrivasiNasibAktif == True",
+            "Global.PemainAktif.PrivasiNasibAktif == False",
+        )
+        self.assert_rejected(mutated, "cleanup inspection non reagisce all'avvio di Vision")
+
+    def test_teleport_cleanup_runs_when_vision_starts(self) -> None:
+        cleanup = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TeleportasiJongkokAktif == True;" in rule.body
+            and "Event Player.TeleportasiJongkokAktif = False;" in rule.body
+            and "Destroy HUD Text(Event Player.HudMenu);" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Event Player.PrivasiNasibAktif == True",
+            "Event Player.PrivasiNasibAktif == False",
+        )
+        self.assert_rejected(mutated, "cleanup Teleport Crouch non reagisce all'avvio di Vision")
 
     def test_vision_name_cleanup_runs_when_subject_turns_private(self) -> None:
         cleanup = self.rule(

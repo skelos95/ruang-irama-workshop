@@ -44,7 +44,7 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 
 | Frequenza | Responsabilità |
 |---:|---|
-| 20 Hz | controlli rapidi e avanzamento Try Your Luck |
+| 20 Hz | controlli rapidi, retry morte completa Revenge/Skull e avanzamento Try Your Luck |
 | 10 Hz | lifecycle reattivo, RGB e refresh visivi |
 | 1 Hz | countdown e cache passive |
 | 0,1 Hz | minuti di permanenza in lobby |
@@ -89,9 +89,9 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 
 | Esito | Durata | Comportamento |
 |---|---:|---|
-| Vision | 15 s | crea e poi rimuove l'effetto Vision senza esporre nome/nameplate degli umani privati |
+| Vision | 15 s | mostra icona, nome e salute live dei target consentiti e sopprime inspection/Teleport Crouch |
 | Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
-| Skull | immediato | uccide il player |
+| Skull | immediato | ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
 | Team Heal | immediato | porta i player umani della squadra alla salute completa |
 | Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s |
 | Hacked | 5 s | applica e poi rimuove Hacked |
@@ -109,6 +109,8 @@ L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelat
 La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
 
 Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection e Vision filtrano sempre Privacy prima di creare o mantenere nome/nameplate.
+
+Revenge e Skull condividono il percorso di morte completa nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva il claimant sul target, ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio.
 
 Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo.
 
@@ -152,7 +154,7 @@ Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. T
 
 La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Privacy è ON per default: impedisce a qualunque osservatore di scegliere l'umano come target della Camera custom e obbliga sia inspection sia Vision a non creare o mantenere il suo nome/nameplate. Ogni handle identificativo già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata. Privacy è ON per default: impedisce a qualunque osservatore di scegliere l'umano come target della Camera custom e obbliga sia inspection sia Vision a non creare o mantenere il suo nome/nameplate. Ogni handle identificativo già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
 
 La destinazione Teleport viene rivalutata al click:
 

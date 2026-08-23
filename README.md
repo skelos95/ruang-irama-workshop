@@ -29,7 +29,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 1 | Third-Person Camera | OFF, self o target valido |
 | 2 | Name Color | 32 colori |
 | 3 | HUD Language | English, Bahasa Indonesia, ไทย |
-| 4 | Revenge | debiti da kill dirette ricevute |
+| 4 | Revenge | debiti da kill dirette, consumati solo alla morte completa |
 | 5 | Unkillable | OFF, 1 HP curabile, FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
@@ -63,22 +63,24 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 
 | Esito | Durata | Effetto |
 |---|---:|---|
-| Vision | 15 s | mostra i target consentiti, senza esporre nome o nameplate degli umani con Privacy ON |
+| Vision | 15 s | mostra icona eroe, nome e salute dei target consentiti; Crouch non apre inspection/Teleport e gli umani con Privacy ON restano nascosti |
 | Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
-| Skull | immediato | morte del player |
+| Skull | immediato | morte completa del player, con retry per mech, duplicazioni e altre forme intermedie |
 | Team Heal | immediato | cura completa dei player umani della squadra |
 | Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s |
 | Hacked | 5 s | stato Hacked |
 
-Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu.
+Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu. Un'icona Skull comparsa durante i giri non può attivare la morte: soltanto lo Skull finale, con roulette conclusa e deadline armata, viene ritentato ogni 0,25 s finché il player non è realmente morto. Una deadline di 5 s libera comunque menu e input se il motore rifiuta la morte, evitando stati permanenti.
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Vision crea un solo IWT per soggetto con icona, nome e salute live; l'avvio di Vision elimina eventuali handle Crouch già presenti e il leave di un iBot distrugge il proprio IWT senza entrare nel lifecycle umano. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+
+Revenge arma una morte forzata ma non modifica subito il debito. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del respawn con Jump attendono `Is Alive == False`, quindi un de-mech non viene trattato come morte finale.
 
 ## Runtime 0.8.0
 
 Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 Hz:
 
-- ogni tick: controlli rapidi e macchina a stati Try Your Luck;
+- ogni tick: controlli rapidi, morte completa Revenge/Skull e macchina a stati Try Your Luck;
 - 10 Hz: lifecycle, RGB e refresh reattivi;
 - 1 Hz: countdown e cache passive;
 - ogni 10 secondi: minuti lobby.

@@ -146,6 +146,9 @@ variables
 		88: WaktuIkonNasibBerakhir
 		89: TimTerakhir
 		90: WaktuTeleportasiDummy
+		91: PenagihBalasDendam
+		92: WaktuPaksaBerikut
+		93: WaktuPaksaBerakhir
 }
 
 subroutines
@@ -1422,6 +1425,7 @@ rule("03i - Bot/Dummy: Hentikan gerak saat bot mati")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == True;
+		Is Alive(Event Player) == False;
 	}
 
 	actions
@@ -1444,12 +1448,18 @@ rule("04 - Pemain Keluar: Tenangkan lalu bersihkan pendaftaran")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == False;
-		Event Player.BotOtomatis == False;
-		Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;
+		Or(Event Player.BotOtomatis == True, Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player))) == True;
 	}
 
 	actions
 	{
+		If(Event Player.BotOtomatis == True);
+			If(Event Player.TeksVisiNasib != Null);
+				Destroy In-World Text(Event Player.TeksVisiNasib);
+			End;
+			Event Player.TeksVisiNasib = Null;
+			Abort;
+		End;
 		Call Subroutine(TenangkanPemain);
 		Wait(0.050, Ignore Condition);
 		Call Subroutine(BersihkanPemain);
@@ -1954,26 +1964,39 @@ rule("99e - Subrutin: Terapkan halaman balas dendam")
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetBalasDendam);
-		If(Count Of(Event Player.DaftarTargetBalasDendam) == 0);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No revenge targets. Peace has won, temporarily.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada target balas dendam. Damai menang... sementara.") : Custom String("ไม่มีเป้าหมายล้างแค้น ความสงบชนะแล้ว...ชั่วคราว"));
+		If(And(Event Player.TargetBalasDendamTerkunci != Null, And(Entity Exists(Event Player.TargetBalasDendamTerkunci), Player Variable(Event Player.TargetBalasDendamTerkunci, PenagihBalasDendam) == Event Player)));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge is still resolving. The debt changes only after full death.") : Event Player.IndeksBahasa == 1 ? Custom String("Balas dendam masih diproses. Utang berubah hanya setelah mati penuh.") : Custom String("กำลังดำเนินการล้างแค้น หนี้จะเปลี่ยนเมื่อเสียชีวิตอย่างสมบูรณ์เท่านั้น"));
 		Else;
-			Event Player.KursorBalasDendam %= Count Of(Event Player.DaftarTargetBalasDendam);
-			Event Player.TargetBalasDendamTerkunci = Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam];
-			Event Player.IndeksBalasDendam = Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.TargetBalasDendamTerkunci);
-			If(Event Player.IndeksBalasDendam < 0);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("That player owes you nothing. Suspiciously peaceful.") : Event Player.IndeksBahasa == 1 ? Custom String("Pemain itu tidak punya utang. Damainya mencurigakan sekali.") : Custom String("ผู้เล่นคนนั้นไม่ได้ติดหนี้คุณ สงบเกินจนน่าสงสัย"));
-			Else If(Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam] <= 0);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge debt cleared. Case closed.") : Event Player.IndeksBahasa == 1 ? Custom String("Utang balas dendam lunas. Kasus ditutup.") : Custom String("ชำระหนี้ล้างแค้นหมดแล้ว ปิดคดี"));
-			Else If(Or(Entity Exists(Event Player.TargetBalasDendamTerkunci) == False, Is Alive(Event Player.TargetBalasDendamTerkunci) == False));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Target is already down. Revenge has office hours.") : Event Player.IndeksBahasa == 1 ? Custom String("Target sudah tumbang. Balas dendam juga punya jam kerja.") : Custom String("เป้าหมายล้มอยู่แล้ว การล้างแค้นก็มีเวลาทำการนะ"));
+			Event Player.TargetBalasDendamTerkunci = Null;
+			Call Subroutine(SegarkanTargetBalasDendam);
+			If(Count Of(Event Player.DaftarTargetBalasDendam) == 0);
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No revenge targets. Peace has won, temporarily.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada target balas dendam. Damai menang... sementara.") : Custom String("ไม่มีเป้าหมายล้างแค้น ความสงบชนะแล้ว...ชั่วคราว"));
 			Else;
-				Set Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam, True);
-				Kill(Event Player.TargetBalasDendamTerkunci, Event Player);
-				Modify Player Variable At Index(Event Player, JumlahBalasDendam, Event Player.IndeksBalasDendam, Subtract, 1);
-				Call Subroutine(EfekTerapkan);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge claimed on {0}. Remaining: {1}.", Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]) : Event Player.IndeksBahasa == 1 ? Custom String("Balas dendam dibayar pada {0}. Sisa: {1}.", Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]) : Custom String("ล้างแค้น {0} สำเร็จ เหลือ: {1}", Event Player.TargetBalasDendamTerkunci, Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam]));
-				Event Player.TargetBalasDendamTerkunci = Null;
+				Event Player.KursorBalasDendam %= Count Of(Event Player.DaftarTargetBalasDendam);
+				Event Player.TargetBalasDendamTerkunci = Event Player.DaftarTargetBalasDendam[Event Player.KursorBalasDendam];
+				Event Player.IndeksBalasDendam = Index Of Array Value(Event Player.PembunuhBalasDendam, Event Player.TargetBalasDendamTerkunci);
+				If(Event Player.IndeksBalasDendam < 0);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("That player owes you nothing. Suspiciously peaceful.") : Event Player.IndeksBahasa == 1 ? Custom String("Pemain itu tidak punya utang. Damainya mencurigakan sekali.") : Custom String("ผู้เล่นคนนั้นไม่ได้ติดหนี้คุณ สงบเกินจนน่าสงสัย"));
+					Event Player.TargetBalasDendamTerkunci = Null;
+				Else If(Event Player.JumlahBalasDendam[Event Player.IndeksBalasDendam] <= 0);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge debt cleared. Case closed.") : Event Player.IndeksBahasa == 1 ? Custom String("Utang balas dendam lunas. Kasus ditutup.") : Custom String("ชำระหนี้ล้างแค้นหมดแล้ว ปิดคดี"));
+					Event Player.TargetBalasDendamTerkunci = Null;
+				Else If(Or(Entity Exists(Event Player.TargetBalasDendamTerkunci) == False, Is Alive(Event Player.TargetBalasDendamTerkunci) == False));
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Target is already down. Revenge has office hours.") : Event Player.IndeksBahasa == 1 ? Custom String("Target sudah tumbang. Balas dendam juga punya jam kerja.") : Custom String("เป้าหมายล้มอยู่แล้ว การล้างแค้นก็มีเวลาทำการนะ"));
+					Event Player.TargetBalasDendamTerkunci = Null;
+				Else If(Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam) == True);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("That target already has a revenge in progress.") : Event Player.IndeksBahasa == 1 ? Custom String("Target itu sudah memiliki balas dendam yang sedang diproses.") : Custom String("เป้าหมายนั้นมีการล้างแค้นที่กำลังดำเนินอยู่แล้ว"));
+					Event Player.TargetBalasDendamTerkunci = Null;
+				Else If(Player Variable(Event Player.TargetBalasDendamTerkunci, KartuNasibAktif) == True);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("That target is using Try Your Luck. Wait until it finishes.") : Event Player.IndeksBahasa == 1 ? Custom String("Target itu sedang memakai Coba Nasib. Tunggu sampai selesai.") : Custom String("เป้าหมายนั้นกำลังใช้เสี่ยงโชค รอให้จบก่อน"));
+					Event Player.TargetBalasDendamTerkunci = Null;
+				Else;
+					Set Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam, True);
+					Set Player Variable(Event Player.TargetBalasDendamTerkunci, PenagihBalasDendam, Event Player);
+					Set Player Variable(Event Player.TargetBalasDendamTerkunci, WaktuPaksaBerikut, Total Time Elapsed);
+					Set Player Variable(Event Player.TargetBalasDendamTerkunci, WaktuPaksaBerakhir, Total Time Elapsed + 5);
+					Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Revenge armed on {0}. Waiting for full death.", Event Player.TargetBalasDendamTerkunci) : Event Player.IndeksBahasa == 1 ? Custom String("Balas dendam diarahkan ke {0}. Menunggu mati penuh.", Event Player.TargetBalasDendamTerkunci) : Custom String("เริ่มล้างแค้น {0} แล้ว กำลังรอการเสียชีวิตอย่างสมบูรณ์", Event Player.TargetBalasDendamTerkunci));
+				End;
 			End;
 		End;
 	}
@@ -2149,6 +2172,8 @@ rule("99k - Subrutin: Terapkan halaman coba nasib")
 	{
 		If(Event Player.KartuNasibAktif == True);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Try Your Luck is still active. Wait for it to finish.") : Event Player.IndeksBahasa == 1 ? Custom String("Coba Nasib masih aktif. Tunggu sampai selesai.") : Custom String("เสี่ยงโชคยังทำงานอยู่ รอให้จบก่อน"));
+		Else If(Event Player.KematianBalasDendam == True);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("A revenge death is still resolving. Try Your Luck is temporarily unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Kematian balas dendam masih diproses. Coba Nasib sementara tidak tersedia.") : Custom String("กำลังดำเนินการเสียชีวิตจากการล้างแค้น จึงยังใช้เสี่ยงโชคไม่ได้ชั่วคราว"));
 		Else;
 			Event Player.KartuNasibAktif = True;
 			Event Player.EfekNasib = Random Integer(1, 6);
@@ -2315,6 +2340,7 @@ rule("12e - Bangkit Lompat: Simpan posisi kematian")
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == False;
 	}
 
 	actions
@@ -2376,6 +2402,7 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 		Event Player.Manusia == True;
 		Is Alive(Event Player) == True;
 		Event Player.MenuTerbuka == False;
+		Event Player.PrivasiNasibAktif == False;
 		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.TeleportasiJongkokDiaktifkan == False;
 		Event Player.ModeKamera != 2;
@@ -2447,8 +2474,31 @@ rule("17 - Balas Dendam: Catat hanya pembunuh langsung")
 	actions
 	{
 		If(Event Player.KematianBalasDendam == True);
-			Event Player.KematianBalasDendam = False;
-			Abort;
+			If(Is Alive(Event Player) == False);
+				If(And(Event Player.PenagihBalasDendam != Null, And(Entity Exists(Event Player.PenagihBalasDendam), And(Player Variable(Event Player.PenagihBalasDendam, Manusia) == True, Attacker == Event Player.PenagihBalasDendam))));
+					Set Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam, Index Of Array Value(Player Variable(Event Player.PenagihBalasDendam, PembunuhBalasDendam), Event Player));
+					If(And(Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam) >= 0, Player Variable(Event Player.PenagihBalasDendam, JumlahBalasDendam)[Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam)] > 0));
+						Modify Player Variable At Index(Event Player.PenagihBalasDendam, JumlahBalasDendam, Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam), Subtract, 1);
+						Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Position Of(Event Player.PenagihBalasDendam) + Vector(0, 1, 0), 3);
+						Small Message(Event Player.PenagihBalasDendam, Player Variable(Event Player.PenagihBalasDendam, IndeksBahasa) == 0 ? Custom String("Revenge claimed on {0}. Remaining: {1}.", Event Player, Player Variable(Event Player.PenagihBalasDendam, JumlahBalasDendam)[Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam)]) : Player Variable(Event Player.PenagihBalasDendam, IndeksBahasa) == 1 ? Custom String("Balas dendam dibayar pada {0}. Sisa: {1}.", Event Player, Player Variable(Event Player.PenagihBalasDendam, JumlahBalasDendam)[Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam)]) : Custom String("ล้างแค้น {0} สำเร็จ เหลือ: {1}", Event Player, Player Variable(Event Player.PenagihBalasDendam, JumlahBalasDendam)[Player Variable(Event Player.PenagihBalasDendam, IndeksBalasDendam)]));
+					End;
+					Set Player Variable(Event Player.PenagihBalasDendam, TargetBalasDendamTerkunci, Null);
+					Event Player.KematianBalasDendam = False;
+					Event Player.PenagihBalasDendam = Null;
+					Event Player.WaktuPaksaBerikut = 0;
+					Event Player.WaktuPaksaBerakhir = 0;
+					Abort;
+				End;
+				If(And(Event Player.PenagihBalasDendam != Null, Entity Exists(Event Player.PenagihBalasDendam)));
+					Set Player Variable(Event Player.PenagihBalasDendam, TargetBalasDendamTerkunci, Null);
+				End;
+				Event Player.KematianBalasDendam = False;
+				Event Player.PenagihBalasDendam = Null;
+				Event Player.WaktuPaksaBerikut = 0;
+				Event Player.WaktuPaksaBerakhir = 0;
+			Else;
+				Abort;
+			End;
 		End;
 		Abort If(Attacker == Null);
 		Abort If(Attacker == Event Player);
@@ -2510,6 +2560,7 @@ rule("18f - Nasib: Bersihkan efek saat mati")
 	conditions
 	{
 		Or(Event Player.KartuNasibAktif == True, Or(Event Player.PutaranKartuNasib > 0, Event Player.EfekNasib != 0)) == True;
+		Is Alive(Event Player) == False;
 	}
 
 	actions
@@ -2529,6 +2580,8 @@ rule("18f - Nasib: Bersihkan efek saat mati")
 		Event Player.EfekNasib = 0;
 		Event Player.EfekNasibBerakhir = 0;
 		Event Player.WaktuBakarNasibBerikut = 0;
+		Event Player.WaktuPaksaBerikut = 0;
+		Event Player.WaktuPaksaBerakhir = 0;
 		Event Player.WaktuPutaranNasibBerikut = 0;
 		Event Player.WaktuIkonNasibBerakhir = 0;
 		Event Player.IkonKartuNasib = Null;
@@ -2536,6 +2589,15 @@ rule("18f - Nasib: Bersihkan efek saat mati")
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
 		Event Player.MenuNasibHarusDibuka = Event Player.MenuTerbuka == False;
+		Event Player.InputMenuDikunci = False;
+		Event Player.PerintahMenu = 0;
+		Allow Button(Event Player, Button(Primary Fire));
+		Allow Button(Event Player, Button(Secondary Fire));
+		Allow Button(Event Player, Button(Interact));
+		Allow Button(Event Player, Button(Reload));
+		Allow Button(Event Player, Button(Ability 1));
+		Allow Button(Event Player, Button(Ability 2));
+		Allow Button(Event Player, Button(Ultimate));
 		Clear Status(Event Player, Unkillable);
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
@@ -2596,7 +2658,7 @@ rule("18i - Nasib: Visi menampilkan nama publik dan bot")
 
 	actions
 	{
-		Create In-World Text(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True))), Custom String("{0}", Event Player), Eye Position(Event Player) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Event Player.Manusia == True ? Event Player.WarnaNama : Color(Orange), Visible Never);
+		Create In-World Text(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True))), Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0}", Event Player), Round To Integer(Health(Event Player), Down)), Eye Position(Event Player) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Event Player.Manusia == True ? Event Player.WarnaNama : Color(Orange), Visible Never);
 		Event Player.TeksVisiNasib = Last Text ID;
 	}
 }
@@ -2665,6 +2727,7 @@ rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.MenuTerbuka == False;
 		Event Player.KartuNasibAktif == False;
+		Event Player.PrivasiNasibAktif == False;
 		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.TeleportasiJongkokDiaktifkan == True;
 		Has Spawned(Event Player) == True;
@@ -2941,7 +3004,7 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 	conditions
 	{
 		Event Player.TeleportasiJongkokAktif == True;
-		Or(Or(Is Button Held(Event Player, Button(Crouch)) == False, Event Player.MenuTerbuka == True), Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False)) == True;
+		Or(Or(Or(Is Button Held(Event Player, Button(Crouch)) == False, Event Player.MenuTerbuka == True), Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False)), Event Player.PrivasiNasibAktif == True) == True;
 	}
 
 	actions
@@ -2994,7 +3057,49 @@ rule("89a - Subrutin: Proses status cepat pemain")
 
 	actions
 	{
-		If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.KebalAktif == True, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))));
+		If(And(Global.PemainAktif.Manusia == True, Or(Global.PemainAktif.KematianBalasDendam == True, And(Global.PemainAktif.KartuNasibAktif == True, And(Global.PemainAktif.EfekNasib == 3, And(Global.PemainAktif.PutaranKartuNasib == 0, Global.PemainAktif.WaktuPaksaBerakhir > 0))))));
+			If(And(Global.PemainAktif.KematianBalasDendam == True, Or(Global.PemainAktif.PenagihBalasDendam == Null, Or(Entity Exists(Global.PemainAktif.PenagihBalasDendam) == False, Player Variable(Global.PemainAktif.PenagihBalasDendam, Manusia) == False))));
+				Global.PemainAktif.KematianBalasDendam = False;
+				Global.PemainAktif.PenagihBalasDendam = Null;
+				Global.PemainAktif.WaktuPaksaBerikut = 0;
+				Global.PemainAktif.WaktuPaksaBerakhir = 0;
+			Else If(And(Global.PemainAktif.WaktuPaksaBerakhir > 0, Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir));
+				If(Global.PemainAktif.KematianBalasDendam == True);
+					Small Message(Global.PemainAktif.PenagihBalasDendam, Player Variable(Global.PemainAktif.PenagihBalasDendam, IndeksBahasa) == 0 ? Custom String("Revenge could not complete. No debt was consumed.") : Player Variable(Global.PemainAktif.PenagihBalasDendam, IndeksBahasa) == 1 ? Custom String("Balas dendam tidak dapat diselesaikan. Tidak ada utang yang dipakai.") : Custom String("การล้างแค้นไม่สำเร็จ ไม่มีการใช้หนี้"));
+					Set Player Variable(Global.PemainAktif.PenagihBalasDendam, TargetBalasDendamTerkunci, Null);
+					Global.PemainAktif.KematianBalasDendam = False;
+					Global.PemainAktif.PenagihBalasDendam = Null;
+				Else;
+					If(Global.PemainAktif.IkonKartuNasib != Null);
+						Destroy Icon(Global.PemainAktif.IkonKartuNasib);
+					End;
+					Global.PemainAktif.IkonKartuNasib = Null;
+					Global.PemainAktif.WaktuIkonNasibBerakhir = 0;
+					Global.PemainAktif.EfekNasib = 0;
+					Global.PemainAktif.EfekNasibBerakhir = 0;
+					Global.PemainAktif.KartuNasibAktif = False;
+					Global.PemainAktif.MenuNasibHarusDibuka = Global.PemainAktif.MenuTerbuka == False;
+					Global.PemainAktif.InputMenuDikunci = False;
+					Global.PemainAktif.PerintahMenu = 0;
+					Allow Button(Global.PemainAktif, Button(Primary Fire));
+					Allow Button(Global.PemainAktif, Button(Secondary Fire));
+					Allow Button(Global.PemainAktif, Button(Interact));
+					Allow Button(Global.PemainAktif, Button(Reload));
+					Allow Button(Global.PemainAktif, Button(Ability 1));
+					Allow Button(Global.PemainAktif, Button(Ability 2));
+					Allow Button(Global.PemainAktif, Button(Ultimate));
+					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("SKULL could not complete. The menu was restored.") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("TENGKORAK tidak dapat diselesaikan. Menu dipulihkan.") : Custom String("กะโหลกทำงานไม่สำเร็จ คืนค่าเมนูแล้ว"));
+				End;
+				Global.PemainAktif.WaktuPaksaBerikut = 0;
+				Global.PemainAktif.WaktuPaksaBerakhir = 0;
+			Else If(And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerikut)));
+				Global.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed + 0.250;
+				Clear Status(Global.PemainAktif, Unkillable);
+				Set Damage Received(Global.PemainAktif, 100);
+				Kill(Global.PemainAktif, Global.PemainAktif.KematianBalasDendam == True ? Global.PemainAktif.PenagihBalasDendam : Null);
+			End;
+		End;
+		If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.KebalAktif == True, And(Global.PemainAktif.KematianBalasDendam == False, And(Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0))), And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))))));
 			If(And(Global.PemainAktif.ModeKebal == 1, Is In Spawn Room(Global.PemainAktif) == False));
 				If(Has Status(Global.PemainAktif, Unkillable) == False);
 					Set Status(Global.PemainAktif, Null, Unkillable, 9999);
@@ -3042,7 +3147,7 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("Camera target unavailable or private. Back to normal.") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("Target kamera tidak tersedia atau privat. Kembali normal.") : Custom String("เป้าหมายกล้องไม่พร้อมใช้งานหรือเป็นส่วนตัว กลับมุมมองปกติแล้ว"));
 			End;
 		End;
-		If(And(Global.PemainAktif.InspeksiAktif == True, Or(Or(Or(Or(Or(Is Button Held(Global.PemainAktif, Button(Crouch)) == False, Global.PemainAktif.MenuTerbuka == True), Has Spawned(Global.PemainAktif) == False), Is Alive(Global.PemainAktif) == False), Global.PemainAktif.ModeKamera == 2), And(Global.PemainAktif.TeleportasiJongkokAktif == True, Global.PemainAktif.KursorTeleportasi != 2))));
+		If(And(Global.PemainAktif.InspeksiAktif == True, Or(Or(Or(Or(Or(Or(Is Button Held(Global.PemainAktif, Button(Crouch)) == False, Global.PemainAktif.MenuTerbuka == True), Has Spawned(Global.PemainAktif) == False), Is Alive(Global.PemainAktif) == False), Global.PemainAktif.ModeKamera == 2), And(Global.PemainAktif.TeleportasiJongkokAktif == True, Global.PemainAktif.KursorTeleportasi != 2)), Global.PemainAktif.PrivasiNasibAktif == True)));
 			If(Global.PemainAktif.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Global.PemainAktif);
 				Global.PemainAktif.PelatNamaDinonaktifkan = False;
@@ -3174,7 +3279,8 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: AKSELERASI MENGIKUTI BIDIKAN — 10dtk") : Custom String("เสี่ยงโชค: เร่งความเร็วตามทิศเล็ง — 10 วินาที"));
 				Else If(Global.PemainAktif.EfekNasib == 3);
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: SKULL") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: TENGKORAK") : Custom String("เสี่ยงโชค: กะโหลก"));
-					Kill(Global.PemainAktif, Null);
+					Global.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed;
+					Global.PemainAktif.WaktuPaksaBerakhir = Total Time Elapsed + 5;
 				Else If(Global.PemainAktif.EfekNasib == 4);
 					Set Player Health(Filtered Array(All Living Players(Team Of(Global.PemainAktif)), Player Variable(Current Array Element, Manusia) == True), 9999);
 					Small Message(Filtered Array(All Living Players(Team Of(Global.PemainAktif)), Player Variable(Current Array Element, Manusia) == True), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("TRY YOUR LUCK: HEART — TEAM FULL HEAL") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("COBA NASIB: HATI — TIM SEMBUH PENUH") : Custom String("เสี่ยงโชค: หัวใจ — รักษาทีมเต็มพลัง"));
@@ -3747,6 +3853,10 @@ rule("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.WaktuPutaranNasibBerikut = 0;
 		Event Player.WaktuIkonNasibBerakhir = 0;
 		Event Player.MenuNasibHarusDibuka = False;
+		Event Player.KematianBalasDendam = False;
+		Event Player.PenagihBalasDendam = Null;
+		Event Player.WaktuPaksaBerikut = 0;
+		Event Player.WaktuPaksaBerakhir = 0;
 		"Matikan semua pemicu sebelum acara keluar atau masuk menyelesaikan pembersihan dan pendaftaran baru."
 		Event Player.SudahSiap = False;
 		Event Player.Manusia = False;
@@ -3841,6 +3951,10 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.WaktuPutaranNasibBerikut = 0;
 		Event Player.WaktuIkonNasibBerakhir = 0;
 		Event Player.MenuNasibHarusDibuka = False;
+		Event Player.KematianBalasDendam = False;
+		Event Player.PenagihBalasDendam = Null;
+		Event Player.WaktuPaksaBerikut = 0;
+		Event Player.WaktuPaksaBerakhir = 0;
 		If(Event Player.TeksTeleportasi != Null);
 			Destroy In-World Text(Event Player.TeksTeleportasi);
 		End;
@@ -3895,6 +4009,12 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 			If(Global.IndeksUtangKeluar >= 0);
 				Modify Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PembunuhBalasDendam, Remove From Array By Index, Global.IndeksUtangKeluar);
 				Modify Player Variable(Global.PemainManusia[Global.IndeksPembersihan], JumlahBalasDendam, Remove From Array By Index, Global.IndeksUtangKeluar);
+			End;
+			If(Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PenagihBalasDendam) == Global.PemainPembersihan);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], KematianBalasDendam, False);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PenagihBalasDendam, Null);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], WaktuPaksaBerikut, 0);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], WaktuPaksaBerakhir, 0);
 			End;
 			If(Global.PemainManusia[Global.IndeksPembersihan].TargetKamera == Global.PemainPembersihan);
 				Stop Camera(Global.PemainManusia[Global.IndeksPembersihan]);
@@ -3978,6 +4098,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.JumlahBalasDendam = Empty Array;
 		Event Player.IndeksBalasDendam = -1;
 		Event Player.KematianBalasDendam = False;
+		Event Player.PenagihBalasDendam = Null;
+		Event Player.WaktuPaksaBerikut = 0;
+		Event Player.WaktuPaksaBerakhir = 0;
 		Event Player.KursorTeleportasi = 0;
 		Event Player.DaftarTargetTeleportasi = Empty Array;
 		Event Player.CalonTargetTeleportasi = Null;

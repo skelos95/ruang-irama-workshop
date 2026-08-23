@@ -436,6 +436,46 @@ def for_spans(rule: Rule) -> list[str]:
     return spans
 
 
+def conditional_branch_spans(text: str) -> list[tuple[int, int]]:
+    """Return balanced If/Else-If/Else branches with offsets in *text*.
+
+    Workshop uses the same ``End;`` token for conditionals and For loops. Keep
+    both on the stack so an action cannot be matched to a sibling branch merely
+    because the same token exists elsewhere in the rule.
+    """
+    stack: list[tuple[str, int | None]] = []
+    spans: list[tuple[int, int]] = []
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        stripped = mask_strings(line).strip()
+        if re.match(r"For (?:Global|Player) Variable", stripped):
+            stack.append(("for", None))
+        elif stripped.startswith("If("):
+            stack.append(("if", offset))
+        elif stripped.startswith("Else If(") or stripped == "Else;":
+            if stack and stack[-1][0] == "if":
+                _, branch_start = stack[-1]
+                if branch_start is not None:
+                    spans.append((branch_start, offset))
+                stack[-1] = ("if", offset)
+        elif stripped == "End;" and stack:
+            kind, branch_start = stack.pop()
+            if kind == "if" and branch_start is not None:
+                spans.append((branch_start, offset + len(line)))
+        offset += len(line)
+    return spans
+
+
+def conditional_branches_containing(text: str, position: int) -> list[str]:
+    """Return enclosing conditional branches, innermost first."""
+    spans = [
+        (start, end)
+        for start, end in conditional_branch_spans(text)
+        if start <= position < end
+    ]
+    return [text[start:end] for start, end in sorted(spans, key=lambda span: span[1] - span[0])]
+
+
 def normalized_rule_body(rule: Rule) -> str:
     body = re.sub(r'^rule\("[^"\r\n]+"\)', 'rule("")', rule.body, count=1)
     return re.sub(r"\s+", "", body)
@@ -1287,7 +1327,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require("HudMenuArcade" not in source and "PramuatSubmenu" not in source,
                    "preload/array di HUD menu ancora presente")
     for rule in rules:
-        if ("Button(Primary Fire)" in rule.body or "Button(Secondary Fire)" in rule.body) and "PerintahMenu" in rule.body and event_type(rule) != "Subroutine":
+        if ("Button(Primary Fire)" in rule.body or "Button(Secondary Fire)" in rule.body) and "PerintahMenu" in rule.body and event_type(rule) == "Ongoing - Each Player":
             checks.require("Create HUD Text(" not in rule.body and "Destroy HUD Text(" not in rule.body,
                            f"{rule.name}: Primary/Secondary non devono ricreare HUD")
 
@@ -1379,6 +1419,8 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
     for rule in crouch_features:
         checks.require("Event Player.MenuTerbuka == False;" in rule.body,
                        f"{rule.name}: Crouch inspection/teleport deve essere disattivato col menu")
+        checks.require("Event Player.PrivasiNasibAktif == False;" in rule.body,
+                       f"{rule.name}: Crouch inspection/teleport deve essere disattivato durante Vision")
 
     for rule in rules_with_event(rules, "Player Died"):
         checks.require("Call Subroutine(TutupMenu);" not in rule.body,
@@ -1724,16 +1766,293 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             checks.require(human_recipient(heart_messages[0].args[0]),
                            "Heart roulette invia HUD anche a bot/dummy")
 
-        checks.equal(
-            state_machine.body.count("Kill(Global.PemainAktif, Null);"),
-            1,
-            "Skull deve uccidere esattamente Global.PemainAktif nella macchina Coba Nasib",
-        )
+        checks.equal(state_machine.body.count("Kill("), 0,
+                     "Skull deve delegare la morte completa alla macchina globale")
+        for token, label in (
+            ("Global.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed;", "timestamp primo tentativo"),
+            ("Global.PemainAktif.WaktuPaksaBerakhir = Total Time Elapsed + 5;", "deadline anti-blocco"),
+        ):
+            checks.require(token in state_machine.body, f"Skull non arma {label}")
         checks.require("Total Time Elapsed" in state_machine.body,
                        "macchina Try Your Luck non confronta timestamp")
     for duration in (15, 10, 5):
         checks.require(re.search(rf"(?:Total Time Elapsed\s*\+\s*{duration}\b|(?:Burning|Hacked),\s*{duration}\))", source) is not None,
                        f"durata Try Your Luck {duration} s assente")
+
+
+def validate_forced_death(checks: Checks, source: str, rules: list[Rule], players: set[str]) -> None:
+    for name in ("PenagihBalasDendam", "WaktuPaksaBerikut", "WaktuPaksaBerakhir"):
+        checks.require(name in players, f"stato morte completa assente: {name}")
+
+    processor = rule_by_subroutine(rules, "ProsesCepatPemain")
+    checks.require(processor is not None, "macchina globale morte completa assente")
+    if processor:
+        processor_masked = mask_strings(processor.body)
+        kill_calls = list(iter_calls(processor.body, "Kill"))
+        checks.equal(len(kill_calls), 1, "morte forzata deve avere un solo Kill nel processor globale")
+        if len(kill_calls) == 1:
+            checks.equal(
+                tuple(argument.strip() for argument in kill_calls[0].args),
+                (
+                    "Global.PemainAktif",
+                    "Global.PemainAktif.KematianBalasDendam == True ? Global.PemainAktif.PenagihBalasDendam : Null",
+                ),
+                "Kill globale deve scegliere solo claimant Revenge oppure Null per Skull",
+            )
+            kill_position = kill_calls[0].start
+            kill_branches = conditional_branches_containing(processor.body, kill_position)
+            checks.require(bool(kill_branches), "morte completa: Kill non appartiene a un ramo condizionale")
+            kill_branch = mask_strings(kill_branches[0]) if kill_branches else ""
+            for token, label in (
+                ("Has Spawned(Global.PemainAktif) == True", "guardia spawn nello stesso ramo di Kill"),
+                ("Is Alive(Global.PemainAktif) == True", "retry soltanto se ancora vivo nello stesso ramo di Kill"),
+                ("Global.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed + 0.250;", "retry a timestamp"),
+                ("Clear Status(Global.PemainAktif, Unkillable);", "rimozione Unkillable"),
+                ("Set Damage Received(Global.PemainAktif, 100);", "ripristino danno ricevuto"),
+            ):
+                position = kill_branch.find(token)
+                branch_kill_position = kill_branch.find("Kill(")
+                checks.require(
+                    0 <= position < branch_kill_position,
+                    f"morte completa: {label} deve precedere Kill",
+                )
+
+        revenge_timeout_anchor = (
+            "Set Player Variable(Global.PemainAktif.PenagihBalasDendam, "
+            "TargetBalasDendamTerkunci, Null);"
+        )
+        revenge_timeout_position = processor_masked.find(revenge_timeout_anchor)
+        checks.require(revenge_timeout_position >= 0, "timeout Revenge: cleanup target claimant assente")
+        if revenge_timeout_position >= 0:
+            revenge_timeout_branches = conditional_branches_containing(
+                processor.body, revenge_timeout_position
+            )
+            revenge_timeout_branch = (
+                mask_strings(revenge_timeout_branches[0]) if revenge_timeout_branches else ""
+            )
+            checks.require(
+                "Global.PemainAktif.KematianBalasDendam == True" in revenge_timeout_branch,
+                "timeout Revenge: cleanup non appartiene al ramo pending",
+            )
+            for token, label in (
+                ("Global.PemainAktif.KematianBalasDendam = False;", "flag pending"),
+                ("Global.PemainAktif.PenagihBalasDendam = Null;", "claimant"),
+            ):
+                checks.require(token in revenge_timeout_branch, f"timeout Revenge non azzera {label}")
+            checks.require(
+                any(
+                    "Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir" in mask_strings(branch)
+                    for branch in revenge_timeout_branches[1:]
+                ),
+                "cleanup Revenge non appartiene al ramo di timeout",
+            )
+
+        skull_timeout_anchor = "Global.PemainAktif.KartuNasibAktif = False;"
+        skull_timeout_position = processor_masked.find(skull_timeout_anchor)
+        checks.require(skull_timeout_position >= 0, "timeout Skull: rilascio stato assente")
+        if skull_timeout_position >= 0:
+            skull_timeout_branches = conditional_branches_containing(processor.body, skull_timeout_position)
+            skull_timeout_branch = mask_strings(skull_timeout_branches[0]) if skull_timeout_branches else ""
+            destroy_icon = "Destroy Icon(Global.PemainAktif.IkonKartuNasib);"
+            checks.require(
+                0 <= skull_timeout_branch.find(destroy_icon) < skull_timeout_branch.find(skull_timeout_anchor),
+                "timeout Skull deve distruggere l'icona prima del rilascio",
+            )
+            checks.require(
+                any(
+                    "Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir" in mask_strings(branch)
+                    for branch in skull_timeout_branches[1:]
+                ),
+                "cleanup Skull non appartiene al ramo di timeout",
+            )
+        for token, label in (
+            ("Global.PemainAktif.KematianBalasDendam == True", "stato Revenge"),
+            ("Global.PemainAktif.KartuNasibAktif == True", "stato Try Your Luck"),
+            ("Global.PemainAktif.EfekNasib == 3", "esito Skull"),
+            (
+                "And(Global.PemainAktif.PutaranKartuNasib == 0, Global.PemainAktif.WaktuPaksaBerakhir > 0)",
+                "Skull finale armato dopo la roulette",
+            ),
+            ("Has Spawned(Global.PemainAktif) == True", "guardia spawn"),
+            ("Is Alive(Global.PemainAktif) == True", "retry soltanto se ancora vivo"),
+            ("Global.PemainAktif.WaktuPaksaBerakhir > 0", "deadline armata"),
+            ("Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir", "scadenza deadline"),
+            ("Global.PemainAktif.KartuNasibAktif = False;", "rilascio Try Your Luck al timeout"),
+            ("Global.PemainAktif.InputMenuDikunci = False;", "rilascio input al timeout"),
+            ("Global.PemainAktif.KematianBalasDendam == False", "blocco riapplicazione Kebal Revenge"),
+            (
+                "Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, "
+                "Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0)))",
+                "blocco riapplicazione Kebal solo per Skull finale armato",
+            ),
+        ):
+            checks.require(token in processor_masked, f"morte completa: {label} assente")
+        checks.require("Is In Alternate Form" not in processor_masked and "Hero(D.Va)" not in processor_masked,
+                       "morte completa non deve dipendere da eroi o forme specifiche")
+
+    checks.equal(len(list(iter_calls(source, "Kill"))), 1,
+                 "Kill deve esistere soltanto nella macchina globale di morte completa")
+
+    revenge_apply = rule_by_subroutine(rules, "TerapkanHalamanBalasDendam")
+    checks.require(revenge_apply is not None, "dispatcher Revenge assente")
+    if revenge_apply:
+        apply_masked = mask_strings(revenge_apply.body)
+        checks.require("Kill(" not in apply_masked,
+                       "Revenge non deve uccidere direttamente al click")
+        checks.require("Modify Player Variable At Index(Event Player, JumlahBalasDendam" not in apply_masked,
+                       "Revenge non deve consumare il debito prima della morte completa")
+        checks.require("Revenge claimed" not in revenge_apply.body,
+                       "Revenge non deve annunciare successo prima della morte completa")
+        for token, label in (
+            ("Set Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam, True);", "flag pending"),
+            ("Set Player Variable(Event Player.TargetBalasDendamTerkunci, PenagihBalasDendam, Event Player);", "claimant"),
+            ("Set Player Variable(Event Player.TargetBalasDendamTerkunci, WaktuPaksaBerikut, Total Time Elapsed);", "primo retry"),
+            ("Set Player Variable(Event Player.TargetBalasDendamTerkunci, WaktuPaksaBerakhir, Total Time Elapsed + 5);", "deadline"),
+            ("Player Variable(Event Player.TargetBalasDendamTerkunci, KematianBalasDendam) == True", "blocco doppio claim"),
+            ("Player Variable(Event Player.TargetBalasDendamTerkunci, KartuNasibAktif) == True", "blocco conflitto Try Your Luck"),
+        ):
+            checks.require(token in apply_masked, f"Revenge arming incompleto: {label}")
+
+    death_recorder = next(
+        (
+            rule for rule in rules_with_event(rules, "Player Died")
+            if "PembunuhBalasDendam" in rule.body and "KematianBalasDendam" in rule.body
+        ),
+        None,
+    )
+    checks.require(death_recorder is not None, "commit Revenge su Player Died assente")
+    if death_recorder:
+        recorder_masked = mask_strings(death_recorder.body)
+        recompute = (
+            "Index Of Array Value(Player Variable(Event Player.PenagihBalasDendam, "
+            "PembunuhBalasDendam), Event Player)"
+        )
+        decrement = "Modify Player Variable At Index(Event Player.PenagihBalasDendam, JumlahBalasDendam"
+        for token, label in (
+            ("If(Is Alive(Event Player) == False);", "conferma Is Alive falso"),
+            ("Attacker == Event Player.PenagihBalasDendam", "coincidenza attacker-claimant"),
+            (recompute, "ricalcolo indice debito al commit"),
+            (decrement, "decremento al commit"),
+            ("Event Player.KematianBalasDendam = False;", "rilascio flag pending"),
+            ("Event Player.PenagihBalasDendam = Null;", "rilascio claimant"),
+        ):
+            checks.require(token in recorder_masked, f"commit Revenge incompleto: {label}")
+        decrement_calls = [
+            call for call in iter_calls(death_recorder.body, "Modify Player Variable At Index")
+            if len(call.args) >= 2
+            and call.args[0].strip() == "Event Player.PenagihBalasDendam"
+            and call.args[1].strip() == "JumlahBalasDendam"
+        ]
+        checks.equal(len(decrement_calls), 1, "commit Revenge deve avere un solo decremento debito")
+        if len(decrement_calls) == 1:
+            commit_branches = conditional_branches_containing(
+                death_recorder.body, decrement_calls[0].start
+            )
+            attacker_branch = next(
+                (
+                    mask_strings(branch)
+                    for branch in commit_branches
+                    if "Attacker == Event Player.PenagihBalasDendam" in mask_strings(branch)
+                ),
+                "",
+            )
+            checks.require(bool(attacker_branch), "commit Revenge non è nel ramo attacker-claimant")
+            recompute_position = attacker_branch.find(recompute)
+            decrement_position = attacker_branch.find(decrement)
+            abort_position = attacker_branch.find("Abort;", decrement_position + len(decrement))
+            checks.require(
+                0 <= recompute_position < decrement_position,
+                "Revenge decrementa prima di ricalcolare l'indice nello stesso ramo",
+            )
+            checks.require(
+                abort_position > decrement_position,
+                "commit Revenge deve eseguire Abort prima del recorder naturale",
+            )
+        checks.require("Revenge claimed" in death_recorder.body,
+                       "successo Revenge non viene annunciato alla morte completa")
+
+    luck_death = next(
+        (
+            rule for rule in rules_with_event(rules, "Player Died")
+            if "Destroy Icon(Event Player.IkonKartuNasib);" in rule.body
+            and "Event Player.KartuNasibAktif = False;" in rule.body
+        ),
+        None,
+    )
+    checks.require(luck_death is not None, "cleanup morte Try Your Luck assente")
+    if luck_death:
+        conditions = rule_block(luck_death, "conditions") or ""
+        checks.require("Is Alive(Event Player) == False;" in conditions,
+                       "cleanup Try Your Luck deve attendere la morte completa")
+        for token, label in (
+            ("Event Player.WaktuPaksaBerikut = 0;", "reset retry"),
+            ("Event Player.WaktuPaksaBerakhir = 0;", "reset deadline"),
+            ("Event Player.InputMenuDikunci = False;", "rilascio latch input"),
+            ("Event Player.PerintahMenu = 0;", "rilascio comando menu"),
+        ):
+            checks.require(token in luck_death.body, f"cleanup morte Try Your Luck: {label} assente")
+        for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
+            checks.require(f"Allow Button(Event Player, Button({button}));" in luck_death.body,
+                           f"cleanup morte Try Your Luck non riabilita {button}")
+
+    jump_respawn_death = next(
+        (
+            rule for rule in rules_with_event(rules, "Player Died")
+            if "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
+            and "Event Player.BangkitLompatDipakai = False;" in rule.body
+        ),
+        None,
+    )
+    checks.require(jump_respawn_death is not None, "regola morte Bangkit Lompat assente")
+    if jump_respawn_death:
+        conditions = rule_block(jump_respawn_death, "conditions") or ""
+        checks.require(
+            "Is Alive(Event Player) == False;" in conditions,
+            "Bangkit Lompat deve attendere la morte completa",
+        )
+
+    dummy_death_stop = next(
+        (
+            rule for rule in rules_with_event(rules, "Player Died")
+            if "Is Dummy Bot(Event Player) == True;" in (rule_block(rule, "conditions") or "")
+            and "Stop Facing(Event Player);" in rule.body
+            and "Stop Throttle In Direction(Event Player);" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_death_stop is not None, "regola arresto dummy morto assente")
+    if dummy_death_stop:
+        conditions = rule_block(dummy_death_stop, "conditions") or ""
+        checks.require(
+            "Is Alive(Event Player) == False;" in conditions,
+            "arresto dummy morto deve attendere la morte completa",
+        )
+
+    for subroutine in ("SiapkanPemain", "TenangkanPemain", "BersihkanPemain"):
+        lifecycle = rule_by_subroutine(rules, subroutine)
+        checks.require(lifecycle is not None, f"lifecycle morte completa assente: {subroutine}")
+        if lifecycle:
+            for token in (
+                "Event Player.KematianBalasDendam = False;",
+                "Event Player.PenagihBalasDendam = Null;",
+                "Event Player.WaktuPaksaBerikut = 0;",
+                "Event Player.WaktuPaksaBerakhir = 0;",
+            ):
+                checks.require(token in lifecycle.body, f"{subroutine}: reset morte completa assente: {token}")
+
+    cleanup = rule_by_subroutine(rules, "BersihkanPemain")
+    if cleanup:
+        for token, label in (
+            ("Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PenagihBalasDendam) == Global.PemainPembersihan", "riferimento claimant uscente"),
+            ("Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], KematianBalasDendam, False);", "annullamento pending su leave"),
+            ("Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PenagihBalasDendam, Null);", "pulizia claimant su leave"),
+        ):
+            checks.require(token in cleanup.body, f"cleanup leave morte completa: {label} assente")
+
+    luck_apply = rule_by_subroutine(rules, "TerapkanHalamanNasib")
+    if luck_apply:
+        checks.require("Else If(Event Player.KematianBalasDendam == True);" in luck_apply.body,
+                       "Try Your Luck può partire durante una Revenge pending")
 
 
 def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str]) -> None:
@@ -1753,6 +2072,42 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         body = left[0].body
         checks.require("Call Subroutine(TenangkanPemain);" in body and "Call Subroutine(BersihkanPemain);" in body,
                        "leave non esegue quiete + cleanup")
+        conditions = rule_block(left[0], "conditions") or ""
+        checks.require(
+            "Is Dummy Bot(Event Player) == False;" in conditions
+            and "Event Player.BotOtomatis == True" in conditions
+            and "Event Player.Manusia == True" in conditions
+            and "Array Contains(Global.PemainManusia, Event Player)" in conditions,
+            "Player Left Match deve includere gli iBot e gli umani registrati, escludendo i dummy nativi",
+        )
+        bot_branch_anchor = body.find("If(Event Player.BotOtomatis == True);")
+        bot_leave_branches = (
+            conditional_branches_containing(body, bot_branch_anchor)
+            if bot_branch_anchor >= 0 else []
+        )
+        bot_leave_branch = mask_strings(bot_leave_branches[0]) if bot_leave_branches else ""
+        checks.require(bool(bot_leave_branch), "Player Left Match non ha un ramo iniziale dedicato agli iBot")
+        destroy_vision = "Destroy In-World Text(Event Player.TeksVisiNasib);"
+        clear_vision = "Event Player.TeksVisiNasib = Null;"
+        abort_bot = "Abort;"
+        destroy_position = bot_leave_branch.find(destroy_vision)
+        clear_position = bot_leave_branch.find(clear_vision)
+        abort_position = bot_leave_branch.find(abort_bot)
+        checks.require(
+            0 <= destroy_position < clear_position < abort_position,
+            "leave iBot deve distruggere TeksVisiNasib, azzerarlo e Abort prima del lifecycle umano",
+        )
+        quiet_position = body.find("Call Subroutine(TenangkanPemain);")
+        cleanup_position = body.find("Call Subroutine(BersihkanPemain);")
+        absolute_abort_position = bot_branch_anchor + abort_position
+        checks.require(
+            "Call Subroutine(TenangkanPemain);" not in bot_leave_branch
+            and "Call Subroutine(BersihkanPemain);" not in bot_leave_branch
+            and bot_branch_anchor >= 0
+            and abort_position >= 0
+            and absolute_abort_position < quiet_position < cleanup_position,
+            "leave iBot può entrare nel lifecycle umano Tenangkan/Bersihkan",
+        )
     classifier = next((rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body), None)
     checks.require(classifier is not None, "registrazione roster umano assente")
     if classifier:
@@ -1916,6 +2271,8 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                        "inspection live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
         checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_live.body,
                        "inspection live reintroduce il bypass Privacy tramite Vision")
+        checks.require("Event Player.PrivasiNasibAktif == False;" in inspection_live.body,
+                       "inspection Crouch non è bloccata durante Vision")
         checks.require("Disable Nameplates(All Players(All Teams), Event Player);" in inspection_live.body,
                        "inspection non disabilita i nameplate nativi")
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
@@ -1939,6 +2296,20 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if teleport_live:
         checks.require(public_target_pattern.search(teleport_live.body) is not None,
                        "teleport live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    teleport_entry = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TeleportasiJongkokAktif = True;" in rule.body
+            and "Button(Crouch)" in rule.body
+        ),
+        None,
+    )
+    checks.require(teleport_entry is not None, "apertura Teleport Crouch assente")
+    if teleport_entry:
+        checks.require("Event Player.PrivasiNasibAktif == False;" in teleport_entry.body,
+                       "Teleport Crouch non è bloccato durante Vision")
 
     teleport_text = next(
         (
@@ -1967,6 +2338,53 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if vision_names:
         checks.require(public_subject_pattern.search(vision_names.body) is not None,
                        "Vision mostra un umano con Privacy ON")
+        vision_calls = list(iter_calls(vision_names.body, "Create In-World Text"))
+        checks.equal(len(vision_calls), 1, "Vision deve creare un solo IWT per soggetto")
+        if len(vision_calls) == 1:
+            vision_call = vision_calls[0]
+            checks.require(len(vision_call.args) >= 6, "IWT Vision malformato")
+            if len(vision_call.args) >= 6:
+                compact_vision = lambda expression: re.sub(r"\s+", "", expression)
+                expected_recipient = compact_vision(
+                    "Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, "
+                    "And(Player Variable(Current Array Element, Manusia) == True, "
+                    "Player Variable(Current Array Element, PrivasiNasibAktif) == True)))"
+                )
+                checks.equal(
+                    compact_vision(vision_call.args[0]),
+                    expected_recipient,
+                    "destinatari Vision devono essere gli altri umani con Vision attiva",
+                )
+                vision_text = vision_call.args[1]
+                for token, label in (
+                    ("Hero Icon String(", "icona eroe"),
+                    ("Hero Being Duplicated(Event Player)", "icona forma duplicata"),
+                    ('Custom String("{0}", Event Player)', "nome player"),
+                    ("Round To Integer(Health(Event Player), Down)", "salute live"),
+                ):
+                    checks.require(token in vision_text, f"Vision non mostra {label}")
+                outer_text = next(
+                    (
+                        call for call in iter_calls(vision_text, "Custom String")
+                        if call.start == 0 and call.end == len(vision_text)
+                    ),
+                    None,
+                )
+                checks.require(outer_text is not None, "testo Vision deve avere un solo wrapper Custom String")
+                if outer_text:
+                    expected_values = (
+                        "HeroIconString(IsDuplicating(EventPlayer)?HeroBeingDuplicated(EventPlayer):HeroOf(EventPlayer))",
+                        'CustomString("{0}",EventPlayer)',
+                        "RoundToInteger(Health(EventPlayer),Down)",
+                    )
+                    checks.require(
+                        len(outer_text.args) == 4
+                        and parse_literal(outer_text.args[0]) == "{0} {1} | {2}"
+                        and tuple(compact_vision(value) for value in outer_text.args[1:]) == expected_values,
+                        "Vision deve mantenere ordine icona, nome e salute",
+                    )
+                checks.equal(vision_call.args[5].strip(), "Visible To Position String and Color",
+                             "Vision deve rivalutare destinatari, posizione, testo e colore")
 
     vision_cleanup = next(
         (
@@ -1991,6 +2409,8 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle is not None, "ProsesSiklusPemain assente per stop osservatore Privacy")
     if cycle:
+        checks.require("Global.PemainAktif.PrivasiNasibAktif == True" in cycle.body,
+                       "cleanup inspection non reagisce all'avvio di Vision")
         privacy_guard = re.search(
             r"Global\.PemainAktif\.ModeKamera\s*==\s*2.*?"
             r"Global\.PemainAktif\.TargetKamera\.Manusia\s*==\s*True.*?"
@@ -2011,6 +2431,21 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         )
         checks.require(mode_reset and target_reset,
                        "stop osservatore Privacy non ripristina ModeKamera e TargetKamera")
+
+    teleport_cleanup = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.TeleportasiJongkokAktif == True;" in rule.body
+            and "Event Player.TeleportasiJongkokAktif = False;" in rule.body
+            and "Destroy HUD Text(Event Player.HudMenu);" in rule.body
+        ),
+        None,
+    )
+    checks.require(teleport_cleanup is not None, "cleanup Teleport Crouch assente")
+    if teleport_cleanup:
+        checks.require("Event Player.PrivasiNasibAktif == True" in teleport_cleanup.body,
+                       "cleanup Teleport Crouch non reagisce all'avvio di Vision")
 
 
 def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
@@ -2093,11 +2528,12 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     if left:
         for token in (
             "Is Dummy Bot(Event Player) == False;",
-            "Event Player.BotOtomatis == False;",
-            "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
+            "Event Player.BotOtomatis == True",
+            "Event Player.Manusia == True",
+            "Array Contains(Global.PemainManusia, Event Player)",
         ):
             checks.require(token in left[0].body,
-                           f"leave/cleanup umano può essere eseguito da bot/dummy: {token}")
+                           f"leave non isola correttamente dummy/iBot/umani: {token}")
 
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     if setup:
@@ -2589,8 +3025,11 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         if death_conditions is not None:
             checks.equal(
                 compact(death_conditions),
-                compact("Is Dummy Bot(Event Player) == True;"),
-                "cleanup morte dummy: condizione esatta e raggiungibile",
+                compact(
+                    "Is Dummy Bot(Event Player) == True; "
+                    "Is Alive(Event Player) == False;"
+                ),
+                "cleanup morte dummy: condizioni esatte dopo la morte completa",
             )
         if death_actions is not None:
             checks.equal(
@@ -2669,6 +3108,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_input_contract(checks, rules)
     validate_scheduler(checks, source, rules, globals_, subroutines)
     validate_try_your_luck(checks, source, rules, players)
+    validate_forced_death(checks, source, rules, players)
     validate_lifecycle(checks, rules, subroutines)
     validate_privacy(checks, rules)
     validate_bot_isolation(checks, rules)
