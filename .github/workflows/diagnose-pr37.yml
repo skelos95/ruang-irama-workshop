@@ -1,13 +1,12 @@
 name: Diagnose PR 37
 
 on:
-  push:
-    branches:
-      - chatgpt/fix-dummy-initial-spawn-distance-hud
   pull_request:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   diagnose:
@@ -27,8 +26,31 @@ jobs:
           python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT >> diagnostic.log 2>&1
           echo "PREFLIGHT_EXIT=$?" >> diagnostic.log
           cat diagnostic.log
-      - name: Upload diagnostics
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: pr37-diagnostic
-          path: diagnostic.log
+      - name: Post diagnostics to PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          output = Path('diagnostic.log').read_text(encoding='utf-8', errors='replace')
+          body = 'Temporary CI diagnostics for PR #37:\n\n```text\n' + output[-50000:] + '\n```'
+          request = urllib.request.Request(
+              'https://api.github.com/repos/skelos95/ruang-irama-workshop/issues/37/comments',
+              data=json.dumps({'body': body}).encode('utf-8'),
+              headers={
+                  'Authorization': f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'User-Agent': 'pr37-diagnostics',
+                  'Content-Type': 'application/json',
+              },
+              method='POST',
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(response.status)
+          PY
