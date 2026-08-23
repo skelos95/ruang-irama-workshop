@@ -444,9 +444,6 @@ def is_read_reference(code: str, name: str, *, masked_code: str | None = None) -
         prefix = masked[max(0, start - 160):start]
         if re.match(r"\s*(?:\[[^\]\r\n]+\])?\s*=(?!=)", suffix):
             continue
-        # Property syntax (Global.X / Event Player.X / player-expression.X)
-        # is unambiguous. A property in the value argument of Set Player
-        # Variable is still a read and must not be hidden by that outer call.
         if start > 0 and masked[start - 1] == ".":
             return True
         if re.search(
@@ -494,7 +491,6 @@ def custom_reference_errors(source: str, globals_: set[str], players: set[str]) 
     for name in re.findall(r"\bEvent Player\.([A-Za-z][A-Za-z0-9_]*)", masked):
         if name not in players:
             errors.add(f"riferimento player non dichiarato: {name}")
-    # Properties after a known player-bearing global are player variables too.
     for name in re.findall(r"\bGlobal\.(?:PemainAktif|PemainPembersihan)\.([A-Za-z][A-Za-z0-9_]*)", masked):
         if name not in players:
             errors.add(f"riferimento player non dichiarato: {name}")
@@ -668,8 +664,6 @@ def language_triads(expression: str) -> list[tuple[str, str, str]]:
                 return
             visit(when_true)
             visit(when_false)
-        # Descend once through an outer function call. Iterating every nested
-        # call again at every level makes the large menu expressions quadratic.
         match = re.match(r"[A-Za-z][A-Za-z0-9 ]*\s*\(", mask_strings(part))
         if match:
             opening = part.find("(", match.start())
@@ -705,6 +699,8 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
         return "hold input"
     if "SudahDiperiksa" in body and "Is Dummy Bot" in body:
         return "bot classification"
+    if rule.name == "03f - Bot/Dummy: Teleport dari ruang spawn ke objektif":
+        return "dummy spawn stabilization"
     if "Respawn(" in body or "BangkitLompat" in body:
         return "respawn"
     if subroutine_target(rule) == "BersihkanPemain":
@@ -1167,7 +1163,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
                        "cadenza scheduler 10 secondi assente")
 
     waits = wait_calls(source)
-    checks.require(len(waits) <= 10, f"Wait oltre il massimo consentito: {len(waits)} > 10")
+    checks.require(len(waits) <= 11, f"Wait oltre il massimo consentito: {len(waits)} > 11")
     for rule in rules:
         calls = wait_calls(rule.body)
         if not calls:

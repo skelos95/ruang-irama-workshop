@@ -41,3 +41,4 @@ Stato: **static-ready / live-pending**.
 - Introduzione dei 12 menu Arcade, della localizzazione EN/ID/TH e dei roster sociali.
 - Estensione di Name Color, Player Icon, Camera, Unkillable, Teleport, Privacy e Vote Player.
 - Prime ottimizzazioni di lifecycle e rendering HUD; i dettagli storici restano disponibili nella cronologia Git.
+- Dummy bot: creazione iniziale su Spawn Point reale, uscita dalla spawn ritardata di 1 s e destinazione 6–16 m dal target; riallineato `PLAYER VIBES` senza spazi manuali.
