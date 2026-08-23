@@ -16,6 +16,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator
 
+try:
+    from tools import check_clipboard_import as clipboard_import
+except ImportError:  # Direct execution: python tools/validate_workshop.py
+    import check_clipboard_import as clipboard_import
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 VERSION = ROOT / "VERSION"
@@ -699,8 +704,6 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
         return "hold input"
     if "SudahDiperiksa" in body and "Is Dummy Bot" in body:
         return "bot classification"
-    if rule.name == "03f - Bot/Dummy: Teleport dari ruang spawn ke objektif":
-        return "dummy spawn stabilization"
     if "Respawn(" in body or "BangkitLompat" in body:
         return "respawn"
     if subroutine_target(rule) == "BersihkanPemain":
@@ -729,7 +732,18 @@ def validate_metadata(checks: Checks, root: Path) -> None:
     checks.require("static-ready" in combined_docs and "live-pending" in combined_docs,
                    "documentazione deve dichiarare static-ready / live-pending")
 
-    workflows = root / ".github" / "workflows"
+    github = root / ".github"
+    github_entries = {
+        path.relative_to(github).as_posix()
+        for path in github.rglob("*")
+    } if github.is_dir() else set()
+    checks.equal(
+        github_entries,
+        {"workflows", "workflows/validate-workshop.yml"},
+        "contenuti permanenti .github",
+    )
+
+    workflows = github / "workflows"
     found = {path.name for path in workflows.glob("*.yml")} | {path.name for path in workflows.glob("*.yaml")}
     checks.equal(found, ALLOWED_WORKFLOWS, "workflow permanenti")
     validation = workflows / "validate-workshop.yml"
@@ -1163,7 +1177,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
                        "cadenza scheduler 10 secondi assente")
 
     waits = wait_calls(source)
-    checks.require(len(waits) <= 11, f"Wait oltre il massimo consentito: {len(waits)} > 11")
+    checks.require(len(waits) <= 10, f"Wait oltre il massimo consentito: {len(waits)} > 10")
     for rule in rules:
         calls = wait_calls(rule.body)
         if not calls:
@@ -1290,8 +1304,8 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                     )
                     checks.require("Global.PemainAktif" not in uncaptured,
                                    f"icona roulette {index}: scratch Global.PemainAktif dinamico senza Evaluate Once")
-                checks.equal(icon.args[3].strip(), "Position",
-                             f"icona roulette {index}: reevaluation deve essere Position")
+                checks.equal(icon.args[3].strip(), "Visible To and Position",
+                             f"icona roulette {index}: reevaluation deve essere Visible To and Position")
                 checks.equal(icon.args[5].strip(), "True",
                              f"icona roulette {index}: Show When Offscreen deve essere True")
         checks.equal(tuple(actual_icon_types), expected_icon_types,
@@ -1587,12 +1601,11 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         + r"\s*\)\s*\)",
         re.DOTALL,
     )
-    vision_target_pattern = re.compile(
-        r"Or\(\s*Is Dummy Bot\(Current Array Element\)\s*==\s*True\s*,\s*"
-        r"Or\(\s*Player Variable\(\s*Current Array Element\s*,\s*BotOtomatis\)\s*==\s*True\s*,\s*"
-        r"Or\(\s*Event Player\.PrivasiNasibAktif\s*==\s*True\s*,\s*"
-        + human_public_pattern_text
-        + r"\s*\)\s*\)\s*\)",
+    public_subject_pattern = re.compile(
+        r"Or\(\s*Is Dummy Bot\(Event Player\)\s*==\s*True\s*,\s*"
+        r"Or\(\s*Event Player\.BotOtomatis\s*==\s*True\s*,\s*"
+        r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
+        r"Event Player\.PrivasiInspeksiAktif\s*==\s*False\s*\)\s*\)\s*\)",
         re.DOTALL,
     )
 
@@ -1646,8 +1659,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     inspection_refresh = rule_by_subroutine(rules, "SegarkanTargetInspeksi")
     checks.require(inspection_refresh is not None, "SegarkanTargetInspeksi assente per filtro Privacy")
     if inspection_refresh:
-        checks.require(vision_target_pattern.search(inspection_refresh.body) is not None,
-                       "inspection non usa Dummy OR iBot OR Vision OR (umano AND Privacy OFF)")
+        checks.require(public_target_pattern.search(inspection_refresh.body) is not None,
+                       "inspection non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_refresh.body,
+                       "inspection reintroduce il bypass Privacy tramite Vision")
 
     inspection_live = next(
         (
@@ -1659,8 +1674,14 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(inspection_live is not None, "aggiornamento live inspection assente")
     if inspection_live:
-        checks.require(vision_target_pattern.search(inspection_live.body) is not None,
-                       "inspection live non usa Dummy OR iBot OR Vision OR (umano AND Privacy OFF)")
+        checks.require(public_target_pattern.search(inspection_live.body) is not None,
+                       "inspection live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_live.body,
+                       "inspection live reintroduce il bypass Privacy tramite Vision")
+        checks.require("Disable Nameplates(All Players(All Teams), Event Player);" in inspection_live.body,
+                       "inspection non disabilita i nameplate nativi")
+        checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
+                       "inspection può mostrare nameplate di umani privati")
 
     teleport_refresh = rule_by_subroutine(rules, "SegarkanTargetTeleportasi")
     checks.require(teleport_refresh is not None, "SegarkanTargetTeleportasi assente per filtro Privacy")
@@ -1680,6 +1701,54 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if teleport_live:
         checks.require(public_target_pattern.search(teleport_live.body) is not None,
                        "teleport live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+
+    teleport_text = next(
+        (
+            rule for rule in rules
+            if "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        ),
+        None,
+    )
+    checks.require(teleport_text is not None, "testo live teleport assente")
+    if teleport_text:
+        checks.require("Disable Nameplates(All Players(All Teams), Event Player);" in teleport_text.body,
+                       "teleport non disabilita i nameplate nativi")
+        checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in teleport_text.body,
+                       "teleport può mostrare nameplate di umani privati")
+
+    vision_names = next(
+        (
+            rule for rule in rules
+            if "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        ),
+        None,
+    )
+    checks.require(vision_names is not None, "IWT nomi Vision assente")
+    if vision_names:
+        checks.require(public_subject_pattern.search(vision_names.body) is not None,
+                       "Vision mostra un umano con Privacy ON")
+
+    vision_cleanup = next(
+        (
+            rule for rule in rules
+            if "Destroy In-World Text(Event Player.TeksVisiNasib);" in rule.body
+            and "Event Player.TeksVisiNasib = Null;" in rule.body
+            and event_type(rule) == "Ongoing - Each Player"
+        ),
+        None,
+    )
+    checks.require(vision_cleanup is not None, "cleanup IWT Vision assente")
+    if vision_cleanup:
+        checks.require(
+            re.search(
+                r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
+                r"Event Player\.PrivasiInspeksiAktif\s*==\s*True\s*\)",
+                vision_cleanup.body,
+            ) is not None,
+            "cleanup Vision non reagisce a Privacy ON",
+        )
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle is not None, "ProsesSiklusPemain assente per stop osservatore Privacy")
@@ -1848,6 +1917,87 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         ):
             checks.require(token in bot_lock.body, f"KunciBot incompleto: {token}")
 
+    for team in ("Team 1", "Team 2"):
+        create_rules = [
+            rule for rule in rules
+            if f"Create Dummy Bot(All Heroes, {team}, -1," in rule.body
+        ]
+        checks.equal(len(create_rules), 1, f"numero regole creazione dummy {team}")
+        if create_rules:
+            create_rule = create_rules[0]
+            for token in (
+                f"Number Of Players({team}) < Number Of Slots({team}) - 1;",
+                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;",
+                f"Position Of(First Of(Spawn Points({team})))",
+            ):
+                checks.require(token in create_rule.body, f"creazione dummy {team} non sicura: {token}")
+
+        release_rules = [
+            rule for rule in rules
+            if f"Destroy Dummy Bot({team}, Slot Of(" in rule.body
+        ]
+        checks.equal(len(release_rules), 1, f"numero regole rilascio slot dummy {team}")
+        if release_rules:
+            release_rule = release_rules[0]
+            for token in (
+                f"Number Of Players({team}) >= Number Of Slots({team});",
+                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
+                "Destroy In-World Text(Player Variable(",
+            ):
+                checks.require(token in release_rule.body, f"rilascio dummy {team} incompleto: {token}")
+
+    dummy_arming = next(
+        (
+            rule for rule in rules
+            if "If(Event Player.WaktuTeleportasiDummy == 0);" in rule.body
+            and "Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_arming is not None, "arming timestamp teleport dummy assente")
+    if dummy_arming:
+        for token in (
+            "Is Dummy Bot(Event Player) == True;",
+            "Has Spawned(Event Player) == True;",
+            "Is Alive(Event Player) == True;",
+            "Is In Spawn Room(Event Player) == True;",
+        ):
+            checks.require(token in dummy_arming.body, f"arming timestamp dummy incompleto: {token}")
+        checks.require(not wait_calls(dummy_arming.body), "arming timestamp dummy non deve usare Wait")
+
+    dummy_teleport = next(
+        (
+            rule for rule in rules
+            if "Position Of(First Of(Spawn Points(Team Of(Event Player))))" in rule.body
+            and "Event Player.WaktuTeleportasiDummy == 0" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_teleport is not None, "teleport dummy a timestamp assente")
+    if dummy_teleport:
+        checks.require(
+            "Or(Event Player.WaktuTeleportasiDummy == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiDummy) == True;"
+            in dummy_teleport.body,
+                       "teleport dummy non attende il timestamp")
+        checks.require("Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;" in dummy_teleport.body,
+                       "teleport dummy non pianifica un retry sicuro")
+        checks.require("Abort;" in dummy_teleport.body,
+                       "teleport dummy non interrompe il primo tick di arming")
+        checks.require(not wait_calls(dummy_teleport.body), "teleport dummy non deve usare Wait")
+
+    dummy_death = next(
+        (
+            rule for rule in rules_with_event(rules, "Player Died")
+            if "Is Dummy Bot(Event Player) == True;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+        ),
+        None,
+    )
+    checks.require(dummy_death is not None, "cleanup morte dummy assente")
+    if dummy_death:
+        checks.require("Event Player.WaktuTeleportasiDummy = 0;" in dummy_death.body,
+                       "morte dummy non riarma il delay del prossimo spawn")
+
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
     objective_rule = next((rule for rule in rules if "PerintahTeleportasi == 1" in rule.body and "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)
@@ -1925,6 +2075,10 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
 def main() -> int:
     source = SOURCE.read_text(encoding="utf-8")
     checks = validate(source)
+    try:
+        clipboard_import.check_path(clipboard_import.ITALIAN_SOURCE, "it-IT")
+    except (OSError, clipboard_import.ClipboardImportError) as error:
+        checks.require(False, f"sorgente importabile italiano non equivalente: {error}")
     checks.finish()
     rules = extract_rules(source)
     print(

@@ -39,9 +39,26 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_dummy_respawn_is_30_seconds(self):
         self.assertIn("Set Respawn Max Time(Event Player, 30);", self.it)
 
+    def test_dummy_reserves_the_last_human_slot_and_leaves_at_full_team(self):
+        for team in ("Team 1", "Team 2"):
+            self.assertIn(f"Number Of Players({team}) < Number Of Slots({team}) - 1;", self.it)
+            self.assertIn(f"Number Of Players({team}) >= Number Of Slots({team});", self.it)
+            self.assertEqual(self.it.count(f"Destroy Dummy Bot({team}, Slot Of("), 1)
+            self.assertIn(
+                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
+                self.it,
+            )
+
     def test_spawn_teleport_uses_safe_mode_specific_destinations(self):
         self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
-        self.assertIn("Wait(1.000, Annulla quando è False);", self.it)
+        self.assertNotIn("Wait(1.000, Annulla quando è False);", self.it)
+        self.assertIn("If(Event Player.WaktuTeleportasiDummy == 0);", self.it)
+        self.assertIn(
+            "Or(Event Player.WaktuTeleportasiDummy == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiDummy) == True;",
+            self.it,
+        )
+        self.assertIn("Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;", self.it)
+        self.assertIn("Event Player.WaktuTeleportasiDummy = 0;", self.it)
         self.assertIn("Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10", self.it)
         self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6", self.it)
         self.assertIn("Current Game Mode == Game Mode(Trasporto)", self.it)

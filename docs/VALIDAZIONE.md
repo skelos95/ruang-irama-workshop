@@ -17,7 +17,7 @@ python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
 ```
 
-Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente. `maintenance-patch.yml` è stato rimosso: la validazione non modifica, non committa e non pubblica file.
+Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente. L'allowlist copre l'intero albero `.github`: `maintenance-patch.yml`, marker, trigger, patcher e automazioni one-shot sono vietati, quindi la validazione non modifica, non committa e non pubblica file.
 
 ## Gate semantici
 
@@ -36,6 +36,10 @@ Il validatore controlla:
 - assenza della vecchia roulette binaria e degli handle di preload.
 
 Non esiste una lista rigida dell'intero blob: le invarianti vengono ricavate dai blocchi e dalle azioni effettive.
+
+### Parità clipboard it-IT / fixture en-US
+
+Il file realmente importabile `workshop/ruang_irama.it-IT.workshop` e la fixture interna `tests/fixtures/semantic_reference.txt` vengono trasformati in una rappresentazione canonica comune. Il gate richiede la stessa sequenza di dichiarazioni, subroutine, regole, condizioni e azioni dopo aver neutralizzato soltanto le differenze native della grammatica clipboard italiana/inglese. Una modifica funzionale presente in una sola copia deve fallire; il semplice conteggio delle regole non è considerato una prova sufficiente di equivalenza.
 
 ### Nomenclatura
 
@@ -94,7 +98,7 @@ Il gate richiede:
 
 - un solo scheduler `Ongoing - Global` a 20 Hz;
 - un solo `Loop` nel sorgente;
-- massimo 11 `Wait`, ognuno in una categoria consentita e riconoscibile;
+- massimo 10 `Wait`, ognuno in una categoria consentita e riconoscibile;
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
@@ -103,7 +107,7 @@ Il gate richiede:
 - un solo raycast Camera;
 - nessuna regola HUD contenente `Wait` o `Loop`.
 
-Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, stabilizzazione dell'uscita dummy dalla Spawn Room, hold input, respawn e cleanup atomico. Qualsiasi Wait fuori allowlist o secondo Loop fa fallire il gate.
+Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, respawn e cleanup atomico. La stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo e non appartiene all'allowlist `Wait`. Qualsiasi Wait fuori allowlist, un undicesimo `Wait` o un secondo Loop fa fallire il gate.
 
 ### Try Your Luck
 
@@ -120,7 +124,7 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 
 L'avvio disattiva Unkillable. Morte, leave e cambio squadra devono annullare timestamp, status, modificatori ed effetti. Un loop o Wait per-player associato alla roulette è vietato.
 
-Le sei icone devono essere visibili soltanto al roster umano, catturare con `Evaluate Once` l'identità del beneficiario e rivalutare con `Update Every Frame` soltanto occhio e direzione. La posizione usa la reevaluation `Position`, mantiene l'indicatore off-screen e non può leggere direttamente lo scratch globale dopo la creazione. Anche `Start Accelerating` deve catturare l'identità dentro `Facing Direction Of`, lasciando dinamica la direzione completa della visuale per tutti i 10 secondi; sono vietati throttle e impulsi ripetuti.
+Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
 
 ### Lifecycle
 
@@ -134,8 +138,10 @@ Il gate controlla:
 - rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
-- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom e sgancio degli osservatori già attivi;
-- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player.
+- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi e assenza di nome/nameplate in Vision e inspection;
+- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player;
+- massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
+- uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
 
 ### Otto modalità
 
@@ -163,10 +169,11 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
-- icona roulette senza aggiornamento ogni frame, con identità/snapshot catturati nel punto sbagliato, rivalutata tramite scratch globale nudo o resa visibile ai bot;
-- accelerazione legata al player scratch corrente, direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
-- Privacy default OFF, target privato selezionabile o osservatore non sganciato;
+- icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
+- accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
+- Privacy default OFF, target privato selezionabile, osservatore non sganciato o nome/nameplate privato esposto da Vision/inspection;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
+- dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
@@ -174,7 +181,8 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - esito/durata Try Your Luck mancante o vecchio percorso binario;
 - guardia Join, cleanup Leave o reset team-switch rimosso;
 - una delle otto modalità o un ramo Teleport mancante;
-- workflow di scrittura o automazione di commit reintrodotto.
+- divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;
+- workflow di scrittura, automazione di commit, marker, trigger o patcher one-shot reintrodotto sotto `.github`.
 
 Ogni mutazione deve fallire per la propria causa, così il test evita un falso positivo dovuto a un'altra invariante già rotta.
 

@@ -145,6 +145,7 @@ variables
 		87: WaktuPutaranNasibBerikut
 		88: WaktuIkonNasibBerakhir
 		89: TimTerakhir
+		90: WaktuTeleportasiDummy
 }
 
 subroutines
@@ -1180,6 +1181,7 @@ rule("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 	{
 		Call Subroutine(KunciBot);
 		If(Is Dummy Bot(Event Player) == True);
+			Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
 			Set Respawn Max Time(Event Player, 30);
 		End;
 	}
@@ -1196,7 +1198,7 @@ rule("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
 	{
 		Global.Siap == True;
 		Is Game In Progress == True;
-		Number Of Slots(Team 1) > 0;
+		Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;
 		Count Of(Spawn Points(Team 1)) > 0;
 		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
@@ -1204,6 +1206,31 @@ rule("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
 	actions
 	{
 		Create Dummy Bot(All Heroes, Team 1, -1, Position Of(First Of(Spawn Points(Team 1))), Vector(0, 0, 1));
+	}
+}
+
+rule("03d1 - Bot/Dummy: Kosongkan slot Tim 1 untuk pemain")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Game In Progress == True;
+		Number Of Players(Team 1) >= Number Of Slots(Team 1);
+		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) > 0;
+	}
+
+	actions
+	{
+		If(Player Variable(First Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)), TeksVisiNasib) != Null);
+			Destroy In-World Text(Player Variable(First Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)), TeksVisiNasib));
+		End;
+		Stop Facing(First Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)));
+		Destroy Dummy Bot(Team 1, Slot Of(First Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True))));
 	}
 }
 
@@ -1218,7 +1245,7 @@ rule("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
 	{
 		Global.Siap == True;
 		Is Game In Progress == True;
-		Number Of Slots(Team 2) > 0;
+		Number Of Players(Team 2) < Number Of Slots(Team 2) - 1;
 		Count Of(Spawn Points(Team 2)) > 0;
 		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
@@ -1226,6 +1253,31 @@ rule("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
 	actions
 	{
 		Create Dummy Bot(All Heroes, Team 2, -1, Position Of(First Of(Spawn Points(Team 2))), Vector(0, 0, 1));
+	}
+}
+
+rule("03e1 - Bot/Dummy: Kosongkan slot Tim 2 untuk pemain")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Game In Progress == True;
+		Number Of Players(Team 2) >= Number Of Slots(Team 2);
+		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) > 0;
+	}
+
+	actions
+	{
+		If(Player Variable(First Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)), TeksVisiNasib) != Null);
+			Destroy In-World Text(Player Variable(First Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)), TeksVisiNasib));
+		End;
+		Stop Facing(First Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)));
+		Destroy Dummy Bot(Team 2, Slot Of(First Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True))));
 	}
 }
 
@@ -1246,11 +1298,15 @@ rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 		Is Alive(Event Player) == True;
 		Is In Spawn Room(Event Player) == True;
 		Count Of(Spawn Points(Team Of(Event Player))) > 0;
+		Or(Event Player.WaktuTeleportasiDummy == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiDummy) == True;
 	}
 
 	actions
 	{
-		Wait(1.000, Abort When False);
+		If(Event Player.WaktuTeleportasiDummy == 0);
+			Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
+			Abort;
+		End;
 		Event Player.PosisiMati = Vector(0, 0, 0);
 		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
@@ -1282,6 +1338,7 @@ rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 				End;
 			End;
 		End;
+		Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
 	}
 }
 
@@ -1348,6 +1405,7 @@ rule("03i - Bot/Dummy: Hentikan arah saat bot mati")
 	actions
 	{
 		Stop Facing(Event Player);
+		Event Player.WaktuTeleportasiDummy = 0;
 	}
 }
 
@@ -2299,20 +2357,15 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 		Event Player.TeleportasiJongkokDiaktifkan == False;
 		Event Player.ModeKamera != 2;
 		Is Button Held(Event Player, Button(Crouch)) == True;
-		Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, Or(Event Player.PrivasiNasibAktif == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))))), Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(Current Array Element)))));
+		Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))), Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(Current Array Element)))));
 	}
 
 	actions
 	{
 		If(Event Player.InspeksiAktif == False);
 			Event Player.InspeksiAktif = True;
-			If(Event Player.PrivasiNasibAktif == False);
-				Disable Nameplates(All Players(All Teams), Event Player);
-				Event Player.PelatNamaDinonaktifkan = True;
-			Else;
-				Enable Nameplates(All Players(All Teams), Event Player);
-				Event Player.PelatNamaDinonaktifkan = False;
-			End;
+			Disable Nameplates(All Players(All Teams), Event Player);
+			Event Player.PelatNamaDinonaktifkan = True;
 		End;
 		Call Subroutine(SegarkanTargetInspeksi);
 		If(Event Player.TeksDunia != Null);
@@ -2501,7 +2554,7 @@ rule("18g - Nasib: Buka kembali menu setelah efek selesai")
 	}
 }
 
-rule("18i - Nasib: Visi menampilkan nama pemain dan bot lain")
+rule("18i - Nasib: Visi menampilkan nama publik dan bot")
 {
 	event
 	{
@@ -2514,6 +2567,7 @@ rule("18i - Nasib: Visi menampilkan nama pemain dan bot lain")
 	{
 		Or(Event Player.TeksVisiNasib == Null, Event Player.TeksVisiNasib == 0) == True;
 		Is Alive(Event Player) == True;
+		Or(Is Dummy Bot(Event Player) == True, Or(Event Player.BotOtomatis == True, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False))) == True;
 		Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) > 0;
 	}
 
@@ -2536,7 +2590,7 @@ rule("18j - Nasib: Bersihkan nama visi saat tidak diperlukan")
 	conditions
 	{
 		And(Event Player.TeksVisiNasib != Null, Event Player.TeksVisiNasib != 0) == True;
-		Or(Is Alive(Event Player) == False, Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
+		Or(Or(Is Alive(Event Player) == False, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True)), Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
 	}
 
 	actions
@@ -2567,7 +2621,7 @@ rule("18k - Nasib: HUD efek dan durasi saat menu tertutup")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: OTHER PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: NAMA PEMAIN / BOT LAIN") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่น / บอตอื่น") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, -99, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: PUBLIC PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: NAMA PEMAIN PUBLIK / BOT") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("\n{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่นสาธารณะ / บอต") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, -99, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
@@ -2763,13 +2817,8 @@ rule("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")
 			Event Player.TargetTeleportasiTeks = Null;
 			Abort;
 		End;
-		If(Event Player.PrivasiNasibAktif == False);
-			Disable Nameplates(All Players(All Teams), Event Player);
-			Event Player.PelatNamaDinonaktifkan = True;
-		Else;
-			Enable Nameplates(All Players(All Teams), Event Player);
-			Event Player.PelatNamaDinonaktifkan = False;
-		End;
+		Disable Nameplates(All Players(All Teams), Event Player);
+		Event Player.PelatNamaDinonaktifkan = True;
 		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.CalonTargetTeleportasi) ? Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : Hero Of(Event Player.CalonTargetTeleportasi)), Custom String("{0}", Event Player.CalonTargetTeleportasi), Round To Integer(Health(Event Player.CalonTargetTeleportasi), Down)), Eye Position(Event Player.CalonTargetTeleportasi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama) : Color(Orange), Visible Never);
 		Event Player.TeksTeleportasi = Last Text ID;
 		Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
@@ -3049,17 +3098,17 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 				End;
 				Global.PemainAktif.EfekNasib = Random Integer(1, 6);
 				If(Global.PemainAktif.EfekNasib == 1);
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Eye, Position, Color(Aqua), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Eye, Visible To and Position, Color(Aqua), True);
 				Else If(Global.PemainAktif.EfekNasib == 2);
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Dizzy, Position, Color(Violet), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Dizzy, Visible To and Position, Color(Violet), True);
 				Else If(Global.PemainAktif.EfekNasib == 3);
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Skull, Position, Custom Color(255, 70, 70, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Skull, Visible To and Position, Custom Color(255, 70, 70, 255), True);
 				Else If(Global.PemainAktif.EfekNasib == 4);
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Heart, Position, Custom Color(70, 255, 110, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Heart, Visible To and Position, Custom Color(70, 255, 110, 255), True);
 				Else If(Global.PemainAktif.EfekNasib == 5);
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Fire, Position, Color(Orange), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Fire, Visible To and Position, Color(Orange), True);
 				Else;
-					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Poison 2, Position, Custom Color(170, 80, 255, 255), True);
+					Create Icon(Global.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Global.PemainAktif)) + Facing Direction Of(Evaluate Once(Global.PemainAktif)) * 4), Poison 2, Visible To and Position, Custom Color(170, 80, 255, 255), True);
 				End;
 				Global.PemainAktif.IkonKartuNasib = Last Created Entity;
 				Modify Player Variable(Global.PemainAktif, PutaranKartuNasib, Subtract, 1);
@@ -3094,7 +3143,7 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 				If(Global.PemainAktif.EfekNasib == 1);
 					Global.PemainAktif.PrivasiNasibAktif = True;
 					Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 15;
-					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: OTHER PLAYER / BOT NAMES — 15s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: NAMA PEMAIN / BOT LAIN — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่น / บอตอื่น — 15 วินาที"));
+					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: PUBLIC PLAYER / BOT NAMES — 15s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: NAMA PEMAIN PUBLIK / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นสาธารณะ / บอต — 15 วินาที"));
 				Else If(Global.PemainAktif.EfekNasib == 2);
 					Set Move Speed(Global.PemainAktif, 1000);
 					Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);
@@ -3957,6 +4006,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.HudEfekNasib = Null;
 		Event Player.TeksVisiNasib = Null;
 		Event Player.TimTerakhir = Team Of(Event Player);
+		Event Player.WaktuTeleportasiDummy = 0;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = False;
@@ -3998,7 +4048,7 @@ rule("96 - Subrutin: Cari target publik terdekat dari bidikan")
 
 	actions
 	{
-		Event Player.DaftarTargetInspeksi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, Or(Event Player.PrivasiNasibAktif == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))));
+		Event Player.DaftarTargetInspeksi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))));
 		If(Count Of(Event Player.DaftarTargetInspeksi) == 0);
 			Event Player.TargetInspeksi = Null;
 		Else;

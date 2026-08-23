@@ -520,12 +520,12 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 0, "All Players(All Teams)")
         self.assert_rejected(mutated, "visibilità riservata agli umani")
 
-    def test_roulette_icons_reevaluate_position_only(self) -> None:
+    def test_roulette_icons_reevaluate_visibility_and_position(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(iter(validator.iter_calls(machine.body, "Create Icon")))
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
-        mutated = self.replace_call_argument(absolute, 3, "None")
-        self.assert_rejected(mutated, "reevaluation deve essere Position")
+        mutated = self.replace_call_argument(absolute, 3, "Position")
+        self.assert_rejected(mutated, "reevaluation deve essere Visible To and Position")
 
     def test_roulette_icons_remain_visible_when_offscreen(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -543,11 +543,11 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         self.assert_rejected(mutated, "icone roulette univoche")
 
     def test_roulette_icon_types_cannot_be_swapped_between_outcomes(self) -> None:
-        self.assertIn("), Eye, Position", self.source)
-        self.assertIn("), Skull, Position", self.source)
-        mutated = self.source.replace("), Eye, Position", "), IkonSementara, Position", 1)
-        mutated = mutated.replace("), Skull, Position", "), Eye, Position", 1)
-        mutated = mutated.replace("), IkonSementara, Position", "), Skull, Position", 1)
+        self.assertIn("), Eye, Visible To and Position", self.source)
+        self.assertIn("), Skull, Visible To and Position", self.source)
+        mutated = self.source.replace("), Eye, Visible To and Position", "), IkonSementara, Visible To and Position", 1)
+        mutated = mutated.replace("), Skull, Visible To and Position", "), Eye, Visible To and Position", 1)
+        mutated = mutated.replace("), IkonSementara, Visible To and Position", "), Skull, Visible To and Position", 1)
         self.assert_rejected(mutated, "ordine tipi icona per esiti roulette 1..6")
 
     def test_roulette_icon_is_destroyed_before_each_replacement(self) -> None:
@@ -833,6 +833,32 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
         self.assert_rejected(mutated, "KunciBot incompleto")
 
+    def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
+        create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
+        mutated = self.replace_in_rule(
+            create,
+            "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;",
+            "Number Of Players(Team 1) < Number Of Slots(Team 1);",
+        )
+        self.assert_rejected(mutated, "creazione dummy Team 1 non sicura")
+
+    def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
+        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
+        mutated = self.replace_in_rule(release, "Destroy Dummy Bot(Team 1, Slot Of(", "Abort If(Slot Of(")
+        self.assert_rejected(mutated, "numero regole rilascio slot dummy Team 1")
+
+    def test_dummy_spawn_delay_uses_a_rearmed_timestamp(self) -> None:
+        arming = self.rule(
+            lambda rule: "If(Event Player.WaktuTeleportasiDummy == 0);" in rule.body
+            and "Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            arming,
+            "If(Event Player.WaktuTeleportasiDummy == 0);",
+            "If(Event Player.WaktuTeleportasiDummy > 0);",
+        )
+        self.assert_rejected(mutated, "arming timestamp teleport dummy assente")
+
     def test_player_hud_is_never_visible_to_bot_or_dummy_players(self) -> None:
         call = next(
             call for call in validator.iter_calls(self.source, "Create HUD Text")
@@ -994,14 +1020,69 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 )
                 self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
 
-    def test_inspection_keeps_the_explicit_vision_bypass(self) -> None:
-        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi")
-        mutated = self.replace_in_rule(
-            refresh,
-            "Event Player.PrivasiNasibAktif == True",
-            "Event Player.PrivasiNasibAktif == False",
+    def test_inspection_rejects_a_vision_privacy_bypass(self) -> None:
+        human_public = (
+            "And(Player Variable(Current Array Element, Manusia) == True, "
+            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)"
         )
-        self.assert_rejected(mutated, "inspection non usa Dummy OR iBot OR Vision")
+        for refresh in (
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi"),
+            self.rule(
+                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+            ),
+        ):
+            with self.subTest(rule=refresh.name):
+                mutated = self.replace_in_rule(
+                    refresh,
+                    human_public,
+                    f"Or(Event Player.PrivasiNasibAktif == True, {human_public})",
+                )
+                self.assert_rejected(mutated, "bypass Privacy tramite Vision")
+
+    def test_vision_names_exclude_private_human_subjects(self) -> None:
+        vision = self.rule(
+            lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            vision,
+            "Event Player.PrivasiInspeksiAktif == False",
+            "Event Player.PrivasiInspeksiAktif == True",
+        )
+        self.assert_rejected(mutated, "Vision mostra un umano con Privacy ON")
+
+    def test_vision_name_cleanup_runs_when_subject_turns_private(self) -> None:
+        cleanup = self.rule(
+            lambda rule: "Destroy In-World Text(Event Player.TeksVisiNasib);" in rule.body
+            and "Event Player.TeksVisiNasib = Null;" in rule.body
+            and validator.event_type(rule) == "Ongoing - Each Player"
+        )
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Event Player.PrivasiInspeksiAktif == True",
+            "Event Player.PrivasiInspeksiAktif == False",
+        )
+        self.assert_rejected(mutated, "cleanup Vision non reagisce a Privacy ON")
+
+    def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
+        protected = (
+            self.rule(
+                lambda rule: "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+            ),
+            self.rule(
+                lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+                and "Create In-World Text(Event Player" in rule.body
+            ),
+        )
+        for rule in protected:
+            with self.subTest(rule=rule.name):
+                mutated = self.replace_in_rule(
+                    rule,
+                    "Disable Nameplates(All Players(All Teams), Event Player);",
+                    "Enable Nameplates(All Players(All Teams), Event Player);",
+                )
+                self.assert_rejected(mutated, "nameplate")
 
     def test_camera_target_cache_excludes_private_humans(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
@@ -1105,6 +1186,20 @@ class RepositoryMetadataTests(unittest.TestCase):
             self.make_repo(root)
             (root / ".github" / "workflows" / "maintenance-patch.yml").write_text("on: workflow_dispatch\n", encoding="utf-8")
             self.assertTrue(any("workflow permanenti" in error for error in self.metadata_errors(root)))
+
+    def test_stale_github_marker_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / ".github" / ".validator-wait-policy-trigger").write_text("one-shot\n", encoding="utf-8")
+            self.assertTrue(any("contenuti permanenti .github" in error for error in self.metadata_errors(root)))
+
+    def test_non_workflow_file_inside_workflows_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / ".github" / "workflows" / "patcher.py").write_text("# one-shot\n", encoding="utf-8")
+            self.assertTrue(any("contenuti permanenti .github" in error for error in self.metadata_errors(root)))
 
     def test_validation_workflow_must_not_push(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

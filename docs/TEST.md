@@ -17,9 +17,11 @@ Accettazione:
 - tutti gli unit test verdi;
 - validatore semantico verde;
 - preflight clipboard `it-IT` verde;
+- parità semantica canonica tra `workshop/ruang_irama.it-IT.workshop` e `tests/fixtures/semantic_reference.txt`;
 - nessuna dipendenza Python esterna;
 - nessun errore da `git diff --check`;
-- un solo workflow permanente, `validate-workshop.yml`.
+- un solo `Loop` e massimo 10 `Wait`, senza `Wait` dedicato alla stabilizzazione dummy;
+- un solo workflow permanente, `validate-workshop.yml`, e nessun marker, trigger o patcher one-shot sotto `.github`.
 
 Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`](VALIDAZIONE.md).
 
@@ -29,7 +31,7 @@ Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`]
 2. Impostare la lingua testo del client su Italiano e importare da zero `workshop/ruang_irama.it-IT.workshop` dalla vista Raw; non riutilizzare un replay precedente alla patch.
 3. Annotare codice import, build client, regione, data/ora e piattaforma.
 4. Abilitare la diagnostica host quando si acquisiscono le metriche.
-5. Preparare 12 slot. I dummy sono sufficienti per il soak; la prova di input simultanei richiede più utenti reali.
+5. Preparare 12 slot. I dummy possono occupare soltanto la capacità libera e devono auto-rimuoversi per consentire fino a 12 umani; la prova di input simultanei richiede più utenti reali.
 
 Accettazione smoke:
 
@@ -109,7 +111,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 | Esito | Verifica |
 |---|---|
-| Vision | effetto e testo EN/ID/TH; cleanup dopo 15 s |
+| Vision | effetto e testo EN/ID/TH; nessun nome/nameplate per umani con Privacy ON; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | morte immediata e cleanup completo |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
@@ -118,8 +120,9 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 Per ciascun esito:
 
-- durante ogni passaggio della roulette l'icona corrente è visibile a tutto il roster umano e resta agganciata al mirino del player che l'ha attivata; provare movimento, rotazione continua e inversione di 180° senza scatti o salti verso altri player;
-- con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che la spinta segua continuamente la direzione 3D corrente;
+- durante ogni passaggio della roulette l'icona corrente deve restare agganciata a occhio/mirino con aggiornamento ogni frame; eseguire movimento, rotazione continua e inversione di 180° senza scatti o salti verso altri player;
+- durante la stessa roulette eseguire join/leave di un umano: la reevaluation `Visible To and Position` deve rendere tutte le sei icone visibili al roster umano corrente, senza includere bot;
+- con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed` segua continuamente la direzione 3D corrente;
 - Unkillable viene disattivato all'avvio;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
@@ -145,8 +148,9 @@ Per ciascun esito:
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
 - Nuovo player e player dopo cambio squadra: Privacy ON e cursore ON per default.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom.
-- Privacy ON: gli altri player non vedono la riga e nessun osservatore può scegliere il player nella Camera custom.
+- Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
+- Attivare Privacy ON mentre inspection o Vision stanno già mostrando il target: ogni nome/nameplate esistente deve sparire entro il ciclo di cleanup e non ricomparire finché Privacy resta ON.
 - Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
 
 ### Teleport
@@ -176,10 +180,11 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 ### Bot e dummy
 
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
-- confermare al massimo un dummy nativo per squadra quando è disponibile uno slot;
+- con due o più slot liberi, confermare al massimo un dummy nativo per squadra; con un solo slot libero, confermare che non venga creato;
+- riempire la squadra: il dummy deve essere rimosso per rendere disponibile la capacità di 6 umani; ripetere ingressi e uscite vicino al limite e verificare assenza di cicli crea/distruggi o spam `Create Dummy Bot`;
 - uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
-- a ogni spawn verificare che il dummy esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
+- a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
 - verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
 - mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
 
@@ -233,7 +238,7 @@ Durante il soak:
 - usare Camera, inspection, Teleport e Try Your Luck;
 - eseguire join/leave e alcuni cambi squadra;
 - cambiare eroe, includendo D.Mon;
-- lasciare attivi i dummy per il carico di base;
+- lasciare attivi i dummy quando esistono almeno due slot liberi, quindi riempire progressivamente la lobby e verificare che vengano rimossi senza impedire l'ingresso di 12 umani;
 - usare più utenti reali per la fase di input simultanei.
 
 Accettazione:
@@ -274,6 +279,8 @@ EN/ID/TH e 12 menu: PASS/FAIL
 Input simultanei: PASS/FAIL
 Join/leave: PASS/FAIL
 Dummy objective routing: PASS/FAIL
+Dummy capacity/no-create-spam: PASS/FAIL
+Privacy Vision/inspection: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
 Cascata full-lobby: PASS/FAIL
@@ -295,4 +302,4 @@ La release diventa **live-ready** soltanto quando tutti i test obbligatori sono 
 
 ### Dummy spawn iniziale
 
-Verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa; dopo circa 1 s devono essere spostati a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 30 s e la stessa uscita sicura deve ripetersi.
+Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 30 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.

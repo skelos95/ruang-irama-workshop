@@ -19,6 +19,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
 ITALIAN_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
+SEMANTIC_REFERENCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 
 CLIENT_LARGEST_RULE_LIMIT_BYTES = 98_000
 SOURCE_RULE_SAFETY_TARGET_BYTES = 80_000
@@ -62,6 +63,63 @@ FORBIDDEN_OUTSIDE_STRINGS = {
     "’": "apostrofo tipografico chiuso",
 }
 
+# The Workshop clipboard grammar localizes only these tokens between the
+# maintained en-US semantic fixture and the user-facing it-IT source. Runtime
+# strings (including rule titles and Workshop comments) are deliberately not
+# translated here: the semantic gate compares them byte-for-byte.
+ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
+    ("Cattura la Bandiera", "Capture The Flag"),
+    ("Annulla quando è False", "Abort When False"),
+    ("Tutti gli eroi", "All Heroes"),
+    ("Ignora condizione", "Ignore Condition"),
+    ("Punto Critico", "Flashpoint"),
+    ("subroutine", "subroutines"),
+    ("condizioni", "conditions"),
+    ("variabili", "variables"),
+    ("giocatore", "player"),
+    ("Trasporto", "Escort"),
+    ("Conquista", "Assault"),
+    ("Globale", "Global"),
+    ("globale", "global"),
+    ("Scorta", "Push"),
+    ("Controllo", "Control"),
+    ("Scontro", "Clash"),
+    ("Ibrida", "Hybrid"),
+    ("regola", "rule"),
+    ("evento", "event"),
+    ("azioni", "actions"),
+    ("Tutti", "All"),
+)
+
+FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX: tuple[tuple[str, str], ...] = (
+    (r"(?m)^\s*(?:global|player)\s*:\s*$", "namespace global/player en-US"),
+    (r"(?m)^\s*All\s*;\s*$", "selettore All en-US"),
+    (r"\bGlobal\s*\.", "namespace Global en-US"),
+    (r"\bAll\s+Heroes\b", "selettore All Heroes en-US"),
+    (r"\bAbort\s+When\s+False\b", "policy Abort When False en-US"),
+    (r"\bIgnore\s+Condition\b", "policy Ignore Condition en-US"),
+    (
+        r"\bColor\s*\(\s*(?:White|Yellow|Orange|Rose|Violet|Sky\s+Blue|Aqua|Turquoise|Lime\s+Green)\s*\)",
+        "colore nominale Color(...) en-US",
+    ),
+    (
+        r"\bGame\s+Mode\s*\(\s*(?:Push|Flashpoint|Capture\s+The\s+Flag|Control|Clash|Hybrid|Escort|Assault)\s*\)",
+        "modalità Game Mode en-US",
+    ),
+)
+
+EQUIVALENT_NAMED_COLORS: tuple[tuple[tuple[int, int, int, int], str], ...] = (
+    ((255, 255, 255, 255), "White"),
+    ((255, 255, 0, 255), "Yellow"),
+    ((236, 153, 0, 255), "Orange"),
+    ((255, 50, 145, 255), "Rose"),
+    ((100, 50, 255, 255), "Violet"),
+    ((108, 190, 244, 255), "Sky Blue"),
+    ((0, 234, 234, 255), "Aqua"),
+    ((0, 230, 151, 255), "Turquoise"),
+    ((160, 232, 27, 255), "Lime Green"),
+)
+
 
 @dataclass(frozen=True)
 class RuleSize:
@@ -79,6 +137,123 @@ class Report:
 
 class ClipboardImportError(ValueError):
     pass
+
+
+def _replace_token(segment: str, source: str, target: str) -> str:
+    """Replace one localized token without touching longer identifiers."""
+
+    phrase_pattern = re.escape(source).replace(r"\ ", r"\s+")
+    if source[0].isalnum():
+        phrase_pattern = rf"(?<!\w){phrase_pattern}"
+    if source[-1].isalnum():
+        phrase_pattern = rf"{phrase_pattern}(?!\w)"
+    return re.sub(phrase_pattern, lambda _match: target, segment)
+
+
+def _normalize_named_colors(segment: str) -> str:
+    """Canonicalize the nine named colors unavailable in it-IT exports."""
+
+    for components, color_name in EQUIVALENT_NAMED_COLORS:
+        component_pattern = r"\s*,\s*".join(str(value) for value in components)
+        pattern = rf"(?<!\w)Custom\s+Color\s*\(\s*{component_pattern}\s*\)(?!\w)"
+        segment = re.sub(
+            pattern,
+            lambda _match, name=color_name: f"Color({name})",
+            segment,
+        )
+    return segment
+
+
+def _canonicalize_outside_strings(segment: str, language: str) -> str:
+    if language == "it-IT":
+        for source, target in sorted(
+            ITALIAN_TO_ENGLISH_TOKENS,
+            key=lambda replacement: len(replacement[0]),
+            reverse=True,
+        ):
+            segment = _replace_token(segment, source, target)
+    segment = _normalize_named_colors(segment)
+    return re.sub(r"\s+", "", segment)
+
+
+def canonical_semantic_text(text: str, language: str) -> str:
+    """Return a semantic comparison stream while preserving quoted text.
+
+    Only known it-IT grammar tokens and equivalent color spellings are
+    canonicalized. Whitespace is ignored exclusively outside quoted strings;
+    every quoted character, including titles and runtime text, remains exact.
+    """
+
+    if language not in LANGUAGE_PROFILES:
+        raise ClipboardImportError(f"profilo lingua non supportato: {language}")
+
+    result: list[str] = []
+    outside: list[str] = []
+    quoted: list[str] = []
+    in_string = False
+    escaped = False
+
+    for char in text:
+        if in_string:
+            quoted.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                result.append("".join(quoted))
+                quoted.clear()
+                in_string = False
+            continue
+
+        if char == '"':
+            result.append(
+                _canonicalize_outside_strings("".join(outside), language)
+            )
+            outside.clear()
+            quoted.append(char)
+            in_string = True
+        else:
+            outside.append(char)
+
+    if in_string:
+        raise ClipboardImportError("stringa Workshop non chiusa: copia/incolla incompleto")
+    result.append(_canonicalize_outside_strings("".join(outside), language))
+    return "".join(result)
+
+
+def semantic_equivalence_error(reference: str, italian: str) -> str | None:
+    """Describe the first EN/IT semantic mismatch, or return ``None``."""
+
+    english_stream = canonical_semantic_text(reference, "en-US")
+    italian_stream = canonical_semantic_text(italian, "it-IT")
+    if english_stream == italian_stream:
+        return None
+
+    mismatch = next(
+        (
+            index
+            for index, (english_char, italian_char) in enumerate(
+                zip(english_stream, italian_stream)
+            )
+            if english_char != italian_char
+        ),
+        min(len(english_stream), len(italian_stream)),
+    )
+    context_start = max(0, mismatch - 45)
+    context_end = mismatch + 45
+    english_context = english_stream[context_start:context_end]
+    italian_context = italian_stream[context_start:context_end]
+    return (
+        "equivalenza semantica EN/IT fallita all'offset canonico "
+        f"{mismatch}: EN={english_context!r}; IT={italian_context!r}"
+    )
+
+
+def require_semantic_equivalence(reference: str, italian: str) -> None:
+    error = semantic_equivalence_error(reference, italian)
+    if error is not None:
+        raise ClipboardImportError(error)
 
 
 def _mask_quoted_text(text: str) -> str:
@@ -261,6 +436,14 @@ def _require_structural_grammar(syntax: str, language: str) -> None:
             )
 
 
+    if language == "it-IT":
+        for pattern, label in FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX:
+            if re.search(pattern, syntax):
+                raise ClipboardImportError(
+                    f"formato misto it-IT/en-US: trovato {label}"
+                )
+
+
 def check_text(text: str, language: str | None = None) -> Report:
     if not text:
         raise ClipboardImportError("sorgente Workshop vuoto")
@@ -335,7 +518,22 @@ def check_path(path: Path = DEFAULT_SOURCE, language: str | None = None) -> Repo
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ClipboardImportError(f"file non UTF-8: {exc}") from exc
-    return check_text(text, language)
+    report = check_text(text, language)
+
+    if path.resolve() == ITALIAN_SOURCE.resolve():
+        reference_raw = SEMANTIC_REFERENCE.read_bytes()
+        if reference_raw.startswith(b"\xef\xbb\xbf"):
+            raise ClipboardImportError("BOM UTF-8 nel riferimento semantico EN")
+        try:
+            reference = reference_raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ClipboardImportError(
+                f"riferimento semantico EN non UTF-8: {exc}"
+            ) from exc
+        check_text(reference, "en-US")
+        require_semantic_equivalence(reference, text)
+
+    return report
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -17,7 +17,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Respawn manuale con Jump da morto.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
-- Un dummy nativo per squadra quando esiste uno slot e uno Spawn Point valido: nasce direttamente nella propria spawn, respawn massimo 30 s e uscita dalla Spawn Room verso una destinazione mode-specific percorribile.
+- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, libera il posto quando la squadra è piena e mantiene disponibile la capacità per 6 umani per team.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
@@ -63,7 +63,7 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 
 | Esito | Durata | Effetto |
 |---|---:|---|
-| Vision | 15 s | mostra i nomi degli altri player e bot, escludendo il beneficiario stesso |
+| Vision | 15 s | mostra i target consentiti, senza esporre nome o nameplate degli umani con Privacy ON |
 | Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
 | Skull | immediato | morte del player |
 | Team Heal | immediato | cura completa dei player umani della squadra |
@@ -72,7 +72,7 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 
 Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu.
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Le icone della roulette catturano una volta l'identità del beneficiario e seguono ogni frame il suo occhio e la sua mira, restando visibili a tutto il roster umano anche fuori schermo; non dipendono dallo scratch globale mentre questo passa al player successivo. L'accelerazione usa la stessa identità stabile e spinge automaticamente lungo la direzione completa della visuale. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
 
 ## Runtime 0.8.0
 
@@ -85,6 +85,8 @@ Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 H
 
 Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
 
+Il sorgente mantiene un solo `Loop` e al massimo **10 `Wait`** autorizzati. Il ritardo di uscita dei dummy dalla Spawn Room non consuma un `Wait`: una scadenza timestamp di 1 secondo viene valutata dal runtime periodico.
+
 Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload o pagine nascoste: apertura, chiusura e cambio pagina sono gli unici eventi che ricreano il menu; la navigazione interna aggiorna variabili rivalutate.
 
 ## HUD e localizzazione
@@ -93,7 +95,7 @@ Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload 
 - I 100 generi, `CHILL`, nomi player ed eroi restano nomi propri universali.
 - Identificatori, titoli regola, subroutine e commenti personalizzati restano in Bahasa Indonesia.
 - Il file Workshop destinato al client italiano usa la grammatica clipboard `it-IT`: alcuni token cambiano (`variables → variabili`, `rule → regola`, `event → evento`), mentre altri restano identici (`Ongoing - Global`, `Button(Secondary Fire)`).
-- La fixture `tests/fixtures/semantic_reference.txt` usa grammatica `en-US` soltanto per il gate semantico e i test: **non è un file da importare nel client**.
+- La fixture `tests/fixtures/semantic_reference.txt` usa grammatica `en-US` soltanto per il gate semantico e i test: **non è un file da importare nel client**. Il gate canonicalizza entrambi i formati e richiede parità semantica con il vero clipboard `it-IT`, così una modifica funzionale non può essere applicata a una sola copia.
 - Ogni `Create HUD Text` usa `Null` nel campo Header; sono ammessi soltanto Subheader/Text e `Small Message`.
 - `Big Message` e titoli HUD sono vietati. Gli In-World Text restano ammessi per inspection, Teleport e Vision.
 - Menu e liste separano contenuto e comandi con la spaziatura HUD prevista.
@@ -111,9 +113,9 @@ La destinazione Objective/Flag viene valutata al click:
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
-I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento; se non esiste un punto valido, il dummy resta in spawn e riprova.
+I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova.
 
-La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom da alcun osservatore; dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
+La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano privato non può essere scelto né mantenuto come target della Camera custom e Vision/inspection non ne mostrano nome o nameplate. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 
 ## Importazione tramite copia/incolla
 
@@ -148,7 +150,7 @@ python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --lan
 
 `check_clipboard_import.py` verifica il formato testuale del paste (UTF-8/BOM, delimitatori, grammatica strutturale, caratteri invisibili e dimensione sorgente delle rule) ma non sostituisce la Diagnostica script del client. Il checker supporta anche il profilo `en-US` usato dalla fixture interna; per Largest Rule mantiene un target statico conservativo di `<= 80 KB` di testo per rule rispetto al limite client `< 98 KB`.
 
-Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue la suite `unittest` e il validatore semantico su push e pull request; i test del preflight clipboard sono inclusi automaticamente nella suite. Non esiste un workflow permanente che modifica o committa automaticamente il repository.
+Il workflow permanente [`.github/workflows/validate-workshop.yml`](.github/workflows/validate-workshop.yml) esegue la suite `unittest` e il validatore semantico su push e pull request; i test del preflight clipboard sono inclusi automaticamente nella suite. L'allowlist di `.github` ammette soltanto questo workflow: marker, trigger, patcher e automazioni one-shot sono vietati, così nessun workflow può modificare o committare automaticamente il repository.
 
 Documentazione operativa:
 

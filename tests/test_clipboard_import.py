@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +19,15 @@ class ClipboardImportTests(unittest.TestCase):
         cls.italian_path = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
         cls.source = cls.source_path.read_text(encoding="utf-8")
         cls.italian = cls.italian_path.read_text(encoding="utf-8")
+
+    def assert_semantic_mismatch(self, mutated_italian: str) -> None:
+        error = clipboard.semantic_equivalence_error(self.source, mutated_italian)
+        self.assertIsNotNone(error)
+        self.assertIn("equivalenza semantica EN/IT fallita", error)
+        with self.assertRaisesRegex(
+            clipboard.ClipboardImportError, "equivalenza semantica EN/IT fallita"
+        ):
+            clipboard.require_semantic_equivalence(self.source, mutated_italian)
 
     def test_internal_semantic_fixture_is_clipboard_safe(self) -> None:
         report = clipboard.check_path(self.source_path, "en-US")
@@ -59,10 +70,132 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertNotIn("If(And(Globale.PemainAktif.WaktuIkonNasibBerakhir > 0", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.KartuNasibAktif == False, Globale.PemainAktif.MenuTerbuka == False", self.italian)
 
-    def test_semantic_fixture_and_italian_have_same_rule_count(self) -> None:
+    def test_semantic_fixture_and_italian_are_exactly_equivalent(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
         italian = clipboard.check_path(self.italian_path, "it-IT")
         self.assertEqual(english.rule_count, italian.rule_count)
+        self.assertIsNone(
+            clipboard.semantic_equivalence_error(self.source, self.italian)
+        )
+        self.assertEqual(
+            clipboard.canonical_semantic_text(self.source, "en-US"),
+            clipboard.canonical_semantic_text(self.italian, "it-IT"),
+        )
+
+    def test_semantic_gate_ignores_only_whitespace_outside_strings(self) -> None:
+        mutated = self.italian.replace("variabili\n{", "  variabili \n  {  ", 1)
+        self.assertIsNone(clipboard.semantic_equivalence_error(self.source, mutated))
+
+    def test_semantic_gate_knows_every_localized_token(self) -> None:
+        for italian, english in clipboard.ITALIAN_TO_ENGLISH_TOKENS:
+            with self.subTest(italian=italian):
+                self.assertEqual(
+                    clipboard.canonical_semantic_text(italian, "it-IT"),
+                    clipboard.canonical_semantic_text(english, "en-US"),
+                )
+
+    def test_semantic_gate_knows_the_nine_equivalent_colors(self) -> None:
+        for components, name in clipboard.EQUIVALENT_NAMED_COLORS:
+            italian = f"Custom Color({', '.join(map(str, components))})"
+            english = f"Color({name})"
+            with self.subTest(color=name):
+                self.assertEqual(
+                    clipboard.canonical_semantic_text(italian, "it-IT"),
+                    clipboard.canonical_semantic_text(english, "en-US"),
+                )
+
+    def test_semantic_gate_rejects_italian_only_privacy_default_change(self) -> None:
+        needle = "Event Player.PrivasiInspeksiAktif = True;"
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(
+            self.italian.replace(
+                needle, "Event Player.PrivasiInspeksiAktif = False;", 1
+            )
+        )
+
+    def test_check_path_rejects_semantically_divergent_italian_source(self) -> None:
+        mutated = self.italian.replace(
+            "Event Player.PrivasiInspeksiAktif = True;",
+            "Event Player.PrivasiInspeksiAktif = False;",
+            1,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            reference_path = temp_root / "semantic_reference.txt"
+            italian_path = temp_root / "ruang_irama.it-IT.workshop"
+            reference_path.write_text(self.source, encoding="utf-8")
+            italian_path.write_text(mutated, encoding="utf-8")
+            with (
+                patch.object(clipboard, "ITALIAN_SOURCE", italian_path),
+                patch.object(clipboard, "SEMANTIC_REFERENCE", reference_path),
+                self.assertRaisesRegex(
+                    clipboard.ClipboardImportError,
+                    "equivalenza semantica EN/IT fallita",
+                ),
+            ):
+                clipboard.check_path(italian_path, "it-IT")
+
+    def test_semantic_gate_rejects_italian_only_acceleration_direction(self) -> None:
+        needle = "Facing Direction Of(Evaluate Once(Globale.PemainAktif))"
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(
+            self.italian.replace(needle, "Vector(1, 0, 0)", 1)
+        )
+
+    def test_semantic_gate_rejects_italian_only_privacy_polarity(self) -> None:
+        needle = "Event Player.PrivasiInspeksiAktif == False"
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(
+            self.italian.replace(
+                needle, "Event Player.PrivasiInspeksiAktif == True", 1
+            )
+        )
+
+    def test_semantic_gate_rejects_italian_only_color_change(self) -> None:
+        needle = "Custom Color(255, 255, 255, 255)"
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(
+            self.italian.replace(needle, "Custom Color(254, 255, 255, 255)", 1)
+        )
+
+    def test_semantic_gate_rejects_italian_only_custom_string_change(self) -> None:
+        needle = 'Custom String("Lowercase")'
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(
+            self.italian.replace(needle, 'Custom String("LOWERCASE")', 1)
+        )
+
+    def test_semantic_gate_rejects_italian_only_rule_structure_change(self) -> None:
+        needle = "\t\tGlobale.Siap == False;\n"
+        self.assertIn(needle, self.italian)
+        self.assert_semantic_mismatch(self.italian.replace(needle, "", 1))
+
+    def test_italian_profile_rejects_english_namespace_even_if_semantics_match(self) -> None:
+        mutated = self.italian.replace("Globale.Siap", "Global.Siap", 1)
+        self.assertIsNone(clipboard.semantic_equivalence_error(self.source, mutated))
+        with self.assertRaisesRegex(clipboard.ClipboardImportError, "namespace Global en-US"):
+            clipboard.check_text(mutated, "it-IT")
+
+    def test_italian_profile_rejects_english_mode_and_all_heroes_tokens(self) -> None:
+        for italian, english, message in (
+            ("Game Mode(Scorta)", "Game Mode(Push)", "modalità Game Mode en-US"),
+            ("Tutti gli eroi", "All Heroes", "All Heroes en-US"),
+        ):
+            with self.subTest(token=english):
+                self.assertIn(italian, self.italian)
+                mutated = self.italian.replace(italian, english, 1)
+                with self.assertRaisesRegex(clipboard.ClipboardImportError, message):
+                    clipboard.check_text(mutated, "it-IT")
+
+    def test_italian_profile_rejects_equivalent_named_color_syntax(self) -> None:
+        mutated = self.italian.replace(
+            "Custom Color(255, 255, 255, 255)",
+            "Color(White)",
+            1,
+        )
+        self.assertIsNone(clipboard.semantic_equivalence_error(self.source, mutated))
+        with self.assertRaisesRegex(clipboard.ClipboardImportError, "colore nominale"):
+            clipboard.check_text(mutated, "it-IT")
 
     def test_auto_detects_both_profiles(self) -> None:
         self.assertEqual(clipboard.check_text(self.source).language, "en-US")
