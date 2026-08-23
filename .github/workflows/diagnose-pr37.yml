@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chatgpt/fix-dummy-initial-spawn-distance-hud
+  pull_request:
 
 permissions:
   contents: read
