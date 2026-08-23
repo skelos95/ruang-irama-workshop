@@ -94,7 +94,7 @@ Il gate richiede:
 
 - un solo scheduler `Ongoing - Global` a 20 Hz;
 - un solo `Loop` nel sorgente;
-- massimo 10 `Wait`, ognuno in una categoria consentita e riconoscibile;
+- massimo 11 `Wait`, ognuno in una categoria consentita e riconoscibile;
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
@@ -103,7 +103,7 @@ Il gate richiede:
 - un solo raycast Camera;
 - nessuna regola HUD contenente `Wait` o `Loop`.
 
-Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, respawn e cleanup atomico. Qualsiasi Wait fuori allowlist o secondo Loop fa fallire il gate.
+Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, stabilizzazione dell'uscita dummy dalla Spawn Room, hold input, respawn e cleanup atomico. Qualsiasi Wait fuori allowlist o secondo Loop fa fallire il gate.
 
 ### Try Your Luck
 
