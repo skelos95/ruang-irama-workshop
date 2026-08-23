@@ -188,7 +188,10 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
 - verificare `Move Speed = 20%` sia per bot AI sia per dummy; gli iBot devono continuare a usare la propria navigazione nativa;
 - a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
-- fuori dalla Spawn Room e con almeno un umano vivo, lasciare il dummy senza input e verificare che avanzi automaticamente verso il target seguendo il facing; eliminare tutti i target, uccidere il dummy e riempire il team, controllando in ogni caso che il throttle si arresti;
+- fuori dalla Spawn Room, posizionare un alleato e un nemico vivo: il dummy deve ignorare l'alleato e avanzare automaticamente verso l'umano nemico più vicino;
+- verificare che il dummy attraversi pareti e soffitti senza attraversare il pavimento o cadere fuori mappa; gli iBot devono conservare le collisioni native;
+- avvicinare il dummy entro 4 m dal nemico e verificare throttle zero; allontanare il nemico oltre la soglia e verificare la ripartenza automatica;
+- uccidere/far uscire/cambiare squadra al target, eliminare tutti i nemici vivi, uccidere il dummy e riempire il team: facing e throttle devono essere fermati o riallineati senza riferimenti obsoleti;
 - verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
 - mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
 

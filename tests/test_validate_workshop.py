@@ -978,6 +978,48 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(bot_rule, "Call Subroutine(KunciBot);", "")
         self.assert_rejected(mutated, "regola dedicata di lock bot/dummy assente")
 
+    def test_native_dummy_wall_collision_keeps_floors_enabled(self) -> None:
+        mutated = self.replace_once(
+            "Disable Movement Collision With Environment(Event Player, False);",
+            "Disable Movement Collision With Environment(Event Player, True);",
+        )
+        self.assert_rejected(mutated, "collisione ambiente dummy: Event Player con Include Floors False")
+
+    def test_native_dummy_wall_collision_does_not_apply_to_ibots(self) -> None:
+        bot_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(KunciBot);" in rule.body
+            and "Disable Movement Collision With Environment" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            bot_rule,
+            "If(Is Dummy Bot(Event Player) == True);\n\t\t\tDisable Movement Collision With Environment",
+            "If(Event Player.BotOtomatis == True);\n\t\t\tDisable Movement Collision With Environment",
+        )
+        self.assert_rejected(mutated, "collisione ambiente non protetta dal ramo dummy nativo")
+
+    def test_native_dummy_wall_collision_branch_cannot_be_made_unreachable(self) -> None:
+        bot_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(KunciBot);" in rule.body
+            and "Disable Movement Collision With Environment" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            bot_rule,
+            "Call Subroutine(KunciBot);\n\t\tIf(Is Dummy Bot(Event Player) == True);",
+            "Call Subroutine(KunciBot);\n\t\tAbort;\n\t\tIf(Is Dummy Bot(Event Player) == True);",
+        )
+        self.assert_rejected(mutated, "collisione ambiente dummy: sequenza raggiungibile e isolata")
+
+    def test_native_dummy_wall_collision_rule_cannot_have_an_impossible_condition(self) -> None:
+        bot_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(KunciBot);" in rule.body
+            and "Disable Movement Collision With Environment" in rule.body
+        )
+        mutated = self.inject_condition(bot_rule, "False == True;")
+        self.assert_rejected(mutated, "collisione ambiente dummy: condizioni esatte e raggiungibili")
+
     def test_bot_lock_neutralizes_player_interference(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
         mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
@@ -993,6 +1035,115 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(movement, "Start Throttle In Direction(Event Player,", "Start Throttle Towards Player(Event Player,")
         self.assert_rejected(mutated, "movimento automatico dummy assente")
 
+    def test_native_dummy_movement_rule_cannot_have_an_impossible_condition(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.inject_condition(movement, "False == True;")
+        self.assert_rejected(mutated, "movimento dummy: condizioni esatte per un nemico vivo")
+
+    def test_native_dummy_movement_cannot_abort_before_facing(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(
+            movement,
+            "\n\t\tStart Facing(Event Player,",
+            "\n\t\tAbort;\n\t\tStart Facing(Event Player,",
+        )
+        self.assert_rejected(mutated, "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
+
+    def test_native_dummy_movement_cannot_be_stopped_after_throttle(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        throttle = next(validator.iter_calls(movement.body, "Start Throttle In Direction"))
+        absolute = validator.Call(
+            throttle.name,
+            throttle.raw,
+            throttle.args,
+            movement.start + throttle.start,
+            movement.start + throttle.end,
+        )
+        mutated = self.source[:absolute.end] + ";\n\t\tStop Throttle In Direction(Event Player)" + self.source[absolute.end:]
+        self.assert_rejected(mutated, "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
+
+    def test_native_dummy_facing_requires_a_nonzero_turn_rate(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        facing = next(validator.iter_calls(movement.body, "Start Facing"))
+        absolute = validator.Call(
+            facing.name,
+            facing.raw,
+            facing.args,
+            movement.start + facing.start,
+            movement.start + facing.end,
+        )
+        mutated = self.replace_call_argument(absolute, 2, "0")
+        self.assert_rejected(mutated, "movimento dummy: facing argomento 2")
+
+    def test_native_dummy_facing_reevaluates_direction_and_turn_rate(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        facing = next(validator.iter_calls(movement.body, "Start Facing"))
+        absolute = validator.Call(
+            facing.name,
+            facing.raw,
+            facing.args,
+            movement.start + facing.start,
+            movement.start + facing.end,
+        )
+        mutated = self.replace_call_argument(absolute, 4, "None")
+        self.assert_rejected(mutated, "movimento dummy: facing argomento 4")
+
+    def test_native_dummy_targets_only_the_opposing_team(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(
+            movement,
+            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
+            "Team Of(Current Array Element) == Team Of(Event Player)",
+        )
+        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere il nemico vivo")
+
+    def test_native_dummy_enemy_predicate_cannot_be_negated(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        predicate = (
+            "And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), "
+            "And(Is Alive(Current Array Element), Team Of(Current Array Element) == "
+            "Opposite Team Of(Team Of(Event Player)))))"
+        )
+        self.assertEqual(movement.body.count(predicate), 3)
+        changed = movement.body.replace(predicate, f"Not({predicate})")
+        mutated = self.source[:movement.start] + changed + self.source[movement.end:]
+        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere il nemico vivo")
+
+    def test_native_dummy_stops_at_exactly_four_metres(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 0) ? 0 : 1")
+        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal nemico")
+
+    def test_native_dummy_stop_condition_cannot_be_negated(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        call = next(validator.iter_calls(movement.body, "Start Throttle In Direction"))
+        magnitude = validator.parse_top_level_ternary(call.args[2])
+        self.assertIsNotNone(magnitude)
+        stop_condition, stopped, moving = magnitude  # type: ignore[misc]
+        absolute = validator.Call(
+            call.name,
+            call.raw,
+            call.args,
+            movement.start + call.start,
+            movement.start + call.end,
+        )
+        mutated = self.replace_call_argument(
+            absolute,
+            2,
+            f"Not({stop_condition}) ? {stopped} : {moving}",
+        )
+        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal nemico")
+
+    def test_native_dummy_stopped_magnitude_is_zero(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 4) ? 1 : 1")
+        self.assert_rejected(mutated, "magnitudine entro quattro metri")
+
+    def test_native_dummy_throttle_reevaluates_direction_and_magnitude(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement, "Direction and Magnitude);", "None);")
+        self.assert_rejected(mutated, "movimento dummy: throttle argomento 5")
+
     def test_native_dummy_stops_throttle_when_no_target_remains(self) -> None:
         cleanup = self.rule(
             lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
@@ -1001,6 +1152,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.replace_in_rule(cleanup, "Stop Throttle In Direction(Event Player);", "")
         self.assert_rejected(mutated, "cleanup movimento dummy senza target non ferma il throttle")
+
+    def test_native_dummy_no_target_cleanup_uses_the_opposing_team_filter(self) -> None:
+        cleanup = self.rule(
+            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
+            and ")) == 0;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
+            "Team Of(Current Array Element) == Team Of(Event Player)",
+        )
+        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere il nemico vivo")
+
+    def test_dummy_release_stops_facing_before_destroy(self) -> None:
+        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
+        mutated = self.replace_in_rule(release, "Stop Facing(First Of(Filtered Array(", "Start Facing(First Of(Filtered Array(")
+        self.assert_rejected(mutated, "rilascio dummy Team 1 incompleto: Stop Facing")
 
     def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
         create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
@@ -1011,10 +1180,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "creazione dummy Team 1 non sicura")
 
+    def test_dummy_creation_cannot_have_an_impossible_condition(self) -> None:
+        create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
+        mutated = self.inject_condition(create, "False == True;")
+        self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
+
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
         release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
         mutated = self.replace_in_rule(release, "Destroy Dummy Bot(Team 1, Slot Of(", "Abort If(Slot Of(")
         self.assert_rejected(mutated, "numero regole rilascio slot dummy Team 1")
+
+    def test_dummy_release_cannot_abort_before_cleanup(self) -> None:
+        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
+        mutated = self.replace_in_rule(
+            release,
+            "\n\t\tIf(Player Variable(",
+            "\n\t\tAbort;\n\t\tIf(Player Variable(",
+        )
+        self.assert_rejected(mutated, "rilascio dummy Team 1: cleanup atomico esatto senza abort")
 
     def test_dummy_spawn_delay_uses_a_rearmed_timestamp(self) -> None:
         arming = self.rule(
@@ -1027,6 +1210,28 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "If(Event Player.WaktuTeleportasiDummy > 0);",
         )
         self.assert_rejected(mutated, "arming timestamp teleport dummy assente")
+
+    def test_dummy_death_cleanup_cannot_have_an_impossible_condition(self) -> None:
+        death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Stop Facing(Event Player);" in rule.body
+            and "WaktuTeleportasiDummy = 0;" in rule.body
+        )
+        mutated = self.inject_condition(death, "False == True;")
+        self.assert_rejected(mutated, "cleanup morte dummy: condizione esatta e raggiungibile")
+
+    def test_dummy_death_cleanup_cannot_abort_before_stopping(self) -> None:
+        death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Stop Facing(Event Player);" in rule.body
+            and "WaktuTeleportasiDummy = 0;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            death,
+            "\n\t\tStop Facing(Event Player);",
+            "\n\t\tAbort;\n\t\tStop Facing(Event Player);",
+        )
+        self.assert_rejected(mutated, "cleanup morte dummy: azioni esatte senza abort")
 
     def test_player_hud_is_never_visible_to_bot_or_dummy_players(self) -> None:
         call = next(

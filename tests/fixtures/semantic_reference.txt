@@ -1198,6 +1198,7 @@ rule("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 	{
 		Call Subroutine(KunciBot);
 		If(Is Dummy Bot(Event Player) == True);
+			Disable Movement Collision With Environment(Event Player, False);
 			Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
 			Set Respawn Max Time(Event Player, 30);
 		End;
@@ -1361,7 +1362,7 @@ rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 	}
 }
 
-rule("03g - Bot/Dummy: Hadap dan dekati pemain hidup terdekat")
+rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")
 {
 	event
 	{
@@ -1376,17 +1377,17 @@ rule("03g - Bot/Dummy: Hadap dan dekati pemain hidup terdekat")
 		Is Dummy Bot(Event Player) == True;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))) > 0;
+		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))))))) > 0;
 	}
 
 	actions
 	{
-		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(First Of(Sorted Array(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element)))), Distance Between(Event Player, Current Array Element))))), 1000, To World, Direction and Turn Rate);
-		Start Throttle In Direction(Event Player, Forward, Is In Spawn Room(Event Player) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(First Of(Sorted Array(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))), Distance Between(Event Player, Current Array Element))))), 1000, To World, Direction and Turn Rate);
+		Start Throttle In Direction(Event Player, Forward, Or(Is In Spawn Room(Event Player), Distance Between(Event Player, First Of(Sorted Array(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))), Distance Between(Event Player, Current Array Element)))) <= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);
 	}
 }
 
-rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada pemain hidup")
+rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")
 {
 	event
 	{
@@ -1399,7 +1400,7 @@ rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada pemain hidup")
 	{
 		Global.Siap == True;
 		Is Dummy Bot(Event Player) == True;
-		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), Is Alive(Current Array Element))))) == 0;
+		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))))))) == 0;
 	}
 
 	actions

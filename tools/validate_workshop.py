@@ -2014,6 +2014,9 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
 
 
 def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
+    def compact(expression: str) -> str:
+        return re.sub(r"\s+", "", expression)
+
     def require_human_guards(rule: Rule | None, label: str, *, triple: bool) -> None:
         checks.require(rule is not None, f"entrypoint umano assente: {label}")
         if not rule:
@@ -2135,6 +2138,67 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     if bot_rule:
         checks.require(not any(token in bot_rule.body for token in ("Create HUD Text(", "Small Message(", "GambarMenu", "Start Camera(", "Respawn(")),
                        "regola dedicata bot/dummy avvia HUD/menu/funzioni umane")
+        checks.equal(
+            compact(event_block(bot_rule)),
+            compact("Ongoing - Each Player; All; All;"),
+            "collisione ambiente dummy: evento esatto per entrambe le squadre",
+        )
+        bot_conditions = rule_block(bot_rule, "conditions")
+        checks.require(bot_conditions is not None,
+                       "collisione ambiente dummy: blocco conditions assente")
+        if bot_conditions is not None:
+            expected_bot_conditions = """
+                Global.Siap == True;
+                Or(Is Dummy Bot(Event Player), Event Player.BotOtomatis) == True;
+                Has Spawned(Event Player) == True;
+                Is Alive(Event Player) == True;
+                Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanBotTerakhir) == True;
+            """
+            checks.equal(
+                compact(bot_conditions),
+                compact(expected_bot_conditions),
+                "collisione ambiente dummy: condizioni esatte e raggiungibili",
+            )
+
+    environment_collision_calls = [
+        (rule, call)
+        for rule in rules
+        for call in iter_calls(rule.body, "Disable Movement Collision With Environment")
+    ]
+    checks.equal(len(environment_collision_calls), 1,
+                 "numero disattivazioni collisione ambiente dummy")
+    if environment_collision_calls:
+        collision_rule, collision_call = environment_collision_calls[0]
+        checks.equal(collision_call.args, ("Event Player", "False"),
+                     "collisione ambiente dummy: Event Player con Include Floors False")
+        if bot_rule:
+            checks.equal(collision_rule.start, bot_rule.start,
+                         "collisione ambiente applicata fuori dalla regola bot/dummy")
+        checks.require(
+            re.search(
+                r"If\(Is Dummy Bot\(Event Player\) == True\);\s*"
+                r"Disable Movement Collision With Environment\(Event Player, False\);",
+                collision_rule.body,
+            ) is not None,
+            "collisione ambiente non protetta dal ramo dummy nativo",
+        )
+        collision_actions = rule_block(collision_rule, "actions")
+        checks.require(collision_actions is not None,
+                       "collisione ambiente dummy: blocco actions assente")
+        if collision_actions is not None:
+            expected_collision_actions = """
+                Call Subroutine(KunciBot);
+                If(Is Dummy Bot(Event Player) == True);
+                    Disable Movement Collision With Environment(Event Player, False);
+                    Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
+                    Set Respawn Max Time(Event Player, 30);
+                End;
+            """
+            checks.equal(
+                re.sub(r"\s+", "", collision_actions),
+                re.sub(r"\s+", "", expected_collision_actions),
+                "collisione ambiente dummy: sequenza raggiungibile e isolata",
+            )
 
     bot_lock = rule_by_subroutine(rules, "KunciBot")
     checks.require(bot_lock is not None, "subroutine dedicata KunciBot assente")
@@ -2170,12 +2234,46 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.equal(len(create_rules), 1, f"numero regole creazione dummy {team}")
         if create_rules:
             create_rule = create_rules[0]
+            checks.equal(
+                compact(event_block(create_rule)),
+                compact("Ongoing - Global;"),
+                f"creazione dummy {team}: evento globale esatto",
+            )
             for token in (
                 f"Number Of Players({team}) < Number Of Slots({team}) - 1;",
                 f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;",
                 f"Position Of(First Of(Spawn Points({team})))",
             ):
                 checks.require(token in create_rule.body, f"creazione dummy {team} non sicura: {token}")
+            create_conditions = rule_block(create_rule, "conditions")
+            create_actions = rule_block(create_rule, "actions")
+            checks.require(create_conditions is not None,
+                           f"creazione dummy {team}: blocco conditions assente")
+            checks.require(create_actions is not None,
+                           f"creazione dummy {team}: blocco actions assente")
+            if create_conditions is not None:
+                expected_create_conditions = f"""
+                    Global.Siap == True;
+                    Is Game In Progress == True;
+                    Number Of Players({team}) < Number Of Slots({team}) - 1;
+                    Count Of(Spawn Points({team})) > 0;
+                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
+                """
+                checks.equal(
+                    compact(create_conditions),
+                    compact(expected_create_conditions),
+                    f"creazione dummy {team}: condizioni esatte e raggiungibili",
+                )
+            if create_actions is not None:
+                expected_create_actions = (
+                    f"Create Dummy Bot(All Heroes, {team}, -1, "
+                    f"Position Of(First Of(Spawn Points({team}))), Vector(0, 0, 1));"
+                )
+                checks.equal(
+                    compact(create_actions),
+                    compact(expected_create_actions),
+                    f"creazione dummy {team}: azione esatta senza abort",
+                )
 
         release_rules = [
             rule for rule in rules
@@ -2184,14 +2282,72 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.equal(len(release_rules), 1, f"numero regole rilascio slot dummy {team}")
         if release_rules:
             release_rule = release_rules[0]
+            checks.equal(
+                compact(event_block(release_rule)),
+                compact("Ongoing - Global;"),
+                f"rilascio dummy {team}: evento globale esatto",
+            )
             for token in (
                 f"Number Of Players({team}) >= Number Of Slots({team});",
                 f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
                 "Destroy In-World Text(Player Variable(",
+                "Stop Facing(First Of(Filtered Array(",
                 "Stop Throttle In Direction(First Of(Filtered Array(",
             ):
                 checks.require(token in release_rule.body, f"rilascio dummy {team} incompleto: {token}")
+            facing_stop = release_rule.body.find("Stop Facing(First Of(Filtered Array(")
+            throttle_stop = release_rule.body.find("Stop Throttle In Direction(First Of(Filtered Array(")
+            destroy_dummy = release_rule.body.find(f"Destroy Dummy Bot({team}, Slot Of(")
+            checks.require(0 <= facing_stop < throttle_stop < destroy_dummy,
+                           f"rilascio dummy {team}: facing/throttle devono fermarsi prima della distruzione")
+            release_conditions = rule_block(release_rule, "conditions")
+            release_actions = rule_block(release_rule, "actions")
+            checks.require(release_conditions is not None,
+                           f"rilascio dummy {team}: blocco conditions assente")
+            checks.require(release_actions is not None,
+                           f"rilascio dummy {team}: blocco actions assente")
+            if release_conditions is not None:
+                expected_release_conditions = f"""
+                    Global.Siap == True;
+                    Is Game In Progress == True;
+                    Number Of Players({team}) >= Number Of Slots({team});
+                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;
+                """
+                checks.equal(
+                    compact(release_conditions),
+                    compact(expected_release_conditions),
+                    f"rilascio dummy {team}: condizioni esatte e raggiungibili",
+                )
+            if release_actions is not None:
+                dummy = (
+                    f"First Of(Filtered Array(All Players({team}), "
+                    "Is Dummy Bot(Current Array Element) == True))"
+                )
+                expected_release_actions = f"""
+                    If(Player Variable({dummy}, TeksVisiNasib) != Null);
+                        Destroy In-World Text(Player Variable({dummy}, TeksVisiNasib));
+                    End;
+                    Stop Facing({dummy});
+                    Stop Throttle In Direction({dummy});
+                    Destroy Dummy Bot({team}, Slot Of({dummy}));
+                """
+                checks.equal(
+                    compact(release_actions),
+                    compact(expected_release_actions),
+                    f"rilascio dummy {team}: cleanup atomico esatto senza abort",
+                )
 
+    expected_enemy_predicate = (
+        "And(Entity Exists(Current Array Element), "
+        "And(Has Spawned(Current Array Element), "
+        "And(Is Alive(Current Array Element), "
+        "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))"
+    )
+    expected_enemy_filter = f"Filtered Array(Global.PemainManusia, {expected_enemy_predicate})"
+    expected_nearest_enemy = (
+        f"First Of(Sorted Array({expected_enemy_filter}, "
+        "Distance Between(Event Player, Current Array Element)))"
+    )
     dummy_movement = next(
         (
             rule for rule in rules
@@ -2203,14 +2359,108 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_movement is not None, "movimento automatico dummy assente")
     if dummy_movement:
+        checks.equal(
+            compact(event_block(dummy_movement)),
+            compact("Ongoing - Each Player; All; All;"),
+            "movimento dummy: evento esatto per entrambe le squadre",
+        )
         for token in (
             "Is Dummy Bot(Event Player) == True;",
             "Has Spawned(Event Player) == True;",
             "Is Alive(Event Player) == True;",
             "Sorted Array(Filtered Array(Global.PemainManusia",
-            "Start Throttle In Direction(Event Player, Forward, Is In Spawn Room(Event Player) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);",
         ):
             checks.require(token in dummy_movement.body, f"movimento automatico dummy incompleto: {token}")
+        movement_filters = [
+            call for call in iter_calls(dummy_movement.body, "Filtered Array")
+            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainManusia"
+        ]
+        checks.equal(len(movement_filters), 3,
+                     "movimento dummy: filtri target nemico in condizione/facing/throttle")
+        for index, target_filter in enumerate(movement_filters, start=1):
+            checks.equal(compact(target_filter.args[1]), compact(expected_enemy_predicate),
+                         f"movimento dummy: filtro target {index} deve essere il nemico vivo")
+
+        movement_conditions = rule_block(dummy_movement, "conditions")
+        checks.require(movement_conditions is not None,
+                       "movimento dummy: blocco conditions assente")
+        if movement_conditions is not None:
+            expected_movement_conditions = f"""
+                Global.Siap == True;
+                Is Dummy Bot(Event Player) == True;
+                Has Spawned(Event Player) == True;
+                Is Alive(Event Player) == True;
+                Count Of({expected_enemy_filter}) > 0;
+            """
+            checks.equal(
+                compact(movement_conditions),
+                compact(expected_movement_conditions),
+                "movimento dummy: condizioni esatte per un nemico vivo",
+            )
+
+        facing_calls = list(iter_calls(dummy_movement.body, "Start Facing"))
+        checks.equal(len(facing_calls), 1, "movimento dummy: numero facing automatici")
+        if facing_calls:
+            facing = facing_calls[0]
+            checks.equal(len(facing.args), 5, "movimento dummy: argomenti facing")
+            if len(facing.args) == 5:
+                for index, expected in (
+                    (0, "Event Player"),
+                    (2, "1000"),
+                    (3, "To World"),
+                    (4, "Direction and Turn Rate"),
+                ):
+                    checks.equal(facing.args[index].strip(), expected,
+                                 f"movimento dummy: facing argomento {index}")
+                checks.equal(
+                    compact(facing.args[1]),
+                    compact(
+                        f"Direction Towards(Eye Position(Event Player), "
+                        f"Eye Position({expected_nearest_enemy}))"
+                    ),
+                    "movimento dummy: facing del nemico vivo più vicino",
+                )
+
+        throttle_calls = list(iter_calls(dummy_movement.body, "Start Throttle In Direction"))
+        checks.equal(len(throttle_calls), 1, "movimento dummy: numero throttle automatici")
+        if throttle_calls:
+            throttle = throttle_calls[0]
+            checks.equal(len(throttle.args), 6, "movimento dummy: argomenti throttle")
+            if len(throttle.args) == 6:
+                for index, expected in (
+                    (0, "Event Player"),
+                    (1, "Forward"),
+                    (3, "To Player"),
+                    (4, "Replace Existing Throttle"),
+                    (5, "Direction and Magnitude"),
+                ):
+                    checks.equal(throttle.args[index].strip(), expected,
+                                 f"movimento dummy: throttle argomento {index}")
+                magnitude = parse_top_level_ternary(throttle.args[2])
+                checks.require(magnitude is not None,
+                               "movimento dummy: magnitudine rivalutata senza ternario di arresto")
+                if magnitude:
+                    stop_condition, stopped, moving = magnitude
+                    checks.equal(stopped, "0", "movimento dummy: magnitudine entro quattro metri")
+                    checks.equal(moving, "1", "movimento dummy: magnitudine oltre quattro metri")
+                    checks.equal(
+                        compact(stop_condition),
+                        compact(
+                            f"Or(Is In Spawn Room(Event Player), "
+                            f"Distance Between(Event Player, {expected_nearest_enemy}) <= 4)"
+                        ),
+                        "movimento dummy: arresto esatto in spawn o entro quattro metri dal nemico",
+                    )
+        movement_actions = rule_block(dummy_movement, "actions")
+        checks.require(movement_actions is not None,
+                       "movimento dummy: blocco actions assente")
+        if movement_actions is not None and len(facing_calls) == 1 and len(throttle_calls) == 1:
+            expected_movement_actions = f"{facing_calls[0].raw};\n{throttle_calls[0].raw};"
+            checks.equal(
+                compact(movement_actions),
+                compact(expected_movement_actions),
+                "movimento dummy: azioni esatte senza abort o arresti aggiuntivi",
+            )
         checks.require(not wait_calls(dummy_movement.body) and action_loop_count(dummy_movement.body) == 0,
                        "movimento automatico dummy non deve usare Wait/Loop")
 
@@ -2227,8 +2477,50 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(no_target_cleanup is not None, "cleanup movimento dummy senza target assente")
     if no_target_cleanup:
+        checks.equal(
+            compact(event_block(no_target_cleanup)),
+            compact("Ongoing - Each Player; All; All;"),
+            "cleanup movimento dummy: evento esatto per entrambe le squadre",
+        )
+        no_target_filters = [
+            call for call in iter_calls(no_target_cleanup.body, "Filtered Array")
+            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainManusia"
+        ]
+        checks.equal(len(no_target_filters), 1,
+                     "cleanup movimento dummy: filtro unico dei nemici vivi")
+        if no_target_filters:
+            checks.equal(
+                compact(no_target_filters[0].args[1]),
+                compact(expected_enemy_predicate),
+                "cleanup movimento dummy: filtro target deve essere il nemico vivo",
+            )
+        cleanup_conditions = rule_block(no_target_cleanup, "conditions")
+        checks.require(cleanup_conditions is not None,
+                       "cleanup movimento dummy: blocco conditions assente")
+        if cleanup_conditions is not None:
+            expected_cleanup_conditions = f"""
+                Global.Siap == True;
+                Is Dummy Bot(Event Player) == True;
+                Count Of({expected_enemy_filter}) == 0;
+            """
+            checks.equal(
+                compact(cleanup_conditions),
+                compact(expected_cleanup_conditions),
+                "cleanup movimento dummy: condizioni esatte senza nemici vivi",
+            )
+        checks.require("Stop Facing(Event Player);" in no_target_cleanup.body,
+                       "cleanup movimento dummy senza target non ferma il facing")
         checks.require("Stop Throttle In Direction(Event Player);" in no_target_cleanup.body,
                        "cleanup movimento dummy senza target non ferma il throttle")
+        cleanup_actions = rule_block(no_target_cleanup, "actions")
+        checks.require(cleanup_actions is not None,
+                       "cleanup movimento dummy: blocco actions assente")
+        if cleanup_actions is not None:
+            checks.equal(
+                compact(cleanup_actions),
+                compact("Stop Facing(Event Player); Stop Throttle In Direction(Event Player);"),
+                "cleanup movimento dummy: azioni esatte di arresto",
+            )
 
     dummy_arming = next(
         (
@@ -2279,10 +2571,37 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_death is not None, "cleanup morte dummy assente")
     if dummy_death:
+        checks.equal(
+            compact(event_block(dummy_death)),
+            compact("Player Died; All; All;"),
+            "cleanup morte dummy: evento esatto per entrambe le squadre",
+        )
         checks.require("Stop Throttle In Direction(Event Player);" in dummy_death.body,
                        "cleanup morte dummy non ferma il throttle")
         checks.require("Event Player.WaktuTeleportasiDummy = 0;" in dummy_death.body,
                        "morte dummy non riarma il delay del prossimo spawn")
+        death_conditions = rule_block(dummy_death, "conditions")
+        death_actions = rule_block(dummy_death, "actions")
+        checks.require(death_conditions is not None,
+                       "cleanup morte dummy: blocco conditions assente")
+        checks.require(death_actions is not None,
+                       "cleanup morte dummy: blocco actions assente")
+        if death_conditions is not None:
+            checks.equal(
+                compact(death_conditions),
+                compact("Is Dummy Bot(Event Player) == True;"),
+                "cleanup morte dummy: condizione esatta e raggiungibile",
+            )
+        if death_actions is not None:
+            checks.equal(
+                compact(death_actions),
+                compact(
+                    "Stop Facing(Event Player); "
+                    "Stop Throttle In Direction(Event Player); "
+                    "Event Player.WaktuTeleportasiDummy = 0;"
+                ),
+                "cleanup morte dummy: azioni esatte senza abort",
+            )
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:

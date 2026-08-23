@@ -142,7 +142,8 @@ Il gate controlla:
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
-- velocità bot/dummy esattamente al 20%, throttle `Forward` automatico soltanto per il dummy nativo e stop obbligatorio su assenza target, morte e rimozione.
+- velocità bot/dummy esattamente al 20%; soltanto il dummy nativo disabilita le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono le collisioni native;
+- filtro di movimento limitato agli umani vivi della squadra opposta, throttle `Forward` rivalutato con magnitudine `0` entro 4 m e `1` oltre la soglia, più stop obbligatorio su assenza target, morte e rimozione.
 
 ### Otto modalità
 
@@ -175,7 +176,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Privacy default OFF, target privato selezionabile, osservatore non sganciato o nome/nameplate privato esposto da Vision/inspection;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
-- velocità bot/dummy diversa dal 20%, throttle automatico assente o cleanup throttle incompleto;
+- velocità bot/dummy diversa dal 20%, collisione ambientale applicata agli iBot o con `Include Floors = True`, target alleato accettato, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
 - slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, spaziatore finale Right rimosso, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;

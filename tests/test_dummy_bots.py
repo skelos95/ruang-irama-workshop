@@ -51,6 +51,13 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_dummy_respawn_is_30_seconds(self):
         self.assertIn("Set Respawn Max Time(Event Player, 30);", self.it)
 
+    def test_only_native_dummies_ignore_walls_but_keep_floor_collision(self):
+        action = "Disable Movement Collision With Environment(Event Player, False);"
+        for source in (self.it, self.en):
+            self.assertEqual(source.count(action), 1)
+            self.assertNotIn("Disable Movement Collision With Environment(Event Player, True);", source)
+            self.assertIn(f"If(Is Dummy Bot(Event Player) == True);\n\t\t\t{action}", source)
+
     def test_dummy_reserves_the_last_human_slot_and_leaves_at_full_team(self):
         for team in ("Team 1", "Team 2"):
             self.assertIn(f"Number Of Players({team}) < Number Of Slots({team}) - 1;", self.it)
@@ -101,29 +108,49 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertNotIn("Set Move Speed(Event Player, 0);", it_lock)
         self.assertNotIn("Set Move Speed(Event Player, 0);", en_lock)
 
-    def test_dummy_faces_nearest_living_human_without_extra_loop(self):
-        self.assertIn("Start Facing(Event Player", self.it)
-        self.assertIn("Sorted Array(Filtered Array(Globale.PemainManusia", self.it)
-        self.assertIn("Direction and Turn Rate", self.it)
+    def test_dummy_faces_nearest_living_enemy_human_without_extra_loop(self):
+        movement_it = self.it.split('regola("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
+            'regola("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
+        )[0]
+        movement_en = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
+            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
+        )[0]
+        for movement, global_name in ((movement_it, "Globale"), (movement_en, "Global")):
+            self.assertIn("Start Facing(Event Player", movement)
+            self.assertIn(f"Sorted Array(Filtered Array({global_name}.PemainManusia", movement)
+            self.assertEqual(
+                movement.count("Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))"),
+                3,
+            )
+            self.assertIn("Direction and Turn Rate", movement)
+            self.assertNotIn("Event Player.BotOtomatis", movement)
+            self.assertNotIn("Wait(", movement)
         self.assertIn("Stop Facing(Event Player);", self.it)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
 
     def test_native_dummy_walks_forward_automatically_and_stops_cleanly(self):
-        throttle = (
-            "Start Throttle In Direction(Event Player, Forward, Is In Spawn Room(Event Player) ? 0 : 1, "
-            "To Player, Replace Existing Throttle, Direction and Magnitude);"
-        )
         for source in (self.it, self.en):
-            self.assertEqual(source.count(throttle), 1)
+            self.assertEqual(source.count("Start Throttle In Direction(Event Player, Forward,"), 1)
+            self.assertIn("Or(Is In Spawn Room(Event Player), Distance Between(Event Player, First Of(Sorted Array(", source)
+            self.assertIn("<= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);", source)
+            self.assertNotIn("Is In Spawn Room(Event Player) ? 0 : 1, To Player", source)
             self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 2)
             self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 2)
 
-        movement = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati pemain hidup terdekat")', 1)[1].split(
-            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada pemain hidup")', 1
+        movement = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
+            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
         )[0]
         self.assertIn("Is Dummy Bot(Event Player) == True;", movement)
         self.assertNotIn("Event Player.BotOtomatis", movement)
         self.assertNotIn("Wait(", movement)
+
+        cleanup = self.en.split('rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1)[1].split(
+            'rule("03i - Bot/Dummy: Hentikan gerak saat bot mati")', 1
+        )[0]
+        self.assertEqual(
+            cleanup.count("Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))"),
+            1,
+        )
 
 
 if __name__ == "__main__":
