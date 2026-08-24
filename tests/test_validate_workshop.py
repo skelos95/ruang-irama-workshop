@@ -488,6 +488,46 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "ciclo esatto 0..12")
 
+    def test_soundtrack_ability_latch_arms_only_on_page_two(self) -> None:
+        router = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu == 0;" in rule.body
+            and "Event Player.PerintahMenu = 5;" in rule.body
+            and "Event Player.PerintahMenu = 6;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            router,
+            "And(Event Player.HalamanMenu == 2, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2))))",
+            "And(Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2))))",
+        )
+        self.assert_rejected(mutated, "Ability 1/2 devono armarsi sulla pagina 2 Soundtrack")
+
+    def test_soundtrack_ability_commands_are_emitted_on_page_two(self) -> None:
+        router = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu = 5;" in rule.body
+            and "Event Player.PerintahMenu = 6;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            router,
+            "Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.HalamanMenu == 2));",
+            "Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.HalamanMenu == 0));",
+        )
+        self.assert_rejected(mutated, "Ability 1 non produce il comando 5 sulla pagina 2 Soundtrack")
+
+    def test_soundtrack_jump_consumes_commands_on_page_two(self) -> None:
+        jump = self.rule(
+            lambda rule: "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+            and "Event Player.PerintahMenu == 5" in rule.body
+            and "Event Player.PerintahMenu == 6" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            jump,
+            "Event Player.HalamanMenu == 2;",
+            "Event Player.HalamanMenu == 0;",
+        )
+        self.assert_rejected(mutated, "salto Soundtrack ±10 deve consumare i comandi sulla pagina 2")
+
     def test_menu_open_message_announces_thirteen_pages_in_all_languages(self) -> None:
         translations = (
             (
@@ -751,15 +791,53 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.source[:apply.start] + mutated_body + self.source[apply.end:]
         self.assert_rejected(mutated, "FULL HP uscita OFF")
 
-    def test_full_hp_try_your_luck_cleanup_restores_player_collision(self) -> None:
+    def test_try_your_luck_start_preserves_unkillable_preference_and_runtime(self) -> None:
         luck = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanNasib")
-        mutated = self.replace_in_rule(luck, "Enable Movement Collision With Players(Event Player);", "")
-        self.assert_rejected(mutated, "FULL HP cleanup TerapkanHalamanNasib")
+        mutations = (
+            ("Event Player.ModeKebal = 0;", "non deve modificare ModeKebal"),
+            ("Event Player.KursorKebal = 0;", "non deve modificare KursorKebal"),
+            ("Event Player.KebalAktif = False;", "non deve modificare KebalAktif"),
+            ("Clear Status(Event Player, Unkillable);", "non deve sospendere status Unkillable"),
+            ("Set Status(Event Player, Null, Unkillable, 9999);", "non deve sospendere status Unkillable"),
+            ("Set Damage Received(Event Player, 100);", "non deve sospendere Damage Received"),
+            ("Set Knockback Received(Event Player, 100);", "non deve sospendere Knockback Received"),
+            ("Enable Movement Collision With Players(Event Player);", "non deve sospendere collisione player"),
+            ("Set Player Health(Event Player, Max Health(Event Player));", "non deve sospendere salute Unkillable"),
+            ("Destroy Icon(Event Player.IkonKebal);", "non deve sospendere icona Unkillable"),
+        )
+        for action, expected in mutations:
+            with self.subTest(action=action):
+                self.assert_rejected(self.inject_action(luck, action), expected)
 
     def test_full_hp_shared_cleanup_restores_knockback(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
         mutated = self.replace_in_rule(cleanup, "Set Knockback Received(Event Player, 100);", "")
         self.assert_rejected(mutated, "FULL HP cleanup PulihkanNasibPemain")
+
+    def test_luck_cleanup_preserves_mode_and_cursor_and_reactivates_unkillable(self) -> None:
+        for subroutine, target in (
+            ("PulihkanNasibPemain", "Event Player"),
+            ("PulihkanNasibAktif", "Global.PemainAktif"),
+        ):
+            cleanup = self.rule(lambda rule, name=subroutine: validator.subroutine_target(rule) == name)
+            logical_restore = f"{target}.KebalAktif = {target}.ModeKebal != 0;"
+            with self.subTest(subroutine=subroutine, mutation="logical restore"):
+                mutated = self.replace_in_rule(cleanup, logical_restore, f"{target}.KebalAktif = False;")
+                self.assert_rejected(mutated, "deve riattivare logicamente Kebal")
+            for field in ("ModeKebal", "KursorKebal"):
+                with self.subTest(subroutine=subroutine, field=field):
+                    mutated = self.inject_action(cleanup, f"{target}.{field} = 0;")
+                    self.assert_rejected(mutated, f"non deve cancellare la preferenza {field}")
+
+    def test_luck_cleanup_reactivates_unkillable_after_engine_normalization(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
+        clear = "Clear Status(Event Player, Unkillable);"
+        restore = "Event Player.KebalAktif = Event Player.ModeKebal != 0;"
+        self.assertLess(cleanup.body.index(clear), cleanup.body.index(restore))
+        changed = cleanup.body.replace(clear, "__CLEAR_UNKILLABLE__", 1)
+        changed = changed.replace(restore, clear, 1).replace("__CLEAR_UNKILLABLE__", restore, 1)
+        mutated = self.source[:cleanup.start] + changed + self.source[cleanup.end:]
+        self.assert_rejected(mutated, "deve riattivare Kebal dopo la normalizzazione")
 
     def test_only_one_loop_is_allowed(self) -> None:
         mutated = self.source + "\nLoop;\n"
@@ -810,6 +888,58 @@ class SemanticWorkshop080Tests(unittest.TestCase):
             "Global.PemainAktif.WaktuPaksaBerakhir = 0;",
         )
         self.assert_rejected(mutated, "Skull non arma deadline anti-blocco")
+
+    def test_burning_cannot_bypass_unkillable(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        branch = "Else If(Global.PemainAktif.EfekNasib == 5);"
+        for action, expected in (
+            ("Clear Status(Global.PemainAktif, Unkillable);", "Clear Status Unkillable"),
+            ("Set Damage Received(Global.PemainAktif, 100);", "Damage Received"),
+            ("Enable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
+        ):
+            with self.subTest(action=action):
+                mutated = self.replace_in_rule(machine, branch, f"{branch}\n\t\t\t\t\t{action}")
+                self.assert_rejected(mutated, f"{expected} può essere modificato soltanto dal bypass Skull/Revenge")
+
+    def test_unkillable_reapply_is_blocked_only_for_revenge_or_final_armed_skull(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        exact_skull_exception = (
+            "Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, "
+            "Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0)))"
+        )
+        mutated = self.replace_in_rule(
+            processor,
+            exact_skull_exception,
+            "Global.PemainAktif.KartuNasibAktif == False",
+        )
+        self.assert_rejected(mutated, "blocco riapplicazione Kebal solo per Skull finale armato")
+
+    def test_global_unkillable_reapply_recreates_missing_or_destroyed_icon(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        safe_guard = (
+            "If(Or(Global.PemainAktif.IkonKebal == Null, "
+            "Entity Exists(Global.PemainAktif.IkonKebal) == False));"
+        )
+        mutated = self.replace_in_rule(
+            processor,
+            safe_guard,
+            "If(Global.PemainAktif.IkonKebal == Null);",
+        )
+        self.assert_rejected(mutated, "non ricrea in sicurezza un'icona assente o non più esistente")
+
+        mutated = self.replace_in_rule(
+            processor,
+            "Create Icon(All Players(All Teams), Global.PemainAktif, Halo, Visible To and Position, Global.RGB, True);",
+            "",
+        )
+        self.assert_rejected(mutated, "deve ricreare le icone 1 HP e FULL HP")
+
+        mutated = self.replace_in_rule(
+            processor,
+            "Global.PemainAktif.IkonKebal = Last Created Entity;",
+            "",
+        )
+        self.assert_rejected(mutated, "salvataggio handle icona")
 
     def test_full_death_machine_owns_the_only_kill(self) -> None:
         processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
@@ -1698,23 +1828,52 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "registrazione bot BotOtomatis/SudahDiperiksa")
 
-    def test_privacy_is_off_by_default(self) -> None:
-        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
-        mutated = self.replace_in_rule(
-            setup,
-            "Event Player.PrivasiInspeksiAktif = False;",
-            "Event Player.PrivasiInspeksiAktif = True;",
+    def test_human_classification_initializes_the_shared_hero_tracker(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
         )
-        self.assert_rejected(mutated, "Privacy deve essere OFF di default")
+        mutated = self.replace_in_rule(
+            classifier,
+            "Event Player.PahlawanTerakhir = Hero Of(Event Player);",
+            "Event Player.PahlawanTerakhir = Null;",
+        )
+        self.assert_rejected(mutated, "classificazione umana non inizializza PahlawanTerakhir")
 
-    def test_privacy_cursor_defaults_to_off(self) -> None:
+    def test_human_hero_swap_cleans_luck_in_the_global_scheduler(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Call Subroutine(PulihkanNasibAktif);",
+            "Abort;",
+        )
+        self.assert_rejected(mutated, "hero swap umano non pulisce Try Your Luck")
+
+    def test_live_luck_cleanup_preserves_physical_unkillable(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibAktif")
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Is Alive(Global.PemainAktif) == False",
+            "Is Alive(Global.PemainAktif) == True",
+        )
+        self.assert_rejected(mutated, "cleanup Try vivo non deve sospendere Unkillable")
+
+    def test_privacy_is_on_by_default(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.KursorPrivasiInspeksi = 0;",
-            "Event Player.KursorPrivasiInspeksi = 1;",
+            "Event Player.PrivasiInspeksiAktif = True;",
+            "Event Player.PrivasiInspeksiAktif = False;",
         )
-        self.assert_rejected(mutated, "cursore Privacy deve iniziare su OFF")
+        self.assert_rejected(mutated, "Privacy deve essere ON di default")
+
+    def test_privacy_cursor_defaults_to_on(self) -> None:
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        mutated = self.replace_in_rule(
+            setup,
+            "Event Player.KursorPrivasiInspeksi = 1;",
+            "Event Player.KursorPrivasiInspeksi = 0;",
+        )
+        self.assert_rejected(mutated, "cursore Privacy deve iniziare su ON")
 
     def test_real_camera_cache_missing_and_excessive_parenthesis_are_rejected(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif")
@@ -1822,17 +1981,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "bypass Privacy tramite Vision")
 
-    def test_vision_names_include_private_human_subjects(self) -> None:
+    def test_vision_names_exclude_private_human_subjects(self) -> None:
         vision = self.rule(
             lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
             and "Create In-World Text(" in rule.body
         )
         mutated = self.replace_in_rule(
             vision,
-            "Event Player.Manusia == True",
             "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
+            "Event Player.Manusia == True",
         )
-        self.assert_rejected(mutated, "Vision esclude umani con Privacy ON")
+        self.assert_rejected(mutated, "Vision espone un umano con Privacy ON")
 
     def test_vision_shows_hero_icon_name_and_live_health(self) -> None:
         vision = self.rule(
@@ -1911,14 +2070,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cleanup Teleport Crouch non reagisce all'avvio di Vision")
 
-    def test_vision_name_cleanup_does_not_depend_on_subject_privacy(self) -> None:
+    def test_vision_name_cleanup_runs_when_subject_enables_privacy(self) -> None:
         cleanup = self.rule(
             lambda rule: "Destroy In-World Text(Event Player.TeksVisiNasib);" in rule.body
             and "Event Player.TeksVisiNasib = Null;" in rule.body
             and validator.event_type(rule) == "Ongoing - Each Player"
         )
-        mutated = self.inject_condition(cleanup, "Event Player.PrivasiInspeksiAktif == True;")
-        self.assert_rejected(mutated, "cleanup Vision dipende dalla Privacy soggetto")
+        mutated = self.replace_in_rule(
+            cleanup,
+            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True)",
+            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
+        )
+        self.assert_rejected(mutated, "cleanup Vision non rimuove subito un umano che attiva Privacy")
 
     def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
         protected = (

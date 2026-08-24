@@ -34,14 +34,14 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
-| 9 | Crouch Privacy | OFF / ON, default OFF |
+| 9 | Crouch Privacy | OFF / ON, default ON |
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
 | 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default ON |
 
 Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è ON per default per preservare l'inseguimento automatico: se un player lo porta a OFF, il dummy avversario lo esclude immediatamente e sceglie comunque il player opt-in più vicino; se non resta alcun target idoneo, si ferma. I default e i cursori persistono tra chiusura e riapertura, ma il cambio squadra esegue intenzionalmente un **reset completo** delle preferenze.
 
-In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP, l'avvio di Try Your Luck e i reset completi di leave/cambio squadra ripristinano sempre danni, urti e collisione normali come un'unica transazione. Una morte normale non cancella invece la scelta: dopo Resurrect il runtime riapplica la tripletta FULL HP, che resta attiva anche in Spawn Room.
+In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP e i reset completi di leave/cambio squadra ripristinano danni, urti e collisione normali come un'unica transazione. Try Your Luck non cambia invece modalità, cursore o protezione scelta: Unkillable resta attivo durante tutti gli esiti. Soltanto lo Skull finale e Revenge sospendono temporaneamente lo status per completare la morte; dopo Resurrect il runtime riapplica la modalità selezionata e ricrea l'icona se il motore l'ha eliminata. `FULL HP` resta protetto anche in Spawn Room.
 
 ## Controlli
 
@@ -62,22 +62,22 @@ Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + In
 
 ## Try Your Luck
 
-L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-player. I sei esiti sono:
+L'attivazione conserva integralmente Unkillable e avvia una macchina a stati senza loop per-player. Modalità, cursore, flag runtime, status, modificatori e icona non vengono modificati all'avvio. I sei esiti sono:
 
 | Esito | Durata | Effetto |
 |---|---:|---|
-| Vision | 15 s | mostra icona eroe, nome e salute di tutti i player/bot validi; Crouch non apre inspection/Teleport |
+| Vision | 15 s | mostra icona eroe, nome e salute di bot/dummy e dei soli player pubblici; Crouch non apre inspection/Teleport |
 | Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
-| Skull | immediato | morte completa del player, con retry per mech, duplicazioni e altre forme intermedie |
+| Skull | immediato | unico esito che sospende temporaneamente Unkillable per ottenere la morte completa, con retry per mech, duplicazioni e altre forme intermedie |
 | Team Heal | immediato | cura completa dei player umani della squadra |
-| Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s |
+| Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s; non bypassa Unkillable |
 | Hacked | 5 s | stato Hacked |
 
-Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu. Un'icona Skull comparsa durante i giri non può attivare la morte: soltanto lo Skull finale, con roulette conclusa e deadline armata, viene ritentato ogni 0,25 s finché il player non è realmente morto. Una deadline di 5 s libera comunque menu e input se il motore rifiuta la morte, evitando stati permanenti.
+Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu. Un'icona Skull comparsa durante i giri non può attivare la morte: soltanto lo Skull finale, con roulette conclusa e deadline armata, può sospendere Unkillable e viene ritentato ogni 0,25 s finché il player non è realmente morto. Una deadline di 5 s libera comunque menu e input se il motore rifiuta la morte, quindi riattiva logicamente la protezione senza cancellare modalità o cursore. Burning non usa questo bypass: in `FULL HP` il danno viene annullato, mentre in `1 HP` resta soggetto allo status Unkillable.
 
-Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Vision crea un solo IWT per soggetto con icona, nome e salute live; l'avvio di Vision elimina eventuali handle Crouch già presenti e il leave di un iBot distrugge il proprio IWT senza entrare nel lifecycle umano. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
+Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Vision crea un solo IWT per soggetto pubblico con icona, nome e salute live; un umano con Crouch Privacy ON non viene esposto e un IWT già presente viene rimosso appena abilita Privacy. L'avvio di Vision elimina inoltre eventuali handle Crouch già presenti e il leave di un iBot distrugge il proprio IWT senza entrare nel lifecycle umano. Morte, timeout e cambio eroe chiudono lo stato temporaneo ma preservano modalità, cursore e protezione Unkillable; il cambio eroe viene rilevato dal ciclo globale a 10 Hz senza una nuova regola per-player. Dopo una morte, il tick globale riapplica la protezione e ricrea l'icona quando il player torna vivo. Leave e cambio squadra restano invece reset lifecycle completi.
 
-Revenge arma una morte forzata ma non modifica subito il debito. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del Resurrect con Jump attendono `Is Alive == False`, quindi un de-mech non viene trattato come morte finale.
+Revenge resta invariato: arma una morte forzata ma non modifica subito il debito ed è, insieme allo Skull finale, l'unico percorso autorizzato a sospendere temporaneamente Unkillable. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del Resurrect con Jump attendono `Is Alive == False`; dopo il ritorno in vita, la modalità Unkillable selezionata viene riapplicata.
 
 ## Runtime 0.8.0
 
@@ -121,7 +121,7 @@ La destinazione Objective/Flag viene valutata al click:
 
 I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; soltanto il dummy nativo usa `Disable Movement Collision With Environment(..., False)`, attraversando pareti e soffitti senza perdere il pavimento, mentre `Enable Movement Collision With Players` mantiene esplicitamente gli urti fisici con player e bot. `Damage Received` e `Knockback Received` restano entrambi al 100%. Il throttle `Forward` rivalutato seleziona esclusivamente l'umano vivo, ancora registrato, della squadra avversaria che ha Dummy Follow ON; fra i target idonei sceglie sempre il più vicino, vale `0` entro 4 m e riparte se il bersaglio si allontana. Opt-out, morte, assenza di target e rimozione fermano o riallineano facing e throttle senza riferimenti obsoleti.
 
-La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è OFF per default: un umano diventa non selezionabile in Camera custom e invisibile (nome/nameplate) in inspection quando Privacy passa a ON, mentre Vision continua a mostrarne il nome durante l'effetto. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
+La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano non è selezionabile nella Camera custom e resta invisibile per nome/nameplate sia in inspection sia in Vision finché non porta volontariamente la preferenza a OFF. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade. Il Workshop può bloccare le proprie Camere custom, ma non può disabilitare la visuale spettatore nativa riservata a lobby e amministratori.
 
 ## Importazione tramite copia/incolla
 

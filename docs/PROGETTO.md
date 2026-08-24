@@ -87,22 +87,22 @@ I placeholder devono avere stessa cardinalità nei tre rami linguistici.
 
 ## Unkillable FULL HP
 
-FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, Try Your Luck, setup fresco e cleanup/reset di leave o cambio squadra ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Un cleanup engine può normalizzare temporaneamente quei valori durante la morte, ma non cancella `ModeKebal = 2`: dopo Resurrect il tick globale riapplica FULL HP. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
+FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, setup fresco e cleanup/reset di leave o cambio squadra ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Try Your Luck non modifica modalità, cursore, flag runtime, status, tripletta o icona Unkillable. Un cleanup engine può normalizzare temporaneamente lo stato dopo morte o timeout, ma conserva `ModeKebal`/`KursorKebal`, ricava di nuovo `KebalAktif` dalla modalità e lascia al tick globale la riapplicazione e l'eventuale ricreazione dell'icona. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
 
 ## Try Your Luck
 
-Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio disattiva Unkillable come nel comportamento 0.8.0 e mantiene la pagina bloccata finché la sequenza non termina.
+Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio conserva Unkillable senza scrivere modalità, cursore o stato di protezione e mantiene la pagina bloccata finché la sequenza non termina.
 
 | Esito | Durata | Comportamento |
 |---|---:|---|
 | Vision | 15 s | mostra icona, nome e salute live dei target consentiti e sopprime inspection/Teleport Crouch |
 | Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
-| Skull | immediato | ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
+| Skull | immediato | unico esito che bypassa temporaneamente Unkillable e ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
 | Team Heal | immediato | porta i player umani della squadra alla salute completa |
-| Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s |
+| Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s, senza bypassare Unkillable |
 | Hacked | 5 s | applica e poi rimuove Hacked |
 
-Il tick globale valuta transizioni e scadenze. Morte, leave e cambio squadra annullano stato, accelerazione, status, HUD/IWT ed effetti associati. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
+Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal, Burning e Hacked non sospendono Unkillable; in particolare FULL HP annulla i tick Burning e 1 HP resta soggetto allo status protettivo. Soltanto lo Skull finale armato e Revenge passano dal bypass della macchina di morte completa. Alla morte o al timeout vengono annullati stato temporaneo, accelerazione, status dell'esito, HUD/IWT ed effetti associati, ma la preferenza Unkillable resta intatta e viene riapplicata dopo Resurrect. Un tracker eroe condiviso rileva inoltre a 10 Hz il cambio eroe umano e applica lo stesso cleanup temporaneo senza azzerare o sospendere Unkillable sul player vivo e senza aggiungere un nuovo `Ongoing - Each Player`; leave e cambio squadra eseguono invece il reset lifecycle completo. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
 
 Le sei icone della roulette usano la reevaluation `Visible To and Position`. `Visible To` rivaluta il roster umano anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino dell'identità catturata, senza seguire lo scratch `Global.PemainAktif`. L'indicatore off-screen resta abilitato e i bot non entrano mai nel pubblico.
 
@@ -114,9 +114,9 @@ L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelat
 
 La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
 
-Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection e Camera rispettano sempre Privacy, mentre Vision mostra il nome anche con Privacy ON.
+Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection, Vision e Camera rispettano sempre Privacy.
 
-Revenge e Skull condividono il percorso di morte completa nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva il claimant sul target, ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio.
+Revenge e lo Skull finale condividono l'unico percorso che bypassa temporaneamente Unkillable nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva invariati claimant e contabilità: ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio. Dopo Resurrect il tick globale ripristina la modalità Unkillable selezionata e ricrea la relativa icona se il motore l'ha distrutta.
 
 Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%, mantengono la collisione con player/bot e disabilitano soltanto le collisioni ambientali con `Include Floors = False`.
 
@@ -160,7 +160,7 @@ Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. T
 
 La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata. Privacy è OFF per default: un umano resta selezionabile in Camera custom finché Privacy non passa a ON; con Privacy ON, inspection e Camera custom non possono creare o mantenere nome/nameplate, mentre Vision continua a mostrarli durante l'effetto. Ogni handle identificativo di inspection già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata per ogni soggetto consentito. Privacy è ON per default: con Privacy ON, inspection, Vision e Camera custom non possono creare o mantenere nome/nameplate dell'umano; passando a OFF il player diventa volontariamente pubblico. Ogni handle identificativo già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
 
 La destinazione Teleport viene rivalutata al click:
 

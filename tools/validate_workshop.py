@@ -1426,6 +1426,56 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "navigazione menu: pagina 12 deve alternare KursorIkutiDummy",
         )
 
+    input_router = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu == 0;" in rule.body
+            and "Event Player.PerintahMenu = 5;" in rule.body
+            and "Event Player.PerintahMenu = 6;" in rule.body
+        ),
+        None,
+    )
+    checks.require(input_router is not None, "router input menu assente")
+    if input_router:
+        checks.require(
+            re.search(
+                r"HalamanMenu\s*==\s*2\s*,\s*Or\(\s*"
+                r"Is Button Held\(Event Player, Button\(Ability 1\)\).*?"
+                r"Is Button Held\(Event Player, Button\(Ability 2\)\)",
+                input_router.body,
+                re.DOTALL,
+            ) is not None,
+            "router input: Ability 1/2 devono armarsi sulla pagina 2 Soundtrack",
+        )
+        for button, command in (("Ability 1", 5), ("Ability 2", 6)):
+            checks.require(
+                re.search(
+                    rf"Is Button Held\(Event Player, Button\({re.escape(button)}\)\)\s*,\s*"
+                    rf"Event Player\.HalamanMenu\s*==\s*2\).*?PerintahMenu\s*=\s*{command};",
+                    input_router.body,
+                    re.DOTALL,
+                ) is not None,
+                f"router input: {button} non produce il comando {command} sulla pagina 2 Soundtrack",
+            )
+
+    soundtrack_jump = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+            and "Event Player.PerintahMenu == 5" in rule.body
+            and "Event Player.PerintahMenu == 6" in rule.body
+        ),
+        None,
+    )
+    checks.require(soundtrack_jump is not None, "salto Soundtrack ±10 assente")
+    if soundtrack_jump:
+        checks.require(
+            "Event Player.HalamanMenu == 2;" in soundtrack_jump.body,
+            "salto Soundtrack ±10 deve consumare i comandi sulla pagina 2",
+        )
+
     apply_dispatcher = next(
         (
             rule for rule in rules
@@ -1788,7 +1838,6 @@ def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
         ("BersihkanPemain", local_restore),
         ("PulihkanNasibPemain", local_restore),
         ("PulihkanNasibAktif", active_restore),
-        ("TerapkanHalamanNasib", local_restore),
     ):
         rule = rule_by_subroutine(rules, subroutine)
         checks.require(rule is not None, f"FULL HP cleanup: subroutine {subroutine} assente")
@@ -1796,6 +1845,119 @@ def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
             masked = mask_strings(rule.body)
             for token in tokens:
                 checks.require(token in masked, f"FULL HP cleanup {subroutine} incompleto: {token}")
+
+    luck_apply = rule_by_subroutine(rules, "TerapkanHalamanNasib")
+    checks.require(luck_apply is not None, "Try Your Luck: subroutine di avvio assente")
+    if luck_apply:
+        luck_apply_masked = mask_strings(luck_apply.body)
+        for field in ("KebalAktif", "ModeKebal", "KursorKebal", "IkonKebal"):
+            checks.require(
+                re.search(rf"Event Player\.{field}\s*=(?!=)", luck_apply_masked) is None,
+                f"Try Your Luck non deve modificare {field} all'avvio",
+            )
+        for token, label in (
+            ("Clear Status(Event Player, Unkillable);", "status Unkillable"),
+            ("Set Status(Event Player, Null, Unkillable", "status Unkillable"),
+            ("Set Damage Received(Event Player", "Damage Received"),
+            ("Set Knockback Received(Event Player", "Knockback Received"),
+            ("Enable Movement Collision With Players(Event Player);", "collisione player"),
+            ("Disable Movement Collision With Players(Event Player);", "collisione player"),
+            ("Set Player Health(Event Player", "salute Unkillable"),
+            ("Destroy Icon(Event Player.IkonKebal);", "icona Unkillable"),
+        ):
+            checks.require(
+                token not in luck_apply_masked,
+                f"Try Your Luck non deve sospendere {label} all'avvio",
+            )
+
+    for subroutine, target in (
+        ("PulihkanNasibPemain", "Event Player"),
+        ("PulihkanNasibAktif", "Global.PemainAktif"),
+    ):
+        cleanup = rule_by_subroutine(rules, subroutine)
+        if not cleanup:
+            continue
+        cleanup_masked = mask_strings(cleanup.body)
+        for field in ("ModeKebal", "KursorKebal"):
+            checks.require(
+                re.search(rf"{re.escape(target)}\.{field}\s*=(?!=)", cleanup_masked) is None,
+                f"{subroutine} non deve cancellare la preferenza {field}",
+            )
+        checks.require(
+            f"{target}.KebalAktif = {target}.ModeKebal != 0;" in cleanup_masked,
+            f"{subroutine} deve riattivare logicamente Kebal dalla preferenza ModeKebal",
+        )
+        logical_restore = f"{target}.KebalAktif = {target}.ModeKebal != 0;"
+        clear_status = f"Clear Status({target}, Unkillable);"
+        checks.require(
+            cleanup_masked.find(clear_status) < cleanup_masked.find(logical_restore),
+            f"{subroutine} deve riattivare Kebal dopo la normalizzazione dello stato motore",
+        )
+
+    active_cleanup = rule_by_subroutine(rules, "PulihkanNasibAktif")
+    if active_cleanup:
+        active_cleanup_masked = mask_strings(active_cleanup.body)
+        clear_position = active_cleanup_masked.find(
+            "Clear Status(Global.PemainAktif, Unkillable);"
+        )
+        cleanup_branches = conditional_branches_containing(active_cleanup.body, clear_position)
+        cleanup_branch = mask_strings(cleanup_branches[0]) if cleanup_branches else ""
+        for token in (
+            "Global.PemainAktif.ModeKebal == 0",
+            "Is Alive(Global.PemainAktif) == False",
+        ):
+            checks.require(
+                token in cleanup_branch,
+                "cleanup Try vivo non deve sospendere Unkillable durante hero swap/timeout: " + token,
+            )
+
+    if processor:
+        processor_masked = mask_strings(processor.body)
+        icon_guard = (
+            "If(Or(Global.PemainAktif.IkonKebal == Null, "
+            "Entity Exists(Global.PemainAktif.IkonKebal) == False));"
+        )
+        icon_store = "Global.PemainAktif.IkonKebal = Last Created Entity;"
+        checks.require(icon_guard in processor_masked,
+                       "riapplicazione globale Kebal non ricrea in sicurezza un'icona assente o non più esistente")
+        checks.equal(processor_masked.count(icon_store), 1,
+                     "riapplicazione globale Kebal: salvataggio handle icona")
+        restore_icons = [
+            call for call in iter_calls(processor.body, "Create Icon")
+            if len(call.args) >= 6
+            and call.args[1].strip() == "Global.PemainAktif"
+            and call.args[2].strip() in {"Warning", "Halo"}
+        ]
+        checks.equal(len(restore_icons), 2,
+                     "riapplicazione globale Kebal deve ricreare le icone 1 HP e FULL HP")
+        expected_icons = {
+            "Warning": "CustomColor(255,80,80,255)",
+            "Halo": "Global.RGB",
+        }
+        for icon in restore_icons:
+            icon_type = icon.args[2].strip()
+            checks.equal(icon.args[0].strip(), "All Players(All Teams)",
+                         f"icona Kebal {icon_type}: pubblico")
+            checks.equal(icon.args[3].strip(), "Visible To and Position",
+                         f"icona Kebal {icon_type}: reevaluation")
+            checks.equal(icon.args[5].strip(), "True",
+                         f"icona Kebal {icon_type}: visibilità off-screen")
+            checks.equal(re.sub(r"\s+", "", icon.args[4]), expected_icons[icon_type],
+                         f"icona Kebal {icon_type}: colore")
+        guard_position = processor_masked.find(icon_guard)
+        store_position = processor_masked.find(icon_store)
+        checks.require(0 <= guard_position < store_position,
+                       "riapplicazione globale Kebal salva l'icona fuori dalla guardia non-Null")
+        if store_position >= 0:
+            icon_branches = conditional_branches_containing(processor.body, store_position)
+            icon_branch = next(
+                (mask_strings(branch) for branch in icon_branches if icon_guard in mask_strings(branch)),
+                "",
+            )
+            checks.require(bool(icon_branch),
+                           "riapplicazione globale Kebal: ricreazione icona fuori dalla guardia")
+            checks.require("If(Global.PemainAktif.ModeKebal == 1);" in icon_branch,
+                           "riapplicazione globale Kebal non distingue icona 1 HP/FULL HP")
 
     spawn_exit = next(
         (
@@ -1884,8 +2046,6 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
         ("PrivasiNasibAktif", "Vision 15 s"),
     ):
         checks.require(token in source, f"Try Your Luck esito mancante: {label}")
-    checks.require("Clear Status(Event Player, Unkillable);" in source,
-                   "Try Your Luck non disattiva Unkillable all'avvio")
     checks.require("Start Forcing Player Position(" not in source,
                    "Try Your Luck non deve forzare la posizione")
     checks.require("Custom String(\"□\")" not in source,
@@ -1900,6 +2060,18 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
     checks.require(state_machine is not None, "macchina a stati ProsesNasibPemain assente")
     if state_machine:
         masked_state_machine = mask_strings(state_machine.body)
+        for token, label in (
+            ("Clear Status(Global.PemainAktif, Unkillable);", "Clear Status Unkillable"),
+            ("Set Status(Global.PemainAktif, Null, Unkillable", "Set Status Unkillable"),
+            ("Set Damage Received(Global.PemainAktif", "Damage Received"),
+            ("Set Knockback Received(Global.PemainAktif", "Knockback Received"),
+            ("Enable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
+            ("Disable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
+        ):
+            checks.require(
+                token not in masked_state_machine,
+                f"Try Your Luck: {label} può essere modificato soltanto dal bypass Skull/Revenge",
+            )
 
         def if_block_containing(condition_fragment: str) -> str | None:
             condition_position = masked_state_machine.find(condition_fragment)
@@ -2572,6 +2744,12 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if classifier:
         checks.require("Abort If(Array Contains(Global.PemainManusia, Event Player));" in classifier.body,
                        "join duplicato può aggiungere due volte il roster")
+        human_marker = "Event Player.Manusia = True;"
+        hero_tracker = "Event Player.PahlawanTerakhir = Hero Of(Event Player);"
+        checks.require(
+            0 <= classifier.body.find(human_marker) < classifier.body.find(hero_tracker),
+            "classificazione umana non inizializza PahlawanTerakhir dopo Manusia=True",
+        )
 
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "SiapkanPemain assente")
@@ -2579,8 +2757,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         reset_tokens = (
             "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
-            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
-            "KursorPrivasiInspeksi = 0;",
+            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = True;",
+            "KursorPrivasiInspeksi = 1;",
             "IzinkanDummyMengikuti = True;", "KursorIkutiDummy = 1;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
@@ -2625,16 +2803,33 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for pattern, label in stable_patterns:
             checks.require(re.search(pattern, cycle.body, re.DOTALL) is not None,
                            f"rilascio stabile lock team-switch incompleto: {label}")
+        hero_swap_pattern = re.compile(
+            r"Global\.PemainAktif\.Manusia\s*==\s*True.*?"
+            r"Has Spawned\(Global\.PemainAktif\)\s*==\s*True.*?"
+            r"Hero Of\(Global\.PemainAktif\)\s*!=\s*Global\.PemainAktif\.PahlawanTerakhir.*?"
+            r"Global\.PemainAktif\.PahlawanTerakhir\s*=\s*Hero Of\(Global\.PemainAktif\);.*?"
+            r"Global\.PemainAktif\.KartuNasibAktif\s*==\s*True.*?"
+            r"Global\.PemainAktif\.PutaranKartuNasib\s*>\s*0.*?"
+            r"Global\.PemainAktif\.EfekNasib\s*!=\s*0.*?"
+            r"Call Subroutine\(PulihkanNasibAktif\);.*?"
+            r"Global\.PemainAktif\.MenuNasibHarusDibuka\s*=\s*"
+            r"Global\.PemainAktif\.MenuTerbuka\s*==\s*False;",
+            re.DOTALL,
+        )
+        checks.require(
+            hero_swap_pattern.search(cycle.body) is not None,
+            "hero swap umano non pulisce Try Your Luck nello scheduler globale",
+        )
 
 
 def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "SiapkanPemain assente per default privacy")
     if setup:
-        checks.require("Event Player.PrivasiInspeksiAktif = False;" in setup.body,
-                       "Privacy deve essere OFF di default per ogni umano")
-        checks.require("Event Player.KursorPrivasiInspeksi = 0;" in setup.body,
-                       "cursore Privacy deve iniziare su OFF (0)")
+        checks.require("Event Player.PrivasiInspeksiAktif = True;" in setup.body,
+                       "Privacy deve essere ON di default per ogni umano")
+        checks.require("Event Player.KursorPrivasiInspeksi = 1;" in setup.body,
+                       "cursore Privacy deve iniziare su ON (1)")
 
     privacy_filter_tokens = (
         "Is Dummy Bot(Current Array Element) == True",
@@ -2657,7 +2852,8 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     vision_subject_pattern = re.compile(
         r"Or\(\s*Is Dummy Bot\(Event Player\)\s*==\s*True\s*,\s*"
         r"Or\(\s*Event Player\.BotOtomatis\s*==\s*True\s*,\s*"
-        r"Event Player\.Manusia\s*==\s*True\s*\)\s*\)",
+        r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
+        r"Event Player\.PrivasiInspeksiAktif\s*==\s*False\s*\)\s*\)\s*\)",
         re.DOTALL,
     )
 
@@ -2795,12 +2991,12 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if vision_names:
         checks.require(
             vision_subject_pattern.search(vision_names.body) is not None,
-            "Vision non copre umani, bot e dummy",
+            "Vision deve coprire bot/dummy e soltanto umani con Privacy OFF",
         )
         vision_conditions = rule_block(vision_names, "conditions") or ""
         checks.require(
-            "Event Player.PrivasiInspeksiAktif == False" not in vision_conditions,
-            "Vision esclude umani con Privacy ON",
+            "Event Player.PrivasiInspeksiAktif == False" in vision_conditions,
+            "Vision espone un umano con Privacy ON",
         )
         vision_calls = list(iter_calls(vision_names.body, "Create In-World Text"))
         checks.equal(len(vision_calls), 1, "Vision deve creare un solo IWT per soggetto")
@@ -2863,8 +3059,8 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if vision_cleanup:
         cleanup_conditions = rule_block(vision_cleanup, "conditions") or ""
         checks.require(
-            "Event Player.PrivasiInspeksiAktif == True" not in cleanup_conditions,
-            "cleanup Vision dipende dalla Privacy soggetto",
+            "Event Player.PrivasiInspeksiAktif == True" in cleanup_conditions,
+            "cleanup Vision non rimuove subito un umano che attiva Privacy",
         )
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
@@ -3202,7 +3398,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                 Or(Is Dummy Bot(Event Player), Event Player.BotOtomatis) == True;
                 Has Spawned(Event Player) == True;
                 Is Alive(Event Player) == True;
-                Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanBotTerakhir) == True;
+                Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanTerakhir) == True;
             """
             checks.equal(
                 compact(bot_conditions),

@@ -98,7 +98,7 @@ variabili
 		39: TargetBalasDendamDipilih
 		40: PelatNamaDinonaktifkan
 		41: KunciBotAktif
-		42: PahlawanBotTerakhir
+		42: PahlawanTerakhir
 		43: DaftarTargetInspeksi
 		44: PerintahMenu
 		45: JenisTeleportasiTerkunci
@@ -1130,6 +1130,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Globale.TeksDuniaPemain = Append To Array(Globale.TeksDuniaPemain, 0);
 		Globale.SlotHUDPemain = Append To Array(Globale.SlotHUDPemain, Event Player.UrutanHUD);
 		Event Player.Manusia = True;
+		Event Player.PahlawanTerakhir = Hero Of(Event Player);
 		Call Subroutine(HitungPilihan);
 	}
 }
@@ -1211,7 +1212,7 @@ regola("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 		Or(Is Dummy Bot(Event Player), Event Player.BotOtomatis) == True;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanBotTerakhir) == True;
+		Or(Event Player.KunciBotAktif == False, Hero Of(Event Player) != Event Player.PahlawanTerakhir) == True;
 	}
 
 	azioni
@@ -1610,7 +1611,7 @@ regola("05c - Menu: Pengatur masukan dengan prioritas tetap")
 		Event Player.PerintahMenu == 0;
 		Event Player.InteraksiKameraDipakai == False;
 		Event Player.KartuNasibAktif == False;
-		Or(Or(Is Button Held(Event Player, Button(Interact)), And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu != -1)), Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), And(Event Player.HalamanMenu == 0, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2)))))) == True;
+		Or(Or(Is Button Held(Event Player, Button(Interact)), And(Is Button Held(Event Player, Button(Reload)), Event Player.HalamanMenu != -1)), Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), And(Event Player.HalamanMenu == 2, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2)))))) == True;
 	}
 
 	azioni
@@ -1624,9 +1625,9 @@ regola("05c - Menu: Pengatur masukan dengan prioritas tetap")
 			Event Player.PerintahMenu = 3;
 		Else If(Is Button Held(Event Player, Button(Secondary Fire)));
 			Event Player.PerintahMenu = 4;
-		Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.HalamanMenu == 0));
+		Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.HalamanMenu == 2));
 			Event Player.PerintahMenu = 5;
-		Else If(And(Is Button Held(Event Player, Button(Ability 2)), Event Player.HalamanMenu == 0));
+		Else If(And(Is Button Held(Event Player, Button(Ability 2)), Event Player.HalamanMenu == 2));
 			Event Player.PerintahMenu = 6;
 		End;
 	}
@@ -2213,21 +2214,7 @@ regola("99k - Subrutin: Terapkan halaman coba nasib")
 				Destroy Icon(Event Player.IkonKartuNasib);
 			End;
 			Event Player.IkonKartuNasib = Null;
-			"Setiap putaran Coba Nasib mematikan Kebal; pemain dapat mengaktifkannya kembali dari halaman Kebal."
-			Event Player.KebalAktif = False;
-			Event Player.ModeKebal = 0;
-			Event Player.KursorKebal = 0;
-			Clear Status(Event Player, Unkillable);
-			Set Damage Received(Event Player, 100);
-			Set Knockback Received(Event Player, 100);
-			Enable Movement Collision With Players(Event Player);
-			If(Is Alive(Event Player) == True);
-				Set Player Health(Event Player, Max Health(Event Player));
-			End;
-			If(Event Player.IkonKebal != Null);
-				Destroy Icon(Event Player.IkonKebal);
-			End;
-			Event Player.IkonKebal = Null;
+			"Coba Nasib mempertahankan pilihan Kebal; hanya kematian final Skull yang menangguhkan perlindungan sampai Resurrect."
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Try Your Luck: six outcomes are rolling.") : Event Player.IndeksBahasa == 1 ? Custom String("Coba Nasib: enam hasil sedang diacak.") : Custom String("เสี่ยงโชค: กำลังสุ่มหกผลลัพธ์"));
 		End;
 	}
@@ -2690,7 +2677,7 @@ regola("18i - Nasib: Visi menampilkan nama publik dan bot")
 	{
 		Or(Event Player.TeksVisiNasib == Null, Event Player.TeksVisiNasib == 0) == True;
 		Is Alive(Event Player) == True;
-		Or(Is Dummy Bot(Event Player) == True, Or(Event Player.BotOtomatis == True, Event Player.Manusia == True)) == True;
+		Or(Is Dummy Bot(Event Player) == True, Or(Event Player.BotOtomatis == True, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False))) == True;
 		Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) > 0;
 	}
 
@@ -2713,7 +2700,7 @@ regola("18j - Nasib: Bersihkan nama visi saat tidak diperlukan")
 	condizioni
 	{
 		And(Event Player.TeksVisiNasib != Null, Event Player.TeksVisiNasib != 0) == True;
-		Or(Is Alive(Event Player) == False, Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
+		Or(Or(Is Alive(Event Player) == False, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True)), Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
 	}
 
 	azioni
@@ -2744,7 +2731,7 @@ regola("18k - Nasib: HUD efek dan durasi saat menu tertutup")
 
 	azioni
 	{
-		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: ALL PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: SEMUA NAMA PLAYER / BOT") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่นทั้งหมด / บอต") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Globale.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: PUBLIC PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: NAMA PLAYER PUBLIK / BOT") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่นสาธารณะ / บอต") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Globale.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
@@ -3097,6 +3084,14 @@ regola("89a - Subrutin: Proses status cepat pemain")
 					Set Player Health(Globale.PemainAktif, Max Health(Globale.PemainAktif));
 				End;
 			End;
+			If(Or(Globale.PemainAktif.IkonKebal == Null, Entity Exists(Globale.PemainAktif.IkonKebal) == False));
+				If(Globale.PemainAktif.ModeKebal == 1);
+					Create Icon(All Players(All Teams), Globale.PemainAktif, Warning, Visible To and Position, Custom Color(255, 80, 80, 255), True);
+				Else;
+					Create Icon(All Players(All Teams), Globale.PemainAktif, Halo, Visible To and Position, Globale.RGB, True);
+				End;
+				Globale.PemainAktif.IkonKebal = Last Created Entity;
+			End;
 		End;
 	}
 }
@@ -3114,6 +3109,14 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 		If(And(Globale.PemainAktif.PindahTimDiproses == True, Or(And(Globale.PemainAktif.Manusia == True, And(Has Spawned(Globale.PemainAktif) == True, Globale.PemainAktif.HudPemainDibuat == True)), And(Globale.PemainAktif.BotOtomatis == True, And(Globale.PemainAktif.SudahDiperiksa == True, And(Has Spawned(Globale.PemainAktif) == True, And(Is Alive(Globale.PemainAktif) == True, Globale.PemainAktif.KunciBotAktif == True)))))));
 			"Pendaftaran manusia dilepas setelah HUD stabil; bot otomatis dilepas hanya setelah klasifikasi dan penguncian selesai."
 			Globale.PemainAktif.PindahTimDiproses = False;
+		End;
+		If(And(Globale.PemainAktif.Manusia == True, And(Has Spawned(Globale.PemainAktif) == True, Hero Of(Globale.PemainAktif) != Globale.PemainAktif.PahlawanTerakhir)));
+			"Perubahan pahlawan manusia dibersihkan oleh scheduler global tanpa membuat aturan Each Player baru."
+			Globale.PemainAktif.PahlawanTerakhir = Hero Of(Globale.PemainAktif);
+			If(Or(Globale.PemainAktif.KartuNasibAktif == True, Or(Globale.PemainAktif.PutaranKartuNasib > 0, Globale.PemainAktif.EfekNasib != 0)));
+				Call Subroutine(PulihkanNasibAktif);
+				Globale.PemainAktif.MenuNasibHarusDibuka = Globale.PemainAktif.MenuTerbuka == False;
+			End;
 		End;
 		If(And(Globale.Siap == True, And(Or(Is Dummy Bot(Globale.PemainAktif), Globale.PemainAktif.BotOtomatis) == True, And(Globale.PemainAktif.KunciBotAktif == True, Or(Has Spawned(Globale.PemainAktif) == False, Is Alive(Globale.PemainAktif) == False)))));
 			Globale.PemainAktif.KunciBotAktif = False;
@@ -3252,7 +3255,7 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 				If(Globale.PemainAktif.EfekNasib == 1);
 					Globale.PemainAktif.PrivasiNasibAktif = True;
 					Globale.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 15;
-					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: ALL PLAYER / BOT NAMES — 15s") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: SEMUA NAMA PLAYER / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นทั้งหมด / บอต — 15 วินาที"));
+					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: PUBLIC PLAYER / BOT NAMES — 15s") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: NAMA PLAYER PUBLIK / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นสาธารณะ / บอต — 15 วินาที"));
 				Else If(Globale.PemainAktif.EfekNasib == 2);
 					Set Move Speed(Globale.PemainAktif, 1000);
 					Start Accelerating(Globale.PemainAktif, Facing Direction Of(Evaluate Once(Globale.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);
@@ -3696,7 +3699,7 @@ regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")
 		Set Damage Received(Event Player, 100);
 		Set Knockback Received(Event Player, 100);
 		Set Move Speed(Event Player, 20);
-		Event Player.PahlawanBotTerakhir = Hero Of(Event Player);
+		Event Player.PahlawanTerakhir = Hero Of(Event Player);
 		Event Player.KunciBotAktif = True;
 		Disable Nameplates(Event Player, Filtered Array(Globale.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 	}
@@ -3817,6 +3820,9 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 	azioni
 	{
 		"Bersihkan Coba Nasib segera sebelum pendaftaran tim baru; bagian ini tidak pernah menjeda pemindaian."
+		Event Player.KebalAktif = False;
+		Event Player.ModeKebal = 0;
+		Event Player.KursorKebal = 0;
 		Call Subroutine(PulihkanNasibPemain);
 		Event Player.MenuNasibHarusDibuka = False;
 		Event Player.KematianBalasDendam = False;
@@ -3896,6 +3902,9 @@ regola("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Event Player.MenuTerbuka = False;
 		Event Player.InputMenuDikunci = False;
 		Event Player.HudPemainDibuat = False;
+		Event Player.KebalAktif = False;
+		Event Player.ModeKebal = 0;
+		Event Player.KursorKebal = 0;
 		Call Subroutine(PulihkanNasibPemain);
 		Event Player.KematianBalasDendam = False;
 		Event Player.PenagihBalasDendam = Null;
@@ -4058,7 +4067,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TargetBalasDendamDipilih = Null;
 		Event Player.PelatNamaDinonaktifkan = False;
 		Event Player.KunciBotAktif = False;
-		Event Player.PahlawanBotTerakhir = Null;
+		Event Player.PahlawanTerakhir = Null;
 		Event Player.DaftarTargetInspeksi = Empty Array;
 		Event Player.PerintahMenu = 0;
 		Event Player.JenisTeleportasiTerkunci = -1;
@@ -4078,8 +4087,8 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.WarnaMenu = Vector(255, 255, 255);
 		Event Player.TeleportasiJongkokDiaktifkan = False;
 		Event Player.KursorTeleportasiJongkok = 0;
-		Event Player.PrivasiInspeksiAktif = False;
-		Event Player.KursorPrivasiInspeksi = 0;
+		Event Player.PrivasiInspeksiAktif = True;
+		Event Player.KursorPrivasiInspeksi = 1;
 		Event Player.ModeKebal = 0;
 		Event Player.IkonKebal = Null;
 		Event Player.KartuNasibAktif = False;
@@ -4218,13 +4227,9 @@ regola("98a - Subrutin: Pulihkan status Nasib untuk Event Player")
 		If(Event Player.TeksVisiNasib != Null);
 			Destroy In-World Text(Event Player.TeksVisiNasib);
 		End;
-		If(Event Player.IkonKebal != Null);
-			Destroy Icon(Event Player.IkonKebal);
-		End;
 		Event Player.IkonKartuNasib = Null;
 		Event Player.HudEfekNasib = Null;
 		Event Player.TeksVisiNasib = Null;
-		Event Player.IkonKebal = Null;
 		Clear Status(Event Player, Burning);
 		Clear Status(Event Player, Hacked);
 		Clear Status(Event Player, Unkillable);
@@ -4236,9 +4241,6 @@ regola("98a - Subrutin: Pulihkan status Nasib untuk Event Player")
 		Set Jump Vertical Speed(Event Player, 100);
 		Set Projectile Speed(Event Player, 100);
 		Set Gravity(Event Player, 100);
-		Event Player.KebalAktif = False;
-		Event Player.ModeKebal = 0;
-		Event Player.KursorKebal = 0;
 		Event Player.KartuNasibAktif = False;
 		Event Player.PutaranKartuNasib = 0;
 		Event Player.JedaKartuNasib = 0;
@@ -4251,6 +4253,7 @@ regola("98a - Subrutin: Pulihkan status Nasib untuk Event Player")
 		Event Player.WaktuPaksaBerikut = 0;
 		Event Player.WaktuPaksaBerakhir = 0;
 		Event Player.MenuNasibHarusDibuka = False;
+		Event Player.KebalAktif = Event Player.ModeKebal != 0;
 		Event Player.InputMenuDikunci = False;
 		Event Player.PerintahMenu = 0;
 		Allow Button(Event Player, Button(Primary Fire));
@@ -4283,27 +4286,22 @@ regola("98b - Subrutin: Pulihkan status Nasib untuk pemain aktif global")
 		If(Globale.PemainAktif.TeksVisiNasib != Null);
 			Destroy In-World Text(Globale.PemainAktif.TeksVisiNasib);
 		End;
-		If(Globale.PemainAktif.IkonKebal != Null);
-			Destroy Icon(Globale.PemainAktif.IkonKebal);
-		End;
 		Globale.PemainAktif.IkonKartuNasib = Null;
 		Globale.PemainAktif.HudEfekNasib = Null;
 		Globale.PemainAktif.TeksVisiNasib = Null;
-		Globale.PemainAktif.IkonKebal = Null;
 		Clear Status(Globale.PemainAktif, Burning);
 		Clear Status(Globale.PemainAktif, Hacked);
-		Clear Status(Globale.PemainAktif, Unkillable);
+		If(Or(Globale.PemainAktif.ModeKebal == 0, Is Alive(Globale.PemainAktif) == False));
+			Clear Status(Globale.PemainAktif, Unkillable);
+			Set Damage Received(Globale.PemainAktif, 100);
+			Set Knockback Received(Globale.PemainAktif, 100);
+			Enable Movement Collision With Players(Globale.PemainAktif);
+		End;
 		Stop Accelerating(Globale.PemainAktif);
-		Set Damage Received(Globale.PemainAktif, 100);
-		Set Knockback Received(Globale.PemainAktif, 100);
-		Enable Movement Collision With Players(Globale.PemainAktif);
 		Set Move Speed(Globale.PemainAktif, 100);
 		Set Jump Vertical Speed(Globale.PemainAktif, 100);
 		Set Projectile Speed(Globale.PemainAktif, 100);
 		Set Gravity(Globale.PemainAktif, 100);
-		Globale.PemainAktif.KebalAktif = False;
-		Globale.PemainAktif.ModeKebal = 0;
-		Globale.PemainAktif.KursorKebal = 0;
 		Globale.PemainAktif.KartuNasibAktif = False;
 		Globale.PemainAktif.PutaranKartuNasib = 0;
 		Globale.PemainAktif.JedaKartuNasib = 0;
@@ -4316,6 +4314,7 @@ regola("98b - Subrutin: Pulihkan status Nasib untuk pemain aktif global")
 		Globale.PemainAktif.WaktuPaksaBerikut = 0;
 		Globale.PemainAktif.WaktuPaksaBerakhir = 0;
 		Globale.PemainAktif.MenuNasibHarusDibuka = False;
+		Globale.PemainAktif.KebalAktif = Globale.PemainAktif.ModeKebal != 0;
 		Globale.PemainAktif.InputMenuDikunci = False;
 		Globale.PemainAktif.PerintahMenu = 0;
 		Allow Button(Globale.PemainAktif, Button(Primary Fire));

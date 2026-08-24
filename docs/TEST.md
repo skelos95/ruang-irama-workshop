@@ -83,7 +83,7 @@ Verificare esattamente 13 voci, indici e contenuti:
 7. Hero Voice — 5 preset.
 8. Player Icon — Nothing + 36 icone.
 9. Crouch Teleport — OFF/ON.
-10. Crouch Privacy — OFF/ON (default OFF).
+10. Crouch Privacy — OFF/ON (default ON).
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
 13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default ON).
@@ -117,7 +117,7 @@ Focus dati:
 - Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
 - Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
 - Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
-- Partire da FULL HP e attivare Try Your Luck, fare leave o cambiare squadra: questi percorsi devono uscire dalla modalità e ripristinare insieme `Damage Received = 100`, `Knockback Received = 100` e collisione player ON.
+- Partire da FULL HP e attivare Try Your Luck: modalità, cursore, status, immunità a danni/urti, assenza di collisione e icona devono restare attivi durante i giri e nei cinque esiti non-Skull. Soltanto lo Skull finale sospende temporaneamente la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Leave o cambio squadra restano invece reset completi e devono ripristinare insieme `Damage Received = 100`, `Knockback Received = 100` e collisione player ON.
 - Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
 - Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
@@ -127,11 +127,11 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 | Esito | Verifica |
 |---|---|
-| Vision | icona eroe, nome e salute live in EN/ID/TH; nomi visibili anche se il target umano ha Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
+| Vision | icona eroe, nome e salute live in EN/ID/TH per bot/dummy e umani con Privacy OFF; nessun nome umano con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
-| Skull | D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa |
+| Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
-| Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; stop alla scadenza/morte |
+| Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; non bypassa Unkillable; stop alla scadenza/morte |
 | Hacked | stato per 5 s, poi rimozione |
 
 Per ciascun esito:
@@ -140,13 +140,22 @@ Per ciascun esito:
 - quando Skull compare soltanto come icona intermedia, il player deve restare vivo; il retry può iniziare esclusivamente se Skull è l'esito finale;
 - durante la stessa roulette eseguire join/leave di un umano: la reevaluation `Visible To and Position` deve rendere tutte le sei icone visibili al roster umano corrente, senza includere bot;
 - con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed` segua continuamente la direzione 3D corrente;
-- Unkillable viene disattivato all'avvio;
+- Unkillable non cambia all'avvio: Mode, Kursor, flag runtime, status, modificatori e icona restano invariati;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
-- morte, leave, hero swap e cambio squadra annullano stato, status ed effetti;
+- morte, timeout e hero swap annullano stato/status/effetti temporanei senza cancellare Mode/Kursor Unkillable; un hero swap da vivo non deve interrompere neppure per un tick status/tripletta/icona Unkillable, mentre leave e cambio squadra eseguono il reset completo;
 - rimuovere un iBot vivo durante Vision e verificare che il suo IWT sparisca senza creare roster, HUD o lifecycle umano;
 - nessuna seconda roulette per lo stesso player parte mentre la prima è attiva;
 - chiusure e riaperture non duplicano HUD, In-World Text o effetti.
+
+Matrice obbligatoria Try Your Luck × Unkillable:
+
+- ripetere i sei esiti con Unkillable OFF, 1 HP e FULL HP;
+- con 1 HP e FULL HP, Vision, Acceleration, Team Heal, Burning e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
+- con FULL HP, Burning deve produrre zero perdita di salute; con 1 HP deve restare soggetto allo status Unkillable e non può completare la morte;
+- con Skull finale, verificare il bypass temporaneo e la morte completa; premere Jump per Resurrect e confermare il ripristino della stessa modalità, della tripletta corretta e dell'icona entro il tick globale;
+- lasciare scadere la deadline Skull quando `Kill` viene rifiutato: menu/input devono liberarsi e Unkillable deve tornare attivo senza alterare Mode/Kursor;
+- ripetere un Revenge su target 1 HP e FULL HP: deve usare lo stesso bypass temporaneo, ma claimant, consumo debito, condizioni di commit e timeout devono restare identici ai test Revenge esistenti.
 
 ### Revenge e morte completa
 
@@ -173,9 +182,9 @@ Per ciascun esito:
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
-- Nuovo player e player dopo cambio squadra: Privacy OFF e cursore OFF per default.
-- Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom.
-- Privacy ON: gli altri player non vedono nome/nameplate in inspection e nessun osservatore può scegliere il player nella Camera custom; Vision continua a mostrare il nome durante l'effetto.
+- Nuovo player e player dopo cambio squadra: Privacy ON e cursore ON per default.
+- Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision può mostrarne icona, nome e salute.
+- Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
 - Attivare Privacy ON mentre inspection sta già mostrando il target: nome/nameplate devono sparire entro il ciclo di cleanup e non ricomparire finché Privacy resta ON.
 - Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
@@ -235,7 +244,7 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti, voti e riferimenti precedenti rimossi;
-- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport, Privacy e Dummy Follow ON;
+- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy ON e Dummy Follow ON;
 - Text Count ed Entity Count tornano al baseline;
 - nessun `excessive Workshop script load`.
 
@@ -320,6 +329,7 @@ Dummy capacity/no-create-spam: PASS/FAIL
 Dummy damage/knockback/collisions: PASS/FAIL
 Dummy Follow nearest/opt-out: PASS/FAIL
 FULL HP immunity/restore: PASS/FAIL
+Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Jump Resurrect/retry latch: PASS/FAIL
 Privacy Vision/inspection: PASS/FAIL
 20 cambi singoli: PASS/FAIL

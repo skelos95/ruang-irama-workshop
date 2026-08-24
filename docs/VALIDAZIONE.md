@@ -102,7 +102,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - `Knockback Received = 0`;
 - `Disable Movement Collision With Players`.
 
-OFF, 1 HP, avvio Try Your Luck, setup e cleanup locali/globali devono contenere il ripristino atomico `100/100/Enable Movement Collision With Players`. Un cleanup di morte non cambia però la preferenza `ModeKebal = 2`: alla ripresa in vita la riapplicazione globale deve riportare FULL HP. In Spawn Room la modalità 2 conserva la tripletta protettiva, mentre soltanto il ramo 1 HP ripristina i valori normali. Le sole due disabilitazioni della collisione con player ammesse appartengono ai rami FULL HP locale e globale; una protezione parziale, una chiamata duplicata o l'applicazione della stessa immunità a dummy/iBot fa fallire il gate.
+OFF, 1 HP, setup e cleanup locali/globali devono contenere il ripristino atomico `100/100/Enable Movement Collision With Players`. L'avvio di Try Your Luck, invece, non può scrivere `ModeKebal`, `KursorKebal`, `KebalAktif`, status, salute, tripletta o icona Unkillable. I cleanup possono normalizzare lo stato engine soltanto quando la modalità è OFF o il player è realmente morto; un cleanup live per timeout/hero swap conserva status e tripletta. Nessun cleanup può modificare modalità o cursore e deve poi assegnare logicamente `KebalAktif = ModeKebal != 0`; alla ripresa in vita la riapplicazione globale deve riportare 1 HP/FULL HP e ricreare l'icona quando l'handle è `Null` oppure l'entità non esiste più. In Spawn Room la modalità 2 conserva la tripletta protettiva, mentre soltanto il ramo 1 HP ripristina i valori normali. Le sole due disabilitazioni della collisione con player ammesse appartengono ai rami FULL HP locale e globale; una protezione parziale, una chiamata duplicata o l'applicazione della stessa immunità a dummy/iBot fa fallire il gate.
 
 ### Scheduler e prestazioni statiche
 
@@ -129,12 +129,12 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 |---|---|
 | Vision | durata 15 s, IWT con icona/nome/salute live e blocco/cleanup di inspection e Teleport Crouch |
 | Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
-| Skull | trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
+| Skull | unico esito autorizzato a bypassare temporaneamente Unkillable; trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
 | Team Heal | cura completa dei soli player umani del team |
-| Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s |
+| Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s, senza rimuovere status o modificatori Unkillable |
 | Hacked | durata 5 s e cleanup status |
 
-L'avvio disattiva Unkillable. Morte, leave e cambio squadra devono annullare timestamp, status, modificatori ed effetti. Un loop o Wait per-player associato alla roulette è vietato.
+L'avvio e la macchina a stati non possono sospendere Unkillable. La condizione di riapplicazione globale deve escludere soltanto Revenge pending o uno Skull finale realmente armato; un'icona Skull intermedia e gli altri cinque esiti restano protetti. Burning non può eseguire `Clear/Set Status(Unkillable)`, cambiare Damage/Knockback Received o collisione: FULL HP annulla i tick di danno e 1 HP conserva lo status. Soltanto il ramo centralizzato Skull finale/Revenge può eseguire il bypass prima di `Kill`. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario; il cleanup su un player ancora vivo non può normalizzare status o tripletta Unkillable. Leave e cambio squadra restano cleanup completi. Un loop o Wait per-player associato alla roulette è vietato.
 
 Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
 
@@ -151,7 +151,7 @@ Il gate controlla:
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
-- Privacy iniziale OFF con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e nessun HUD Crouch sovrapposto durante Vision;
+- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e Vision e nessun HUD Crouch sovrapposto durante Vision;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
@@ -187,11 +187,11 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - ciclo Main Menu ancora `0..11`, pagina 12 priva di renderer/cursore/apply/tinta, writer Dummy Follow estraneo o messaggio di apertura rimasto a dodici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
 - Jump tornato a `Respawn`, teleport spostato dopo il `Wait`, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
-- FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo o ripristino `100/100/collisione ON` mancante in una delle uscite;
+- FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
 - accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
-- Privacy default diverso da OFF, target privato selezionabile, osservatore non sganciato, Vision priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
+- Privacy default diverso da ON, target privato selezionabile o visibile in inspection/Vision, osservatore non sganciato, Vision pubblica priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, collisione player disabilitata, collisione ambientale applicata agli iBot o con `Include Floors = True`, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
@@ -200,7 +200,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;
-- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline o cleanup eseguito prima della morte completa;
+- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning capace di bypassare Unkillable, cleanup che cancella Mode/Kursor o non riattiva logicamente Kebal, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
 - Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker o pending non ripulito su timeout/leave/team switch;
 - guardia Join, cleanup Leave o reset team-switch rimosso;
 - una delle otto modalità o un ramo Teleport mancante;

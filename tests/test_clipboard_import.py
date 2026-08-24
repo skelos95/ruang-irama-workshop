@@ -105,18 +105,18 @@ class ClipboardImportTests(unittest.TestCase):
                 )
 
     def test_semantic_gate_rejects_italian_only_privacy_default_change(self) -> None:
-        needle = "Event Player.PrivasiInspeksiAktif = False;"
+        needle = "Event Player.PrivasiInspeksiAktif = True;"
         self.assertIn(needle, self.italian)
         self.assert_semantic_mismatch(
             self.italian.replace(
-                needle, "Event Player.PrivasiInspeksiAktif = True;", 1
+                needle, "Event Player.PrivasiInspeksiAktif = False;", 1
             )
         )
 
     def test_check_path_rejects_semantically_divergent_italian_source(self) -> None:
         mutated = self.italian.replace(
-            "Event Player.PrivasiInspeksiAktif = False;",
             "Event Player.PrivasiInspeksiAktif = True;",
+            "Event Player.PrivasiInspeksiAktif = False;",
             1,
         )
         with tempfile.TemporaryDirectory() as temp_dir:
