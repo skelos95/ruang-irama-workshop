@@ -155,6 +155,10 @@ variables
 		96: TargetDummyIkuti
 		97: CalonTargetInspeksi
 		98: PosisiTeleportTujuan
+		99: TargetLampiranTeleportasi
+		100: LampiranTeleportasiAktif
+		101: PahlawanLampiranSendiri
+		102: PahlawanLampiranTarget
 }
 
 subroutines
@@ -2743,7 +2747,7 @@ rule("18k - Nasib: HUD efek dan durasi saat menu tertutup")
 	}
 }
 
-rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
+rule("19 - Teleportasi Jongkok: Buka empat halaman selama Jongkok ditahan")
 {
 	event
 	{
@@ -2782,7 +2786,7 @@ rule("19 - Teleportasi Jongkok: Buka tiga halaman selama Jongkok ditahan")
 	}
 }
 
-rule("19a - Teleportasi Jongkok: Primary berpindah, Secondary mengganti halaman")
+rule("19a - Teleportasi Jongkok: Primary maju, Secondary mundur, Interact jalankan")
 {
 	event
 	{
@@ -2796,20 +2800,22 @@ rule("19a - Teleportasi Jongkok: Primary berpindah, Secondary mengganti halaman"
 		Event Player.TeleportasiJongkokAktif == True;
 		Event Player.PerintahTeleportasi == 0;
 		Is Button Held(Event Player, Button(Crouch)) == True;
-		Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))) == True;
+		Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), Is Button Held(Event Player, Button(Interact))) == True;
 	}
 
 	actions
 	{
 		If(Is Button Held(Event Player, Button(Primary Fire)));
 			Event Player.PerintahTeleportasi = 1;
-		Else;
+		Else If(Is Button Held(Event Player, Button(Secondary Fire)));
 			Event Player.PerintahTeleportasi = 2;
+		Else;
+			Event Player.PerintahTeleportasi = 3;
 		End;
 	}
 }
 
-rule("19b - Teleportasi Jongkok: Lepaskan pengunci Primary dan Secondary")
+rule("19b - Teleportasi Jongkok: Lepaskan pengunci navigasi dan aksi")
 {
 	event
 	{
@@ -2824,6 +2830,7 @@ rule("19b - Teleportasi Jongkok: Lepaskan pengunci Primary dan Secondary")
 		Event Player.PerintahTeleportasi != 0;
 		Is Button Held(Event Player, Button(Primary Fire)) == False;
 		Is Button Held(Event Player, Button(Secondary Fire)) == False;
+		Is Button Held(Event Player, Button(Interact)) == False;
 	}
 
 	actions
@@ -2832,7 +2839,7 @@ rule("19b - Teleportasi Jongkok: Lepaskan pengunci Primary dan Secondary")
 	}
 }
 
-rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
+rule("19c - Teleportasi Jongkok: Primary maju dan Secondary mundur empat halaman")
 {
 	event
 	{
@@ -2844,13 +2851,13 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 	conditions
 	{
 		Event Player.TeleportasiJongkokAktif == True;
-		Event Player.PerintahTeleportasi == 2;
+		Or(Event Player.PerintahTeleportasi == 1, Event Player.PerintahTeleportasi == 2) == True;
 	}
 
 	actions
 	{
-		Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + 1) % 3;
-		If(Event Player.KursorTeleportasi != 2);
+		Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 3)) % 4;
+		If(And(Event Player.KursorTeleportasi != 2, Event Player.KursorTeleportasi != 3));
 			Event Player.CalonTargetTeleportasi = Null;
 			If(Event Player.TeksTeleportasi != Null);
 				Destroy In-World Text(Event Player.TeksTeleportasi);
@@ -2878,6 +2885,7 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 			Event Player.TargetTeleportasiTeks = Null;
 			Call Subroutine(SegarkanTargetTeleportasi);
 		End;
+		Call Subroutine(GambarTeleportasi);
 	}
 }
 
@@ -2894,7 +2902,7 @@ rule("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")
 	{
 		Event Player.Manusia == True;
 		Event Player.TeleportasiJongkokAktif == True;
-		Event Player.KursorTeleportasi == 2;
+		Or(Event Player.KursorTeleportasi == 2, Event Player.KursorTeleportasi == 3) == True;
 		Is Alive(Event Player) == True;
 		Is Button Held(Event Player, Button(Crouch)) == True;
 		Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;
@@ -2918,7 +2926,7 @@ rule("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")
 	}
 }
 
-rule("19e - Teleportasi Jongkok: Primary Fire menjalankan halaman aktif")
+rule("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")
 {
 	event
 	{
@@ -2930,26 +2938,133 @@ rule("19e - Teleportasi Jongkok: Primary Fire menjalankan halaman aktif")
 	conditions
 	{
 		Event Player.TeleportasiJongkokAktif == True;
-		Event Player.PerintahTeleportasi == 1;
+		Event Player.PerintahTeleportasi == 3;
 	}
 
 	actions
 	{
 		Event Player.JenisTeleportasiTerkunci = Event Player.KursorTeleportasi;
 		Event Player.TargetTeleportasiTerkunci = Null;
-		Call Subroutine(SegarkanTargetTeleportasi);
-		If(Event Player.JenisTeleportasiTerkunci == 2);
+		If(Or(Event Player.JenisTeleportasiTerkunci == 2, Event Player.JenisTeleportasiTerkunci == 3));
+			Call Subroutine(SegarkanTargetTeleportasi);
 			Event Player.TargetTeleportasiTerkunci = Event Player.CalonTargetTeleportasi;
 		End;
 		If(Event Player.JenisTeleportasiTerkunci == 0);
 			Call Subroutine(TeleportKeSpawn);
 		Else If(Event Player.JenisTeleportasiTerkunci == 1);
 			Call Subroutine(TeleportKeObjektif);
-		Else;
+		Else If(Event Player.JenisTeleportasiTerkunci == 2);
 			Call Subroutine(TeleportKeTarget);
+		Else;
+			If(Or(Or(Event Player.TargetTeleportasiTerkunci == Null, Entity Exists(Event Player.TargetTeleportasiTerkunci) == False), Or(Has Spawned(Event Player.TargetTeleportasiTerkunci) == False, Is Alive(Event Player.TargetTeleportasiTerkunci) == False)));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attach target unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Target tempel tidak tersedia.") : Custom String("เป้าหมายสำหรับเกาะไม่พร้อมใช้งาน"));
+			Else If(And(Player Variable(Event Player.TargetTeleportasiTerkunci, LampiranTeleportasiAktif) == True, Player Variable(Event Player.TargetTeleportasiTerkunci, TargetLampiranTeleportasi) == Event Player));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attach refused: that would create a loop.") : Event Player.IndeksBahasa == 1 ? Custom String("Tempel ditolak: itu akan membuat lingkaran.") : Custom String("ไม่สามารถเกาะได้ เพราะจะเกิดวงวน"));
+			Else;
+				If(Event Player.LampiranTeleportasiAktif == True);
+					Detach Players(Event Player);
+				End;
+				Event Player.TargetLampiranTeleportasi = Event Player.TargetTeleportasiTerkunci;
+				Event Player.PahlawanLampiranSendiri = Hero Of(Event Player);
+				Event Player.PahlawanLampiranTarget = Hero Of(Event Player.TargetLampiranTeleportasi);
+				Event Player.LampiranTeleportasiAktif = True;
+				Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0, Y Component Of(Eye Position(Event Player.TargetLampiranTeleportasi)) - Y Component Of(Position Of(Event Player.TargetLampiranTeleportasi)) + 0.750, 0));
+				Disallow Button(Event Player, Button(Reload));
+				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attached above {0}. RELOAD detaches.", Event Player.TargetLampiranTeleportasi) : Event Player.IndeksBahasa == 1 ? Custom String("Menempel di atas {0}. RELOAD untuk lepas.", Event Player.TargetLampiranTeleportasi) : Custom String("เกาะอยู่เหนือ {0} กดรีโหลดเพื่อปล่อย", Event Player.TargetLampiranTeleportasi));
+			End;
 		End;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
+	}
+}
+
+rule("19f - Teleportasi Jongkok: Reload melepas lampiran")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.LampiranTeleportasiAktif == True;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Detached.") : Event Player.IndeksBahasa == 1 ? Custom String("Sudah lepas.") : Custom String("ปล่อยแล้ว"));
+	}
+}
+
+rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.LampiranTeleportasiAktif == True;
+	}
+
+	actions
+	{
+		If(Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False));
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+			Abort;
+		End;
+		If(Or(Event Player.TargetLampiranTeleportasi == Null, Entity Exists(Event Player.TargetLampiranTeleportasi) == False));
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+			Abort;
+		End;
+		If(Or(Has Spawned(Event Player.TargetLampiranTeleportasi) == False, Is Alive(Event Player.TargetLampiranTeleportasi) == False));
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+			Abort;
+		End;
+		If(Or(Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri, Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget));
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+			Abort;
+		End;
+		If(And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True));
+		Detach Players(Event Player);
+		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
+		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
+		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
+		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
+		Allow Button(Event Player, Button(Reload));
+		End;
 	}
 }
 
@@ -3104,7 +3219,7 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 			Else;
 				Set Player Variable(Global.PemainAktif, CalonTargetInspeksi, Null);
 			End;
-			If(And(Global.PemainAktif.TeleportasiJongkokAktif == True, And(Global.PemainAktif.KursorTeleportasi == 2, Is Button Held(Global.PemainAktif, Button(Crouch)) == True)));
+			If(And(Global.PemainAktif.TeleportasiJongkokAktif == True, And(Or(Global.PemainAktif.KursorTeleportasi == 2, Global.PemainAktif.KursorTeleportasi == 3), Is Button Held(Global.PemainAktif, Button(Crouch)) == True)));
 				Call Subroutine(SegarkanTargetPublikAktif);
 				Set Player Variable(Global.PemainAktif, DaftarTargetTeleportasi, Global.PemainAktif.DaftarTargetInspeksi);
 				Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, Count Of(Global.PemainAktif.DaftarTargetTeleportasi) == 0 ? Null : First Of(Sorted Array(Global.PemainAktif.DaftarTargetTeleportasi, Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
@@ -3134,7 +3249,7 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("Camera target unavailable or private. Back to normal.") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("Target kamera tidak tersedia atau privat. Kembali normal.") : Custom String("เป้าหมายกล้องไม่พร้อมใช้งานหรือเป็นส่วนตัว กลับมุมมองปกติแล้ว"));
 			End;
 		End;
-		If(And(Global.PemainAktif.InspeksiAktif == True, Or(Or(Or(Or(Or(Or(Is Button Held(Global.PemainAktif, Button(Crouch)) == False, Global.PemainAktif.MenuTerbuka == True), Has Spawned(Global.PemainAktif) == False), Is Alive(Global.PemainAktif) == False), Global.PemainAktif.ModeKamera == 2), And(Global.PemainAktif.TeleportasiJongkokAktif == True, Global.PemainAktif.KursorTeleportasi != 2)), Global.PemainAktif.PrivasiNasibAktif == True)));
+		If(And(Global.PemainAktif.InspeksiAktif == True, Or(Or(Or(Or(Or(Or(Is Button Held(Global.PemainAktif, Button(Crouch)) == False, Global.PemainAktif.MenuTerbuka == True), Has Spawned(Global.PemainAktif) == False), Is Alive(Global.PemainAktif) == False), Global.PemainAktif.ModeKamera == 2), And(Global.PemainAktif.TeleportasiJongkokAktif == True, And(Global.PemainAktif.KursorTeleportasi != 2, Global.PemainAktif.KursorTeleportasi != 3))), Global.PemainAktif.PrivasiNasibAktif == True)));
 			If(Global.PemainAktif.PelatNamaDinonaktifkan == True);
 				Enable Nameplates(All Players(All Teams), Global.PemainAktif);
 				Global.PemainAktif.PelatNamaDinonaktifkan = False;
@@ -3515,8 +3630,8 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 		End;
-		Event Player.KursorTeleportasi %= 3;
-		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: next page", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("release {0}: close", Input Binding String(Button(Crouch)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("{0}: teleport | {1}: halaman berikutnya", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("lepas {0}: tutup", Input Binding String(Button(Crouch)))) : Custom String("{0}\n{1}", Custom String("{0}: เทเลพอร์ต | {1}: หน้าถัดไป", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("ปล่อย {0}: ปิด", Input Binding String(Button(Crouch)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> SPAWN ROOM\n{0}", Is In Spawn Room(Event Player) ? Custom String("YOU ARE ALREADY HERE") : Custom String("PRIMARY FIRE: TELEPORT")) : Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJECTIVE / FLAG\nPRIMARY FIRE: TELEPORT") : Custom String("TELEPORT 3/3\n> ALL PLAYERS\nTARGET: {0}\nAIM AT A VISIBLE NAME", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/3\n> RUANG MUNCUL\n{0}", Is In Spawn Room(Event Player) ? Custom String("KAMU SUDAH DI SINI") : Custom String("PRIMARY FIRE: TELEPORT")) : Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/3\n> OBJEKTIF / BENDERA\nPRIMARY FIRE: TELEPORT") : Custom String("TELEPORT 3/3\n> SEMUA PLAYER\nTARGET: {0}\nARAHKAN KE NAMA YANG TERLIHAT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/3\n> ห้องเกิด\n{0}", Is In Spawn Room(Event Player) ? Custom String("คุณอยู่ที่นี่แล้ว") : Custom String("ยิงหลัก: เทเลพอร์ต")) : Event Player.KursorTeleportasi == 1 ? Custom String("เทเลพอร์ต 2/3\n> เป้าหมาย / ธง\nยิงหลัก: เทเลพอร์ต") : Custom String("เทเลพอร์ต 3/3\n> ผู้เล่นทั้งหมด\nเป้าหมาย: {0}\nเล็งไปที่ชื่อที่มองเห็น", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 3, Color(White), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
+		Event Player.KursorTeleportasi %= 4;
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}: next | {1}: previous | {2}: action", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact))), Custom String("release {0}: close | {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("{0}: berikutnya | {1}: sebelumnya | {2}: aksi", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact))), Custom String("lepas {0}: tutup | {1}: lepas tempel", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("{0}: ถัดไป | {1}: ก่อนหน้า | {2}: ใช้งาน", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact))), Custom String("ปล่อย {0}: ปิด | {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/4\n> SPAWN ROOM\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/4\n> OBJECTIVE / FLAG\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("TELEPORT 3/4\n> PLAYER / BOT\nTARGET: {0}\nINTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Custom String("TELEPORT 4/4\n> ATTACH ABOVE PLAYER / BOT\nTARGET: {0}\nINTERACT: ATTACH | RELOAD: DETACH", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("TELEPORT 1/4\n> RUANG MUNCUL\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("TELEPORT 2/4\n> OBJEKTIF / BENDERA\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("TELEPORT 3/4\n> PLAYER / BOT\nTARGET: {0}\nINTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Custom String("TELEPORT 4/4\n> TEMPEL DI ATAS PLAYER / BOT\nTARGET: {0}\nINTERACT: TEMPEL | RELOAD: LEPAS", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Event Player.KursorTeleportasi == 0 ? Custom String("เทเลพอร์ต 1/4\n> ห้องเกิด\nใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 1 ? Custom String("เทเลพอร์ต 2/4\n> เป้าหมาย / ธง\nใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 2 ? Custom String("เทเลพอร์ต 3/4\n> ผู้เล่น / บอต\nเป้าหมาย: {0}\nใช้งาน: เทเลพอร์ต", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")) : Custom String("เทเลพอร์ต 4/4\n> เกาะเหนือผู้เล่น / บอต\nเป้าหมาย: {0}\nใช้งาน: เกาะ | รีโหลด: ปล่อย", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -3864,6 +3979,11 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 	{
 		"Pemicu sudah mati; pulihkan sistem dalam kelompok kecil lalu lakukan pembersihan atomik."
 		Stop Camera(Event Player);
+		Detach Players(Event Player);
+		Event Player.LampiranTeleportasiAktif = False;
+		Event Player.TargetLampiranTeleportasi = Null;
+		Event Player.PahlawanLampiranSendiri = Null;
+		Event Player.PahlawanLampiranTarget = Null;
 		Stop Chasing Player Variable(Event Player, WarnaMenu);
 		Clear Status(Event Player, Unkillable);
 		Set Damage Received(Event Player, 100);
@@ -3963,6 +4083,14 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		Call Subroutine(HitungPilihan);
 		"Bersihkan semua referensi pemain yang keluar dari utang balas dendam milik pemain yang masih ada."
 		For Global Variable(IndeksPembersihan, 0, Count Of(Global.PemainManusia), 1);
+			If(Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetLampiranTeleportasi) == Global.PemainPembersihan);
+				Detach Players(Global.PemainManusia[Global.IndeksPembersihan]);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], LampiranTeleportasiAktif, False);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], TargetLampiranTeleportasi, Null);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PahlawanLampiranSendiri, Null);
+				Set Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PahlawanLampiranTarget, Null);
+				Allow Button(Global.PemainManusia[Global.IndeksPembersihan], Button(Reload));
+			End;
 			Global.IndeksUtangKeluar = Index Of Array Value(Global.PemainManusia[Global.IndeksPembersihan].PembunuhBalasDendam, Global.PemainPembersihan);
 			If(Global.IndeksUtangKeluar >= 0);
 				Modify Player Variable(Global.PemainManusia[Global.IndeksPembersihan], PembunuhBalasDendam, Remove From Array By Index, Global.IndeksUtangKeluar);
@@ -4119,6 +4247,10 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TargetDummyIkuti = Null;
 		Event Player.CalonTargetInspeksi = Null;
 		Event Player.PosisiTeleportTujuan = Vector(0, 0, 0);
+		Event Player.TargetLampiranTeleportasi = Null;
+		Event Player.LampiranTeleportasiAktif = False;
+		Event Player.PahlawanLampiranSendiri = Null;
+		Event Player.PahlawanLampiranTarget = Null;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = False;

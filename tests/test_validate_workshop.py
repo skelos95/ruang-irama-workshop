@@ -1682,7 +1682,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
             "True",
         )
-        self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+        self.assert_rejected(mutated, "cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo")
     def test_no_target_cleanup_rejects_cached_target_opt_out(self) -> None:
         cleanup = self.rule(
             lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body

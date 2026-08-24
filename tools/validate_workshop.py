@@ -3786,15 +3786,15 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
             (
                 rule
                 for rule in rules
-                if "PerintahTeleportasi == 1" in rule.body
+                if "PerintahTeleportasi == 3" in rule.body
                 and "Call Subroutine(TeleportKeObjektif);" in rule.body
             ),
             None,
         )
         checks.require(
             click_dispatch is not None
-            or "PerintahTeleportasi == 1" in objective_rule.body
-            or "Button(Primary Fire)" in objective_rule.body,
+            or "PerintahTeleportasi == 3" in objective_rule.body
+            or "Button(Interact)" in objective_rule.body,
             "destinazione teleport non viene valutata al click",
         )
     for token in FORBIDDEN_RESULT_ACTIONS:
