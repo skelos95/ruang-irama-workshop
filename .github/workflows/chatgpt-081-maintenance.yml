@@ -25,7 +25,8 @@ jobs:
         run: |
           set -euo pipefail
           python tools/chatgpt_081_serial_lifecycle.py
-          git rm -f tools/chatgpt_081_serial_lifecycle.py .github/workflows/chatgpt-081-maintenance.yml
+          python tools/chatgpt_081_fix_leave_validator.py
+          git rm -f tools/chatgpt_081_serial_lifecycle.py tools/chatgpt_081_fix_leave_validator.py .github/workflows/chatgpt-081-maintenance.yml
 
           python -m py_compile tools/validate_workshop.py tests/test_validate_workshop.py tests/test_runtime_maintenance.py
           python tools/validate_workshop.py
