@@ -17,38 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Dump forcing syntax and failing test
+      - name: Dump forcing position references
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          s=Path('workshop/ruang_irama.it-IT.workshop').read_text(encoding='utf-8')
-          def end_brace(start):
-              o=s.find('{', start); d=0; ins=False; esc=False
-              for i in range(o,len(s)):
-                  c=s[i]
-                  if ins:
-                      if esc: esc=False
-                      elif c=='\\': esc=True
-                      elif c=='"': ins=False
-                      continue
-                  if c=='"': ins=True
-                  elif c=='{': d+=1
-                  elif c=='}':
-                      d-=1
-                      if d==0: return i+1
-              raise SystemExit('unclosed')
-          for m in re.finditer(r'regola\("([^"]+)"\)', s):
-              e=end_brace(m.start()); block=s[m.start():e]
-              if 'Forcing Player Position' in block:
-                  print('\n===== '+m.group(1)+' =====\n'+block)
-          t=Path('tests/test_validate_workshop.py').read_text(encoding='utf-8')
-          name='test_native_dummy_cache_respects_per_player_follow_opt_out'
-          a=t.index('    def '+name)
-          b=t.find('\n    def ', a+1)
-          print('\n===== FAILING TEST =====\n'+t[a:b])
-          v=Path('tools/validate_workshop.py').read_text(encoding='utf-8')
-          needle='cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo'
-          a=max(0,v.index(needle)-1800); b=min(len(v),v.index(needle)+2200)
-          print('\n===== VALIDATOR CACHE BLOCK =====\n'+v[a:b])
+          for fn in ['workshop/ruang_irama.it-IT.workshop','tests/fixtures/semantic_reference.txt','tools/validate_workshop.py','tests/test_validate_workshop.py']:
+              print('\n===== '+fn+' =====')
+              for i,line in enumerate(Path(fn).read_text(encoding='utf-8').splitlines(),1):
+                  if 'Forcing' in line or 'forcing' in line:
+                      print(f'{i}: {line}')
           PY
