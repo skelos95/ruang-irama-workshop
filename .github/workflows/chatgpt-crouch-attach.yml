@@ -27,6 +27,37 @@ jobs:
           set +e
           LOG=/tmp/crouch-attach-ci.log
           : > "$LOG"
+
+          # Hot-fix only the temporary patcher: the stale validator message occurs in
+          # multiple negative tests, but only this specific opt-out test needs the new
+          # earlier guard message.
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tools/chatgpt_crouch_attach_patch.py')
+          s = p.read_text(encoding='utf-8')
+          old = '''test = replace_once(
+              test,
+              'self.assert_rejected(mutated, "cache target dummy: filtro deve essere l\\'umano nemico vivo opt-in")',
+              'self.assert_rejected(mutated, "cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo")',
+              "stale dummy cache error expectation",
+          )'''
+          new = '''method_name = "test_native_dummy_cache_respects_per_player_follow_opt_out"
+          method_start = test.index(f"    def {method_name}(self")
+          method_end = test.find("\\n    def ", method_start + 1)
+          if method_end < 0:
+              method_end = len(test)
+          method_block = test[method_start:method_end]
+          old_expectation = 'self.assert_rejected(mutated, "cache target dummy: filtro deve essere l\\'umano nemico vivo opt-in")'
+          new_expectation = 'self.assert_rejected(mutated, "cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo")'
+          if method_block.count(old_expectation) != 1:
+              raise RuntimeError("targeted stale dummy-cache expectation missing")
+          method_block = method_block.replace(old_expectation, new_expectation, 1)
+          test = test[:method_start] + method_block + test[method_end:]'''
+          if old not in s:
+              raise SystemExit('temporary patcher hot-fix anchor missing')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
           run_gate() {
             echo "===== $1 =====" | tee -a "$LOG"
             shift
@@ -69,7 +100,7 @@ jobs:
           fi
 
           git rm .github/workflows/chatgpt-crouch-attach.yml tools/chatgpt_crouch_attach_patch.py
-          rm -f chatgpt-crouch-attach-ci.log
+          git rm -f chatgpt-crouch-attach-ci.log 2>/dev/null || true
           git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_validate_workshop.py tests/test_runtime_maintenance.py CHANGELOG.md
           git commit -m "Add Crouch Teleport attach mode"
           git push origin HEAD:chatgpt-crouch-attach
