@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Dump relevant Workshop rules
+      - name: Dump forcing syntax and failing test
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -39,13 +39,16 @@ jobs:
                       if d==0: return i+1
               raise SystemExit('unclosed')
           for m in re.finditer(r'regola\("([^"]+)"\)', s):
-              name=m.group(1)
-              e=end_brace(m.start())
-              block=s[m.start():e]
-              if ('Teleportasi Jongkok' in name or 'GambarTeleportasi' in block or 'TerapkanTeleportasiJongkok' in block or 'SegarkanTargetTeleportasi' in block or 'KursorTeleportasi' in block):
-                  print('\n===== '+name+' =====\n'+block)
-          print('\n===== PLAYER VAR TAIL =====')
-          a=s.index('\t\t80: EfekNasib')
-          b=s.index('\n}\n\nsubroutine', a)
-          print(s[a:b])
+              e=end_brace(m.start()); block=s[m.start():e]
+              if 'Forcing Player Position' in block:
+                  print('\n===== '+m.group(1)+' =====\n'+block)
+          t=Path('tests/test_validate_workshop.py').read_text(encoding='utf-8')
+          name='test_native_dummy_cache_respects_per_player_follow_opt_out'
+          a=t.index('    def '+name)
+          b=t.find('\n    def ', a+1)
+          print('\n===== FAILING TEST =====\n'+t[a:b])
+          v=Path('tools/validate_workshop.py').read_text(encoding='utf-8')
+          needle='cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo'
+          a=max(0,v.index(needle)-1800); b=min(len(v),v.index(needle)+2200)
+          print('\n===== VALIDATOR CACHE BLOCK =====\n'+v[a:b])
           PY
