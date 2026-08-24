@@ -81,6 +81,16 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget", source)
             self.assertIn("TargetLampiranTeleportasi) == Global.PemainPembersihan", source.replace("Globale.", "Global."))
 
+    def test_jump_resurrect_always_has_non_aborting_fallbacks(self):
+        for source in (self.it, self.en):
+            self.assertNotIn("No safe resurrection position was found.", source)
+            self.assertNotIn("Tidak ada posisi bangkit yang aman.", source)
+            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);", source)
+            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Spawn Points(Team Of(Event Player)))));", source)
+            self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", source)
+            self.assertIn("Resurrect(Event Player);\n\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);", source)
+
+
     def test_custom_string_uses_at_most_three_substitution_values(self):
         for source in (self.it, self.en):
             self.assertNotIn("{3}", source)

@@ -54,8 +54,10 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertNotIn("All Players(Squadra 1)", self.it)
         self.assertNotIn("All Players(Squadra 2)", self.it)
 
-    def test_dummy_respawn_is_30_seconds(self):
-        self.assertIn("Set Respawn Max Time(Event Player, 30);", self.it)
+    def test_dummy_respawn_is_3_seconds(self):
+        for source in (self.it, self.en):
+            self.assertIn("Set Respawn Max Time(Event Player, 3);", source)
+            self.assertNotIn("Set Respawn Max Time(Event Player, 30);", source)
 
     def test_only_native_dummies_ignore_walls_but_keep_floor_collision(self):
         action = "Disable Movement Collision With Environment(Event Player, False);"

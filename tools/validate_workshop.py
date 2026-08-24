@@ -3484,7 +3484,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                     Enable Movement Collision With Players(Event Player);
                     Disable Movement Collision With Environment(Event Player, False);
                     Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
-                    Set Respawn Max Time(Event Player, 30);
+                    Set Respawn Max Time(Event Player, 3);
                 End;
             """
             checks.equal(
