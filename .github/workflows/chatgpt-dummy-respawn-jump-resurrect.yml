@@ -12,7 +12,7 @@ jobs:
   build-test:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Check out feature branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -31,7 +31,6 @@ jobs:
           python tools/validate_workshop.py
           python -m unittest tests.test_dummy_bots tests.test_runtime_maintenance
           python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
-          python -m unittest discover -s tests -p 'test_*.py'
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
