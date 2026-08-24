@@ -16,7 +16,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan senza Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertNotIn("Sorted Array(Filtered Array", inspect)
             self.assertIn("CalonTargetInspeksi", inspect)
             self.assertNotIn("19d0 - Teleportasi Jongkok", source)
@@ -53,7 +53,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Event Player.PerintahTeleportasi = 3;", source)
             self.assertIn("PerintahTeleportasi == 3;", source)
             self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 3)) % 4", source)
-            self.assertIn("ATTACH ABOVE PLAYER / BOT", source)
+            self.assertIn("PLAYER / BOT ATTACH 4/4", source)
 
     def test_crouch_attach_uses_native_attach_and_reload_detach(self):
         for source in (self.it, self.en):
