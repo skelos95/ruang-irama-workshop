@@ -128,33 +128,24 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertNotIn("Set Move Speed(Event Player, 0);", en_lock)
 
     def test_dummy_faces_nearest_living_enemy_human_without_extra_loop(self):
-        movement_it = self.it.split('regola("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
-            'regola("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
-        )[0]
-        movement_en = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
-            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
-        )[0]
-        for movement, global_name in ((movement_it, "Globale"), (movement_en, "Global")):
-            self.assertIn("Start Facing(Event Player", movement)
-            self.assertIn(f"Sorted Array(Filtered Array({global_name}.PemainManusia", movement)
-            self.assertEqual(
-                movement.count("Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))"),
-                3,
-            )
-            self.assertEqual(
-                movement.count("Player Variable(Current Array Element, Manusia) == True"),
-                3,
-            )
-            self.assertEqual(
-                movement.count("Player Variable(Current Array Element, IzinkanDummyMengikuti) == True"),
-                3,
-            )
+        for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
+            movement = source.split(f'{rule_kw}("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
+                f'{rule_kw}("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
+            )[0]
+            self.assertIn("Event Player.TargetDummyIkuti", movement)
+            self.assertNotIn("Sorted Array(Filtered Array", movement)
+            self.assertNotIn(f"Filtered Array({global_name}.PemainManusia", movement)
             self.assertIn("Direction and Turn Rate", movement)
-            self.assertNotIn("Event Player.BotOtomatis", movement)
-            self.assertNotIn("Wait(", movement)
-        self.assertIn("Stop Facing(Event Player);", self.it)
-        self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
+            self.assertIn("Direction and Magnitude", movement)
 
+            scheduler = source.split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[1].split(
+                f'{rule_kw}("89c - Subrutin: Proses simpanan pemain 1 Hz")', 1
+            )[0]
+            self.assertIn("TargetDummyIkuti", scheduler)
+            self.assertIn(f"Filtered Array({global_name}.PemainManusia", scheduler)
+            self.assertIn("IzinkanDummyMengikuti", scheduler)
+            self.assertIn("Sorted Array", scheduler)
+        self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
     def test_dummy_follow_page_defaults_off_and_is_per_player(self):
         for source in (self.it, self.en):
             self.assertIn(
@@ -168,29 +159,23 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("12 - DUMMY MENGIKUTI", source)
 
     def test_native_dummy_walks_forward_automatically_and_stops_cleanly(self):
-        for source in (self.it, self.en):
+        for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             self.assertEqual(source.count("Start Throttle In Direction(Event Player, Forward,"), 1)
-            self.assertIn("Or(Is In Spawn Room(Event Player), Distance Between(Event Player, First Of(Sorted Array(", source)
-            self.assertIn("<= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);", source)
-            self.assertNotIn("Is In Spawn Room(Event Player) ? 0 : 1, To Player", source)
+            self.assertIn("Distance Between(Event Player, Event Player.TargetDummyIkuti) <= 4", source)
             self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 2)
             self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 1)
 
-        movement = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
-            'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
-        )[0]
-        self.assertIn("Is Dummy Bot(Event Player) == True;", movement)
-        self.assertNotIn("Event Player.BotOtomatis", movement)
-        self.assertNotIn("Wait(", movement)
+            movement = source.split(f'{rule_kw}("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
+                f'{rule_kw}("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
+            )[0]
+            self.assertIn("Is Dummy Bot(Event Player) == True;", movement)
+            self.assertIn("TargetDummyIkuti", movement)
+            self.assertNotIn("Wait(", movement)
 
-        cleanup = self.en.split('rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1)[1].split(
-            'rule("03i - Bot/Dummy: Hentikan gerak saat bot mati")', 1
-        )[0]
-        self.assertEqual(
-            cleanup.count("Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))"),
-            1,
-        )
-
+            cleanup = source.split(f'{rule_kw}("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1)[1].split(
+                f'{rule_kw}("03i - Bot/Dummy: Hentikan gerak saat bot mati")', 1
+            )[0]
+            self.assertIn("TargetDummyIkuti", cleanup)
 
 if __name__ == "__main__":
     unittest.main()

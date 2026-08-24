@@ -2082,17 +2082,29 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
     if state_machine:
         masked_state_machine = mask_strings(state_machine.body)
         for token, label in (
-            ("Clear Status(Global.PemainAktif, Unkillable);", "Clear Status Unkillable"),
             ("Set Status(Global.PemainAktif, Null, Unkillable", "Set Status Unkillable"),
-            ("Set Damage Received(Global.PemainAktif", "Damage Received"),
             ("Set Knockback Received(Global.PemainAktif", "Knockback Received"),
             ("Enable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
             ("Disable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
         ):
             checks.require(
                 token not in masked_state_machine,
-                f"Try Your Luck: {label} può essere modificato soltanto dal bypass Skull/Revenge",
+                f"Try Your Luck: {label} non appartiene al bypass Burning",
             )
+        checks.require(masked_state_machine.count("Clear Status(Global.PemainAktif, Unkillable);") >= 2,
+                       "Burning deve sospendere Unkillable all'applicazione e prima di ogni tick")
+        checks.require(masked_state_machine.count("Set Damage Received(Global.PemainAktif, 100);") >= 2,
+                       "Burning deve ripristinare Damage Received prima dei tick")
+        checks.require(
+            "Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.050);"
+            in masked_state_machine,
+            "Burning deve infliggere il 5% della Max Health per tick",
+        )
+        checks.require(
+            "Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 1.000;"
+            in masked_state_machine,
+            "Burning deve usare tick da un secondo",
+        )
 
         def if_block_containing(condition_fragment: str) -> str | None:
             condition_position = masked_state_machine.find(condition_fragment)
@@ -2495,9 +2507,10 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
             ("Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir", "scadenza deadline"),
             ("Global.PemainAktif.KematianBalasDendam == False", "blocco riapplicazione Kebal Revenge"),
             (
-                "Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, "
-                "Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0)))",
-                "blocco riapplicazione Kebal solo per Skull finale armato",
+                "And(And(Global.PemainAktif.KartuNasibAktif == True, Global.PemainAktif.PutaranKartuNasib == 0), "
+                "Or(And(Global.PemainAktif.EfekNasib == 3, Global.PemainAktif.WaktuPaksaBerakhir > 0), "
+                "And(Global.PemainAktif.EfekNasib == 5, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed))) == False",
+                "blocco riapplicazione Kebal durante Skull/Burning finali",
             ),
         ):
             checks.require(token in processor_masked, f"morte completa: {label} assente")
@@ -2904,8 +2917,8 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                 privacy_reads,
                 f"{rule.name}: filtro Privacy non analizzabile come chiamata bilanciata",
             )
-    checks.equal(privacy_read_total, 4, "numero filtri Privacy target-aware")
-    checks.equal(parsed_privacy_filter_total, 4, "filtri Privacy strutturalmente analizzabili")
+    checks.equal(privacy_read_total, 2, "numero filtri Privacy target-aware condivisi")
+    checks.equal(parsed_privacy_filter_total, 2, "filtri Privacy condivisi strutturalmente analizzabili")
     camera_targets = rule_by_subroutine(rules, "SegarkanTargetKamera")
     checks.require(camera_targets is not None, "SegarkanTargetKamera assente per filtro Privacy")
     if camera_targets:
@@ -2925,8 +2938,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     inspection_refresh = rule_by_subroutine(rules, "SegarkanTargetInspeksi")
     checks.require(inspection_refresh is not None, "SegarkanTargetInspeksi assente per filtro Privacy")
     if inspection_refresh:
-        checks.require("Call Subroutine(SegarkanTargetPublikPemain);" in inspection_refresh.body,
-                       "inspection non riusa la subroutine pubblica condivisa")
+        checks.require("Event Player.CalonTargetInspeksi" in inspection_refresh.body,
+                       "inspection non consuma il candidato cache del scheduler")
+        checks.require("Filtered Array(" not in inspection_refresh.body and "Sorted Array(" not in inspection_refresh.body,
+                       "inspection refresh reintroduce una scansione pesante fuori dallo scheduler")
         checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_refresh.body,
                        "inspection reintroduce il bypass Privacy tramite Vision")
 
@@ -2934,14 +2949,14 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
         ),
         None,
     )
-    checks.require(inspection_live is not None, "aggiornamento live inspection assente")
+    checks.require(inspection_live is not None, "aggiornamento live inspection cache assente")
     if inspection_live:
-        checks.require(public_target_pattern.search(inspection_live.body) is not None,
-                       "inspection live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Sorted Array(Filtered Array(" not in inspection_live.body,
+                       "inspection live ricalcola ancora i target fuori dallo scheduler")
         checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_live.body,
                        "inspection live reintroduce il bypass Privacy tramite Vision")
         checks.require("Event Player.PrivasiNasibAktif == False;" in inspection_live.body,
@@ -2951,26 +2966,34 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
                        "inspection può mostrare nameplate di umani privati")
 
+    cycle_targets = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    checks.require(cycle_targets is not None, "scheduler 10 Hz assente per target cache")
+    if cycle_targets:
+        checks.require("Call Subroutine(SegarkanTargetPublikAktif);" in cycle_targets.body,
+                       "scheduler target non riusa il filtro pubblico condiviso")
+        checks.require("Set Player Variable(Global.PemainAktif, CalonTargetInspeksi," in cycle_targets.body,
+                       "scheduler 10 Hz non aggiorna CalonTargetInspeksi")
+        checks.require("Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi," in cycle_targets.body,
+                       "scheduler 10 Hz non aggiorna CalonTargetTeleportasi")
+        checks.require("Angle Between Vectors(Facing Direction Of(Global.PemainAktif)" in cycle_targets.body,
+                       "scheduler target non conserva l'ordinamento angolare originale")
+
     teleport_refresh = rule_by_subroutine(rules, "SegarkanTargetTeleportasi")
     checks.require(teleport_refresh is not None, "SegarkanTargetTeleportasi assente per filtro Privacy")
     if teleport_refresh:
         checks.require("Call Subroutine(SegarkanTargetPublikPemain);" in teleport_refresh.body,
-                       "teleport non riusa la subroutine pubblica condivisa")
+                       "teleport discreto non riusa la subroutine pubblica condivisa")
         checks.require("Event Player.DaftarTargetTeleportasi = Event Player.DaftarTargetInspeksi;" in teleport_refresh.body,
-                       "teleport non usa la lista pubblica condivisa")
+                       "teleport discreto non usa la lista pubblica condivisa")
 
-    teleport_live = next(
-        (
-            rule for rule in rules
-            if event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(" in rule.body
-        ),
-        None,
-    )
-    checks.require(teleport_live is not None, "aggiornamento live teleport assente")
-    if teleport_live:
-        checks.require(public_target_pattern.search(teleport_live.body) is not None,
-                       "teleport live non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+    heavy_live_target_rules = [
+        rule for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and "Sorted Array(Filtered Array(All Players(All Teams)" in rule.body
+        and ("TargetInspeksi" in rule.body or "CalonTargetTeleportasi" in rule.body)
+    ]
+    checks.equal(len(heavy_live_target_rules), 0,
+                 "inspection/teleport non devono fare scansioni target pesanti nelle regole live")
 
     teleport_entry = next(
         (
@@ -3515,13 +3538,27 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         "And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, "
         "And(Has Spawned(Current Array Element), "
         "And(Is Alive(Current Array Element), "
-        "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))"
+        "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))"
     )
-    expected_enemy_filter = f"Filtered Array(Global.PemainManusia, {expected_enemy_predicate})"
-    expected_nearest_enemy = (
-        f"First Of(Sorted Array({expected_enemy_filter}, "
-        "Distance Between(Event Player, Current Array Element)))"
-    )
+    dummy_cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    checks.require(dummy_cycle is not None, "cache target dummy 10 Hz assente")
+    if dummy_cycle:
+        target_filters = [
+            call for call in iter_calls(dummy_cycle.body, "Filtered Array")
+            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainManusia"
+            and "IzinkanDummyMengikuti" in call.raw
+        ]
+        checks.equal(len(target_filters), 1,
+                     "cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo")
+        if target_filters:
+            checks.equal(compact(target_filters[0].args[1]), compact(expected_enemy_predicate),
+                         "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+        checks.require(
+            "Set Player Variable(Global.PemainAktif, TargetDummyIkuti, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Distance Between(Global.PemainAktif, Current Array Element))));"
+            in dummy_cycle.body,
+            "cache target dummy non seleziona il più vicino a 10 Hz",
+        )
+
     dummy_movement = next(
         (
             rule for rule in rules
@@ -3533,44 +3570,22 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_movement is not None, "movimento automatico dummy assente")
     if dummy_movement:
-        checks.equal(
-            compact(event_block(dummy_movement)),
-            compact("Ongoing - Each Player; All; All;"),
-            "movimento dummy: evento esatto per entrambe le squadre",
-        )
+        checks.equal(compact(event_block(dummy_movement)), compact("Ongoing - Each Player; All; All;"),
+                     "movimento dummy: evento esatto per entrambe le squadre")
         for token in (
             "Is Dummy Bot(Event Player) == True;",
             "Has Spawned(Event Player) == True;",
             "Is Alive(Event Player) == True;",
-            "Sorted Array(Filtered Array(Global.PemainManusia",
+            "Event Player.TargetDummyIkuti != Null;",
+            "Entity Exists(Event Player.TargetDummyIkuti) == True;",
+            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == True;",
+            "Team Of(Event Player.TargetDummyIkuti) == Opposite Team Of(Team Of(Event Player));",
         ):
             checks.require(token in dummy_movement.body, f"movimento automatico dummy incompleto: {token}")
-        movement_filters = [
-            call for call in iter_calls(dummy_movement.body, "Filtered Array")
-            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainManusia"
-        ]
-        checks.equal(len(movement_filters), 3,
-                     "movimento dummy: filtri target nemico in condizione/facing/throttle")
-        for index, target_filter in enumerate(movement_filters, start=1):
-            checks.equal(compact(target_filter.args[1]), compact(expected_enemy_predicate),
-                          f"movimento dummy: filtro target {index} deve essere l'umano nemico vivo opt-in")
-
-        movement_conditions = rule_block(dummy_movement, "conditions")
-        checks.require(movement_conditions is not None,
-                       "movimento dummy: blocco conditions assente")
-        if movement_conditions is not None:
-            expected_movement_conditions = f"""
-                Global.Siap == True;
-                Is Dummy Bot(Event Player) == True;
-                Has Spawned(Event Player) == True;
-                Is Alive(Event Player) == True;
-                Count Of({expected_enemy_filter}) > 0;
-            """
-            checks.equal(
-                compact(movement_conditions),
-                compact(expected_movement_conditions),
-                "movimento dummy: condizioni esatte per un umano nemico vivo opt-in",
-            )
+        checks.require("Filtered Array(Global.PemainManusia" not in dummy_movement.body,
+                       "movimento dummy ricalcola ancora il roster invece di usare TargetDummyIkuti")
+        checks.require("Sorted Array(" not in dummy_movement.body,
+                       "movimento dummy riordina ancora i target per-frame")
 
         facing_calls = list(iter_calls(dummy_movement.body, "Start Facing"))
         checks.equal(len(facing_calls), 1, "movimento dummy: numero facing automatici")
@@ -3586,14 +3601,9 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                 ):
                     checks.equal(facing.args[index].strip(), expected,
                                  f"movimento dummy: facing argomento {index}")
-                checks.equal(
-                    compact(facing.args[1]),
-                    compact(
-                        f"Direction Towards(Eye Position(Event Player), "
-                        f"Eye Position({expected_nearest_enemy}))"
-                    ),
-                    "movimento dummy: facing dell'umano nemico opt-in più vicino",
-                )
+                checks.equal(compact(facing.args[1]),
+                             compact("Direction Towards(Eye Position(Event Player), Eye Position(Event Player.TargetDummyIkuti))"),
+                             "movimento dummy: facing deve usare il target cache")
 
         throttle_calls = list(iter_calls(dummy_movement.body, "Start Throttle In Direction"))
         checks.equal(len(throttle_calls), 1, "movimento dummy: numero throttle automatici")
@@ -3610,31 +3620,19 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                 ):
                     checks.equal(throttle.args[index].strip(), expected,
                                  f"movimento dummy: throttle argomento {index}")
-                magnitude = parse_top_level_ternary(throttle.args[2])
-                checks.require(magnitude is not None,
-                               "movimento dummy: magnitudine rivalutata senza ternario di arresto")
-                if magnitude:
-                    stop_condition, stopped, moving = magnitude
-                    checks.equal(stopped, "0", "movimento dummy: magnitudine entro quattro metri")
-                    checks.equal(moving, "1", "movimento dummy: magnitudine oltre quattro metri")
-                    checks.equal(
-                        compact(stop_condition),
-                        compact(
-                            f"Or(Is In Spawn Room(Event Player), "
-                            f"Distance Between(Event Player, {expected_nearest_enemy}) <= 4)"
-                        ),
-                        "movimento dummy: arresto esatto in spawn o entro quattro metri dal target opt-in",
-                    )
-        movement_actions = rule_block(dummy_movement, "actions")
-        checks.require(movement_actions is not None,
-                       "movimento dummy: blocco actions assente")
-        if movement_actions is not None and len(facing_calls) == 1 and len(throttle_calls) == 1:
-            expected_movement_actions = f"{facing_calls[0].raw};\n{throttle_calls[0].raw};"
-            checks.equal(
-                compact(movement_actions),
-                compact(expected_movement_actions),
-                "movimento dummy: azioni esatte senza abort o arresti aggiuntivi",
-            )
+            magnitude = parse_top_level_ternary(throttle.args[2]) if len(throttle.args) >= 3 else None
+            checks.require(magnitude is not None, "movimento dummy: ternario arresto assente")
+            if magnitude:
+                stop_condition, stopped, moving = magnitude
+                checks.equal(stopped, "0", "movimento dummy: magnitudine entro quattro metri")
+                checks.equal(moving, "1", "movimento dummy: magnitudine oltre quattro metri")
+                checks.equal(compact(stop_condition),
+                             compact("Or(Is In Spawn Room(Event Player), Distance Between(Event Player, Event Player.TargetDummyIkuti) <= 4)"),
+                             "movimento dummy: arresto deve usare il target cache")
+        checks.require("Abort;" not in dummy_movement.body
+                       and "Stop Facing(Event Player);" not in dummy_movement.body
+                       and "Stop Throttle In Direction(Event Player);" not in dummy_movement.body,
+                       "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
         checks.require(not wait_calls(dummy_movement.body) and action_loop_count(dummy_movement.body) == 0,
                        "movimento automatico dummy non deve usare Wait/Loop")
 
@@ -3643,58 +3641,30 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             rule for rule in rules
             if event_type(rule) == "Ongoing - Each Player"
             and "Is Dummy Bot(Event Player) == True;" in rule.body
-            and "Count Of(Filtered Array(Global.PemainManusia" in rule.body
-            and ")) == 0;" in rule.body
+            and "Event Player.TargetDummyIkuti == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         ),
         None,
     )
-    checks.require(no_target_cleanup is not None, "cleanup movimento dummy senza target assente")
+    checks.require(no_target_cleanup is not None, "cleanup movimento dummy cache senza target assente")
     if no_target_cleanup:
-        checks.equal(
-            compact(event_block(no_target_cleanup)),
-            compact("Ongoing - Each Player; All; All;"),
-            "cleanup movimento dummy: evento esatto per entrambe le squadre",
-        )
-        no_target_filters = [
-            call for call in iter_calls(no_target_cleanup.body, "Filtered Array")
-            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainManusia"
-        ]
-        checks.equal(len(no_target_filters), 1,
-                     "cleanup movimento dummy: filtro unico dei nemici vivi")
-        if no_target_filters:
-            checks.equal(
-                compact(no_target_filters[0].args[1]),
-                compact(expected_enemy_predicate),
-                "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in",
-            )
-        cleanup_conditions = rule_block(no_target_cleanup, "conditions")
-        checks.require(cleanup_conditions is not None,
-                       "cleanup movimento dummy: blocco conditions assente")
-        if cleanup_conditions is not None:
-            expected_cleanup_conditions = f"""
-                Global.Siap == True;
-                Is Dummy Bot(Event Player) == True;
-                Count Of({expected_enemy_filter}) == 0;
-            """
-            checks.equal(
-                compact(cleanup_conditions),
-                compact(expected_cleanup_conditions),
-                "cleanup movimento dummy: condizioni esatte senza umani nemici vivi opt-in",
-            )
-        checks.require("Stop Facing(Event Player);" in no_target_cleanup.body,
-                       "cleanup movimento dummy senza target non ferma il facing")
-        checks.require("Stop Throttle In Direction(Event Player);" in no_target_cleanup.body,
-                       "cleanup movimento dummy senza target non ferma il throttle")
-        cleanup_actions = rule_block(no_target_cleanup, "actions")
-        checks.require(cleanup_actions is not None,
-                       "cleanup movimento dummy: blocco actions assente")
-        if cleanup_actions is not None:
-            checks.equal(
-                compact(cleanup_actions),
-                compact("Stop Facing(Event Player); Stop Throttle In Direction(Event Player);"),
-                "cleanup movimento dummy: azioni esatte di arresto",
-            )
+        checks.equal(compact(event_block(no_target_cleanup)), compact("Ongoing - Each Player; All; All;"),
+                     "cleanup movimento dummy: evento esatto per entrambe le squadre")
+        checks.require("Filtered Array(Global.PemainManusia" not in no_target_cleanup.body,
+                       "cleanup movimento dummy non deve rifiltrare il roster")
+        for token in (
+            "Event Player.TargetDummyIkuti == Null",
+            "Entity Exists(Event Player.TargetDummyIkuti) == False",
+            "Player Variable(Event Player.TargetDummyIkuti, Manusia) == False",
+            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == False",
+            "Has Spawned(Event Player.TargetDummyIkuti) == False",
+            "Is Alive(Event Player.TargetDummyIkuti) == False",
+            "Team Of(Event Player.TargetDummyIkuti) != Opposite Team Of(Team Of(Event Player))",
+            "Stop Facing(Event Player);",
+            "Stop Throttle In Direction(Event Player);",
+        ):
+            checks.require(token in no_target_cleanup.body,
+                           f"cleanup movimento dummy cache incompleto: {token}")
 
     dummy_arming = next(
         (
@@ -3775,7 +3745,8 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                 compact(
                     "Stop Facing(Event Player); "
                     "Stop Throttle In Direction(Event Player); "
-                    "Event Player.WaktuTeleportasiDummy = 0;"
+                    "Event Player.WaktuTeleportasiDummy = 0; "
+                    "Event Player.TargetDummyIkuti = Null;"
                 ),
                 "cleanup morte dummy: azioni esatte senza abort",
             )
@@ -3802,8 +3773,15 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                            f"destinazione obiettivo non copre {mode}")
         checks.require("Is On Objective(" in objective_rule.body,
                        "Push non usa proxy robot/fallback obiettivo")
-        checks.require("Nearest Walkable Position(" in objective_rule.body,
-                       "teleport obiettivo non verifica una posizione percorribile")
+        safe_position = rule_by_subroutine(rules, "CariPosisiTeleportAman")
+        checks.require(safe_position is not None, "subroutine comune posizione teleport sicura assente")
+        checks.require("Call Subroutine(CariPosisiTeleportAman);" in objective_rule.body,
+                       "teleport obiettivo non usa la subroutine comune di sicurezza")
+        if safe_position:
+            checks.require("Nearest Walkable Position(" in safe_position.body,
+                           "subroutine teleport sicura non verifica una posizione percorribile")
+            checks.require("Ray Cast Hit Position(" in safe_position.body,
+                           "subroutine teleport sicura non verifica terreno/percorso")
         click_dispatch = next(
             (
                 rule

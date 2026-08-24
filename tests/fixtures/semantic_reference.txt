@@ -10,51 +10,51 @@ variables
 		6: JarakKamera
 		7: GeserKamera
 		8: BantalanDinding
-		9: JarakBidik
-		10: HudKiriPemain
-		11: HudKananPemain
-		12: HudMenuPemain
-		13: TeksDuniaPemain
-		14: IndeksKeluar
-		15: NamaWarna
-		16: NamaWarnaInggris
-		17: NamaBahasa
-		18: NamaHalamanInggris
-		19: DurasiServerMenit
-		20: WaktuAkhirServer
-		21: SisaWaktuServer
-		22: TeksWaktuServer
-		23: MulaiUlangSudahDiminta
-		24: DiagnostikPerforma
-		25: NamaWarnaThai
-		26: NamaHalamanThai
-		27: IndeksPembersihan
-		28: PemainPembersihan
-		29: IndeksUtangKeluar
-		30: SlotHUDPemain
-		31: NamaLokasiInggris
-		32: NamaLokasiIndonesia
-		33: NamaLokasiThai
-		34: IndeksLokasiServer
-		35: RGB
-		36: RGBFase
-		37: DaftarIkon
-		38: NamaIkonInggris
-		39: NamaIkonIndonesia
-		40: NamaIkonThai
-		41: SlotHUDTerakhir
-		42: DaftarWarnaRGB
-		43: PemimpinPilihan
-		44: PilihanTerbanyak
-		45: PilihanSeri
-		46: IndeksPemilih
-		47: PilihPahlawanDilewati
-		48: PersiapanDilewati
-		49: ModeMulaiDiminta
-		50: PemainAktif
-		51: IndeksPemainGlobal
-		52: LangkahPenjadwal
-		53: TimDummyAktif
+		9: HudKiriPemain
+		10: HudKananPemain
+		11: HudMenuPemain
+		12: TeksDuniaPemain
+		13: IndeksKeluar
+		14: NamaWarna
+		15: NamaWarnaInggris
+		16: NamaBahasa
+		17: NamaHalamanInggris
+		18: DurasiServerMenit
+		19: WaktuAkhirServer
+		20: SisaWaktuServer
+		21: TeksWaktuServer
+		22: MulaiUlangSudahDiminta
+		23: DiagnostikPerforma
+		24: NamaWarnaThai
+		25: NamaHalamanThai
+		26: IndeksPembersihan
+		27: PemainPembersihan
+		28: IndeksUtangKeluar
+		29: SlotHUDPemain
+		30: NamaLokasiInggris
+		31: NamaLokasiIndonesia
+		32: NamaLokasiThai
+		33: IndeksLokasiServer
+		34: RGB
+		35: RGBFase
+		36: DaftarIkon
+		37: NamaIkonInggris
+		38: NamaIkonIndonesia
+		39: NamaIkonThai
+		40: SlotHUDTerakhir
+		41: DaftarWarnaRGB
+		42: PemimpinPilihan
+		43: PilihanTerbanyak
+		44: PilihanSeri
+		45: IndeksPemilih
+		46: PilihPahlawanDilewati
+		47: PersiapanDilewati
+		48: ModeMulaiDiminta
+		49: PemainAktif
+		50: IndeksPemainGlobal
+		51: LangkahPenjadwal
+		52: TimDummyAktif
+		53: JarakBidik
 	player:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -152,6 +152,9 @@ variables
 		93: WaktuPaksaBerakhir
 		94: IzinkanDummyMengikuti
 		95: KursorIkutiDummy
+		96: TargetDummyIkuti
+		97: CalonTargetInspeksi
+		98: PosisiTeleportTujuan
 }
 
 subroutines
@@ -213,6 +216,7 @@ subroutines
 	54: TeleportKeTarget
 	55: GambarIkutiDummy
 	56: TerapkanHalamanIkutiDummy
+	57: CariPosisiTeleportAman
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -1017,9 +1021,7 @@ rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
 		Wait(0.050, Ignore Condition);
 		Abort If(Entity Exists(Event Player) == False);
 		"Jika pendaftaran lama masih ada, jalankan pembersihan cadangan tepat sekali setelah keadaan sudah tenang."
-		If(Or(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(
-			Global.SlotHUDPemain, Event Player.UrutanHUD))), Array Contains(Mapped Array(Global.PemainManusia, Custom String("{0}",
-			Current Array Element)), Custom String("{0}", Event Player))));
+		If(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(Global.SlotHUDPemain, Event Player.UrutanHUD))));
 			Call Subroutine(BersihkanPemain);
 		End;
 		Wait(0.050, Ignore Condition);
@@ -1386,13 +1388,19 @@ rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")
 		Is Dummy Bot(Event Player) == True;
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
-		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))))))))) > 0;
+		Event Player.TargetDummyIkuti != Null;
+		Entity Exists(Event Player.TargetDummyIkuti) == True;
+		Player Variable(Event Player.TargetDummyIkuti, Manusia) == True;
+		Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == True;
+		Has Spawned(Event Player.TargetDummyIkuti) == True;
+		Is Alive(Event Player.TargetDummyIkuti) == True;
+		Team Of(Event Player.TargetDummyIkuti) == Opposite Team Of(Team Of(Event Player));
 	}
 
 	actions
 	{
-		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(First Of(Sorted Array(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))), Distance Between(Event Player, Current Array Element))))), 1000, To World, Direction and Turn Rate);
-		Start Throttle In Direction(Event Player, Forward, Or(Is In Spawn Room(Event Player), Distance Between(Event Player, First Of(Sorted Array(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))), Distance Between(Event Player, Current Array Element)))) <= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Event Player.TargetDummyIkuti)), 1000, To World, Direction and Turn Rate);
+		Start Throttle In Direction(Event Player, Forward, Or(Is In Spawn Room(Event Player), Distance Between(Event Player, Event Player.TargetDummyIkuti) <= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);
 	}
 }
 
@@ -1409,7 +1417,7 @@ rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")
 	{
 		Global.Siap == True;
 		Is Dummy Bot(Event Player) == True;
-		Count Of(Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))))))))) == 0;
+		Or(Or(Or(Event Player.TargetDummyIkuti == Null, Entity Exists(Event Player.TargetDummyIkuti) == False), Or(Player Variable(Event Player.TargetDummyIkuti, Manusia) == False, Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == False)), Or(Or(Has Spawned(Event Player.TargetDummyIkuti) == False, Is Alive(Event Player.TargetDummyIkuti) == False), Team Of(Event Player.TargetDummyIkuti) != Opposite Team Of(Team Of(Event Player)))) == True;
 	}
 
 	actions
@@ -1439,6 +1447,7 @@ rule("03i - Bot/Dummy: Hentikan gerak saat bot mati")
 		Stop Facing(Event Player);
 		Stop Throttle In Direction(Event Player);
 		Event Player.WaktuTeleportasiDummy = 0;
+		Event Player.TargetDummyIkuti = Null;
 	}
 }
 
@@ -2405,9 +2414,15 @@ rule("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 	actions
 	{
 		Event Player.BangkitLompatDipakai = True;
-		Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6)));
+		Event Player.PosisiTeleportTujuan = Event Player.PosisiMati + Vector(Random Real(-6, 6), 0, Random Real(-6, 6));
+		Call Subroutine(CariPosisiTeleportAman);
 		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);
+			Event Player.PosisiTeleportTujuan = Event Player.PosisiMati;
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe resurrection position was found. Release Jump and try again.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada posisi bangkit yang aman. Lepaskan Jump lalu coba lagi.") : Custom String("ไม่พบตำแหน่งฟื้นคืนชีพที่ปลอดภัย ปล่อยปุ่มกระโดดแล้วลองอีกครั้ง"));
+			Abort;
 		End;
 		Resurrect(Event Player);
 		Teleport(Event Player, Event Player.PosisiBangkitAman);
@@ -2462,7 +2477,7 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 		Event Player.TeleportasiJongkokDiaktifkan == False;
 		Event Player.ModeKamera != 2;
 		Is Button Held(Event Player, Button(Crouch)) == True;
-		Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))), Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(Current Array Element)))));
+		Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;
 	}
 
 	actions
@@ -2472,7 +2487,6 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 			Disable Nameplates(All Players(All Teams), Event Player);
 			Event Player.PelatNamaDinonaktifkan = True;
 		End;
-		Call Subroutine(SegarkanTargetInspeksi);
 		If(Event Player.TeksDunia != Null);
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
@@ -2480,8 +2494,9 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 		End;
 		Event Player.TeksDunia = Null;
+		Call Subroutine(SegarkanTargetInspeksi);
 		Abort If(Event Player.TargetInspeksi == Null);
-		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Color(Orange), Visible Never);
+		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
 		Event Player.TeksDunia = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
 			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
@@ -2866,31 +2881,6 @@ rule("19c - Teleportasi Jongkok: Secondary Fire mengganti tiga halaman")
 	}
 }
 
-rule("19d0 - Teleportasi Jongkok: Perbarui target bidikan tanpa Wait")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Manusia == True;
-		Event Player.TeleportasiJongkokAktif == True;
-		Event Player.KursorTeleportasi == 2;
-		Is Alive(Event Player) == True;
-		Is Button Held(Event Player, Button(Crouch)) == True;
-		Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))), Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(Current Array Element)))));
-	}
-
-	actions
-	{
-		Call Subroutine(SegarkanTargetTeleportasi);
-	}
-}
-
 rule("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")
 {
 	event
@@ -3054,7 +3044,7 @@ rule("89a - Subrutin: Proses status cepat pemain")
 				Kill(Global.PemainAktif, Global.PemainAktif.KematianBalasDendam == True ? Global.PemainAktif.PenagihBalasDendam : Null);
 			End;
 		End;
-		If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.KebalAktif == True, And(Global.PemainAktif.KematianBalasDendam == False, And(Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0))), And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))))));
+		If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.KebalAktif == True, And(Global.PemainAktif.KematianBalasDendam == False, And(And(And(Global.PemainAktif.KartuNasibAktif == True, Global.PemainAktif.PutaranKartuNasib == 0), Or(And(Global.PemainAktif.EfekNasib == 3, Global.PemainAktif.WaktuPaksaBerakhir > 0), And(Global.PemainAktif.EfekNasib == 5, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed))) == False, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True))))));
 			If(And(Global.PemainAktif.ModeKebal == 1, Is In Spawn Room(Global.PemainAktif) == False));
 				If(Has Status(Global.PemainAktif, Unkillable) == False);
 					Set Status(Global.PemainAktif, Null, Unkillable, 9999);
@@ -3098,6 +3088,28 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 
 	actions
 	{
+		"Target dummy dan bidikan berat dihitung pada siklus 10 Hz, bukan di evaluasi per-frame."
+		If(And(Is Dummy Bot(Global.PemainAktif) == True, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)));
+			Set Player Variable(Global.PemainAktif, DaftarTargetInspeksi, Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))));
+			If(Count Of(Global.PemainAktif.DaftarTargetInspeksi) > 0);
+				Set Player Variable(Global.PemainAktif, TargetDummyIkuti, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Distance Between(Global.PemainAktif, Current Array Element))));
+			Else;
+				Set Player Variable(Global.PemainAktif, TargetDummyIkuti, Null);
+			End;
+		End;
+		If(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)));
+			If(And(Global.PemainAktif.MenuTerbuka == False, And(Global.PemainAktif.PrivasiNasibAktif == False, And(Global.PemainAktif.TeleportasiJongkokAktif == False, And(Global.PemainAktif.TeleportasiJongkokDiaktifkan == False, And(Global.PemainAktif.ModeKamera != 2, Is Button Held(Global.PemainAktif, Button(Crouch)) == True))))));
+				Call Subroutine(SegarkanTargetPublikAktif);
+				Set Player Variable(Global.PemainAktif, CalonTargetInspeksi, Count Of(Global.PemainAktif.DaftarTargetInspeksi) == 0 ? Null : First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
+			Else;
+				Set Player Variable(Global.PemainAktif, CalonTargetInspeksi, Null);
+			End;
+			If(And(Global.PemainAktif.TeleportasiJongkokAktif == True, And(Global.PemainAktif.KursorTeleportasi == 2, Is Button Held(Global.PemainAktif, Button(Crouch)) == True)));
+				Call Subroutine(SegarkanTargetPublikAktif);
+				Set Player Variable(Global.PemainAktif, DaftarTargetTeleportasi, Global.PemainAktif.DaftarTargetInspeksi);
+				Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, Count Of(Global.PemainAktif.DaftarTargetTeleportasi) == 0 ? Null : First Of(Sorted Array(Global.PemainAktif.DaftarTargetTeleportasi, Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
+			End;
+		End;
 		If(And(Global.PemainAktif.PindahTimDiproses == True, Or(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Global.PemainAktif.HudPemainDibuat == True)), And(Global.PemainAktif.BotOtomatis == True, And(Global.PemainAktif.SudahDiperiksa == True, And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, Global.PemainAktif.KunciBotAktif == True)))))));
 			"Pendaftaran manusia dilepas setelah HUD stabil; bot otomatis dilepas hanya setelah klasifikasi dan penguncian selesai."
 			Global.PemainAktif.PindahTimDiproses = False;
@@ -3264,6 +3276,8 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 					Global.PemainAktif.KartuNasibAktif = False;
 				Else If(Global.PemainAktif.EfekNasib == 5);
 					Set Status(Global.PemainAktif, Null, Burning, 10);
+					Clear Status(Global.PemainAktif, Unkillable);
+					Set Damage Received(Global.PemainAktif, 100);
 					Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;
 					Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed;
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: BURNING — 5% MAX HP / SEC — 10s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: TERBAKAR — 5% HP MAKS / DETIK — 10dtk") : Custom String("เสี่ยงโชค: ไฟไหม้ — 5% HP สูงสุด / วินาที — 10 วินาที"));
@@ -3282,8 +3296,10 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 					If(Global.PemainAktif.WaktuBakarNasibBerikut <= Total Time Elapsed);
 						If(Has Spawned(Global.PemainAktif) == True);
 							If(Is Alive(Global.PemainAktif) == True);
-								Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.025);
-								Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;
+								Clear Status(Global.PemainAktif, Unkillable);
+								Set Damage Received(Global.PemainAktif, 100);
+								Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.050);
+								Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 1.000;
 							End;
 						End;
 					End;
@@ -3692,6 +3708,7 @@ rule("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")
 		Set Knockback Received(Event Player, 100);
 		Set Move Speed(Event Player, 20);
 		Event Player.PahlawanTerakhir = Hero Of(Event Player);
+		Event Player.TargetDummyIkuti = Null;
 		Event Player.KunciBotAktif = True;
 		Disable Nameplates(Event Player, Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, InspeksiAktif) == True));
 	}
@@ -3910,9 +3927,6 @@ rule("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		If(And(Global.IndeksKeluar < 0, Event Player.UrutanHUD >= 0));
 			Global.IndeksKeluar = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);
 		End;
-		If(Global.IndeksKeluar < 0);
-			Global.IndeksKeluar = Index Of Array Value(Mapped Array(Global.PemainManusia, Custom String("{0}", Current Array Element)), Custom String("{0}", Event Player));
-		End;
 		Global.PemainPembersihan = Global.IndeksKeluar >= 0 ? Global.PemainManusia[Global.IndeksKeluar] : Event Player;
 		If(Global.IndeksKeluar >= 0);
 			If(Event Player.IkonKebal != Null);
@@ -4102,6 +4116,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.WaktuTeleportasiDummy = 0;
 		Event Player.IzinkanDummyMengikuti = False;
 		Event Player.KursorIkutiDummy = 0;
+		Event Player.TargetDummyIkuti = Null;
+		Event Player.CalonTargetInspeksi = Null;
+		Event Player.PosisiTeleportTujuan = Vector(0, 0, 0);
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = False;
@@ -4144,11 +4161,10 @@ rule("96 - Subrutin: Cari target publik terdekat dari bidikan")
 
 	actions
 	{
-		Call Subroutine(SegarkanTargetPublikPemain);
-		If(Count Of(Event Player.DaftarTargetInspeksi) == 0);
+		If(Or(Event Player.CalonTargetInspeksi == Null, Or(Entity Exists(Event Player.CalonTargetInspeksi) == False, Is Alive(Event Player.CalonTargetInspeksi) == False)));
 			Event Player.TargetInspeksi = Null;
 		Else;
-			Event Player.TargetInspeksi = First Of(Sorted Array(Event Player.DaftarTargetInspeksi, Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(Current Array Element)))));
+			Event Player.TargetInspeksi = Event Player.CalonTargetInspeksi;
 		End;
 	}
 }
@@ -4412,41 +4428,45 @@ rule("98h - Subrutin: Teleportasi ke objektif mode aktif")
 
 	actions
 	{
+		Event Player.PosisiTeleportTujuan = Vector(0, 0, 0);
 		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-			If(Distance Between(Payload Position, Vector(0, 0, 0)) <= 0.100);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Payload position unavailable right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi payload belum tersedia saat ini.") : Custom String("ตำแหน่งเพย์โหลดยังไม่พร้อมใช้งานตอนนี้"));
-			Else;
-				Teleport(Event Player, Nearest Walkable Position(Payload Position + Vector(2, 0, 0)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the payload.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat payload.") : Custom String("เทเลพอร์ตใกล้เพย์โหลดแล้ว"));
+			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
+				Event Player.PosisiTeleportTujuan = Payload Position + Vector(2, 0, 0);
 			End;
 		Else If(Current Game Mode == Game Mode(Capture The Flag));
-			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) <= 0.100);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Enemy flag position unavailable right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi bendera musuh belum tersedia saat ini.") : Custom String("ตำแหน่งธงศัตรูยังไม่พร้อมใช้งานตอนนี้"));
-			Else;
-				Teleport(Event Player, Nearest Walkable Position(Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the enemy flag.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat bendera musuh.") : Custom String("เทเลพอร์ตใกล้ธงของศัตรูแล้ว"));
+			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
+				Event Player.PosisiTeleportTujuan = Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0);
 			End;
 		Else If(Current Game Mode == Game Mode(Push));
 			If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
-				Teleport(Event Player, Nearest Walkable Position(Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the Push robot.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat robot Push.") : Custom String("เทเลพอร์ตใกล้หุ่นยนต์ Push แล้ว"));
+				Event Player.PosisiTeleportTujuan = Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0);
 			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Robot position unavailable; using the current objective.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi robot belum tersedia; memakai objektif saat ini.") : Custom String("ไม่พบตำแหน่งหุ่นยนต์ ใช้เป้าหมายปัจจุบันแทน"));
-			Else;
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Push robot position unavailable right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi robot Push belum tersedia saat ini.") : Custom String("ตำแหน่งหุ่นยนต์ Push ยังไม่พร้อมใช้งานตอนนี้"));
+				Event Player.PosisiTeleportTujuan = Objective Position(Objective Index);
 			End;
 		Else If(Or(Or(Current Game Mode == Game Mode(Flashpoint), Current Game Mode == Game Mode(Control)), Or(Current Game Mode == Game Mode(Clash), Current Game Mode == Game Mode(Assault))));
-			If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Current objective position is unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi objektif saat ini belum tersedia.") : Custom String("ตำแหน่งเป้าหมายปัจจุบันยังไม่พร้อมใช้งาน"));
-			Else;
-				Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the current objective.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat objektif saat ini.") : Custom String("เทเลพอร์ตใกล้เป้าหมายปัจจุบันแล้ว"));
+			If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+				Event Player.PosisiTeleportTujuan = Objective Position(Objective Index);
 			End;
-		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) <= 0.100);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Objective position unavailable in this mode. The objective is being mysterious.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi objektif tidak tersedia di mode ini. Objektifnya sedang misterius.") : Custom String("ตำแหน่งเป้าหมายใช้ไม่ได้ในโหมดนี้ เป้าหมายกำลังเล่นซ่อนหา"));
+		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+			Event Player.PosisiTeleportTujuan = Objective Position(Objective Index);
+		End;
+		If(Distance Between(Event Player.PosisiTeleportTujuan, Vector(0, 0, 0)) <= 0.100);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Objective position unavailable right now.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi objektif belum tersedia saat ini.") : Custom String("ตำแหน่งเป้าหมายยังไม่พร้อมใช้งานตอนนี้"));
+			Abort;
+		End;
+		Call Subroutine(CariPosisiTeleportAman);
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe walkable position was found near the objective.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada posisi aman yang bisa dilalui dekat objektif.") : Custom String("ไม่พบตำแหน่งที่ปลอดภัยและเดินได้ใกล้เป้าหมาย"));
+			Abort;
+		End;
+		Teleport(Event Player, Event Player.PosisiBangkitAman);
+		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the payload.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat payload.") : Custom String("เทเลพอร์ตใกล้เพย์โหลดแล้ว"));
+		Else If(Current Game Mode == Game Mode(Capture The Flag));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the enemy flag.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat bendera musuh.") : Custom String("เทเลพอร์ตใกล้ธงของศัตรูแล้ว"));
+		Else If(Current Game Mode == Game Mode(Push));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the Push objective.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat objektif Push.") : Custom String("เทเลพอร์ตใกล้เป้าหมาย Push แล้ว"));
 		Else;
-			Teleport(Event Player, Nearest Walkable Position(Objective Position(Objective Index)));
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near the current objective.") : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat objektif saat ini.") : Custom String("เทเลพอร์ตใกล้เป้าหมายปัจจุบันแล้ว"));
 		End;
 	}
@@ -4464,9 +4484,50 @@ rule("98i - Subrutin: Teleportasi ke target pemain")
 	{
 		If(Or(Or(Event Player.TargetTeleportasiTerkunci == Null, Entity Exists(Event Player.TargetTeleportasiTerkunci) == False), Or(Is Alive(Event Player.TargetTeleportasiTerkunci) == False, Array Contains(Event Player.DaftarTargetTeleportasi, Event Player.TargetTeleportasiTerkunci) == False)));
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Target unavailable. Even teleportation has standards.") : Event Player.IndeksBahasa == 1 ? Custom String("Target sedang tidak tersedia. Teleportasi juga punya standar.") : Custom String("เป้าหมายไม่พร้อมใช้งาน แม้แต่เทเลพอร์ตก็มีมาตรฐาน"));
-		Else;
-			Teleport(Event Player, Nearest Walkable Position(Position Of(Event Player.TargetTeleportasiTerkunci) - Facing Direction Of(Event Player.TargetTeleportasiTerkunci) * 1.500));
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near {0}. Personal space sold separately.", Event Player.TargetTeleportasiTerkunci) : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.TargetTeleportasiTerkunci) : Custom String("เทเลพอร์ตไปใกล้ {0} แล้ว พื้นที่ส่วนตัวไม่ได้รวมในแพ็กเกจ", Event Player.TargetTeleportasiTerkunci));
+			Abort;
+		End;
+		Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) - Facing Direction Of(Event Player.TargetTeleportasiTerkunci) * 1.500;
+		Call Subroutine(CariPosisiTeleportAman);
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci);
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe walkable position was found near that target.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada posisi aman yang bisa dilalui dekat target itu.") : Custom String("ไม่พบตำแหน่งที่ปลอดภัยและเดินได้ใกล้เป้าหมายนั้น"));
+			Abort;
+		End;
+		Teleport(Event Player, Event Player.PosisiBangkitAman);
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Teleported near {0}. Personal space sold separately.", Event Player.TargetTeleportasiTerkunci) : Event Player.IndeksBahasa == 1 ? Custom String("Teleport dekat {0}. Jarak pribadi dijual terpisah.", Event Player.TargetTeleportasiTerkunci) : Custom String("เทเลพอร์ตไปใกล้ {0} แล้ว พื้นที่ส่วนตัวไม่ได้รวมในแพ็กเกจ", Event Player.TargetTeleportasiTerkunci));
+	}
+}
+
+rule("98j - Subrutin: Cari posisi teleport aman")
+{
+	event
+	{
+		Subroutine;
+		CariPosisiTeleportAman;
+	}
+
+	actions
+	{
+		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+		Abort If(Distance Between(Event Player.PosisiTeleportTujuan, Vector(0, 0, 0)) <= 0.100);
+		Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiTeleportTujuan);
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiTeleportTujuan) > 8);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) > 6);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiTeleportTujuan + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) > 0.750);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 		End;
 	}
 }

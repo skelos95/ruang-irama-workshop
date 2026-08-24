@@ -921,31 +921,41 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "Skull non arma deadline anti-blocco")
 
-    def test_burning_cannot_bypass_unkillable(self) -> None:
+    def test_burning_temporarily_bypasses_unkillable_and_scales_with_max_health(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
-        branch = "Else If(Global.PemainAktif.EfekNasib == 5);"
-        for action, expected in (
-            ("Clear Status(Global.PemainAktif, Unkillable);", "Clear Status Unkillable"),
-            ("Set Damage Received(Global.PemainAktif, 100);", "Damage Received"),
-            ("Enable Movement Collision With Players(Global.PemainAktif);", "collisione player"),
-        ):
-            with self.subTest(action=action):
-                mutated = self.replace_in_rule(machine, branch, f"{branch}\n\t\t\t\t\t{action}")
-                self.assert_rejected(mutated, f"{expected} può essere modificato soltanto dal bypass Skull/Revenge")
+        mutated = self.replace_in_rule(
+            machine,
+            "Clear Status(Global.PemainAktif, Unkillable);",
+            "Clear Status(Global.PemainAktif, Burning);",
+        )
+        self.assert_rejected(mutated, "Burning deve sospendere Unkillable")
 
-    def test_unkillable_reapply_is_blocked_only_for_revenge_or_final_armed_skull(self) -> None:
+        mutated = self.replace_in_rule(
+            machine,
+            "Damage(Global.PemainAktif, Global.PemainAktif, Max Health(Global.PemainAktif) * 0.050);",
+            "Damage(Global.PemainAktif, Global.PemainAktif, 25);",
+        )
+        self.assert_rejected(mutated, "5% della Max Health")
+
+        mutated = self.replace_in_rule(
+            machine,
+            "Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 1.000;",
+            "Global.PemainAktif.WaktuBakarNasibBerikut = Total Time Elapsed + 0.500;",
+        )
+        self.assert_rejected(mutated, "tick da un secondo")
+    def test_unkillable_reapply_is_blocked_for_revenge_skull_and_active_burning(self) -> None:
         processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        exact_skull_exception = (
-            "Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, "
-            "Or(Global.PemainAktif.PutaranKartuNasib != 0, Global.PemainAktif.WaktuPaksaBerakhir <= 0)))"
+        exact_exception = (
+            "And(And(Global.PemainAktif.KartuNasibAktif == True, Global.PemainAktif.PutaranKartuNasib == 0), "
+            "Or(And(Global.PemainAktif.EfekNasib == 3, Global.PemainAktif.WaktuPaksaBerakhir > 0), "
+            "And(Global.PemainAktif.EfekNasib == 5, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed))) == False"
         )
         mutated = self.replace_in_rule(
             processor,
-            exact_skull_exception,
+            exact_exception,
             "Global.PemainAktif.KartuNasibAktif == False",
         )
-        self.assert_rejected(mutated, "blocco riapplicazione Kebal solo per Skull finale armato")
-
+        self.assert_rejected(mutated, "blocco riapplicazione Kebal durante Skull/Burning finali")
     def test_global_unkillable_reapply_recreates_missing_or_destroyed_icon(self) -> None:
         processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
         safe_guard = (
@@ -1581,11 +1591,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(movement, "Start Throttle In Direction(Event Player,", "Start Throttle Towards Player(Event Player,")
         self.assert_rejected(mutated, "movimento automatico dummy assente")
 
-    def test_native_dummy_movement_rule_cannot_have_an_impossible_condition(self) -> None:
+    def test_native_dummy_movement_requires_a_valid_cached_target(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        mutated = self.inject_condition(movement, "False == True;")
-        self.assert_rejected(mutated, "movimento dummy: condizioni esatte per un umano nemico vivo opt-in")
-
+        mutated = self.replace_in_rule(
+            movement,
+            "Event Player.TargetDummyIkuti != Null;",
+            "Event Player.TargetDummyIkuti == Null;",
+        )
+        self.assert_rejected(mutated, "movimento automatico dummy incompleto")
     def test_native_dummy_movement_cannot_abort_before_facing(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.replace_in_rule(
@@ -1634,84 +1647,66 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(absolute, 4, "None")
         self.assert_rejected(mutated, "movimento dummy: facing argomento 4")
 
-    def test_native_dummy_targets_only_the_opposing_team(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+    def test_native_dummy_cache_targets_only_the_opposing_team(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
-            movement,
-            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
-            "Team Of(Current Array Element) == Team Of(Event Player)",
+            cycle,
+            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif))",
+            "Team Of(Current Array Element) == Team Of(Global.PemainAktif)",
         )
-        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere l'umano nemico vivo opt-in")
-
-    def test_native_dummy_enemy_predicate_cannot_be_negated(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+    def test_native_dummy_cache_enemy_predicate_cannot_be_negated(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         predicate = (
             "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
             "And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, "
             "And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), "
-            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))"
+            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))"
         )
-        self.assertEqual(movement.body.count(predicate), 3)
-        changed = movement.body.replace(predicate, f"Not({predicate})")
-        mutated = self.source[:movement.start] + changed + self.source[movement.end:]
-        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere l'umano nemico vivo opt-in")
-
-    def test_native_dummy_targets_only_currently_registered_humans(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        self.assertEqual(cycle.body.count(predicate), 1)
+        changed = cycle.body.replace(predicate, f"Not({predicate})")
+        mutated = self.source[:cycle.start] + changed + self.source[cycle.end:]
+        self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+    def test_native_dummy_cache_targets_only_currently_registered_humans(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
-            movement,
+            cycle,
             "Player Variable(Current Array Element, Manusia) == True",
             "Player Variable(Current Array Element, Manusia) == False",
         )
-        self.assert_rejected(mutated, "umano nemico vivo opt-in")
-
-    def test_native_dummy_respects_per_player_follow_opt_out(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+    def test_native_dummy_cache_respects_per_player_follow_opt_out(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
-            movement,
+            cycle,
             "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
             "True",
         )
-        self.assert_rejected(mutated, "umano nemico vivo opt-in")
-
-    def test_no_target_cleanup_uses_the_same_dummy_follow_eligibility(self) -> None:
+        self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
+    def test_no_target_cleanup_rejects_cached_target_opt_out(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
-            and ")) == 0;" in rule.body
+            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(
             cleanup,
-            "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
-            "True",
+            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == False",
+            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == True",
         )
-        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in")
-
+        self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
     def test_native_dummy_stops_at_exactly_four_metres(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 0) ? 0 : 1")
-        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal target opt-in")
-
+        self.assert_rejected(mutated, "arresto deve usare il target cache")
     def test_native_dummy_stop_condition_cannot_be_negated(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         call = next(validator.iter_calls(movement.body, "Start Throttle In Direction"))
         magnitude = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(magnitude)
         stop_condition, stopped, moving = magnitude  # type: ignore[misc]
-        absolute = validator.Call(
-            call.name,
-            call.raw,
-            call.args,
-            movement.start + call.start,
-            movement.start + call.end,
-        )
-        mutated = self.replace_call_argument(
-            absolute,
-            2,
-            f"Not({stop_condition}) ? {stopped} : {moving}",
-        )
-        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal target opt-in")
-
+        absolute = validator.Call(call.name, call.raw, call.args, movement.start + call.start, movement.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, f"Not({stop_condition}) ? {stopped} : {moving}")
+        self.assert_rejected(mutated, "arresto deve usare il target cache")
     def test_native_dummy_stopped_magnitude_is_zero(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 4) ? 1 : 1")
@@ -1722,28 +1717,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(movement, "Direction and Magnitude);", "None);")
         self.assert_rejected(mutated, "movimento dummy: throttle argomento 5")
 
-    def test_native_dummy_stops_throttle_when_no_target_remains(self) -> None:
+    def test_native_dummy_stops_throttle_when_cached_target_is_invalid(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
-            and ")) == 0;" in rule.body
+            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(cleanup, "Stop Throttle In Direction(Event Player);", "")
-        self.assert_rejected(mutated, "cleanup movimento dummy senza target non ferma il throttle")
-
-    def test_native_dummy_no_target_cleanup_uses_the_opposing_team_filter(self) -> None:
+        self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
+    def test_native_dummy_cleanup_stops_when_cached_target_changes_team(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
-            and ")) == 0;" in rule.body
+            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(
             cleanup,
-            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
-            "Team Of(Current Array Element) == Team Of(Event Player)",
+            "Team Of(Event Player.TargetDummyIkuti) != Opposite Team Of(Team Of(Event Player))",
+            "Team Of(Event Player.TargetDummyIkuti) == Opposite Team Of(Team Of(Event Player))",
         )
-        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in")
-
+        self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
     def test_dummy_release_stops_facing_before_destroy(self) -> None:
         release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")
         mutated = self.replace_in_rule(release, "Stop Facing(First Of(Filtered Array(", "Start Facing(First Of(Filtered Array(")
@@ -1944,13 +1935,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assertIsNone(validator.delimiter_error(validator.rule_block(cache, "actions") or ""))
         self.assert_rejected(mutated, "terminatore statement")
 
-    def test_all_four_privacy_filters_have_balanced_call_parentheses(self) -> None:
+    def test_shared_privacy_filters_have_balanced_call_parentheses(self) -> None:
         privacy_calls: list[tuple[validator.Rule, validator.Call]] = []
         for rule in validator.extract_rules(self.source):
             for call in validator.iter_calls(rule.body, "Filtered Array"):
                 if "PrivasiInspeksiAktif" in call.raw:
                     privacy_calls.append((rule, call))
-        self.assertEqual(len(privacy_calls), 4)
+        self.assertEqual(len(privacy_calls), 2)
         for rule, call in privacy_calls:
             absolute_end = rule.start + call.end
             self.assertEqual(self.source[absolute_end - 1], ")")
@@ -1961,7 +1952,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
             for kind, mutated in mutations.items():
                 with self.subTest(rule=rule.name, kind=kind):
                     self.assert_rejected(mutated, "non bilanciata")
-
     def test_camera_target_refresh_excludes_private_humans(self) -> None:
         refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain")
         mutated = self.replace_in_rule(
@@ -1980,18 +1970,10 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
 
-    def test_all_inspection_and_teleport_filters_require_a_classified_human(self) -> None:
+    def test_shared_public_filters_require_a_classified_human(self) -> None:
         protected_rules = (
             self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain"),
             self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif"),
-            self.rule(
-                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
-            ),
-            self.rule(
-                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                and "Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(" in rule.body
-            ),
         )
         for rule in protected_rules:
             with self.subTest(rule=rule.name):
@@ -2001,16 +1983,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
                     "True",
                 )
                 self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
-
     def test_inspection_rejects_a_vision_privacy_bypass(self) -> None:
         refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi")
-        mutated = self.replace_in_rule(
+        mutated = self.inject_action(
             refresh,
-            "Call Subroutine(SegarkanTargetPublikPemain);",
-            "Call Subroutine(SegarkanTargetPublikPemain);\n\t\tIf(Event Player.PrivasiNasibAktif == True);\n\t\t\tAbort;\n\t\tEnd;",
+            "If(Event Player.PrivasiNasibAktif == True);\n\t\t\tAbort;\n\t\tEnd;",
         )
         self.assert_rejected(mutated, "bypass Privacy tramite Vision")
-
     def test_vision_names_exclude_private_human_subjects(self) -> None:
         vision = self.rule(
             lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
@@ -2063,7 +2042,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_inspection_crouch_is_blocked_during_vision(self) -> None:
         inspection = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
         )
         mutated = self.replace_in_rule(inspection, "\n\t\tEvent Player.PrivasiNasibAktif == False;", "")
         self.assert_rejected(mutated, "inspection Crouch non è bloccata durante Vision")
@@ -2116,7 +2095,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
         protected = (
             self.rule(
-                lambda rule: "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
+                lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
             ),
             self.rule(
                 lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
