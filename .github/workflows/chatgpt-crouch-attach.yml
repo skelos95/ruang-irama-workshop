@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - chatgpt-crouch-attach
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -19,8 +22,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
-          p=Path('workshop/ruang_irama.it-IT.workshop')
-          s=p.read_text(encoding='utf-8')
+          s=Path('workshop/ruang_irama.it-IT.workshop').read_text(encoding='utf-8')
           def end_brace(start):
               o=s.find('{', start); d=0; ins=False; esc=False
               for i in range(o,len(s)):
