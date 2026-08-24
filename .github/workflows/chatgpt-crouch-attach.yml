@@ -21,28 +21,56 @@ jobs:
           ref: chatgpt-crouch-attach
           fetch-depth: 0
 
-      - name: Apply feature patch and remove temporary tooling
+      - name: Apply, validate, test, and publish result
+        shell: bash
         run: |
-          python tools/chatgpt_crouch_attach_patch.py
-          git rm .github/workflows/chatgpt-crouch-attach.yml tools/chatgpt_crouch_attach_patch.py
-          python -m py_compile tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/validate_workshop.py
+          set +e
+          LOG=/tmp/crouch-attach-ci.log
+          : > "$LOG"
+          run_gate() {
+            echo "===== $1 =====" | tee -a "$LOG"
+            shift
+            "$@" >>"$LOG" 2>&1
+            rc=$?
+            echo "exit=$rc" | tee -a "$LOG"
+            return $rc
+          }
 
-      - name: Validate Workshop source
-        run: python tools/validate_workshop.py
+          failed=0
+          run_gate PATCH python tools/chatgpt_crouch_attach_patch.py || failed=1
+          if [ "$failed" -eq 0 ]; then
+            run_gate PYCOMPILE python -m py_compile tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/validate_workshop.py || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate VALIDATOR python tools/validate_workshop.py || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate FOCUSED python -m unittest tests.test_runtime_maintenance tests.test_dummy_bots || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate CLIPBOARD python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate FULL_SUITE python -m unittest discover -s tests -p 'test_*.py' || failed=1
+          fi
 
-      - name: Run focused runtime tests
-        run: python -m unittest tests.test_runtime_maintenance tests.test_dummy_bots
-
-      - name: Preflight Italian clipboard source
-        run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
-
-      - name: Run full regression suite
-        run: python -m unittest discover -s tests -p 'test_*.py'
-
-      - name: Commit validated feature branch
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ "$failed" -ne 0 ]; then
+            git reset --hard HEAD
+            git clean -fd
+            cp "$LOG" chatgpt-crouch-attach-ci.log
+            git add chatgpt-crouch-attach-ci.log
+            git commit -m "Record Crouch Teleport build failure"
+            git push origin HEAD:chatgpt-crouch-attach
+            cat "$LOG"
+            exit 1
+          fi
+
+          git rm .github/workflows/chatgpt-crouch-attach.yml tools/chatgpt_crouch_attach_patch.py
+          rm -f chatgpt-crouch-attach-ci.log
           git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_validate_workshop.py tests/test_runtime_maintenance.py CHANGELOG.md
           git commit -m "Add Crouch Teleport attach mode"
           git push origin HEAD:chatgpt-crouch-attach
+          cat "$LOG"
