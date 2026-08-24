@@ -12,10 +12,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: chatgpt-crouch-labels-build
-  cancel-in-progress: true
-
 jobs:
   build-test:
     if: github.actor != 'github-actions[bot]'
