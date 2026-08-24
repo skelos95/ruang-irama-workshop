@@ -143,11 +143,11 @@ class ClipboardImportTests(unittest.TestCase):
         )
 
     def test_semantic_gate_rejects_italian_only_privacy_polarity(self) -> None:
-        needle = "Event Player.PrivasiInspeksiAktif == False"
+        needle = "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False"
         self.assertIn(needle, self.italian)
         self.assert_semantic_mismatch(
             self.italian.replace(
-                needle, "Event Player.PrivasiInspeksiAktif == True", 1
+                needle, "Player Variable(Current Array Element, PrivasiInspeksiAktif) == True", 1
             )
         )
 

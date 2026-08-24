@@ -108,7 +108,7 @@ L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelat
 
 La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
 
-Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection e Vision filtrano sempre Privacy prima di creare o mantenere nome/nameplate.
+Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection e Camera rispettano sempre Privacy, mentre Vision mostra il nome anche con Privacy ON.
 
 Revenge e Skull condividono il percorso di morte completa nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva il claimant sul target, ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio.
 
@@ -154,7 +154,7 @@ Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. T
 
 La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata. Privacy è OFF per default: un umano resta selezionabile in Camera custom finché Privacy non passa a ON, stato in cui sia inspection sia Vision non possono creare o mantenere nome/nameplate. Ogni handle identificativo già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata. Privacy è OFF per default: un umano resta selezionabile in Camera custom finché Privacy non passa a ON; con Privacy ON, inspection e Camera custom non possono creare o mantenere nome/nameplate, mentre Vision continua a mostrarli durante l'effetto. Ogni handle identificativo di inspection già esistente viene ripulito quando Privacy passa a ON. Questa garanzia riguarda i sistemi Workshop della modalità, non la visuale spettatore nativa riservata a lobby e amministratori.
 
 La destinazione Teleport viene rivalutata al click:
 

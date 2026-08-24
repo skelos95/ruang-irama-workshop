@@ -1558,17 +1558,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "bypass Privacy tramite Vision")
 
-    def test_vision_names_exclude_private_human_subjects(self) -> None:
+    def test_vision_names_include_private_human_subjects(self) -> None:
         vision = self.rule(
             lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
             and "Create In-World Text(" in rule.body
         )
         mutated = self.replace_in_rule(
             vision,
-            "Event Player.PrivasiInspeksiAktif == False",
-            "Event Player.PrivasiInspeksiAktif == True",
+            "Event Player.Manusia == True",
+            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
         )
-        self.assert_rejected(mutated, "Vision mostra un umano con Privacy ON")
+        self.assert_rejected(mutated, "Vision esclude umani con Privacy ON")
 
     def test_vision_shows_hero_icon_name_and_live_health(self) -> None:
         vision = self.rule(
@@ -1647,18 +1647,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cleanup Teleport Crouch non reagisce all'avvio di Vision")
 
-    def test_vision_name_cleanup_runs_when_subject_turns_private(self) -> None:
+    def test_vision_name_cleanup_does_not_depend_on_subject_privacy(self) -> None:
         cleanup = self.rule(
             lambda rule: "Destroy In-World Text(Event Player.TeksVisiNasib);" in rule.body
             and "Event Player.TeksVisiNasib = Null;" in rule.body
             and validator.event_type(rule) == "Ongoing - Each Player"
         )
-        mutated = self.replace_in_rule(
-            cleanup,
-            "Event Player.PrivasiInspeksiAktif == True",
-            "Event Player.PrivasiInspeksiAktif == False",
-        )
-        self.assert_rejected(mutated, "cleanup Vision non reagisce a Privacy ON")
+        mutated = self.inject_condition(cleanup, "Event Player.PrivasiInspeksiAktif == True;")
+        self.assert_rejected(mutated, "cleanup Vision dipende dalla Privacy soggetto")
 
     def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
         protected = (

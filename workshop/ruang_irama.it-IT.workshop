@@ -2619,7 +2619,7 @@ regola("18i - Nasib: Visi menampilkan nama publik dan bot")
 	{
 		Or(Event Player.TeksVisiNasib == Null, Event Player.TeksVisiNasib == 0) == True;
 		Is Alive(Event Player) == True;
-		Or(Is Dummy Bot(Event Player) == True, Or(Event Player.BotOtomatis == True, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False))) == True;
+		Or(Is Dummy Bot(Event Player) == True, Or(Event Player.BotOtomatis == True, Event Player.Manusia == True)) == True;
 		Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) > 0;
 	}
 
@@ -2642,7 +2642,7 @@ regola("18j - Nasib: Bersihkan nama visi saat tidak diperlukan")
 	condizioni
 	{
 		And(Event Player.TeksVisiNasib != Null, Event Player.TeksVisiNasib != 0) == True;
-		Or(Or(Is Alive(Event Player) == False, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True)), Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
+		Or(Is Alive(Event Player) == False, Count Of(Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)))) == 0) == True;
 	}
 
 	azioni
@@ -2673,7 +2673,7 @@ regola("18k - Nasib: HUD efek dan durasi saat menu tertutup")
 
 	azioni
 	{
-		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: PUBLIC PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: NAMA PEMAIN PUBLIK / BOT") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่นสาธารณะ / บอต") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Globale.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISION: ALL PLAYER / BOT NAMES") : Event Player.EfekNasib == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.EfekNasib == 5 ? Custom String("BURNING: 5% MAX HP / SEC") : Custom String("HACKED"), Custom String("{0}s REMAINING", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("VISI: SEMUA NAMA PLAYER / BOT") : Event Player.EfekNasib == 2 ? Custom String("AKSELERASI MENGIKUTI BIDIKAN") : Event Player.EfekNasib == 5 ? Custom String("TERBAKAR: 5% HP MAKS / DETIK") : Custom String("DIRETAS"), Custom String("TERSISA {0}dtk", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))) : Custom String("{0}\n{1}", Event Player.EfekNasib == 1 ? Custom String("วิสัยทัศน์: ชื่อผู้เล่นทั้งหมด / บอต") : Event Player.EfekNasib == 2 ? Custom String("เร่งความเร็วตามทิศเล็ง") : Event Player.EfekNasib == 5 ? Custom String("ไฟไหม้: 5% HP สูงสุด / วินาที") : Custom String("ถูกแฮ็ก"), Custom String("เหลือ {0} วินาที", Max(0, Round To Integer(Event Player.EfekNasibBerakhir - Total Time Elapsed, Up)))), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Globale.RGB, Visible To String and Color, Visible Never);
 		Event Player.HudEfekNasib = Last Text ID;
 	}
 }
@@ -3177,7 +3177,7 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 				If(Globale.PemainAktif.EfekNasib == 1);
 					Globale.PemainAktif.PrivasiNasibAktif = True;
 					Globale.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 15;
-					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: PUBLIC PLAYER / BOT NAMES — 15s") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: NAMA PEMAIN PUBLIK / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นสาธารณะ / บอต — 15 วินาที"));
+					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: ALL PLAYER / BOT NAMES — 15s") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: SEMUA NAMA PLAYER / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นทั้งหมด / บอต — 15 วินาที"));
 				Else If(Globale.PemainAktif.EfekNasib == 2);
 					Set Move Speed(Globale.PemainAktif, 1000);
 					Start Accelerating(Globale.PemainAktif, Facing Direction Of(Evaluate Once(Globale.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);
@@ -4376,6 +4376,4 @@ regola("98i - Subrutin: Teleportasi ke target pemain")
 		End;
 	}
 }
-
-
 

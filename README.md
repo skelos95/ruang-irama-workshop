@@ -63,7 +63,7 @@ L'attivazione disabilita Unkillable e avvia una macchina a stati senza loop per-
 
 | Esito | Durata | Effetto |
 |---|---:|---|
-| Vision | 15 s | mostra icona eroe, nome e salute dei target consentiti; Crouch non apre inspection/Teleport e gli umani con Privacy ON restano nascosti |
+| Vision | 15 s | mostra icona eroe, nome e salute di tutti i player/bot validi; Crouch non apre inspection/Teleport |
 | Acceleration | 10 s | propulsione automatica 3D guidata dalla mira, senza input direzionali |
 | Skull | immediato | morte completa del player, con retry per mech, duplicazioni e altre forme intermedie |
 | Team Heal | immediato | cura completa dei player umani della squadra |
@@ -118,7 +118,7 @@ La destinazione Objective/Flag viene valutata al click:
 
 I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; soltanto il dummy nativo usa `Disable Movement Collision With Environment(..., False)`, attraversando pareti e soffitti senza perdere il pavimento. Il throttle `Forward` rivalutato seleziona esclusivamente l'umano vivo della squadra avversaria più vicino, vale `0` entro 4 m e riparte se il bersaglio si allontana; morte, assenza di nemici e rimozione fermano facing e throttle.
 
-La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è OFF per default: un umano diventa non selezionabile in Camera custom e invisibile (nome/nameplate) a Vision/inspection solo quando Privacy passa a ON. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
+La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è OFF per default: un umano diventa non selezionabile in Camera custom e invisibile (nome/nameplate) in inspection quando Privacy passa a ON, mentre Vision continua a mostrarne il nome durante l'effetto. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 
 ## Importazione tramite copia/incolla
 

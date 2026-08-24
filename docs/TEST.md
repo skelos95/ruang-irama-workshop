@@ -114,7 +114,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 | Esito | Verifica |
 |---|---|
-| Vision | icona eroe, nome e salute live in EN/ID/TH; nessun target umano con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
+| Vision | icona eroe, nome e salute live in EN/ID/TH; nomi visibili anche se il target umano ha Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
@@ -162,9 +162,9 @@ Per ciascun esito:
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
 - Nuovo player e player dopo cambio squadra: Privacy OFF e cursore OFF per default.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom.
-- Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
+- Privacy ON: gli altri player non vedono nome/nameplate in inspection e nessun osservatore può scegliere il player nella Camera custom; Vision continua a mostrare il nome durante l'effetto.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
-- Attivare Privacy ON mentre inspection o Vision stanno già mostrando il target: ogni nome/nameplate esistente deve sparire entro il ciclo di cleanup e non ricomparire finché Privacy resta ON.
+- Attivare Privacy ON mentre inspection sta già mostrando il target: nome/nameplate devono sparire entro il ciclo di cleanup e non ricomparire finché Privacy resta ON.
 - Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
 
 ### Teleport

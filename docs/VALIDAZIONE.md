@@ -139,7 +139,7 @@ Il gate controlla:
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
-- Privacy iniziale OFF con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato e nessun HUD Crouch sovrapposto durante Vision;
+- Privacy iniziale OFF con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e nessun HUD Crouch sovrapposto durante Vision;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.

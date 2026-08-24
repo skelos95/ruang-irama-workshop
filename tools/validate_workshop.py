@@ -2338,11 +2338,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         + r"\s*\)\s*\)",
         re.DOTALL,
     )
-    public_subject_pattern = re.compile(
+    vision_subject_pattern = re.compile(
         r"Or\(\s*Is Dummy Bot\(Event Player\)\s*==\s*True\s*,\s*"
         r"Or\(\s*Event Player\.BotOtomatis\s*==\s*True\s*,\s*"
-        r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
-        r"Event Player\.PrivasiInspeksiAktif\s*==\s*False\s*\)\s*\)\s*\)",
+        r"Event Player\.Manusia\s*==\s*True\s*\)\s*\)",
         re.DOTALL,
     )
 
@@ -2478,8 +2477,15 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(vision_names is not None, "IWT nomi Vision assente")
     if vision_names:
-        checks.require(public_subject_pattern.search(vision_names.body) is not None,
-                       "Vision mostra un umano con Privacy ON")
+        checks.require(
+            vision_subject_pattern.search(vision_names.body) is not None,
+            "Vision non copre umani, bot e dummy",
+        )
+        vision_conditions = rule_block(vision_names, "conditions") or ""
+        checks.require(
+            "Event Player.PrivasiInspeksiAktif == False" not in vision_conditions,
+            "Vision esclude umani con Privacy ON",
+        )
         vision_calls = list(iter_calls(vision_names.body, "Create In-World Text"))
         checks.equal(len(vision_calls), 1, "Vision deve creare un solo IWT per soggetto")
         if len(vision_calls) == 1:
@@ -2539,13 +2545,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(vision_cleanup is not None, "cleanup IWT Vision assente")
     if vision_cleanup:
+        cleanup_conditions = rule_block(vision_cleanup, "conditions") or ""
         checks.require(
-            re.search(
-                r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
-                r"Event Player\.PrivasiInspeksiAktif\s*==\s*True\s*\)",
-                vision_cleanup.body,
-            ) is not None,
-            "cleanup Vision non reagisce a Privacy ON",
+            "Event Player.PrivasiInspeksiAktif == True" not in cleanup_conditions,
+            "cleanup Vision dipende dalla Privacy soggetto",
         )
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
