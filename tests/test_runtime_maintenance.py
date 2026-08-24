@@ -16,7 +16,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan senza Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertNotIn("Sorted Array(Filtered Array", inspect)
             self.assertIn("CalonTargetInspeksi", inspect)
             self.assertNotIn("19d0 - Teleportasi Jongkok", source)
