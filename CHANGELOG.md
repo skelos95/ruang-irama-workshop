@@ -47,6 +47,8 @@ Stato: **live-ready**.
 - Rimossi tre `Wait(0.016)` ridondanti da Jump Resurrect, cleanup roster e seconda fase della classificazione iBot: `BersihkanPemain` è ora interamente atomica e il classificatore conserva soltanto il frame necessario a leggere il nome forzato. Restano 7 Wait funzionali e un solo Loop, indispensabile per il tick dello scheduler globale.
 - Crouch Teleport esteso a quattro pagine: Primary/Secondary navigano avanti e indietro, Interact esegue l'azione; la quarta pagina permette di agganciarsi sopra un player/bot pubblico con offset sopra la testa, Crouch + Reload sgancia soltanto con il menu Melee chiuso; morte/leave/cambio eroe di uno dei due interrompono automaticamente il collegamento.
 
+- Cambio squadra reso global-first: il scheduler globale accoda il lifecycle, cleanup e setup sono separati da timestamp da 0,1 s e protetti da Server Load; Player Left evita il doppio cleanup quando l'entità esiste ancora sulla nuova squadra.
+
 ## 0.7.2 — baseline
 
 - Teleport Crouch con selezione target vicina al reticolo e fallback obiettivo.

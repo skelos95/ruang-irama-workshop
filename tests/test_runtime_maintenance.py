@@ -97,5 +97,29 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn('Custom String("{0}\\n{1}", Custom String("HOLD {0} FOR ALL COMMANDS"', source)
 
 
+
+    def test_team_switch_lifecycle_is_global_first_and_load_guarded(self):
+        for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
+            self.assertNotIn("Player Joined Match;", source)
+            fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
+            self.assertIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
+            self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;", fast)
+
+            cleanup = source.split(f'{rule_kw}("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")', 1)[1].split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[0]
+            self.assertIn("Event Player.SiklusPemainAktif == True;", cleanup)
+            self.assertIn("Server Load < 150;", cleanup)
+            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;", cleanup)
+            self.assertNotIn("Wait(", cleanup)
+
+            setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
+            self.assertIn("Event Player.SiklusPemainAktif == False;", setup)
+            self.assertIn("Server Load < 150;", setup)
+            self.assertNotIn("Wait(", setup)
+
+            left = source.split(f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")', 1)[1].split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[0]
+            self.assertIn("0.100", left)
+            self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", left)
+
 if __name__ == "__main__":
     unittest.main()
