@@ -2969,7 +2969,6 @@ rule("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")
 				Event Player.PahlawanLampiranTarget = Hero Of(Event Player.TargetLampiranTeleportasi);
 				Event Player.LampiranTeleportasiAktif = True;
 				Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0, Y Component Of(Eye Position(Event Player.TargetLampiranTeleportasi)) - Y Component Of(Position Of(Event Player.TargetLampiranTeleportasi)) + 0.750, 0));
-				Disallow Button(Event Player, Button(Reload));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attached above {0}. CROUCH + RELOAD detaches.", Event Player.TargetLampiranTeleportasi) : Event Player.IndeksBahasa == 1 ? Custom String("Menempel di atas {0}. JONGKOK + RELOAD untuk lepas.", Event Player.TargetLampiranTeleportasi) : Custom String("เกาะอยู่เหนือ {0} กดย่อ + รีโหลดเพื่อปล่อย", Event Player.TargetLampiranTeleportasi));
 			End;
 		End;
@@ -3001,7 +3000,6 @@ rule("19f - Teleportasi Jongkok: Reload melepas lampiran")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Detached.") : Event Player.IndeksBahasa == 1 ? Custom String("Sudah lepas.") : Custom String("ปล่อยแล้ว"));
 	}
 }
@@ -3028,7 +3026,6 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 			Abort;
 		End;
 		If(Or(Event Player.TargetLampiranTeleportasi == Null, Entity Exists(Event Player.TargetLampiranTeleportasi) == False));
@@ -3037,7 +3034,6 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 			Abort;
 		End;
 		If(Or(Has Spawned(Event Player.TargetLampiranTeleportasi) == False, Is Alive(Event Player.TargetLampiranTeleportasi) == False));
@@ -3046,7 +3042,6 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 			Abort;
 		End;
 		If(Or(Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri, Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget));
@@ -3055,7 +3050,6 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 			Abort;
 		End;
 		If(And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True));
@@ -3064,7 +3058,6 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		Allow Button(Event Player, Button(Reload));
 		End;
 	}
 }
