@@ -726,19 +726,26 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "senza azioni Respawn")
 
-    def test_jump_resurrect_teleports_before_wait_then_confirms_success(self) -> None:
+    def test_jump_resurrect_teleports_and_confirms_in_same_tick(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Teleport(Event Player, Event Player.PosisiBangkitAman);\n\t\tWait(0.016, Ignore Condition);",
-            "Wait(0.016, Ignore Condition);\n\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);",
+            "Resurrect(Event Player);\n\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);",
+            "Teleport(Event Player, Event Player.PosisiBangkitAman);\n\t\tResurrect(Event Player);",
         )
-        self.assert_rejected(mutated, "teletrasportare nello stesso tick")
+        self.assert_rejected(mutated, "teletrasportare e confermare")
 
-    def test_jump_resurrect_confirms_success_after_wait(self) -> None:
+    def test_jump_resurrect_confirms_success_in_same_tick(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(resurrect, "If(Is Alive(Event Player) == True);", "If(True);")
-        self.assert_rejected(mutated, "poi confermare il successo")
+        self.assert_rejected(mutated, "confermare il successo nello stesso tick")
+
+    def test_jump_resurrect_cannot_wait_or_loop(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        for action in ("Wait(0.016, Ignore Condition);", "Loop;"):
+            with self.subTest(action=action):
+                mutated = self.inject_action(resurrect, action)
+                self.assert_rejected(mutated, "senza Wait/Loop")
 
     def test_jump_resurrect_cannot_rearm_during_same_press(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -858,9 +865,19 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.source + "\nLoop;\n"
         self.assert_rejected(mutated, "numero Loop")
 
-    def test_at_most_ten_waits_are_allowed(self) -> None:
-        mutated = self.source + "\n" + "\n".join("Wait(0.001, Ignore Condition);" for _ in range(11))
+    def test_at_most_seven_waits_are_allowed(self) -> None:
+        scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
+        mutated = self.inject_action(scheduler, "Wait(0.001, Ignore Condition);")
         self.assert_rejected(mutated, "Wait oltre")
+
+    def test_wait_allowlist_rejects_changed_delay(self) -> None:
+        classifier = self.rule(lambda rule: "Start Forcing Dummy Bot Name(Event Player" in rule.body)
+        mutated = self.replace_in_rule(
+            classifier,
+            "Wait(0.016, Ignore Condition);",
+            "Wait(0.100, Ignore Condition);",
+        )
+        self.assert_rejected(mutated, "Wait nominativamente consentiti")
 
     def test_wait_outside_allowlist_is_rejected(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
@@ -1816,14 +1833,12 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(setup, "Event Player.IndeksBahasa = 0;", "Event Player.IndeksBahasa = Event Player.IndeksBahasa;")
         self.assert_rejected(mutated, "IndeksBahasa = 0")
 
-    def test_cleanup_critical_section_cannot_wait(self) -> None:
+    def test_cleanup_is_fully_atomic_without_wait_or_loop(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
-        token = "Global.IndeksKeluar = Index Of Array Value"
-        position = cleanup.body.index(token)
-        line_end = cleanup.body.index(";", position) + 1
-        changed = cleanup.body[:line_end] + "\n\t\tWait(0.016, Ignore Condition);" + cleanup.body[line_end:]
-        mutated = self.source[:cleanup.start] + changed + self.source[cleanup.end:]
-        self.assert_rejected(mutated, "cleanup usa Wait")
+        for action in ("Wait(0.016, Ignore Condition);", "Loop;"):
+            with self.subTest(action=action):
+                mutated = self.inject_action(cleanup, action)
+                self.assert_rejected(mutated, "BersihkanPemain deve essere atomica")
 
     def test_team_switch_lock_releases_only_after_stable_registration(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")

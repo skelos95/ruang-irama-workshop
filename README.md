@@ -58,7 +58,7 @@ In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità ag
 | Overlay Teleport | Crouch + Secondary / Primary | cambia pagina / teletrasporta |
 | Morto | Jump | Resurrect vicino al punto di morte |
 
-Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Resurrect e teleport sicuro vengono eseguiti nello stesso tick; dopo 0,016 s il motore conferma il ritorno in vita prima di mostrare feedback ed effetto. Se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
+Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Resurrect, teleport sicuro e verifica del successo vengono eseguiti nello stesso tick, senza `Wait`; se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
 
 ## Try Your Luck
 
@@ -90,7 +90,7 @@ Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 H
 
 Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
 
-Il sorgente mantiene un solo `Loop` e al massimo **10 `Wait`** autorizzati. Il ritardo di uscita dei dummy dalla Spawn Room non consuma un `Wait`: una scadenza timestamp di 1 secondo viene valutata dal runtime periodico.
+Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 
 Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload o pagine nascoste: apertura, chiusura e cambio pagina sono gli unici eventi che ricreano il menu; la navigazione interna aggiorna variabili rivalutate.
 

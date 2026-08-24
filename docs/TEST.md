@@ -22,7 +22,7 @@ Accettazione:
 - parità semantica canonica tra `workshop/ruang_irama.it-IT.workshop` e `tests/fixtures/semantic_reference.txt`;
 - nessuna dipendenza Python esterna;
 - nessun errore da `git diff --check`;
-- un solo `Loop` e massimo 10 `Wait`, senza `Wait` dedicato alla stabilizzazione dummy;
+- un solo `Loop` e massimo 7 `Wait`, senza `Wait` in Resurrect, cleanup roster o stabilizzazione dummy;
 - un solo workflow permanente, `validate-workshop.yml`, e nessun marker, trigger o patcher one-shot sotto `.github`.
 
 Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`](VALIDAZIONE.md).

@@ -91,7 +91,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump esatta: latch, `Resurrect`, teleport sicuro nello stesso tick, `Wait(0.016)` e conferma `Is Alive`; il ramo non può riarmarsi da solo e una regola separata libera il latch soltanto quando il player ancora morto rilascia Jump;
+- sequenza Jump esatta e senza `Wait`: latch, `Resurrect`, teleport sicuro e conferma `Is Alive` nello stesso tick; il ramo non può riarmarsi da solo e una regola separata libera il latch soltanto quando il player ancora morto rilascia Jump;
 - latch rilasciati senza doppie attivazioni.
 
 ### Unkillable FULL HP
@@ -110,7 +110,7 @@ Il gate richiede:
 
 - un solo scheduler `Ongoing - Global` a 20 Hz;
 - un solo `Loop` nel sorgente;
-- massimo 10 `Wait`, ognuno in una categoria consentita e riconoscibile;
+- massimo 7 `Wait`, ciascuno fissato per ruolo, durata e quantità;
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
@@ -119,7 +119,7 @@ Il gate richiede:
 - un solo raycast Camera;
 - nessuna regola HUD contenente `Wait` o `Loop`.
 
-Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, Resurrect e cleanup atomico. La stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo e non appartiene all'allowlist `Wait`. Qualsiasi Wait fuori allowlist, un undicesimo `Wait` o un secondo Loop fa fallire il gate.
+Le categorie Wait autorizzabili sono soltanto: tick scheduler, ordinamento join/leave, primo frame della classificazione bot e hold input. Resurrect e cleanup roster sono atomici e senza `Wait`; la stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo. Qualsiasi Wait fuori allowlist, un ottavo `Wait`, una durata diversa o un secondo Loop fa fallire il gate.
 
 ### Try Your Luck
 

@@ -34,7 +34,7 @@ Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Resurrect e teleport alla posizione sicura avvengono nello stesso tick; dopo `Wait(0.016)` la guardia `Is Alive == True` autorizza soltanto effetto e feedback. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
+- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Resurrect, teleport alla posizione sicura e guardia `Is Alive == True` avvengono nello stesso tick senza `Wait`; effetto e feedback vengono emessi soltanto in caso di successo. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
 
 Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
 
@@ -51,7 +51,7 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 
 Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
 
-Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spawn Room registra una scadenza di 1 secondo e il controllo periodico agisce soltanto dopo quel timestamp. Non esiste un `Wait` dedicato al dummy e il budget complessivo resta massimo 10 `Wait`.
+Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spawn Room registra una scadenza di 1 secondo e il controllo periodico agisce soltanto dopo quel timestamp. Non esiste un `Wait` dedicato al dummy e il budget complessivo resta massimo 7 `Wait`.
 
 `Ongoing - Each Player` è ammesso soltanto quando l'evento o lo stato è realmente individuale:
 
@@ -197,8 +197,8 @@ Busan, Eichenwalde e Paraíso hanno priorità perché modificati nella patch del
 Target statici:
 
 - un solo `Loop` globale;
-- massimo 10 `Wait`, ciascuno associato a un percorso autorizzato;
-- stabilizzazione dummy a timestamp, mai tramite un undicesimo `Wait`;
+- massimo 7 `Wait`, ciascuno associato a un percorso autorizzato;
+- stabilizzazione dummy a timestamp, mai tramite un ottavo `Wait`;
 - un solo raycast Camera;
 - nessuna regola, variabile o subroutine inutilizzata/duplicata;
 - nessun loop o Wait dentro le subroutine chiamate durante una scansione scheduler;

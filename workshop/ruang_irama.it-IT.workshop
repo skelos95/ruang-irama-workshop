@@ -1094,13 +1094,6 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Else;
 			Event Player.BotOtomatis = False;
 		End;
-		Wait(0.016, Ignora condizione);
-		Abort If(Entity Exists(Event Player) == False);
-		If(Or(Event Player.SudahSiap == False, Has Spawned(Event Player) == False));
-			Stop Forcing Dummy Bot Name(Event Player);
-			Event Player.SudahDiperiksa = False;
-			Abort;
-		End;
 		Stop Forcing Dummy Bot Name(Event Player);
 		If(Event Player.BotOtomatis == True);
 			Cancel Primary Action(Event Player);
@@ -2418,7 +2411,6 @@ regola("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 		End;
 		Resurrect(Event Player);
 		Teleport(Event Player, Event Player.PosisiBangkitAman);
-		Wait(0.016, Ignora condizione);
 		If(Is Alive(Event Player) == True);
 			Call Subroutine(EfekPulihkan);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Resurrected nearby. Try not to repeat that.") : Event Player.IndeksBahasa == 1 ? Custom String("Bangkit kembali dekat titik mati. Coba jangan ulangi.") : Custom String("ฟื้นคืนชีพใกล้จุดตายแล้ว อย่าซ้ำอีกล่ะ"));
@@ -3913,8 +3905,7 @@ regola("93c - Subrutin: Bersihkan pemain saat keluar atau pindah tim")
 		End;
 		Event Player.TeksTeleportasi = Null;
 		Event Player.TargetTeleportasiTeks = Null;
-		"Satu jeda sebelum bagian kritis; setelah variabel kerja Global dipakai, pembersihan harus atomik tanpa Wait."
-		Wait(0.016, Ignora condizione);
+		"Seluruh pembersihan berjalan atomik tanpa Wait sebelum atau sesudah variabel kerja Global dipakai."
 		Globale.IndeksKeluar = Index Of Array Value(Globale.PemainManusia, Event Player);
 		If(And(Globale.IndeksKeluar < 0, Event Player.UrutanHUD >= 0));
 			Globale.IndeksKeluar = Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD);

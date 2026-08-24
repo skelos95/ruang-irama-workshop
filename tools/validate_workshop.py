@@ -739,16 +739,16 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
     body = rule.body
     if scheduler is not None and rule.start == scheduler.start:
         return "scheduler"
-    if event_type(rule) in {"Player Joined Match", "Player Left Match"}:
-        return "join/leave ordering"
-    if "Abort When False" in body and ("Button(Melee)" in body or "Button(Interact)" in body):
-        return "hold input"
+    if event_type(rule) == "Player Joined Match":
+        return "join ordering"
+    if event_type(rule) == "Player Left Match":
+        return "leave ordering"
+    if "Abort When False" in body and "Button(Melee)" in body:
+        return "menu hold"
+    if "Abort When False" in body and "Button(Interact)" in body:
+        return "camera hold"
     if "SudahDiperiksa" in body and "Is Dummy Bot" in body:
         return "bot classification"
-    if "Resurrect(" in body or "BangkitLompat" in body:
-        return "resurrect"
-    if subroutine_target(rule) == "BersihkanPemain":
-        return "atomic cleanup"
     return None
 
 
@@ -1682,14 +1682,17 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Event Player.BangkitLompatDipakai = True;",
             "Resurrect(Event Player);",
             "Teleport(Event Player, Event Player.PosisiBangkitAman);",
-            "Wait(0.016, Ignore Condition);",
             "If(Is Alive(Event Player) == True);",
         )
         positions = [masked.find(token) for token in ordered]
         checks.require(
             all(position >= 0 for position in positions)
             and positions == sorted(positions),
-            "Jump Resurrect deve teletrasportare nello stesso tick, attendere 0,016 s e poi confermare il successo",
+            "Jump Resurrect deve teletrasportare e confermare il successo nello stesso tick",
+        )
+        checks.require(
+            not wait_calls(resurrect.body) and action_loop_count(resurrect.body) == 0,
+            "Jump Resurrect deve funzionare senza Wait/Loop",
         )
         checks.require(
             "Event Player.BangkitLompatDipakai = False;" not in masked,
@@ -1997,12 +2000,30 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
                        "cadenza scheduler 10 secondi assente")
 
     waits = wait_calls(source)
-    checks.require(len(waits) <= 10, f"Wait oltre il massimo consentito: {len(waits)} > 10")
+    checks.require(len(waits) <= 7, f"Wait oltre il massimo consentito: {len(waits)} > 7")
+    wait_signatures: Counter[tuple[str | None, tuple[str, ...]]] = Counter()
     for rule in rules:
         calls = wait_calls(rule.body)
         if not calls:
             continue
-        checks.require(wait_role(rule, scheduler) is not None, f"Wait non allowlisted in regola: {rule.name}")
+        role = wait_role(rule, scheduler)
+        checks.require(role is not None, f"Wait non allowlisted in regola: {rule.name}")
+        for call in calls:
+            signature = tuple(re.sub(r"\s+", " ", argument).strip() for argument in call.args)
+            wait_signatures[(role, signature)] += 1
+    expected_wait_signatures: Counter[tuple[str | None, tuple[str, ...]]] = Counter({
+        ("scheduler", ("0.050", "Ignore Condition")): 1,
+        ("join ordering", ("0.050", "Ignore Condition")): 2,
+        ("leave ordering", ("0.050", "Ignore Condition")): 1,
+        ("bot classification", ("0.016", "Ignore Condition")): 1,
+        ("menu hold", ("0.500", "Abort When False")): 1,
+        ("camera hold", ("0.500", "Abort When False")): 1,
+    })
+    checks.equal(
+        wait_signatures,
+        expected_wait_signatures,
+        "Wait nominativamente consentiti per ruolo, durata e quantità",
+    )
     for rule in rules:
         for span in for_spans(rule):
             checks.require("Wait(" not in mask_strings(span),
@@ -2770,10 +2791,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require(not wait_calls(quiet.body) and action_loop_count(quiet.body) == 0,
                        "TenangkanPemain deve essere atomica e senza Wait/Loop")
     if cleanup:
-        critical = cleanup.body[cleanup.body.find("Global.IndeksKeluar ="):]
-        checks.require("Wait(" not in critical,
-                       "cleanup usa Wait dopo l'acquisizione scratch Global")
-        checks.require("Remove From Array By Index" in critical,
+        checks.require(
+            not wait_calls(cleanup.body) and action_loop_count(cleanup.body) == 0,
+            "BersihkanPemain deve essere atomica e senza Wait/Loop",
+        )
+        checks.require("Remove From Array By Index" in cleanup.body,
                        "cleanup non compatta roster/handle paralleli")
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
