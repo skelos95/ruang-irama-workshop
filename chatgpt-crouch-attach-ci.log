@@ -3,12 +3,64 @@ Crouch Teleport attach patch applied
 exit=0
 ===== PYCOMPILE =====
 exit=0
+===== TELEPORT CLICK VALIDATOR CONTEXT =====
+Position(Objective Index)" in rule.body
+        ),
+        None,
+    )
+    if objective_rule is None:
+        objective_rule = rule_by_subroutine(rules, "TeleportKeObjektif")
+    checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
+    if objective_rule:
+        for mode in GAME_MODES:
+            checks.require(f"Game Mode({mode})" in objective_rule.body,
+                           f"destinazione obiettivo non copre {mode}")
+        checks.require("Is On Objective(" in objective_rule.body,
+                       "Push non usa proxy robot/fallback obiettivo")
+        safe_position = rule_by_subroutine(rules, "CariPosisiTeleportAman")
+        checks.require(safe_position is not None, "subroutine comune posizione teleport sicura assente")
+        checks.require("Call Subroutine(CariPosisiTeleportAman);" in objective_rule.body,
+                       "teleport obiettivo non usa la subroutine comune di sicurezza")
+        if safe_position:
+            checks.require("Nearest Walkable Position(" in safe_position.body,
+                           "subroutine teleport sicura non verifica una posizione percorribile")
+            checks.require("Ray Cast Hit Position(" in safe_position.body,
+                           "subroutine teleport sicura non verifica terreno/percorso")
+        click_dispatch = next(
+            (
+                rule
+                for rule in rules
+                if "PerintahTeleportasi == 1" in rule.body
+                and "Call Subroutine(TeleportKeObjektif);" in rule.body
+            ),
+            None,
+        )
+        checks.require(
+            click_dispatch is not None
+            or "PerintahTeleportasi == 1" in objective_rule.body
+            or "Button(Primary Fire)" in objective_rule.body,
+            "destinazione teleport non viene valutata al click",
+        )
+    for token in FORBIDDEN_RESULT_ACTIONS:
+        checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
+    checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
+    camera_rule = rule_by_subroutine(rules, "MulaiKamera")
+    checks.require(camera_rule is not None, "subroutine Camera assente")
+    if camera_rule:
+        checks.equal(camera_rule.body.count("Ray Cast Hit Position("), 1, "raycast Camera")
+
+
+def validate_indonesian_and_duplicates(checks: Checks, source: str, rules: list[Rule]) -> None:
+    names = [rule.name for rule in rules]
+    checks.equal(len(names), len(set(names)), "titoli regola univoci")
+    bodies = [normalized_rule_body(rule) for rule in rules]
+    checks.require(not [body for body, count in Counter(bodies).items() if count > 1],
+                   "regole duplicate con corpo identico")
+    for rule in rules:
+        checks.require(FORBIDDEN_PROSE.search(rule.name) is None,
+                       f"titolo regola non interamente indonesiano: {rule.name}")
+    standalone_comments = re.findall
 ===== VALIDATOR =====
-ERRORE - 6 controllo/i non superato/i:
-  - contenuti permanenti .github: atteso {'workflows/validate-workshop.yml', 'workflows'}, trovato {'workflows/chatgpt-crouch-attach.yml', 'workflows/validate-workshop.yml', 'workflows'}
-  - workflow permanenti: atteso {'validate-workshop.yml'}, trovato {'validate-workshop.yml', 'chatgpt-crouch-attach.yml'}
-  - numero argomenti/placeholder incoerente in Custom String: 'Attached above 0. RELOAD detaches.'
-  - numero argomenti/placeholder incoerente in Custom String: 'Menempel di atas 0. RELOAD untuk lepas.'
-  - numero argomenti/placeholder incoerente in Custom String: 'เกาะอยู่เหนือ 0 กดรีโหลดเพื่อปล่อย'
+ERRORE - 1 controllo/i non superato/i:
   - destinazione teleport non viene valutata al click
 exit=1
