@@ -1,0 +1,49 @@
+name: Inspect Crouch Teleport
+
+on:
+  push:
+    branches:
+      - chatgpt-crouch-attach
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Dump relevant Workshop rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('workshop/ruang_irama.it-IT.workshop')
+          s=p.read_text(encoding='utf-8')
+          def end_brace(start):
+              o=s.find('{', start); d=0; ins=False; esc=False
+              for i in range(o,len(s)):
+                  c=s[i]
+                  if ins:
+                      if esc: esc=False
+                      elif c=='\\': esc=True
+                      elif c=='"': ins=False
+                      continue
+                  if c=='"': ins=True
+                  elif c=='{': d+=1
+                  elif c=='}':
+                      d-=1
+                      if d==0: return i+1
+              raise SystemExit('unclosed')
+          for m in re.finditer(r'regola\("([^"]+)"\)', s):
+              name=m.group(1)
+              e=end_brace(m.start())
+              block=s[m.start():e]
+              if ('Teleportasi Jongkok' in name or 'GambarTeleportasi' in block or 'TerapkanTeleportasiJongkok' in block or 'SegarkanTargetTeleportasi' in block or 'KursorTeleportasi' in block):
+                  print('\n===== '+name+' =====\n'+block)
+          print('\n===== PLAYER VAR TAIL =====')
+          a=s.index('\t\t80: EfekNasib')
+          b=s.index('\n}\n\nsubroutine', a)
+          print(s[a:b])
+          PY
