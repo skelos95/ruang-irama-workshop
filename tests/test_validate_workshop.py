@@ -1857,23 +1857,23 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cleanup Try vivo non deve sospendere Unkillable")
 
-    def test_privacy_is_on_by_default(self) -> None:
+    def test_privacy_is_off_by_default(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.PrivasiInspeksiAktif = True;",
             "Event Player.PrivasiInspeksiAktif = False;",
+            "Event Player.PrivasiInspeksiAktif = True;",
         )
-        self.assert_rejected(mutated, "Privacy deve essere ON di default")
+        self.assert_rejected(mutated, "Privacy deve essere OFF di default")
 
-    def test_privacy_cursor_defaults_to_on(self) -> None:
+    def test_privacy_cursor_defaults_to_off(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.KursorPrivasiInspeksi = 1;",
             "Event Player.KursorPrivasiInspeksi = 0;",
+            "Event Player.KursorPrivasiInspeksi = 1;",
         )
-        self.assert_rejected(mutated, "cursore Privacy deve iniziare su ON")
+        self.assert_rejected(mutated, "cursore Privacy deve iniziare su OFF")
 
     def test_real_camera_cache_missing_and_excessive_parenthesis_are_rejected(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif")

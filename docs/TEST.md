@@ -83,7 +83,7 @@ Verificare esattamente 13 voci, indici e contenuti:
 7. Hero Voice — 5 preset.
 8. Player Icon — Nothing + 36 icone.
 9. Crouch Teleport — OFF/ON.
-10. Crouch Privacy — OFF/ON (default ON).
+10. Crouch Privacy — OFF/ON (default OFF).
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
 13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default ON).
@@ -182,7 +182,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
-- Nuovo player e player dopo cambio squadra: Privacy ON e cursore ON per default.
+- Nuovo player e player dopo cambio squadra: Privacy OFF e cursore OFF per default.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision può mostrarne icona, nome e salute.
 - Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
@@ -244,7 +244,7 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti, voti e riferimenti precedenti rimossi;
-- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy ON e Dummy Follow ON;
+- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy OFF e Dummy Follow ON;
 - Text Count ed Entity Count tornano al baseline;
 - nessun `excessive Workshop script load`.
 

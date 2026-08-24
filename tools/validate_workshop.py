@@ -2757,8 +2757,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         reset_tokens = (
             "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
-            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = True;",
-            "KursorPrivasiInspeksi = 1;",
+            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
+            "KursorPrivasiInspeksi = 0;",
             "IzinkanDummyMengikuti = True;", "KursorIkutiDummy = 1;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
@@ -2826,10 +2826,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "SiapkanPemain assente per default privacy")
     if setup:
-        checks.require("Event Player.PrivasiInspeksiAktif = True;" in setup.body,
-                       "Privacy deve essere ON di default per ogni umano")
-        checks.require("Event Player.KursorPrivasiInspeksi = 1;" in setup.body,
-                       "cursore Privacy deve iniziare su ON (1)")
+        checks.require("Event Player.PrivasiInspeksiAktif = False;" in setup.body,
+                       "Privacy deve essere OFF di default per ogni umano")
+        checks.require("Event Player.KursorPrivasiInspeksi = 0;" in setup.body,
+                       "cursore Privacy deve iniziare su OFF (0)")
 
     privacy_filter_tokens = (
         "Is Dummy Bot(Current Array Element) == True",

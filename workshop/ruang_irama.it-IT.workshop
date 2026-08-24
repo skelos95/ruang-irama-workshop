@@ -4087,8 +4087,8 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.WarnaMenu = Vector(255, 255, 255);
 		Event Player.TeleportasiJongkokDiaktifkan = False;
 		Event Player.KursorTeleportasiJongkok = 0;
-		Event Player.PrivasiInspeksiAktif = True;
-		Event Player.KursorPrivasiInspeksi = 1;
+		Event Player.PrivasiInspeksiAktif = False;
+		Event Player.KursorPrivasiInspeksi = 0;
 		Event Player.ModeKebal = 0;
 		Event Player.IkonKebal = Null;
 		Event Player.KartuNasibAktif = False;

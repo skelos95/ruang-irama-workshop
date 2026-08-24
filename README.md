@@ -34,7 +34,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nothing + 36 icone |
 | 8 | Crouch Teleport | OFF / ON, default OFF |
-| 9 | Crouch Privacy | OFF / ON, default ON |
+| 9 | Crouch Privacy | OFF / ON, default OFF |
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
 | 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default ON |
@@ -121,7 +121,7 @@ La destinazione Objective/Flag viene valutata al click:
 
 I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; soltanto il dummy nativo usa `Disable Movement Collision With Environment(..., False)`, attraversando pareti e soffitti senza perdere il pavimento, mentre `Enable Movement Collision With Players` mantiene esplicitamente gli urti fisici con player e bot. `Damage Received` e `Knockback Received` restano entrambi al 100%. Il throttle `Forward` rivalutato seleziona esclusivamente l'umano vivo, ancora registrato, della squadra avversaria che ha Dummy Follow ON; fra i target idonei sceglie sempre il più vicino, vale `0` entro 4 m e riparte se il bersaglio si allontana. Opt-out, morte, assenza di target e rimozione fermano o riallineano facing e throttle senza riferimenti obsoleti.
 
-La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è ON per default: un umano non è selezionabile nella Camera custom e resta invisibile per nome/nameplate sia in inspection sia in Vision finché non porta volontariamente la preferenza a OFF. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade. Il Workshop può bloccare le proprie Camere custom, ma non può disabilitare la visuale spettatore nativa riservata a lobby e amministratori.
+La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è OFF per default: l'umano resta pubblico per Camera custom, inspection e Vision finché non attiva volontariamente la preferenza. Con Privacy ON non è selezionabile nella Camera custom e nome/nameplate vengono nascosti sia in inspection sia in Vision; gli osservatori custom già agganciati vengono sganciati. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade. Il Workshop può bloccare le proprie Camere custom, ma non può disabilitare la visuale spettatore nativa riservata a lobby e amministratori.
 
 ## Importazione tramite copia/incolla
 

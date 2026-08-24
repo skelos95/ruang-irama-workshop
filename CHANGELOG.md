@@ -21,7 +21,7 @@ Stato: **static-ready / live-pending**.
 - Corretto il rendering live della roulette: tutte le sei icone usano `Visible To and Position`, rivalutano la posizione con `Update Every Frame` su occhio/mirino del beneficiario e restano visibili a tutti gli umani anche quando il roster cambia.
 - Corretta l'accelerazione live: `Facing Direction Of(Evaluate Once(player))` conserva il beneficiario ma segue la sua mira con `Direction Rate and Max Speed`, producendo propulsione automatica 3D senza input direzionali.
 - Menu e Camera condividono ora il latch Interact: cambiare stato di Crouch durante lo stesso hold non può attivare entrambi.
-- Crouch Privacy parte ON per ogni umano; esclude il player dalla Camera custom, interrompe una Camera già agganciata e nasconde nome/nameplate in inspection e Vision finché il player non sceglie OFF.
+- Crouch Privacy parte OFF per ogni umano; quando il player la attiva, lo esclude dalla Camera custom, interrompe una Camera già agganciata e nasconde nome/nameplate in inspection e Vision.
 - Vision mostra icona, nome e salute live soltanto per bot/dummy e umani pubblici; Crouch inspection/Teleport viene soppresso per tutta la durata per evitare sovrapposizioni.
 - Corretto il latch Soundtrack: `Crouch + Ability 1/2` viene armato e consumato sulla pagina 2, ripristinando i comandi `+10/−10` generi.
 - Aggiunto cleanup hero swap global-first: il tracker eroe condiviso viene aggiornato a 10 Hz e annulla roulette, status, HUD e accelerazione Try Your Luck senza creare un nuovo `Ongoing - Each Player` e senza sospendere Unkillable se il player è vivo.
