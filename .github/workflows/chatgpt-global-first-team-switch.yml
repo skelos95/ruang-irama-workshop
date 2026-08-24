@@ -26,7 +26,8 @@ jobs:
           set -euo pipefail
           python tools/chatgpt_fix_global_first_patcher.py
           python tools/chatgpt_global_first_team_switch.py
-          git rm -f tools/chatgpt_fix_global_first_patcher.py tools/chatgpt_global_first_team_switch.py .github/workflows/chatgpt-global-first-team-switch.yml
+          python tools/chatgpt_fix_wait_limit_test.py
+          git rm -f tools/chatgpt_fix_global_first_patcher.py tools/chatgpt_global_first_team_switch.py tools/chatgpt_fix_wait_limit_test.py .github/workflows/chatgpt-global-first-team-switch.yml
 
           python -m py_compile tools/validate_workshop.py tests/test_validate_workshop.py tests/test_runtime_maintenance.py
           python tools/validate_workshop.py
