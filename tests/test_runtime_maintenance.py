@@ -55,12 +55,15 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 3)) % 4", source)
             self.assertIn("PLAYER / BOT ATTACH 4/4", source)
 
-    def test_crouch_attach_uses_native_attach_and_reload_detach(self):
-        for source in (self.it, self.en):
+    def test_crouch_attach_uses_native_attach_and_crouch_reload_detach(self):
+        for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             self.assertIn("Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0,", source)
             self.assertIn("+ 0.750, 0));", source)
             self.assertIn("Detach Players(Event Player);", source)
-            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", source)
+            detach_rule = source.split(f'{rule_kw}("19f - Teleportasi Jongkok: Reload melepas lampiran")', 1)[1].split(f'{rule_kw}("19h - Teleportasi Jongkok', 1)[0]
+            self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", detach_rule)
+            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", detach_rule)
+            self.assertIn("CROUCH + RELOAD: DETACH", source)
             self.assertIn("99: TargetLampiranTeleportasi", source)
             self.assertIn("100: LampiranTeleportasiAktif", source)
 
