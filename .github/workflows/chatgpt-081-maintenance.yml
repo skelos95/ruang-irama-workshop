@@ -26,14 +26,14 @@ jobs:
           set -euo pipefail
           python tools/chatgpt_081_serial_lifecycle.py
           python tools/chatgpt_081_fix_leave_validator.py
-          git rm -f tools/chatgpt_081_serial_lifecycle.py tools/chatgpt_081_fix_leave_validator.py .github/workflows/chatgpt-081-maintenance.yml
 
-          python -m py_compile tools/validate_workshop.py tests/test_validate_workshop.py tests/test_runtime_maintenance.py
+          python -m py_compile tools/validate_workshop.py tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/chatgpt_parallel_unittest.py
           python tools/validate_workshop.py
           python -m unittest tests.test_runtime_maintenance
           python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
-          python -m unittest discover -s tests -p 'test_*.py'
+          python tools/chatgpt_parallel_unittest.py
 
+          git rm -f tools/chatgpt_081_serial_lifecycle.py tools/chatgpt_081_fix_leave_validator.py tools/chatgpt_parallel_unittest.py .github/workflows/chatgpt-081-maintenance.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
