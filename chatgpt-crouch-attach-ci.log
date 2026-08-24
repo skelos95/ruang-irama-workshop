@@ -1,9 +1,14 @@
 ===== PATCH =====
-Traceback (most recent call last):
-  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tools/chatgpt_crouch_attach_patch.py", line 447, in <module>
-    test = replace_once(
-           ^^^^^^^^^^^^^
-  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tools/chatgpt_crouch_attach_patch.py", line 64, in replace_once
-    raise RuntimeError(f"{label}: expected one anchor, found {text.count(old)}")
-RuntimeError: stale dummy cache error expectation: expected one anchor, found 4
+Crouch Teleport attach patch applied
+exit=0
+===== PYCOMPILE =====
+exit=0
+===== VALIDATOR =====
+ERRORE - 6 controllo/i non superato/i:
+  - contenuti permanenti .github: atteso {'workflows/validate-workshop.yml', 'workflows'}, trovato {'workflows/chatgpt-crouch-attach.yml', 'workflows/validate-workshop.yml', 'workflows'}
+  - workflow permanenti: atteso {'validate-workshop.yml'}, trovato {'validate-workshop.yml', 'chatgpt-crouch-attach.yml'}
+  - numero argomenti/placeholder incoerente in Custom String: 'Attached above 0. RELOAD detaches.'
+  - numero argomenti/placeholder incoerente in Custom String: 'Menempel di atas 0. RELOAD untuk lepas.'
+  - numero argomenti/placeholder incoerente in Custom String: 'เกาะอยู่เหนือ 0 กดรีโหลดเพื่อปล่อย'
+  - destinazione teleport non viene valutata al click
 exit=1
