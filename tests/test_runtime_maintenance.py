@@ -45,5 +45,32 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("JarakBidik = 25;", source)
 
 
+    def test_crouch_teleport_has_four_pages_and_new_controls(self):
+        for source in (self.it, self.en):
+            self.assertIn("KursorTeleportasi %= 4;", source)
+            self.assertIn("Event Player.PerintahTeleportasi = 1;", source)
+            self.assertIn("Event Player.PerintahTeleportasi = 2;", source)
+            self.assertIn("Event Player.PerintahTeleportasi = 3;", source)
+            self.assertIn("PerintahTeleportasi == 3;", source)
+            self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 3)) % 4", source)
+            self.assertIn("ATTACH ABOVE PLAYER / BOT", source)
+
+    def test_crouch_attach_uses_native_attach_and_reload_detach(self):
+        for source in (self.it, self.en):
+            self.assertIn("Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0,", source)
+            self.assertIn("+ 0.750, 0));", source)
+            self.assertIn("Detach Players(Event Player);", source)
+            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", source)
+            self.assertIn("99: TargetLampiranTeleportasi", source)
+            self.assertIn("100: LampiranTeleportasiAktif", source)
+
+    def test_crouch_attach_auto_detaches_on_death_leave_or_hero_change(self):
+        for source in (self.it, self.en):
+            self.assertIn("Entity Exists(Event Player.TargetLampiranTeleportasi) == False", source)
+            self.assertIn("Is Alive(Event Player.TargetLampiranTeleportasi) == False", source)
+            self.assertIn("Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri", source)
+            self.assertIn("Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget", source)
+            self.assertIn("TargetLampiranTeleportasi) == Global.PemainPembersihan", source.replace("Globale.", "Global."))
+
 if __name__ == "__main__":
     unittest.main()

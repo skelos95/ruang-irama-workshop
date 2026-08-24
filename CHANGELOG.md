@@ -45,6 +45,7 @@ Stato: **live-ready**.
 - Rimosso il workflow di manutenzione che generava commit automatici; l'allowlist di `.github` conserva soltanto il workflow permanente di validazione e rifiuta marker, trigger o patcher one-shot.
 - Test live completati e stabilità della 0.8.0 confermata dall'utente il 24 agosto 2026; la release passa a `live-ready` senza attribuire valori numerici non registrati.
 - Rimossi tre `Wait(0.016)` ridondanti da Jump Resurrect, cleanup roster e seconda fase della classificazione iBot: `BersihkanPemain` è ora interamente atomica e il classificatore conserva soltanto il frame necessario a leggere il nome forzato. Restano 7 Wait funzionali e un solo Loop, indispensabile per il tick dello scheduler globale.
+- Crouch Teleport esteso a quattro pagine: Primary/Secondary navigano avanti e indietro, Interact esegue l'azione; la quarta pagina permette di agganciarsi sopra un player/bot pubblico con offset sopra la testa, Reload sgancia e morte/leave/cambio eroe di uno dei due interrompono automaticamente il collegamento.
 
 ## 0.7.2 — baseline
 
