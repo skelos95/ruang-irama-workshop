@@ -17,13 +17,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Dump forcing position references
+      - name: Dump crouch teleport validator coverage
         run: |
           python - <<'PY'
           from pathlib import Path
-          for fn in ['workshop/ruang_irama.it-IT.workshop','tests/fixtures/semantic_reference.txt','tools/validate_workshop.py','tests/test_validate_workshop.py']:
+          needles=('KursorTeleportasi','Teleportasi Jongkok','Crouch Teleport','crouch teleport','SegarkanTargetTeleportasi')
+          for fn in ['tools/validate_workshop.py','tests/test_validate_workshop.py','tests/test_runtime_maintenance.py']:
+              lines=Path(fn).read_text(encoding='utf-8').splitlines()
+              hits=[]
+              for i,line in enumerate(lines):
+                  if any(n in line for n in needles):
+                      hits.append(i)
               print('\n===== '+fn+' =====')
-              for i,line in enumerate(Path(fn).read_text(encoding='utf-8').splitlines(),1):
-                  if 'Forcing' in line or 'forcing' in line:
-                      print(f'{i}: {line}')
+              shown=set()
+              for i in hits:
+                  for j in range(max(0,i-8), min(len(lines),i+10)):
+                      if j not in shown:
+                          print(f'{j+1}: {lines[j]}')
+                          shown.add(j)
+                  print('---')
           PY
