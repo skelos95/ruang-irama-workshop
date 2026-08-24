@@ -5,7 +5,7 @@ Il server CHILL crea al massimo **un dummy bot per squadra** soltanto quando esi
 Comportamento atteso:
 
 - eroe casuale;
-- respawn massimo di 30 secondi;
+- respawn massimo di 3 secondi;
 - nessun menu Arcade, HUD personale o input offensivo;
 - velocità di movimento fissata al **20%** per bot AI e dummy;
 - `Damage Dealt = 0` e `Knockback Dealt = 0`, quindi il dummy non danneggia né spinge i player;

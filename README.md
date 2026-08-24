@@ -2,11 +2,11 @@
 
 Overlay sociale e Arcade per lobby Overwatch 2 **6v6 fino a 12 player**, progettato per convivere con punteggi e obiettivi nativi di Push, Flashpoint, Capture the Flag, Control, Clash, Hybrid, Escort e Assault, mentre la conclusione automatica della partita è governata dal timer CHILL.
 
-Versione: **0.8.0**
+Versione: **0.8.1**
 
-Stato: **live-ready**
+Stato: **static-ready / live-pending**
 
-I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. I test live sono stati completati dall'utente e la stabilità della 0.8.0 è stata confermata il 24 agosto 2026; i valori diagnostici numerici non forniti non vengono ricostruiti o inventati nel repository.
+I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. La 0.8.1 ha superato i gate statici ma richiede una nuova regressione live del cambio squadra prima di essere dichiarata live-ready; i valori diagnostici numerici non forniti non vengono ricostruiti o inventati nel repository.
 
 ## Funzioni
 
@@ -55,7 +55,9 @@ In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità ag
 | Soundtrack | Crouch + Ability 1 / Ability 2 | `+10` / `−10` generi |
 | Menu aperto o chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna la Camera rapida |
 | Menu chiuso | Tieni Crouch | inspection e, se abilitato, overlay Teleport |
-| Overlay Teleport | Crouch + Secondary / Primary | cambia pagina / teletrasporta |
+| Crouch Travel & Attach | Crouch + Primary / Secondary | pagina successiva / precedente |
+| Crouch Travel & Attach | Crouch + Interact | esegue la pagina attiva (Spawn / Objective / Player-Bot Travel / Player-Bot Attach) |
+| Attaccato, Menu Arcade chiuso | Crouch + Reload | sgancia dal player/bot; Reload senza Crouch resta nativo |
 | Morto | Jump | Resurrect vicino al punto di morte |
 
 Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Resurrect, teleport sicuro e verifica del successo vengono eseguiti nello stesso tick, senza `Wait`; se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
@@ -73,13 +75,13 @@ L'attivazione conserva integralmente Unkillable e avvia una macchina a stati sen
 | Burning | 10 s | 5% della salute massima al secondo, in tick da 2,5% ogni 0,5 s; non bypassa Unkillable |
 | Hacked | 5 s | stato Hacked |
 
-Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu. Un'icona Skull comparsa durante i giri non può attivare la morte: soltanto lo Skull finale, con roulette conclusa e deadline armata, può sospendere Unkillable e viene ritentato ogni 0,25 s finché il player non è realmente morto. Una deadline di 5 s libera comunque menu e input se il motore rifiuta la morte, quindi riattiva logicamente la protezione senza cancellare modalità o cursore. Burning non usa questo bypass: in `FULL HP` il danno viene annullato, mentre in `1 HP` resta soggetto allo status Unkillable.
+Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chiuso soltanto per gli effetti con durata (Vision, Acceleration, Burning e Hacked), così l'HUD dell'effetto può prendere il suo posto; Skull e Team Heal sono immediati e non chiudono il menu. Un'icona Skull comparsa durante i giri non può attivare la morte: soltanto lo Skull finale, con roulette conclusa e deadline armata, può sospendere Unkillable e viene ritentato ogni 0,25 s finché il player non è realmente morto. Una deadline di 5 s libera comunque menu e input se il motore rifiuta la morte, quindi riattiva logicamente la protezione senza cancellare modalità o cursore. Burning usa un bypass temporaneo dedicato: rimuove Unkillable e normalizza Damage Received soltanto per il tick da 5% Max Health, poi il scheduler riapplica la modalità scelta.
 
 Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Vision crea un solo IWT per soggetto pubblico con icona, nome e salute live; un umano con Crouch Privacy ON non viene esposto e un IWT già presente viene rimosso appena abilita Privacy. L'avvio di Vision elimina inoltre eventuali handle Crouch già presenti e il leave di un iBot distrugge il proprio IWT senza entrare nel lifecycle umano. Morte, timeout e cambio eroe chiudono lo stato temporaneo ma preservano modalità, cursore e protezione Unkillable; il cambio eroe viene rilevato dal ciclo globale a 10 Hz senza una nuova regola per-player. Dopo una morte, il tick globale riapplica la protezione e ricrea l'icona quando il player torna vivo. Leave e cambio squadra restano invece reset lifecycle completi.
 
 Revenge resta invariato: arma una morte forzata ma non modifica subito il debito ed è, insieme allo Skull finale, l'unico percorso autorizzato a sospendere temporaneamente Unkillable. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del Resurrect con Jump attendono `Is Alive == False`; dopo il ritorno in vita, la modalità Unkillable selezionata viene riapplicata.
 
-## Runtime 0.8.0
+## Runtime 0.8.1
 
 Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 Hz:
 
@@ -88,7 +90,7 @@ Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 H
 - 1 Hz: countdown e cache passive;
 - ogni 10 secondi: minuti lobby.
 
-Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
+Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. Il lifecycle join/cambio squadra è inoltre serializzato da un lock globale: un solo player alla volta esegue cleanup/setup, con 0,25 s tra le fasi e sospensione delle cache pesanti durante la transazione. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
 
 Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 
@@ -170,4 +172,4 @@ Documentazione operativa:
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) richiede un nuovo import e rende inutilizzabili i replay precedenti, pur senza dichiarare modifiche Workshop. La matrice comprende inoltre D.Mon, il nuovo Team Status Indicator e le modifiche a Busan, Eichenwalde e Paraíso della [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11).
 
-La release 0.8.0 è **live-ready** sulla base dei test live completati e della conferma di stabilità dell'utente del 24 agosto 2026. Il tag finale `v0.8.0` identifica il commit pubblicato e validato.
+La release 0.8.1 è **live-ready** sulla base dei test live completati e della conferma di stabilità dell'utente del 24 agosto 2026. Il tag finale `v0.8.1` identifica il commit pubblicato e validato.

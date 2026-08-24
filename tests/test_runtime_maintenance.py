@@ -98,28 +98,52 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
 
 
-    def test_team_switch_lifecycle_is_global_first_and_load_guarded(self):
+    def test_team_switch_lifecycle_is_globally_serialized_and_load_guarded(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             self.assertNotIn("Player Joined Match;", source)
+            self.assertIn("54: PemainSiklusGlobal", source)
+            self.assertIn("55: WaktuSiklusGlobal", source)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", source)
+
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
             self.assertIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
             self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
-            self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Null", fast)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal = {global_name}.PemainAktif;", fast)
+            self.assertIn("Server Load < 150", fast)
 
             cleanup = source.split(f'{rule_kw}("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")', 1)[1].split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[0]
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Event Player;", cleanup)
             self.assertIn("Event Player.SiklusPemainAktif == True;", cleanup)
             self.assertIn("Server Load < 150;", cleanup)
-            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;", cleanup)
+            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;", cleanup)
             self.assertNotIn("Wait(", cleanup)
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Event Player;", setup)
             self.assertIn("Event Player.SiklusPemainAktif == False;", setup)
             self.assertIn("Server Load < 150;", setup)
             self.assertNotIn("Wait(", setup)
 
+            scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 -', 1)[0]
+            self.assertIn(f"Entity Exists({global_name}.PemainSiklusGlobal) == False", scheduler)
+            owner_gate = f"Or({global_name}.PemainSiklusGlobal == Null, {global_name}.PemainAktif == {global_name}.PemainSiklusGlobal)"
+            self.assertGreaterEqual(scheduler.count(owner_gate), 2)
+            self.assertIn("Call Subroutine(ProsesCepatPemain);", scheduler)
+            self.assertIn("Call Subroutine(ProsesNasibPemain);", scheduler)
+            self.assertIn(f"And({global_name}.LangkahPenjadwal % 20 == 0, {global_name}.PemainSiklusGlobal == Null)", scheduler)
+
+            cycle = source.split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[1].split(f'{rule_kw}("89c - Subrutin', 1)[0]
+            self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", cycle)
+            self.assertIn(f"{global_name}.WaktuSiklusGlobal = Total Time Elapsed + 0.250;", cycle)
+
             left = source.split(f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")', 1)[1].split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[0]
-            self.assertIn("0.100", left)
+            self.assertIn("Wait(0.500,", left)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", left)
+            self.assertIn("Event Player.UrutanHUD = -1;", left)
+            self.assertLess(left.index("Event Player.UrutanHUD = -1;"), left.index("Call Subroutine(BersihkanPemain);"))
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Event Player", left)
 
 if __name__ == "__main__":
     unittest.main()

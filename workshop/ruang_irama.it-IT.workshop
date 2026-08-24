@@ -55,6 +55,8 @@ variabili
 		51: LangkahPenjadwal
 		52: TimDummyAktif
 		53: JarakBidik
+		54: PemainSiklusGlobal
+		55: WaktuSiklusGlobal
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -851,6 +853,8 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.PemainAktif = Null;
 		Globale.IndeksPemainGlobal = 0;
 		Globale.LangkahPenjadwal = 0;
+		Globale.PemainSiklusGlobal = Null;
+		Globale.WaktuSiklusGlobal = 0;
 		Globale.TimDummyAktif = Team 1;
 		Globale.RGBFase = 0;
 		Globale.RGB = Custom Color(255, 80, 80, 255);
@@ -1014,6 +1018,7 @@ regola("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.BotOtomatis == False;
 		Event Player.PindahTimDiproses == True;
+		Globale.PemainSiklusGlobal == Event Player;
 		Event Player.SiklusPemainAktif == True;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
@@ -1027,7 +1032,7 @@ regola("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")
 			Call Subroutine(BersihkanPemain);
 		End;
 		Event Player.SiklusPemainAktif = False;
-		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;
+		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;
 	}
 }
 
@@ -1045,6 +1050,7 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 		Is Dummy Bot(Event Player) == False;
 		Event Player.BotOtomatis == False;
 		Event Player.PindahTimDiproses == True;
+		Globale.PemainSiklusGlobal == Event Player;
 		Event Player.SiklusPemainAktif == False;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
@@ -1476,10 +1482,15 @@ regola("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")
 			Event Player.TeksVisiNasib = Null;
 			Abort;
 		End;
-		Wait(0.100, Ignora condizione);
+		Wait(0.500, Ignora condizione);
 		Abort If(And(Entity Exists(Event Player) == True, Event Player.TimTerakhir != Team Of(Event Player)));
+		Event Player.UrutanHUD = -1;
 		Call Subroutine(TenangkanPemain);
 		Call Subroutine(BersihkanPemain);
+		If(Globale.PemainSiklusGlobal == Event Player);
+			Globale.PemainSiklusGlobal = Null;
+			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+		End;
 	}
 }
 
@@ -1512,15 +1523,21 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 			Globale.TeksWaktuServer = Globale.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Globale.SisaWaktuServer / 60, Down),
 				Globale.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Globale.SisaWaktuServer / 60, Down), Globale.SisaWaktuServer % 60);
 		End;
+		If(And(Globale.PemainSiklusGlobal != Null, Entity Exists(Globale.PemainSiklusGlobal) == False));
+			Globale.PemainSiklusGlobal = Null;
+			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+		End;
 		"Indeks dan pemain aktif hanya dimiliki penjadwal; tidak ada jeda selama pemindaian."
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
 			Globale.PemainAktif = All Players(All Teams)[Globale.IndeksPemainGlobal];
-			Call Subroutine(ProsesCepatPemain);
-			Call Subroutine(ProsesNasibPemain);
-			If(Globale.LangkahPenjadwal % 2 == 0);
+			If(Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal));
+				Call Subroutine(ProsesCepatPemain);
+				Call Subroutine(ProsesNasibPemain);
+			End;
+			If(And(Globale.LangkahPenjadwal % 2 == 0, Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal)));
 				Call Subroutine(ProsesSiklusPemain);
 			End;
-			If(Globale.LangkahPenjadwal % 20 == 0);
+			If(And(Globale.LangkahPenjadwal % 20 == 0, Globale.PemainSiklusGlobal == Null));
 				Call Subroutine(ProsesCachePemain);
 			End;
 			If(And(Globale.LangkahPenjadwal == 0, And(Globale.PemainAktif.Manusia == True, Entity Exists(Globale.PemainAktif))));
@@ -3136,7 +3153,10 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			Globale.PemainAktif.SiklusPemainAktif = Globale.PemainAktif.PernahDisiapkan == True;
 			Globale.PemainAktif.SudahSiap = False;
 			Globale.PemainAktif.Manusia = False;
-			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;
+			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
+		End;
+		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Entity Exists(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Server Load < 150))))));
+			Globale.PemainSiklusGlobal = Globale.PemainAktif;
 		End;
 		If(And(Globale.PemainAktif.Manusia == True, Or(Globale.PemainAktif.KematianBalasDendam == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.EfekNasib == 3, And(Globale.PemainAktif.PutaranKartuNasib == 0, Globale.PemainAktif.WaktuPaksaBerakhir > 0))))));
 			If(And(Globale.PemainAktif.KematianBalasDendam == True, Or(Globale.PemainAktif.PenagihBalasDendam == Null, Or(Entity Exists(Globale.PemainAktif.PenagihBalasDendam) == False, Player Variable(Globale.PemainAktif.PenagihBalasDendam, Manusia) == False))));
@@ -3235,6 +3255,10 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 			Globale.PemainAktif.PindahTimDiproses = False;
 			Globale.PemainAktif.SiklusPemainAktif = False;
 			Globale.PemainAktif.WaktuSiklusTim = 0;
+			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
+				Globale.PemainSiklusGlobal = Null;
+				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
 		End;
 		If(And(Globale.PemainAktif.Manusia == True, And(Has Spawned(Globale.PemainAktif) == True, Hero Of(Globale.PemainAktif) != Globale.PemainAktif.PahlawanTerakhir)));
 			"Perubahan pahlawan manusia dibersihkan oleh scheduler global tanpa membuat aturan Each Player baru."

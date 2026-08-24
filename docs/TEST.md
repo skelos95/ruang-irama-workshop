@@ -1,8 +1,8 @@
-# Piano di test — versione 0.8.0
+# Piano di test — versione 0.8.1
 
-Stato: **live-ready**
+Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 sono stati completati dall'utente e la stabilità è stata confermata il 24 agosto 2026. La matrice e il modello di registrazione restano qui come procedura di regressione; eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce un lifecycle team-switch seriale e deve completare nuovamente la matrice live prima del passaggio a live-ready. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -133,7 +133,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
-| Burning | 5% max HP al secondo per 10 s, con tick da 2,5% ogni 0,5 s; non bypassa Unkillable; stop alla scadenza/morte |
+| Burning | 5% max HP ogni 1 s per 10 s; bypass temporaneo di Unkillable/Damage Received durante il tick; stop alla scadenza/morte |
 | Hacked | stato per 5 s, poi rimozione |
 
 Per ciascun esito:
@@ -153,8 +153,8 @@ Per ciascun esito:
 Matrice obbligatoria Try Your Luck × Unkillable:
 
 - ripetere i sei esiti con Unkillable OFF, 1 HP e FULL HP;
-- con 1 HP e FULL HP, Vision, Acceleration, Team Heal, Burning e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
-- con FULL HP, Burning deve produrre zero perdita di salute; con 1 HP deve restare soggetto allo status Unkillable e non può completare la morte;
+- con 1 HP e FULL HP, Vision, Acceleration, Team Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
+- con Burning, verificare che ogni secondo venga applicato il 5% della Max Health anche partendo da 1 HP/FULL HP, senza modificare Mode/Kursor e con ripristino della protezione fra i tick;
 - con Skull finale, verificare il bypass temporaneo e la morte completa; premere Jump per Resurrect e confermare il ripristino della stessa modalità, della tripletta corretta e dell'icona entro il tick globale;
 - lasciare scadere la deadline Skull quando `Kill` viene rifiutato: menu/input devono liberarsi e Unkillable deve tornare attivo senza alterare Mode/Kursor;
 - ripetere un Revenge su target 1 HP e FULL HP: deve usare lo stesso bypass temporaneo, ma claimant, consumo debito, condizioni di commit e timeout devono restare identici ai test Revenge esistenti.
@@ -169,6 +169,23 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Mercy, Torbjörn e altre forme/armi alternative non devono essere trattate come casi speciali: il criterio terminale resta esclusivamente `Is Alive == False`.
 
 ## 6. Camera, inspection e Teleport
+
+### Crouch Travel & Attach
+
+- Tenere Crouch e verificare le quattro pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach.
+- Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva.
+- Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
+- Da attaccati, Reload senza Crouch deve restare l'azione nativa dell'eroe.
+- Con Menu Arcade Melee chiuso, Crouch + Reload deve sganciare; con Menu Arcade Melee aperto non deve sganciare.
+- Morte, leave/despawn, cambio eroe proprio o del target e Privacy ON del target umano devono sganciare automaticamente.
+
+### Cambio squadra / lifecycle 0.8.1
+
+- Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load`.
+- Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: il lifecycle deve processare un solo player per volta.
+- Durante la transazione verificare che HUD/roster del player corrente vengano ricreati una volta sola e che gli altri player restino stabili.
+- Verificare che il lock globale venga rilasciato anche se il player esce durante cleanup/setup.
+- Con diagnostica host attiva, confermare che le cache 1 Hz e il lavoro periodico non essenziale restino sospesi mentre il lock lifecycle è occupato.
 
 ### Camera
 
@@ -350,7 +367,7 @@ Screenshot/video:
 Note e riproduzione problemi:
 ```
 
-Per le release future, lo stato **live-ready** richiede nuovamente test obbligatori completati, rispetto dei limiti e correzione di ogni anomalia riproducibile. Il blocco precedente è un modello riutilizzabile, non un verbale numerico compilato retroattivamente per la 0.8.0.
+Per le release future, lo stato **live-ready** richiede nuovamente test obbligatori completati, rispetto dei limiti e correzione di ogni anomalia riproducibile. Il blocco precedente è un modello riutilizzabile, non un verbale numerico compilato retroattivamente per la 0.8.1.
 
 
 ### Dummy spawn iniziale
