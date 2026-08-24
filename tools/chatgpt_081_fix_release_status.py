@@ -32,4 +32,31 @@ for rel, pairs in replacements.items():
         text = text.replace(old, new, 1)
     path.write_text(text, encoding="utf-8")
 
-print("Marked 0.8.1 core docs static-ready / live-pending")
+# The release metadata gate must match the current release phase. 0.8.1 is
+# intentionally live-pending until the new team-switch lifecycle passes client tests.
+validator = ROOT / "tools" / "validate_workshop.py"
+v = validator.read_text(encoding="utf-8")
+old_policy = '''            checks.require(
+                "Stato: **live-ready**" in text,
+                f"documento non dichiara Stato: **live-ready**: {relative}",
+            )
+            checks.require(
+                "Stato: **static-ready / live-pending**" not in text,
+                f"documento conserva lo stato live-pending: {relative}",
+            )'''
+new_policy = '''            checks.require(
+                "Stato: **static-ready / live-pending**" in text,
+                f"documento non dichiara Stato: **static-ready / live-pending**: {relative}",
+            )
+            checks.require(
+                "Stato: **live-ready**" not in text,
+                f"documento dichiara live-ready prima della regressione client: {relative}",
+            )'''
+if v.count(old_policy) != 1:
+    raise SystemExit(f"validator release policy occurrence count: {v.count(old_policy)}")
+v = v.replace(old_policy, new_policy, 1)
+validator.write_text(v, encoding="utf-8")
+
+# Keep metadata unit tests aligned with the 0.8.1 release phase.
+test = ROOT / "tests" / "test_validate_workshop.py"
+t = test.read_text(encoding="utf-8")nt = None
