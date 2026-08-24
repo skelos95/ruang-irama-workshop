@@ -472,14 +472,114 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(rule, "Destroy HUD Text(Event Player.HudMenu);")
         self.assert_rejected(mutated, "Primary/Secondary")
 
-    def test_all_twelve_pages_are_routed(self) -> None:
+    def test_all_thirteen_pages_are_routed(self) -> None:
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHalamanAktif")
-        mutated = self.replace_in_rule(router, "HalamanMenu == 11", "HalamanMenu == 12")
-        self.assert_rejected(mutated, "pagina 11")
+        mutated = self.replace_in_rule(router, "HalamanMenu == 12", "HalamanMenu == 13")
+        self.assert_rejected(mutated, "pagina 12")
+
+    def test_main_menu_cycles_exactly_over_pages_zero_through_twelve(self) -> None:
+        navigation = self.rule(
+            lambda rule: "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            navigation,
+            "(Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;",
+            "(Event Player.PerintahMenu == 3 ? 1 : 11)) % 12;",
+        )
+        self.assert_rejected(mutated, "ciclo esatto 0..12")
+
+    def test_menu_open_message_announces_thirteen_pages_in_all_languages(self) -> None:
+        translations = (
+            (
+                "Arcade Menu online. Thirteen extremely important decisions await.",
+                "Arcade Menu online. Twelve extremely important decisions await.",
+            ),
+            (
+                "Menu Arcade online. Tiga belas keputusan yang sangat penting menunggu.",
+                "Menu Arcade online. Dua belas keputusan yang sangat penting menunggu.",
+            ),
+            (
+                "เปิดเมนูอาร์เคดแล้ว มีสิบสามตัวเลือกสำคัญรอคุณอยู่",
+                "เปิดเมนูอาร์เคดแล้ว มีสิบสองตัวเลือกสำคัญรอคุณอยู่",
+            ),
+        )
+        for current, legacy in translations:
+            with self.subTest(language=current):
+                mutated = self.replace_once(current, legacy)
+                self.assert_rejected(mutated, "messaggio apertura menu a 13 pagine assente")
+
+    def test_menu_open_message_rejects_legacy_twelve_page_wording(self) -> None:
+        for legacy in (
+            "Twelve extremely important decisions",
+            "Dua belas keputusan",
+            "มีสิบสองตัวเลือก",
+        ):
+            with self.subTest(legacy=legacy):
+                mutated = self.source + f"\n// {legacy}\n"
+                self.assert_rejected(mutated, "messaggio apertura menu ancora fermo a 12")
+
+    def test_page_twelve_navigation_toggles_dummy_follow_cursor(self) -> None:
+        navigation = self.rule(
+            lambda rule: "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            navigation,
+            "Event Player.KursorIkutiDummy = (Event Player.KursorIkutiDummy + 1) % 2;",
+            "Event Player.KursorIkutiDummy = Event Player.KursorIkutiDummy;",
+        )
+        self.assert_rejected(mutated, "pagina 12 deve alternare KursorIkutiDummy")
+
+    def test_opening_page_twelve_syncs_preview_with_applied_preference(self) -> None:
+        dispatcher = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu == 1;" in rule.body
+            and "TerapkanHalamanIkutiDummy" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            dispatcher,
+            "Event Player.KursorIkutiDummy = Event Player.IzinkanDummyMengikuti ? 1 : 0;",
+            "Event Player.KursorIkutiDummy = 0;",
+        )
+        self.assert_rejected(mutated, "apertura pagina 12 non sincronizza")
+
+    def test_page_twelve_apply_dispatcher_is_required(self) -> None:
+        dispatcher = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu == 1;" in rule.body
+            and "TerapkanHalamanIkutiDummy" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            dispatcher,
+            "Call Subroutine(TerapkanHalamanIkutiDummy);",
+            "Abort;",
+        )
+        self.assert_rejected(mutated, "pagina 12 deve usare TerapkanHalamanIkutiDummy")
+
+    def test_dummy_follow_renderer_is_localized_and_explicitly_enemy_scoped(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarIkutiDummy")
+        mutated = self.replace_in_rule(renderer, "DUMMY MUSUH", "DUMMY")
+        self.assert_rejected(mutated, "DUMMY MUSUH")
+
+    def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
+        transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransisiWarnaMenu")
+        mutated = self.replace_in_rule(
+            transition,
+            "Event Player.HalamanMenu) == 12 ?",
+            "Event Player.HalamanMenu) == 13 ?",
+        )
+        self.assert_rejected(mutated, "pagina 12 Dummy Follow non ha una tinta")
+
+    def test_dummy_follow_state_cannot_be_written_by_camera_or_other_features(self) -> None:
+        camera_release = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.InteraksiKameraDipakai = False;" in rule.body
+        )
+        mutated = self.inject_action(camera_release, "Event Player.IzinkanDummyMengikuti = False;")
+        self.assert_rejected(mutated, "scritto fuori da setup/apply/quiete")
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "12 subroutine pagina")
+        self.assert_rejected(mutated, "13 subroutine pagina")
 
     def test_menu_dispatch_requires_crouch(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Ability 2)" in rule.body)
@@ -557,10 +657,109 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(death, "Call Subroutine(TutupMenu);")
         self.assert_rejected(mutated, "morte non deve chiudere")
 
-    def test_jump_respawn_is_not_blocked_by_open_menu(self) -> None:
-        respawn = self.rule(lambda rule: "Respawn(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.inject_action(respawn, "Abort If(Event Player.MenuTerbuka == False);")
-        self.assert_rejected(mutated, "Jump respawn")
+    def test_jump_resurrect_is_not_blocked_by_open_menu(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.inject_action(resurrect, "Abort If(Event Player.MenuTerbuka == False);")
+        self.assert_rejected(mutated, "Jump Resurrect")
+
+    def test_jump_resurrect_cannot_regress_to_respawn(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Resurrect(Event Player);",
+            "Respawn(Event Player);",
+        )
+        self.assert_rejected(mutated, "senza azioni Respawn")
+
+    def test_jump_resurrect_teleports_before_wait_then_confirms_success(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Teleport(Event Player, Event Player.PosisiBangkitAman);\n\t\tWait(0.016, Ignore Condition);",
+            "Wait(0.016, Ignore Condition);\n\t\tTeleport(Event Player, Event Player.PosisiBangkitAman);",
+        )
+        self.assert_rejected(mutated, "teletrasportare nello stesso tick")
+
+    def test_jump_resurrect_confirms_success_after_wait(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(resurrect, "If(Is Alive(Event Player) == True);", "If(True);")
+        self.assert_rejected(mutated, "poi confermare il successo")
+
+    def test_jump_resurrect_cannot_rearm_during_same_press(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.inject_action(resurrect, "Event Player.BangkitLompatDipakai = False;")
+        self.assert_rejected(mutated, "non deve riarmarsi durante la stessa pressione")
+
+    def test_failed_jump_resurrect_releases_latch_only_after_jump_release(self) -> None:
+        release = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Is Button Held(Event Player, Button(Jump)) == False;" in rule.body
+            and "Event Player.BangkitLompatDipakai = False;" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            release,
+            "Is Button Held(Event Player, Button(Jump)) == False;",
+            "Is Button Held(Event Player, Button(Jump)) == True;",
+        )
+        self.assert_rejected(mutated, "rilascio Jump deve riarmare")
+
+    def test_jump_resurrect_release_requires_human_dead_guards(self) -> None:
+        release = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Is Button Held(Event Player, Button(Jump)) == False;" in rule.body
+            and "Event Player.BangkitLompatDipakai = False;" in rule.body
+        )
+        for guard in (
+            "Event Player.Manusia == True;",
+            "Is Dummy Bot(Event Player) == False;",
+            "Is Alive(Event Player) == False;",
+        ):
+            with self.subTest(guard=guard):
+                mutated = self.replace_in_rule(release, guard, "")
+                self.assert_rejected(mutated, "rilascio latch Resurrect senza guardia")
+
+    def test_full_hp_application_requires_damage_knockback_and_player_phasing(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanKebal")
+        for token in (
+            "Set Damage Received(Event Player, 0);",
+            "Set Knockback Received(Event Player, 0);",
+            "Disable Movement Collision With Players(Event Player);",
+        ):
+            with self.subTest(token=token):
+                mutated = self.replace_in_rule(apply, token, "")
+                self.assert_rejected(mutated, "FULL HP applicazione")
+
+    def test_full_hp_global_reapply_requires_the_complete_protection_triplet(self) -> None:
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        for token in (
+            "Set Damage Received(Global.PemainAktif, 0);",
+            "Set Knockback Received(Global.PemainAktif, 0);",
+            "Disable Movement Collision With Players(Global.PemainAktif);",
+        ):
+            with self.subTest(token=token):
+                mutated = self.replace_in_rule(processor, token, "")
+                self.assert_rejected(mutated, "FULL HP riapplicazione globale")
+
+    def test_full_hp_off_restores_damage_knockback_and_player_collision(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanKebal")
+        off_anchor = apply.body.index("If(Event Player.ModeKebal == 0);")
+        mode_one_anchor = apply.body.index("If(Event Player.ModeKebal == 1);", off_anchor)
+        off_body = apply.body[off_anchor:mode_one_anchor]
+        self.assertIn("Enable Movement Collision With Players(Event Player);", off_body)
+        changed = off_body.replace("Enable Movement Collision With Players(Event Player);", "", 1)
+        mutated_body = apply.body[:off_anchor] + changed + apply.body[mode_one_anchor:]
+        mutated = self.source[:apply.start] + mutated_body + self.source[apply.end:]
+        self.assert_rejected(mutated, "FULL HP uscita OFF")
+
+    def test_full_hp_try_your_luck_cleanup_restores_player_collision(self) -> None:
+        luck = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanNasib")
+        mutated = self.replace_in_rule(luck, "Enable Movement Collision With Players(Event Player);", "")
+        self.assert_rejected(mutated, "FULL HP cleanup TerapkanHalamanNasib")
+
+    def test_full_hp_shared_cleanup_restores_knockback(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
+        mutated = self.replace_in_rule(cleanup, "Set Knockback Received(Event Player, 100);", "")
+        self.assert_rejected(mutated, "FULL HP cleanup PulihkanNasibPemain")
 
     def test_only_one_loop_is_allowed(self) -> None:
         mutated = self.source + "\nLoop;\n"
@@ -1145,10 +1344,23 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.replace_in_rule(
             bot_rule,
-            "If(Is Dummy Bot(Event Player) == True);\n\t\t\tDisable Movement Collision With Environment",
-            "If(Event Player.BotOtomatis == True);\n\t\t\tDisable Movement Collision With Environment",
+            "If(Is Dummy Bot(Event Player) == True);\n\t\t\tEnable Movement Collision With Players",
+            "If(Event Player.BotOtomatis == True);\n\t\t\tEnable Movement Collision With Players",
         )
-        self.assert_rejected(mutated, "collisione ambiente non protetta dal ramo dummy nativo")
+        self.assert_rejected(mutated, "collisioni dummy non protette dal ramo nativo")
+
+    def test_native_dummy_explicitly_keeps_player_collision_enabled(self) -> None:
+        bot_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(KunciBot);" in rule.body
+            and "Disable Movement Collision With Environment" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            bot_rule,
+            "Enable Movement Collision With Players(Event Player);",
+            "",
+        )
+        self.assert_rejected(mutated, "collisioni dummy non protette dal ramo nativo")
 
     def test_native_dummy_wall_collision_branch_cannot_be_made_unreachable(self) -> None:
         bot_rule = self.rule(
@@ -1177,6 +1389,26 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
         self.assert_rejected(mutated, "KunciBot incompleto")
 
+    def test_bot_lock_receives_normal_damage_and_knockback(self) -> None:
+        bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
+        expected_messages = {
+            "Damage": "danni ricevuti normali",
+            "Knockback": "urti ricevuti normali",
+        }
+        for action, expected_message in expected_messages.items():
+            with self.subTest(action=action):
+                mutated = self.replace_in_rule(
+                    bot_lock,
+                    f"Set {action} Received(Event Player, 100);",
+                    f"Set {action} Received(Event Player, 0);",
+                )
+                self.assert_rejected(mutated, expected_message)
+
+    def test_bot_lock_must_not_disable_collision_with_players(self) -> None:
+        bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
+        mutated = self.inject_action(bot_lock, "Disable Movement Collision With Players(Event Player);")
+        self.assert_rejected(mutated, "non deve disattivare la collisione dummy con i player")
+
     def test_bot_lock_requires_exactly_twenty_percent_move_speed(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
         mutated = self.replace_in_rule(bot_lock, "Set Move Speed(Event Player, 20);", "Set Move Speed(Event Player, 0);")
@@ -1190,7 +1422,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_native_dummy_movement_rule_cannot_have_an_impossible_condition(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.inject_condition(movement, "False == True;")
-        self.assert_rejected(mutated, "movimento dummy: condizioni esatte per un nemico vivo")
+        self.assert_rejected(mutated, "movimento dummy: condizioni esatte per un umano nemico vivo opt-in")
 
     def test_native_dummy_movement_cannot_abort_before_facing(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
@@ -1247,24 +1479,56 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
             "Team Of(Current Array Element) == Team Of(Event Player)",
         )
-        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere il nemico vivo")
+        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere l'umano nemico vivo opt-in")
 
     def test_native_dummy_enemy_predicate_cannot_be_negated(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         predicate = (
-            "And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), "
-            "And(Is Alive(Current Array Element), Team Of(Current Array Element) == "
-            "Opposite Team Of(Team Of(Event Player)))))"
+            "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
+            "And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, "
+            "And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), "
+            "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))"
         )
         self.assertEqual(movement.body.count(predicate), 3)
         changed = movement.body.replace(predicate, f"Not({predicate})")
         mutated = self.source[:movement.start] + changed + self.source[movement.end:]
-        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere il nemico vivo")
+        self.assert_rejected(mutated, "movimento dummy: filtro target 1 deve essere l'umano nemico vivo opt-in")
+
+    def test_native_dummy_targets_only_currently_registered_humans(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(
+            movement,
+            "Player Variable(Current Array Element, Manusia) == True",
+            "Player Variable(Current Array Element, Manusia) == False",
+        )
+        self.assert_rejected(mutated, "umano nemico vivo opt-in")
+
+    def test_native_dummy_respects_per_player_follow_opt_out(self) -> None:
+        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        mutated = self.replace_in_rule(
+            movement,
+            "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
+            "True",
+        )
+        self.assert_rejected(mutated, "umano nemico vivo opt-in")
+
+    def test_no_target_cleanup_uses_the_same_dummy_follow_eligibility(self) -> None:
+        cleanup = self.rule(
+            lambda rule: "Count Of(Filtered Array(Global.PemainManusia" in rule.body
+            and ")) == 0;" in rule.body
+            and "Stop Facing(Event Player);" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
+            "True",
+        )
+        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in")
 
     def test_native_dummy_stops_at_exactly_four_metres(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 0) ? 0 : 1")
-        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal nemico")
+        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal target opt-in")
 
     def test_native_dummy_stop_condition_cannot_be_negated(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
@@ -1284,7 +1548,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             2,
             f"Not({stop_condition}) ? {stopped} : {moving}",
         )
-        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal nemico")
+        self.assert_rejected(mutated, "arresto esatto in spawn o entro quattro metri dal target opt-in")
 
     def test_native_dummy_stopped_magnitude_is_zero(self) -> None:
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
@@ -1316,7 +1580,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))",
             "Team Of(Current Array Element) == Team Of(Event Player)",
         )
-        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere il nemico vivo")
+        self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in")
 
     def test_dummy_release_stops_facing_before_destroy(self) -> None:
         release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")

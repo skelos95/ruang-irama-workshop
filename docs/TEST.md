@@ -62,7 +62,9 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
-| Morto | Jump | respawn vicino alla morte; menu ancora visibile |
+| Morto | Jump | `Resurrect` e teleport vicino alla morte; menu ancora visibile |
+
+Sul caso Jump, tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita; non deve essere usata la transizione nativa `Respawn`.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -70,7 +72,7 @@ Verificare inoltre entrambe le transizioni senza rilasciare `Interact`: dopo `Cr
 
 ## 4. Menu e localizzazione
 
-Verificare esattamente 12 voci, indici e contenuti:
+Verificare esattamente 13 voci, indici e contenuti:
 
 1. Name Color — 32 colori.
 2. Third-Person Camera — OFF, self e target valido.
@@ -84,6 +86,7 @@ Verificare esattamente 12 voci, indici e contenuti:
 10. Crouch Privacy — OFF/ON (default OFF).
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
+13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default ON).
 
 Per ogni pagina e per ciascuna lingua EN/ID/TH:
 
@@ -107,6 +110,16 @@ Focus dati:
 - 26 località server nello stesso ordine;
 - roster con `MIN`, `MENIT` e `นาที` corretti;
 - CHILL, generi, nomi player ed eroi invariati come nomi propri.
+
+### Unkillable FULL HP
+
+- Applicare FULL HP e ricevere contemporaneamente fuoco, danni periodici e urti/knockback da eroi e bot: salute e posizione non devono essere alterate.
+- Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
+- Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
+- Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
+- Partire da FULL HP e attivare Try Your Luck, fare leave o cambiare squadra: questi percorsi devono uscire dalla modalità e ripristinare insieme `Damage Received = 100`, `Knockback Received = 100` e collisione player ON.
+- Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
+- Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
 ## 5. Try Your Luck
 
@@ -199,10 +212,15 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi; con D.Va/D.Mon, il de-mech non deve fermare definitivamente facing/throttle prima della morte completa;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
 - verificare `Move Speed = 20%` sia per bot AI sia per dummy; gli iBot devono continuare a usare la propria navigazione nativa;
+- colpire e spingere i dummy con sorgenti diverse: devono ricevere danni e knockback normali (`100%`), pur restando offensivamente passivi;
 - a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
 - fuori dalla Spawn Room, posizionare un alleato e un nemico vivo: il dummy deve ignorare l'alleato e avanzare automaticamente verso l'umano nemico più vicino;
-- verificare che il dummy attraversi pareti e soffitti senza attraversare il pavimento o cadere fuori mappa; gli iBot devono conservare le collisioni native;
+- verificare che il dummy attraversi pareti e soffitti senza attraversare il pavimento o cadere fuori mappa, ma continui a collidere fisicamente con umani, bot e altri dummy; gli iBot devono conservare tutte le collisioni native;
 - avvicinare il dummy entro 4 m dal nemico e verificare throttle zero; allontanare il nemico oltre la soglia e verificare la ripartenza automatica;
+- con due umani nemici opt-in a distanze diverse, verificare che il dummy scelga sempre quello più vicino; invertire le distanze e controllare il riallineamento;
+- sul player più vicino aprire pagina 12 e applicare Dummy Follow OFF: il dummy deve escluderlo subito e passare al successivo umano opt-in, anche se più lontano;
+- portare tutti gli umani avversari a Dummy Follow OFF: facing e throttle devono fermarsi; riattivare ON per un player deve far ripartire l'inseguimento verso di lui;
+- verificare che un iBot, un dummy, uno spectator, un umano morto/non spawned e un umano nel breve intervallo di cambio squadra non vengano mai scelti come target;
 - uccidere/far uscire/cambiare squadra al target, eliminare tutti i nemici vivi, uccidere il dummy e riempire il team: facing e throttle devono essere fermati o riallineati senza riferimenti obsoleti;
 - verificare che Anran e gli esiti Try Your Luck riservati agli umani non applichino funzioni o messaggi ai bot;
 - mantenere bot/dummy come target passivi validi per Camera, inspection e Vision, senza consentire loro di attivare alcun sistema.
@@ -217,7 +235,7 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti, voti e riferimenti precedenti rimossi;
-- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport e Privacy;
+- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport, Privacy e Dummy Follow ON;
 - Text Count ed Entity Count tornano al baseline;
 - nessun `excessive Workshop script load`.
 
@@ -252,7 +270,7 @@ Durata minima: **30 minuti** con 12 slot occupati.
 
 Durante il soak:
 
-- alternare combattimento e respawn;
+- alternare combattimento, morti e Resurrect con Jump;
 - aprire/chiudere e navigare menu su più player;
 - usare Camera, inspection, Teleport e Try Your Luck;
 - eseguire join/leave e alcuni cambi squadra;
@@ -294,11 +312,15 @@ Slot umani/dummy:
 
 Import: PASS/FAIL
 D.Mon: PASS/FAIL
-EN/ID/TH e 12 menu: PASS/FAIL
+EN/ID/TH e 13 menu: PASS/FAIL
 Input simultanei: PASS/FAIL
 Join/leave: PASS/FAIL
 Dummy objective routing: PASS/FAIL
 Dummy capacity/no-create-spam: PASS/FAIL
+Dummy damage/knockback/collisions: PASS/FAIL
+Dummy Follow nearest/opt-out: PASS/FAIL
+FULL HP immunity/restore: PASS/FAIL
+Jump Resurrect/retry latch: PASS/FAIL
 Privacy Vision/inspection: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL

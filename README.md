@@ -12,16 +12,16 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 
 - HUD centrale con nome server, countdown e località configurabile, allineato su slot Top/Left/Right deterministici.
 - Roster sinistro con icona, eroe, player e minuti; roster destro con genere musicale.
-- 12 menu Arcade con preferenze individuali.
+- 13 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
-- Respawn manuale con Jump da morto.
+- Resurrect manuale con Jump da morto, senza usare l'azione `Respawn`.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
-- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, libera il posto quando la squadra è piena, attraversa pareti e soffitti mantenendo solidi i pavimenti e si muove automaticamente al 20% verso l'umano nemico vivo più vicino, fermandosi entro 4 m.
+- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, libera il posto quando la squadra è piena, attraversa pareti e soffitti mantenendo solidi i pavimenti, conserva la collisione con player/bot e riceve normalmente danni e urti. Si muove automaticamente al 20% verso l'umano nemico vivo opt-in più vicino, fermandosi entro 4 m.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
-## I 12 menu
+## I 13 menu
 
 | Pagina | Menu | Contenuto |
 |---:|---|---|
@@ -37,8 +37,11 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 9 | Crouch Privacy | OFF / ON, default OFF |
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
+| 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default ON |
 
-Gli indici restano invariati: Main Menu `-1`, sottomenu `0..11`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. I default e i cursori persistono tra chiusura e riapertura, ma il cambio squadra esegue intenzionalmente un **reset completo** delle preferenze.
+Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è ON per default per preservare l'inseguimento automatico: se un player lo porta a OFF, il dummy avversario lo esclude immediatamente e sceglie comunque il player opt-in più vicino; se non resta alcun target idoneo, si ferma. I default e i cursori persistono tra chiusura e riapertura, ma il cambio squadra esegue intenzionalmente un **reset completo** delle preferenze.
+
+In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP, l'avvio di Try Your Luck e i reset completi di leave/cambio squadra ripristinano sempre danni, urti e collisione normali come un'unica transazione. Una morte normale non cancella invece la scelta: dopo Resurrect il runtime riapplica la tripletta FULL HP, che resta attiva anche in Spawn Room.
 
 ## Controlli
 
@@ -53,9 +56,9 @@ Gli indici restano invariati: Main Menu `-1`, sottomenu `0..11`. Name Color (pag
 | Menu aperto o chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna la Camera rapida |
 | Menu chiuso | Tieni Crouch | inspection e, se abilitato, overlay Teleport |
 | Overlay Teleport | Crouch + Secondary / Primary | cambia pagina / teletrasporta |
-| Morto | Jump | respawn vicino al punto di morte |
+| Morto | Jump | Resurrect vicino al punto di morte |
 
-Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva il respawn.
+Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Resurrect e teleport sicuro vengono eseguiti nello stesso tick; dopo 0,016 s il motore conferma il ritorno in vita prima di mostrare feedback ed effetto. Se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
 
 ## Try Your Luck
 
@@ -74,7 +77,7 @@ Durante la roulette il Menu Arcade resta visibile. Al risultato finale viene chi
 
 Stati, messaggi ed effetti sono localizzati nelle tre lingue. Tutte le sei icone della roulette usano `Visible To and Position`: `Visible To` continua a rivalutare il roster, quindi ogni umano le vede anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino del beneficiario catturato. L'accelerazione usa `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`: l'identità resta stabile, la mira resta dinamica e il movimento parte senza input direzionali. Vision crea un solo IWT per soggetto con icona, nome e salute live; l'avvio di Vision elimina eventuali handle Crouch già presenti e il leave di un iBot distrugge il proprio IWT senza entrare nel lifecycle umano. Morte, leave e cambio squadra devono chiudere ogni stato temporaneo senza lasciare effetti o handle.
 
-Revenge arma una morte forzata ma non modifica subito il debito. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del respawn con Jump attendono `Is Alive == False`, quindi un de-mech non viene trattato come morte finale.
+Revenge arma una morte forzata ma non modifica subito il debito. La macchina globale ritenta la kill sul target vivo; soltanto l'evento di morte con `Is Alive == False` e attacker uguale al claimant ricalcola l'indice corrente e sottrae una carica. Una transizione D.Va/Echo, un altro attacker, un timeout, un leave o un cambio squadra non producono un falso successo. Anche posizione e prompt del Resurrect con Jump attendono `Is Alive == False`, quindi un de-mech non viene trattato come morte finale.
 
 ## Runtime 0.8.0
 
@@ -116,7 +119,7 @@ La destinazione Objective/Flag viene valutata al click:
 - Push: proxy dell'obiettivo con fallback alla posizione obiettivo;
 - Flashpoint, Control, Clash e Assault: `Objective Position(Objective Index)`.
 
-I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; soltanto il dummy nativo usa `Disable Movement Collision With Environment(..., False)`, attraversando pareti e soffitti senza perdere il pavimento. Il throttle `Forward` rivalutato seleziona esclusivamente l'umano vivo della squadra avversaria più vicino, vale `0` entro 4 m e riparte se il bersaglio si allontana; morte, assenza di nemici e rimozione fermano facing e throttle.
+I dummy nativi nascono su uno Spawn Point reale della propria squadra, evitando l'origine della mappa, soltanto quando rimangono almeno due slot liberi. Se la squadra diventa piena, il dummy viene rimosso e la guardia di creazione non lo ricrea finché non tornano disponibili due slot, evitando spam di `Create Dummy Bot` e lasciando spazio a 6 umani. Per uscire dalla Spawn Room usano payload per Escort/Hybrid, bandiera nemica per CTF, proxy dell'obiettivo con fallback per Push e obiettivo corrente negli altri casi. Un timestamp stabilizza per 1 secondo lo spawn senza `Wait`; alla scadenza il punto di arrivo viene cercato circa 10 m verso la propria spawn e deve restare almeno 6 m dal target, oltre a passare `Nearest Walkable Position` e il controllo del pavimento. Se non esiste un punto valido, il dummy resta in spawn e riprova. Fuori dalla spawn, il lock limita bot e dummy al 20%; soltanto il dummy nativo usa `Disable Movement Collision With Environment(..., False)`, attraversando pareti e soffitti senza perdere il pavimento, mentre `Enable Movement Collision With Players` mantiene esplicitamente gli urti fisici con player e bot. `Damage Received` e `Knockback Received` restano entrambi al 100%. Il throttle `Forward` rivalutato seleziona esclusivamente l'umano vivo, ancora registrato, della squadra avversaria che ha Dummy Follow ON; fra i target idonei sceglie sempre il più vicino, vale `0` entro 4 m e riparte se il bersaglio si allontana. Opt-out, morte, assenza di target e rimozione fermano o riallineano facing e throttle senza riferimenti obsoleti.
 
 La pagina All Players sceglie un target valido vicino al reticolo e rispetta Crouch Privacy. Privacy è OFF per default: un umano diventa non selezionabile in Camera custom e invisibile (nome/nameplate) in inspection quando Privacy passa a ON, mentre Vision continua a mostrarne il nome durante l'effetto. Dummy e bot AI rimangono soltanto target passivi e non ricevono menu, HUD o input Arcade.
 

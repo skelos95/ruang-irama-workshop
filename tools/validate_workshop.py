@@ -74,6 +74,7 @@ PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanPrivasiInspeksi",
     "TerapkanHalamanNasib",
     "TerapkanHalamanPilihan",
+    "TerapkanHalamanIkutiDummy",
 }
 LIFECYCLE_SUBROUTINES = {"SiapkanPemain", "TenangkanPemain", "BersihkanPemain"}
 LUCK_TIMESTAMP_VARIABLES = {
@@ -744,8 +745,8 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
         return "hold input"
     if "SudahDiperiksa" in body and "Is Dummy Bot" in body:
         return "bot classification"
-    if "Respawn(" in body or "BangkitLompat" in body:
-        return "respawn"
+    if "Resurrect(" in body or "BangkitLompat" in body:
+        return "resurrect"
     if subroutine_target(rule) == "BersihkanPemain":
         return "atomic cleanup"
     return None
@@ -1007,6 +1008,15 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
 
 
 def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
+    for text in (
+        "Arcade Menu online. Thirteen extremely important decisions await.",
+        "Menu Arcade online. Tiga belas keputusan yang sangat penting menunggu.",
+        "เปิดเมนูอาร์เคดแล้ว มีสิบสามตัวเลือกสำคัญรอคุณอยู่",
+    ):
+        checks.require(text in source, f"messaggio apertura menu a 13 pagine assente: {text}")
+    for legacy in ("Twelve extremely important decisions", "Dua belas keputusan", "มีสิบสองตัวเลือก"):
+        checks.require(legacy not in source, f"messaggio apertura menu ancora fermo a 12: {legacy}")
+
     checks.require("Big Message(" not in mask_strings(source), "Big Message/titolo vietato")
     lowered_source = source.lower()
     for clause in GLOBAL_MODIFIER_CLAUSES:
@@ -1251,6 +1261,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 checks.equal(call.args[3].strip(), "Null", "renderer HUD roster Right: Text")
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
+    for name in ("IzinkanDummyMengikuti", "KursorIkutiDummy"):
+        checks.require(name in players, f"stato pagina 12 Dummy Follow assente: {name}")
     checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
                    "router menu GambarMenu/GambarHalamanAktif assente")
     menu_renderers = [
@@ -1258,7 +1270,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
-    checks.equal(len(arcade_renderers), 13, "renderer menu principale + pagine 0..11")
+    checks.equal(len(arcade_renderers), 14, "renderer menu principale + pagine 0..12")
     for rule in menu_renderers:
         calls = list(iter_calls(rule.body, "Create HUD Text"))
         checks.equal(len(calls), 1, f"{subroutine_target(rule)}: un solo Create HUD")
@@ -1334,7 +1346,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     router = rule_by_subroutine(rules, "GambarHalamanAktif")
     checks.require(router is not None, "subroutine router pagine assente")
     if router:
-        for page in range(12):
+        for page in range(13):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
         checks.require(
@@ -1345,6 +1357,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             re.search(r"HalamanMenu\s*==\s*2.*?Call Subroutine\(GambarMusik\);", router.body, re.DOTALL) is not None,
             "router menu: pagina 2 deve aprire Soundtrack",
         )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*12.*?Call Subroutine\(GambarIkutiDummy\);", router.body, re.DOTALL) is not None,
+            "router menu: pagina 12 deve aprire Dummy Follow",
+        )
 
     main_renderer = rule_by_subroutine(rules, "GambarUtama")
     checks.require(main_renderer is not None, "renderer menu principale assente")
@@ -1352,12 +1368,28 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for token in (
             "0 - NAME COLOR",
             "2 - SOUNDTRACK",
+            "12 - DUMMY FOLLOW",
             "0 - WARNA NAMA",
             "2 - MUSIK",
+            "12 - DUMMY MENGIKUTI",
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
+            "12 - ดัมมี่ติดตาม",
         ):
-            checks.require(token in main_renderer.body, f"menu principale non allineato allo swap 0/2: {token}")
+            checks.require(token in main_renderer.body, f"menu principale non copre tutte le pagine localizzate: {token}")
+
+    dummy_follow_renderer = rule_by_subroutine(rules, "GambarIkutiDummy")
+    checks.require(dummy_follow_renderer is not None, "renderer pagina 12 Dummy Follow assente")
+    if dummy_follow_renderer:
+        for token in (
+            "12 - DUMMY FOLLOW",
+            "ENEMY DUMMY",
+            "12 - DUMMY MENGIKUTI",
+            "DUMMY MUSUH",
+            "12 - ดัมมี่ติดตาม",
+        ):
+            checks.require(token in dummy_follow_renderer.body,
+                           f"pagina 12 Dummy Follow non chiarisce il consenso localizzato: {token}")
 
     navigation_rule = next(
         (
@@ -1372,12 +1404,26 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
+            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;"
+            in navigation_rule.body,
+            "navigazione menu principale non usa ciclo esatto 0..12",
+        )
+        checks.require(
             re.search(r"HalamanMenu\s*==\s*0.*?KursorWarna\s*=", navigation_rule.body, re.DOTALL) is not None,
             "navigazione menu: pagina 0 deve muovere KursorWarna",
         )
         checks.require(
             re.search(r"HalamanMenu\s*==\s*2.*?KursorGenre\s*=", navigation_rule.body, re.DOTALL) is not None,
             "navigazione menu: pagina 2 deve muovere KursorGenre",
+        )
+        checks.require(
+            re.search(
+                r"HalamanMenu\s*==\s*12.*?KursorIkutiDummy\s*=\s*"
+                r"\(Event Player\.KursorIkutiDummy\s*\+\s*1\)\s*%\s*2;",
+                navigation_rule.body,
+                re.DOTALL,
+            ) is not None,
+            "navigazione menu: pagina 12 deve alternare KursorIkutiDummy",
         )
 
     apply_dispatcher = next(
@@ -1400,9 +1446,26 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             re.search(r"HalamanMenu\s*==\s*2.*?Call Subroutine\(TerapkanHalamanMusik\);", apply_dispatcher.body, re.DOTALL) is not None,
             "apply menu: pagina 2 deve usare TerapkanHalamanMusik",
         )
+        checks.require(
+            re.search(
+                r"HalamanMenu\s*==\s*12.*?Call Subroutine\(TerapkanHalamanIkutiDummy\);",
+                apply_dispatcher.body,
+                re.DOTALL,
+            ) is not None,
+            "apply menu: pagina 12 deve usare TerapkanHalamanIkutiDummy",
+        )
+        checks.require(
+            re.search(
+                r"HalamanMenu\s*==\s*12.*?KursorIkutiDummy\s*=\s*"
+                r"Event Player\.IzinkanDummyMengikuti\s*\?\s*1\s*:\s*0;",
+                apply_dispatcher.body,
+                re.DOTALL,
+            ) is not None,
+            "apertura pagina 12 non sincronizza il cursore con la preferenza applicata",
+        )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
-                   "dispatcher Interact non suddiviso nelle 12 subroutine pagina")
+                   "dispatcher Interact non suddiviso nelle 13 subroutine pagina")
     for name in sorted(PAGE_APPLY_SUBROUTINES):
         rule = rule_by_subroutine(rules, name)
         if rule:
@@ -1410,6 +1473,53 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            f"{name}: handler pagina deve essere senza Wait/Loop")
             checks.require("Create HUD Text(" not in rule.body and "Destroy HUD Text(" not in rule.body,
                            f"{name}: applicare una preferenza non deve ricreare HUD")
+
+    dummy_follow_apply = rule_by_subroutine(rules, "TerapkanHalamanIkutiDummy")
+    if dummy_follow_apply:
+        for token, label in (
+            (
+                "If(Event Player.IzinkanDummyMengikuti != (Event Player.KursorIkutiDummy == 1));",
+                "confronto stato/cursore",
+            ),
+            (
+                "Event Player.IzinkanDummyMengikuti = Event Player.KursorIkutiDummy == 1;",
+                "applicazione preferenza per-player",
+            ),
+        ):
+            checks.require(token in dummy_follow_apply.body,
+                           f"pagina 12 Dummy Follow incompleta: {label}")
+
+    follow_writers: list[tuple[str, str]] = []
+    for rule in rules:
+        owner = subroutine_target(rule) or rule.name
+        for match in re.finditer(
+            r"Event Player\.IzinkanDummyMengikuti\s*=(?!=)\s*([^;\r\n]+);",
+            mask_strings(rule.body),
+        ):
+            follow_writers.append((owner, match.group(1).strip()))
+    required_follow_writers = {
+        ("SiapkanPemain", "True"),
+        ("TerapkanHalamanIkutiDummy", "Event Player.KursorIkutiDummy == 1"),
+    }
+    allowed_follow_writers = required_follow_writers | {("TenangkanPemain", "False")}
+    checks.require(required_follow_writers <= set(follow_writers),
+                   "Dummy Follow non ha writer setup/apply obbligatori")
+    checks.require(set(follow_writers) <= allowed_follow_writers,
+                   f"Dummy Follow scritto fuori da setup/apply/quiete: {follow_writers}")
+    checks.equal(len(follow_writers), len(set(follow_writers)),
+                 "Dummy Follow ha writer duplicati")
+
+    color_transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
+    checks.require(color_transition is not None, "transizione colore menu assente")
+    if color_transition:
+        checks.require(
+            re.search(
+                r"\(Event Player\.HalamanMenu == -1 \? Event Player\.KursorUtama : "
+                r"Event Player\.HalamanMenu\) == 12 \?",
+                color_transition.body,
+            ) is not None,
+            "pagina 12 Dummy Follow non ha una tinta menu dedicata",
+        )
 
 
 def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
@@ -1490,11 +1600,216 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                        f"{rule.name}: la morte non deve chiudere il menu")
         checks.require("Destroy HUD Text(Event Player.HudMenu);" not in rule.body,
                        f"{rule.name}: la morte non deve nascondere il menu")
-    respawn = next((rule for rule in rules if "Respawn(Event Player)" in rule.body and "Button(Jump)" in rule.body), None)
-    checks.require(respawn is not None, "respawn da morto con Jump assente")
-    if respawn:
-        checks.require("MenuTerbuka == False" not in respawn.body,
-                       "Jump respawn deve funzionare anche col menu visibile")
+    resurrect = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Resurrect(Event Player);" in rule.body
+            and "Button(Jump)" in rule.body
+        ),
+        None,
+    )
+    checks.require(resurrect is not None, "Resurrect da morto con Jump assente")
+    checks.require(not any("Respawn(" in rule.body for rule in rules),
+                   "Jump deve usare Resurrect senza azioni Respawn")
+    if resurrect:
+        checks.require("MenuTerbuka == False" not in resurrect.body,
+                       "Jump Resurrect deve funzionare anche col menu visibile")
+        conditions = rule_block(resurrect, "conditions") or ""
+        for token in (
+            "Event Player.Manusia == True;",
+            "Event Player.BotOtomatis == False;",
+            "Is Dummy Bot(Event Player) == False;",
+            "Is Alive(Event Player) == False;",
+            "Event Player.BangkitLompatDipakai == False;",
+            "Is Button Held(Event Player, Button(Jump)) == True;",
+        ):
+            checks.require(token in conditions, f"Jump Resurrect senza guardia: {token}")
+
+        actions = rule_block(resurrect, "actions") or ""
+        masked = mask_strings(actions)
+        ordered = (
+            "Event Player.BangkitLompatDipakai = True;",
+            "Resurrect(Event Player);",
+            "Teleport(Event Player, Event Player.PosisiBangkitAman);",
+            "Wait(0.016, Ignore Condition);",
+            "If(Is Alive(Event Player) == True);",
+        )
+        positions = [masked.find(token) for token in ordered]
+        checks.require(
+            all(position >= 0 for position in positions)
+            and positions == sorted(positions),
+            "Jump Resurrect deve teletrasportare nello stesso tick, attendere 0,016 s e poi confermare il successo",
+        )
+        checks.require(
+            "Event Player.BangkitLompatDipakai = False;" not in masked,
+            "Jump Resurrect non deve riarmarsi durante la stessa pressione",
+        )
+
+    resurrect_release = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.BangkitLompatDipakai = False;" in (rule_block(rule, "actions") or "")
+            and "Is Button Held(Event Player, Button(Jump)) == False;" in (rule_block(rule, "conditions") or "")
+        ),
+        None,
+    )
+    checks.require(
+        resurrect_release is not None,
+        "rilascio Jump deve riarmare il latch Resurrect dopo un tentativo fallito",
+    )
+    if resurrect_release:
+        release_conditions = rule_block(resurrect_release, "conditions") or ""
+        for token in (
+            "Event Player.Manusia == True;",
+            "Event Player.BotOtomatis == False;",
+            "Is Dummy Bot(Event Player) == False;",
+            "Is Alive(Event Player) == False;",
+            "Event Player.BangkitLompatDipakai == True;",
+            "Is Button Held(Event Player, Button(Jump)) == False;",
+        ):
+            checks.require(token in release_conditions, f"rilascio latch Resurrect senza guardia: {token}")
+        release_actions = rule_block(resurrect_release, "actions") or ""
+        checks.equal(
+            re.sub(r"\s+", "", release_actions),
+            "EventPlayer.BangkitLompatDipakai=False;",
+            "rilascio Jump deve soltanto riarmare il latch Resurrect",
+        )
+
+
+def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
+    """FULL HP owns damage, knockback and player-collision immunity as one state."""
+
+    local_protection = (
+        "Set Damage Received(Event Player, 0);",
+        "Set Knockback Received(Event Player, 0);",
+        "Disable Movement Collision With Players(Event Player);",
+    )
+    active_protection = (
+        "Set Damage Received(Global.PemainAktif, 0);",
+        "Set Knockback Received(Global.PemainAktif, 0);",
+        "Disable Movement Collision With Players(Global.PemainAktif);",
+    )
+    local_restore = (
+        "Set Damage Received(Event Player, 100);",
+        "Set Knockback Received(Event Player, 100);",
+        "Enable Movement Collision With Players(Event Player);",
+    )
+    active_restore = (
+        "Set Damage Received(Global.PemainAktif, 100);",
+        "Set Knockback Received(Global.PemainAktif, 100);",
+        "Enable Movement Collision With Players(Global.PemainAktif);",
+    )
+
+    def require_enclosing_branch(
+        rule: Rule | None,
+        anchor: str,
+        tokens: tuple[str, ...],
+        label: str,
+    ) -> None:
+        checks.require(rule is not None, f"{label}: regola assente")
+        if not rule:
+            return
+        masked = mask_strings(rule.body)
+        position = masked.find(anchor)
+        checks.require(position >= 0, f"{label}: ramo assente")
+        if position < 0:
+            return
+        branches = conditional_branches_containing(rule.body, position)
+        checks.require(bool(branches), f"{label}: azioni fuori da un ramo condizionale")
+        branch = mask_strings(branches[0]) if branches else ""
+        for token in tokens:
+            checks.require(token in branch, f"{label}: protezione/ripristino assente: {token}")
+
+    apply = rule_by_subroutine(rules, "TerapkanHalamanKebal")
+    processor = rule_by_subroutine(rules, "ProsesCepatPemain")
+    require_enclosing_branch(
+        apply,
+        "Set Damage Received(Event Player, 0);",
+        local_protection,
+        "FULL HP applicazione",
+    )
+    require_enclosing_branch(
+        processor,
+        "Set Damage Received(Global.PemainAktif, 0);",
+        active_protection,
+        "FULL HP riapplicazione globale",
+    )
+    require_enclosing_branch(
+        apply,
+        "If(Event Player.ModeKebal == 0);",
+        local_restore,
+        "FULL HP uscita OFF",
+    )
+    require_enclosing_branch(
+        apply,
+        "If(Event Player.ModeKebal == 1);",
+        local_restore,
+        "FULL HP passaggio a 1 HP",
+    )
+    require_enclosing_branch(
+        processor,
+        "If(And(Global.PemainAktif.ModeKebal == 1,",
+        active_restore,
+        "FULL HP riapplicazione modalità 1 HP",
+    )
+
+    expected_zero_calls = {
+        "Set Damage Received": {
+            ("TerapkanHalamanKebal", ("Event Player", "0")),
+            ("ProsesCepatPemain", ("Global.PemainAktif", "0")),
+        },
+        "Set Knockback Received": {
+            ("TerapkanHalamanKebal", ("Event Player", "0")),
+            ("ProsesCepatPemain", ("Global.PemainAktif", "0")),
+        },
+        "Disable Movement Collision With Players": {
+            ("TerapkanHalamanKebal", ("Event Player",)),
+            ("ProsesCepatPemain", ("Global.PemainAktif",)),
+        },
+    }
+    for action, expected in expected_zero_calls.items():
+        actual_items = [
+            (
+                subroutine_target(rule) or rule.name,
+                tuple(argument.strip() for argument in call.args),
+            )
+            for rule in rules
+            for call in iter_calls(rule.body, action)
+            if (action == "Disable Movement Collision With Players")
+            or (len(call.args) >= 2 and call.args[1].strip() == "0")
+        ]
+        checks.equal(len(actual_items), 2, f"FULL HP: numero azioni {action}")
+        checks.equal(set(actual_items), expected, f"FULL HP: ownership esclusiva di {action}")
+
+    for subroutine, tokens in (
+        ("SiapkanPemain", local_restore),
+        ("BersihkanPemain", local_restore),
+        ("PulihkanNasibPemain", local_restore),
+        ("PulihkanNasibAktif", active_restore),
+        ("TerapkanHalamanNasib", local_restore),
+    ):
+        rule = rule_by_subroutine(rules, subroutine)
+        checks.require(rule is not None, f"FULL HP cleanup: subroutine {subroutine} assente")
+        if rule:
+            masked = mask_strings(rule.body)
+            for token in tokens:
+                checks.require(token in masked, f"FULL HP cleanup {subroutine} incompleto: {token}")
+
+    spawn_exit = next(
+        (
+            rule for rule in rules
+            if "Event Player.ModeKebal == 1;" in (rule_block(rule, "conditions") or "")
+            and "Is In Spawn Room(Event Player) == True;" in (rule_block(rule, "conditions") or "")
+        ),
+        None,
+    )
+    checks.require(spawn_exit is not None, "ripristino modalità 1 HP in Spawn Room assente")
+    if spawn_exit:
+        masked = mask_strings(spawn_exit.body)
+        for token in local_restore:
+            checks.require(token in masked, f"ripristino modalità 1 HP in Spawn Room incompleto: {token}")
 
 
 def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
@@ -2266,6 +2581,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
             "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
             "KursorPrivasiInspeksi = 0;",
+            "IzinkanDummyMengikuti = True;", "KursorIkutiDummy = 1;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
         for token in reset_tokens:
@@ -2846,7 +3162,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "InspeksiAktif = True;" in rule.body and "Button(Crouch)" in rule.body), None), "inspection Crouch", False),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "TeleportasiJongkokAktif = True;" in rule.body and "Button(Crouch)" in rule.body), None), "teleport Crouch", True),
         (next((rule for rule in rules if event_type(rule) == "Player Died" and "Hero(Anran)" in rule.body and "Set Ultimate Charge(Event Player, 100);" in rule.body), None), "passiva Anran", True),
-        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Respawn(Event Player);" in rule.body and "Button(Jump)" in rule.body), None), "respawn Jump", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Resurrect(Event Player);" in rule.body and "Button(Jump)" in rule.body), None), "Resurrect Jump", True),
     )
     for rule, label, triple in entrypoints:
         require_human_guards(rule, label, triple=triple)
@@ -2870,7 +3186,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(bot_rule is not None, "regola dedicata di lock bot/dummy assente")
     if bot_rule:
-        checks.require(not any(token in bot_rule.body for token in ("Create HUD Text(", "Small Message(", "GambarMenu", "Start Camera(", "Respawn(")),
+        checks.require(not any(token in bot_rule.body for token in ("Create HUD Text(", "Small Message(", "GambarMenu", "Start Camera(", "Respawn(", "Resurrect(")),
                        "regola dedicata bot/dummy avvia HUD/menu/funzioni umane")
         checks.equal(
             compact(event_block(bot_rule)),
@@ -2911,10 +3227,11 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.require(
             re.search(
                 r"If\(Is Dummy Bot\(Event Player\) == True\);\s*"
+                r"Enable Movement Collision With Players\(Event Player\);\s*"
                 r"Disable Movement Collision With Environment\(Event Player, False\);",
                 collision_rule.body,
             ) is not None,
-            "collisione ambiente non protetta dal ramo dummy nativo",
+            "collisioni dummy non protette dal ramo nativo o in ordine errato",
         )
         collision_actions = rule_block(collision_rule, "actions")
         checks.require(collision_actions is not None,
@@ -2923,6 +3240,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             expected_collision_actions = """
                 Call Subroutine(KunciBot);
                 If(Is Dummy Bot(Event Player) == True);
+                    Enable Movement Collision With Players(Event Player);
                     Disable Movement Collision With Environment(Event Player, False);
                     Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
                     Set Respawn Max Time(Event Player, 30);
@@ -2937,7 +3255,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     bot_lock = rule_by_subroutine(rules, "KunciBot")
     checks.require(bot_lock is not None, "subroutine dedicata KunciBot assente")
     if bot_lock:
-        checks.require(not any(token in bot_lock.body for token in ("Create HUD Text(", "Create In-World Text(", "Small Message(", "Start Camera(", "Teleport(", "Respawn(")),
+        checks.require(not any(token in bot_lock.body for token in ("Create HUD Text(", "Create In-World Text(", "Small Message(", "Start Camera(", "Teleport(", "Respawn(", "Resurrect(")),
                        "KunciBot crea HUD/menu/funzioni per bot/dummy")
         for token in (
             "Set Primary Fire Enabled(Event Player, False);",
@@ -2952,6 +3270,17 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             "Set Knockback Dealt(Event Player, 0);",
         ):
             checks.require(token in bot_lock.body, f"KunciBot incompleto: {token}")
+        for action, expected, label in (
+            ("Set Damage Received", ("Event Player", "100"), "danni ricevuti normali"),
+            ("Set Knockback Received", ("Event Player", "100"), "urti ricevuti normali"),
+        ):
+            calls = list(iter_calls(bot_lock.body, action))
+            checks.equal(len(calls), 1, f"KunciBot: numero impostazioni {label}")
+            if calls:
+                checks.equal(tuple(argument.strip() for argument in calls[0].args), expected,
+                             f"KunciBot: {label}")
+        checks.require("Disable Movement Collision With Players(" not in bot_lock.body,
+                       "KunciBot non deve disattivare la collisione dummy con i player")
         move_speed_calls = list(iter_calls(bot_lock.body, "Set Move Speed"))
         checks.equal(len(move_speed_calls), 1, "KunciBot: numero impostazioni velocità")
         if move_speed_calls:
@@ -2964,9 +3293,11 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
 
     expected_enemy_predicate = (
         "And(Entity Exists(Current Array Element), "
+        "And(Player Variable(Current Array Element, Manusia) == True, "
+        "And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, "
         "And(Has Spawned(Current Array Element), "
         "And(Is Alive(Current Array Element), "
-        "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))"
+        "Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player)))))))"
     )
     expected_enemy_filter = f"Filtered Array(Global.PemainManusia, {expected_enemy_predicate})"
     expected_nearest_enemy = (
@@ -3004,7 +3335,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                      "movimento dummy: filtri target nemico in condizione/facing/throttle")
         for index, target_filter in enumerate(movement_filters, start=1):
             checks.equal(compact(target_filter.args[1]), compact(expected_enemy_predicate),
-                         f"movimento dummy: filtro target {index} deve essere il nemico vivo")
+                          f"movimento dummy: filtro target {index} deve essere l'umano nemico vivo opt-in")
 
         movement_conditions = rule_block(dummy_movement, "conditions")
         checks.require(movement_conditions is not None,
@@ -3020,7 +3351,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 compact(movement_conditions),
                 compact(expected_movement_conditions),
-                "movimento dummy: condizioni esatte per un nemico vivo",
+                "movimento dummy: condizioni esatte per un umano nemico vivo opt-in",
             )
 
         facing_calls = list(iter_calls(dummy_movement.body, "Start Facing"))
@@ -3043,7 +3374,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                         f"Direction Towards(Eye Position(Event Player), "
                         f"Eye Position({expected_nearest_enemy}))"
                     ),
-                    "movimento dummy: facing del nemico vivo più vicino",
+                    "movimento dummy: facing dell'umano nemico opt-in più vicino",
                 )
 
         throttle_calls = list(iter_calls(dummy_movement.body, "Start Throttle In Direction"))
@@ -3074,7 +3405,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                             f"Or(Is In Spawn Room(Event Player), "
                             f"Distance Between(Event Player, {expected_nearest_enemy}) <= 4)"
                         ),
-                        "movimento dummy: arresto esatto in spawn o entro quattro metri dal nemico",
+                        "movimento dummy: arresto esatto in spawn o entro quattro metri dal target opt-in",
                     )
         movement_actions = rule_block(dummy_movement, "actions")
         checks.require(movement_actions is not None,
@@ -3117,7 +3448,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 compact(no_target_filters[0].args[1]),
                 compact(expected_enemy_predicate),
-                "cleanup movimento dummy: filtro target deve essere il nemico vivo",
+                "cleanup movimento dummy: filtro target deve essere l'umano nemico vivo opt-in",
             )
         cleanup_conditions = rule_block(no_target_cleanup, "conditions")
         checks.require(cleanup_conditions is not None,
@@ -3131,7 +3462,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 compact(cleanup_conditions),
                 compact(expected_cleanup_conditions),
-                "cleanup movimento dummy: condizioni esatte senza nemici vivi",
+                "cleanup movimento dummy: condizioni esatte senza umani nemici vivi opt-in",
             )
         checks.require("Stop Facing(Event Player);" in no_target_cleanup.body,
                        "cleanup movimento dummy senza target non ferma il facing")
@@ -3320,6 +3651,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_localization(checks, source, globals_)
     validate_hud_and_menu(checks, source, rules, players, subroutines)
     validate_input_contract(checks, rules)
+    validate_unkillable_full_hp(checks, rules)
     validate_scheduler(checks, source, rules, globals_, subroutines)
     validate_try_your_luck(checks, source, rules, players)
     validate_forced_death(checks, source, rules, players)

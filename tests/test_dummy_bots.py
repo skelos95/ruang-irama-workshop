@@ -62,7 +62,12 @@ class DummyBotFeatureTests(unittest.TestCase):
         for source in (self.it, self.en):
             self.assertEqual(source.count(action), 1)
             self.assertNotIn("Disable Movement Collision With Environment(Event Player, True);", source)
-            self.assertIn(f"If(Is Dummy Bot(Event Player) == True);\n\t\t\t{action}", source)
+            self.assertIn(
+                "If(Is Dummy Bot(Event Player) == True);\n"
+                "\t\t\tEnable Movement Collision With Players(Event Player);\n"
+                f"\t\t\t{action}",
+                source,
+            )
 
     def test_dummy_reserves_the_last_human_slot_and_leaves_at_full_team(self):
         for team in ("Team 1", "Team 2"):
@@ -113,7 +118,10 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertEqual(en_lock.count("Set Damage Received(Event Player, 100);"), 1)
         self.assertNotIn("Set Damage Received(Event Player, 0);", it_lock)
         self.assertNotIn("Set Damage Received(Event Player, 0);", en_lock)
-        self.assertIn("Set Knockback Received(Event Player, 0);", it_lock)
+        self.assertIn("Set Knockback Received(Event Player, 100);", it_lock)
+        self.assertIn("Set Knockback Received(Event Player, 100);", en_lock)
+        self.assertNotIn("Disable Movement Collision With Players", it_lock)
+        self.assertNotIn("Disable Movement Collision With Players", en_lock)
         self.assertEqual(it_lock.count("Set Move Speed(Event Player, 20);"), 1)
         self.assertEqual(en_lock.count("Set Move Speed(Event Player, 20);"), 1)
         self.assertNotIn("Set Move Speed(Event Player, 0);", it_lock)
@@ -133,11 +141,28 @@ class DummyBotFeatureTests(unittest.TestCase):
                 movement.count("Team Of(Current Array Element) == Opposite Team Of(Team Of(Event Player))"),
                 3,
             )
+            self.assertEqual(
+                movement.count("Player Variable(Current Array Element, Manusia) == True"),
+                3,
+            )
+            self.assertEqual(
+                movement.count("Player Variable(Current Array Element, IzinkanDummyMengikuti) == True"),
+                3,
+            )
             self.assertIn("Direction and Turn Rate", movement)
             self.assertNotIn("Event Player.BotOtomatis", movement)
             self.assertNotIn("Wait(", movement)
         self.assertIn("Stop Facing(Event Player);", self.it)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
+
+    def test_dummy_follow_page_defaults_on_and_is_per_player(self):
+        for source in (self.it, self.en):
+            self.assertIn("Event Player.IzinkanDummyMengikuti = True;", source)
+            self.assertIn("Event Player.KursorIkutiDummy = 1;", source)
+            self.assertIn("Call Subroutine(TerapkanHalamanIkutiDummy);", source)
+            self.assertIn("Call Subroutine(GambarIkutiDummy);", source)
+            self.assertIn("12 - DUMMY FOLLOW", source)
+            self.assertIn("12 - DUMMY MENGIKUTI", source)
 
     def test_native_dummy_walks_forward_automatically_and_stops_cleanly(self):
         for source in (self.it, self.en):

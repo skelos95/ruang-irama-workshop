@@ -57,7 +57,8 @@ Il gate rifiuta residui noti italiano/inglese negli elementi personalizzati e i 
 Il gate verifica:
 
 - rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
-- 12 menu e tutte le pagine operative;
+- 13 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..12`;
+- pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default ON; il messaggio di apertura deve annunciare tredici pagine in EN/ID/TH e non può contenere le vecchie forme Twelve/Dua belas/สิบสอง;
 - 37 nomi Player Icon in tre array allineati;
 - 26 località server in tre array allineati;
 - equivalenza di placeholder e argomenti tra le traduzioni;
@@ -89,8 +90,19 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - Camera con Interact 0,5 s a menu aperto o chiuso, ma soltanto con Crouch rilasciato;
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
-- menu congelato da morti e Jump come unico input custom di respawn; posizione e prompt vengono registrati soltanto con `Is Alive == False`;
+- menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
+- sequenza Jump esatta: latch, `Resurrect`, teleport sicuro nello stesso tick, `Wait(0.016)` e conferma `Is Alive`; il ramo non può riarmarsi da solo e una regola separata libera il latch soltanto quando il player ancora morto rilascia Jump;
 - latch rilasciati senza doppie attivazioni.
+
+### Unkillable FULL HP
+
+`FULL HP` è validato come stato composto indivisibile. Sia l'applicazione menu sia la riapplicazione globale devono eseguire insieme:
+
+- `Damage Received = 0`;
+- `Knockback Received = 0`;
+- `Disable Movement Collision With Players`.
+
+OFF, 1 HP, avvio Try Your Luck, setup e cleanup locali/globali devono contenere il ripristino atomico `100/100/Enable Movement Collision With Players`. Un cleanup di morte non cambia però la preferenza `ModeKebal = 2`: alla ripresa in vita la riapplicazione globale deve riportare FULL HP. In Spawn Room la modalità 2 conserva la tripletta protettiva, mentre soltanto il ramo 1 HP ripristina i valori normali. Le sole due disabilitazioni della collisione con player ammesse appartengono ai rami FULL HP locale e globale; una protezione parziale, una chiamata duplicata o l'applicazione della stessa immunità a dummy/iBot fa fallire il gate.
 
 ### Scheduler e prestazioni statiche
 
@@ -107,7 +119,7 @@ Il gate richiede:
 - un solo raycast Camera;
 - nessuna regola HUD contenente `Wait` o `Loop`.
 
-Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, respawn e cleanup atomico. La stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo e non appartiene all'allowlist `Wait`. Qualsiasi Wait fuori allowlist, un undicesimo `Wait` o un secondo Loop fa fallire il gate.
+Le categorie Wait autorizzabili sono: tick scheduler, ordinamento atomico join/leave, classificazione bot, hold input, Resurrect e cleanup atomico. La stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo e non appartiene all'allowlist `Wait`. Qualsiasi Wait fuori allowlist, un undicesimo `Wait` o un secondo Loop fa fallire il gate.
 
 ### Try Your Luck
 
@@ -143,8 +155,10 @@ Il gate controlla:
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
-- velocità bot/dummy esattamente al 20%; soltanto il dummy nativo disabilita le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono le collisioni native;
-- filtro di movimento limitato agli umani vivi della squadra opposta, throttle `Forward` rivalutato con magnitudine `0` entro 4 m e `1` oltre la soglia, più stop obbligatorio su assenza target, morte completa e rimozione; de-mech/transizioni ancora vive non possono eseguire lo stop terminale.
+- velocità bot/dummy esattamente al 20%; il dummy nativo mantiene esplicitamente la collisione con player/bot e disabilita soltanto le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono tutte le collisioni native;
+- `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
+- filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
+- ownership Dummy Follow limitata al default setup ON, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
 
 ### Otto modalità
 
@@ -170,14 +184,17 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Header diverso da `Null`, `Big Message` o secondo handle menu;
 - preload/HUD nascosto reintrodotto;
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
+- ciclo Main Menu ancora `0..11`, pagina 12 priva di renderer/cursore/apply/tinta, writer Dummy Follow estraneo o messaggio di apertura rimasto a dodici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
+- Jump tornato a `Respawn`, teleport spostato dopo il `Wait`, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo o ripristino `100/100/collisione ON` mancante in una delle uscite;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
 - accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto;
-- Privacy default OFF, target privato selezionabile, osservatore non sganciato, Vision priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
+- Privacy default diverso da OFF, target privato selezionabile, osservatore non sganciato, Vision priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
-- velocità bot/dummy diversa dal 20%, collisione ambientale applicata agli iBot o con `Include Floors = True`, target alleato accettato, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
+- velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, collisione player disabilitata, collisione ambientale applicata agli iBot o con `Include Floors = True`, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
 - slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, spaziatore finale Right rimosso, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
@@ -215,8 +232,8 @@ La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-no
 La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 - import e D.Mon smoke test;
-- 12 menu e input in EN/ID/TH;
-- morte/respawn, hero swap, spectator, join/leave e team switch;
+- 13 menu e input in EN/ID/TH, inclusa pagina 12 Dummy Follow;
+- morte/Resurrect con Jump, hero swap, spectator, join/leave e team switch;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;
 - tutte le otto modalità;
 - soak minimo 30 minuti a 12 slot;

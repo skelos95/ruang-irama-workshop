@@ -23,7 +23,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 12 pagine mantengono gli indici `0..11`. Default, effetti e risultati funzionali non cambiano rispetto al contratto della modalità. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
+Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è ON. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
 
 ### Input
 
@@ -34,7 +34,7 @@ Main Menu usa pagina `-1`; le 12 pagine mantengono gli indici `0..11`. Default, 
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue il respawn custom.
+- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Resurrect e teleport alla posizione sicura avvengono nello stesso tick; dopo `Wait(0.016)` la guardia `Is Alive == True` autorizza soltanto effetto e feedback. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
 
 Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
 
@@ -58,7 +58,7 @@ Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spa
 - lettura input e latch di pressione/hold;
 - classificazione one-shot umano/bot;
 - creazione o rivalutazione di rendering visibile a un singolo player;
-- respawn o cleanup atomico che dipende dall'evento player.
+- Resurrect o cleanup atomico che dipende dall'evento player.
 
 ## Menu Arcade
 
@@ -73,6 +73,8 @@ Il lifecycle del menu è:
 
 Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
 
+Il ciclo del Main Menu è esattamente modulo 13; pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
+
 Tutti i menu seguono lo stesso layout:
 
 ```text
@@ -82,6 +84,10 @@ comandi disponibili
 ```
 
 I placeholder devono avere stessa cardinalità nei tre rami linguistici.
+
+## Unkillable FULL HP
+
+FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, Try Your Luck, setup fresco e cleanup/reset di leave o cambio squadra ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Un cleanup engine può normalizzare temporaneamente quei valori durante la morte, ma non cancella `ModeKebal = 2`: dopo Resurrect il tick globale riapplica FULL HP. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
 
 ## Try Your Luck
 
@@ -112,7 +118,7 @@ Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel
 
 Revenge e Skull condividono il percorso di morte completa nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva il claimant sul target, ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio.
 
-Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo.
+Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%, mantengono la collisione con player/bot e disabilitano soltanto le collisioni ambientali con `Include Floors = False`.
 
 ### Leave
 
@@ -220,4 +226,4 @@ La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto
 
 ### Dummy bot: spawn e distanza sicura
 
-I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi. Soltanto il dummy Workshop disabilita la collisione con pareti e soffitti mantenendo il pavimento, guarda l'umano nemico vivo più vicino e avanza in `Forward` finché la distanza è maggiore di 4 m. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`; morte, assenza di nemici e rimozione fermano sempre facing e throttle.
+I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Soltanto il dummy Workshop disabilita la collisione con pareti e soffitti mantenendo il pavimento; la collisione con player/bot resta esplicitamente abilitata. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.
