@@ -28,9 +28,6 @@ jobs:
           LOG=/tmp/crouch-attach-ci.log
           : > "$LOG"
 
-          # Hot-fix only the temporary patcher: the stale validator message occurs in
-          # multiple negative tests, but only this specific opt-out test needs the new
-          # earlier guard message.
           python - <<'PY'
           from pathlib import Path
           p = Path('tools/chatgpt_crouch_attach_patch.py')
@@ -54,8 +51,17 @@ jobs:
           method_block = method_block.replace(old_expectation, new_expectation, 1)
           test = test[:method_start] + method_block + test[method_end:]'''
           if old not in s:
-              raise SystemExit('temporary patcher hot-fix anchor missing')
-          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+              raise SystemExit('temporary patcher test hot-fix anchor missing')
+          s = s.replace(old, new, 1)
+          for a, b in (
+              ('Attached above {0}. RELOAD detaches.', 'Attached above {{0}}. RELOAD detaches.'),
+              ('Menempel di atas {0}. RELOAD untuk lepas.', 'Menempel di atas {{0}}. RELOAD untuk lepas.'),
+              ('เกาะอยู่เหนือ {0} กดรีโหลดเพื่อปล่อย', 'เกาะอยู่เหนือ {{0}} กดรีโหลดเพื่อปล่อย'),
+          ):
+              if a not in s:
+                  raise SystemExit(f'attach message hot-fix anchor missing: {a}')
+              s = s.replace(a, b, 1)
+          p.write_text(s, encoding='utf-8')
           PY
 
           run_gate() {
@@ -73,6 +79,15 @@ jobs:
             run_gate PYCOMPILE python -m py_compile tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/validate_workshop.py || failed=1
           fi
           if [ "$failed" -eq 0 ]; then
+            echo "===== TELEPORT CLICK VALIDATOR CONTEXT =====" >> "$LOG"
+            python - <<'PY' >> "$LOG" 2>&1
+          from pathlib import Path
+          s = Path('tools/validate_workshop.py').read_text(encoding='utf-8')
+          needle = 'destinazione teleport non viene valutata al click'
+          i = s.index(needle)
+          print(s[max(0, i-1800):min(len(s), i+1200)])
+          PY
+            rm -f .github/workflows/chatgpt-crouch-attach.yml
             run_gate VALIDATOR python tools/validate_workshop.py || failed=1
           fi
           if [ "$failed" -eq 0 ]; then
