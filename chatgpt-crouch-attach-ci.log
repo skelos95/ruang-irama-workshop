@@ -1,0 +1,9 @@
+===== PATCH =====
+Traceback (most recent call last):
+  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tools/chatgpt_crouch_attach_patch.py", line 447, in <module>
+    test = replace_once(
+           ^^^^^^^^^^^^^
+  File "/home/runner/work/ruang-irama-workshop/ruang-irama-workshop/tools/chatgpt_crouch_attach_patch.py", line 64, in replace_once
+    raise RuntimeError(f"{label}: expected one anchor, found {text.count(old)}")
+RuntimeError: stale dummy cache error expectation: expected one anchor, found 4
+exit=1
