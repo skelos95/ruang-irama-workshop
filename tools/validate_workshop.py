@@ -2013,8 +2013,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             wait_signatures[(role, signature)] += 1
     expected_wait_signatures: Counter[tuple[str | None, tuple[str, ...]]] = Counter({
         ("scheduler", ("0.050", "Ignore Condition")): 1,
-        ("join ordering", ("0.050", "Ignore Condition")): 2,
-        ("leave ordering", ("0.050", "Ignore Condition")): 1,
+        ("leave ordering", ("0.100", "Ignore Condition")): 1,
         ("bot classification", ("0.016", "Ignore Condition")): 1,
         ("menu hold", ("0.500", "Abort When False")): 1,
         ("camera hold", ("0.500", "Abort When False")): 1,
@@ -2725,18 +2724,16 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                    "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
     joined = rules_with_event(rules, "Player Joined Match")
     left = rules_with_event(rules, "Player Left Match")
-    checks.equal(len(joined), 1, "regola Player Joined Match unica")
+    checks.equal(len(joined), 0, "lifecycle join/team-switch deve essere global-first senza Player Joined Match")
     checks.equal(len(left), 1, "regola Player Left Match unica")
-    if joined:
-        body = joined[0].body
-        for token in ("Event Player.PindahTimDiproses == False;", "SiklusPemainAktif", "Array Contains(Global.PemainManusia, Event Player)"):
-            checks.require(token in body, f"join/team switch senza guardia duplicati: {token}")
-        for name in ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain"):
-            checks.require(f"Call Subroutine({name});" in body, f"join/team switch non chiama {name}")
     if left:
         body = left[0].body
         checks.require("Call Subroutine(TenangkanPemain);" in body and "Call Subroutine(BersihkanPemain);" in body,
                        "leave non esegue quiete + cleanup")
+        checks.require("Wait(0.100, Ignore Condition);" in body,
+                       "leave deve distinguere una vera uscita dal cambio squadra con 0,100 s")
+        checks.require("Abort If(And(Entity Exists(Event Player) == True, Event Player.TimTerakhir != Team Of(Event Player)));" in body,
+                       "leave non delega il cambio squadra al lifecycle globale")
         conditions = rule_block(left[0], "conditions") or ""
         checks.require(
             "Is Dummy Bot(Event Player) == False;" in conditions
@@ -2813,6 +2810,66 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle is not None, "ProsesSiklusPemain assente")
+    fast = rule_by_subroutine(rules, "ProsesCepatPemain")
+    checks.require(fast is not None, "dispatcher lifecycle globale ProsesCepatPemain assente")
+    if fast:
+        for token in (
+            "Global.PemainAktif.PindahTimDiproses == False",
+            "Global.PemainAktif.PernahDisiapkan == False",
+            "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)",
+            "Global.PemainAktif.PindahTimDiproses = True;",
+            "Global.PemainAktif.SiklusPemainAktif = Global.PemainAktif.PernahDisiapkan == True;",
+            "Global.PemainAktif.SudahSiap = False;",
+            "Global.PemainAktif.Manusia = False;",
+            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;",
+        ):
+            checks.require(token in fast.body, f"dispatcher lifecycle globale incompleto: {token}")
+
+    cleanup_worker = next((
+        rule for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and "Call Subroutine(BersihkanPemain);" in rule.body
+        and "Event Player.WaktuSiklusTim" in rule.body
+    ), None)
+    setup_worker = next((
+        rule for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and "Call Subroutine(SiapkanPemain);" in rule.body
+        and "Event Player.WaktuSiklusTim" in rule.body
+    ), None)
+    checks.require(cleanup_worker is not None, "worker cleanup lifecycle accodato dal globale assente")
+    checks.require(setup_worker is not None, "worker setup lifecycle accodato dal globale assente")
+    if cleanup_worker:
+        cleanup_conditions = rule_block(cleanup_worker, "conditions") or ""
+        for token in (
+            "Event Player.PindahTimDiproses == True;",
+            "Event Player.SiklusPemainAktif == True;",
+            "Event Player.SudahSiap == False;",
+            "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
+            "Server Load < 150;",
+        ):
+            checks.require(token in cleanup_conditions, f"worker cleanup lifecycle senza guardia: {token}")
+        checks.require(not wait_calls(cleanup_worker.body), "worker cleanup lifecycle non deve usare Wait")
+        checks.require("Event Player.SiklusPemainAktif = False;" in cleanup_worker.body,
+                       "worker cleanup non passa alla fase setup")
+        checks.require("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;" in cleanup_worker.body,
+                       "worker cleanup non separa cleanup/setup di 0,100 s")
+    if setup_worker:
+        setup_conditions = rule_block(setup_worker, "conditions") or ""
+        for token in (
+            "Event Player.PindahTimDiproses == True;",
+            "Event Player.SiklusPemainAktif == False;",
+            "Event Player.SudahSiap == False;",
+            "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
+            "Server Load < 150;",
+        ):
+            checks.require(token in setup_conditions, f"worker setup lifecycle senza guardia: {token}")
+        checks.require(not wait_calls(setup_worker.body), "worker setup lifecycle non deve usare Wait")
+
+    quiet = rule_by_subroutine(rules, "TenangkanPemain")
+    if quiet:
+        checks.require("Call Subroutine(PulihkanNasibPemain);" not in quiet.body,
+                       "TenangkanPemain non deve duplicare il reset pesante già eseguito da BersihkanPemain")
     if setup:
         checks.require("Event Player.PindahTimDiproses = False;" not in setup.body,
                        "SiapkanPemain rilascia troppo presto il lock team-switch")
@@ -2834,6 +2891,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             (human_stable, "registrazione umana Manusia/Spawn/HUD"),
             (bot_stable, "registrazione bot BotOtomatis/SudahDiperiksa/Spawn/Alive/KunciBotAktif"),
             (r"Global\.PemainAktif\.PindahTimDiproses\s*=\s*False;", "rilascio PindahTimDiproses"),
+            (r"Global\.PemainAktif\.SiklusPemainAktif\s*=\s*False;", "rilascio fase lifecycle"),
+            (r"Global\.PemainAktif\.WaktuSiklusTim\s*=\s*0;", "rilascio timestamp lifecycle"),
         )
         for pattern, label in stable_patterns:
             checks.require(re.search(pattern, cycle.body, re.DOTALL) is not None,
@@ -3373,12 +3432,12 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.equal(roster_writers[0].start, classifier.start,
                      "roster umano scritto fuori dal classificatore dedicato")
 
-    joined = rules_with_event(rules, "Player Joined Match")
-    if joined:
-        checks.require("Is Dummy Bot(Event Player) == False;" in joined[0].body,
-                       "join/team-switch umano non esclude dummy nativi")
-        checks.require("Event Player.BotOtomatis == False;" in joined[0].body,
-                       "join/team-switch umano può riattivare il lifecycle di un iBot")
+    lifecycle_dispatcher = rule_by_subroutine(rules, "ProsesCepatPemain")
+    if lifecycle_dispatcher:
+        checks.require("Is Dummy Bot(Global.PemainAktif) == False" in lifecycle_dispatcher.body,
+                       "dispatcher lifecycle globale non esclude dummy nativi")
+        checks.require("Global.PemainAktif.BotOtomatis == False" in lifecycle_dispatcher.body,
+                       "dispatcher lifecycle globale può riattivare il lifecycle di un iBot")
     left = rules_with_event(rules, "Player Left Match")
     if left:
         for token in (

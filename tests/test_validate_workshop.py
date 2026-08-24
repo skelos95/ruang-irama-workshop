@@ -867,7 +867,16 @@ class SemanticWorkshop080Tests(unittest.TestCase):
 
     def test_at_most_seven_waits_are_allowed(self) -> None:
         scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
-        mutated = self.inject_action(scheduler, "Wait(0.001, Ignore Condition);")
+        mutated = self.source
+        for delay in ("0.001", "0.002", "0.003"):
+            current = next(
+                rule for rule in validator.extract_rules(mutated)
+                if validator.action_loop_count(rule.body) == 1
+            )
+            closing = current.body.rfind("\n\t}")
+            changed = current.body[:closing] + f"\n\t\tWait({delay}, Ignore Condition);" + current.body[closing:]
+            mutated = mutated[:current.start] + changed + mutated[current.end:]
+        self.assertGreater(len(validator.wait_calls(mutated)), 7)
         self.assert_rejected(mutated, "Wait oltre")
 
     def test_wait_allowlist_rejects_changed_delay(self) -> None:
@@ -1398,15 +1407,23 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(absolute, 0, "All Living Players(Team Of(Global.PemainAktif))")
         self.assert_rejected(mutated, "invia HUD anche a bot/dummy")
 
-    def test_join_requires_duplicate_guard(self) -> None:
-        joined = self.rule(lambda rule: validator.event_type(rule) == "Player Joined Match")
-        mutated = self.replace_in_rule(joined, "Event Player.PindahTimDiproses == False;", "Event Player.PindahTimDiproses == True;")
-        self.assert_rejected(mutated, "PindahTimDiproses")
+    def test_global_lifecycle_dispatch_requires_duplicate_guard(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            fast,
+            "Global.PemainAktif.PindahTimDiproses == False",
+            "Global.PemainAktif.PindahTimDiproses == True",
+        )
+        self.assert_rejected(mutated, "dispatcher lifecycle globale")
 
-    def test_team_switch_lifecycle_excludes_classified_ibots(self) -> None:
-        joined = self.rule(lambda rule: validator.event_type(rule) == "Player Joined Match")
-        mutated = self.replace_in_rule(joined, "Event Player.BotOtomatis == False;", "Event Player.BotOtomatis == True;")
-        self.assert_rejected(mutated, "join/team-switch umano può riattivare")
+    def test_global_lifecycle_dispatch_excludes_classified_ibots(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            fast,
+            "Global.PemainAktif.BotOtomatis == False",
+            "Global.PemainAktif.BotOtomatis == True",
+        )
+        self.assert_rejected(mutated, "dispatcher lifecycle globale")
 
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")

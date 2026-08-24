@@ -159,6 +159,7 @@ variables
 		100: LampiranTeleportasiAktif
 		101: PahlawanLampiranSendiri
 		102: PahlawanLampiranTarget
+		103: WaktuSiklusTim
 }
 
 subroutines
@@ -999,42 +1000,7 @@ rule("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 	}
 }
 
-rule("01 - Pemain Masuk atau Pindah Tim: Tunggu pembersihan lalu masuk kembali")
-{
-	event
-	{
-		Player Joined Match;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Dummy Bot(Event Player) == False;
-		Event Player.BotOtomatis == False;
-		Event Player.PindahTimDiproses == False;
-		Or(Event Player.SudahSiap == False, Event Player.TimTerakhir != Team Of(Event Player)) == True;
-	}
-
-	actions
-	{
-		"Tenangkan keadaan aktif sebelum menunggu pembersihan dari acara keluar."
-		Event Player.PindahTimDiproses = True;
-		Event Player.SiklusPemainAktif = True;
-		Call Subroutine(TenangkanPemain);
-		Wait(0.050, Ignore Condition);
-		Abort If(Entity Exists(Event Player) == False);
-		"Jika pendaftaran lama masih ada, jalankan pembersihan cadangan tepat sekali setelah keadaan sudah tenang."
-		If(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(Global.SlotHUDPemain, Event Player.UrutanHUD))));
-			Call Subroutine(BersihkanPemain);
-		End;
-		Wait(0.050, Ignore Condition);
-		Abort If(Entity Exists(Event Player) == False);
-		Call Subroutine(SiapkanPemain);
-	}
-}
-
-rule("01b - Pemain Lama: Siapkan juga yang sudah telanjur ada")
+rule("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")
 {
 	event
 	{
@@ -1045,19 +1011,48 @@ rule("01b - Pemain Lama: Siapkan juga yang sudah telanjur ada")
 
 	conditions
 	{
-		Global.Siap == True;
 		Is Dummy Bot(Event Player) == False;
+		Event Player.BotOtomatis == False;
+		Event Player.PindahTimDiproses == True;
+		Event Player.SiklusPemainAktif == True;
 		Event Player.SudahSiap == False;
-		Event Player.PernahDisiapkan == False;
-		Event Player.SiklusPemainAktif == False;
-		Event Player.PindahTimDiproses == False;
+		Total Time Elapsed >= Event Player.WaktuSiklusTim;
+		Server Load < 150;
 	}
 
 	actions
 	{
-		"Aturan cadangan ini hanya untuk pemain yang sudah ada saat skrip mulai, bukan untuk perpindahan tim berikutnya."
-		Event Player.PindahTimDiproses = True;
-		Event Player.SiklusPemainAktif = True;
+		Call Subroutine(TenangkanPemain);
+		If(Or(Array Contains(Global.PemainManusia, Event Player), And(Event Player.PernahDisiapkan == True, Array Contains(Global.SlotHUDPemain, Event Player.UrutanHUD))));
+			Call Subroutine(BersihkanPemain);
+		End;
+		Event Player.SiklusPemainAktif = False;
+		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;
+	}
+}
+
+rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.BotOtomatis == False;
+		Event Player.PindahTimDiproses == True;
+		Event Player.SiklusPemainAktif == False;
+		Event Player.SudahSiap == False;
+		Total Time Elapsed >= Event Player.WaktuSiklusTim;
+		Server Load < 150;
+	}
+
+	actions
+	{
 		Call Subroutine(SiapkanPemain);
 	}
 }
@@ -1079,7 +1074,8 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.SiklusPemainAktif == False;
 		Has Spawned(Event Player) == True;
 		Event Player.SudahDiperiksa == False;
-	}
+	
+		Server Load < 150;}
 
 	actions
 	{
@@ -1154,7 +1150,8 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
-	}
+	
+		Server Load < 150;}
 
 	actions
 	{
@@ -1455,7 +1452,7 @@ rule("03i - Bot/Dummy: Hentikan gerak saat bot mati")
 	}
 }
 
-rule("04 - Pemain Keluar: Tenangkan lalu bersihkan pendaftaran")
+rule("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")
 {
 	event
 	{
@@ -1479,8 +1476,9 @@ rule("04 - Pemain Keluar: Tenangkan lalu bersihkan pendaftaran")
 			Event Player.TeksVisiNasib = Null;
 			Abort;
 		End;
+		Wait(0.100, Ignore Condition);
+		Abort If(And(Entity Exists(Event Player) == True, Event Player.TimTerakhir != Team Of(Event Player)));
 		Call Subroutine(TenangkanPemain);
-		Wait(0.050, Ignore Condition);
 		Call Subroutine(BersihkanPemain);
 	}
 }
@@ -3133,6 +3131,13 @@ rule("89a - Subrutin: Proses status cepat pemain")
 
 	actions
 	{
+		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Global.PemainAktif.PindahTimDiproses == False, Or(And(Global.PemainAktif.PernahDisiapkan == False, Global.PemainAktif.SudahSiap == False), And(Global.PemainAktif.PernahDisiapkan == True, Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)))))));
+			Global.PemainAktif.PindahTimDiproses = True;
+			Global.PemainAktif.SiklusPemainAktif = Global.PemainAktif.PernahDisiapkan == True;
+			Global.PemainAktif.SudahSiap = False;
+			Global.PemainAktif.Manusia = False;
+			Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;
+		End;
 		If(And(Global.PemainAktif.Manusia == True, Or(Global.PemainAktif.KematianBalasDendam == True, And(Global.PemainAktif.KartuNasibAktif == True, And(Global.PemainAktif.EfekNasib == 3, And(Global.PemainAktif.PutaranKartuNasib == 0, Global.PemainAktif.WaktuPaksaBerakhir > 0))))));
 			If(And(Global.PemainAktif.KematianBalasDendam == True, Or(Global.PemainAktif.PenagihBalasDendam == Null, Or(Entity Exists(Global.PemainAktif.PenagihBalasDendam) == False, Player Variable(Global.PemainAktif.PenagihBalasDendam, Manusia) == False))));
 				Global.PemainAktif.KematianBalasDendam = False;
@@ -3228,6 +3233,8 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 		If(And(Global.PemainAktif.PindahTimDiproses == True, Or(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Global.PemainAktif.HudPemainDibuat == True)), And(Global.PemainAktif.BotOtomatis == True, And(Global.PemainAktif.SudahDiperiksa == True, And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, Global.PemainAktif.KunciBotAktif == True)))))));
 			"Pendaftaran manusia dilepas setelah HUD stabil; bot otomatis dilepas hanya setelah klasifikasi dan penguncian selesai."
 			Global.PemainAktif.PindahTimDiproses = False;
+			Global.PemainAktif.SiklusPemainAktif = False;
+			Global.PemainAktif.WaktuSiklusTim = 0;
 		End;
 		If(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Hero Of(Global.PemainAktif) != Global.PemainAktif.PahlawanTerakhir)));
 			"Perubahan pahlawan manusia dibersihkan oleh scheduler global tanpa membuat aturan Each Player baru."
@@ -3947,7 +3954,14 @@ rule("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
 		Event Player.KursorKebal = 0;
-		Call Subroutine(PulihkanNasibPemain);
+		If(Event Player.IkonKartuNasib != Null);
+			Destroy Icon(Event Player.IkonKartuNasib);
+		End;
+		Event Player.IkonKartuNasib = Null;
+		Stop Accelerating(Event Player);
+		Set Move Speed(Event Player, 100);
+		Event Player.WaktuPaksaBerikut = 0;
+		Event Player.WaktuPaksaBerakhir = 0;
 		Event Player.MenuNasibHarusDibuka = False;
 		Event Player.KematianBalasDendam = False;
 		Event Player.PenagihBalasDendam = Null;
@@ -4251,6 +4265,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.LampiranTeleportasiAktif = False;
 		Event Player.PahlawanLampiranSendiri = Null;
 		Event Player.PahlawanLampiranTarget = Null;
+		Event Player.WaktuSiklusTim = 0;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = False;
