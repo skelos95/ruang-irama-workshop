@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import concurrent.futures
+import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+TESTS = ROOT / "tests"
 
 
 def flatten(suite):
@@ -17,18 +19,24 @@ def flatten(suite):
             yield item.id()
 
 
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(TESTS))
 loader = unittest.TestLoader()
-suite = loader.discover(str(ROOT / "tests"), pattern="test_*.py", top_level_dir=str(ROOT))
+suite = loader.discover(str(TESTS), pattern="test_*.py")
 ids = list(flatten(suite))
 if not ids:
     raise SystemExit("No tests discovered")
 workers = min(4, len(ids))
 chunks = [ids[i::workers] for i in range(workers)]
 
+env = os.environ.copy()
+existing = env.get("PYTHONPATH", "")
+env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(TESTS), existing]) if existing else os.pathsep.join([str(ROOT), str(TESTS)])
+
 
 def run_chunk(chunk):
     cmd = [sys.executable, "-m", "unittest", *chunk]
-    result = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
+    result = subprocess.run(cmd, cwd=ROOT, env=env, text=True, capture_output=True)
     return result.returncode, result.stdout, result.stderr, len(chunk)
 
 failed = False
