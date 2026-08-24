@@ -1,8 +1,8 @@
-# Progetto tecnico — CHILL Dedicated Server 0.8.0
+# Progetto tecnico — CHILL Dedicated Server 0.8.1
 
-Stato: **live-ready**
+Stato: **static-ready / live-pending**
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; i test live sono stati completati dall'utente e la stabilità è stata confermata il 24 agosto 2026. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la 0.8.1 richiede una nuova regressione live del cambio squadra prima del passaggio a live-ready. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 
 ## Obiettivi
 
@@ -99,7 +99,7 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 | Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
 | Skull | immediato | unico esito che bypassa temporaneamente Unkillable e ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
 | Team Heal | immediato | porta i player umani della squadra alla salute completa |
-| Burning | 10 s | infligge il 5% della salute massima al secondo, come 2,5% ogni 0,5 s, senza bypassare Unkillable |
+| Burning | 10 s | infligge il 5% della salute massima ogni 1 s; sospende temporaneamente Unkillable e Damage Received per ciascun tick |
 | Hacked | 5 s | applica e poi rimuove Hacked |
 
 Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal, Burning e Hacked non sospendono Unkillable; in particolare FULL HP annulla i tick Burning e 1 HP resta soggetto allo status protettivo. Soltanto lo Skull finale armato e Revenge passano dal bypass della macchina di morte completa. Alla morte o al timeout vengono annullati stato temporaneo, accelerazione, status dell'esito, HUD/IWT ed effetti associati, ma la preferenza Unkillable resta intatta e viene riapplicata dopo Resurrect. Un tracker eroe condiviso rileva inoltre a 10 Hz il cambio eroe umano e applica lo stesso cleanup temporaneo senza azzerare o sospendere Unkillable sul player vivo e senza aggiungere un nuovo `Ongoing - Each Player`; leave e cambio squadra eseguono invece il reset lifecycle completo. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
@@ -118,7 +118,7 @@ Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel
 
 Revenge e lo Skull finale condividono l'unico percorso che bypassa temporaneamente Unkillable nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva invariati claimant e contabilità: ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio. Dopo Resurrect il tick globale ripristina la modalità Unkillable selezionata e ricrea la relativa icona se il motore l'ha distrutta.
 
-Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 30 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%, mantengono la collisione con player/bot e disabilitano soltanto le collisioni ambientali con `Include Floors = False`.
+Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%, mantengono la collisione con player/bot e disabilitano soltanto le collisioni ambientali con `Include Floors = False`.
 
 ### Leave
 
@@ -132,7 +132,7 @@ Il cleanup:
 
 ### Cambio squadra
 
-Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da setup fresco. Il reset totale delle preferenze è intenzionale. La sequenza impedisce doppioni anche durante transizioni simultanee o una cascata full-lobby.
+Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da setup fresco. Il reset totale delle preferenze è intenzionale. Un lock globale assegna il lifecycle a un solo player per volta: cleanup e setup sono separati da 0,25 s, il player successivo riceve il lock soltanto dopo la stabilizzazione del precedente e le cache pesanti vengono sospese durante la transazione.
 
 ## HUD, testi ed effetti
 
@@ -212,7 +212,7 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
 
-La release 0.8.0 è **live-ready** dopo il completamento dei test live e la conferma di stabilità dell'utente del 24 agosto 2026. Per future regressioni resta obbligatoria la matrice seguente:
+La release 0.8.1 è **live-ready** dopo il completamento dei test live e la conferma di stabilità dell'utente del 24 agosto 2026. Per future regressioni resta obbligatoria la matrice seguente:
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;

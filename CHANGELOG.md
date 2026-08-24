@@ -2,6 +2,17 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Un rilascio `static-ready / live-pending` ha superato i controlli automatici, ma richiede ancora l'import e i test nel client Overwatch prima del tag finale `live-ready`.
 
+## 0.8.1 — 2026-08-24
+
+Stato: **live-pending**.
+
+- Cambio squadra reso global-first seriale: un lock globale assegna cleanup/setup a un solo player per volta, con 0,25 s fra le fasi e cooldown prima del player successivo.
+- Durante una transazione lifecycle il scheduler sospende per gli altri player anche il fast-path 20 Hz, oltre al ciclo 10 Hz e alle cache 1 Hz; resta attivo quasi soltanto il proprietario del cambio squadra, riducendo il picco di carico critico.
+- La discriminazione `Player Left Match` attende 0,5 s prima del cleanup, così una transizione di squadra ha più tempo per riapparire come entità valida e non percorre accidentalmente anche il cleanup di leave.
+- Il cleanup `Player Left Match` disabilita il fallback per slot HUD prima di rimuovere il roster: una vecchia entità distrutta dal cambio team non può più eliminare la nuova entità che eredita lo stesso slot.
+- Documentazione riallineata al runtime reale: dummy respawn 3 s, Burning 5% Max Health ogni secondo con bypass temporaneo di Unkillable/Damage Received, e controlli completi Crouch Travel & Attach.
+- GitHub Actions limitato ai push su `main` e alle PR, con concurrency/cancel-in-progress e timeout 15 minuti per evitare run duplicati e X rossi obsoleti.
+
 ## 0.8.0 — 2026-08-24
 
 Stato: **live-ready**.

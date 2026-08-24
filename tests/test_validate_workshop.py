@@ -8,7 +8,7 @@ from pathlib import Path
 from tools import validate_workshop as validator
 
 
-class SemanticWorkshop080Tests(unittest.TestCase):
+class SemanticWorkshop081Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = validator.SOURCE.read_text(encoding="utf-8")
@@ -2195,11 +2195,11 @@ class RepositoryMetadataTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:
         (root / ".github" / "workflows").mkdir(parents=True)
         (root / "docs").mkdir()
-        (root / "VERSION").write_text("0.8.0\n", encoding="utf-8")
+        (root / "VERSION").write_text("0.8.1\n", encoding="utf-8")
         for relative in validator.CORE_DOCS:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("CHILL 0.8.0\nStato: **live-ready**\n", encoding="utf-8")
+            path.write_text("CHILL 0.8.1\nStato: **static-ready / live-pending**\n", encoding="utf-8")
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
             "on:\n  push:\njobs:\n  validate:\n    steps:\n      - run: python tools/validate_workshop.py\n"
             "      - run: python -m unittest discover -s tests\n",
@@ -2224,12 +2224,12 @@ class RepositoryMetadataTests(unittest.TestCase):
             (root / "VERSION").write_text("0.7.2\n", encoding="utf-8")
             self.assertTrue(any("VERSION" in error for error in self.metadata_errors(root)))
 
-    def test_live_pending_document_is_rejected(self) -> None:
+    def test_live_ready_document_is_rejected_before_client_regression(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             (root / "README.md").write_text(
-                "CHILL 0.8.0\nStato: **static-ready / live-pending**\n",
+                "CHILL 0.8.1\nStato: **live-ready**\n",
                 encoding="utf-8",
             )
             errors = self.metadata_errors(root)

@@ -1,12 +1,12 @@
-# Rapporto di validazione — versione 0.8.0
+# Rapporto di validazione — versione 0.8.1
 
 Data: 2026-08-20
 
-Release tecnica: **CHILL Dedicated Server 0.8.0**
+Release tecnica: **CHILL Dedicated Server 0.8.1**
 
-Stato: **live-ready**
+Stato: **static-ready / live-pending**
 
-Il gate 0.8.0 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
+Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
 ## Esecuzione
 
@@ -131,10 +131,10 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 | Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
 | Skull | unico esito autorizzato a bypassare temporaneamente Unkillable; trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
 | Team Heal | cura completa dei soli player umani del team |
-| Burning | 5% max HP al secondo per 10 s, implementato come 2,5% ogni 0,5 s, senza rimuovere status o modificatori Unkillable |
+| Burning | 5% max HP ogni 1 s per 10 s; rimuove temporaneamente Unkillable e normalizza Damage Received per applicare ciascun tick |
 | Hacked | durata 5 s e cleanup status |
 
-L'avvio e la macchina a stati non possono sospendere Unkillable. La condizione di riapplicazione globale deve escludere soltanto Revenge pending o uno Skull finale realmente armato; un'icona Skull intermedia e gli altri cinque esiti restano protetti. Burning non può eseguire `Clear/Set Status(Unkillable)`, cambiare Damage/Knockback Received o collisione: FULL HP annulla i tick di danno e 1 HP conserva lo status. Soltanto il ramo centralizzato Skull finale/Revenge può eseguire il bypass prima di `Kill`. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario; il cleanup su un player ancora vivo non può normalizzare status o tripletta Unkillable. Leave e cambio squadra restano cleanup completi. Un loop o Wait per-player associato alla roulette è vietato.
+L'avvio e la macchina a stati non possono sospendere Unkillable. La condizione di riapplicazione globale deve escludere soltanto Revenge pending o uno Skull finale realmente armato; un'icona Skull intermedia e gli altri cinque esiti restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100` per il solo tick da 5% Max Health; modalità/cursore restano invariati e il tick globale riapplica subito la protezione selezionata. Soltanto il ramo centralizzato Skull finale/Revenge può eseguire il bypass prima di `Kill`. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario; il cleanup su un player ancora vivo non può normalizzare status o tripletta Unkillable. Leave e cambio squadra restano cleanup completi. Un loop o Wait per-player associato alla roulette è vietato.
 
 Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
 
@@ -149,12 +149,12 @@ Il gate controlla:
 - reset completo delle preferenze dopo il cambio squadra;
 - rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
-- ordine atomico delle operazioni sensibili e rilascio dei latch;
+- ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
 - Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e Vision e nessun HUD Crouch sovrapposto durante Vision;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
-- uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
+- uscita dummy stabilizzata da un timestamp di 1 secondo, respawn massimo 3 secondi e riarmo alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
 - velocità bot/dummy esattamente al 20%; il dummy nativo mantiene esplicitamente la collisione con player/bot e disabilita soltanto le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono tutte le collisioni native;
 - `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
 - filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
@@ -221,7 +221,7 @@ Il parser testuale non può certificare:
 - leak osservabili soltanto tramite Text Count ed Entity Count;
 - interferenze con Team Status Indicator.
 
-Il gate statico non sostituisce queste verifiche client. Per la 0.8.0 il pass live è stato chiuso dalla conferma dell'utente del 24 agosto 2026; i valori numerici non forniti non vengono ricostruiti nel rapporto.
+Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 il pass live è stato chiuso dalla conferma dell'utente del 24 agosto 2026; i valori numerici non forniti non vengono ricostruiti nel rapporto.
 
 ## Contesto patch
 
@@ -244,4 +244,4 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 ## Decisione
 
-La versione 0.8.0 è **live-ready**: i gate repository devono risultare verdi sul commit finale e l'utente ha confermato il completamento dei test live e la stabilità. Il vecchio tag `v0.7.2` viene sostituito da `v0.8.0` sul commit pubblicato; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+La versione 0.8.1 è **live-ready**: i gate repository devono risultare verdi sul commit finale e l'utente ha confermato il completamento dei test live e la stabilità. Il vecchio tag `v0.7.2` viene sostituito da `v0.8.1` sul commit pubblicato; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.

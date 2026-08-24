@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Semantic static gate for CHILL Dedicated Server Workshop 0.8.0.
+"""Semantic static gate for CHILL Dedicated Server Workshop 0.8.1.
 
 The validator deliberately checks behaviour and ownership boundaries instead of
 pinning the complete Workshop export or rule-number prefixes. It only uses the
@@ -26,7 +26,7 @@ SOURCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
-CURRENT_VERSION = "0.8.0"
+CURRENT_VERSION = "0.8.1"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
 MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
@@ -765,12 +765,12 @@ def validate_metadata(checks: Checks, root: Path) -> None:
             text = path.read_text(encoding="utf-8")
             checks.require(CURRENT_VERSION in text, f"documento non allineato a {CURRENT_VERSION}: {relative}")
             checks.require(
-                "Stato: **live-ready**" in text,
-                f"documento non dichiara Stato: **live-ready**: {relative}",
+                "Stato: **static-ready / live-pending**" in text,
+                f"documento non dichiara Stato: **static-ready / live-pending**: {relative}",
             )
             checks.require(
-                "Stato: **static-ready / live-pending**" not in text,
-                f"documento conserva lo stato live-pending: {relative}",
+                "Stato: **live-ready**" not in text,
+                f"documento dichiara live-ready prima della regressione client: {relative}",
             )
 
     github = root / ".github"
@@ -2013,7 +2013,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             wait_signatures[(role, signature)] += 1
     expected_wait_signatures: Counter[tuple[str | None, tuple[str, ...]]] = Counter({
         ("scheduler", ("0.050", "Ignore Condition")): 1,
-        ("leave ordering", ("0.100", "Ignore Condition")): 1,
+        ("leave ordering", ("0.500", "Ignore Condition")): 1,
         ("bot classification", ("0.016", "Ignore Condition")): 1,
         ("menu hold", ("0.500", "Abort When False")): 1,
         ("camera hold", ("0.500", "Abort When False")): 1,
@@ -2730,10 +2730,14 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         body = left[0].body
         checks.require("Call Subroutine(TenangkanPemain);" in body and "Call Subroutine(BersihkanPemain);" in body,
                        "leave non esegue quiete + cleanup")
-        checks.require("Wait(0.100, Ignore Condition);" in body,
-                       "leave deve distinguere una vera uscita dal cambio squadra con 0,100 s")
+        checks.require("Wait(0.500, Ignore Condition);" in body,
+                       "leave deve distinguere una vera uscita dal cambio squadra con 0,500 s")
         checks.require("Abort If(And(Entity Exists(Event Player) == True, Event Player.TimTerakhir != Team Of(Event Player)));" in body,
                        "leave non delega il cambio squadra al lifecycle globale")
+        checks.require("Event Player.UrutanHUD = -1;" in body,
+                       "leave stale può ancora usare il fallback slot HUD e colpire la nuova entità")
+        checks.require(body.find("Event Player.UrutanHUD = -1;") < body.find("Call Subroutine(BersihkanPemain);"),
+                       "leave deve disabilitare il fallback slot prima del cleanup")
         conditions = rule_block(left[0], "conditions") or ""
         checks.require(
             "Is Dummy Bot(Event Player) == False;" in conditions
@@ -2812,6 +2816,22 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     checks.require(cycle is not None, "ProsesSiklusPemain assente")
     fast = rule_by_subroutine(rules, "ProsesCepatPemain")
     checks.require(fast is not None, "dispatcher lifecycle globale ProsesCepatPemain assente")
+    scheduler = next((rule for rule in rules if event_type(rule) == "Ongoing - Global" and action_loop_count(rule.body) == 1), None)
+    checks.require(scheduler is not None, "scheduler globale lifecycle assente")
+    if scheduler:
+        for token in (
+            "Global.PemainSiklusGlobal != Null",
+            "Entity Exists(Global.PemainSiklusGlobal) == False",
+            "Or(Global.PemainSiklusGlobal == Null, Global.PemainAktif == Global.PemainSiklusGlobal)",
+            "Call Subroutine(ProsesCepatPemain);",
+            "Call Subroutine(ProsesNasibPemain);",
+            "And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null)",
+        ):
+            checks.require(token in scheduler.body, f"scheduler non serializza/throttla il lifecycle: {token}")
+        checks.require(
+            scheduler.body.count("Or(Global.PemainSiklusGlobal == Null, Global.PemainAktif == Global.PemainSiklusGlobal)") >= 2,
+            "scheduler non limita fast-path e ciclo al proprietario lifecycle",
+        )
     if fast:
         for token in (
             "Global.PemainAktif.PindahTimDiproses == False",
@@ -2821,7 +2841,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.SiklusPemainAktif = Global.PemainAktif.PernahDisiapkan == True;",
             "Global.PemainAktif.SudahSiap = False;",
             "Global.PemainAktif.Manusia = False;",
-            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.100;",
+            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            "Global.PemainSiklusGlobal == Null",
+            "Global.PemainSiklusGlobal = Global.PemainAktif;",
+            "Global.WaktuSiklusGlobal",
         ):
             checks.require(token in fast.body, f"dispatcher lifecycle globale incompleto: {token}")
 
@@ -2843,6 +2866,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         cleanup_conditions = rule_block(cleanup_worker, "conditions") or ""
         for token in (
             "Event Player.PindahTimDiproses == True;",
+            "Global.PemainSiklusGlobal == Event Player;",
             "Event Player.SiklusPemainAktif == True;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
@@ -2852,12 +2876,13 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require(not wait_calls(cleanup_worker.body), "worker cleanup lifecycle non deve usare Wait")
         checks.require("Event Player.SiklusPemainAktif = False;" in cleanup_worker.body,
                        "worker cleanup non passa alla fase setup")
-        checks.require("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.100;" in cleanup_worker.body,
-                       "worker cleanup non separa cleanup/setup di 0,100 s")
+        checks.require("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;" in cleanup_worker.body,
+                       "worker cleanup non separa cleanup/setup di 0,250 s")
     if setup_worker:
         setup_conditions = rule_block(setup_worker, "conditions") or ""
         for token in (
             "Event Player.PindahTimDiproses == True;",
+            "Global.PemainSiklusGlobal == Event Player;",
             "Event Player.SiklusPemainAktif == False;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
@@ -2893,6 +2918,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             (r"Global\.PemainAktif\.PindahTimDiproses\s*=\s*False;", "rilascio PindahTimDiproses"),
             (r"Global\.PemainAktif\.SiklusPemainAktif\s*=\s*False;", "rilascio fase lifecycle"),
             (r"Global\.PemainAktif\.WaktuSiklusTim\s*=\s*0;", "rilascio timestamp lifecycle"),
+            (r"Global\.PemainSiklusGlobal\s*=\s*Null;", "rilascio lock lifecycle globale"),
+            (r"Global\.WaktuSiklusGlobal\s*=\s*Total Time Elapsed \+ 0\.250;", "cooldown lifecycle globale"),
         )
         for pattern, label in stable_patterns:
             checks.require(re.search(pattern, cycle.body, re.DOTALL) is not None,
@@ -3436,7 +3463,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     if lifecycle_dispatcher:
         checks.require("Is Dummy Bot(Global.PemainAktif) == False" in lifecycle_dispatcher.body,
                        "dispatcher lifecycle globale non esclude dummy nativi")
-        checks.require("Global.PemainAktif.BotOtomatis == False" in lifecycle_dispatcher.body,
+        checks.require(lifecycle_dispatcher.body.count("Global.PemainAktif.BotOtomatis == False") >= 2,
                        "dispatcher lifecycle globale può riattivare il lifecycle di un iBot")
     left = rules_with_event(rules, "Player Left Match")
     if left:
@@ -3928,7 +3955,7 @@ def main() -> int:
     checks.finish()
     rules = extract_rules(source)
     print(
-        "OK - gate semantici v0.8.0 superati "
+        "OK - gate semantici v0.8.1 superati "
         f"({len(rules)} regole, {len(wait_calls(source))} Wait, {action_loop_count(source)} Loop)"
     )
     return 0
