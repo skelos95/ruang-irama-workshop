@@ -7,5 +7,10 @@ new = '''        checks.require("Wait(0.500, Ignore Condition);" in body,
                        "leave deve distinguere una vera uscita dal cambio squadra con 0,500 s")'''
 if s.count(old) != 1:
     raise SystemExit(f"leave validator contract occurrence count: {s.count(old)}")
-p.write_text(s.replace(old, new, 1), encoding="utf-8")
-print("Updated leave validator contract to 0.500 s")
+s = s.replace(old, new, 1)
+label_old = "OK - gate semantici v0.8.0 superati"
+if s.count(label_old) != 1:
+    raise SystemExit(f"validator success label occurrence count: {s.count(label_old)}")
+s = s.replace(label_old, "OK - gate semantici v0.8.1 superati", 1)
+p.write_text(s, encoding="utf-8")
+print("Updated leave validator contract and 0.8.1 success label")
