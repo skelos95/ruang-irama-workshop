@@ -76,17 +76,12 @@ jobs:
           failed=0
           run_gate PATCH python tools/chatgpt_crouch_attach_patch.py || failed=1
           if [ "$failed" -eq 0 ]; then
+            run_gate VALIDATOR_FIX python tools/chatgpt_crouch_attach_validator_fix.py || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
             run_gate PYCOMPILE python -m py_compile tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/validate_workshop.py || failed=1
           fi
           if [ "$failed" -eq 0 ]; then
-            echo "===== TELEPORT CLICK VALIDATOR CONTEXT =====" >> "$LOG"
-            python - <<'PY' >> "$LOG" 2>&1
-          from pathlib import Path
-          s = Path('tools/validate_workshop.py').read_text(encoding='utf-8')
-          needle = 'destinazione teleport non viene valutata al click'
-          i = s.index(needle)
-          print(s[max(0, i-1800):min(len(s), i+1200)])
-          PY
             rm -f .github/workflows/chatgpt-crouch-attach.yml
             run_gate VALIDATOR python tools/validate_workshop.py || failed=1
           fi
@@ -114,9 +109,9 @@ jobs:
             exit 1
           fi
 
-          git rm .github/workflows/chatgpt-crouch-attach.yml tools/chatgpt_crouch_attach_patch.py
+          git rm .github/workflows/chatgpt-crouch-attach.yml tools/chatgpt_crouch_attach_patch.py tools/chatgpt_crouch_attach_validator_fix.py
           git rm -f chatgpt-crouch-attach-ci.log 2>/dev/null || true
-          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_validate_workshop.py tests/test_runtime_maintenance.py CHANGELOG.md
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_validate_workshop.py tests/test_runtime_maintenance.py tools/validate_workshop.py CHANGELOG.md
           git commit -m "Add Crouch Teleport attach mode"
           git push origin HEAD:chatgpt-crouch-attach
           cat "$LOG"
