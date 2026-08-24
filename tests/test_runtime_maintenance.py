@@ -75,5 +75,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget", source)
             self.assertIn("TargetLampiranTeleportasi) == Global.PemainPembersihan", source.replace("Globale.", "Global."))
 
+    def test_custom_string_uses_at_most_three_substitution_values(self):
+        for source in (self.it, self.en):
+            self.assertNotIn("{3}", source)
+            self.assertIn('Custom String("{0}\\n{1}", Custom String("HOLD {0} FOR ALL COMMANDS"', source)
+
+
 if __name__ == "__main__":
     unittest.main()
