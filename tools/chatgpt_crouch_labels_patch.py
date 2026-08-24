@@ -15,6 +15,18 @@ def replace_exact(text: str, old: str, new: str, label: str, count: int = 1) -> 
     return text.replace(old, new, count)
 
 
+def replace_ordered_pair(text: str, old: str, first_new: str, second_new: str, label: str) -> str:
+    found = text.count(old)
+    if found != 2:
+        raise RuntimeError(f"{label}: expected 2, found {found}")
+    first = text.find(old)
+    text = text[:first] + first_new + text[first + len(old):]
+    second = text.find(old, first + len(first_new))
+    if second < 0:
+        raise RuntimeError(f"{label}: second occurrence disappeared")
+    return text[:second] + second_new + text[second + len(old):]
+
+
 for path in SOURCES:
     text = path.read_text(encoding="utf-8")
     text = replace_exact(text, "8 - CROUCH TELEPORT\\nCURRENT: {0}", "8 - CROUCH TRAVEL & ATTACH\\nCURRENT: {0}", "english main label")
@@ -37,14 +49,23 @@ for path in SOURCES:
         'Custom String("กด {0} ค้างสำหรับทุกคำสั่ง\\n{1}: ถัดไป | {2}: ก่อนหน้า | {3}: ใช้งาน", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact))), Custom String("ปล่อย {0}: ปิด | {0} + {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))',
         "thai runtime instructions")
 
+    # English and Indonesian intentionally used the exact same old 3/4 label.
+    # Preserve their source order so each locale receives its own descriptive title.
+    common_player_bot = "TELEPORT 3/4\\n> PLAYER / BOT\\nTARGET: {0}\\nINTERACT: TELEPORT"
+    text = replace_ordered_pair(
+        text,
+        common_player_bot,
+        "PLAYER / BOT TRAVEL 3/4\\n> TELEPORT NEXT TO TARGET\\nTARGET: {0}\\nINTERACT: TELEPORT",
+        "PINDAH KE PLAYER / BOT 3/4\\n> TELEPORT DI DEKAT TARGET\\nTARGET: {0}\\nINTERACT: TELEPORT",
+        "localized player/bot travel labels",
+    )
+
     replacements = {
         "TELEPORT 1/4\\n> SPAWN ROOM\\nINTERACT: TELEPORT": "SPAWN TRAVEL 1/4\\n> RETURN TO SPAWN ROOM\\nINTERACT: TELEPORT",
         "TELEPORT 2/4\\n> OBJECTIVE / FLAG\\nINTERACT: TELEPORT": "OBJECTIVE TRAVEL 2/4\\n> JUMP TO OBJECTIVE / ENEMY FLAG\\nINTERACT: TELEPORT",
-        "TELEPORT 3/4\\n> PLAYER / BOT\\nTARGET: {0}\\nINTERACT: TELEPORT": "PLAYER / BOT TRAVEL 3/4\\n> TELEPORT NEXT TO TARGET\\nTARGET: {0}\\nINTERACT: TELEPORT",
         "TELEPORT 4/4\\n> ATTACH ABOVE PLAYER / BOT\\nTARGET: {0}\\nINTERACT: ATTACH | RELOAD: DETACH": "PLAYER / BOT ATTACH 4/4\\n> RIDE ABOVE TARGET\\nTARGET: {0}\\nINTERACT: ATTACH | CROUCH + RELOAD: DETACH",
         "TELEPORT 1/4\\n> RUANG MUNCUL\\nINTERACT: TELEPORT": "PINDAH KE SPAWN 1/4\\n> KEMBALI KE RUANG MUNCUL\\nINTERACT: TELEPORT",
         "TELEPORT 2/4\\n> OBJEKTIF / BENDERA\\nINTERACT: TELEPORT": "PINDAH KE OBJEKTIF 2/4\\n> LOMPAT KE OBJEKTIF / BENDERA MUSUH\\nINTERACT: TELEPORT",
-        "TELEPORT 3/4\\n> PLAYER / BOT\\nTARGET: {0}\\nINTERACT: TELEPORT": "PINDAH KE PLAYER / BOT 3/4\\n> TELEPORT DI DEKAT TARGET\\nTARGET: {0}\\nINTERACT: TELEPORT",
         "TELEPORT 4/4\\n> TEMPEL DI ATAS PLAYER / BOT\\nTARGET: {0}\\nINTERACT: TEMPEL | RELOAD: LEPAS": "TEMPEL PLAYER / BOT 4/4\\n> NAIK DI ATAS TARGET\\nTARGET: {0}\\nINTERACT: TEMPEL | JONGKOK + RELOAD: LEPAS",
         "เทเลพอร์ต 1/4\\n> ห้องเกิด\\nใช้งาน: เทเลพอร์ต": "กลับห้องเกิด 1/4\\n> เทเลพอร์ตกลับห้องเกิด\\nใช้งาน: เทเลพอร์ต",
         "เทเลพอร์ต 2/4\\n> เป้าหมาย / ธง\\nใช้งาน: เทเลพอร์ต": "ไปเป้าหมาย 2/4\\n> เทเลพอร์ตไปเป้าหมาย / ธงศัตรู\\nใช้งาน: เทเลพอร์ต",
