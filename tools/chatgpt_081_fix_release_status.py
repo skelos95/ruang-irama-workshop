@@ -32,8 +32,7 @@ for rel, pairs in replacements.items():
         text = text.replace(old, new, 1)
     path.write_text(text, encoding="utf-8")
 
-# The release metadata gate must match the current release phase. 0.8.1 is
-# intentionally live-pending until the new team-switch lifecycle passes client tests.
+# 0.8.1 must remain live-pending until the new team-switch lifecycle passes client tests.
 validator = ROOT / "tools" / "validate_workshop.py"
 v = validator.read_text(encoding="utf-8")
 old_policy = '''            checks.require(
@@ -57,6 +56,43 @@ if v.count(old_policy) != 1:
 v = v.replace(old_policy, new_policy, 1)
 validator.write_text(v, encoding="utf-8")
 
-# Keep metadata unit tests aligned with the 0.8.1 release phase.
-test = ROOT / "tests" / "test_validate_workshop.py"
-t = test.read_text(encoding="utf-8")nt = None
+# Keep repository metadata tests aligned with the 0.8.1 release phase.
+test_path = ROOT / "tests" / "test_validate_workshop.py"
+t = test_path.read_text(encoding="utf-8")
+t = t.replace("class SemanticWorkshop080Tests", "class SemanticWorkshop081Tests", 1)
+start = t.index("class RepositoryMetadataTests")
+head, tail = t[:start], t[start:]
+tail = tail.replace("0.8.0", "0.8.1")
+old_make = 'path.write_text("CHILL 0.8.1\\nStato: **live-ready**\\n", encoding="utf-8")'
+new_make = 'path.write_text("CHILL 0.8.1\\nStato: **static-ready / live-pending**\\n", encoding="utf-8")'
+if tail.count(old_make) != 1:
+    raise SystemExit(f"metadata make_repo live-ready occurrence count: {tail.count(old_make)}")
+tail = tail.replace(old_make, new_make, 1)
+old_test = '''    def test_live_pending_document_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "README.md").write_text(
+                "CHILL 0.8.1\\nStato: **static-ready / live-pending**\\n",
+                encoding="utf-8",
+            )
+            errors = self.metadata_errors(root)
+            self.assertTrue(any("live-ready" in error or "live-pending" in error for error in errors))
+'''
+new_test = '''    def test_live_ready_document_is_rejected_before_client_regression(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "README.md").write_text(
+                "CHILL 0.8.1\\nStato: **live-ready**\\n",
+                encoding="utf-8",
+            )
+            errors = self.metadata_errors(root)
+            self.assertTrue(any("live-ready" in error or "live-pending" in error for error in errors))
+'''
+if tail.count(old_test) != 1:
+    raise SystemExit(f"metadata live-pending test occurrence count: {tail.count(old_test)}")
+tail = tail.replace(old_test, new_test, 1)
+test_path.write_text(head + tail, encoding="utf-8")
+
+print("Marked 0.8.1 static-ready / live-pending and aligned metadata gate/tests")
