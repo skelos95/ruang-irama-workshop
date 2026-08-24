@@ -22,8 +22,8 @@ for rel in ("workshop/ruang_irama.it-IT.workshop", "tests/fixtures/semantic_refe
 
 test_path = ROOT / "tests/test_runtime_maintenance.py"
 test = test_path.read_text(encoding="utf-8")
-old_test = '            self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", detach_rule)\n            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", detach_rule)'
-new_test = '            self.assertIn("Event Player.MenuTerbuka == False;", detach_rule)\n            self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", detach_rule)\n            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", detach_rule)\n            self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", detach_rule)'
+old_test = '            self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", manual_detach)\n            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", manual_detach)'
+new_test = '            self.assertIn("Event Player.MenuTerbuka == False;", manual_detach)\n            self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", manual_detach)\n            self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", manual_detach)\n            self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", manual_detach)'
 if test.count(old_test) != 1:
     raise SystemExit(f"expected one detach test block, found {test.count(old_test)}")
 test_path.write_text(test.replace(old_test, new_test, 1), encoding="utf-8")
