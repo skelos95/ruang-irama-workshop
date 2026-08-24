@@ -2989,6 +2989,7 @@ regola("19f - Teleportasi Jongkok: Reload melepas lampiran")
 	condizioni
 	{
 		Event Player.LampiranTeleportasiAktif == True;
+		Event Player.MenuTerbuka == False;
 		Is Button Held(Event Player, Button(Crouch)) == True;
 		Is Button Held(Event Player, Button(Reload)) == True;
 	}

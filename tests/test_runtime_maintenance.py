@@ -63,8 +63,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             attach_rule = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
             detach_rules = source.split(f'{rule_kw}("19f - Teleportasi Jongkok: Reload melepas lampiran")', 1)[1].split(f'{rule_kw}("19g - Teleportasi Jongkok', 1)[0]
             manual_detach = detach_rules.split(f'{rule_kw}("19h - Teleportasi Jongkok', 1)[0]
+            self.assertIn("Event Player.MenuTerbuka == False;", manual_detach)
             self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", manual_detach)
             self.assertIn("Is Button Held(Event Player, Button(Reload)) == True;", manual_detach)
+            self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", manual_detach)
             self.assertNotIn("Disallow Button(Event Player, Button(Reload));", attach_rule)
             self.assertNotIn("Allow Button(Event Player, Button(Reload));", detach_rules)
             self.assertIn("CROUCH + RELOAD: DETACH", source)
