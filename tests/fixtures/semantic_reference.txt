@@ -4109,8 +4109,8 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TeksVisiNasib = Null;
 		Event Player.TimTerakhir = Team Of(Event Player);
 		Event Player.WaktuTeleportasiDummy = 0;
-		Event Player.IzinkanDummyMengikuti = True;
-		Event Player.KursorIkutiDummy = 1;
+		Event Player.IzinkanDummyMengikuti = False;
+		Event Player.KursorIkutiDummy = 0;
 		Event Player.PernahDisiapkan = True;
 		Event Player.PindahTimDiproses = True;
 		Event Player.SiklusPemainAktif = False;

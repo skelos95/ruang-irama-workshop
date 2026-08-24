@@ -617,6 +617,21 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         mutated = self.inject_action(camera_release, "Event Player.IzinkanDummyMengikuti = False;")
         self.assert_rejected(mutated, "scritto fuori da setup/apply/quiete")
 
+    def test_dummy_follow_defaults_to_off(self) -> None:
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        for current, wrong in (
+            (
+                "Event Player.IzinkanDummyMengikuti = False;",
+                "Event Player.IzinkanDummyMengikuti = True;",
+            ),
+            (
+                "Event Player.KursorIkutiDummy = 0;",
+                "Event Player.KursorIkutiDummy = 1;",
+            ),
+        ):
+            mutated = self.replace_in_rule(setup, current, wrong)
+            self.assert_rejected(mutated, "reset completo cambio squadra mancante")
+
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
         self.assert_rejected(mutated, "13 subroutine pagina")
@@ -2173,7 +2188,7 @@ class RepositoryMetadataTests(unittest.TestCase):
         for relative in validator.CORE_DOCS:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("CHILL 0.8.0 — static-ready / live-pending\n", encoding="utf-8")
+            path.write_text("CHILL 0.8.0\nStato: **live-ready**\n", encoding="utf-8")
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
             "on:\n  push:\njobs:\n  validate:\n    steps:\n      - run: python tools/validate_workshop.py\n"
             "      - run: python -m unittest discover -s tests\n",
@@ -2197,6 +2212,17 @@ class RepositoryMetadataTests(unittest.TestCase):
             self.make_repo(root)
             (root / "VERSION").write_text("0.7.2\n", encoding="utf-8")
             self.assertTrue(any("VERSION" in error for error in self.metadata_errors(root)))
+
+    def test_live_pending_document_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "README.md").write_text(
+                "CHILL 0.8.0\nStato: **static-ready / live-pending**\n",
+                encoding="utf-8",
+            )
+            errors = self.metadata_errors(root)
+            self.assertTrue(any("live-ready" in error or "live-pending" in error for error in errors))
 
     def test_maintenance_workflow_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

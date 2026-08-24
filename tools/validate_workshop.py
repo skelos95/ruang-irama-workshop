@@ -764,14 +764,14 @@ def validate_metadata(checks: Checks, root: Path) -> None:
         if path.is_file():
             text = path.read_text(encoding="utf-8")
             checks.require(CURRENT_VERSION in text, f"documento non allineato a {CURRENT_VERSION}: {relative}")
-
-    combined_docs = "\n".join(
-        (root / relative).read_text(encoding="utf-8")
-        for relative in CORE_DOCS
-        if (root / relative).is_file()
-    ).lower()
-    checks.require("static-ready" in combined_docs and "live-pending" in combined_docs,
-                   "documentazione deve dichiarare static-ready / live-pending")
+            checks.require(
+                "Stato: **live-ready**" in text,
+                f"documento non dichiara Stato: **live-ready**: {relative}",
+            )
+            checks.require(
+                "Stato: **static-ready / live-pending**" not in text,
+                f"documento conserva lo stato live-pending: {relative}",
+            )
 
     github = root / ".github"
     github_entries = {
@@ -1548,7 +1548,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ):
             follow_writers.append((owner, match.group(1).strip()))
     required_follow_writers = {
-        ("SiapkanPemain", "True"),
+        ("SiapkanPemain", "False"),
         ("TerapkanHalamanIkutiDummy", "Event Player.KursorIkutiDummy == 1"),
     }
     allowed_follow_writers = required_follow_writers | {("TenangkanPemain", "False")}
@@ -2759,7 +2759,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
             "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
             "KursorPrivasiInspeksi = 0;",
-            "IzinkanDummyMengikuti = True;", "KursorIkutiDummy = 1;",
+            "IzinkanDummyMengikuti = False;", "KursorIkutiDummy = 0;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
         for token in reset_tokens:

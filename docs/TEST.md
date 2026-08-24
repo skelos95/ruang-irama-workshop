@@ -1,6 +1,8 @@
 # Piano di test — versione 0.8.0
 
-Stato atteso dopo i gate repository: **static-ready / live-pending**. Nessun risultato live è presunto: import, input simultanei, rendering e stabilità devono essere registrati dal client Overwatch aggiornato al 19 agosto 2026.
+Stato: **live-ready**
+
+I test live della 0.8.0 sono stati completati dall'utente e la stabilità è stata confermata il 24 agosto 2026. La matrice e il modello di registrazione restano qui come procedura di regressione; eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -86,7 +88,7 @@ Verificare esattamente 13 voci, indici e contenuti:
 10. Crouch Privacy — OFF/ON (default OFF).
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
-13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default ON).
+13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default OFF).
 
 Per ogni pagina e per ciascuna lingua EN/ID/TH:
 
@@ -244,7 +246,7 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti, voti e riferimenti precedenti rimossi;
-- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy OFF e Dummy Follow ON;
+- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy OFF e Dummy Follow OFF;
 - Text Count ed Entity Count tornano al baseline;
 - nessun `excessive Workshop script load`.
 
@@ -348,7 +350,7 @@ Screenshot/video:
 Note e riproduzione problemi:
 ```
 
-La release diventa **live-ready** soltanto quando tutti i test obbligatori sono PASS, le metriche rispettano i limiti e ogni anomalia riproducibile è stata corretta e rivalidata.
+Per le release future, lo stato **live-ready** richiede nuovamente test obbligatori completati, rispetto dei limiti e correzione di ogni anomalia riproducibile. Il blocco precedente è un modello riutilizzabile, non un verbale numerico compilato retroattivamente per la 0.8.0.
 
 
 ### Dummy spawn iniziale

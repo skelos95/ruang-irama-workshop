@@ -22,7 +22,7 @@ Il throttle automatico e la disattivazione delle collisioni ambientali sono rise
 
 ## Menu 12 — Dummy Follow
 
-La preferenza è per-player e parte **ON**. ON consente al dummy avversario di includere quell'umano nella propria selezione; OFF lo esclude senza cambiare la logica nearest-target. Il cambio squadra esegue il reset completo e riporta Dummy Follow a ON. La stessa condizione di eleggibilità viene usata per avvio, facing, throttle e cleanup, così opt-out, morte o team-switch non lasciano il dummy agganciato a un riferimento obsoleto.
+La preferenza è per-player e parte **OFF**. ON consente al dummy avversario di includere quell'umano nella propria selezione; OFF lo esclude senza cambiare la logica nearest-target. Il cambio squadra esegue il reset completo e riporta Dummy Follow a OFF; se tutti i target restano OFF, il dummy non insegue nessuno. La stessa condizione di eleggibilità viene usata per avvio, facing, throttle e cleanup, così opt-out, morte o team-switch non lasciano il dummy agganciato a un riferimento obsoleto.
 
 ## Destinazioni dalla Spawn Room
 

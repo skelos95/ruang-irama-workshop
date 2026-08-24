@@ -155,10 +155,13 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Stop Facing(Event Player);", self.it)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
 
-    def test_dummy_follow_page_defaults_on_and_is_per_player(self):
+    def test_dummy_follow_page_defaults_off_and_is_per_player(self):
         for source in (self.it, self.en):
-            self.assertIn("Event Player.IzinkanDummyMengikuti = True;", source)
-            self.assertIn("Event Player.KursorIkutiDummy = 1;", source)
+            self.assertIn(
+                "Event Player.IzinkanDummyMengikuti = False;\n"
+                "\t\tEvent Player.KursorIkutiDummy = 0;",
+                source,
+            )
             self.assertIn("Call Subroutine(TerapkanHalamanIkutiDummy);", source)
             self.assertIn("Call Subroutine(GambarIkutiDummy);", source)
             self.assertIn("12 - DUMMY FOLLOW", source)

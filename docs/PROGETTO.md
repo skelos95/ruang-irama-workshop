@@ -1,8 +1,8 @@
 # Progetto tecnico — CHILL Dedicated Server 0.8.0
 
-Stato release: **static-ready / live-pending**.
+Stato: **live-ready**
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; import, rendering, carico e concorrenza restano da confermare nel client Overwatch aggiornato al 19 agosto 2026. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; i test live sono stati completati dall'utente e la stabilità è stata confermata il 24 agosto 2026. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 
 ## Obiettivi
 
@@ -23,7 +23,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è ON. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
+Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
 
 ### Input
 
@@ -212,7 +212,7 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
 
-La release 0.8.0 resta **live-pending** finché non vengono registrati:
+La release 0.8.0 è **live-ready** dopo il completamento dei test live e la conferma di stabilità dell'utente del 24 agosto 2026. Per future regressioni resta obbligatoria la matrice seguente:
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;

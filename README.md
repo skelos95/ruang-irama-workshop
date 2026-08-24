@@ -4,9 +4,9 @@ Overlay sociale e Arcade per lobby Overwatch 2 **6v6 fino a 12 player**, progett
 
 Versione: **0.8.0**
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. La dicitura `live-ready` verrà usata soltanto dopo import, diagnostica client, matrice modalità e soak test nel client aggiornato.
+I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. I test live sono stati completati dall'utente e la stabilità della 0.8.0 è stata confermata il 24 agosto 2026; i valori diagnostici numerici non forniti non vengono ricostruiti o inventati nel repository.
 
 ## Funzioni
 
@@ -37,9 +37,9 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 9 | Crouch Privacy | OFF / ON, default OFF |
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
-| 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default ON |
+| 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default OFF |
 
-Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è ON per default per preservare l'inseguimento automatico: se un player lo porta a OFF, il dummy avversario lo esclude immediatamente e sceglie comunque il player opt-in più vicino; se non resta alcun target idoneo, si ferma. I default e i cursori persistono tra chiusura e riapertura, ma il cambio squadra esegue intenzionalmente un **reset completo** delle preferenze.
+Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è OFF per default: il dummy resta fermo finché almeno un umano avversario non abilita volontariamente l'opt-in; fra i player con preferenza ON sceglie sempre il più vicino e si ferma nuovamente quando non resta alcun target idoneo. I default e i cursori persistono tra chiusura e riapertura, ma il cambio squadra esegue intenzionalmente un **reset completo** delle preferenze.
 
 In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP e i reset completi di leave/cambio squadra ripristinano danni, urti e collisione normali come un'unica transazione. Try Your Luck non cambia invece modalità, cursore o protezione scelta: Unkillable resta attivo durante tutti gli esiti. Soltanto lo Skull finale e Revenge sospendono temporaneamente lo status per completare la morte; dopo Resurrect il runtime riapplica la modalità selezionata e ricrea l'icona se il motore l'ha eliminata. `FULL HP` resta protetto anche in Spawn Room.
 
@@ -170,4 +170,4 @@ Documentazione operativa:
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) richiede un nuovo import e rende inutilizzabili i replay precedenti, pur senza dichiarare modifiche Workshop. La matrice comprende inoltre D.Mon, il nuovo Team Status Indicator e le modifiche a Busan, Eichenwalde e Paraíso della [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11).
 
-Finché i risultati reali della Diagnostica script e gli altri test live non sono registrati, la release resta **static-ready / live-pending**.
+La release 0.8.0 è **live-ready** sulla base dei test live completati e della conferma di stabilità dell'utente del 24 agosto 2026. Il tag finale `v0.8.0` identifica il commit pubblicato e validato.

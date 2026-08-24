@@ -4,7 +4,7 @@ Data: 2026-08-20
 
 Release tecnica: **CHILL Dedicated Server 0.8.0**
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
 Il gate 0.8.0 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
@@ -58,7 +58,7 @@ Il gate verifica:
 
 - rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
 - 13 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..12`;
-- pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default ON; il messaggio di apertura deve annunciare tredici pagine in EN/ID/TH e non può contenere le vecchie forme Twelve/Dua belas/สิบสอง;
+- pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default OFF; il messaggio di apertura deve annunciare tredici pagine in EN/ID/TH e non può contenere le vecchie forme Twelve/Dua belas/สิบสอง;
 - 37 nomi Player Icon in tre array allineati;
 - 26 località server in tre array allineati;
 - equivalenza di placeholder e argomenti tra le traduzioni;
@@ -158,7 +158,7 @@ Il gate controlla:
 - velocità bot/dummy esattamente al 20%; il dummy nativo mantiene esplicitamente la collisione con player/bot e disabilita soltanto le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono tutte le collisioni native;
 - `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
 - filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
-- ownership Dummy Follow limitata al default setup ON, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
+- ownership Dummy Follow limitata al default setup OFF, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
 
 ### Otto modalità
 
@@ -221,13 +221,13 @@ Il parser testuale non può certificare:
 - leak osservabili soltanto tramite Text Count ed Entity Count;
 - interferenze con Team Status Indicator.
 
-Per questo la release resta `live-pending` anche con gate verde.
+Il gate statico non sostituisce queste verifiche client. Per la 0.8.0 il pass live è stato chiuso dalla conferma dell'utente del 24 agosto 2026; i valori numerici non forniti non vengono ricostruiti nel rapporto.
 
 ## Contesto patch
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
 
-## Gate live ancora aperto
+## Gate live completato
 
 La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
@@ -244,4 +244,4 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 ## Decisione
 
-La versione 0.8.0 è **static-ready / live-pending**: il repository può essere pubblicato come candidata statica dopo unit test e validatore verdi. Il tag finale `v0.8.0` e la dicitura **live-ready** restano sospesi finché i risultati client non vengono registrati e ogni eventuale correzione non supera nuovamente entrambi i gate.
+La versione 0.8.0 è **live-ready**: i gate repository devono risultare verdi sul commit finale e l'utente ha confermato il completamento dei test live e la stabilità. Il vecchio tag `v0.7.2` viene sostituito da `v0.8.0` sul commit pubblicato; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
