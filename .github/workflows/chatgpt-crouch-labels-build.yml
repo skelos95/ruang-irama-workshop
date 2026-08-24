@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: chatgpt-crouch-labels-build
+  cancel-in-progress: true
+
 jobs:
   build-test:
     if: github.actor != 'github-actions[bot]'
@@ -21,31 +25,58 @@ jobs:
           ref: chatgpt-crouch-labels
           fetch-depth: 0
 
-      - name: Apply patch
-        run: python tools/chatgpt_crouch_labels_patch.py
-
-      - name: Remove temporary build files before validation
-        run: git rm tools/chatgpt_crouch_labels_patch.py .github/workflows/chatgpt-crouch-labels-build.yml
-
-      - name: Python syntax
-        run: python -m py_compile tests/test_runtime_maintenance.py tools/validate_workshop.py
-
-      - name: Validate Workshop source
-        run: python tools/validate_workshop.py
-
-      - name: Focused runtime tests
-        run: python -m unittest tests.test_runtime_maintenance
-
-      - name: Preflight Italian clipboard source
-        run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
-
-      - name: Full regression suite
-        run: python -m unittest discover -s tests -p 'test_*.py'
-
-      - name: Publish clean feature tree
+      - name: Apply, validate, test, and publish result
+        shell: bash
         run: |
+          set +e
+          LOG=/tmp/crouch-labels-ci.log
+          : > "$LOG"
+          run_gate() {
+            echo "===== $1 =====" | tee -a "$LOG"
+            shift
+            "$@" >>"$LOG" 2>&1
+            rc=$?
+            echo "exit=$rc" | tee -a "$LOG"
+            return $rc
+          }
+
+          failed=0
+          run_gate PATCH python tools/chatgpt_crouch_labels_patch.py || failed=1
+          if [ "$failed" -eq 0 ]; then
+            git rm tools/chatgpt_crouch_labels_patch.py .github/workflows/chatgpt-crouch-labels-build.yml >>"$LOG" 2>&1 || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate PYCOMPILE python -m py_compile tests/test_runtime_maintenance.py tools/validate_workshop.py || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate VALIDATOR python tools/validate_workshop.py || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate FOCUSED python -m unittest tests.test_runtime_maintenance || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate CLIPBOARD python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT || failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            run_gate FULL_SUITE python -m unittest discover -s tests -p 'test_*.py' || failed=1
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ "$failed" -ne 0 ]; then
+            git reset --hard HEAD
+            git clean -fd
+            cp "$LOG" chatgpt-crouch-labels-ci.log
+            git add chatgpt-crouch-labels-ci.log
+            git commit -m "Record Crouch Travel validation failure"
+            git push origin HEAD:chatgpt-crouch-labels
+            cat "$LOG"
+            exit 1
+          fi
+
+          rm -f chatgpt-crouch-labels-ci.log
           git add -A
           git commit -m "Clarify Crouch Travel HUD and detach command"
           git push origin HEAD:chatgpt-crouch-labels
+          cat "$LOG"
