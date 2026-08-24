@@ -31,7 +31,7 @@ jobs:
 
           python -m py_compile tools/validate_workshop.py tests/test_validate_workshop.py tests/test_runtime_maintenance.py
           python tools/validate_workshop.py
-          python -m unittest tests.test_runtime_maintenance tests.test_validate_workshop
+          python -m unittest tests.test_runtime_maintenance
           python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
           python -m unittest discover -s tests -p 'test_*.py'
 
