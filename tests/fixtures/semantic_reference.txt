@@ -1221,7 +1221,7 @@ rule("03c - Bot/Dummy: Kunci saat hidup kembali atau pahlawan berganti")
 			Enable Movement Collision With Players(Event Player);
 			Disable Movement Collision With Environment(Event Player, False);
 			Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;
-			Set Respawn Max Time(Event Player, 30);
+			Set Respawn Max Time(Event Player, 3);
 		End;
 	}
 }
@@ -2425,8 +2425,13 @@ rule("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 			Call Subroutine(CariPosisiTeleportAman);
 		End;
 		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe resurrection position was found. Release Jump and try again.") : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada posisi bangkit yang aman. Lepaskan Jump lalu coba lagi.") : Custom String("ไม่พบตำแหน่งฟื้นคืนชีพที่ปลอดภัย ปล่อยปุ่มกระโดดแล้วลองอีกครั้ง"));
-			Abort;
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Spawn Points(Team Of(Event Player)))));
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiBangkitAman = Event Player.PosisiMati;
 		End;
 		Resurrect(Event Player);
 		Teleport(Event Player, Event Player.PosisiBangkitAman);
