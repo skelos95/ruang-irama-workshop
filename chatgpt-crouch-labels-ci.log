@@ -20,7 +20,7 @@ Traceback (most recent call last):
 IndexError: list index out of range
 
 ----------------------------------------------------------------------
-Ran 8 tests in 0.005s
+Ran 8 tests in 0.006s
 
 FAILED (errors=1)
 exit=1
