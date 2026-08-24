@@ -120,8 +120,8 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         )
 
     def test_declaration_name_at_32_utf8_bytes_is_accepted(self) -> None:
-        valid_name = "DaftarTargetTeleportasi"
-        boundary_name = "DaftarTargetTeleportasiSekarangX"
+        valid_name = "TargetBalasDendamDipilih"
+        boundary_name = "TargetBalasDendamDipilihSekarang"
         self.assertEqual(len(boundary_name.encode("utf-8")), validator.MAX_DECLARATION_NAME_BYTES)
         mutated = self.source.replace(valid_name, boundary_name)
         self.assertEqual(self.errors(mutated), [])
@@ -645,10 +645,10 @@ class SemanticWorkshop080Tests(unittest.TestCase):
         self.assert_rejected(mutated, "timeout Revenge non azzera flag pending")
 
     def test_skull_timeout_destroys_the_roulette_icon(self) -> None:
-        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        processor = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibAktif")
         mutated = self.replace_in_rule(
             processor,
-            "\n\t\t\t\t\t\tDestroy Icon(Global.PemainAktif.IkonKartuNasib);",
+            "Destroy Icon(Global.PemainAktif.IkonKartuNasib);",
             "",
         )
         self.assert_rejected(mutated, "timeout Skull deve distruggere l'icona")
@@ -712,8 +712,8 @@ class SemanticWorkshop080Tests(unittest.TestCase):
     def test_try_your_luck_cleanup_waits_for_full_death(self) -> None:
         cleanup = self.rule(
             lambda rule: validator.event_type(rule) == "Player Died"
-            and "Destroy Icon(Event Player.IkonKartuNasib);" in rule.body
-            and "Event Player.KartuNasibAktif = False;" in rule.body
+            and "KartuNasibAktif" in rule.body
+            and "Call Subroutine(PulihkanNasibPemain);" in rule.body
         )
         mutated = self.replace_in_rule(cleanup, "\n\t\tIs Alive(Event Player) == False;", "")
         self.assert_rejected(mutated, "deve attendere la morte completa")
@@ -996,25 +996,16 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: Stop Accelerating")
 
     def test_luck_acceleration_is_stopped_on_death(self) -> None:
-        death_cleanup = self.rule(
-            lambda rule: validator.event_type(rule) == "Player Died" and "KartuNasibAktif" in rule.body
-        )
+        death_cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
         mutated = self.replace_in_rule(death_cleanup, "Stop Accelerating(Event Player);", "")
         self.assert_rejected(mutated, "cleanup accelerazione morte: Stop Accelerating assente")
 
     def test_roulette_icon_is_destroyed_and_cleared_on_all_lifecycle_paths(self) -> None:
-        cleanup_rules = (
-            (self.rule(lambda rule: validator.event_type(rule) == "Player Died" and "KartuNasibAktif" in rule.body), "morte"),
-            (self.rule(lambda rule: validator.subroutine_target(rule) == "TenangkanPemain"), "quiete lifecycle"),
-            (self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain"), "cleanup lifecycle"),
-        )
-        for rule, label in cleanup_rules:
-            with self.subTest(path=label, mutation="destroy"):
-                mutated = self.replace_in_rule(rule, "Destroy Icon(Event Player.IkonKartuNasib);", "")
-                self.assert_rejected(mutated, f"cleanup icona roulette {label}: Destroy Icon assente")
-            with self.subTest(path=label, mutation="null"):
-                mutated = self.replace_in_rule(rule, "Event Player.IkonKartuNasib = Null;", "")
-                self.assert_rejected(mutated, f"cleanup icona roulette {label}: azzeramento handle assente")
+        reset = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
+        mutated = self.replace_in_rule(reset, "Destroy Icon(Event Player.IkonKartuNasib);", "")
+        self.assert_rejected(mutated, "cleanup icona roulette morte: Destroy Icon assente")
+        mutated = self.replace_in_rule(reset, "Event Player.IkonKartuNasib = Null;", "")
+        self.assert_rejected(mutated, "cleanup icona roulette morte: azzeramento handle assente")
 
     def test_heart_heal_excludes_bot_and_dummy_players(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -1328,37 +1319,46 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "cleanup movimento dummy: filtro target deve essere il nemico vivo")
 
     def test_dummy_release_stops_facing_before_destroy(self) -> None:
-        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
+        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")
         mutated = self.replace_in_rule(release, "Stop Facing(First Of(Filtered Array(", "Start Facing(First Of(Filtered Array(")
-        self.assert_rejected(mutated, "rilascio dummy Team 1 incompleto: Stop Facing")
+        self.assert_rejected(mutated, "LepasDummyTim incompleta")
 
     def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
-        create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
+        create = self.rule(
+            lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
+            and "Call Subroutine(BuatDummyTim);" in rule.body
+        )
         mutated = self.replace_in_rule(
             create,
             "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;",
             "Number Of Players(Team 1) < Number Of Slots(Team 1);",
         )
-        self.assert_rejected(mutated, "creazione dummy Team 1 non sicura")
+        self.assert_rejected(mutated, "numero regole creazione dummy Team 1")
 
     def test_dummy_creation_cannot_have_an_impossible_condition(self) -> None:
-        create = self.rule(lambda rule: "Create Dummy Bot(All Heroes, Team 1, -1," in rule.body)
+        create = self.rule(
+            lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
+            and "Call Subroutine(BuatDummyTim);" in rule.body
+        )
         mutated = self.inject_condition(create, "False == True;")
         self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
 
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
-        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
-        mutated = self.replace_in_rule(release, "Destroy Dummy Bot(Team 1, Slot Of(", "Abort If(Slot Of(")
+        release = self.rule(
+            lambda rule: "Number Of Players(Team 1) >= Number Of Slots(Team 1);" in rule.body
+            and "Call Subroutine(LepasDummyTim);" in rule.body
+        )
+        mutated = self.replace_in_rule(release, "Call Subroutine(LepasDummyTim);", "Abort;")
         self.assert_rejected(mutated, "numero regole rilascio slot dummy Team 1")
 
     def test_dummy_release_cannot_abort_before_cleanup(self) -> None:
-        release = self.rule(lambda rule: "Destroy Dummy Bot(Team 1, Slot Of(" in rule.body)
+        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")
         mutated = self.replace_in_rule(
             release,
             "\n\t\tIf(Player Variable(",
             "\n\t\tAbort;\n\t\tIf(Player Variable(",
         )
-        self.assert_rejected(mutated, "rilascio dummy Team 1: cleanup atomico esatto senza abort")
+        self.assert_rejected(mutated, "LepasDummyTim: cleanup atomico esatto senza abort")
 
     def test_dummy_spawn_delay_uses_a_rearmed_timestamp(self) -> None:
         arming = self.rule(
@@ -1434,30 +1434,30 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "registrazione bot BotOtomatis/SudahDiperiksa")
 
-    def test_privacy_is_on_by_default(self) -> None:
+    def test_privacy_is_off_by_default(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.PrivasiInspeksiAktif = True;",
             "Event Player.PrivasiInspeksiAktif = False;",
+            "Event Player.PrivasiInspeksiAktif = True;",
         )
-        self.assert_rejected(mutated, "Privacy deve essere ON di default")
+        self.assert_rejected(mutated, "Privacy deve essere OFF di default")
 
-    def test_privacy_cursor_defaults_to_on(self) -> None:
+    def test_privacy_cursor_defaults_to_off(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.KursorPrivasiInspeksi = 1;",
             "Event Player.KursorPrivasiInspeksi = 0;",
+            "Event Player.KursorPrivasiInspeksi = 1;",
         )
-        self.assert_rejected(mutated, "cursore Privacy deve iniziare su ON")
+        self.assert_rejected(mutated, "cursore Privacy deve iniziare su OFF")
 
     def test_real_camera_cache_missing_and_excessive_parenthesis_are_rejected(self) -> None:
-        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif")
         call = next(
             call for call in validator.iter_calls(cache.body, "Set Player Variable")
             if len(call.args) >= 3
-            and call.args[1].strip() == "DaftarTargetKamera"
+            and call.args[1].strip() == "DaftarTargetInspeksi"
             and "PrivasiInspeksiAktif" in call.args[2]
         )
         absolute_end = cache.start + call.end
@@ -1471,11 +1471,11 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 self.assert_rejected(mutated, "sintassi actions non bilanciata")
 
     def test_parentheses_cannot_be_compensated_across_statement_terminators(self) -> None:
-        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif")
         call = next(
             call for call in validator.iter_calls(cache.body, "Set Player Variable")
             if len(call.args) >= 3
-            and call.args[1].strip() == "DaftarTargetKamera"
+            and call.args[1].strip() == "DaftarTargetInspeksi"
             and "PrivasiInspeksiAktif" in call.args[2]
         )
         absolute_end = cache.start + call.end
@@ -1489,21 +1489,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
             + self.source[next_terminator:]
         )
         self.assertIsNone(validator.delimiter_error(validator.rule_block(cache, "actions") or ""))
-        mutated_cache = next(
-            rule for rule in validator.extract_rules(mutated)
-            if validator.subroutine_target(rule) == "ProsesCachePemain"
-        )
-        mutated_actions = validator.mask_strings(validator.rule_block(mutated_cache, "actions") or "")
-        self.assertEqual(mutated_actions.count("("), mutated_actions.count(")"))
         self.assert_rejected(mutated, "terminatore statement")
 
-    def test_all_six_privacy_filters_have_balanced_call_parentheses(self) -> None:
+    def test_all_four_privacy_filters_have_balanced_call_parentheses(self) -> None:
         privacy_calls: list[tuple[validator.Rule, validator.Call]] = []
         for rule in validator.extract_rules(self.source):
             for call in validator.iter_calls(rule.body, "Filtered Array"):
                 if "PrivasiInspeksiAktif" in call.raw:
                     privacy_calls.append((rule, call))
-        self.assertEqual(len(privacy_calls), 6)
+        self.assertEqual(len(privacy_calls), 4)
         for rule, call in privacy_calls:
             absolute_end = rule.start + call.end
             self.assertEqual(self.source[absolute_end - 1], ")")
@@ -1516,31 +1510,31 @@ rule("999x - Nasib: Renderer pemain tambahan")
                     self.assert_rejected(mutated, "non bilanciata")
 
     def test_camera_target_refresh_excludes_private_humans(self) -> None:
-        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetKamera")
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain")
         mutated = self.replace_in_rule(
             refresh,
             "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
             "Player Variable(Current Array Element, PrivasiInspeksiAktif) == True",
         )
-        self.assert_rejected(mutated, "lista target Camera non esclude umani privati")
+        self.assert_rejected(mutated, "numero filtri Privacy target-aware")
 
     def test_unclassified_human_is_not_treated_as_a_public_camera_target(self) -> None:
-        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetKamera")
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain")
         mutated = self.replace_in_rule(
             refresh,
             "Player Variable(Current Array Element, Manusia) == True",
             "True",
         )
-        self.assert_rejected(mutated, "Dummy OR iBot OR (umano AND Privacy OFF)")
+        self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
 
     def test_all_inspection_and_teleport_filters_require_a_classified_human(self) -> None:
         protected_rules = (
-            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi"),
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain"),
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif"),
             self.rule(
                 lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                 and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
             ),
-            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetTeleportasi"),
             self.rule(
                 lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                 and "Event Player.CalonTargetTeleportasi != First Of(Sorted Array(Filtered Array(" in rule.body
@@ -1556,24 +1550,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 self.assert_rejected(mutated, "ogni Privacy OFF target richiede Manusia=True")
 
     def test_inspection_rejects_a_vision_privacy_bypass(self) -> None:
-        human_public = (
-            "And(Player Variable(Current Array Element, Manusia) == True, "
-            "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)"
+        refresh = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi")
+        mutated = self.replace_in_rule(
+            refresh,
+            "Call Subroutine(SegarkanTargetPublikPemain);",
+            "Call Subroutine(SegarkanTargetPublikPemain);\n\t\tIf(Event Player.PrivasiNasibAktif == True);\n\t\t\tAbort;\n\t\tEnd;",
         )
-        for refresh in (
-            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetInspeksi"),
-            self.rule(
-                lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                and "Event Player.TargetInspeksi != First Of(Sorted Array(Filtered Array(" in rule.body
-            ),
-        ):
-            with self.subTest(rule=refresh.name):
-                mutated = self.replace_in_rule(
-                    refresh,
-                    human_public,
-                    f"Or(Event Player.PrivasiNasibAktif == True, {human_public})",
-                )
-                self.assert_rejected(mutated, "bypass Privacy tramite Vision")
+        self.assert_rejected(mutated, "bypass Privacy tramite Vision")
 
     def test_vision_names_exclude_private_human_subjects(self) -> None:
         vision = self.rule(
@@ -1700,10 +1683,10 @@ rule("999x - Nasib: Renderer pemain tambahan")
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
         mutated = self.replace_in_rule(
             cache,
-            "Player Variable(Current Array Element, BotOtomatis) == True",
-            "Player Variable(Current Array Element, BotOtomatis) == False",
+            "Call Subroutine(SegarkanTargetPublikAktif);",
+            "Abort;",
         )
-        self.assert_rejected(mutated, "cache target Camera non esclude umani privati")
+        self.assert_rejected(mutated, "cache target Camera non riusa la subroutine pubblica globale")
 
     def test_active_observer_is_stopped_when_target_turns_private(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")

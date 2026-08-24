@@ -139,7 +139,7 @@ Il gate controlla:
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
 - ordine atomico delle operazioni sensibili e rilascio dei latch;
 - cleanup di HUD, In-World Text, effetti, status e slot.
-- Privacy iniziale ON con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato e nessun HUD Crouch sovrapposto durante Vision;
+- Privacy iniziale OFF con cursore coerente, esclusione degli umani privati dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato e nessun HUD Crouch sovrapposto durante Vision;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, riarmato alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
@@ -180,7 +180,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - velocità bot/dummy diversa dal 20%, collisione ambientale applicata agli iBot o con `Include Floors = True`, target alleato accettato, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
 - slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, spaziatore finale Right rimosso, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
-- parentesi mancante o in eccesso in una chiamata annidata, inclusi i sei filtri Privacy;
+- parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;
 - esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline o cleanup eseguito prima della morte completa;

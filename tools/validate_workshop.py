@@ -1337,6 +1337,69 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for page in range(12):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*0.*?Call Subroutine\(GambarWarna\);", router.body, re.DOTALL) is not None,
+            "router menu: pagina 0 deve aprire Name Color",
+        )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*2.*?Call Subroutine\(GambarMusik\);", router.body, re.DOTALL) is not None,
+            "router menu: pagina 2 deve aprire Soundtrack",
+        )
+
+    main_renderer = rule_by_subroutine(rules, "GambarUtama")
+    checks.require(main_renderer is not None, "renderer menu principale assente")
+    if main_renderer:
+        for token in (
+            "0 - NAME COLOR",
+            "2 - SOUNDTRACK",
+            "0 - WARNA NAMA",
+            "2 - MUSIK",
+            "0 - สีชื่อ",
+            "2 - เพลงประกอบ",
+        ):
+            checks.require(token in main_renderer.body, f"menu principale non allineato allo swap 0/2: {token}")
+
+    navigation_rule = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
+            and "Event Player.PerintahMenu == 3" in rule.body
+            and "Event Player.PerintahMenu == 4" in rule.body
+        ),
+        None,
+    )
+    checks.require(navigation_rule is not None, "navigazione menu principale assente")
+    if navigation_rule:
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*0.*?KursorWarna\s*=", navigation_rule.body, re.DOTALL) is not None,
+            "navigazione menu: pagina 0 deve muovere KursorWarna",
+        )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*2.*?KursorGenre\s*=", navigation_rule.body, re.DOTALL) is not None,
+            "navigazione menu: pagina 2 deve muovere KursorGenre",
+        )
+
+    apply_dispatcher = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PerintahMenu == 1;" in rule.body
+            and "Event Player.MenuTerbuka == True;" in rule.body
+            and "TerapkanHalaman" in rule.body
+        ),
+        None,
+    )
+    checks.require(apply_dispatcher is not None, "dispatcher apply menu assente")
+    if apply_dispatcher:
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*0.*?Call Subroutine\(TerapkanHalamanWarna\);", apply_dispatcher.body, re.DOTALL) is not None,
+            "apply menu: pagina 0 deve usare TerapkanHalamanWarna",
+        )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*2.*?Call Subroutine\(TerapkanHalamanMusik\);", apply_dispatcher.body, re.DOTALL) is not None,
+            "apply menu: pagina 2 deve usare TerapkanHalamanMusik",
+        )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
                    "dispatcher Interact non suddiviso nelle 12 subroutine pagina")
@@ -1716,6 +1779,10 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                 checks.require(final_icon_cleanup_masked.index(destroy_token) < final_icon_cleanup_masked.index(null_token),
                                "cleanup finale azzera handle roulette prima di distruggerlo")
 
+        player_luck_reset = rule_by_subroutine(rules, "PulihkanNasibPemain")
+        checks.require(player_luck_reset is not None, "subroutine PulihkanNasibPemain assente")
+        player_luck_reset_masked = mask_strings(player_luck_reset.body) if player_luck_reset else ""
+
         death_cleanup = next(
             (rule for rule in rules_with_event(rules, "Player Died") if "KartuNasibAktif" in rule.body),
             None,
@@ -1729,19 +1796,39 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             checks.require(cleanup_rule is not None, f"cleanup accelerazione {label} assente")
             if cleanup_rule:
                 cleanup_masked = mask_strings(cleanup_rule.body)
-                checks.require("Stop Accelerating(Event Player);" in cleanup_masked,
-                               f"cleanup accelerazione {label}: Stop Accelerating assente")
-                checks.require("Set Move Speed(Event Player, 100);" in cleanup_masked,
-                               f"cleanup accelerazione {label}: Move Speed 100 assente")
+                uses_shared_reset = "Call Subroutine(PulihkanNasibPemain);" in cleanup_masked
+                checks.require(
+                    "Stop Accelerating(Event Player);" in cleanup_masked
+                    or (uses_shared_reset and "Stop Accelerating(Event Player);" in player_luck_reset_masked),
+                    f"cleanup accelerazione {label}: Stop Accelerating assente",
+                )
+                checks.require(
+                    "Set Move Speed(Event Player, 100);" in cleanup_masked
+                    or (uses_shared_reset and "Set Move Speed(Event Player, 100);" in player_luck_reset_masked),
+                    f"cleanup accelerazione {label}: Move Speed 100 assente",
+                )
                 destroy_icon = "Destroy Icon(Event Player.IkonKartuNasib);"
                 null_icon = "Event Player.IkonKartuNasib = Null;"
-                checks.require(destroy_icon in cleanup_masked,
-                               f"cleanup icona roulette {label}: Destroy Icon assente")
-                checks.require(null_icon in cleanup_masked,
-                               f"cleanup icona roulette {label}: azzeramento handle assente")
+                checks.require(
+                    destroy_icon in cleanup_masked
+                    or (uses_shared_reset and destroy_icon in player_luck_reset_masked),
+                    f"cleanup icona roulette {label}: Destroy Icon assente",
+                )
+                checks.require(
+                    null_icon in cleanup_masked
+                    or (uses_shared_reset and null_icon in player_luck_reset_masked),
+                    f"cleanup icona roulette {label}: azzeramento handle assente",
+                )
                 if destroy_icon in cleanup_masked and null_icon in cleanup_masked:
-                    checks.require(cleanup_masked.index(destroy_icon) < cleanup_masked.index(null_icon),
-                                   f"cleanup icona roulette {label}: handle azzerato prima del destroy")
+                    checks.require(
+                        cleanup_masked.index(destroy_icon) < cleanup_masked.index(null_icon),
+                        f"cleanup icona roulette {label}: handle azzerato prima del destroy",
+                    )
+                elif uses_shared_reset and destroy_icon in player_luck_reset_masked and null_icon in player_luck_reset_masked:
+                    checks.require(
+                        player_luck_reset_masked.index(destroy_icon) < player_luck_reset_masked.index(null_icon),
+                        f"cleanup icona roulette {label}: handle azzerato prima del destroy",
+                    )
 
         health_calls = [
             call for call in iter_calls(state_machine.body, "Set Player Health")
@@ -1783,6 +1870,14 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
 def validate_forced_death(checks: Checks, source: str, rules: list[Rule], players: set[str]) -> None:
     for name in ("PenagihBalasDendam", "WaktuPaksaBerikut", "WaktuPaksaBerakhir"):
         checks.require(name in players, f"stato morte completa assente: {name}")
+
+    active_luck_reset = rule_by_subroutine(rules, "PulihkanNasibAktif")
+    checks.require(active_luck_reset is not None, "subroutine PulihkanNasibAktif assente")
+    active_luck_reset_masked = mask_strings(active_luck_reset.body) if active_luck_reset else ""
+
+    player_luck_reset = rule_by_subroutine(rules, "PulihkanNasibPemain")
+    checks.require(player_luck_reset is not None, "subroutine PulihkanNasibPemain assente")
+    player_luck_reset_masked = mask_strings(player_luck_reset.body) if player_luck_reset else ""
 
     processor = rule_by_subroutine(rules, "ProsesCepatPemain")
     checks.require(processor is not None, "macchina globale morte completa assente")
@@ -1848,14 +1943,27 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
             )
 
         skull_timeout_anchor = "Global.PemainAktif.KartuNasibAktif = False;"
+        skull_timeout_call = "Call Subroutine(PulihkanNasibAktif);"
         skull_timeout_position = processor_masked.find(skull_timeout_anchor)
+        if skull_timeout_position < 0:
+            skull_timeout_position = processor_masked.find(skull_timeout_call)
         checks.require(skull_timeout_position >= 0, "timeout Skull: rilascio stato assente")
         if skull_timeout_position >= 0:
             skull_timeout_branches = conditional_branches_containing(processor.body, skull_timeout_position)
             skull_timeout_branch = mask_strings(skull_timeout_branches[0]) if skull_timeout_branches else ""
             destroy_icon = "Destroy Icon(Global.PemainAktif.IkonKartuNasib);"
+            direct_cleanup_ordered = (
+                0 <= skull_timeout_branch.find(destroy_icon) < skull_timeout_branch.find(skull_timeout_anchor)
+            )
+            shared_cleanup_ordered = (
+                skull_timeout_call in skull_timeout_branch
+                and destroy_icon in active_luck_reset_masked
+                and "Global.PemainAktif.KartuNasibAktif = False;" in active_luck_reset_masked
+                and active_luck_reset_masked.index(destroy_icon)
+                < active_luck_reset_masked.index("Global.PemainAktif.KartuNasibAktif = False;")
+            )
             checks.require(
-                0 <= skull_timeout_branch.find(destroy_icon) < skull_timeout_branch.find(skull_timeout_anchor),
+                direct_cleanup_ordered or shared_cleanup_ordered,
                 "timeout Skull deve distruggere l'icona prima del rilascio",
             )
             checks.require(
@@ -1877,8 +1985,6 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
             ("Is Alive(Global.PemainAktif) == True", "retry soltanto se ancora vivo"),
             ("Global.PemainAktif.WaktuPaksaBerakhir > 0", "deadline armata"),
             ("Total Time Elapsed >= Global.PemainAktif.WaktuPaksaBerakhir", "scadenza deadline"),
-            ("Global.PemainAktif.KartuNasibAktif = False;", "rilascio Try Your Luck al timeout"),
-            ("Global.PemainAktif.InputMenuDikunci = False;", "rilascio input al timeout"),
             ("Global.PemainAktif.KematianBalasDendam == False", "blocco riapplicazione Kebal Revenge"),
             (
                 "Or(Global.PemainAktif.KartuNasibAktif == False, Or(Global.PemainAktif.EfekNasib != 3, "
@@ -1887,6 +1993,22 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
             ),
         ):
             checks.require(token in processor_masked, f"morte completa: {label} assente")
+        checks.require(
+            "Global.PemainAktif.KartuNasibAktif = False;" in processor_masked
+            or (
+                "Call Subroutine(PulihkanNasibAktif);" in processor_masked
+                and "Global.PemainAktif.KartuNasibAktif = False;" in active_luck_reset_masked
+            ),
+            "morte completa: rilascio Try Your Luck al timeout assente",
+        )
+        checks.require(
+            "Global.PemainAktif.InputMenuDikunci = False;" in processor_masked
+            or (
+                "Call Subroutine(PulihkanNasibAktif);" in processor_masked
+                and "Global.PemainAktif.InputMenuDikunci = False;" in active_luck_reset_masked
+            ),
+            "morte completa: rilascio input al timeout assente",
+        )
         checks.require("Is In Alternate Form" not in processor_masked and "Hero(D.Va)" not in processor_masked,
                        "morte completa non deve dipendere da eroi o forme specifiche")
 
@@ -1974,8 +2096,14 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
     luck_death = next(
         (
             rule for rule in rules_with_event(rules, "Player Died")
-            if "Destroy Icon(Event Player.IkonKartuNasib);" in rule.body
-            and "Event Player.KartuNasibAktif = False;" in rule.body
+            if (
+                "Destroy Icon(Event Player.IkonKartuNasib);" in rule.body
+                and "Event Player.KartuNasibAktif = False;" in rule.body
+            )
+            or (
+                "Call Subroutine(PulihkanNasibPemain);" in rule.body
+                and "KartuNasibAktif" in rule.body
+            )
         ),
         None,
     )
@@ -1984,16 +2112,26 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
         conditions = rule_block(luck_death, "conditions") or ""
         checks.require("Is Alive(Event Player) == False;" in conditions,
                        "cleanup Try Your Luck deve attendere la morte completa")
+        luck_death_masked = mask_strings(luck_death.body)
+        uses_shared_reset = "Call Subroutine(PulihkanNasibPemain);" in luck_death_masked
         for token, label in (
             ("Event Player.WaktuPaksaBerikut = 0;", "reset retry"),
             ("Event Player.WaktuPaksaBerakhir = 0;", "reset deadline"),
             ("Event Player.InputMenuDikunci = False;", "rilascio latch input"),
             ("Event Player.PerintahMenu = 0;", "rilascio comando menu"),
         ):
-            checks.require(token in luck_death.body, f"cleanup morte Try Your Luck: {label} assente")
+            checks.require(
+                token in luck_death_masked
+                or (uses_shared_reset and token in player_luck_reset_masked),
+                f"cleanup morte Try Your Luck: {label} assente",
+            )
         for button in ("Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 1", "Ability 2", "Ultimate"):
-            checks.require(f"Allow Button(Event Player, Button({button}));" in luck_death.body,
-                           f"cleanup morte Try Your Luck non riabilita {button}")
+            token = f"Allow Button(Event Player, Button({button}));"
+            checks.require(
+                token in luck_death_masked
+                or (uses_shared_reset and token in player_luck_reset_masked),
+                f"cleanup morte Try Your Luck non riabilita {button}",
+            )
 
     jump_respawn_death = next(
         (
@@ -2032,13 +2170,19 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
         lifecycle = rule_by_subroutine(rules, subroutine)
         checks.require(lifecycle is not None, f"lifecycle morte completa assente: {subroutine}")
         if lifecycle:
+            lifecycle_masked = mask_strings(lifecycle.body)
+            uses_shared_reset = "Call Subroutine(PulihkanNasibPemain);" in lifecycle_masked
             for token in (
                 "Event Player.KematianBalasDendam = False;",
                 "Event Player.PenagihBalasDendam = Null;",
                 "Event Player.WaktuPaksaBerikut = 0;",
                 "Event Player.WaktuPaksaBerakhir = 0;",
             ):
-                checks.require(token in lifecycle.body, f"{subroutine}: reset morte completa assente: {token}")
+                checks.require(
+                    token in lifecycle_masked
+                    or (uses_shared_reset and token in player_luck_reset_masked),
+                    f"{subroutine}: reset morte completa assente: {token}",
+                )
 
     cleanup = rule_by_subroutine(rules, "BersihkanPemain")
     if cleanup:
@@ -2120,8 +2264,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         reset_tokens = (
             "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
-            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = True;",
-            "KursorPrivasiInspeksi = 1;",
+            "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
+            "KursorPrivasiInspeksi = 0;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
         )
         for token in reset_tokens:
@@ -2171,10 +2315,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "SiapkanPemain assente per default privacy")
     if setup:
-        checks.require("Event Player.PrivasiInspeksiAktif = True;" in setup.body,
-                       "Privacy deve essere ON di default per ogni umano")
-        checks.require("Event Player.KursorPrivasiInspeksi = 1;" in setup.body,
-                       "cursore Privacy deve iniziare su ON (1)")
+        checks.require("Event Player.PrivasiInspeksiAktif = False;" in setup.body,
+                       "Privacy deve essere OFF di default per ogni umano")
+        checks.require("Event Player.KursorPrivasiInspeksi = 0;" in setup.body,
+                       "cursore Privacy deve iniziare su OFF (0)")
 
     privacy_filter_tokens = (
         "Is Dummy Bot(Current Array Element) == True",
@@ -2227,33 +2371,29 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                 privacy_reads,
                 f"{rule.name}: filtro Privacy non analizzabile come chiamata bilanciata",
             )
-    checks.equal(privacy_read_total, 6, "numero filtri Privacy target-aware")
-    checks.equal(parsed_privacy_filter_total, 6, "filtri Privacy strutturalmente analizzabili")
+    checks.equal(privacy_read_total, 4, "numero filtri Privacy target-aware")
+    checks.equal(parsed_privacy_filter_total, 4, "filtri Privacy strutturalmente analizzabili")
     camera_targets = rule_by_subroutine(rules, "SegarkanTargetKamera")
     checks.require(camera_targets is not None, "SegarkanTargetKamera assente per filtro Privacy")
     if camera_targets:
-        checks.require("Filtered Array(" in camera_targets.body,
-                       "lista target Camera non usa un filtro")
-        for token in privacy_filter_tokens:
-            checks.require(token in camera_targets.body,
-                           f"lista target Camera non esclude umani privati: {token}")
-        checks.require(public_target_pattern.search(camera_targets.body) is not None,
-                       "lista target Camera non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Call Subroutine(SegarkanTargetPublikPemain);" in camera_targets.body,
+                       "lista target Camera non riusa la subroutine pubblica condivisa")
+        checks.require("Filtered Array(Event Player.DaftarTargetInspeksi, Has Spawned(Current Array Element) == True)" in camera_targets.body,
+                       "lista target Camera non deriva dai target pubblici spawnati")
 
     cache = rule_by_subroutine(rules, "ProsesCachePemain")
     checks.require(cache is not None, "ProsesCachePemain assente per cache Camera")
     if cache:
-        for token in privacy_filter_tokens:
-            checks.require(token in cache.body,
-                           f"cache target Camera non esclude umani privati: {token}")
-        checks.require(public_target_pattern.search(cache.body) is not None,
-                       "cache target Camera non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Call Subroutine(SegarkanTargetPublikAktif);" in cache.body,
+                       "cache target Camera non riusa la subroutine pubblica globale")
+        checks.require("Set Player Variable(Global.PemainAktif, DaftarTargetKamera, Global.PemainAktif.DaftarTargetInspeksi);" in cache.body,
+                       "cache target Camera non copia la lista pubblica condivisa")
 
     inspection_refresh = rule_by_subroutine(rules, "SegarkanTargetInspeksi")
     checks.require(inspection_refresh is not None, "SegarkanTargetInspeksi assente per filtro Privacy")
     if inspection_refresh:
-        checks.require(public_target_pattern.search(inspection_refresh.body) is not None,
-                       "inspection non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Call Subroutine(SegarkanTargetPublikPemain);" in inspection_refresh.body,
+                       "inspection non riusa la subroutine pubblica condivisa")
         checks.require("Event Player.PrivasiNasibAktif == True" not in inspection_refresh.body,
                        "inspection reintroduce il bypass Privacy tramite Vision")
 
@@ -2281,8 +2421,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     teleport_refresh = rule_by_subroutine(rules, "SegarkanTargetTeleportasi")
     checks.require(teleport_refresh is not None, "SegarkanTargetTeleportasi assente per filtro Privacy")
     if teleport_refresh:
-        checks.require(public_target_pattern.search(teleport_refresh.body) is not None,
-                       "teleport non usa Dummy OR iBot OR (umano AND Privacy OFF)")
+        checks.require("Call Subroutine(SegarkanTargetPublikPemain);" in teleport_refresh.body,
+                       "teleport non riusa la subroutine pubblica condivisa")
+        checks.require("Event Player.DaftarTargetTeleportasi = Event Player.DaftarTargetInspeksi;" in teleport_refresh.body,
+                       "teleport non usa la lista pubblica condivisa")
 
     teleport_live = next(
         (
@@ -2446,6 +2588,159 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if teleport_cleanup:
         checks.require("Event Player.PrivasiNasibAktif == True" in teleport_cleanup.body,
                        "cleanup Teleport Crouch non reagisce all'avvio di Vision")
+
+
+def validate_dummy_slot_management(
+    checks: Checks,
+    rules: list[Rule],
+    compact,
+) -> None:
+    for team in ("Team 1", "Team 2"):
+        create_rules = [
+            rule for rule in rules
+            if f"Number Of Players({team}) < Number Of Slots({team}) - 1;" in rule.body
+            and "Call Subroutine(BuatDummyTim);" in rule.body
+        ]
+        checks.equal(len(create_rules), 1, f"numero regole creazione dummy {team}")
+        if create_rules:
+            create_rule = create_rules[0]
+            checks.equal(
+                compact(event_block(create_rule)),
+                compact("Ongoing - Global;"),
+                f"creazione dummy {team}: evento globale esatto",
+            )
+            for token in (
+                f"Count Of(Spawn Points({team})) > 0;",
+                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;",
+            ):
+                checks.require(token in create_rule.body, f"creazione dummy {team} non sicura: {token}")
+            create_conditions = rule_block(create_rule, "conditions")
+            create_actions = rule_block(create_rule, "actions")
+            checks.require(create_conditions is not None,
+                           f"creazione dummy {team}: blocco conditions assente")
+            checks.require(create_actions is not None,
+                           f"creazione dummy {team}: blocco actions assente")
+            if create_conditions is not None:
+                expected_create_conditions = f"""
+                    Global.Siap == True;
+                    Is Game In Progress == True;
+                    Number Of Players({team}) < Number Of Slots({team}) - 1;
+                    Count Of(Spawn Points({team})) > 0;
+                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
+                """
+                checks.equal(
+                    compact(create_conditions),
+                    compact(expected_create_conditions),
+                    f"creazione dummy {team}: condizioni esatte e raggiungibili",
+                )
+            if create_actions is not None:
+                expected_create_actions = f"""
+                    Global.TimDummyAktif = {team};
+                    Call Subroutine(BuatDummyTim);
+                """
+                checks.equal(
+                    compact(create_actions),
+                    compact(expected_create_actions),
+                    f"creazione dummy {team}: azione esatta tramite subroutine condivisa",
+                )
+
+        release_rules = [
+            rule for rule in rules
+            if f"Number Of Players({team}) >= Number Of Slots({team});" in rule.body
+            and "Call Subroutine(LepasDummyTim);" in rule.body
+        ]
+        checks.equal(len(release_rules), 1, f"numero regole rilascio slot dummy {team}")
+        if release_rules:
+            release_rule = release_rules[0]
+            checks.equal(
+                compact(event_block(release_rule)),
+                compact("Ongoing - Global;"),
+                f"rilascio dummy {team}: evento globale esatto",
+            )
+            checks.require(
+                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;"
+                in release_rule.body,
+                f"rilascio dummy {team} incompleto: filtro presenza dummy",
+            )
+            release_conditions = rule_block(release_rule, "conditions")
+            release_actions = rule_block(release_rule, "actions")
+            checks.require(release_conditions is not None,
+                           f"rilascio dummy {team}: blocco conditions assente")
+            checks.require(release_actions is not None,
+                           f"rilascio dummy {team}: blocco actions assente")
+            if release_conditions is not None:
+                expected_release_conditions = f"""
+                    Global.Siap == True;
+                    Is Game In Progress == True;
+                    Number Of Players({team}) >= Number Of Slots({team});
+                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;
+                """
+                checks.equal(
+                    compact(release_conditions),
+                    compact(expected_release_conditions),
+                    f"rilascio dummy {team}: condizioni esatte e raggiungibili",
+                )
+            if release_actions is not None:
+                expected_release_actions = f"""
+                    Global.TimDummyAktif = {team};
+                    Call Subroutine(LepasDummyTim);
+                """
+                checks.equal(
+                    compact(release_actions),
+                    compact(expected_release_actions),
+                    f"rilascio dummy {team}: azione esatta tramite subroutine condivisa",
+                )
+
+    create_dummy = rule_by_subroutine(rules, "BuatDummyTim")
+    checks.require(create_dummy is not None, "subroutine BuatDummyTim assente")
+    if create_dummy:
+        create_actions = rule_block(create_dummy, "actions")
+        checks.require(create_actions is not None, "BuatDummyTim: blocco actions assente")
+        if create_actions is not None:
+            expected_create_dummy = (
+                "Create Dummy Bot(All Heroes, Global.TimDummyAktif, -1, "
+                "Position Of(First Of(Spawn Points(Global.TimDummyAktif))), Vector(0, 0, 1));"
+            )
+            checks.equal(
+                compact(create_actions),
+                compact(expected_create_dummy),
+                "BuatDummyTim: azione esatta senza abort",
+            )
+
+    release_dummy = rule_by_subroutine(rules, "LepasDummyTim")
+    checks.require(release_dummy is not None, "subroutine LepasDummyTim assente")
+    if release_dummy:
+        release_actions = rule_block(release_dummy, "actions")
+        checks.require(release_actions is not None, "LepasDummyTim: blocco actions assente")
+        for token in (
+            "Abort If(Count Of(Filtered Array(All Players(Global.TimDummyAktif), Is Dummy Bot(Current Array Element) == True)) == 0);",
+            "Destroy In-World Text(Player Variable(",
+            "Stop Facing(First Of(Filtered Array(",
+            "Stop Throttle In Direction(First Of(Filtered Array(",
+            "Destroy Dummy Bot(Global.TimDummyAktif, Slot Of(",
+        ):
+            checks.require(token in release_dummy.body, f"LepasDummyTim incompleta: {token}")
+        facing_stop = release_dummy.body.find("Stop Facing(First Of(Filtered Array(")
+        throttle_stop = release_dummy.body.find("Stop Throttle In Direction(First Of(Filtered Array(")
+        destroy_dummy = release_dummy.body.find("Destroy Dummy Bot(Global.TimDummyAktif, Slot Of(")
+        checks.require(0 <= facing_stop < throttle_stop < destroy_dummy,
+                       "LepasDummyTim: facing/throttle devono fermarsi prima della distruzione")
+        if release_actions is not None:
+            dummy = "First Of(Filtered Array(All Players(Global.TimDummyAktif), Is Dummy Bot(Current Array Element) == True))"
+            expected_release_dummy = f"""
+                Abort If(Count Of(Filtered Array(All Players(Global.TimDummyAktif), Is Dummy Bot(Current Array Element) == True)) == 0);
+                If(Player Variable({dummy}, TeksVisiNasib) != Null);
+                    Destroy In-World Text(Player Variable({dummy}, TeksVisiNasib));
+                End;
+                Stop Facing({dummy});
+                Stop Throttle In Direction({dummy});
+                Destroy Dummy Bot(Global.TimDummyAktif, Slot Of({dummy}));
+            """
+            checks.equal(
+                compact(release_actions),
+                compact(expected_release_dummy),
+                "LepasDummyTim: cleanup atomico esatto senza abort",
+            )
 
 
 def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
@@ -2662,116 +2957,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(move_speed_calls[0].args[1].strip(), "20",
                          "KunciBot: velocità bot/dummy")
 
-    for team in ("Team 1", "Team 2"):
-        create_rules = [
-            rule for rule in rules
-            if f"Create Dummy Bot(All Heroes, {team}, -1," in rule.body
-        ]
-        checks.equal(len(create_rules), 1, f"numero regole creazione dummy {team}")
-        if create_rules:
-            create_rule = create_rules[0]
-            checks.equal(
-                compact(event_block(create_rule)),
-                compact("Ongoing - Global;"),
-                f"creazione dummy {team}: evento globale esatto",
-            )
-            for token in (
-                f"Number Of Players({team}) < Number Of Slots({team}) - 1;",
-                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;",
-                f"Position Of(First Of(Spawn Points({team})))",
-            ):
-                checks.require(token in create_rule.body, f"creazione dummy {team} non sicura: {token}")
-            create_conditions = rule_block(create_rule, "conditions")
-            create_actions = rule_block(create_rule, "actions")
-            checks.require(create_conditions is not None,
-                           f"creazione dummy {team}: blocco conditions assente")
-            checks.require(create_actions is not None,
-                           f"creazione dummy {team}: blocco actions assente")
-            if create_conditions is not None:
-                expected_create_conditions = f"""
-                    Global.Siap == True;
-                    Is Game In Progress == True;
-                    Number Of Players({team}) < Number Of Slots({team}) - 1;
-                    Count Of(Spawn Points({team})) > 0;
-                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
-                """
-                checks.equal(
-                    compact(create_conditions),
-                    compact(expected_create_conditions),
-                    f"creazione dummy {team}: condizioni esatte e raggiungibili",
-                )
-            if create_actions is not None:
-                expected_create_actions = (
-                    f"Create Dummy Bot(All Heroes, {team}, -1, "
-                    f"Position Of(First Of(Spawn Points({team}))), Vector(0, 0, 1));"
-                )
-                checks.equal(
-                    compact(create_actions),
-                    compact(expected_create_actions),
-                    f"creazione dummy {team}: azione esatta senza abort",
-                )
-
-        release_rules = [
-            rule for rule in rules
-            if f"Destroy Dummy Bot({team}, Slot Of(" in rule.body
-        ]
-        checks.equal(len(release_rules), 1, f"numero regole rilascio slot dummy {team}")
-        if release_rules:
-            release_rule = release_rules[0]
-            checks.equal(
-                compact(event_block(release_rule)),
-                compact("Ongoing - Global;"),
-                f"rilascio dummy {team}: evento globale esatto",
-            )
-            for token in (
-                f"Number Of Players({team}) >= Number Of Slots({team});",
-                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
-                "Destroy In-World Text(Player Variable(",
-                "Stop Facing(First Of(Filtered Array(",
-                "Stop Throttle In Direction(First Of(Filtered Array(",
-            ):
-                checks.require(token in release_rule.body, f"rilascio dummy {team} incompleto: {token}")
-            facing_stop = release_rule.body.find("Stop Facing(First Of(Filtered Array(")
-            throttle_stop = release_rule.body.find("Stop Throttle In Direction(First Of(Filtered Array(")
-            destroy_dummy = release_rule.body.find(f"Destroy Dummy Bot({team}, Slot Of(")
-            checks.require(0 <= facing_stop < throttle_stop < destroy_dummy,
-                           f"rilascio dummy {team}: facing/throttle devono fermarsi prima della distruzione")
-            release_conditions = rule_block(release_rule, "conditions")
-            release_actions = rule_block(release_rule, "actions")
-            checks.require(release_conditions is not None,
-                           f"rilascio dummy {team}: blocco conditions assente")
-            checks.require(release_actions is not None,
-                           f"rilascio dummy {team}: blocco actions assente")
-            if release_conditions is not None:
-                expected_release_conditions = f"""
-                    Global.Siap == True;
-                    Is Game In Progress == True;
-                    Number Of Players({team}) >= Number Of Slots({team});
-                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;
-                """
-                checks.equal(
-                    compact(release_conditions),
-                    compact(expected_release_conditions),
-                    f"rilascio dummy {team}: condizioni esatte e raggiungibili",
-                )
-            if release_actions is not None:
-                dummy = (
-                    f"First Of(Filtered Array(All Players({team}), "
-                    "Is Dummy Bot(Current Array Element) == True))"
-                )
-                expected_release_actions = f"""
-                    If(Player Variable({dummy}, TeksVisiNasib) != Null);
-                        Destroy In-World Text(Player Variable({dummy}, TeksVisiNasib));
-                    End;
-                    Stop Facing({dummy});
-                    Stop Throttle In Direction({dummy});
-                    Destroy Dummy Bot({team}, Slot Of({dummy}));
-                """
-                checks.equal(
-                    compact(release_actions),
-                    compact(expected_release_actions),
-                    f"rilascio dummy {team}: cleanup atomico esatto senza abort",
-                )
+    validate_dummy_slot_management(checks, rules, compact)
 
     expected_enemy_predicate = (
         "And(Entity Exists(Current Array Element), "
@@ -3044,7 +3230,19 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
-    objective_rule = next((rule for rule in rules if "PerintahTeleportasi == 1" in rule.body and "Payload Position" in rule.body and "Flag Position(" in rule.body and "Objective Position(Objective Index)" in rule.body), None)
+    objective_rule = next(
+        (
+            rule
+            for rule in rules
+            if "PerintahTeleportasi == 1" in rule.body
+            and "Payload Position" in rule.body
+            and "Flag Position(" in rule.body
+            and "Objective Position(Objective Index)" in rule.body
+        ),
+        None,
+    )
+    if objective_rule is None:
+        objective_rule = rule_by_subroutine(rules, "TeleportKeObjektif")
     checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
     if objective_rule:
         for mode in GAME_MODES:
@@ -3054,8 +3252,21 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                        "Push non usa proxy robot/fallback obiettivo")
         checks.require("Nearest Walkable Position(" in objective_rule.body,
                        "teleport obiettivo non verifica una posizione percorribile")
-        checks.require("Button(Primary Fire)" in objective_rule.body or "PerintahTeleportasi == 1" in objective_rule.body or event_type(objective_rule) == "Subroutine",
-                       "destinazione teleport non viene valutata al click")
+        click_dispatch = next(
+            (
+                rule
+                for rule in rules
+                if "PerintahTeleportasi == 1" in rule.body
+                and "Call Subroutine(TeleportKeObjektif);" in rule.body
+            ),
+            None,
+        )
+        checks.require(
+            click_dispatch is not None
+            or "PerintahTeleportasi == 1" in objective_rule.body
+            or "Button(Primary Fire)" in objective_rule.body,
+            "destinazione teleport non viene valutata al click",
+        )
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")

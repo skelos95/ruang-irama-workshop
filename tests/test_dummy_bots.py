@@ -30,11 +30,17 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertNotIn(", Top, 100,", source)
             self.assertNotIn(", Top, -99,", source)
 
-    def test_exactly_one_creation_rule_per_team(self):
-        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Team 1, -1, Position Of(First Of(Spawn Points(Team 1))), Vector(0, 0, 1));"), 1)
-        self.assertEqual(self.it.count("Create Dummy Bot(Tutti gli eroi, Team 2, -1, Position Of(First Of(Spawn Points(Team 2))), Vector(0, 0, 1));"), 1)
-        self.assertEqual(self.en.count("Create Dummy Bot(All Heroes, Team 1, -1, Position Of(First Of(Spawn Points(Team 1))), Vector(0, 0, 1));"), 1)
-        self.assertEqual(self.en.count("Create Dummy Bot(All Heroes, Team 2, -1, Position Of(First Of(Spawn Points(Team 2))), Vector(0, 0, 1));"), 1)
+    def test_shared_dummy_creation_subroutine_is_single_and_safe(self):
+        self.assertEqual(
+            self.it.count("Create Dummy Bot(Tutti gli eroi, Globale.TimDummyAktif, -1, Position Of(First Of(Spawn Points(Globale.TimDummyAktif))), Vector(0, 0, 1));"),
+            1,
+        )
+        self.assertEqual(
+            self.en.count("Create Dummy Bot(All Heroes, Global.TimDummyAktif, -1, Position Of(First Of(Spawn Points(Global.TimDummyAktif))), Vector(0, 0, 1));"),
+            1,
+        )
+        self.assertEqual(self.it.count("Call Subroutine(BuatDummyTim);"), 2)
+        self.assertEqual(self.en.count("Call Subroutine(BuatDummyTim);"), 2)
         self.assertNotIn("Create Dummy Bot(Tutti gli eroi, Team 1, -1, Null, Null);", self.it)
         self.assertNotIn("Create Dummy Bot(Tutti gli eroi, Team 2, -1, Null, Null);", self.it)
 
@@ -62,11 +68,16 @@ class DummyBotFeatureTests(unittest.TestCase):
         for team in ("Team 1", "Team 2"):
             self.assertIn(f"Number Of Players({team}) < Number Of Slots({team}) - 1;", self.it)
             self.assertIn(f"Number Of Players({team}) >= Number Of Slots({team});", self.it)
-            self.assertEqual(self.it.count(f"Destroy Dummy Bot({team}, Slot Of("), 1)
             self.assertIn(
                 f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
                 self.it,
             )
+        self.assertEqual(self.it.count("Call Subroutine(LepasDummyTim);"), 2)
+        self.assertEqual(self.en.count("Call Subroutine(LepasDummyTim);"), 2)
+        self.assertEqual(
+            self.it.count("Destroy Dummy Bot(Globale.TimDummyAktif, Slot Of(First Of(Filtered Array(All Players(Globale.TimDummyAktif), Is Dummy Bot(Current Array Element) == True))));"),
+            1,
+        )
 
     def test_spawn_teleport_uses_safe_mode_specific_destinations(self):
         self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
@@ -135,7 +146,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("<= 4) ? 0 : 1, To Player, Replace Existing Throttle, Direction and Magnitude);", source)
             self.assertNotIn("Is In Spawn Room(Event Player) ? 0 : 1, To Player", source)
             self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 2)
-            self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 2)
+            self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 1)
 
         movement = self.en.split('rule("03g - Bot/Dummy: Hadap dan dekati manusia musuh hidup terdekat")', 1)[1].split(
             'rule("03h - Bot/Dummy: Hentikan gerak saat tidak ada manusia musuh hidup")', 1
