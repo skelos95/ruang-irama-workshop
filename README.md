@@ -56,7 +56,7 @@ In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità ag
 | Menu aperto o chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna la Camera rapida |
 | Menu chiuso | Tieni Crouch | inspection e, se abilitato, overlay Teleport |
 | Crouch Travel & Attach | Crouch + Primary / Secondary | pagina successiva / precedente |
-| Crouch Travel & Attach | Crouch + Interact | esegue la pagina attiva (Spawn / Objective / Player-Bot Travel / Player-Bot Attach) |
+| Crouch Travel & Attach | Crouch + Interact | esegue la pagina attiva (Spawn / Objective / Player-Bot Travel / Player-Bot Attach / Self Kill) |
 | Attaccato, Menu Arcade chiuso | Crouch + Reload | sgancia dal player/bot; Reload senza Crouch resta nativo |
 | Morto | Jump | Resurrect vicino al punto di morte |
 

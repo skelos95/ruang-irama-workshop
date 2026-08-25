@@ -6,6 +6,9 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Cambio squadra ripetuto irrobustito: il lifecycle memorizza il Team target più recente, riavvia la transazione se il Team cambia di nuovo prima della stabilizzazione e acquisisce il lock pesante solo quando il player è realmente spawned.
+- Crouch Travel & Attach passa a 5 pagine: la nuova pagina `Self Kill` usa Interact per eliminare volontariamente il proprio eroe, con bypass temporaneo della protezione Unkillable.
+
 - Cambio squadra reso global-first seriale: un lock globale assegna cleanup/setup a un solo player per volta, con 0,25 s fra le fasi e cooldown prima del player successivo.
 - Durante una transazione lifecycle il scheduler sospende per gli altri player anche il fast-path 20 Hz, oltre al ciclo 10 Hz e alle cache 1 Hz; resta attivo quasi soltanto il proprietario del cambio squadra, riducendo il picco di carico critico.
 - La discriminazione `Player Left Match` attende 0,5 s prima del cleanup, così una transizione di squadra ha più tempo per riapparire come entità valida e non percorre accidentalmente anche il cleanup di leave.

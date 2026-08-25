@@ -2837,13 +2837,20 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.PindahTimDiproses == False",
             "Global.PemainAktif.PernahDisiapkan == False",
             "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)",
+            "Global.PemainAktif.PindahTimDiproses == True",
+            "Global.PemainAktif.TimSiklusTarget != Team Of(Global.PemainAktif)",
+            "Global.PemainSiklusGlobal == Global.PemainAktif",
+            "Global.PemainSiklusGlobal = Null;",
+            "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;",
             "Global.PemainAktif.PindahTimDiproses = True;",
             "Global.PemainAktif.SiklusPemainAktif = Global.PemainAktif.PernahDisiapkan == True;",
             "Global.PemainAktif.SudahSiap = False;",
             "Global.PemainAktif.Manusia = False;",
+            "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
             "Global.PemainSiklusGlobal == Null",
             "Global.PemainSiklusGlobal = Global.PemainAktif;",
+            "Has Spawned(Global.PemainAktif) == True",
             "Global.WaktuSiklusGlobal",
         ):
             checks.require(token in fast.body, f"dispatcher lifecycle globale incompleto: {token}")
@@ -2867,6 +2874,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for token in (
             "Event Player.PindahTimDiproses == True;",
             "Global.PemainSiklusGlobal == Event Player;",
+            "Event Player.TimSiklusTarget == Team Of(Event Player);",
+            "Has Spawned(Event Player) == True;",
             "Event Player.SiklusPemainAktif == True;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
@@ -2883,6 +2892,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for token in (
             "Event Player.PindahTimDiproses == True;",
             "Global.PemainSiklusGlobal == Event Player;",
+            "Event Player.TimSiklusTarget == Team Of(Event Player);",
+            "Has Spawned(Event Player) == True;",
             "Event Player.SiklusPemainAktif == False;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",

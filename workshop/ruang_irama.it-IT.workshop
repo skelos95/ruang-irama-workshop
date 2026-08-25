@@ -162,6 +162,8 @@ variabili
 		101: PahlawanLampiranSendiri
 		102: PahlawanLampiranTarget
 		103: WaktuSiklusTim
+		104: TimSiklusTarget
+		105: BunuhDiriDiminta
 }
 
 subroutine
@@ -1019,6 +1021,8 @@ regola("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")
 		Event Player.BotOtomatis == False;
 		Event Player.PindahTimDiproses == True;
 		Globale.PemainSiklusGlobal == Event Player;
+		Event Player.TimSiklusTarget == Team Of(Event Player);
+		Has Spawned(Event Player) == True;
 		Event Player.SiklusPemainAktif == True;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
@@ -1051,6 +1055,8 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 		Event Player.BotOtomatis == False;
 		Event Player.PindahTimDiproses == True;
 		Globale.PemainSiklusGlobal == Event Player;
+		Event Player.TimSiklusTarget == Team Of(Event Player);
+		Has Spawned(Event Player) == True;
 		Event Player.SiklusPemainAktif == False;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
@@ -2876,7 +2882,7 @@ regola("19c - Teleportasi Jongkok: Primary maju dan Secondary mundur empat halam
 
 	azioni
 	{
-		Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 3)) % 4;
+		Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 4)) % 5;
 		If(And(Event Player.KursorTeleportasi != 2, Event Player.KursorTeleportasi != 3));
 			Event Player.CalonTargetTeleportasi = Null;
 			If(Event Player.TeksTeleportasi != Null);
@@ -2975,7 +2981,7 @@ regola("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")
 			Call Subroutine(TeleportKeObjektif);
 		Else If(Event Player.JenisTeleportasiTerkunci == 2);
 			Call Subroutine(TeleportKeTarget);
-		Else;
+		Else If(Event Player.JenisTeleportasiTerkunci == 3);
 			If(Or(Or(Event Player.TargetTeleportasiTerkunci == Null, Entity Exists(Event Player.TargetTeleportasiTerkunci) == False), Or(Has Spawned(Event Player.TargetTeleportasiTerkunci) == False, Is Alive(Event Player.TargetTeleportasiTerkunci) == False)));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attach target unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Target tempel tidak tersedia.") : Custom String("เป้าหมายสำหรับเกาะไม่พร้อมใช้งาน"));
 			Else If(And(Player Variable(Event Player.TargetTeleportasiTerkunci, LampiranTeleportasiAktif) == True, Player Variable(Event Player.TargetTeleportasiTerkunci, TargetLampiranTeleportasi) == Event Player));
@@ -2991,6 +2997,10 @@ regola("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")
 				Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0, Y Component Of(Eye Position(Event Player.TargetLampiranTeleportasi)) - Y Component Of(Position Of(Event Player.TargetLampiranTeleportasi)) + 0.750, 0));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attached above {0}. CROUCH + RELOAD detaches.", Event Player.TargetLampiranTeleportasi) : Event Player.IndeksBahasa == 1 ? Custom String("Menempel di atas {0}. JONGKOK + RELOAD untuk lepas.", Event Player.TargetLampiranTeleportasi) : Custom String("เกาะอยู่เหนือ {0} กดย่อ + รีโหลดเพื่อปล่อย", Event Player.TargetLampiranTeleportasi));
 			End;
+		Else;
+			Event Player.BunuhDiriDiminta = True;
+			Event Player.WaktuPaksaBerikut = Total Time Elapsed;
+			Event Player.WaktuPaksaBerakhir = Total Time Elapsed + 5;
 		End;
 		Event Player.JenisTeleportasiTerkunci = -1;
 		Event Player.TargetTeleportasiTerkunci = Null;
@@ -3148,24 +3158,33 @@ regola("89a - Subrutin: Proses status cepat pemain")
 
 	azioni
 	{
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Globale.PemainAktif.PindahTimDiproses == False, Or(And(Globale.PemainAktif.PernahDisiapkan == False, Globale.PemainAktif.SudahSiap == False), And(Globale.PemainAktif.PernahDisiapkan == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif)))))));
+		If(And(Globale.PemainAktif.PindahTimDiproses == True, Globale.PemainAktif.TimSiklusTarget != Team Of(Globale.PemainAktif)));
+			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
+				Globale.PemainSiklusGlobal = Null;
+				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
+		End;
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, Or(And(Globale.PemainAktif.PindahTimDiproses == False, Or(And(Globale.PemainAktif.PernahDisiapkan == False, Globale.PemainAktif.SudahSiap == False), And(Globale.PemainAktif.PernahDisiapkan == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif)))), And(Globale.PemainAktif.PindahTimDiproses == True, Globale.PemainAktif.TimSiklusTarget != Team Of(Globale.PemainAktif))))));
 			Globale.PemainAktif.PindahTimDiproses = True;
 			Globale.PemainAktif.SiklusPemainAktif = Globale.PemainAktif.PernahDisiapkan == True;
 			Globale.PemainAktif.SudahSiap = False;
 			Globale.PemainAktif.Manusia = False;
+			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
 			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
 		End;
-		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Entity Exists(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Server Load < 150))))));
+		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Entity Exists(Globale.PemainAktif) == True, And(Has Spawned(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Server Load < 150)))))));
 			Globale.PemainSiklusGlobal = Globale.PemainAktif;
 		End;
-		If(And(Globale.PemainAktif.Manusia == True, Or(Globale.PemainAktif.KematianBalasDendam == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.EfekNasib == 3, And(Globale.PemainAktif.PutaranKartuNasib == 0, Globale.PemainAktif.WaktuPaksaBerakhir > 0))))));
+		If(And(Globale.PemainAktif.Manusia == True, Or(Globale.PemainAktif.BunuhDiriDiminta == True, Or(Globale.PemainAktif.KematianBalasDendam == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.EfekNasib == 3, And(Globale.PemainAktif.PutaranKartuNasib == 0, Globale.PemainAktif.WaktuPaksaBerakhir > 0)))))));
 			If(And(Globale.PemainAktif.KematianBalasDendam == True, Or(Globale.PemainAktif.PenagihBalasDendam == Null, Or(Entity Exists(Globale.PemainAktif.PenagihBalasDendam) == False, Player Variable(Globale.PemainAktif.PenagihBalasDendam, Manusia) == False))));
 				Globale.PemainAktif.KematianBalasDendam = False;
 				Globale.PemainAktif.PenagihBalasDendam = Null;
 				Globale.PemainAktif.WaktuPaksaBerikut = 0;
 				Globale.PemainAktif.WaktuPaksaBerakhir = 0;
 			Else If(And(Globale.PemainAktif.WaktuPaksaBerakhir > 0, Total Time Elapsed >= Globale.PemainAktif.WaktuPaksaBerakhir));
-				If(Globale.PemainAktif.KematianBalasDendam == True);
+				If(Globale.PemainAktif.BunuhDiriDiminta == True);
+					Globale.PemainAktif.BunuhDiriDiminta = False;
+				Else If(Globale.PemainAktif.KematianBalasDendam == True);
 					Small Message(Globale.PemainAktif.PenagihBalasDendam, Player Variable(Globale.PemainAktif.PenagihBalasDendam, IndeksBahasa) == 0 ? Custom String("Revenge could not complete. No debt was consumed.") : Player Variable(Globale.PemainAktif.PenagihBalasDendam, IndeksBahasa) == 1 ? Custom String("Balas dendam tidak dapat diselesaikan. Tidak ada utang yang dipakai.") : Custom String("การล้างแค้นไม่สำเร็จ ไม่มีการใช้หนี้"));
 					Set Player Variable(Globale.PemainAktif.PenagihBalasDendam, TargetBalasDendamTerkunci, Null);
 					Globale.PemainAktif.KematianBalasDendam = False;
@@ -3661,8 +3680,44 @@ regola("91g - Subrutin: Gambar menu teleportasi")
 		If(Index Of Array Value(Globale.PemainManusia, Event Player) >= 0);
 			Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = 0;
 		End;
-		Event Player.KursorTeleportasi %= 4;
-		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("HOLD {0} FOR ALL COMMANDS", Input Binding String(Button(Crouch))), Custom String("{0}: next | {1}: previous | {2}: action", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("release {0}: close | {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("TAHAN {0} UNTUK SEMUA PERINTAH", Input Binding String(Button(Crouch))), Custom String("{0}: berikutnya | {1}: sebelumnya | {2}: aksi", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("lepas {0}: tutup | {0} + {1}: lepas tempel", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("กด {0} ค้างสำหรับทุกคำสั่ง", Input Binding String(Button(Crouch))), Custom String("{0}: ถัดไป | {1}: ก่อนหน้า | {2}: ใช้งาน", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("ปล่อย {0}: ปิด | {0} + {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("SPAWN TRAVEL 1/4\n> RETURN TO SPAWN ROOM\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("OBJECTIVE TRAVEL 2/4\n> JUMP TO OBJECTIVE / ENEMY FLAG\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("PLAYER / BOT TRAVEL 3/4\n> TELEPORT NEXT TO TARGET\nTARGET: {0}\nINTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Custom String("PLAYER / BOT ATTACH 4/4\n> RIDE ABOVE TARGET\nTARGET: {0}\nINTERACT: ATTACH | CROUCH + RELOAD: DETACH", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("PINDAH KE SPAWN 1/4\n> KEMBALI KE RUANG MUNCUL\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("PINDAH KE OBJEKTIF 2/4\n> LOMPAT KE OBJEKTIF / BENDERA MUSUH\nINTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("PINDAH KE PLAYER / BOT 3/4\n> TELEPORT DI DEKAT TARGET\nTARGET: {0}\nINTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Custom String("TEMPEL PLAYER / BOT 4/4\n> NAIK DI ATAS TARGET\nTARGET: {0}\nINTERACT: TEMPEL | JONGKOK + RELOAD: LEPAS", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Event Player.KursorTeleportasi == 0 ? Custom String("กลับห้องเกิด 1/4\n> เทเลพอร์ตกลับห้องเกิด\nใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 1 ? Custom String("ไปเป้าหมาย 2/4\n> เทเลพอร์ตไปเป้าหมาย / ธงศัตรู\nใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 2 ? Custom String("ไปหาผู้เล่น / บอต 3/4\n> เทเลพอร์ตข้างเป้าหมาย\nเป้าหมาย: {0}\nใช้งาน: เทเลพอร์ต", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")) : Custom String("เกาะผู้เล่น / บอต 4/4\n> เกาะเหนือเป้าหมาย\nเป้าหมาย: {0}\nใช้งาน: เกาะ | ย่อ + รีโหลด: ปล่อย", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
+		Event Player.KursorTeleportasi %= 5;
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("HOLD {0} FOR ALL COMMANDS", Input Binding String(Button(Crouch))), Custom String("{0}: next | {1}: previous | {2}: action", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("release {0}: close | {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("TAHAN {0} UNTUK SEMUA PERINTAH", Input Binding String(Button(Crouch))), Custom String("{0}: berikutnya | {1}: sebelumnya | {2}: aksi", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("lepas {0}: tutup | {0} + {1}: lepas tempel", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("กด {0} ค้างสำหรับทุกคำสั่ง", Input Binding String(Button(Crouch))), Custom String("{0}: ถัดไป | {1}: ก่อนหน้า | {2}: ใช้งาน", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("ปล่อย {0}: ปิด | {0} + {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("SPAWN TRAVEL 1/5\
+> RETURN TO SPAWN ROOM\
+INTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("OBJECTIVE TRAVEL 2/5\
+> JUMP TO OBJECTIVE / ENEMY FLAG\
+INTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("PLAYER / BOT TRAVEL 3/5\
+> TELEPORT NEXT TO TARGET\
+TARGET: {0}\
+INTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Event Player.KursorTeleportasi == 3 ? Custom String("PLAYER / BOT ATTACH 4/5\
+> RIDE ABOVE TARGET\
+TARGET: {0}\
+INTERACT: ATTACH | CROUCH + RELOAD: DETACH", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET")) : Custom String("SELF KILL 5/5\
+> ELIMINATE YOUR HERO\
+INTERACT: KILL SELF") : Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("PINDAH KE SPAWN 1/5\
+> KEMBALI KE RUANG MUNCUL\
+INTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("PINDAH KE OBJEKTIF 2/5\
+> LOMPAT KE OBJEKTIF / BENDERA MUSUH\
+INTERACT: TELEPORT") : Event Player.KursorTeleportasi == 2 ? Custom String("PINDAH KE PLAYER / BOT 3/5\
+> TELEPORT DI DEKAT TARGET\
+TARGET: {0}\
+INTERACT: TELEPORT", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Event Player.KursorTeleportasi == 3 ? Custom String("TEMPEL PLAYER / BOT 4/5\
+> NAIK DI ATAS TARGET\
+TARGET: {0}\
+INTERACT: TEMPEL | JONGKOK + RELOAD: LEPAS", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TIDAK ADA TARGET PUBLIK")) : Custom String("BUNUH DIRI 5/5\
+> ELIMINASI HERO SENDIRI\
+INTERACT: BUNUH DIRI") : Event Player.KursorTeleportasi == 0 ? Custom String("กลับห้องเกิด 1/5\
+> เทเลพอร์ตกลับห้องเกิด\
+ใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 1 ? Custom String("ไปเป้าหมาย 2/5\
+> เทเลพอร์ตไปเป้าหมาย / ธงศัตรู\
+ใช้งาน: เทเลพอร์ต") : Event Player.KursorTeleportasi == 2 ? Custom String("ไปหาผู้เล่น / บอต 3/5\
+> เทเลพอร์ตข้างเป้าหมาย\
+เป้าหมาย: {0}\
+ใช้งาน: เทเลพอร์ต", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")) : Event Player.KursorTeleportasi == 3 ? Custom String("เกาะผู้เล่น / บอต 4/5\
+> เกาะเหนือเป้าหมาย\
+เป้าหมาย: {0}\
+ใช้งาน: เกาะ | ย่อ + รีโหลด: ปล่อย", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายสาธารณะ")) : Custom String("กำจัดตัวเอง 5/5\
+> กำจัดฮีโร่ของคุณ\
+ใช้งาน: กำจัดตัวเอง"), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(205, 255, 225, 255), Custom Color(80, 255, 160, 255), Visible To and String, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 		If(Index Of Array Value(Globale.PemainManusia, Event Player) >= 0);
 			Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = Event Player.HudMenu;
@@ -4279,6 +4334,8 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.HudEfekNasib = Null;
 		Event Player.TeksVisiNasib = Null;
 		Event Player.TimTerakhir = Team Of(Event Player);
+		Event Player.TimSiklusTarget = Team Of(Event Player);
+		Event Player.BunuhDiriDiminta = False;
 		Event Player.WaktuTeleportasiDummy = 0;
 		Event Player.IzinkanDummyMengikuti = False;
 		Event Player.KursorIkutiDummy = 0;
@@ -4430,6 +4487,7 @@ regola("98a - Subrutin: Pulihkan status Nasib untuk Event Player")
 		Event Player.WaktuIkonNasibBerakhir = 0;
 		Event Player.WaktuPaksaBerikut = 0;
 		Event Player.WaktuPaksaBerakhir = 0;
+		Event Player.BunuhDiriDiminta = False;
 		Event Player.MenuNasibHarusDibuka = False;
 		Event Player.KebalAktif = Event Player.ModeKebal != 0;
 		Event Player.InputMenuDikunci = False;
