@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la 0.8.1 richiede una nuova regressione live del cambio squadra prima del passaggio a live-ready. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la 0.8.1 resta live-pending finché non viene completata una nuova regressione nel client, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 
 ## Obiettivi
 
@@ -23,7 +23,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. I cursori persistono durante la permanenza nella stessa squadra; un cambio squadra equivale invece a leave + fresh join e ripristina tutte le preferenze.
+Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. Preferenze e cursori persistono durante chiusura, riapertura e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
 
 ### Input
 
@@ -34,6 +34,7 @@ Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
+- Crouch Travel & Attach contiene cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva.
 - Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Resurrect, teleport alla posizione sicura e guardia `Is Alive == True` avvengono nello stesso tick senza `Wait`; effetto e feedback vengono emessi soltanto in caso di successo. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
 
 Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
@@ -75,6 +76,12 @@ Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indie
 
 Il ciclo del Main Menu è esattamente modulo 13; pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
 
+### Profilo per nome visibile
+
+Il nome visibile esatto `งูแท้` abilita un profilo dedicato durante il setup. Name Color `Silver Mist` e Player Icon `Poison 2` sono default iniziali e restano modificabili dal player; Player Vibes è invece fissato a `Caladan Brood`, perciò la pagina Soundtrack è visibile ma read-only e nessun input può modificarne il valore. `Caladan Brood` è una voce dedicata al profilo e non entra nel catalogo globale, che resta di 100 generi per i player generici.
+
+Il matching usa esclusivamente il nome visibile, non un identificatore account: due omonimi esatti ricevono lo stesso profilo, mentre una rinomina non viene riconosciuta. Il cambio squadra leggero conserva colore e icona eventualmente scelti e mantiene il Vibes bloccato; un leave vero seguito da rejoin esegue nuovamente il setup e riapplica `Silver Mist`, `Poison 2` e `Caladan Brood`.
+
 Tutti i menu seguono lo stesso layout:
 
 ```text
@@ -87,7 +94,7 @@ I placeholder devono avere stessa cardinalità nei tre rami linguistici.
 
 ## Unkillable FULL HP
 
-FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, setup fresco e cleanup/reset di leave o cambio squadra ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Try Your Luck non modifica modalità, cursore, flag runtime, status, tripletta o icona Unkillable. Un cleanup engine può normalizzare temporaneamente lo stato dopo morte o timeout, ma conserva `ModeKebal`/`KursorKebal`, ricava di nuovo `KebalAktif` dalla modalità e lascia al tick globale la riapplicazione e l'eventuale ricreazione dell'icona. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
+FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, setup fresco e cleanup di un leave vero ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Un cambio squadra leggero non ricostruisce lo stato engine. Try Your Luck non modifica modalità o cursore Unkillable: Vision, Acceleration, Team Heal e Hacked conservano la tripletta, mentre Burning sospende status e riduzione del danno per l'intero effetto e li ripristina al termine. Un cleanup engine può normalizzare temporaneamente lo stato dopo morte o timeout, ma conserva `ModeKebal`/`KursorKebal`, ricava di nuovo `KebalAktif` dalla modalità e lascia al tick globale la riapplicazione e l'eventuale ricreazione dell'icona. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
 
 ## Try Your Luck
 
@@ -99,10 +106,10 @@ Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-play
 | Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
 | Skull | immediato | unico esito che bypassa temporaneamente Unkillable e ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
 | Team Heal | immediato | porta i player umani della squadra alla salute completa |
-| Burning | 10 s | infligge il 5% della salute massima ogni 1 s; sospende temporaneamente Unkillable e Damage Received per ciascun tick |
+| Burning | 10 s | infligge il 5% della salute massima ogni 1 s; sospende Unkillable e normalizza Damage Received per l'intera durata, poi ripristina la modalità scelta |
 | Hacked | 5 s | applica e poi rimuove Hacked |
 
-Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal, Burning e Hacked non sospendono Unkillable; in particolare FULL HP annulla i tick Burning e 1 HP resta soggetto allo status protettivo. Soltanto lo Skull finale armato e Revenge passano dal bypass della macchina di morte completa. Alla morte o al timeout vengono annullati stato temporaneo, accelerazione, status dell'esito, HUD/IWT ed effetti associati, ma la preferenza Unkillable resta intatta e viene riapplicata dopo Resurrect. Un tracker eroe condiviso rileva inoltre a 10 Hz il cambio eroe umano e applica lo stesso cleanup temporaneo senza azzerare o sospendere Unkillable sul player vivo e senza aggiungere un nuovo `Ongoing - Each Player`; leave e cambio squadra eseguono invece il reset lifecycle completo. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
+Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal e Hacked non sospendono Unkillable; Burning è l'eccezione a durata: conserva modalità e cursore ma sospende status e riduzione del danno per tutti i 10 secondi, applica il 5% della Max Health ogni secondo e ripristina la protezione al termine o nel cleanup anticipato. Soltanto lo Skull finale armato e Revenge passano invece dal bypass della macchina di morte completa. Alla morte o al timeout vengono annullati stato temporaneo, accelerazione, status dell'esito, HUD/IWT ed effetti associati, ma la preferenza Unkillable resta intatta e viene riapplicata dopo Resurrect. Un tracker eroe condiviso rileva inoltre a 10 Hz il cambio eroe umano e applica lo stesso cleanup temporaneo senza azzerare la preferenza sul player vivo e senza aggiungere un nuovo `Ongoing - Each Player`; il cambio squadra leggero conserva preferenze, cursori, Camera, status, effetti e voti, mentre un leave vero ripulisce l'entità e il successivo rejoin esegue un setup fresco. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
 
 Le sei icone della roulette usano la reevaluation `Visible To and Position`. `Visible To` rivaluta il roster umano anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino dell'identità catturata, senza seguire lo scratch `Global.PemainAktif`. L'indicatore off-screen resta abilitato e i bot non entrano mai nel pubblico.
 
@@ -132,7 +139,7 @@ Il cleanup:
 
 ### Cambio squadra
 
-Il cambio Team 1 ↔ Team 2 usa lo stesso cleanup completo del leave seguito da setup fresco. Il reset totale delle preferenze è intenzionale. Un lock globale assegna il lifecycle a un solo player per volta: cleanup e setup sono separati da 0,25 s, il player successivo riceve il lock soltanto dopo la stabilizzazione del precedente e le cache pesanti vengono sospese durante la transazione.
+Il cambio Team 1 ↔ Team 2 di un umano già registrato usa un refresh leggero: aggiorna i campi dipendenti dal Team, chiude/riarma soltanto Menu Arcade e overlay Teleport e ricrea `HudKiri/HudKanan` quando necessario. Roster, preferenze e cursori non vengono ricostruiti; Camera, status, effetti e voti attivi non vengono cancellati. Restano quindi invariati lingua, colore, icona, genere, Teleport, Privacy, Dummy Follow e le scelte del profilo dedicato. Il fast-path non acquisisce il lock del setup iniziale. Un leave vero esegue invece il cleanup completo e rimuove il player dal roster; il rejoin successivo passa dal setup fresco e riapplica tutti i default.
 
 ## HUD, testi ed effetti
 
@@ -212,7 +219,7 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
 
-La release 0.8.1 è **live-ready** dopo il completamento dei test live e la conferma di stabilità dell'utente del 24 agosto 2026. Per future regressioni resta obbligatoria la matrice seguente:
+La release 0.8.1 resta **static-ready / live-pending**: i gate statici sono soddisfatti, ma la matrice nel client non è ancora documentata come completata e non viene dichiarato alcun tag finale. Per chiudere la regressione restano obbligatorie le prove seguenti:
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;

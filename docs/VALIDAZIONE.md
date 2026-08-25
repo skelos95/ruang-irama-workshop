@@ -1,6 +1,6 @@
 # Rapporto di validazione — versione 0.8.1
 
-Data: 2026-08-20
+Data: 2026-08-25
 
 Release tecnica: **CHILL Dedicated Server 0.8.1**
 
@@ -66,7 +66,7 @@ Il gate verifica:
 - riga vuota coerente tra contenuto e comandi.
 - promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
 
-I 100 generi restano nomi internazionali e non richiedono traduzione.
+I 100 generi restano nomi internazionali e non richiedono traduzione. Il profilo per nome visibile esatto `งูแท้` usa `Caladan Brood` come Player Vibes dedicato e bloccato senza aggiungerlo al catalogo globale.
 
 ### HUD e rendering
 
@@ -131,10 +131,10 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 | Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
 | Skull | unico esito autorizzato a bypassare temporaneamente Unkillable; trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
 | Team Heal | cura completa dei soli player umani del team |
-| Burning | 5% max HP ogni 1 s per 10 s; rimuove temporaneamente Unkillable e normalizza Damage Received per applicare ciascun tick |
+| Burning | 5% max HP ogni 1 s per 10 s; rimuove Unkillable e normalizza Damage Received per l'intera durata, quindi ripristina la modalità scelta |
 | Hacked | durata 5 s e cleanup status |
 
-L'avvio e la macchina a stati non possono sospendere Unkillable. La condizione di riapplicazione globale deve escludere soltanto Revenge pending o uno Skull finale realmente armato; un'icona Skull intermedia e gli altri cinque esiti restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100` per il solo tick da 5% Max Health; modalità/cursore restano invariati e il tick globale riapplica subito la protezione selezionata. Soltanto il ramo centralizzato Skull finale/Revenge può eseguire il bypass prima di `Kill`. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario; il cleanup su un player ancora vivo non può normalizzare status o tripletta Unkillable. Leave e cambio squadra restano cleanup completi. Un loop o Wait per-player associato alla roulette è vietato.
+L'avvio della roulette non può sospendere Unkillable e un'icona Skull intermedia non può armare la morte. Vision, Acceleration, Team Heal e Hacked restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100`: modalità e cursore restano invariati, la sospensione dura per tutto l'effetto da 10 secondi, il danno è 5% Max Health ogni secondo e la protezione selezionata viene ripristinata soltanto alla fine o nel cleanup anticipato, non fra i tick. Il ramo centralizzato Skull finale/Revenge resta l'unico a usare il bypass prima di `Kill`. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario. Un cambio squadra leggero conserva preferenze e cursori; leave e rejoin eseguono invece cleanup e setup fresco. Un loop o Wait per-player associato alla roulette è vietato.
 
 Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
 
@@ -145,12 +145,14 @@ Il gate controlla:
 - guardia anti-duplicato prima della registrazione roster;
 - un solo setup e un solo set di handle per player;
 - cleanup completo su leave;
-- cambio squadra implementato come cleanup + setup fresco;
-- reset completo delle preferenze dopo il cambio squadra;
-- rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection;
+- cambio squadra di un umano registrato implementato come refresh leggero dello stato dipendente dal Team, con chiusura/riarmo di Menu Arcade e overlay Teleport e ricreazione mirata di `HudKiri/HudKanan`, senza cleanup + setup fresco;
+- conservazione di preferenze, cursori e singola voce roster dopo il cambio squadra; un leave vero seguito da rejoin riapplica invece i default di setup;
+- conservazione di Camera, status, effetti e voti attivi durante il cambio squadra leggero;
+- rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection durante il cleanup di un leave vero;
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
-- ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo e rilascio dei latch;
-- cleanup di HUD, In-World Text, effetti, status e slot.
+- ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo per il setup iniziale e rilascio dei latch; il fast-path del team switch non acquisisce quel lock;
+- cleanup di HUD, In-World Text, effetti, status e slot sul leave vero;
+- profilo del nome visibile esatto `งูแท้`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Caladan Brood` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
 - Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e Vision e nessun HUD Crouch sovrapposto durante Vision;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
@@ -159,6 +161,7 @@ Il gate controlla:
 - `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
 - filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
 - ownership Dummy Follow limitata al default setup OFF, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
+- Crouch Travel & Attach composto da cinque pagine — Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill — con Primary/Secondary riservati alla navigazione e Interact riservato all'esecuzione.
 
 ### Otto modalità
 
@@ -200,9 +203,11 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
 - secondo raycast Camera;
-- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning capace di bypassare Unkillable, cleanup che cancella Mode/Kursor o non riattiva logicamente Kebal, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
-- Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker o pending non ripulito su timeout/leave/team switch;
-- guardia Join, cleanup Leave o reset team-switch rimosso;
+- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning che non sospende Unkillable/Damage Received per tutti i 10 secondi, riapplica la protezione fra i tick, modifica Mode/Kursor o non la ripristina al termine, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
+- Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker, pending non ripulito su timeout/leave oppure pending perso/duplicato durante un cambio squadra leggero;
+- guardia Join, cleanup Leave o refresh team-switch rimossi, preferenze/Camera/status/effetti/voti cancellati durante un cambio leggero oppure default non riapplicati dopo un vero rejoin;
+- profilo `งูแท้` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Caladan Brood` aggiunto al catalogo globale o conteggio generi diverso da 100;
+- Crouch Travel & Attach con meno di cinque pagine, Self Kill assente, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
 - una delle otto modalità o un ramo Teleport mancante;
 - divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;
 - workflow di scrittura, automazione di commit, marker, trigger o patcher one-shot reintrodotto sotto `.github`.
@@ -221,19 +226,23 @@ Il parser testuale non può certificare:
 - leak osservabili soltanto tramite Text Count ed Entity Count;
 - interferenze con Team Status Indicator.
 
-Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 il pass live è stato chiuso dalla conferma dell'utente del 24 agosto 2026; i valori numerici non forniti non vengono ricostruiti nel rapporto.
+Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la matrice live resta da completare e documentare; i valori numerici non forniti non vengono ricostruiti nel rapporto.
 
 ## Contesto patch
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
 
-## Gate live completato
+## Gate live da completare
 
 La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 - import e D.Mon smoke test;
 - 13 menu e input in EN/ID/TH, inclusa pagina 12 Dummy Follow;
+- profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
+- cinque pagine Crouch Travel & Attach con Primary/Secondary per navigare e Interact per eseguire;
 - morte/Resurrect con Jump, hero swap, spectator, join/leave e team switch;
+- Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
+- respawn dummy entro 3 secondi;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;
 - tutte le otto modalità;
 - soak minimo 30 minuti a 12 slot;
@@ -244,4 +253,4 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 ## Decisione
 
-La versione 0.8.1 è **live-ready**: i gate repository devono risultare verdi sul commit finale e l'utente ha confermato il completamento dei test live e la stabilità. Il vecchio tag `v0.7.2` viene sostituito da `v0.8.1` sul commit pubblicato; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.

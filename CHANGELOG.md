@@ -2,10 +2,11 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Un rilascio `static-ready / live-pending` ha superato i controlli automatici, ma richiede ancora l'import e i test nel client Overwatch prima del tag finale `live-ready`.
 
-## 0.8.1 — 2026-08-24
+## 0.8.1 — 2026-08-25
 
 Stato: **live-pending**.
 
+- Aggiunto il profilo riconosciuto dal nome visibile esatto `งูแท้`: Name Color `Silver Mist` e Player Icon `Poison 2` vengono applicati come default iniziali ma restano modificabili; Player Vibes è fissato a `Caladan Brood` e la pagina Soundtrack diventa read-only. Il catalogo globale resta di 100 generi. Il riconoscimento per nome visibile comporta la limitazione nota che gli omonimi condividono il profilo e una rinomina non viene riconosciuta; il cambio squadra leggero conserva le preferenze correnti, mentre leave e rejoin riapplicano i default.
 - Dopo il cambio squadra vengono ricreati solo `HudKiri/HudKanan` del player per riagganciare subito il nome alle liste, senza ricostruire roster o preferenze. La posizione sicura condivisa di teleport/resurrect/dummy ora richiede spazio libero finale su quattro lati e sopra la testa e solleva il punto di 0,5 m, riducendo incastri in muri e pavimento. Il renderer Crouch Teleport conserva il layout multilinea senza caratteri `\`.
 - Corretto il menu dopo il cambio squadra: i player già presenti in `PemainManusia` non rientrano più nel classifier umano/bot; il fast-path globale autoripristina `Manusia`, `SudahDiperiksa` e `SudahSiap` prima di riarmare HUD e input.
 - Teleport rinforzato contro muri/pavimenti: dummy e player condividono il controllo body-safe, il teleport verso player prova più lati invece della posizione esatta e l'HUD Teleport torna multilinea senza mostrare backslash.
@@ -16,8 +17,6 @@ Stato: **live-pending**.
 - Cambio squadra ripetuto convertito a refresh leggero: un umano già registrato aggiorna soltanto lo stato dipendente dal Team, senza cleanup/setup completo, ricostruzione HUD o reset engine; il cleanup roster resta riservato a una vera uscita.
 - Crouch Travel & Attach resta a 5 pagine ma il renderer Teleport non mostra più simboli `\`. `Self Kill` esegue una sola `Kill` immediata, senza Wait/Loop e senza condividere i retry di Skull/Revenge: su forme come il mech di D.Va termina soltanto la forma corrente, senza una seconda kill automatica sul pilota.
 
-- Cambio squadra reso global-first seriale: un lock globale assegna cleanup/setup a un solo player per volta, con 0,25 s fra le fasi e cooldown prima del player successivo.
-- Durante una transazione lifecycle il scheduler sospende per gli altri player anche il fast-path 20 Hz, oltre al ciclo 10 Hz e alle cache 1 Hz; resta attivo quasi soltanto il proprietario del cambio squadra, riducendo il picco di carico critico.
 - La discriminazione `Player Left Match` attende 0,5 s prima del cleanup, così una transizione di squadra ha più tempo per riapparire come entità valida e non percorre accidentalmente anche il cleanup di leave.
 - Il cleanup `Player Left Match` disabilita il fallback per slot HUD prima di rimuovere il roster: una vecchia entità distrutta dal cambio team non può più eliminare la nuova entità che eredita lo stesso slot.
 - Documentazione riallineata al runtime reale: dummy respawn 3 s, Burning 5% Max Health ogni secondo con bypass temporaneo di Unkillable/Damage Received, e controlli completi Crouch Travel & Attach.

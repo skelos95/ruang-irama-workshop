@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce un lifecycle team-switch seriale e deve completare nuovamente la matrice live prima del passaggio a live-ready. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra e il profilo dedicato `งูแท้`, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -113,13 +113,22 @@ Focus dati:
 - roster con `MIN`, `MENIT` e `นาที` corretti;
 - CHILL, generi, nomi player ed eroi invariati come nomi propri.
 
+### Profilo `งูแท้`
+
+- Entrare con il nome visibile esatto `งูแท้`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Caladan Brood`.
+- Modificare colore e icona dal menu, chiudere/riaprire e cambiare squadra: entrambe le scelte devono restare modificabili e persistenti.
+- Aprire Soundtrack: la pagina deve risultare read-only e Primary/Secondary, Interact e Ability 1/2 non devono cambiare `Caladan Brood`.
+- Verificare che `Caladan Brood` non aumenti il catalogo globale: gli altri player continuano ad avere esattamente 100 generi e il normale wrap `0..99`.
+- Uscire davvero dalla lobby e rientrare con lo stesso nome: il setup deve riapplicare `Silver Mist`, `Poison 2` e il Vibes bloccato.
+- Entrare con un nome simile ma non identico: il profilo non deve attivarsi. Per verificare una rinomina dell'account, uscire davvero dalla lobby e rientrare con il nuovo nome prima di controllare che il profilo non venga riapplicato; nella stessa sessione resta invece attivo fino al rejoin. Entrare con un secondo player dallo stesso nome visibile esatto deve mostrare la limitazione nota del matching e applicare lo stesso profilo.
+
 ### Unkillable FULL HP
 
 - Applicare FULL HP e ricevere contemporaneamente fuoco, danni periodici e urti/knockback da eroi e bot: salute e posizione non devono essere alterate.
 - Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
 - Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
 - Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
-- Partire da FULL HP e attivare Try Your Luck: modalità, cursore, status, immunità a danni/urti, assenza di collisione e icona devono restare attivi durante i giri e nei cinque esiti non-Skull. Soltanto lo Skull finale sospende temporaneamente la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Leave o cambio squadra restano invece reset completi e devono ripristinare insieme `Damage Received = 100`, `Knockback Received = 100` e collisione player ON.
+- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Team Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Un cambio squadra leggero conserva la preferenza; soltanto leave e rejoin eseguono setup fresco e ripristinano i default.
 - Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
 - Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
@@ -133,7 +142,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
 | Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
-| Burning | 5% max HP ogni 1 s per 10 s; bypass temporaneo di Unkillable/Damage Received durante il tick; stop alla scadenza/morte |
+| Burning | 5% max HP ogni 1 s per 10 s; Unkillable e riduzione Damage Received sospesi per l'intera durata e ripristinati al termine; stop alla morte |
 | Hacked | stato per 5 s, poi rimozione |
 
 Per ciascun esito:
@@ -145,7 +154,7 @@ Per ciascun esito:
 - Unkillable non cambia all'avvio: Mode, Kursor, flag runtime, status, modificatori e icona restano invariati;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
-- morte, timeout e hero swap annullano stato/status/effetti temporanei senza cancellare Mode/Kursor Unkillable; un hero swap da vivo non deve interrompere neppure per un tick status/tripletta/icona Unkillable, mentre leave e cambio squadra eseguono il reset completo;
+- morte, timeout e hero swap annullano stato/status/effetti temporanei senza cancellare Mode/Kursor Unkillable; salvo il periodo Burning intenzionale, un hero swap da vivo non deve lasciare interrotti status/tripletta/icona Unkillable. Il cambio squadra leggero conserva preferenze, Camera, status, effetti e voti attivi, mentre leave e rejoin eseguono cleanup e setup fresco;
 - rimuovere un iBot vivo durante Vision e verificare che il suo IWT sparisca senza creare roster, HUD o lifecycle umano;
 - nessuna seconda roulette per lo stesso player parte mentre la prima è attiva;
 - chiusure e riaperture non duplicano HUD, In-World Text o effetti.
@@ -154,7 +163,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - ripetere i sei esiti con Unkillable OFF, 1 HP e FULL HP;
 - con 1 HP e FULL HP, Vision, Acceleration, Team Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
-- con Burning, verificare che ogni secondo venga applicato il 5% della Max Health anche partendo da 1 HP/FULL HP, senza modificare Mode/Kursor e con ripristino della protezione fra i tick;
+- con Burning, verificare che ogni secondo venga applicato il 5% della Max Health anche partendo da 1 HP/FULL HP, senza modificare Mode/Kursor; Unkillable e la riduzione Damage Received devono restare sospesi per tutti i 10 secondi, senza riapplicazione fra i tick, e tornare immediatamente al termine o dopo un cleanup anticipato;
 - con Skull finale, verificare il bypass temporaneo e la morte completa; premere Jump per Resurrect e confermare il ripristino della stessa modalità, della tripletta corretta e dell'icona entro il tick globale;
 - lasciare scadere la deadline Skull quando `Kill` viene rifiutato: menu/input devono liberarsi e Unkillable deve tornare attivo senza alterare Mode/Kursor;
 - ripetere un Revenge su target 1 HP e FULL HP: deve usare lo stesso bypass temporaneo, ma claimant, consumo debito, condizioni di commit e timeout devono restare identici ai test Revenge esistenti.
@@ -165,15 +174,16 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Durante il demech non devono comparire il prompt Jump né una falsa posizione di morte; entrambi devono essere registrati soltanto alla morte completa.
 - Con Echo duplicata, verificare che la fine della copia non consumi il debito e che il retry prosegua fino alla morte della forma base.
 - Un secondo claimant sullo stesso target deve essere rifiutato; se un altro attacker completa la kill, il primo claimant non consuma alcun debito e la morte viene registrata normalmente.
-- Leave o cambio squadra di claimant/target e timeout di 5 s devono annullare il pending, liberare il menu e non mostrare il messaggio di successo.
+- Il cambio squadra leggero di claimant o target deve conservare il pending senza consumare il debito, duplicare il claim o mostrare un falso successo; soltanto morte completa valida o timeout ne chiudono l'esecuzione. Un leave vero deve annullarlo e liberare i riferimenti.
 - Mercy, Torbjörn e altre forme/armi alternative non devono essere trattate come casi speciali: il criterio terminale resta esclusivamente `Is Alive == False`.
 
 ## 6. Camera, inspection e Teleport
 
 ### Crouch Travel & Attach
 
-- Tenere Crouch e verificare le quattro pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach.
-- Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva.
+- Tenere Crouch e verificare le cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill.
+- Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva; Primary/Secondary non devono eseguire il teleport o la kill.
+- Sulla pagina Self Kill, Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold.
 - Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
 - Da attaccati, Reload senza Crouch deve restare l'azione nativa dell'eroe.
 - Con Menu Arcade Melee chiuso, Crouch + Reload deve sganciare; con Menu Arcade Melee aperto non deve sganciare.
@@ -181,11 +191,12 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 ### Cambio squadra / lifecycle 0.8.1
 
-- Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load`.
-- Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: il lifecycle deve processare un solo player per volta.
-- Durante la transazione verificare che HUD/roster del player corrente vengano ricreati una volta sola e che gli altri player restino stabili.
-- Verificare che il lock globale venga rilasciato anche se il player esce durante cleanup/setup.
-- Con diagnostica host attiva, confermare che le cache 1 Hz e il lavoro periodico non essenziale restino sospesi mentre il lock lifecycle è occupato.
+- Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load` e che il roster conservi una sola voce.
+- Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: ciascun player già registrato deve percorrere il refresh leggero senza entrare nel setup iniziale serializzato.
+- Durante la transizione verificare che vengano aggiornati soltanto stato dipendente dal Team, UI transitoria e, quando necessario, `HudKiri/HudKanan`; roster, preferenze e cursori devono restare stabili.
+- Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il fast-path non acquisisca il lock globale del join.
+- Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il refresh leggero non deve cancellarli o ricrearli.
+- Eseguire poi un leave vero durante o subito dopo il refresh: il cleanup deve rimuovere una sola volta roster e riferimenti, e il successivo rejoin deve passare dal setup fresco.
 
 ### Camera
 
@@ -201,7 +212,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
-- Nuovo player e player dopo cambio squadra: Privacy OFF e cursore OFF per default.
+- Nuovo player o vero rejoin: Privacy OFF e cursore OFF per default; un cambio squadra leggero conserva invece lo stato e il cursore scelti.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision può mostrarne icona, nome e salute.
 - Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
@@ -212,7 +223,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Nuovo player: Menu 8 OFF, nessun overlay Teleport.
 - Attivare Menu 8, chiudere menu e tenere Crouch.
-- Crouch + Secondary cambia pagina; Crouch + Primary teletrasporta.
+- Crouch + Primary/Secondary navigano rispettivamente alla pagina successiva/precedente; Crouch + Interact esegue la pagina attiva.
 - Spawn Room usa un punto valido della squadra.
 - All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy.
 - Ricalcolare il target al click; morte/leave tra preview e click deve annullare o scegliere soltanto un fallback esplicito.
@@ -237,7 +248,7 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
 - con due o più slot liberi, confermare al massimo un dummy nativo per squadra; con un solo slot libero, confermare che non venga creato;
 - riempire la squadra: il dummy deve essere rimosso per rendere disponibile la capacità di 6 umani; ripetere ingressi e uscite vicino al limite e verificare assenza di cicli crea/distruggi o spam `Create Dummy Bot`;
-- uccidere ciascun dummy e verificare respawn entro il limite configurato di 30 secondi; con D.Va/D.Mon, il de-mech non deve fermare definitivamente facing/throttle prima della morte completa;
+- uccidere ciascun dummy e verificare respawn entro il limite configurato di 3 secondi; con D.Va/D.Mon, il de-mech non deve fermare definitivamente facing/throttle prima della morte completa;
 - confermare che il lock dedicato resti applicato a spawn, respawn e cambio eroe senza attraversare setup/cleanup umano;
 - verificare `Move Speed = 20%` sia per bot AI sia per dummy; gli iBot devono continuare a usare la propria navigazione nativa;
 - colpire e spingere i dummy con sorgenti diverse: devono ricevere danni e knockback normali (`100%`), pur restando offensivamente passivi;
@@ -262,10 +273,12 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 Dopo ogni cambio:
 
 - nessun doppione roster o handle;
-- Camera, status, effetti, voti e riferimenti precedenti rimossi;
-- tutte le preferenze tornano ai default, inclusi lingua, colore, genere, icona, Teleport OFF, Privacy OFF e Dummy Follow OFF;
-- Text Count ed Entity Count tornano al baseline;
+- Camera, status, effetti e voti attivi restano invariati; soltanto Menu Arcade e overlay Teleport vengono chiusi/riarmati e `HudKiri/HudKanan` vengono ricreati quando necessario;
+- tutte le preferenze e i cursori restano invariati, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow e il profilo dedicato `งูแท้`; soltanto stato dipendente dal Team e riferimenti transitori vengono aggiornati;
+- Text Count ed Entity Count non crescono rispetto allo stato equivalente precedente al cambio;
 - nessun `excessive Workshop script load`.
+
+Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Caladan Brood` bloccato.
 
 ## 8. Matrice modalità
 
@@ -351,6 +364,7 @@ FULL HP immunity/restore: PASS/FAIL
 Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Jump Resurrect/retry latch: PASS/FAIL
 Privacy Vision/inspection: PASS/FAIL
+Profilo งูแท้ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
 Cascata full-lobby: PASS/FAIL
@@ -367,9 +381,9 @@ Screenshot/video:
 Note e riproduzione problemi:
 ```
 
-Per le release future, lo stato **live-ready** richiede nuovamente test obbligatori completati, rispetto dei limiti e correzione di ogni anomalia riproducibile. Il blocco precedente è un modello riutilizzabile, non un verbale numerico compilato retroattivamente per la 0.8.1.
+La 0.8.1 resta **static-ready / live-pending** finché i test obbligatori, i limiti e ogni anomalia riproducibile non vengono verificati nel client. Il blocco precedente è un modello da compilare, non un verbale numerico ricostruito retroattivamente.
 
 
 ### Dummy spawn iniziale
 
-Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 30 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
+Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.

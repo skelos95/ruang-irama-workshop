@@ -81,6 +81,186 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_official_source_passes_all_semantic_checks(self) -> None:
         self.assertEqual(self.errors(self.source), [])
 
+    def test_special_player_declaration_setup_and_exact_unicode_are_guarded(self) -> None:
+        mutations = (
+            (
+                self.source.replace("\t\t105: MusikKhusus", "\t\t104: MusikKhusus", 1),
+                "indice MusikKhusus",
+            ),
+            (
+                self.source.replace(
+                    "Event Player.MusikKhusus = Null;",
+                    "Event Player.MusikKhusus = False;",
+                    1,
+                ),
+                "inizializzazione MusikKhusus",
+            ),
+            (
+                self.source.replace('Custom String("งูแท้")', 'Custom String("งูเท้")', 1),
+                "matcher Unicode esatto งูแท้",
+            ),
+        )
+        for mutated, fragment in mutations:
+            with self.subTest(fragment=fragment):
+                self.assert_rejected(mutated, fragment)
+
+    def test_special_player_indices_and_cursors_are_guarded(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+        )
+        mutations = (
+            ("Event Player.IndeksWarna = 1;", "Event Player.IndeksWarna = 2;"),
+            ("Event Player.KursorWarna = 1;", "Event Player.KursorWarna = 2;"),
+            ("Event Player.IndeksIkon = 23;", "Event Player.IndeksIkon = 22;"),
+            ("Event Player.KursorIkon = 23;", "Event Player.KursorIkon = 22;"),
+        )
+        for old, new in mutations:
+            with self.subTest(field=old):
+                self.assert_rejected(
+                    self.replace_in_rule(classifier, old, new),
+                    "blocco default isolato",
+                )
+
+    def test_special_player_matcher_must_follow_bot_exclusion(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+        )
+        marker = classifier.body.index('Custom String("งูแท้")')
+        spans = [
+            span for span in validator.conditional_branch_spans(classifier.body)
+            if span[0] <= marker < span[1]
+        ]
+        self.assertTrue(spans)
+        start, end = min(spans, key=lambda span: span[1] - span[0])
+        profile_branch = classifier.body[start:end]
+        without_profile = classifier.body[:start] + classifier.body[end:]
+        bot_start = without_profile.index("If(Event Player.BotOtomatis == True);")
+        moved = (
+            without_profile[:bot_start]
+            + profile_branch
+            + "\n\t\t"
+            + without_profile[bot_start:]
+        )
+        mutated = self.source[:classifier.start] + moved + self.source[classifier.end:]
+        self.assert_rejected(mutated, "matcher deve seguire esclusione/Abort degli iBot")
+
+    def test_special_player_catalog_mappings_are_guarded(self) -> None:
+        mutations = (
+            (
+                self.source.replace(
+                    'Custom String("Lowercase")',
+                    'Custom String("Caladan Brood")',
+                    1,
+                ),
+                "Caladan Brood inserito nei 100 generi ordinari",
+            ),
+            (
+                self.source.replace(
+                    "Custom Color(190, 210, 230, 255)",
+                    "Custom Color(191, 210, 230, 255)",
+                    1,
+                ),
+                "valore Silver Mist indice 1",
+            ),
+            (
+                self.source.replace(
+                    "Vector(190, 210, 230)",
+                    "Vector(191, 210, 230)",
+                    1,
+                ),
+                "vettore Silver Mist indice 1",
+            ),
+            (
+                self.source.replace("Icon String(Poison 2)", "Icon String(Poison)", 1),
+                "icona indice 23",
+            ),
+        )
+        for mutated, fragment in mutations:
+            with self.subTest(fragment=fragment):
+                self.assert_rejected(mutated, fragment)
+
+    def test_special_player_roster_main_and_locked_renderers_are_guarded(self) -> None:
+        roster = self.rule(
+            lambda rule: "Event Player.HudPemainDibuat = True;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
+        )
+        roster_mutation = self.replace_in_rule(
+            roster,
+            "Event Player.MusikKhusus != Null ? Event Player.MusikKhusus : Event Player.IndeksGenre",
+            "Event Player.MusikKhusus == Null ? Event Player.MusikKhusus : Event Player.IndeksGenre",
+        )
+        self.assert_rejected(roster_mutation, "profilo speciale roster: condizione profilo speciale")
+
+        main = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        main_mutation = self.replace_in_rule(
+            main,
+            'Custom String("2 - MUSIK\\nSAAT INI: {0}", Event Player.MusikKhusus != Null',
+            'Custom String("2 - MUSIK\\nSAAT INI: {0}", Event Player.MusikKhusus == Null',
+        )
+        self.assert_rejected(main_mutation, "profilo speciale menu principale: condizione profilo speciale")
+
+        music = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarMusik")
+        locked_mutation = self.replace_in_rule(
+            music,
+            'Custom String("เพลงถูกล็อก\\nปัจจุบัน: {0}", Event Player.MusikKhusus)',
+            'Custom String("เพลงถูกล็อก\\nตอนนี้: {0}", Event Player.MusikKhusus)',
+        )
+        self.assert_rejected(locked_mutation, "testo locked")
+
+    def test_special_player_music_navigation_guards_are_required(self) -> None:
+        navigation = self.rule(
+            lambda rule: "Event Player.PerintahMenu == 3" in rule.body
+            and "Event Player.PerintahMenu == 4" in rule.body
+            and "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+        )
+        plus_minus_one = self.replace_in_rule(
+            navigation,
+            "Else If(And(Event Player.HalamanMenu == 2, Event Player.MusikKhusus == Null));",
+            "Else If(Event Player.HalamanMenu == 2);",
+        )
+        self.assert_rejected(plus_minus_one, "guardia Soundtrack ±1")
+
+        jump = self.rule(
+            lambda rule: "Event Player.PerintahMenu == 5" in rule.body
+            and "Event Player.PerintahMenu == 6" in rule.body
+            and "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+        )
+        plus_minus_ten = self.replace_in_rule(
+            jump,
+            "\n\t\tEvent Player.MusikKhusus == Null;",
+            "",
+        )
+        self.assert_rejected(plus_minus_ten, "guardia Soundtrack ±10")
+
+        apply_music = self.rule(
+            lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanMusik"
+        )
+        apply_mutation = self.replace_in_rule(
+            apply_music,
+            "Abort If(Event Player.MusikKhusus != Null);",
+            "Abort If(False);",
+        )
+        self.assert_rejected(apply_mutation, "deve iniziare con la guardia locked")
+
+    def test_special_player_writer_ownership_is_guarded(self) -> None:
+        main = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutations = (
+            (
+                self.inject_action(main, "Global.PemainAktif.MusikKhusus = Null;"),
+                "writer property MusikKhusus",
+            ),
+            (
+                self.inject_action(
+                    main,
+                    "Chase Player Variable At Rate(Event Player, MusikKhusus, 1, 1);",
+                ),
+                "writer azione inattesi MusikKhusus",
+            ),
+        )
+        for mutated, fragment in mutations:
+            with self.subTest(fragment=fragment):
+                self.assert_rejected(mutated, fragment)
+
     def test_source_is_not_pinned_by_whole_file_hash(self) -> None:
         mutated = self.source.replace("\n\nrule(", "\n\n\nrule(", 1)
         self.assertEqual(self.errors(mutated), [])
@@ -2200,6 +2380,10 @@ class RepositoryMetadataTests(unittest.TestCase):
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("CHILL 0.8.1\nStato: **static-ready / live-pending**\n", encoding="utf-8")
+        (root / "CHANGELOG.md").write_text(
+            "## 0.8.1\n\nStato: **live-pending**.\n",
+            encoding="utf-8",
+        )
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
             "on:\n  push:\njobs:\n  validate:\n    steps:\n      - run: python tools/validate_workshop.py\n"
             "      - run: python -m unittest discover -s tests\n",
@@ -2234,6 +2418,89 @@ class RepositoryMetadataTests(unittest.TestCase):
             )
             errors = self.metadata_errors(root)
             self.assertTrue(any("live-ready" in error or "live-pending" in error for error in errors))
+
+    def test_assertive_current_live_ready_claim_is_rejected_with_valid_state_marker(self) -> None:
+        claims = (
+            "La versione 0.8.1 è live-ready.",
+            "La versione v0.8.1 è live-ready.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.make_repo(root)
+                readme = root / "README.md"
+                readme.write_text(
+                    readme.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                self.assertTrue(
+                    any(
+                        "affermazione live-ready assertiva" in error
+                        for error in self.metadata_errors(root)
+                    )
+                )
+
+    def test_published_current_tag_or_release_claim_is_rejected(self) -> None:
+        claims = (
+            "Il tag finale v0.8.1 identifica il commit pubblicato e validato.",
+            "La release 0.8.1 è stata pubblicata.",
+            "La release v0.8.1 è stata pubblicata.",
+            "https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.1",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.make_repo(root)
+                readme = root / "README.md"
+                readme.write_text(
+                    readme.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                self.assertTrue(
+                    any("tag/release v0.8.1" in error for error in self.metadata_errors(root))
+                )
+
+    def test_future_live_ready_explanation_and_planned_tag_are_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            readme = root / "README.md"
+            readme.write_text(
+                readme.read_text(encoding="utf-8")
+                + "\nLo stato live-ready richiede i test client completi. "
+                "Il tag finale v0.8.1 verrà creato soltanto dopo quei test.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(self.metadata_errors(root), [])
+
+    def test_historical_changelog_live_ready_is_not_treated_as_current_status(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "CHANGELOG.md").write_text(
+                "## 0.8.1\nStato: **live-pending**.\n"
+                "## 0.8.0\nStato: **live-ready**\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(self.metadata_errors(root), [])
+
+    def test_assertive_current_changelog_claim_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "CHANGELOG.md").write_text(
+                "## 0.8.1 — 2026-08-25\n\n"
+                "Stato: **live-pending**.\n\n"
+                "La versione v0.8.1 è live-ready.\n\n"
+                "## 0.8.0\n\nStato: **live-ready**.\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(
+                any(
+                    "CHANGELOG.md contiene un'affermazione live-ready" in error
+                    for error in self.metadata_errors(root)
+                )
+            )
 
     def test_maintenance_workflow_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

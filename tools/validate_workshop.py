@@ -27,6 +27,7 @@ VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 CURRENT_VERSION = "0.8.1"
+CURRENT_VERSION_RE = rf"v?{re.escape(CURRENT_VERSION)}"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
 MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
@@ -34,6 +35,32 @@ CORE_DOCS = (
     "docs/PROGETTO.md",
     "docs/VALIDAZIONE.md",
     "docs/TEST.md",
+)
+
+ASSERTIVE_LIVE_READY_PATTERNS = (
+    re.compile(r"(?im)^\s*stato\s*:\s*live-ready\b"),
+    re.compile(
+        rf"(?i)\b(?:la\s+)?(?:release|versione|{CURRENT_VERSION_RE})\s+"
+        rf"(?:corrente\s+|attuale\s+)?(?:{CURRENT_VERSION_RE}\s+)?"
+        r"(?:è|risulta|diventa|passa\s+a|viene\s+dichiarata|ha\s+raggiunto)\s+"
+        r"(?:ora\s+)?live-ready\b"
+    ),
+)
+PUBLISHED_CURRENT_RELEASE_PATTERNS = (
+    re.compile(
+        rf"(?i)\b(?:il\s+)?tag(?:\s+finale)?\s+v{re.escape(CURRENT_VERSION)}\s+"
+        r"(?:identifica|punta|esiste|risulta|è\s+(?:stato\s+)?(?:pubblicato|creato|presente))\b"
+    ),
+    re.compile(
+        rf"(?i)\b(?:release|versione)\s+{CURRENT_VERSION_RE}\s+"
+        r"(?:è\s+stata\s+|risulta\s+)?(?:pubblicata|rilasciata|disponibile)\b"
+    ),
+    re.compile(
+        rf"(?i)\bv{re.escape(CURRENT_VERSION)}\b[^.\r\n]{{0,100}}\bcommit\s+pubblicato\b"
+    ),
+    re.compile(
+        rf"(?i)https?://github\.com/[^\s)]+/(?:releases/tag|tree)/v{re.escape(CURRENT_VERSION)}\b"
+    ),
 )
 
 MENU_ACTION_BUTTONS = {
@@ -752,6 +779,20 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
     return None
 
 
+def current_release_claims(text: str) -> tuple[bool, bool]:
+    """Return assertive live-ready and published-release claims for 0.8.1.
+
+    Markdown emphasis is irrelevant to the claim.  The patterns intentionally
+    require an assertive verb or a publication URL so explanatory prose such as
+    "live-ready requires client tests" and planned future tags remain valid.
+    """
+
+    plain = re.sub(r"[`*_]", "", text)
+    live_ready = any(pattern.search(plain) for pattern in ASSERTIVE_LIVE_READY_PATTERNS)
+    published = any(pattern.search(plain) for pattern in PUBLISHED_CURRENT_RELEASE_PATTERNS)
+    return live_ready, published
+
+
 def validate_metadata(checks: Checks, root: Path) -> None:
     version_file = root / "VERSION"
     checks.require(version_file.is_file(), "VERSION assente")
@@ -768,9 +809,45 @@ def validate_metadata(checks: Checks, root: Path) -> None:
                 "Stato: **static-ready / live-pending**" in text,
                 f"documento non dichiara Stato: **static-ready / live-pending**: {relative}",
             )
+            live_ready, published = current_release_claims(text)
             checks.require(
-                "Stato: **live-ready**" not in text,
-                f"documento dichiara live-ready prima della regressione client: {relative}",
+                not live_ready,
+                f"documento contiene un'affermazione live-ready assertiva per {CURRENT_VERSION}: {relative}",
+            )
+            checks.require(
+                not published,
+                f"documento dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente: {relative}",
+            )
+
+    changelog = root / "CHANGELOG.md"
+    checks.require(changelog.is_file(), "CHANGELOG.md assente")
+    if changelog.is_file():
+        changelog_text = changelog.read_text(encoding="utf-8")
+        current_section_match = re.search(
+            rf"(?ms)^##\s+v?{re.escape(CURRENT_VERSION)}\b.*?(?=^##\s+|\Z)",
+            changelog_text,
+        )
+        checks.require(
+            current_section_match is not None,
+            f"CHANGELOG.md senza sezione corrente {CURRENT_VERSION}",
+        )
+        if current_section_match is not None:
+            current_section = current_section_match.group(0)
+            checks.require(
+                re.search(
+                    r"(?im)^\s*Stato:\s*\*\*live-pending\*\*\.\s*$",
+                    current_section,
+                ) is not None,
+                f"CHANGELOG.md: la sezione {CURRENT_VERSION} deve restare live-pending",
+            )
+            live_ready, published = current_release_claims(current_section)
+            checks.require(
+                not live_ready,
+                f"CHANGELOG.md contiene un'affermazione live-ready assertiva per {CURRENT_VERSION}",
+            )
+            checks.require(
+                not published,
+                f"CHANGELOG.md dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente",
             )
 
     github = root / ".github"
@@ -1593,6 +1670,433 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 color_transition.body,
             ) is not None,
             "pagina 12 Dummy Follow non ha una tinta menu dedicata",
+        )
+
+
+def validate_special_player_profile(
+    checks: Checks,
+    source: str,
+    rules: list[Rule],
+    player_entries: list[Declaration],
+) -> None:
+    """Validate the isolated defaults and soundtrack lock for player งูแท้."""
+
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
+    def full_custom_string(expression: str) -> Call | None:
+        expression = trim_outer_parentheses(expression)
+        return next(
+            (
+                call
+                for call in iter_calls(expression, "Custom String")
+                if call.start == 0 and call.end == len(expression)
+            ),
+            None,
+        )
+
+    def direct_assignment_values(rule: Rule, name: str) -> list[str]:
+        masked = mask_strings(rule.body)
+        values: list[str] = []
+        for match in re.finditer(
+            rf"\bEvent Player\.{re.escape(name)}\s*=(?!=)\s*([^;\r\n]+);",
+            masked,
+        ):
+            start, end = match.span(1)
+            values.append(rule.body[start:end].strip())
+        return values
+
+    def soundtrack_choice(expression: str, label: str) -> str | None:
+        special = parse_top_level_ternary(expression)
+        checks.require(special is not None, f"{label}: ternario MusikKhusus assente")
+        if special is None:
+            return None
+        special_condition, special_value, ordinary = special
+        checks.equal(
+            code(special_condition),
+            "EventPlayer.MusikKhusus!=Null",
+            f"{label}: condizione profilo speciale",
+        )
+        checks.equal(
+            code(special_value),
+            "EventPlayer.MusikKhusus",
+            f"{label}: valore profilo speciale",
+        )
+        generic = parse_top_level_ternary(ordinary)
+        checks.require(generic is not None, f"{label}: fallback generi ordinari assente")
+        if generic is None:
+            return None
+        genre_condition, genre_value, fallback = generic
+        checks.equal(
+            code(genre_condition),
+            "EventPlayer.IndeksGenre>=0",
+            f"{label}: condizione genere ordinario",
+        )
+        checks.equal(
+            code(genre_value),
+            "Global.DaftarGenre[EventPlayer.IndeksGenre]",
+            f"{label}: lookup genere ordinario",
+        )
+        return fallback
+
+    declarations = [entry for entry in player_entries if entry.name == "MusikKhusus"]
+    checks.equal(len(declarations), 1, "profilo speciale: dichiarazione MusikKhusus")
+    if declarations:
+        checks.equal(declarations[0].index, 105, "profilo speciale: indice MusikKhusus")
+
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    checks.require(setup is not None, "profilo speciale: SiapkanPemain assente")
+    if setup:
+        checks.equal(
+            direct_assignment_values(setup, "MusikKhusus"),
+            ["Null"],
+            "profilo speciale: inizializzazione MusikKhusus",
+        )
+
+    classifier = next(
+        (rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body),
+        None,
+    )
+    checks.require(classifier is not None, "profilo speciale: classifier umano assente")
+    profile_match: re.Match[str] | None = None
+    if classifier:
+        profile_match = re.search(
+            r'If\s*\(\s*Custom String\s*\(\s*"\{0\}"\s*,\s*Event Player\s*\)\s*'
+            r'==\s*Custom String\s*\(\s*"งูแท้"\s*\)\s*\)\s*;',
+            classifier.body,
+        )
+        checks.require(profile_match is not None, "profilo speciale: matcher Unicode esatto งูแท้ assente")
+        checks.equal(classifier.body.count('Custom String("งูแท้")'), 1,
+                     "profilo speciale: numero matcher Unicode งูแท้")
+        if profile_match:
+            enclosing = conditional_branches_containing(classifier.body, profile_match.start())
+            checks.require(bool(enclosing), "profilo speciale: matcher fuori da un ramo If isolato")
+            if enclosing:
+                expected_branch = '''
+If(Custom String("{0}", Event Player) == Custom String("งูแท้"));
+    Event Player.MusikKhusus = Custom String("Caladan Brood");
+    Event Player.IndeksWarna = 1;
+    Event Player.KursorWarna = 1;
+    Event Player.WarnaNama = Global.DaftarWarna[1];
+    Event Player.WarnaMenu = Global.DaftarWarnaRGB[1];
+    Event Player.IndeksIkon = 23;
+    Event Player.KursorIkon = 23;
+End;
+'''
+                checks.equal(
+                    clipboard_import.canonical_semantic_text(enclosing[0], "en-US"),
+                    clipboard_import.canonical_semantic_text(expected_branch, "en-US"),
+                    "profilo speciale: blocco default isolato",
+                )
+
+            spans = [
+                span for span in conditional_branch_spans(classifier.body)
+                if span[0] <= profile_match.start() < span[1]
+            ]
+            profile_end = min(spans, key=lambda span: span[1] - span[0])[1] if spans else -1
+            bot_match = re.search(
+                r"If\s*\(\s*Event Player\.BotOtomatis\s*==\s*True\s*\)\s*;",
+                classifier.body,
+            )
+            bot_spans = [
+                span for span in conditional_branch_spans(classifier.body)
+                if bot_match is not None and span[0] <= bot_match.start() < span[1]
+            ]
+            bot_end = min(bot_spans, key=lambda span: span[1] - span[0])[1] if bot_spans else -1
+            checks.require(0 <= bot_end < profile_match.start(),
+                           "profilo speciale: matcher deve seguire esclusione/Abort degli iBot")
+            conditions = rule_block(classifier, "conditions") or ""
+            checks.require("Is Dummy Bot(Event Player) == False;" in conditions,
+                           "profilo speciale: matcher non protetto dall'esclusione dummy")
+
+            ordered_defaults = (
+                "Event Player.IndeksGenre = -1;",
+                "Event Player.IndeksWarna = 0;",
+                "Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];",
+            )
+            positions = [classifier.body.find(token) for token in ordered_defaults]
+            checks.require(
+                all(position >= 0 for position in positions)
+                and positions == sorted(positions)
+                and positions[-1] < profile_match.start(),
+                "profilo speciale: matcher deve seguire i default generici",
+            )
+            minute = classifier.body.find("Event Player.MenitLobi = 0;")
+            roster = classifier.body.find("Append To Array(Global.PemainManusia, Event Player)")
+            checks.require(
+                profile_end >= 0 and profile_end < minute < roster,
+                "profilo speciale: matcher deve precedere minuti e inserimento roster/HUD",
+            )
+
+    direct_writers = [
+        (subroutine_target(rule) or rule.name, value)
+        for rule in rules
+        for value in direct_assignment_values(rule, "MusikKhusus")
+    ]
+    checks.equal(len(direct_writers), 2, "profilo speciale: numero writer MusikKhusus")
+    property_writers = [
+        (subroutine_target(rule) or rule.name, match.group("receiver").strip())
+        for rule in rules
+        for match in re.finditer(
+            r"(?m)^[ \t]*(?P<receiver>[^;\r\n=]+?)\.MusikKhusus"
+            r"(?:\s*\[[^\]\r\n]+\])?\s*=(?!=)",
+            mask_strings(rule.body),
+        )
+    ]
+    checks.equal(len(property_writers), 2, "profilo speciale: numero writer property MusikKhusus")
+    checks.require(
+        all(receiver == "Event Player" for _, receiver in property_writers),
+        f"profilo speciale: receiver writer inattesi MusikKhusus: {property_writers}",
+    )
+    action_writers = [
+        (subroutine_target(rule) or rule.name, action)
+        for rule in rules
+        for action in (
+            "Set Player Variable",
+            "Set Player Variable At Index",
+            "Modify Player Variable",
+            "Modify Player Variable At Index",
+            "Chase Player Variable At Rate",
+            "Chase Player Variable Over Time",
+            "Stop Chasing Player Variable",
+        )
+        for call in iter_calls(rule.body, action)
+        if len(call.args) >= 2 and call.args[1].strip() == "MusikKhusus"
+    ]
+    checks.require(not action_writers, f"profilo speciale: writer azione inattesi MusikKhusus: {action_writers}")
+
+    caladan_calls = [
+        call
+        for call in iter_calls(source, "Custom String")
+        if call.args and parse_literal(call.args[0]) == "Caladan Brood"
+    ]
+    checks.equal(len(caladan_calls), 1, "profilo speciale: Caladan Brood deve essere un solo valore custom")
+    genres = array_assignment_items(source, "DaftarGenre")
+    checks.require(genres is not None, "profilo speciale: array dei 100 generi assente")
+    if genres is not None:
+        checks.equal(len(genres), 100, "profilo speciale: numero generi ordinari")
+        genre_literals = {
+            parse_literal(call.args[0])
+            for item in genres
+            for call in iter_calls(item, "Custom String")
+            if call.args
+        }
+        checks.require("Caladan Brood" not in genre_literals,
+                       "profilo speciale: Caladan Brood inserito nei 100 generi ordinari")
+
+    color_names = array_assignment_items(source, "NamaWarnaInggris")
+    checks.require(color_names is not None and len(color_names) > 1,
+                   "profilo speciale: nomi colore inglesi assenti")
+    if color_names is not None and len(color_names) > 1:
+        silver = next(iter(iter_calls(color_names[1], "Custom String")), None)
+        checks.equal(
+            parse_literal(silver.args[0]) if silver and silver.args else None,
+            "Silver Mist",
+            "profilo speciale: colore indice 1",
+        )
+    colors = array_assignment_items(source, "DaftarWarna")
+    checks.require(colors is not None and len(colors) > 1,
+                   "profilo speciale: palette colori non copre indice 1")
+    if colors is not None and len(colors) > 1:
+        checks.equal(
+            code(colors[1]),
+            "CustomColor(190,210,230,255)",
+            "profilo speciale: valore Silver Mist indice 1",
+        )
+    color_vectors = array_assignment_items(source, "DaftarWarnaRGB")
+    checks.require(color_vectors is not None and len(color_vectors) > 1,
+                   "profilo speciale: palette RGB non copre indice 1")
+    if color_vectors is not None and len(color_vectors) > 1:
+        checks.equal(
+            code(color_vectors[1]),
+            "Vector(190,210,230)",
+            "profilo speciale: vettore Silver Mist indice 1",
+        )
+    icons = array_assignment_items(source, "DaftarIkon")
+    checks.require(icons is not None and len(icons) > 23,
+                   "profilo speciale: array icone non copre indice 23")
+    if icons is not None and len(icons) > 23:
+        checks.equal(code(icons[23]), "IconString(Poison2)", "profilo speciale: icona indice 23")
+
+    roster_rule = next(
+        (
+            rule for rule in rules
+            if "Event Player.HudPemainDibuat = True;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
+        ),
+        None,
+    )
+    checks.require(roster_rule is not None, "profilo speciale: renderer roster assente")
+    if roster_rule:
+        right_calls = [
+            call for call in iter_calls(roster_rule.body, "Create HUD Text")
+            if len(call.args) >= 5 and call.args[4].strip() == "Right"
+        ]
+        checks.equal(len(right_calls), 1, "profilo speciale: renderer roster Right")
+        vibe_calls = [
+            call
+            for call in iter_calls(right_calls[0].args[2], "Custom String")
+            if right_calls and len(call.args) == 3
+            and parse_literal(call.args[0]) == "{0} - {1}"
+            and call.args[1].strip() == "Event Player"
+        ] if right_calls else []
+        checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
+        if vibe_calls:
+            fallback = soundtrack_choice(vibe_calls[0].args[2], "profilo speciale roster")
+            triads = language_triads(fallback) if fallback is not None else []
+            checks.equal(len(triads), 1, "profilo speciale roster: fallback EN/ID/TH")
+            if triads:
+                for branch, expected in zip(
+                    triads[0],
+                    ("no soundtrack yet", "belum pilih musik", "ยังไม่ได้เลือกเพลง"),
+                ):
+                    custom = full_custom_string(branch)
+                    checks.equal(
+                        parse_literal(custom.args[0]) if custom and custom.args else None,
+                        expected,
+                        "profilo speciale roster: fallback localizzato invariato",
+                    )
+
+    main_menu = rule_by_subroutine(rules, "GambarUtama")
+    checks.require(main_menu is not None, "profilo speciale: GambarUtama assente")
+    if main_menu:
+        main_calls = list(iter_calls(main_menu.body, "Create HUD Text"))
+        main_text = main_calls[0].args[3] if main_calls and len(main_calls[0].args) >= 4 else ""
+        main_specs = (
+            ("2 - SOUNDTRACK\nCURRENT: {0}", "no soundtrack yet"),
+            ("2 - MUSIK\nSAAT INI: {0}", "belum pilih musik"),
+            ("2 - เพลงประกอบ\nปัจจุบัน: {0}", "ยังไม่ได้เลือกเพลง"),
+        )
+        for heading, expected_fallback in main_specs:
+            matches = [
+                call for call in iter_calls(main_text, "Custom String")
+                if call.args and parse_literal(call.args[0]) == heading
+            ]
+            checks.equal(len(matches), 1, f"profilo speciale menu principale: renderer {heading.splitlines()[0]}")
+            if matches and len(matches[0].args) >= 2:
+                fallback = soundtrack_choice(matches[0].args[1], "profilo speciale menu principale")
+                custom = full_custom_string(fallback) if fallback is not None else None
+                checks.equal(
+                    parse_literal(custom.args[0]) if custom and custom.args else None,
+                    expected_fallback,
+                    "profilo speciale menu principale: fallback ordinario invariato",
+                )
+
+    music_page = rule_by_subroutine(rules, "GambarMusik")
+    checks.require(music_page is not None, "profilo speciale: GambarMusik assente")
+    if music_page:
+        page_calls = list(iter_calls(music_page.body, "Create HUD Text"))
+        checks.equal(len(page_calls), 1, "profilo speciale: Create HUD GambarMusik")
+        if page_calls and len(page_calls[0].args) >= 4:
+            locked_subheader = parse_top_level_ternary(page_calls[0].args[2])
+            checks.require(locked_subheader is not None,
+                           "profilo speciale pagina musica: ramo sottotitolo locked assente")
+            if locked_subheader:
+                condition, locked, unlocked = locked_subheader
+                checks.equal(code(condition), "EventPlayer.MusikKhusus!=Null",
+                             "profilo speciale pagina musica: guardia sottotitolo locked")
+                locked_triads = language_triads(locked)
+                checks.equal(len(locked_triads), 1,
+                             "profilo speciale pagina musica: comandi locked EN/ID/TH")
+                if locked_triads:
+                    for branch in locked_triads[0]:
+                        bindings = tuple(
+                            call.args[0].strip()
+                            for call in iter_calls(branch, "Input Binding String")
+                            if call.args
+                        )
+                        checks.equal(
+                            bindings,
+                            ("Button(Reload)", "Button(Melee)"),
+                            "profilo speciale pagina musica: locked mostra solo back/close",
+                        )
+                for instruction in MENU_CROUCH_INSTRUCTIONS:
+                    checks.require(instruction in unlocked,
+                                   f"profilo speciale pagina musica: ramo ordinario invariato: {instruction}")
+
+            locked_body = parse_top_level_ternary(page_calls[0].args[3])
+            checks.require(locked_body is not None,
+                           "profilo speciale pagina musica: contenuto locked assente")
+            if locked_body:
+                condition, locked, unlocked = locked_body
+                checks.equal(code(condition), "EventPlayer.MusikKhusus!=Null",
+                             "profilo speciale pagina musica: guardia contenuto locked")
+                locked_triads = language_triads(locked)
+                checks.equal(len(locked_triads), 1,
+                             "profilo speciale pagina musica: testo locked EN/ID/TH")
+                if locked_triads:
+                    expected_locked = (
+                        "SOUNDTRACK LOCKED\nCURRENT: {0}",
+                        "MUSIK TERKUNCI\nSAAT INI: {0}",
+                        "เพลงถูกล็อก\nปัจจุบัน: {0}",
+                    )
+                    for branch, expected in zip(locked_triads[0], expected_locked):
+                        custom = full_custom_string(branch)
+                        checks.equal(
+                            parse_literal(custom.args[0]) if custom and custom.args else None,
+                            expected,
+                            "profilo speciale pagina musica: testo locked",
+                        )
+                        checks.equal(
+                            tuple(argument.strip() for argument in custom.args[1:]) if custom else (),
+                            ("Event Player.MusikKhusus",),
+                            "profilo speciale pagina musica: valore locked",
+                        )
+                for token in ("Event Player.KursorGenre", "Global.DaftarGenre", "/100"):
+                    checks.require(token in unlocked,
+                                   f"profilo speciale pagina musica: ramo ordinario invariato: {token}")
+
+    navigation = next(
+        (
+            rule for rule in rules
+            if "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+            and "Event Player.PerintahMenu == 3" in rule.body
+            and "Event Player.PerintahMenu == 4" in rule.body
+        ),
+        None,
+    )
+    checks.require(navigation is not None, "profilo speciale: navigazione Soundtrack ±1 assente")
+    if navigation:
+        update = navigation.body.find("Event Player.KursorGenre = (Event Player.KursorGenre")
+        branches = conditional_branches_containing(navigation.body, update) if update >= 0 else []
+        checks.require(bool(branches), "profilo speciale: update Soundtrack ±1 fuori da un ramo")
+        if branches:
+            checks.require(
+                re.search(
+                    r"Else If\s*\(\s*And\s*\(\s*Event Player\.HalamanMenu\s*==\s*2\s*,\s*"
+                    r"Event Player\.MusikKhusus\s*==\s*Null\s*\)\s*\)\s*;",
+                    branches[0],
+                ) is not None,
+                "profilo speciale: guardia Soundtrack ±1",
+            )
+
+    jump = next(
+        (
+            rule for rule in rules
+            if "Event Player.KursorGenre = (Event Player.KursorGenre" in rule.body
+            and "Event Player.PerintahMenu == 5" in rule.body
+            and "Event Player.PerintahMenu == 6" in rule.body
+        ),
+        None,
+    )
+    checks.require(jump is not None, "profilo speciale: navigazione Soundtrack ±10 assente")
+    if jump:
+        conditions = rule_block(jump, "conditions") or ""
+        checks.require(
+            "EventPlayer.MusikKhusus==Null;" in code(conditions),
+            "profilo speciale: guardia Soundtrack ±10",
+        )
+
+    apply_music = rule_by_subroutine(rules, "TerapkanHalamanMusik")
+    checks.require(apply_music is not None, "profilo speciale: TerapkanHalamanMusik assente")
+    if apply_music:
+        actions = rule_block(apply_music, "actions") or ""
+        checks.require(
+            re.match(
+                r"\s*Abort If\s*\(\s*Event Player\.MusikKhusus\s*!=\s*Null\s*\)\s*;",
+                actions,
+            ) is not None,
+            "profilo speciale: TerapkanHalamanMusik deve iniziare con la guardia locked",
         )
 
 
@@ -3935,6 +4439,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     subroutines = {entry.name for entry in sub_entries}
     validate_localization(checks, source, globals_)
     validate_hud_and_menu(checks, source, rules, players, subroutines)
+    validate_special_player_profile(checks, source, rules, player_entries)
     validate_input_contract(checks, rules)
     validate_unkillable_full_hp(checks, rules)
     validate_scheduler(checks, source, rules, globals_, subroutines)
