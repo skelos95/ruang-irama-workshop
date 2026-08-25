@@ -141,7 +141,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
             classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", classifier)
-            self.assertIn(f"Abort If(Or(Has Spawned({global_name}.PemainAktif) == False, Is Alive({global_name}.PemainAktif) == False));", fast)
+            self.assertNotIn(f"Abort If(Or(Has Spawned({global_name}.PemainAktif) == False, Is Alive({global_name}.PemainAktif) == False));", fast)
             self.assertIn(f"Disable Game Mode HUD({global_name}.PemainAktif);", fast)
             self.assertIn(f"Disable Game Mode In-World UI({global_name}.PemainAktif);", fast)
             self.assertIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKiri);", fast)

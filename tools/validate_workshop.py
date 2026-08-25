@@ -3339,6 +3339,9 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.Manusia = True;",
             "Global.PemainAktif.SudahDiperiksa = True;",
             "Global.PemainAktif.SudahSiap = True;",
+            "Global.PemainAktif.HudKiri = Null;",
+            "Global.PemainAktif.HudKanan = Null;",
+            "Global.PemainAktif.HudPemainDibuat = False;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
@@ -3355,6 +3358,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Server Load < 150",
         ):
             checks.require(token in fast.body, f"dispatcher team-switch leggero incompleto: {token}")
+        checks.require(
+            "Abort If(Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False));" not in fast.body,
+            "dispatcher team-switch leggero non deve bloccare refresh roster con guardia spawn/hidup",
+        )
         checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 4,
                      "dispatcher team-switch leggero deve escludere gli iBot in tutti i gate")
         checks.require("Call Subroutine(BersihkanPemain);" not in fast.body,

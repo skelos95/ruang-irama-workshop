@@ -1605,6 +1605,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "dispatcher team-switch leggero")
 
+    def test_global_lifecycle_dispatch_does_not_abort_refresh_while_waiting_spawn(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.inject_action(
+            fast,
+            "Abort If(Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False));",
+        )
+        self.assert_rejected(mutated, "guardia spawn/hidup")
+
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
         mutated = self.replace_in_rule(

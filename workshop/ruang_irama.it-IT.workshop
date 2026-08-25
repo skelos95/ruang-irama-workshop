@@ -3145,7 +3145,6 @@ regola("89a - Subrutin: Proses status cepat pemain")
 		End;
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Globale.PemainAktif.PernahDisiapkan == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif))))));
 			"Perubahan tim pemain terdaftar hanya menyegarkan identitas tim; HUD, pilihan, menu, dan status tidak dibangun ulang."
-			Abort If(Or(Has Spawned(Globale.PemainAktif) == False, Is Alive(Globale.PemainAktif) == False));
 			Globale.PemainAktif.Manusia = True;
 			Globale.PemainAktif.SudahDiperiksa = True;
 			Globale.PemainAktif.SudahSiap = True;
