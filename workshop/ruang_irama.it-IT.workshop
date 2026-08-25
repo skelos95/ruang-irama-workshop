@@ -3140,6 +3140,20 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			"Overwatch mengaktifkan kembali tampilan mode dan dapat meninggalkan pengunci masukan saat pindah tim. Segarkan hanya keadaan tampilan dan mesin yang diperlukan tanpa pembersihan siklus penuh."
 			Disable Game Mode HUD(Globale.PemainAktif);
 			Disable Game Mode In-World UI(Globale.PemainAktif);
+			"Segarkan hanya dua baris daftar pemain agar nama entitas diperbarui setelah pindah tim tanpa membangun ulang roster."
+			If(Globale.PemainAktif.HudKiri != Null);
+				Destroy HUD Text(Globale.PemainAktif.HudKiri);
+			End;
+			If(Globale.PemainAktif.HudKanan != Null);
+				Destroy HUD Text(Globale.PemainAktif.HudKanan);
+			End;
+			Globale.PemainAktif.HudKiri = Null;
+			Globale.PemainAktif.HudKanan = Null;
+			Globale.PemainAktif.HudPemainDibuat = False;
+			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
+				Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
+				Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
+			End;
 			If(Globale.PemainAktif.HudMenu != Null);
 				Destroy HUD Text(Globale.PemainAktif.HudMenu);
 			End;
@@ -4708,7 +4722,28 @@ regola("98j - Subrutin: Cari posisi teleport aman")
 			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 		End;
 		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
-			Event Player.PosisiBangkitAman += Vector(0, 0.250, 0);
+			"Periksa lagi ruang badan dan kepala setelah semua koreksi dinding; titik sempit dibatalkan agar pemanggil mencoba posisi lain."
+			If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1.000, 0), Event Player.PosisiBangkitAman + Vector(1.500, 1.000, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1.000, 0)) < 1.250);
+				Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+				Abort;
+			End;
+			If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1.000, 0), Event Player.PosisiBangkitAman + Vector(-1.500, 1.000, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1.000, 0)) < 1.250);
+				Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+				Abort;
+			End;
+			If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1.000, 0), Event Player.PosisiBangkitAman + Vector(0, 1.000, 1.500), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1.000, 0)) < 1.250);
+				Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+				Abort;
+			End;
+			If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1.000, 0), Event Player.PosisiBangkitAman + Vector(0, 1.000, -1.500), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1.000, 0)) < 1.250);
+				Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+				Abort;
+			End;
+			If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 0.500, 0), Event Player.PosisiBangkitAman + Vector(0, 2.750, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 0.500, 0)) < 2.000);
+				Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+				Abort;
+			End;
+			Event Player.PosisiBangkitAman += Vector(0, 0.500, 0);
 		End;
 	}
 }

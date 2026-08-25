@@ -64,7 +64,13 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Vector(-1.500, 1, 0)", source)
             self.assertIn("Vector(0, 1, 1.500)", source)
             self.assertIn("Vector(0, 1, -1.500)", source)
-            self.assertIn("Event Player.PosisiBangkitAman += Vector(0, 0.250, 0);", source)
+            self.assertIn("Event Player.PosisiBangkitAman += Vector(0, 0.500, 0);", source)
+            self.assertIn("Vector(0, 2.750, 0)", source)
+            self.assertIn("Vector(1.500, 1.000, 0)", source)
+            self.assertIn("Vector(-1.500, 1.000, 0)", source)
+            dummy_spawn = source.split(f'{rule_kw}("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 1)[1].split(f'{rule_kw}("03g - Bot/Dummy', 1)[0]
+            self.assertIn("Call Subroutine(CariPosisiTeleportAman);", dummy_spawn)
+            self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", dummy_spawn)
 
             interact = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
             self.assertEqual(interact.count("Kill(Event Player, Null);"), 1)
@@ -138,6 +144,13 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"Abort If(Or(Has Spawned({global_name}.PemainAktif) == False, Is Alive({global_name}.PemainAktif) == False));", fast)
             self.assertIn(f"Disable Game Mode HUD({global_name}.PemainAktif);", fast)
             self.assertIn(f"Disable Game Mode In-World UI({global_name}.PemainAktif);", fast)
+            self.assertIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKiri);", fast)
+            self.assertIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKanan);", fast)
+            self.assertIn(f"{global_name}.PemainAktif.HudKiri = Null;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.HudKanan = Null;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.HudPemainDibuat = False;", fast)
+            self.assertIn(f"{global_name}.HudKiriPemain[Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainAktif)] = 0;", fast)
+            self.assertIn(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainAktif)] = 0;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SeranganDekatDipakai = False;", fast)
             self.assertIn(f"{global_name}.PemainAktif.MenuTerbuka = False;", fast)
             self.assertIn(f"{global_name}.PemainAktif.PerintahMenu = 0;", fast)

@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Dopo il cambio squadra vengono ricreati solo `HudKiri/HudKanan` del player per riagganciare subito il nome alle liste, senza ricostruire roster o preferenze. La posizione sicura condivisa di teleport/resurrect/dummy ora richiede spazio libero finale su quattro lati e sopra la testa e solleva il punto di 0,5 m, riducendo incastri in muri e pavimento. Il renderer Crouch Teleport conserva il layout multilinea senza caratteri `\`.
 - Corretto il menu dopo il cambio squadra: i player già presenti in `PemainManusia` non rientrano più nel classifier umano/bot; il fast-path globale autoripristina `Manusia`, `SudahDiperiksa` e `SudahSiap` prima di riarmare HUD e input.
 - Teleport rinforzato contro muri/pavimenti: dummy e player condividono il controllo body-safe, il teleport verso player prova più lati invece della posizione esatta e l'HUD Teleport torna multilinea senza mostrare backslash.
 - Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo, quindi riapplica `Disable Game Mode HUD` / `Disable Game Mode In-World UI` e riabilita i latch/pulsanti del Menu Arcade senza ricostruire roster o HUD custom.

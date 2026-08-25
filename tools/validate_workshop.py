@@ -3867,10 +3867,10 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                            "subroutine teleport sicura non mantiene distanza laterale dalle pareti")
             checks.require("Vector(0, 1, 1.500)" in safe_position.body and "Vector(0, 1, -1.500)" in safe_position.body,
                            "subroutine teleport sicura non mantiene distanza frontale/posteriore dalle pareti")
-            checks.require("Vector(0, 2.500, 0)" in safe_position.body,
-                           "subroutine teleport sicura non verifica spazio sopra la capsula")
-            checks.require("PosisiBangkitAman += Vector(0, 0.250, 0);" in safe_position.body,
-                           "subroutine teleport sicura non rialza il punto finale dal pavimento")
+            checks.require("Vector(0, 2.750, 0)" in safe_position.body,
+                           "subroutine teleport sicura non verifica spazio sopra la capsula finale")
+            checks.require("PosisiBangkitAman += Vector(0, 0.500, 0);" in safe_position.body,
+                           "subroutine teleport sicura non rialza di 0,5 m il punto finale dal pavimento")
         click_dispatch = next(
             (
                 rule
