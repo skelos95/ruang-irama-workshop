@@ -3125,6 +3125,42 @@ regola("89a - Subrutin: Proses status cepat pemain")
 	{
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Globale.PemainAktif.PernahDisiapkan == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif))))));
 			"Perubahan tim pemain terdaftar hanya menyegarkan identitas tim; HUD, pilihan, menu, dan status tidak dibangun ulang."
+			Abort If(Or(Has Spawned(Globale.PemainAktif) == False, Is Alive(Globale.PemainAktif) == False));
+			"Overwatch mengaktifkan kembali tampilan mode dan dapat meninggalkan pengunci masukan saat pindah tim. Segarkan hanya keadaan tampilan dan mesin yang diperlukan tanpa pembersihan siklus penuh."
+			Disable Game Mode HUD(Globale.PemainAktif);
+			Disable Game Mode In-World UI(Globale.PemainAktif);
+			If(Globale.PemainAktif.HudMenu != Null);
+				Destroy HUD Text(Globale.PemainAktif.HudMenu);
+			End;
+			Globale.PemainAktif.HudMenu = Null;
+			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
+				Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
+			End;
+			Globale.PemainAktif.MenuTerbuka = False;
+			Globale.PemainAktif.HalamanMenu = -1;
+			Globale.PemainAktif.SeranganDekatDipakai = False;
+			Globale.PemainAktif.PerintahMenu = 0;
+			Globale.PemainAktif.InputMenuDikunci = False;
+			Globale.PemainAktif.InteraksiKameraDipakai = False;
+			Globale.PemainAktif.TeleportasiJongkokAktif = False;
+			Globale.PemainAktif.PerintahTeleportasi = 0;
+			If(Globale.PemainAktif.TeksTeleportasi != Null);
+				Destroy In-World Text(Globale.PemainAktif.TeksTeleportasi);
+			End;
+			Globale.PemainAktif.TeksTeleportasi = Null;
+			Globale.PemainAktif.TargetTeleportasiTeks = Null;
+			If(Globale.PemainAktif.PelatNamaDinonaktifkan == True);
+				Enable Nameplates(All Players(All Teams), Globale.PemainAktif);
+				Globale.PemainAktif.PelatNamaDinonaktifkan = False;
+			End;
+			Allow Button(Globale.PemainAktif, Button(Melee));
+			Allow Button(Globale.PemainAktif, Button(Primary Fire));
+			Allow Button(Globale.PemainAktif, Button(Secondary Fire));
+			Allow Button(Globale.PemainAktif, Button(Interact));
+			Allow Button(Globale.PemainAktif, Button(Reload));
+			Allow Button(Globale.PemainAktif, Button(Ability 1));
+			Allow Button(Globale.PemainAktif, Button(Ability 2));
+			Allow Button(Globale.PemainAktif, Button(Ultimate));
 			Globale.PemainAktif.TimTerakhir = Team Of(Globale.PemainAktif);
 			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
 			Globale.PemainAktif.PindahTimDiproses = False;

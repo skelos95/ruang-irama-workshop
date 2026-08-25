@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo, quindi riapplica `Disable Game Mode HUD` / `Disable Game Mode In-World UI` e riabilita i latch/pulsanti del Menu Arcade senza ricostruire roster o HUD custom.
 - Cambio squadra alleggerito radicalmente: i player già registrati aggiornano solo Team/lifecycle state; il cleanup completo non viene più eseguito sul team switch.
 - Player Left usa solo rimozione esatta di roster/HUD, senza reset engine, fallback slot HUD, Filtered Array o scansioni di tutti gli altri player.
 
