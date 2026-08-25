@@ -630,7 +630,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             ),
         ):
             mutated = self.replace_in_rule(setup, current, wrong)
-            self.assert_rejected(mutated, "reset completo cambio squadra mancante")
+            self.assert_rejected(mutated, "reset setup iniziale mancante")
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
@@ -1414,7 +1414,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Global.PemainAktif.PindahTimDiproses == False",
             "Global.PemainAktif.PindahTimDiproses == True",
         )
-        self.assert_rejected(mutated, "dispatcher lifecycle globale")
+        self.assert_rejected(mutated, "dispatcher team-switch leggero")
 
     def test_global_lifecycle_dispatch_excludes_classified_ibots(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
@@ -1423,7 +1423,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Global.PemainAktif.BotOtomatis == False",
             "Global.PemainAktif.BotOtomatis == True",
         )
-        self.assert_rejected(mutated, "dispatcher lifecycle globale")
+        self.assert_rejected(mutated, "dispatcher team-switch leggero")
 
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
@@ -1432,7 +1432,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player))",
             "Event Player.Manusia == False",
         )
-        self.assert_rejected(mutated, "Player Left Match deve includere gli iBot e gli umani registrati")
+        self.assert_rejected(mutated, "Player Left Match deve includere iBot e umani registrati")
 
     def test_player_left_match_includes_classified_ibots(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
@@ -1442,7 +1442,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player))) == True;",
             "Or(Event Player.Manusia == True, Array Contains(Global.PemainManusia, Event Player)) == True;",
         )
-        self.assert_rejected(mutated, "Player Left Match deve includere gli iBot")
+        self.assert_rejected(mutated, "Player Left Match deve includere iBot e umani registrati")
 
     def test_ibot_leave_destroys_vision_text_before_human_lifecycle(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
@@ -1836,7 +1836,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(call, 0, "All Players(All Teams)")
         self.assert_rejected(mutated, "Create HUD Text visibile a bot/dummy")
 
-    def test_team_switch_performs_full_preferences_reset(self) -> None:
+    def test_initial_setup_performs_full_preferences_reset(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(setup, "Event Player.IndeksBahasa = 0;", "Event Player.IndeksBahasa = Event Player.IndeksBahasa;")
         self.assert_rejected(mutated, "IndeksBahasa = 0")

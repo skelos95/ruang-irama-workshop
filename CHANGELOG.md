@@ -6,8 +6,11 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
-- Cambio squadra ripetuto irrobustito: il lifecycle memorizza il Team target più recente, riavvia la transazione se il Team cambia di nuovo prima della stabilizzazione e acquisisce il lock pesante solo quando il player è realmente spawned.
-- Crouch Travel & Attach passa a 5 pagine: la nuova pagina `Self Kill` usa Interact per eliminare volontariamente il proprio eroe, con bypass temporaneo della protezione Unkillable.
+- Cambio squadra alleggerito radicalmente: i player già registrati aggiornano solo Team/lifecycle state; il cleanup completo non viene più eseguito sul team switch.
+- Player Left usa solo rimozione esatta di roster/HUD, senza reset engine, fallback slot HUD, Filtered Array o scansioni di tutti gli altri player.
+
+- Cambio squadra ripetuto convertito a refresh leggero: un umano già registrato aggiorna soltanto lo stato dipendente dal Team, senza cleanup/setup completo, ricostruzione HUD o reset engine; il cleanup roster resta riservato a una vera uscita.
+- Crouch Travel & Attach resta a 5 pagine ma il renderer Teleport non mostra più simboli `\`. `Self Kill` esegue una sola `Kill` immediata, senza Wait/Loop e senza condividere i retry di Skull/Revenge: su forme come il mech di D.Va termina soltanto la forma corrente, senza una seconda kill automatica sul pilota.
 
 - Cambio squadra reso global-first seriale: un lock globale assegna cleanup/setup a un solo player per volta, con 0,25 s fra le fasi e cooldown prima del player successivo.
 - Durante una transazione lifecycle il scheduler sospende per gli altri player anche il fast-path 20 Hz, oltre al ciclo 10 Hz e alle cache 1 Hz; resta attivo quasi soltanto il proprietario del cambio squadra, riducendo il picco di carico critico.
