@@ -1339,6 +1339,8 @@ rule("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")
 		End;
 		If(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) > 0.100);
 			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10);
+			Event Player.PosisiTeleportTujuan = Event Player.PosisiBangkitAman;
+			Call Subroutine(CariPosisiTeleportAman);
 			If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6);
 				If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 16);
 					If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman) <= 6);
@@ -3686,7 +3688,13 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 		End;
 		Event Player.KursorTeleportasi %= 5;
-		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("HOLD {0} FOR ALL COMMANDS", Input Binding String(Button(Crouch))), Custom String("{0}: next | {1}: previous | {2}: action", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("release {0}: close | {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("TAHAN {0} UNTUK SEMUA PERINTAH", Input Binding String(Button(Crouch))), Custom String("{0}: berikutnya | {1}: sebelumnya | {2}: aksi", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("lepas {0}: tutup | {0} + {1}: lepas tempel", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("กด {0} ค้างสำหรับทุกคำสั่ง", Input Binding String(Button(Crouch))), Custom String("{0}: ถัดไป | {1}: ก่อนหน้า | {2}: ใช้งาน", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("ปล่อย {0}: ปิด | {0} + {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("SPAWN TRAVEL 1/5
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}
+{1}", Custom String("{0}
+{1}", Custom String("HOLD {0} FOR ALL COMMANDS", Input Binding String(Button(Crouch))), Custom String("{0}: next | {1}: previous | {2}: action", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("release {0}: close | {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}
+{1}", Custom String("{0}
+{1}", Custom String("TAHAN {0} UNTUK SEMUA PERINTAH", Input Binding String(Button(Crouch))), Custom String("{0}: berikutnya | {1}: sebelumnya | {2}: aksi", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("lepas {0}: tutup | {0} + {1}: lepas tempel", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))) : Custom String("{0}
+{1}", Custom String("{0}
+{1}", Custom String("กด {0} ค้างสำหรับทุกคำสั่ง", Input Binding String(Button(Crouch))), Custom String("{0}: ถัดไป | {1}: ก่อนหน้า | {2}: ใช้งาน", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Interact)))), Custom String("ปล่อย {0}: ปิด | {0} + {1}: ปล่อยตัว", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("SPAWN TRAVEL 1/5
 > RETURN TO SPAWN ROOM
 INTERACT: TELEPORT") : Event Player.KursorTeleportasi == 1 ? Custom String("OBJECTIVE TRAVEL 2/5
 > JUMP TO OBJECTIVE / ENEMY FLAG
@@ -4594,10 +4602,26 @@ rule("98i - Subrutin: Teleportasi ke target pemain")
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Target unavailable. Even teleportation has standards.") : Event Player.IndeksBahasa == 1 ? Custom String("Target sedang tidak tersedia. Teleportasi juga punya standar.") : Custom String("เป้าหมายไม่พร้อมใช้งาน แม้แต่เทเลพอร์ตก็มีมาตรฐาน"));
 			Abort;
 		End;
-		Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) - Facing Direction Of(Event Player.TargetTeleportasiTerkunci) * 1.500;
+		Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) - Facing Direction Of(Event Player.TargetTeleportasiTerkunci) * 2.250;
 		Call Subroutine(CariPosisiTeleportAman);
 		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) + Facing Direction Of(Event Player.TargetTeleportasiTerkunci) * 2.250;
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) + Vector(2.250, 0, 0);
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) + Vector(-2.250, 0, 0);
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) + Vector(0, 0, 2.250);
+			Call Subroutine(CariPosisiTeleportAman);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiTeleportTujuan = Position Of(Event Player.TargetTeleportasiTerkunci) + Vector(0, 0, -2.250);
 			Call Subroutine(CariPosisiTeleportAman);
 		End;
 		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
@@ -4626,6 +4650,43 @@ rule("98j - Subrutin: Cari posisi teleport aman")
 			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 			Abort;
 		End;
+		"Jauhkan titik teleport dari dinding sebelum memeriksa tanah dan jalur akhir."
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(1.500, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 1.250);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiBangkitAman + Vector(-1.500, 0, 0));
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(-1.500, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 1.250);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiBangkitAman + Vector(1.500, 0, 0));
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, 1.500), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 1.250);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiBangkitAman + Vector(0, 0, -1.500));
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, -1.500), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 1.250);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiBangkitAman + Vector(0, 0, 1.500));
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(1.000, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 0.850);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(-1.000, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 0.850);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, 1.000), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 0.850);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, -1.000), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) < 0.850);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 0.250, 0), Event Player.PosisiBangkitAman + Vector(0, 2.500, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 0.250, 0)) < 2.000);
+			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+			Abort;
+		End;
 		If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiTeleportTujuan) > 8);
 			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
 			Abort;
@@ -4636,6 +4697,9 @@ rule("98j - Subrutin: Cari posisi teleport aman")
 		End;
 		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiTeleportTujuan + Vector(0, 1, 0), Event Player.PosisiBangkitAman + Vector(0, 1, 0), Empty Array, Empty Array, False), Event Player.PosisiBangkitAman + Vector(0, 1, 0)) > 0.750);
 			Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+		End;
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100);
+			Event Player.PosisiBangkitAman += Vector(0, 0.250, 0);
 		End;
 	}
 }

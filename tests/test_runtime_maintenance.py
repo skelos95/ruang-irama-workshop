@@ -59,7 +59,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             teleport_render = source.split(f'{rule_kw}("91g - Subrutin: Gambar menu teleportasi")', 1)[1].split(f'{rule_kw}("', 1)[0]
             self.assertNotIn("\\", teleport_render)
             self.assertNotIn('Custom String("{0}n{1}"', teleport_render)
-            self.assertIn(" | ", teleport_render)
+            self.assertIn('Custom String("{0}\n{1}", Custom String("{0}\n{1}",'.replace("\\n", "\n"), teleport_render)
+            self.assertIn("Vector(1.500, 1, 0)", source)
+            self.assertIn("Vector(-1.500, 1, 0)", source)
+            self.assertIn("Vector(0, 1, 1.500)", source)
+            self.assertIn("Vector(0, 1, -1.500)", source)
+            self.assertIn("Event Player.PosisiBangkitAman += Vector(0, 0.250, 0);", source)
 
             interact = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
             self.assertEqual(interact.count("Kill(Event Player, Null);"), 1)

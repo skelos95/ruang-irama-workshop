@@ -112,6 +112,9 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0)", self.it)
         self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) > 0.100", self.it)
         self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", self.it)
+        dummy_rule = self.it.split('regola("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 1)[1].split('regola("03g -', 1)[0]
+        self.assertIn("Event Player.PosisiTeleportTujuan = Event Player.PosisiBangkitAman;", dummy_rule)
+        self.assertIn("Call Subroutine(CariPosisiTeleportAman);", dummy_rule)
 
     def test_dummy_receives_normal_damage(self):
         it_lock = self.it.split('regola("92 - Subrutin: Kunci bot/dummy, kaki tetap bisa bergerak")', 1)[1].split('regola("91o - Subrutin: Gambar menu pilihan pemain")', 1)[0]

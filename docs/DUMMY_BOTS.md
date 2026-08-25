@@ -12,6 +12,7 @@ Comportamento atteso:
 - `Damage Received = 100` e `Knockback Received = 100`, quindi riceve normalmente ogni danno e urto;
 - quando entra nella Spawn Room, registra una scadenza a 1 secondo; il controllo periodico attende il timestamp senza usare `Wait`, poi cerca una destinazione mode-specific vicina all'obiettivo o alla bandiera e teletrasporta soltanto verso una posizione percorribile con terreno valido;
 - se la destinazione non è valida, resta in spawn e riprova invece di usare coordinate nulle;
+- prima del teleport la destinazione dummy passa dalla stessa routine body-safe dei player: viene allontanata dai muri, scartata se il soffitto è troppo basso e rialzata di 0,25 m dal pavimento;
 - attraversa pareti e soffitti con `Disable Movement Collision With Environment(Event Player, False)`, mantenendo attiva la collisione con i pavimenti; `Enable Movement Collision With Players` conserva esplicitamente la collisione con umani, bot e altri dummy;
 - fuori dalla Spawn Room considera soltanto umani registrati, spawned, vivi, della squadra avversaria e con Dummy Follow ON; `Sorted Array` seleziona sempre il target idoneo più vicino e il dummy avanza automaticamente nella propria direzione `Forward`, senza dipendere da input direzionali;
 - entro 4 m dal nemico porta il throttle a zero; se il nemico si allontana oltre la soglia riparte automaticamente;

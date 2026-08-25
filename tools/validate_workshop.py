@@ -3858,6 +3858,14 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                            "subroutine teleport sicura non verifica una posizione percorribile")
             checks.require("Ray Cast Hit Position(" in safe_position.body,
                            "subroutine teleport sicura non verifica terreno/percorso")
+            checks.require("Vector(1.500, 1, 0)" in safe_position.body and "Vector(-1.500, 1, 0)" in safe_position.body,
+                           "subroutine teleport sicura non mantiene distanza laterale dalle pareti")
+            checks.require("Vector(0, 1, 1.500)" in safe_position.body and "Vector(0, 1, -1.500)" in safe_position.body,
+                           "subroutine teleport sicura non mantiene distanza frontale/posteriore dalle pareti")
+            checks.require("Vector(0, 2.500, 0)" in safe_position.body,
+                           "subroutine teleport sicura non verifica spazio sopra la capsula")
+            checks.require("PosisiBangkitAman += Vector(0, 0.250, 0);" in safe_position.body,
+                           "subroutine teleport sicura non rialza il punto finale dal pavimento")
         click_dispatch = next(
             (
                 rule
