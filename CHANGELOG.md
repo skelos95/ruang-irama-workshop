@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Corretto il menu dopo il cambio squadra: i player già presenti in `PemainManusia` non rientrano più nel classifier umano/bot; il fast-path globale autoripristina `Manusia`, `SudahDiperiksa` e `SudahSiap` prima di riarmare HUD e input.
 - Teleport rinforzato contro muri/pavimenti: dummy e player condividono il controllo body-safe, il teleport verso player prova più lati invece della posizione esatta e l'HUD Teleport torna multilinea senza mostrare backslash.
 - Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo, quindi riapplica `Disable Game Mode HUD` / `Disable Game Mode In-World UI` e riabilita i latch/pulsanti del Menu Arcade senza ricostruire roster o HUD custom.
 - Cambio squadra alleggerito radicalmente: i player già registrati aggiornano solo Team/lifecycle state; il cleanup completo non viene più eseguito sul team switch.

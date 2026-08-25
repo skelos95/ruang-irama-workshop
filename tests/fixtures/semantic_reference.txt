@@ -1049,6 +1049,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 	{
 		Global.Siap == True;
 		Is Dummy Bot(Event Player) == False;
+		Array Contains(Global.PemainManusia, Event Player) == False;
 		Event Player.SudahSiap == True;
 		Event Player.SiklusPemainAktif == False;
 		Has Spawned(Event Player) == True;
@@ -3125,9 +3126,17 @@ rule("89a - Subrutin: Proses status cepat pemain")
 
 	actions
 	{
+		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, Global.PemainAktif.Manusia == False))));
+			Global.PemainAktif.Manusia = True;
+			Global.PemainAktif.SudahDiperiksa = True;
+			Global.PemainAktif.SudahSiap = True;
+		End;
 		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, And(Global.PemainAktif.PernahDisiapkan == True, Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif))))));
 			"Perubahan tim pemain terdaftar hanya menyegarkan identitas tim; HUD, pilihan, menu, dan status tidak dibangun ulang."
 			Abort If(Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False));
+			Global.PemainAktif.Manusia = True;
+			Global.PemainAktif.SudahDiperiksa = True;
+			Global.PemainAktif.SudahSiap = True;
 			"Overwatch mengaktifkan kembali tampilan mode dan dapat meninggalkan pengunci masukan saat pindah tim. Segarkan hanya keadaan tampilan dan mesin yang diperlukan tanpa pembersihan siklus penuh."
 			Disable Game Mode HUD(Global.PemainAktif);
 			Disable Game Mode In-World UI(Global.PemainAktif);

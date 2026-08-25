@@ -2776,6 +2776,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if classifier:
         checks.require("Abort If(Array Contains(Global.PemainManusia, Event Player));" in classifier.body,
                        "join duplicato può aggiungere due volte il roster")
+        checks.require("Array Contains(Global.PemainManusia, Event Player) == False;" in classifier.body,
+                       "classifier non deve rieseguire sui player già registrati nel roster")
         checks.require(classifier.body.find("Event Player.Manusia = True;") < classifier.body.find("Event Player.PahlawanTerakhir = Hero Of(Event Player);"),
                        "classificazione umana non inizializza PahlawanTerakhir dopo Manusia=True")
 
@@ -2830,6 +2832,9 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.PernahDisiapkan == True",
             "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)",
             "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
+            "Global.PemainAktif.Manusia = True;",
+            "Global.PemainAktif.SudahDiperiksa = True;",
+            "Global.PemainAktif.SudahSiap = True;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
@@ -2846,7 +2851,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Server Load < 150",
         ):
             checks.require(token in fast.body, f"dispatcher team-switch leggero incompleto: {token}")
-        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 3,
+        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 4,
                      "dispatcher team-switch leggero deve escludere gli iBot in tutti i gate")
         checks.require("Call Subroutine(BersihkanPemain);" not in fast.body,
                        "team switch non deve chiamare BersihkanPemain")
