@@ -2574,9 +2574,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "corpo identico")
 
 
-    def test_native_match_time_is_paused_until_chill_restart(self) -> None:
-        mutated = self.source.replace("Pause Match Time;", "", 1)
-        self.assert_rejected(mutated, "timer nativo deve restare in pausa")
+    def test_native_match_time_is_protected_without_pausing_prematch(self) -> None:
+        self.assertNotIn("Pause Match Time;", self.source)
+        self.assertNotIn("Unpause Match Time;", self.source)
+        mutated = self.source.replace("Set Match Time(600);", "", 1)
+        self.assert_rejected(mutated, "protezione timer nativo senza pausa")
+        mutated = self.source.replace("Is Assembling Heroes == False;", "Is Assembling Heroes == True;", 1)
+        self.assert_rejected(mutated, "deve escludere Assemble Heroes")
 
     def test_leave_distinguishes_team_switch_from_true_exit(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")

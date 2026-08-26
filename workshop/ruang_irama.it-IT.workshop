@@ -945,7 +945,6 @@ regola("00a1 - Umum: Mulai mode segera saat menunggu pemain")
 	{
 		"Permintaan mulai hanya boleh dikirim sekali sampai pertandingan berikutnya."
 		Globale.ModeMulaiDiminta = True;
-		Unpause Match Time;
 		Start Game Mode;
 	}
 }
@@ -969,7 +968,6 @@ regola("00a2 - Umum: Lewati pemilihan pahlawan")
 	{
 		"Jalankan satu kali hanya pada fase awal; pindah tim saat pertandingan berjalan tidak boleh memanggil Set Match Time berulang kali."
 		Globale.PilihPahlawanDilewati = True;
-		Unpause Match Time;
 		Set Match Time(0);
 	}
 }
@@ -993,12 +991,11 @@ regola("00a3 - Umum: Lewati persiapan awal")
 	{
 		"Lewati persiapan sekali saja agar aturan global tidak menembak Set Match Time terus-menerus."
 		Globale.PersiapanDilewati = True;
-		Unpause Match Time;
 		Set Match Time(0);
 	}
 }
 
-regola("00a4 - Umum: Bekukan waktu mode setelah pertandingan aktif")
+regola("00a4 - Umum: Jaga waktu mode tanpa membekukan fase awal")
 {
 	evento
 	{
@@ -1009,12 +1006,15 @@ regola("00a4 - Umum: Bekukan waktu mode setelah pertandingan aktif")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
+		Is Assembling Heroes == False;
+		Is In Setup == False;
+		Match Time < 120;
 	}
 
 	azioni
 	{
-		"Jangan bekukan waktu saat Assemble Heroes atau Setup; tunggu pertandingan benar-benar aktif."
-		Pause Match Time;
+		"Jaga timer mode tetap jauh dari nol tanpa Pause Match Time agar transisi Assemble Heroes dan Setup tidak pernah membeku."
+		Set Match Time(600);
 	}
 }
 
@@ -1039,7 +1039,6 @@ regola("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 		Globale.PilihPahlawanDilewati = False;
 		Globale.PersiapanDilewati = False;
 		Globale.ModeMulaiDiminta = False;
-		Unpause Match Time;
 		Restart Match;
 	}
 }

@@ -4763,7 +4763,16 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
-    checks.equal(source.count("Pause Match Time;"), 1, "timer nativo deve restare in pausa fino al restart CHILL")
+    checks.equal(source.count("Pause Match Time;"), 0, "Pause Match Time vietato: blocca Assemble Heroes/Setup")
+    checks.equal(source.count("Unpause Match Time;"), 0, "Unpause Match Time non necessario senza pause")
+    timer_protectors = [rule for rule in rules if "Set Match Time(600);" in rule.body]
+    checks.equal(len(timer_protectors), 1, "protezione timer nativo senza pausa")
+    if timer_protectors:
+        protector = timer_protectors[0]
+        checks.require("Is Game In Progress == True;" in protector.body, "protezione timer nativo solo in partita attiva")
+        checks.require("Is Assembling Heroes == False;" in protector.body, "protezione timer nativo deve escludere Assemble Heroes")
+        checks.require("Is In Setup == False;" in protector.body, "protezione timer nativo deve escludere Setup")
+        checks.require("Match Time < 120;" in protector.body, "soglia protezione timer nativo")
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
     if camera_rule:
