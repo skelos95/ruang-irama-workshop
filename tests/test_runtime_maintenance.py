@@ -23,6 +23,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertIn("Event Player.NamaTampilan != Null;", roster)
+            self.assertIn('Event Player.NamaTampilan != Custom String("");', roster)
             self.assertIn('Custom String("{0} - {1} MIN", Event Player.NamaTampilan, Event Player.MenitLobi)', roster)
             self.assertIn('Custom String("{0} - {1}", Event Player.NamaTampilan,', roster)
 
@@ -33,8 +34,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)", teleport)
 
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin', 1)[0]
-            self.assertIn(f"If({global_name}.PemainAktif.NamaTampilan == Null);", fast)
+            cache_invalid = f'Or({global_name}.PemainAktif.NamaTampilan == Null, {global_name}.PemainAktif.NamaTampilan == Custom String("") )'.replace('"") )', '""))')
+            self.assertIn(cache_invalid, fast)
+            self.assertIn(f'Custom String("{{0}}", {global_name}.PemainAktif) != Custom String("")', fast)
             self.assertIn(f'{global_name}.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{{0}}", {global_name}.PemainAktif));', fast)
+            self.assertLess(fast.index(cache_invalid), fast.index(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)"))
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):

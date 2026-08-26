@@ -1153,6 +1153,7 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.TimTerakhir == Team Of(Event Player);
 		Event Player.SegarkanRosterTertunda == False;
 		Event Player.NamaTampilan != Null;
+		Event Player.NamaTampilan != Custom String("");
 		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
@@ -3153,8 +3154,11 @@ rule("89a - Subrutin: Proses status cepat pemain")
 
 	actions
 	{
+		If(And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, And(Or(Global.PemainAktif.NamaTampilan == Null, Global.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Global.PemainAktif) != Custom String(""))));
+			Global.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Global.PemainAktif));
+		End;
 		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, Or(Global.PemainAktif.Manusia == False, Global.PemainAktif.PernahDisiapkan == False)))));
-			If(Global.PemainAktif.NamaTampilan == Null);
+			If(And(Or(Global.PemainAktif.NamaTampilan == Null, Global.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Global.PemainAktif) != Custom String("")));
 				Global.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Global.PemainAktif));
 			End;
 			If(Custom String("{0}", Global.PemainAktif) == Custom String("งูแท้"));
