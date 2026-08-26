@@ -177,7 +177,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Modify Global Variable(HudKiriPemain, Remove From Array By Index", source)
             self.assertNotIn("Modify Global Variable(HudKananPemain, Remove From Array By Index", source)
             self.assertIn(f"{global_name}.PemainSlotHUD[{global_name}.IndeksUtangKeluar] = Null;", source)
-            self.assertIn(f"{global_name}.NamaSlotHUD[{global_name}.IndeksUtangKeluar] = Custom String("");", source)
+            self.assertIn(f'{global_name}.NamaSlotHUD[{global_name}.IndeksUtangKeluar] = Custom String("");', source)
             self.assertIn(f"{global_name}.PemainSlotHUD[{global_name}.PemainPengganti.UrutanHUD] = {global_name}.PemainPengganti;", source)
             self.assertIn(f"{global_name}.PemainPengganti.NamaTampilan = {global_name}.NamaSlotHUD[{global_name}.PemainPengganti.UrutanHUD];", source)
             self.assertIn(f"{global_name}.NamaSlotHUD[Player Variable(Event Player.TargetInspeksi, UrutanHUD)]", source)
