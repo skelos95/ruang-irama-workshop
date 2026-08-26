@@ -879,7 +879,6 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
 		Disable Built-In Game Mode Completion;
-		Pause Match Time;
 		If(Global.DiagnostikPerforma == False);
 			Disable Inspector Recording;
 		End;
@@ -946,6 +945,7 @@ rule("00a1 - Umum: Mulai mode segera saat menunggu pemain")
 	{
 		"Permintaan mulai hanya boleh dikirim sekali sampai pertandingan berikutnya."
 		Global.ModeMulaiDiminta = True;
+		Unpause Match Time;
 		Start Game Mode;
 	}
 }
@@ -969,6 +969,7 @@ rule("00a2 - Umum: Lewati pemilihan pahlawan")
 	{
 		"Jalankan satu kali hanya pada fase awal; pindah tim saat pertandingan berjalan tidak boleh memanggil Set Match Time berulang kali."
 		Global.PilihPahlawanDilewati = True;
+		Unpause Match Time;
 		Set Match Time(0);
 	}
 }
@@ -992,7 +993,28 @@ rule("00a3 - Umum: Lewati persiapan awal")
 	{
 		"Lewati persiapan sekali saja agar aturan global tidak menembak Set Match Time terus-menerus."
 		Global.PersiapanDilewati = True;
+		Unpause Match Time;
 		Set Match Time(0);
+	}
+}
+
+rule("00a4 - Umum: Bekukan waktu mode setelah pertandingan aktif")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Siap == True;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		"Jangan bekukan waktu saat Assemble Heroes atau Setup; tunggu pertandingan benar-benar aktif."
+		Pause Match Time;
 	}
 }
 
@@ -1017,6 +1039,7 @@ rule("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 		Global.PilihPahlawanDilewati = False;
 		Global.PersiapanDilewati = False;
 		Global.ModeMulaiDiminta = False;
+		Unpause Match Time;
 		Restart Match;
 	}
 }
