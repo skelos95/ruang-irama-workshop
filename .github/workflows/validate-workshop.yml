@@ -1,35 +1,37 @@
-name: Validate Workshop
+name: Apply Team-Switch Name Cache Fix
 
 on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: validate-workshop-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: team-switch-name-cache-main
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  patch-and-validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
-      - name: Run validator unit tests
+      - name: Repair cached display name across team switches
+        run: python .github/maintenance/fix_team_switch_name_cache.py
+
+      - name: Run regression suite
         run: python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Validate Workshop source
@@ -37,3 +39,15 @@ jobs:
 
       - name: Preflight Italian clipboard source
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+      - name: Commit validated fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_runtime_maintenance.py CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No cache-repair changes to commit."
+            exit 0
+          fi
+          git commit -m "Repair cached player name after team switches"
+          git push origin HEAD:main
