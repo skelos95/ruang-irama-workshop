@@ -3494,9 +3494,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainSiklusGlobal == Null",
             "Global.PemainSiklusGlobal = Global.PemainAktif;",
             "Has Spawned(Global.PemainAktif) == True",
-            "Server Load < 150",
         ):
             checks.require(token in fast.body, f"dispatcher team-switch leggero incompleto: {token}")
+
+        checks.require("Server Load < 150" not in fast.body,
+                       "dispatcher team-switch non deve dipendere da Server Load < 150")
 
         mismatch_anchor = fast.body.find(
             "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
@@ -3584,9 +3586,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                 "Is Alive(Global.PemainAktif) == True",
                 "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
                 "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
-                "Server Load < 150",
-            ):
+                ):
                 checks.require(token in pending_header, f"consumer roster pending senza guardia: {token}")
+            checks.require("Server Load < 150" not in pending_header,
+                           "consumer roster pending non deve dipendere dal carico server")
             checks.require(
                 "Destroy HUD Text(Global.PemainAktif.HudKiri);" not in pending
                 and "Destroy HUD Text(Global.PemainAktif.HudKanan);" not in pending,
@@ -3681,6 +3684,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Is Alive(Event Player) == True;" not in roster_conditions,
             "renderer roster non deve attendere Is Alive e bloccare il lifecycle globale",
         )
+        checks.require("Server Load < 150" not in roster_conditions,
+                       "renderer roster non deve dipendere dal carico server")
         ready_order = tuple(
             roster_hud.body.find(token)
             for token in (
@@ -3723,9 +3728,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Event Player.SiklusPemainAktif == False;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
-            "Server Load < 150;",
         ):
             checks.require(token in conditions, f"worker setup iniziale senza guardia: {token}")
+        checks.require("Server Load < 150" not in conditions,
+                       "worker setup iniziale non deve dipendere dal carico server")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
         checks.require("Call Subroutine(SiapkanPemain);" in setup_worker.body,

@@ -180,6 +180,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", classifier)
             self.assertIn(f"{global_name}.WaktuSiklusGlobal = Total Time Elapsed + 0.250;", classifier)
             self.assertNotIn(f"Abort If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
+            self.assertNotIn("Server Load < 150", classifier)
             self.assertLess(
                 classifier.index("Call Subroutine(KunciBot);"),
                 classifier.index(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);"),
@@ -220,12 +221,15 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = False;", fast)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False", fast)
             self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
-            self.assertIn("Server Load < 150", fast)
+            self.assertNotIn("Server Load < 150", fast)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
+            setup_worker = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain', 1)[0]
+            self.assertNotIn("Server Load < 150", setup_worker)
             self.assertNotIn("Call Subroutine(SiapkanPemain);", fast)
 
             roster_hud = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
+            self.assertNotIn("Server Load < 150", roster_hud)
             self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster_hud)
             self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster_hud)
             self.assertGreater(

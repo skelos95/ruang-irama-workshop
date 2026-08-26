@@ -1029,7 +1029,6 @@ rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 		Event Player.SiklusPemainAktif == False;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
-		Server Load < 150;
 	}
 
 	actions
@@ -1057,8 +1056,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.SiklusPemainAktif == False;
 		Has Spawned(Event Player) == True;
 		Event Player.SudahDiperiksa == False;
-	
-		Server Load < 150;}
+	}
 
 	actions
 	{
@@ -1158,8 +1156,7 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
-	
-		Server Load < 150;}
+	}
 
 	actions
 	{
@@ -3229,7 +3226,7 @@ rule("89a - Subrutin: Proses status cepat pemain")
 				Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 			End;
 		End;
-		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Global.PemainAktif.Manusia == True, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, And(Global.PemainAktif.SegarkanRosterTertunda == True, And(Global.PemainAktif.TimTerakhir == Team Of(Global.PemainAktif), And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, And(Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim, And(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0, Server Load < 150)))))))))));
+		If(And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Global.PemainAktif.Manusia == True, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, And(Global.PemainAktif.SegarkanRosterTertunda == True, And(Global.PemainAktif.TimTerakhir == Team Of(Global.PemainAktif), And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, And(Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim, Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0))))))))));
 			"Ganti handle daftar kanonis hanya setelah entitas tim baru stabil; 02b membuat ulang kedua baris pada konteks pemain yang baru."
 			If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
 				If(Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] != 0);
@@ -3261,7 +3258,7 @@ rule("89a - Subrutin: Proses status cepat pemain")
 			Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);
 			Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
 		End;
-		If(And(Global.PemainSiklusGlobal == Null, And(Global.PemainAktif.PindahTimDiproses == True, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == False, And(Entity Exists(Global.PemainAktif) == True, And(Has Spawned(Global.PemainAktif) == True, And(Total Time Elapsed >= Global.WaktuSiklusGlobal, Server Load < 150))))))));
+		If(And(Global.PemainSiklusGlobal == Null, And(Global.PemainAktif.PindahTimDiproses == True, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == False, And(Entity Exists(Global.PemainAktif) == True, And(Has Spawned(Global.PemainAktif) == True, Total Time Elapsed >= Global.WaktuSiklusGlobal)))))));
 			Global.PemainSiklusGlobal = Global.PemainAktif;
 		End;
 		If(And(Global.PemainAktif.Manusia == True, Or(Global.PemainAktif.KematianBalasDendam == True, And(Global.PemainAktif.KartuNasibAktif == True, And(Global.PemainAktif.EfekNasib == 3, And(Global.PemainAktif.PutaranKartuNasib == 0, Global.PemainAktif.WaktuPaksaBerakhir > 0))))));
