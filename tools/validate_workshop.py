@@ -1934,10 +1934,10 @@ End;
             mask_strings(rule.body),
         )
     ]
-    checks.equal(len(property_writers), 3, "profilo speciale: numero writer property MusikKhusus")
+    checks.equal(len(property_writers), 4, "profilo speciale: numero writer property MusikKhusus")
     checks.require(
         Counter(receiver for _, receiver in property_writers)
-        == Counter({"Event Player": 2, "Global.PemainAktif": 1}),
+        == Counter({"Event Player": 2, "Global.PemainAktif": 1, "Global.PemainPengganti": 1}),
         f"profilo speciale: receiver writer inattesi MusikKhusus: {property_writers}",
     )
     action_writers = [
@@ -3342,12 +3342,22 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require("Abort If(Entity Exists(Event Player) == True);" in body,
                        "leave deve ignorare ogni entità ancora valida dopo il grace period")
         replacement_guard = (
-            "Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, "
+            "If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, "
             "Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, "
             "Custom String(\"{0}\", Current Array Element) == Event Player.NamaTampilan)))) > 0);"
         )
         checks.require(replacement_guard in body,
                        "leave non distingue il cambio squadra dalla vera uscita tramite identità persistente")
+        checks.require("Global.PemainManusia[Global.IndeksKeluar] = Global.PemainPengganti;" in body,
+                       "team-switch non sostituisce il riferimento entità nel medesimo slot roster")
+        checks.require("Global.PemainPengganti.UrutanHUD = Global.SlotHUDPemain[Global.IndeksKeluar];" in body,
+                       "team-switch non conserva lo slot HUD del profilo")
+        checks.require("Global.PemainPengganti.PemainDipilih = Event Player.PemainDipilih;" in body
+                       and "Global.PemainManusia[Global.IndeksPemilih].PemainDipilih = Global.PemainPengganti;" in body
+                       and "Call Subroutine(HitungPilihan);" in body,
+                       "team-switch non migra voto e riferimenti sociali sulla nuova entità")
+        checks.require("Call Subroutine(SiapkanPemain);" not in body,
+                       "team-switch non deve rifare il setup completo")
         checks.require(all(token in body for token in ("Global.ProfilNama", "Global.ProfilPreferensiA", "Global.ProfilPreferensiB", "Global.ProfilStatus", "Global.ProfilSosial", "Global.ProfilPilihanNama")),
                        "leave non salva il profilo persistente prima del grace period")
         checks.require("Call Subroutine(BersihkanPemain);" in body,

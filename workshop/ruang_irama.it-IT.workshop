@@ -63,6 +63,7 @@ variabili
 		59: ProfilStatus
 		60: ProfilSosial
 		61: ProfilPilihanNama
+		62: PemainPengganti
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -377,6 +378,7 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.ProfilStatus = Empty Array;
 		Globale.ProfilSosial = Empty Array;
 		Globale.ProfilPilihanNama = Empty Array;
+		Globale.PemainPengganti = Null;
 		Globale.IndeksKeluar = -1;
 		Globale.SlotHUDTerakhir = -1;
 		Globale.PemimpinPilihan = Null;
@@ -1578,7 +1580,64 @@ regola("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")
 		Wait(0.500, Ignora condizione);
 		Abort If(Entity Exists(Event Player) == True);
 		"Jika identitas yang sama sudah aktif lagi, kejadian ini hanya perpindahan tim dan roster lama tidak boleh dibersihkan."
-		Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);
+		If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);
+			"Perubahan tim mengganti referensi entitas aktif pada slot roster yang sama; profil dan setup pemain tidak didaftarkan ulang dari nol."
+			Globale.PemainPengganti = First Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan))));
+			Globale.IndeksKeluar = Index Of Array Value(Globale.PemainManusia, Event Player);
+			If(And(Globale.PemainPengganti != Null, Globale.IndeksKeluar >= 0));
+				Globale.PemainPengganti.WaktuMasuk = Event Player.WaktuMasuk;
+				Globale.PemainPengganti.MenitLobi = Event Player.MenitLobi;
+				Globale.PemainPengganti.NamaTampilan = Event Player.NamaTampilan;
+				Globale.PemainPengganti.IndeksGenre = Event Player.IndeksGenre;
+				Globale.PemainPengganti.KursorGenre = Event Player.KursorGenre;
+				Globale.PemainPengganti.IndeksWarna = Event Player.IndeksWarna;
+				Globale.PemainPengganti.KursorWarna = Event Player.KursorWarna;
+				Globale.PemainPengganti.WarnaNama = Event Player.WarnaNama;
+				Globale.PemainPengganti.WarnaMenu = Event Player.WarnaMenu;
+				Globale.PemainPengganti.IndeksBahasa = Event Player.IndeksBahasa;
+				Globale.PemainPengganti.KursorBahasa = Event Player.KursorBahasa;
+				Globale.PemainPengganti.IndeksSuara = Event Player.IndeksSuara;
+				Globale.PemainPengganti.KursorSuara = Event Player.KursorSuara;
+				Globale.PemainPengganti.IndeksIkon = Event Player.IndeksIkon;
+				Globale.PemainPengganti.KursorIkon = Event Player.KursorIkon;
+				Globale.PemainPengganti.TeleportasiJongkokDiaktifkan = Event Player.TeleportasiJongkokDiaktifkan;
+				Globale.PemainPengganti.KursorTeleportasiJongkok = Event Player.KursorTeleportasiJongkok;
+				Globale.PemainPengganti.PrivasiInspeksiAktif = Event Player.PrivasiInspeksiAktif;
+				Globale.PemainPengganti.KursorPrivasiInspeksi = Event Player.KursorPrivasiInspeksi;
+				Globale.PemainPengganti.ModeKebal = Event Player.ModeKebal;
+				Globale.PemainPengganti.KursorKebal = Event Player.KursorKebal;
+				Globale.PemainPengganti.IzinkanDummyMengikuti = Event Player.IzinkanDummyMengikuti;
+				Globale.PemainPengganti.KursorIkutiDummy = Event Player.KursorIkutiDummy;
+				Globale.PemainPengganti.KursorKamera = Event Player.KursorKamera;
+				Globale.PemainPengganti.KursorPilihan = Event Player.KursorPilihan;
+				Globale.PemainPengganti.PemainDipilih = Event Player.PemainDipilih;
+				Globale.PemainPengganti.JumlahPilihan = Event Player.JumlahPilihan;
+				Globale.PemainPengganti.MusikKhusus = Event Player.MusikKhusus;
+				Globale.PemainPengganti.UrutanHUD = Globale.SlotHUDPemain[Globale.IndeksKeluar];
+				Globale.PemainManusia[Globale.IndeksKeluar] = Globale.PemainPengganti;
+				For Global Variable(IndeksPemilih, 0, Count Of(Globale.PemainManusia), 1);
+					If(Globale.PemainManusia[Globale.IndeksPemilih].PemainDipilih == Event Player);
+						Globale.PemainManusia[Globale.IndeksPemilih].PemainDipilih = Globale.PemainPengganti;
+					End;
+				End;
+				Globale.PemainPengganti.Manusia = True;
+				Globale.PemainPengganti.BotOtomatis = False;
+				Globale.PemainPengganti.SudahDiperiksa = True;
+				Globale.PemainPengganti.SudahSiap = True;
+				Globale.PemainPengganti.PernahDisiapkan = True;
+				Globale.PemainPengganti.PindahTimDiproses = False;
+				Globale.PemainPengganti.SiklusPemainAktif = False;
+				Globale.PemainPengganti.HudPemainDibuat = False;
+				Globale.PemainPengganti.HudKiri = Null;
+				Globale.PemainPengganti.HudKanan = Null;
+				Globale.PemainPengganti.TimTerakhir = Event Player.TimTerakhir;
+				Globale.PemainPengganti.TimSiklusTarget = Team Of(Globale.PemainPengganti);
+				Globale.PemainPengganti.WaktuSiklusTim = Total Time Elapsed + 0.050;
+				Call Subroutine(HitungPilihan);
+			End;
+			Globale.PemainPengganti = Null;
+			Abort;
+		End;
 		Call Subroutine(BersihkanPemain);
 		If(Globale.PemainSiklusGlobal == Event Player);
 			Globale.PemainSiklusGlobal = Null;

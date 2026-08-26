@@ -2574,6 +2574,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "corpo identico")
 
 
+    def test_team_switch_rebinds_stale_entity_in_place(self) -> None:
+        leave = self.rule(lambda rule: "Player Left Match;" in rule.body and "Call Subroutine(BersihkanPemain);" in rule.body)
+        mutated = self.replace_in_rule(
+            leave,
+            "Global.PemainManusia[Global.IndeksKeluar] = Global.PemainPengganti;",
+            "Global.PemainPengganti = Global.PemainPengganti;",
+        )
+        self.assert_rejected(mutated, "medesimo slot roster")
+
     def test_native_match_time_is_protected_without_pausing_prematch(self) -> None:
         self.assertNotIn("Pause Match Time;", self.source)
         self.assertNotIn("Unpause Match Time;", self.source)
