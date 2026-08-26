@@ -1245,8 +1245,8 @@ regola("02b - HUD Pemain: Hubungkan ke slot global")
 	evento
 	{
 		Ongoing - Each Player;
-		All;
-		All;
+		Tutti;
+		Tutti;
 	}
 
 	condizioni
