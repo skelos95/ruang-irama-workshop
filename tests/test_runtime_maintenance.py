@@ -154,6 +154,35 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
 
 
+    def test_roster_is_owned_by_persistent_global_hud_slots(self):
+        for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
+            self.assertIn("63: PemainSlotHUD", source)
+            self.assertIn("64: NamaSlotHUD", source)
+            self.assertIn(f"{global_name}.PemainSlotHUD = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);", source)
+            self.assertIn(f'{rule_kw}("00b - HUD Roster: Dua belas slot global permanen")', source)
+            global_rows = source.split(f'{rule_kw}("00b - HUD Roster: Dua belas slot global permanen")', 1)[1].split(f'{rule_kw}("00a1 - Umum:', 1)[0]
+            self.assertIn("Ongoing - Global;", global_rows)
+            self.assertIn("For Global Variable(IndeksPemilih, 0, 12, 1);", global_rows)
+            self.assertEqual(global_rows.count("Create HUD Text("), 2)
+            self.assertIn(f"{global_name}.PemainSlotHUD[Evaluate Once({global_name}.IndeksPemilih)]", global_rows)
+            self.assertIn(f"{global_name}.NamaSlotHUD[Evaluate Once({global_name}.IndeksPemilih)]", global_rows)
+
+            player_bind = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke slot global")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            self.assertNotIn("Create HUD Text(", player_bind)
+            self.assertIn(f"Event Player.HudKiri = {global_name}.HudKiriPemain[Event Player.UrutanHUD];", player_bind)
+            self.assertIn(f"Event Player.HudKanan = {global_name}.HudKananPemain[Event Player.UrutanHUD];", player_bind)
+
+            self.assertIn(f"{global_name}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;", source)
+            self.assertIn(f"{global_name}.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;", source)
+            self.assertNotIn("Modify Global Variable(HudKiriPemain, Remove From Array By Index", source)
+            self.assertNotIn("Modify Global Variable(HudKananPemain, Remove From Array By Index", source)
+            self.assertIn(f"{global_name}.PemainSlotHUD[{global_name}.IndeksUtangKeluar] = Null;", source)
+            self.assertIn(f"{global_name}.NamaSlotHUD[{global_name}.IndeksUtangKeluar] = Custom String("");", source)
+            self.assertIn(f"{global_name}.PemainSlotHUD[{global_name}.PemainPengganti.UrutanHUD] = {global_name}.PemainPengganti;", source)
+            self.assertIn(f"{global_name}.PemainPengganti.NamaTampilan = {global_name}.NamaSlotHUD[{global_name}.PemainPengganti.UrutanHUD];", source)
+            self.assertIn(f"{global_name}.NamaSlotHUD[Player Variable(Event Player.TargetInspeksi, UrutanHUD)]", source)
+            self.assertIn(f"{global_name}.NamaSlotHUD[Player Variable(Event Player.CalonTargetTeleportasi, UrutanHUD)]", source)
+
     def test_registered_team_switch_never_destroys_roster_or_hides_crouch_target(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
