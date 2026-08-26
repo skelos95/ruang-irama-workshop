@@ -1709,7 +1709,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Is Alive(Global.PemainAktif) == True",
             "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
             "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
-            "Server Load < 150",
         ):
             with self.subTest(guard=token):
                 changed_branch = branch.replace(token, "True", 1)
