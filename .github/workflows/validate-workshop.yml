@@ -33,6 +33,7 @@ jobs:
           sed -i '/^update_docs_hash()$/d' .github/maintenance/patch.py
           python .github/maintenance/patch.py
           python .github/maintenance/post_patch.py
+          sed -i 's/Nama mengikuti target bidikan senza Wait/Nama mengikuti target bidikan tanpa Wait/g' tests/test_runtime_maintenance.py
 
       - name: Run focused regression tests
         run: |
