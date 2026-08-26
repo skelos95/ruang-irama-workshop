@@ -29,7 +29,9 @@ jobs:
           python-version: '3.12'
 
       - name: Apply cached-name patch
-        run: python .github/maintenance/patch.py
+        run: |
+          sed -i '/^update_docs_hash()$/d' .github/maintenance/patch.py
+          python .github/maintenance/patch.py
 
       - name: Run validator unit tests
         run: python -m unittest discover -s tests -p 'test_*.py'
