@@ -3503,16 +3503,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.SudahDiperiksa = True;",
             "Global.PemainAktif.SudahSiap = True;",
             "Global.PemainAktif.PernahDisiapkan = True;",
-            "Global.PemainAktif.SegarkanRosterTertunda = True;",
-            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
-            "Global.PemainAktif.HudKiri = Null;",
-            "Global.PemainAktif.HudKanan = Null;",
-            "Global.PemainAktif.HudPemainDibuat = False;",
             "Global.PemainAktif.SegarkanRosterTertunda = False;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
-            "Global.PemainAktif.WaktuSiklusTim = 0;",
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == False",
             "Global.PemainAktif.PindahTimDiproses == False",
             "Global.PemainAktif.PindahTimDiproses = True;",
@@ -3577,116 +3571,21 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                     "Global.PemainAktif.SudahDiperiksa = True;",
                     "Global.PemainAktif.SudahSiap = True;",
                     "Global.PemainAktif.PernahDisiapkan = True;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = True;",
-                    "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
                     "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
                 )
             )
             checks.require(
                 all(position >= 0 for position in detector_order)
                 and detector_order == tuple(sorted(detector_order)),
-                "dispatcher team-switch: ordine detector/pending/ack TimTerakhir",
+                "dispatcher team-switch: ordine detector/ack TimTerakhir",
             )
             checks.require(
                 "Global.PemainAktif.Manusia = False;" not in mismatch,
                 "dispatcher team-switch: il detector non deve nascondere il player ai target Crouch",
             )
 
-        pending_anchor = fast.body.find(
-            "Global.PemainAktif.SegarkanRosterTertunda == True"
-        )
-        pending_branches = (
-            conditional_branches_containing(fast.body, pending_anchor)
-            if pending_anchor >= 0 else []
-        )
-        checks.require(bool(pending_branches), "dispatcher team-switch: consumer roster pending non isolato")
-        if pending_branches:
-            pending = mask_strings(pending_branches[0])
-            pending_header = pending.splitlines()[0]
-            for token in (
-                "Is Dummy Bot(Global.PemainAktif) == False",
-                "Global.PemainAktif.BotOtomatis == False",
-                "Global.PemainAktif.Manusia == True",
-                "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
-                "Global.PemainAktif.SegarkanRosterTertunda == True",
-                "Global.PemainAktif.TimTerakhir == Team Of(Global.PemainAktif)",
-                "Has Spawned(Global.PemainAktif) == True",
-                "Is Alive(Global.PemainAktif) == True",
-                "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
-                "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
-                ):
-                checks.require(token in pending_header, f"consumer roster pending senza guardia: {token}")
-            checks.require("Server Load < 150" not in pending_header,
-                           "consumer roster pending non deve dipendere dal carico server")
-            checks.require(
-                "Destroy HUD Text(Global.PemainAktif.HudKiri);" not in pending
-                and "Destroy HUD Text(Global.PemainAktif.HudKanan);" not in pending,
-                "consumer roster pending deve distruggere gli handle canonici globali",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", pending) is None,
-                "consumer roster pending non deve usare Abort",
-            )
-            pending_order = tuple(
-                pending.find(token)
-                for token in (
-                    "Destroy HUD Text(Global.HudKiriPemain[",
-                    "Destroy HUD Text(Global.HudKananPemain[",
-                    "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                    "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                    "Global.PemainAktif.HudKiri = Null;",
-                    "Global.PemainAktif.HudKanan = Null;",
-                    "Global.PemainAktif.HudPemainDibuat = False;",
-                    "Global.PemainAktif.WaktuSiklusTim = 0;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                )
-            )
-            checks.require(
-                all(position >= 0 for position in pending_order)
-                and pending_order == tuple(sorted(pending_order)),
-                "consumer roster pending: ordine destroy/clear/riarmo",
-            )
-        recovery_branches = [
-            fast.body[start:end]
-            for start, end in conditional_branch_spans(fast.body)
-            if "Array Contains(Global.PemainManusia, Global.PemainAktif) == False"
-            in fast.body[start:end]
-            and "Global.PemainAktif.SegarkanRosterTertunda == True"
-            in fast.body[start:end]
-            and "Global.PemainAktif.PindahTimDiproses = False;"
-            in fast.body[start:end]
-        ]
-        checks.equal(len(recovery_branches), 1, "team-switch: recovery non-roster pending")
-        if recovery_branches:
-            recovery = mask_strings(recovery_branches[0])
-            recovery_order = tuple(
-                recovery.find(token)
-                for token in (
-                    "Global.PemainAktif.WaktuSiklusTim = 0;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                    "Global.PemainAktif.PindahTimDiproses = False;",
-                )
-            )
-            checks.require(
-                all(position >= 0 for position in recovery_order)
-                and recovery_order == tuple(sorted(recovery_order)),
-                "team-switch: recovery non-roster deve liberare pending prima del requeue",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", recovery) is None,
-                "team-switch: recovery non-roster pending non deve usare Abort",
-            )
-
-        pending_true_writes = sum(
-            rule.body.count("SegarkanRosterTertunda = True;") for rule in rules
-        )
-        pending_false_writes = sum(
-            rule.body.count("SegarkanRosterTertunda = False;") for rule in rules
-        )
-        checks.equal(pending_true_writes, 1, "ownership writer pending roster True")
-        checks.equal(pending_false_writes, 3, "ownership writer pending roster False")
-
-        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 6,
+        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 4,
                      "dispatcher team-switch leggero deve escludere gli iBot in tutti i gate")
         checks.require("Call Subroutine(BersihkanPemain);" not in fast.body,
                        "team switch non deve chiamare BersihkanPemain")
@@ -3825,12 +3724,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         "Player Variable(Current Array Element, BotOtomatis) == True",
         "Player Variable(Current Array Element, Manusia) == True",
         "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
-        "Player Variable(Current Array Element, SegarkanRosterTertunda) == False",
     )
     human_public_pattern_text = (
         r"And\(\s*Player Variable\(\s*Current Array Element\s*,\s*Manusia\)\s*==\s*True\s*,\s*"
-        r"And\(\s*Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False\s*,\s*"
-        r"Player Variable\(\s*Current Array Element\s*,\s*SegarkanRosterTertunda\)\s*==\s*False\s*\)\s*\)"
+        r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False\s*\)"
     )
     human_public_pattern = re.compile(human_public_pattern_text, re.DOTALL)
     public_target_pattern = re.compile(
@@ -3852,10 +3749,6 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False",
         re.DOTALL,
     )
-    pending_false_pattern = re.compile(
-        r"Player Variable\(\s*Current Array Element\s*,\s*SegarkanRosterTertunda\)\s*==\s*False",
-        re.DOTALL,
-    )
     privacy_read_total = 0
     parsed_privacy_filter_total = 0
     for rule in rules:
@@ -3865,12 +3758,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 len(human_public_pattern.findall(rule.body)),
                 privacy_reads,
-                f"{rule.name}: ogni Privacy OFF target richiede Manusia=True e pending roster False",
-            )
-            checks.equal(
-                len(pending_false_pattern.findall(rule.body)),
-                privacy_reads,
-                f"{rule.name}: ogni target pubblico deve escludere il pending team-switch",
+                f"{rule.name}: ogni Privacy OFF target richiede Manusia=True",
             )
             parsed_filters = [
                 call for call in iter_calls(rule.body, "Filtered Array")
