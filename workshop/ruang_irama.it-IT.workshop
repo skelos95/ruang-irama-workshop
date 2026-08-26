@@ -165,6 +165,7 @@ variabili
 		104: TimSiklusTarget
 		105: MusikKhusus
 		106: SegarkanRosterTertunda
+		107: NamaTampilan
 }
 
 subroutine
@@ -1099,6 +1100,8 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			End;
 			Abort;
 		End;
+		"Bekukan nama manusia sekali saat identitasnya valid. HUD roster dan teks dunia memakai salinan ini agar token player tidak kosong setelah pindah tim."
+		Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));
 		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
 		Disable Game Mode HUD(Event Player);
 		Disable Game Mode In-World UI(Event Player);
@@ -1151,6 +1154,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Has Spawned(Event Player) == True;
 		Event Player.TimTerakhir == Team Of(Event Player);
 		Event Player.SegarkanRosterTertunda == False;
+		Event Player.NamaTampilan != Null;
 		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
@@ -1162,7 +1166,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
 		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0}{1}{2}", Custom String("{0} {1} {2}",
 			Globale.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player.NamaTampilan, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player.NamaTampilan, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player.NamaTampilan, Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
 			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Globale.PemimpinPilihan)
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Globale.PemimpinPilihan)
 			: Custom String("\n \nCHILL STAR: {0}", Globale.PemimpinPilihan) : Custom String("") : Custom String(""),
@@ -1183,7 +1187,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Event Player.HudKiri = Last Text ID;
 		Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = Event Player.HudKiri;
 		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0} {1} {2}", Globale.DaftarIkon[Event Player.IndeksIkon],
-			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player,
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player.NamaTampilan,
 			Event Player.MusikKhusus != Null ? Event Player.MusikKhusus : Event Player.IndeksGenre >= 0 ? Globale.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Null, Right, -13 + Event Player.UrutanHUD,
 			Custom Color(255, 255, 255, 255), Event Player.WarnaNama, Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
@@ -2520,7 +2524,7 @@ regola("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 		Event Player.TeksDunia = Null;
 		Call Subroutine(SegarkanTargetInspeksi);
 		Abort If(Event Player.TargetInspeksi == Null);
-		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
+		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, NamaTampilan) : Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Eye Position(Event Player.TargetInspeksi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
 		Event Player.TeksDunia = Last Text ID;
 		If(Index Of Array Value(Globale.PemainManusia, Event Player) >= 0);
 			Globale.TeksDuniaPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = Event Player.TeksDunia;
@@ -2940,7 +2944,7 @@ regola("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")
 		End;
 		Disable Nameplates(All Players(All Teams), Event Player);
 		Event Player.PelatNamaDinonaktifkan = True;
-		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.CalonTargetTeleportasi) ? Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : Hero Of(Event Player.CalonTargetTeleportasi)), Custom String("{0}", Event Player.CalonTargetTeleportasi), Round To Integer(Health(Event Player.CalonTargetTeleportasi), Down)), Eye Position(Event Player.CalonTargetTeleportasi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
+		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.CalonTargetTeleportasi) ? Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : Hero Of(Event Player.CalonTargetTeleportasi)), Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : Custom String("{0}", Event Player.CalonTargetTeleportasi), Round To Integer(Health(Event Player.CalonTargetTeleportasi), Down)), Eye Position(Event Player.CalonTargetTeleportasi) + Vector(0, 0.450, 0), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
 		Event Player.TeksTeleportasi = Last Text ID;
 		Event Player.TargetTeleportasiTeks = Event Player.CalonTargetTeleportasi;
 	}
@@ -3153,6 +3157,9 @@ regola("89a - Subrutin: Proses status cepat pemain")
 	azioni
 	{
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Or(Globale.PemainAktif.Manusia == False, Globale.PemainAktif.PernahDisiapkan == False)))));
+			If(Globale.PemainAktif.NamaTampilan == Null);
+				Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
+			End;
 			If(Custom String("{0}", Globale.PemainAktif) == Custom String("งูแท้"));
 				Globale.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
 				If(Globale.PemainAktif.PernahDisiapkan == False);
@@ -4215,6 +4222,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.IndeksGenre = -1;
 		Event Player.MusikKhusus = Null;
 		Event Player.SegarkanRosterTertunda = False;
+		Event Player.NamaTampilan = Null;
 		Event Player.UrutanHUD = -1;
 		Event Player.HudKiri = Null;
 		Event Player.HudKanan = Null;

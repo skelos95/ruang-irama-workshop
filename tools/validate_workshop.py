@@ -2027,7 +2027,7 @@ End;
             for call in iter_calls(right_calls[0].args[2], "Custom String")
             if right_calls and len(call.args) == 3
             and parse_literal(call.args[0]) == "{0} - {1}"
-            and call.args[1].strip() == "Event Player"
+            and call.args[1].strip() in {"Event Player", "Event Player.NamaTampilan"}
         ] if right_calls else []
         checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
         if vibe_calls:
