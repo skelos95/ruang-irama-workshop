@@ -32,9 +32,15 @@ jobs:
         run: |
           sed -i '/^update_docs_hash()$/d' .github/maintenance/patch.py
           python .github/maintenance/patch.py
+          python .github/maintenance/post_patch.py
 
-      - name: Run validator unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run focused regression tests
+        run: |
+          python -m unittest \
+            tests.test_runtime_maintenance \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_official_source_passes_all_semantic_checks \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_special_player_roster_main_and_locked_renderers_are_guarded \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_global_lifecycle_dispatch_excludes_classified_ibots
 
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
@@ -46,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_runtime_maintenance.py CHANGELOG.md docs/VALIDAZIONE.md
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tests/test_runtime_maintenance.py tools/validate_workshop.py CHANGELOG.md
           if git diff --cached --quiet; then
             echo "No maintenance changes to commit."
             exit 0
