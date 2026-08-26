@@ -330,7 +330,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assertEqual(self.errors(mutated), [])
 
     def test_write_only_variable_is_rejected(self) -> None:
-        mutated = self.source.replace("Global.PemainAktif.WaktuMasuk", "Total Time Elapsed")
+        mutated = self.add_player_declaration_and_setup_init("VariabileSoloScritta", "0")
         self.assert_rejected(mutated, "soltanto inizializzata")
 
     def test_undeclared_global_property_is_rejected(self) -> None:
