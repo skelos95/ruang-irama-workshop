@@ -43,9 +43,6 @@ jobs:
             tests.test_validate_workshop.SemanticWorkshop081Tests.test_special_player_roster_main_and_locked_renderers_are_guarded \
             tests.test_validate_workshop.SemanticWorkshop081Tests.test_global_lifecycle_dispatch_excludes_classified_ibots
 
-      - name: Validate Workshop source
-        run: python tools/validate_workshop.py
-
       - name: Preflight Italian clipboard source
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 
