@@ -1271,7 +1271,7 @@ rule("02b - HUD Pemain: Hubungkan ke slot global")
 		"Baris roster sudah dimiliki slot global; player hanya menyimpan alias handle untuk kompatibilitas lifecycle."
 		Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];
 		Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];
-		Event Player.HudPemainDibuat = True;
+		Event Player.HudPemainDibuat = And(Event Player.HudKiri != Null, Event Player.HudKanan != Null);
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Welcome to CHILL. Pick a vibe, pick a color, stay weird.") : Event Player.IndeksBahasa == 1 ? Custom String("Selamat datang di CHILL. Pilih vibe, pilih warna, tetap aneh.") : Custom String("ยินดีต้อนรับสู่ CHILL เลือกเพลง เลือกสี แล้วกวนแบบพอดี ๆ"));
 	}
 }
