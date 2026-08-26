@@ -1682,7 +1682,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("SiapkanPemain", "False"),
         ("TerapkanHalamanIkutiDummy", "Event Player.KursorIkutiDummy == 1"),
     }
-    allowed_follow_writers = required_follow_writers | {("TenangkanPemain", "False")}
+    allowed_follow_writers = required_follow_writers | {
+        ("TenangkanPemain", "False"),
+        ("02 - Pemain: Pisahkan manusia dari pasukan kaleng", "X Component Of(Global.ProfilSosial[Index Of Array Value(Global.ProfilNama, Event Player.NamaTampilan)]) == 1"),
+    }
     checks.require(required_follow_writers <= set(follow_writers),
                    "Dummy Follow non ha writer setup/apply obbligatori")
     checks.require(set(follow_writers) <= allowed_follow_writers,
@@ -1851,7 +1854,7 @@ End;
                 and positions[-1] < profile_match.start(),
                 "profilo speciale: matcher deve seguire i default generici",
             )
-            minute = classifier.body.find("Event Player.MenitLobi = 0;")
+            minute = classifier.body.find("Event Player.MenitLobi = ")
             roster = classifier.body.find("Append To Array(Global.PemainManusia, Event Player)")
             checks.require(
                 profile_end >= 0 and profile_end < minute < roster,
@@ -3338,6 +3341,15 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "leave deve attendere 0,500 s prima di distinguere uscita e cambio team")
         checks.require("Abort If(Entity Exists(Event Player) == True);" in body,
                        "leave deve ignorare ogni entità ancora valida dopo il grace period")
+        replacement_guard = (
+            "Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, "
+            "Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, "
+            "Custom String(\"{0}\", Current Array Element) == Event Player.NamaTampilan)))) > 0);"
+        )
+        checks.require(replacement_guard in body,
+                       "leave non distingue il cambio squadra dalla vera uscita tramite identità persistente")
+        checks.require(all(token in body for token in ("Global.ProfilNama", "Global.ProfilPreferensiA", "Global.ProfilPreferensiB", "Global.ProfilStatus", "Global.ProfilSosial", "Global.ProfilPilihanNama")),
+                       "leave non salva il profilo persistente prima del grace period")
         checks.require("Call Subroutine(BersihkanPemain);" in body,
                        "leave vero non esegue cleanup esatto roster/HUD")
         checks.require("Call Subroutine(TenangkanPemain);" not in body,
@@ -3365,6 +3377,12 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "leave iBot non deve entrare nel cleanup umano")
 
     classifier = next((rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body), None)
+    if classifier:
+        checks.require("Index Of Array Value(Global.ProfilNama, Event Player.NamaTampilan) >= 0" in classifier.body,
+                       "classifier non ripristina il profilo persistente al rejoin")
+        checks.require("Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiA" in classifier.body
+                       and "Event Player.JumlahPilihan = Y Component Of(Global.ProfilSosial" in classifier.body,
+                       "rejoin non ripristina tempo CHILL e stato sociale persistente")
     checks.require(classifier is not None, "registrazione roster umano assente")
     if classifier:
         checks.require("Abort If(Array Contains(Global.PemainManusia, Event Player));" in classifier.body,
@@ -4745,6 +4763,7 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
+    checks.equal(source.count("Pause Match Time;"), 1, "timer nativo deve restare in pausa fino al restart CHILL")
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
     if camera_rule:

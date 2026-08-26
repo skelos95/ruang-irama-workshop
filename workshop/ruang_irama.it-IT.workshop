@@ -57,6 +57,12 @@ variabili
 		53: JarakBidik
 		54: PemainSiklusGlobal
 		55: WaktuSiklusGlobal
+		56: ProfilNama
+		57: ProfilPreferensiA
+		58: ProfilPreferensiB
+		59: ProfilStatus
+		60: ProfilSosial
+		61: ProfilPilihanNama
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -365,6 +371,12 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.HudMenuPemain = Empty Array;
 		Globale.TeksDuniaPemain = Empty Array;
 		Globale.SlotHUDPemain = Empty Array;
+		Globale.ProfilNama = Empty Array;
+		Globale.ProfilPreferensiA = Empty Array;
+		Globale.ProfilPreferensiB = Empty Array;
+		Globale.ProfilStatus = Empty Array;
+		Globale.ProfilSosial = Empty Array;
+		Globale.ProfilPilihanNama = Empty Array;
 		Globale.IndeksKeluar = -1;
 		Globale.SlotHUDTerakhir = -1;
 		Globale.PemimpinPilihan = Null;
@@ -867,6 +879,7 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
 		Disable Built-In Game Mode Completion;
+		Pause Match Time;
 		If(Globale.DiagnostikPerforma == False);
 			Disable Inspector Recording;
 		End;
@@ -1115,7 +1128,40 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			Event Player.IndeksIkon = 23;
 			Event Player.KursorIkon = 23;
 		End;
-		Event Player.MenitLobi = 0;
+		"Profil pemain bertahan sampai pertandingan dimulai ulang; masuk kembali memulihkan pilihan yang sudah diterapkan."
+		If(Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan) >= 0);
+			Event Player.WaktuMasuk = X Component Of(Globale.ProfilPreferensiA[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IndeksGenre = Y Component Of(Globale.ProfilPreferensiA[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IndeksWarna = Z Component Of(Globale.ProfilPreferensiA[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IndeksBahasa = X Component Of(Globale.ProfilPreferensiB[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IndeksSuara = Y Component Of(Globale.ProfilPreferensiB[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IndeksIkon = Z Component Of(Globale.ProfilPreferensiB[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.TeleportasiJongkokDiaktifkan = X Component Of(Globale.ProfilStatus[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]) == 1;
+			Event Player.PrivasiInspeksiAktif = Y Component Of(Globale.ProfilStatus[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]) == 1;
+			Event Player.ModeKebal = Z Component Of(Globale.ProfilStatus[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.IzinkanDummyMengikuti = X Component Of(Globale.ProfilSosial[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]) == 1;
+			Event Player.JumlahPilihan = Y Component Of(Globale.ProfilSosial[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.KursorKamera = Z Component Of(Globale.ProfilSosial[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]);
+			Event Player.KursorGenre = Max(0, Event Player.IndeksGenre);
+			Event Player.KursorWarna = Event Player.IndeksWarna;
+			Event Player.WarnaNama = Globale.DaftarWarna[Event Player.IndeksWarna];
+			Event Player.WarnaMenu = Globale.DaftarWarnaRGB[Event Player.IndeksWarna];
+			Event Player.KursorBahasa = Event Player.IndeksBahasa;
+			Event Player.KursorSuara = Event Player.IndeksSuara;
+			Event Player.KursorIkon = Event Player.IndeksIkon;
+			Event Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0;
+			Event Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif ? 1 : 0;
+			Event Player.KursorKebal = Event Player.ModeKebal;
+			Event Player.KursorIkutiDummy = Event Player.IzinkanDummyMengikuti ? 1 : 0;
+		Else;
+			Globale.ProfilNama = Append To Array(Globale.ProfilNama, Event Player.NamaTampilan);
+			Globale.ProfilPreferensiA = Append To Array(Globale.ProfilPreferensiA, Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna));
+			Globale.ProfilPreferensiB = Append To Array(Globale.ProfilPreferensiB, Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon));
+			Globale.ProfilStatus = Append To Array(Globale.ProfilStatus, Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal));
+			Globale.ProfilSosial = Append To Array(Globale.ProfilSosial, Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera));
+			Globale.ProfilPilihanNama = Append To Array(Globale.ProfilPilihanNama, Custom String(""));
+		End;
+		Event Player.MenitLobi = Max(0, Round To Integer((Total Time Elapsed - Event Player.WaktuMasuk) / 60, Down));
 		Event Player.UrutanHUD = First Of(Globale.SlotHUDTersedia);
 		Globale.SlotHUDTerakhir = Max(Globale.SlotHUDTerakhir, Event Player.UrutanHUD);
 		Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0);
@@ -1129,6 +1175,9 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Globale.SlotHUDPemain = Append To Array(Globale.SlotHUDPemain, Event Player.UrutanHUD);
 		Event Player.Manusia = True;
 		Event Player.PahlawanTerakhir = Hero Of(Event Player);
+		If(And(Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan) >= 0, Globale.ProfilPilihanNama[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] != Custom String("")));
+			Event Player.PemainDipilih = First Of(Filtered Array(Globale.PemainManusia, Player Variable(Current Array Element, NamaTampilan) == Globale.ProfilPilihanNama[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)]));
+		End;
 		Call Subroutine(HitungPilihan);
 	}
 }
@@ -1477,6 +1526,26 @@ regola("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")
 
 	azioni
 	{
+		"Simpan profil sebelum masa tunggu keluar; perubahan tim tidak boleh menghapus identitas yang sudah terdaftar."
+		If(And(Event Player.BotOtomatis == False, Is Dummy Bot(Event Player) == False));
+			If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));
+				Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));
+			End;
+			If(Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan) < 0);
+				Globale.ProfilNama = Append To Array(Globale.ProfilNama, Event Player.NamaTampilan);
+				Globale.ProfilPreferensiA = Append To Array(Globale.ProfilPreferensiA, Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna));
+				Globale.ProfilPreferensiB = Append To Array(Globale.ProfilPreferensiB, Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon));
+				Globale.ProfilStatus = Append To Array(Globale.ProfilStatus, Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal));
+				Globale.ProfilSosial = Append To Array(Globale.ProfilSosial, Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera));
+				Globale.ProfilPilihanNama = Append To Array(Globale.ProfilPilihanNama, Event Player.PemainDipilih != Null ? Player Variable(Event Player.PemainDipilih, NamaTampilan) : Custom String(""));
+			Else;
+				Globale.ProfilPreferensiA[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna);
+				Globale.ProfilPreferensiB[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon);
+				Globale.ProfilStatus[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal);
+				Globale.ProfilSosial[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera);
+				Globale.ProfilPilihanNama[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)] = Event Player.PemainDipilih != Null ? Player Variable(Event Player.PemainDipilih, NamaTampilan) : Globale.ProfilPilihanNama[Index Of Array Value(Globale.ProfilNama, Event Player.NamaTampilan)];
+			End;
+		End;
 		If(Event Player.BotOtomatis == True);
 			If(Event Player.TeksVisiNasib != Null);
 				Destroy In-World Text(Event Player.TeksVisiNasib);
@@ -1486,6 +1555,8 @@ regola("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")
 		End;
 		Wait(0.500, Ignora condizione);
 		Abort If(Entity Exists(Event Player) == True);
+		"Jika identitas yang sama sudah aktif lagi, kejadian ini hanya perpindahan tim dan roster lama tidak boleh dibersihkan."
+		Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);
 		Call Subroutine(BersihkanPemain);
 		If(Globale.PemainSiklusGlobal == Event Player);
 			Globale.PemainSiklusGlobal = Null;

@@ -2574,6 +2574,21 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "corpo identico")
 
 
+    def test_native_match_time_is_paused_until_chill_restart(self) -> None:
+        mutated = self.source.replace("Pause Match Time;", "", 1)
+        self.assert_rejected(mutated, "timer nativo deve restare in pausa")
+
+    def test_leave_distinguishes_team_switch_from_true_exit(self) -> None:
+        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
+        token = 'Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);'
+        mutated = self.replace_in_rule(left, token, 'Abort If(False);')
+        self.assert_rejected(mutated, "vera uscita tramite identità persistente")
+
+    def test_rejoin_requires_persistent_profile_restore(self) -> None:
+        classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+        mutated = self.replace_in_rule(classifier, "Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiA", "Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiB")
+        self.assert_rejected(mutated, "tempo CHILL e stato sociale persistente")
+
     def test_builtin_completion_is_disabled_exactly_once(self) -> None:
         token = "Disable Built-In Game Mode Completion;"
         self.assertEqual(self.source.count(token), 1)

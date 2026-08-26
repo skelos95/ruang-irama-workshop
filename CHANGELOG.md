@@ -25,6 +25,8 @@ Stato: **live-pending**.
 - Documentazione riallineata al runtime reale: dummy respawn 3 s, Burning 5% Max Health ogni secondo con bypass temporaneo di Unkillable/Damage Received, e controlli completi Crouch Travel & Attach.
 - GitHub Actions limitato ai push su `main` e alle PR, con concurrency/cancel-in-progress e timeout 30 minuti per evitare run duplicati, falsi timeout e X rossi obsoleti.
 
+- Lifecycle player: il cambio squadra non viene più scambiato per un vero leave; i veri leave salvano un profilo persistente per rejoin nella stessa partita, e il timer nativo resta in pausa fino allo zero del timer CHILL.
+
 ## 0.8.0 — 2026-08-24
 
 Stato: **live-ready**.
