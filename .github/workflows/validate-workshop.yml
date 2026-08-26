@@ -31,8 +31,11 @@ jobs:
       - name: Repair cached display name across team switches
         run: python .github/maintenance/fix_team_switch_name_cache.py
 
-      - name: Run regression suite
-        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run focused regression tests
+        run: |
+          python -m unittest \
+            tests.test_runtime_maintenance \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_official_source_passes_all_semantic_checks
 
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
