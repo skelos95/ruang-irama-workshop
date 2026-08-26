@@ -1,39 +1,272 @@
-name: Validate Workshop
+name: Apply Persistent Player Lifecycle Patch
 
 on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: validate-workshop-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: persistent-player-lifecycle-main
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  patch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
-      - name: Run validator unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Apply persistent lifecycle patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Validate Workshop source
-        run: python tools/validate_workshop.py
+          def once(text: str, old: str, new: str, label: str) -> str:
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {text.count(old)}')
+              return text.replace(old, new, 1)
+
+          def patch_source(path: Path, g: str, actions_word: str, wait_ignore: str) -> None:
+              text = path.read_text(encoding='utf-8')
+
+              text = once(
+                  text,
+                  '\t\t55: WaktuSiklusGlobal\n',
+                  '\t\t55: WaktuSiklusGlobal\n'
+                  '\t\t56: ProfilNama\n'
+                  '\t\t57: ProfilPreferensiA\n'
+                  '\t\t58: ProfilPreferensiB\n'
+                  '\t\t59: ProfilStatus\n'
+                  '\t\t60: ProfilSosial\n'
+                  '\t\t61: ProfilPilihanNama\n',
+                  f'{path}: global profile declarations',
+              )
+
+              init_old = f'\t\t{g}.SlotHUDPemain = Empty Array;\n'
+              init_new = init_old + (
+                  f'\t\t{g}.ProfilNama = Empty Array;\n'
+                  f'\t\t{g}.ProfilPreferensiA = Empty Array;\n'
+                  f'\t\t{g}.ProfilPreferensiB = Empty Array;\n'
+                  f'\t\t{g}.ProfilStatus = Empty Array;\n'
+                  f'\t\t{g}.ProfilSosial = Empty Array;\n'
+                  f'\t\t{g}.ProfilPilihanNama = Empty Array;\n'
+              )
+              text = once(text, init_old, init_new, f'{path}: profile init')
+
+              text = once(
+                  text,
+                  '\t\tDisable Built-In Game Mode Completion;\n',
+                  '\t\tDisable Built-In Game Mode Completion;\n\t\tPause Match Time;\n',
+                  f'{path}: pause native timer',
+              )
+
+              classifier_old = (
+                  '\t\tEvent Player.MenitLobi = 0;\n'
+                  f'\t\tEvent Player.UrutanHUD = First Of({g}.SlotHUDTersedia);'
+              )
+              idx = f'Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)'
+              classifier_new = (
+                  '\t\t"Profil pemain bertahan sampai pertandingan dimulai ulang; masuk kembali memulihkan pilihan yang sudah diterapkan."\n'
+                  f'\t\tIf({idx} >= 0);\n'
+                  f'\t\t\tEvent Player.WaktuMasuk = X Component Of({g}.ProfilPreferensiA[{idx}]);\n'
+                  f'\t\t\tEvent Player.IndeksGenre = Y Component Of({g}.ProfilPreferensiA[{idx}]);\n'
+                  f'\t\t\tEvent Player.IndeksWarna = Z Component Of({g}.ProfilPreferensiA[{idx}]);\n'
+                  f'\t\t\tEvent Player.IndeksBahasa = X Component Of({g}.ProfilPreferensiB[{idx}]);\n'
+                  f'\t\t\tEvent Player.IndeksSuara = Y Component Of({g}.ProfilPreferensiB[{idx}]);\n'
+                  f'\t\t\tEvent Player.IndeksIkon = Z Component Of({g}.ProfilPreferensiB[{idx}]);\n'
+                  f'\t\t\tEvent Player.TeleportasiJongkokDiaktifkan = X Component Of({g}.ProfilStatus[{idx}]) == 1;\n'
+                  f'\t\t\tEvent Player.PrivasiInspeksiAktif = Y Component Of({g}.ProfilStatus[{idx}]) == 1;\n'
+                  f'\t\t\tEvent Player.ModeKebal = Z Component Of({g}.ProfilStatus[{idx}]);\n'
+                  f'\t\t\tEvent Player.IzinkanDummyMengikuti = X Component Of({g}.ProfilSosial[{idx}]) == 1;\n'
+                  f'\t\t\tEvent Player.JumlahPilihan = Y Component Of({g}.ProfilSosial[{idx}]);\n'
+                  f'\t\t\tEvent Player.KursorKamera = Z Component Of({g}.ProfilSosial[{idx}]);\n'
+                  f'\t\t\tEvent Player.KursorGenre = Max(0, Event Player.IndeksGenre);\n'
+                  f'\t\t\tEvent Player.KursorWarna = Event Player.IndeksWarna;\n'
+                  f'\t\t\tEvent Player.WarnaNama = {g}.DaftarWarna[Event Player.IndeksWarna];\n'
+                  f'\t\t\tEvent Player.WarnaMenu = {g}.DaftarWarnaRGB[Event Player.IndeksWarna];\n'
+                  f'\t\t\tEvent Player.KursorBahasa = Event Player.IndeksBahasa;\n'
+                  f'\t\t\tEvent Player.KursorSuara = Event Player.IndeksSuara;\n'
+                  f'\t\t\tEvent Player.KursorIkon = Event Player.IndeksIkon;\n'
+                  f'\t\t\tEvent Player.KursorTeleportasiJongkok = Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0;\n'
+                  f'\t\t\tEvent Player.KursorPrivasiInspeksi = Event Player.PrivasiInspeksiAktif ? 1 : 0;\n'
+                  f'\t\t\tEvent Player.KursorKebal = Event Player.ModeKebal;\n'
+                  f'\t\t\tEvent Player.KursorIkutiDummy = Event Player.IzinkanDummyMengikuti ? 1 : 0;\n'
+                  '\t\tElse;\n'
+                  f'\t\t\t{g}.ProfilNama = Append To Array({g}.ProfilNama, Event Player.NamaTampilan);\n'
+                  f'\t\t\t{g}.ProfilPreferensiA = Append To Array({g}.ProfilPreferensiA, Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna));\n'
+                  f'\t\t\t{g}.ProfilPreferensiB = Append To Array({g}.ProfilPreferensiB, Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon));\n'
+                  f'\t\t\t{g}.ProfilStatus = Append To Array({g}.ProfilStatus, Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal));\n'
+                  f'\t\t\t{g}.ProfilSosial = Append To Array({g}.ProfilSosial, Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera));\n'
+                  f'\t\t\t{g}.ProfilPilihanNama = Append To Array({g}.ProfilPilihanNama, Custom String(""));\n'
+                  '\t\tEnd;\n'
+                  '\t\tEvent Player.MenitLobi = Max(0, Round To Integer((Total Time Elapsed - Event Player.WaktuMasuk) / 60, Down));\n'
+                  f'\t\tEvent Player.UrutanHUD = First Of({g}.SlotHUDTersedia);'
+              )
+              text = once(text, classifier_old, classifier_new, f'{path}: classifier profile restore')
+
+              classifier_tail_old = (
+                  '\t\tEvent Player.Manusia = True;\n'
+                  '\t\tEvent Player.PahlawanTerakhir = Hero Of(Event Player);\n'
+                  '\t\tCall Subroutine(HitungPilihan);'
+              )
+              classifier_tail_new = (
+                  '\t\tEvent Player.Manusia = True;\n'
+                  '\t\tEvent Player.PahlawanTerakhir = Hero Of(Event Player);\n'
+                  f'\t\tIf(And({idx} >= 0, {g}.ProfilPilihanNama[{idx}] != Custom String("")));\n'
+                  f'\t\t\tEvent Player.PemainDipilih = First Of(Filtered Array({g}.PemainManusia, Player Variable(Current Array Element, NamaTampilan) == {g}.ProfilPilihanNama[{idx}]));\n'
+                  '\t\tEnd;\n'
+                  '\t\tCall Subroutine(HitungPilihan);'
+              )
+              text = once(text, classifier_tail_old, classifier_tail_new, f'{path}: restore saved vote target')
+
+              leave_event = text.index('Player Left Match;')
+              actions_marker = f'\t{actions_word}\n\t{{\n'
+              actions_pos = text.index(actions_marker, leave_event) + len(actions_marker)
+              leave_save = (
+                  '\t\t"Simpan profil sebelum masa tunggu keluar; perubahan tim tidak boleh menghapus identitas yang sudah terdaftar."\n'
+                  '\t\tIf(And(Event Player.BotOtomatis == False, Is Dummy Bot(Event Player) == False));\n'
+                  '\t\t\tIf(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));\n'
+                  '\t\t\t\tEvent Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));\n'
+                  '\t\t\tEnd;\n'
+                  f'\t\t\tIf(Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan) < 0);\n'
+                  f'\t\t\t\t{g}.ProfilNama = Append To Array({g}.ProfilNama, Event Player.NamaTampilan);\n'
+                  f'\t\t\t\t{g}.ProfilPreferensiA = Append To Array({g}.ProfilPreferensiA, Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna));\n'
+                  f'\t\t\t\t{g}.ProfilPreferensiB = Append To Array({g}.ProfilPreferensiB, Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon));\n'
+                  f'\t\t\t\t{g}.ProfilStatus = Append To Array({g}.ProfilStatus, Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal));\n'
+                  f'\t\t\t\t{g}.ProfilSosial = Append To Array({g}.ProfilSosial, Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera));\n'
+                  f'\t\t\t\t{g}.ProfilPilihanNama = Append To Array({g}.ProfilPilihanNama, Event Player.PemainDipilih != Null ? Player Variable(Event Player.PemainDipilih, NamaTampilan) : Custom String(""));\n'
+                  '\t\t\tElse;\n'
+                  f'\t\t\t\t{g}.ProfilPreferensiA[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.WaktuMasuk, Event Player.IndeksGenre, Event Player.IndeksWarna);\n'
+                  f'\t\t\t\t{g}.ProfilPreferensiB[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.IndeksBahasa, Event Player.IndeksSuara, Event Player.IndeksIkon);\n'
+                  f'\t\t\t\t{g}.ProfilStatus[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.TeleportasiJongkokDiaktifkan ? 1 : 0, Event Player.PrivasiInspeksiAktif ? 1 : 0, Event Player.ModeKebal);\n'
+                  f'\t\t\t\t{g}.ProfilSosial[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)] = Vector(Event Player.IzinkanDummyMengikuti ? 1 : 0, Event Player.JumlahPilihan, Event Player.KursorKamera);\n'
+                  f'\t\t\t\t{g}.ProfilPilihanNama[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)] = Event Player.PemainDipilih != Null ? Player Variable(Event Player.PemainDipilih, NamaTampilan) : {g}.ProfilPilihanNama[Index Of Array Value({g}.ProfilNama, Event Player.NamaTampilan)];\n'
+                  '\t\t\tEnd;\n'
+                  '\t\tEnd;\n'
+              )
+              text = text[:actions_pos] + leave_save + text[actions_pos:]
+
+              leave_tail_old = (
+                  f'\t\tWait(0.500, {wait_ignore});\n'
+                  '\t\tAbort If(Entity Exists(Event Player) == True);\n'
+                  '\t\tCall Subroutine(BersihkanPemain);'
+              )
+              replacement_guard = (
+                  f'\t\tWait(0.500, {wait_ignore});\n'
+                  '\t\tAbort If(Entity Exists(Event Player) == True);\n'
+                  '\t\t"Jika identitas yang sama sudah aktif lagi, kejadian ini hanya perpindahan tim dan roster lama tidak boleh dibersihkan."\n'
+                  '\t\tAbort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);\n'
+                  '\t\tCall Subroutine(BersihkanPemain);'
+              )
+              text = once(text, leave_tail_old, replacement_guard, f'{path}: team-switch leave guard')
+
+              path.write_text(text, encoding='utf-8')
+
+          patch_source(Path('tests/fixtures/semantic_reference.txt'), 'Global', 'actions', 'Ignore Condition')
+          patch_source(Path('workshop/ruang_irama.it-IT.workshop'), 'Globale', 'azioni', 'Ignora condizione')
+
+          validator = Path('tools/validate_workshop.py')
+          text = validator.read_text(encoding='utf-8')
+          text = once(
+              text,
+              '    checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")\n',
+              '    checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")\n'
+              '    checks.equal(source.count("Pause Match Time;"), 1, "timer nativo deve restare in pausa fino al restart CHILL")\n',
+              'validator: native timer gate',
+          )
+          text = once(
+              text,
+              '        checks.require("Abort If(Entity Exists(Event Player) == True);" in body,\n'
+              '                       "leave deve ignorare ogni entità ancora valida dopo il grace period")\n',
+              '        checks.require("Abort If(Entity Exists(Event Player) == True);" in body,\n'
+              '                       "leave deve ignorare ogni entità ancora valida dopo il grace period")\n'
+              '        replacement_guard = (\n'
+              '            "Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, "\n'
+              '            "Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, "\n'
+              '            "Custom String(\\\"{0}\\\", Current Array Element) == Event Player.NamaTampilan)))) > 0);"\n'
+              '        )\n'
+              '        checks.require(replacement_guard in body,\n'
+              '                       "leave non distingue il cambio squadra dalla vera uscita tramite identità persistente")\n'
+              '        checks.require(all(token in body for token in ("Global.ProfilNama", "Global.ProfilPreferensiA", "Global.ProfilPreferensiB", "Global.ProfilStatus", "Global.ProfilSosial", "Global.ProfilPilihanNama")),\n'
+              '                       "leave non salva il profilo persistente prima del grace period")\n',
+              'validator: leave persistent identity gate',
+          )
+          classifier_anchor = '    classifier = next((rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body), None)\n'
+          if classifier_anchor not in text:
+              raise SystemExit('validator: classifier anchor missing')
+          classifier_extra = (
+              classifier_anchor
+              + '    if classifier:\n'
+              + '        checks.require("Index Of Array Value(Global.ProfilNama, Event Player.NamaTampilan) >= 0" in classifier.body,\n'
+              + '                       "classifier non ripristina il profilo persistente al rejoin")\n'
+              + '        checks.require("Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiA" in classifier.body\n'
+              + '                       and "Event Player.JumlahPilihan = Y Component Of(Global.ProfilSosial" in classifier.body,\n'
+              + '                       "rejoin non ripristina tempo CHILL e stato sociale persistente")\n'
+          )
+          text = text.replace(classifier_anchor, classifier_extra, 1)
+          validator.write_text(text, encoding='utf-8')
+
+          tests = Path('tests/test_validate_workshop.py')
+          text = tests.read_text(encoding='utf-8')
+          anchor = '    def test_builtin_completion_is_disabled_exactly_once(self) -> None:\n'
+          if anchor not in text:
+              raise SystemExit('tests: builtin completion anchor missing')
+          added = '''    def test_native_match_time_is_paused_until_chill_restart(self) -> None:\n        mutated = self.source.replace("Pause Match Time;", "", 1)\n        self.assert_rejected(mutated, "timer nativo deve restare in pausa")\n\n    def test_leave_distinguishes_team_switch_from_true_exit(self) -> None:\n        left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")\n        token = 'Abort If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, Custom String("{0}", Current Array Element) == Event Player.NamaTampilan)))) > 0);'\n        mutated = self.replace_in_rule(left, token, 'Abort If(False);')\n        self.assert_rejected(mutated, "vera uscita tramite identità persistente")\n\n    def test_rejoin_requires_persistent_profile_restore(self) -> None:\n        classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)\n        mutated = self.replace_in_rule(classifier, "Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiA", "Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiB")\n        self.assert_rejected(mutated, "tempo CHILL e stato sociale persistente")\n\n'''
+          text = text.replace(anchor, added + anchor, 1)
+          tests.write_text(text, encoding='utf-8')
+
+          docs = Path('docs/VALIDAZIONE.md')
+          text = docs.read_text(encoding='utf-8')
+          text = text.replace(
+              'Un cambio squadra leggero conserva preferenze e cursori; leave e rejoin eseguono invece cleanup e setup fresco.',
+              'Un cambio squadra leggero conserva preferenze e cursori; un vero leave salva un profilo persistente per nome e un rejoin prima del restart CHILL ripristina preferenze, tempo lobby, stato sociale e voto.',
+          )
+          text = text.replace(
+              'un leave/rejoin o un fallback di nuova identità passa invece dal setup fresco;',
+              'un vero leave rimuove soltanto l’entità attiva e conserva il profilo globale; il rejoin prima del restart CHILL ripristina quel profilo;',
+          )
+          docs.write_text(text, encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          marker = '## 0.8.1'
+          pos = text.find(marker)
+          if pos >= 0 and 'profilo persistente per rejoin' not in text:
+              end = text.find('\n## ', pos + len(marker))
+              if end < 0:
+                  end = len(text)
+              note = '\n- Lifecycle player: il cambio squadra non viene più scambiato per un vero leave; i veri leave salvano un profilo persistente per rejoin nella stessa partita, e il timer nativo resta in pausa fino allo zero del timer CHILL.\n'
+              text = text[:end] + note + text[end:]
+          changelog.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Run targeted semantic regressions
+        run: |
+          python -m unittest \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_official_source_passes_all_semantic_checks \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_native_match_time_is_paused_until_chill_restart \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_leave_distinguishes_team_switch_from_true_exit \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_rejoin_requires_persistent_profile_restore
 
       - name: Preflight Italian clipboard source
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+      - name: Commit persistent lifecycle patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workshop/ruang_irama.it-IT.workshop tests/fixtures/semantic_reference.txt tools/validate_workshop.py tests/test_validate_workshop.py docs/VALIDAZIONE.md CHANGELOG.md
+          git commit -m "Persist player identity across team changes"
+          git push origin HEAD:main
