@@ -164,6 +164,7 @@ variabili
 		103: WaktuSiklusTim
 		104: TimSiklusTarget
 		105: MusikKhusus
+		106: SegarkanRosterTertunda
 }
 
 subroutine
@@ -1086,7 +1087,18 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 
 		Abort If(Entity Exists(Event Player) == False);
 		Abort If(Array Contains(Globale.PemainManusia, Event Player));
-		Abort If(Count Of(Globale.SlotHUDTersedia) == 0);
+		If(Count Of(Globale.SlotHUDTersedia) == 0);
+			Event Player.SudahDiperiksa = False;
+			Event Player.SudahSiap = False;
+			Event Player.PindahTimDiproses = False;
+			Event Player.SiklusPemainAktif = False;
+			Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;
+			If(Globale.PemainSiklusGlobal == Event Player);
+				Globale.PemainSiklusGlobal = Null;
+				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
+			Abort;
+		End;
 		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
 		Disable Game Mode HUD(Event Player);
 		Disable Game Mode In-World UI(Event Player);
@@ -1137,6 +1149,8 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		Is Dummy Bot(Event Player) == False;
 		Array Contains(Globale.PemainManusia, Event Player) == True;
 		Has Spawned(Event Player) == True;
+		Event Player.TimTerakhir == Team Of(Event Player);
+		Event Player.SegarkanRosterTertunda == False;
 		Event Player.HudPemainDibuat == False;
 		Event Player.HudKiri == Null;
 		Event Player.HudKanan == Null;
@@ -1146,7 +1160,6 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 	azioni
 	{
 		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
-		Event Player.HudPemainDibuat = True;
 		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0}{1}{2}", Custom String("{0} {1} {2}",
 			Globale.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player, Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
@@ -1176,6 +1189,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 			Custom Color(255, 255, 255, 255), Event Player.WarnaNama, Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
 		Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = Event Player.HudKanan;
+		Event Player.HudPemainDibuat = True;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 			"Welcome to CHILL. Pick a vibe, pick a color, stay weird.") : Event Player.IndeksBahasa == 1 ? Custom String(
 			"Selamat datang di CHILL. Pilih vibe, pilih warna, tetap aneh.") : Custom String(
@@ -3138,40 +3152,42 @@ regola("89a - Subrutin: Proses status cepat pemain")
 
 	azioni
 	{
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Globale.PemainAktif.Manusia == False))));
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Or(Globale.PemainAktif.Manusia == False, Globale.PemainAktif.PernahDisiapkan == False)))));
+			If(Custom String("{0}", Globale.PemainAktif) == Custom String("งูแท้"));
+				Globale.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
+				If(Globale.PemainAktif.PernahDisiapkan == False);
+					Globale.PemainAktif.IndeksWarna = 1;
+					Globale.PemainAktif.KursorWarna = 1;
+					Globale.PemainAktif.WarnaNama = Globale.DaftarWarna[1];
+					Globale.PemainAktif.WarnaMenu = Globale.DaftarWarnaRGB[1];
+					Globale.PemainAktif.IndeksIkon = 23;
+					Globale.PemainAktif.KursorIkon = 23;
+				End;
+			End;
 			Globale.PemainAktif.Manusia = True;
 			Globale.PemainAktif.SudahDiperiksa = True;
 			Globale.PemainAktif.SudahSiap = True;
+			Globale.PemainAktif.PernahDisiapkan = True;
 		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Globale.PemainAktif.PernahDisiapkan == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif))))));
-			"Perubahan tim pemain terdaftar hanya menyegarkan identitas tim; HUD, pilihan, menu, dan status tidak dibangun ulang."
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif)))));
+			"Perubahan tim pemain terdaftar mempertahankan roster, preferensi, dan status persisten; hanya UI sementara serta baris nama yang dipasang ulang."
 			Globale.PemainAktif.Manusia = True;
 			Globale.PemainAktif.SudahDiperiksa = True;
 			Globale.PemainAktif.SudahSiap = True;
+			Globale.PemainAktif.PernahDisiapkan = True;
 			"Overwatch mengaktifkan kembali tampilan mode dan dapat meninggalkan pengunci masukan saat pindah tim. Segarkan hanya keadaan tampilan dan mesin yang diperlukan tanpa pembersihan siklus penuh."
 			Disable Game Mode HUD(Globale.PemainAktif);
 			Disable Game Mode In-World UI(Globale.PemainAktif);
-			"Segarkan hanya dua baris daftar pemain agar nama entitas diperbarui setelah pindah tim tanpa membangun ulang roster."
-			If(Globale.PemainAktif.HudKiri != Null);
-				Destroy HUD Text(Globale.PemainAktif.HudKiri);
-			End;
-			If(Globale.PemainAktif.HudKanan != Null);
-				Destroy HUD Text(Globale.PemainAktif.HudKanan);
-			End;
-			Globale.PemainAktif.HudKiri = Null;
-			Globale.PemainAktif.HudKanan = Null;
-			Globale.PemainAktif.HudPemainDibuat = False;
+			"Tunda penggantian dua baris daftar sampai entitas tim baru sudah spawned; roster dan identitas manusia tetap aktif selama transisi."
+			Globale.PemainAktif.SegarkanRosterTertunda = True;
+			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
 			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
-				Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
-				Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
-			End;
-			If(Globale.PemainAktif.HudMenu != Null);
-				Destroy HUD Text(Globale.PemainAktif.HudMenu);
-			End;
-			Globale.PemainAktif.HudMenu = Null;
-			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
+				If(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
+					Destroy HUD Text(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
+				End;
 				Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
 			End;
+			Globale.PemainAktif.HudMenu = Null;
 			Globale.PemainAktif.MenuTerbuka = False;
 			Globale.PemainAktif.HalamanMenu = -1;
 			Globale.PemainAktif.SeranganDekatDipakai = False;
@@ -3201,11 +3217,34 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
 			Globale.PemainAktif.PindahTimDiproses = False;
 			Globale.PemainAktif.SiklusPemainAktif = False;
-			Globale.PemainAktif.WaktuSiklusTim = 0;
 			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
 				Globale.PemainSiklusGlobal = Null;
 				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 			End;
+		End;
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Globale.PemainAktif.Manusia == True, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Globale.PemainAktif.SegarkanRosterTertunda == True, And(Globale.PemainAktif.TimTerakhir == Team Of(Globale.PemainAktif), And(Has Spawned(Globale.PemainAktif) == True, And(Is Alive(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.PemainAktif.WaktuSiklusTim, And(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0, Server Load < 150)))))))))));
+			"Ganti handle daftar kanonis hanya setelah entitas tim baru stabil; 02b membuat ulang kedua baris pada konteks pemain yang baru."
+			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
+				If(Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
+					Destroy HUD Text(Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
+				End;
+				If(Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
+					Destroy HUD Text(Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
+				End;
+				Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
+				Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
+			End;
+			Globale.PemainAktif.HudKiri = Null;
+			Globale.PemainAktif.HudKanan = Null;
+			Globale.PemainAktif.HudPemainDibuat = False;
+			Globale.PemainAktif.WaktuSiklusTim = 0;
+			Globale.PemainAktif.SegarkanRosterTertunda = False;
+		End;
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.SegarkanRosterTertunda == True))));
+			"Jika referensi pemain berubah saat pindah tim, lepaskan pending ringan agar jalur setup awal dapat mendaftarkan entitas baru tanpa limbo."
+			Globale.PemainAktif.WaktuSiklusTim = 0;
+			Globale.PemainAktif.SegarkanRosterTertunda = False;
+			Globale.PemainAktif.PindahTimDiproses = False;
 		End;
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.PindahTimDiproses == False))));
 			Globale.PemainAktif.PindahTimDiproses = True;
@@ -4175,6 +4214,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.MenitLobi = 0;
 		Event Player.IndeksGenre = -1;
 		Event Player.MusikKhusus = Null;
+		Event Player.SegarkanRosterTertunda = False;
 		Event Player.UrutanHUD = -1;
 		Event Player.HudKiri = Null;
 		Event Player.HudKanan = Null;
@@ -4495,7 +4535,7 @@ regola("98c - Subrutin: Segarkan daftar target publik untuk Event Player")
 
 	azioni
 	{
-		Event Player.DaftarTargetInspeksi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False)))))));
+		Event Player.DaftarTargetInspeksi = Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, Player Variable(Current Array Element, SegarkanRosterTertunda) == False))))))));
 	}
 }
 
@@ -4510,7 +4550,7 @@ regola("98d - Subrutin: Segarkan daftar target publik untuk pemain aktif global"
 	azioni
 	{
 		Abort If(Or(Globale.PemainAktif == Null, Entity Exists(Globale.PemainAktif) == False));
-		Set Player Variable(Globale.PemainAktif, DaftarTargetInspeksi, Filtered Array(All Players(All Teams), And(Current Array Element != Globale.PemainAktif, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiInspeksiAktif) == False))))))));
+		Set Player Variable(Globale.PemainAktif, DaftarTargetInspeksi, Filtered Array(All Players(All Teams), And(Current Array Element != Globale.PemainAktif, And(Entity Exists(Current Array Element), And(Is Alive(Current Array Element), Or(Is Dummy Bot(Current Array Element) == True, Or(Player Variable(Current Array Element, BotOtomatis) == True, And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, PrivasiInspeksiAktif) == False, Player Variable(Current Array Element, SegarkanRosterTertunda) == False)))))))));
 	}
 }
 

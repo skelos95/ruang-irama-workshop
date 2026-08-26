@@ -139,16 +139,52 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainAktif.Manusia = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SudahDiperiksa = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.PernahDisiapkan = True;", fast)
+            self.assertIn(
+                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
+                fast,
+            )
+            self.assertIn(
+                f'{global_name}.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
+                fast,
+            )
             classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", classifier)
-            self.assertNotIn(f"Abort If(Or(Has Spawned({global_name}.PemainAktif) == False, Is Alive({global_name}.PemainAktif) == False));", fast)
+            self.assertIn(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
+            self.assertIn("Event Player.SudahDiperiksa = False;", classifier)
+            self.assertIn("Event Player.SudahSiap = False;", classifier)
+            self.assertIn("Event Player.PindahTimDiproses = False;", classifier)
+            self.assertIn(f"If({global_name}.PemainSiklusGlobal == Event Player);", classifier)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", classifier)
+            self.assertIn(f"{global_name}.WaktuSiklusGlobal = Total Time Elapsed + 0.250;", classifier)
+            self.assertNotIn(f"Abort If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
+            self.assertLess(
+                classifier.index("Call Subroutine(KunciBot);"),
+                classifier.index(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);"),
+            )
             self.assertIn(f"Disable Game Mode HUD({global_name}.PemainAktif);", fast)
             self.assertIn(f"Disable Game Mode In-World UI({global_name}.PemainAktif);", fast)
-            self.assertIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKiri);", fast)
-            self.assertIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKanan);", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda == True", fast)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
+            self.assertIn(f"Total Time Elapsed >= {global_name}.PemainAktif.WaktuSiklusTim", fast)
+            self.assertIn(f"Has Spawned({global_name}.PemainAktif) == True", fast)
+            self.assertIn(f"Is Alive({global_name}.PemainAktif) == True", fast)
+            self.assertIn(f"Destroy HUD Text({global_name}.HudKiriPemain[", fast)
+            self.assertIn(f"Destroy HUD Text({global_name}.HudKananPemain[", fast)
+            self.assertNotIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKiri);", fast)
+            self.assertNotIn(f"Destroy HUD Text({global_name}.PemainAktif.HudKanan);", fast)
+            self.assertNotIn(f"Destroy HUD Text({global_name}.PemainAktif.HudMenu);", fast)
+            self.assertIn(f"Destroy HUD Text({global_name}.HudMenuPemain[", fast)
             self.assertIn(f"{global_name}.PemainAktif.HudKiri = Null;", fast)
             self.assertIn(f"{global_name}.PemainAktif.HudKanan = Null;", fast)
             self.assertIn(f"{global_name}.PemainAktif.HudPemainDibuat = False;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = False;", fast)
+            self.assertIn(
+                f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False, "
+                f"{global_name}.PemainAktif.SegarkanRosterTertunda == True",
+                fast,
+            )
             self.assertIn(f"{global_name}.HudKiriPemain[Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainAktif)] = 0;", fast)
             self.assertIn(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainAktif)] = 0;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SeranganDekatDipakai = False;", fast)
@@ -165,6 +201,19 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Server Load < 150", fast)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
             self.assertNotIn("Call Subroutine(SiapkanPemain);", fast)
+
+            roster_hud = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
+            self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster_hud)
+            self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster_hud)
+            self.assertGreater(
+                roster_hud.index("Event Player.HudPemainDibuat = True;"),
+                roster_hud.index(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKanan;"),
+            )
+            self.assertEqual(
+                source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"),
+                2,
+            )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", setup)

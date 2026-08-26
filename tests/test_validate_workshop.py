@@ -144,6 +144,29 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source[:classifier.start] + moved + self.source[classifier.end:]
         self.assert_rejected(mutated, "matcher deve seguire esclusione/Abort degli iBot")
 
+    def test_special_player_lifecycle_repair_reasserts_lock_and_reset_defaults(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutations = (
+            (
+                'Global.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
+                "Global.PemainAktif.MusikKhusus = Null;",
+            ),
+            (
+                "If(Global.PemainAktif.PernahDisiapkan == False);",
+                "If(True);",
+            ),
+            (
+                "Global.PemainAktif.IndeksIkon = 23;",
+                "Global.PemainAktif.IndeksIkon = 22;",
+            ),
+        )
+        for old, new in mutations:
+            with self.subTest(token=old):
+                self.assert_rejected(
+                    self.replace_in_rule(fast, old, new),
+                    "repair default/lock isolato",
+                )
+
     def test_special_player_catalog_mappings_are_guarded(self) -> None:
         mutations = (
             (
@@ -1605,13 +1628,194 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "dispatcher team-switch leggero")
 
-    def test_global_lifecycle_dispatch_does_not_abort_refresh_while_waiting_spawn(self) -> None:
+    def test_team_switch_detector_defers_destructive_refresh_until_stable_spawn(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        mutated = self.inject_action(
-            fast,
-            "Abort If(Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False));",
+        marker = (
+            '"Tunda penggantian dua baris daftar sampai entitas tim baru sudah spawned; '
+            'roster dan identitas manusia tetap aktif selama transisi."'
         )
-        self.assert_rejected(mutated, "guardia spawn/hidup")
+        mutations = (
+            (
+                self.replace_in_rule(
+                    fast,
+                    marker,
+                    marker + "\n\t\t\tAbort If(Has Spawned(Global.PemainAktif) == False);",
+                ),
+                "detector non deve usare Abort",
+            ),
+            (
+                self.replace_in_rule(
+                    fast,
+                    marker,
+                    marker
+                    + "\n\t\t\tIf(Is Alive(Global.PemainAktif) == False);"
+                    + "\n\t\t\t\tAbort;\n\t\t\tEnd;",
+                ),
+                "detector non deve usare Abort",
+            ),
+            (
+                self.replace_in_rule(
+                    fast,
+                    marker,
+                    marker + "\n\t\t\tDestroy HUD Text(Global.PemainAktif.HudKiri);",
+                ),
+                "detector non deve distruggere il roster",
+            ),
+        )
+        for mutated, fragment in mutations:
+            with self.subTest(fragment=fragment):
+                self.assert_rejected(mutated, fragment)
+
+        mutated = self.replace_in_rule(
+            fast,
+            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            "Global.PemainAktif.WaktuSiklusTim = 0;",
+        )
+        self.assert_rejected(mutated, "ordine detector/pending/ack TimTerakhir")
+
+    def test_team_switch_detector_keeps_crouch_identity_and_arms_pending_refresh(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        marker = (
+            '"Perubahan tim pemain terdaftar mempertahankan roster, preferensi, dan status '
+            'persisten; hanya UI sementara serta baris nama yang dipasang ulang."'
+            '\n\t\t\tGlobal.PemainAktif.Manusia = True;'
+        )
+        mutated = self.replace_in_rule(
+            fast,
+            marker,
+            marker.replace("Manusia = True", "Manusia = False"),
+        )
+        self.assert_rejected(mutated, "non deve nascondere il player ai target Crouch")
+
+        mutated = self.replace_in_rule(
+            fast,
+            "Global.PemainAktif.SegarkanRosterTertunda = True;",
+            "Global.PemainAktif.SegarkanRosterTertunda = False;",
+        )
+        self.assert_rejected(mutated, "dispatcher team-switch leggero incompleto")
+
+    def test_pending_roster_refresh_requires_stable_guards_and_canonical_handles(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        anchor = fast.body.index("Global.PemainAktif.SegarkanRosterTertunda == True")
+        spans = [
+            span for span in validator.conditional_branch_spans(fast.body)
+            if span[0] <= anchor < span[1]
+        ]
+        self.assertTrue(spans)
+        start, end = min(spans, key=lambda span: span[1] - span[0])
+        branch = fast.body[start:end]
+        for token in (
+            "Has Spawned(Global.PemainAktif) == True",
+            "Is Alive(Global.PemainAktif) == True",
+            "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
+            "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
+            "Server Load < 150",
+        ):
+            with self.subTest(guard=token):
+                changed_branch = branch.replace(token, "True", 1)
+                self.assertNotEqual(changed_branch, branch)
+                changed_body = fast.body[:start] + changed_branch + fast.body[end:]
+                mutated = self.source[:fast.start] + changed_body + self.source[fast.end:]
+                self.assert_rejected(mutated, "consumer roster pending senza guardia")
+
+        changed_branch = branch.replace(
+            "Destroy HUD Text(Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)]);",
+            "Destroy HUD Text(Global.PemainAktif.HudKiri);",
+            1,
+        )
+        self.assertNotEqual(changed_branch, branch)
+        changed_body = fast.body[:start] + changed_branch + fast.body[end:]
+        mutated = self.source[:fast.start] + changed_body + self.source[fast.end:]
+        self.assert_rejected(mutated, "handle canonici globali")
+
+        changed_branch = branch.replace(
+            '"Ganti handle daftar kanonis hanya setelah entitas tim baru stabil; 02b membuat ulang kedua baris pada konteks pemain yang baru."',
+            '"Ganti handle daftar kanonis hanya setelah entitas tim baru stabil; 02b membuat ulang kedua baris pada konteks pemain yang baru."\n\t\t\tAbort;',
+            1,
+        )
+        self.assertNotEqual(changed_branch, branch)
+        changed_body = fast.body[:start] + changed_branch + fast.body[end:]
+        mutated = self.source[:fast.start] + changed_body + self.source[fast.end:]
+        self.assert_rejected(mutated, "consumer roster pending non deve usare Abort")
+
+    def test_roster_ready_flag_is_written_after_both_recreated_handles(self) -> None:
+        roster = self.rule(
+            lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
+        )
+        ready = "\t\tEvent Player.HudPemainDibuat = True;\n"
+        self.assertIn(ready, roster.body)
+        changed = roster.body.replace(ready, "", 1)
+        actions = changed.index("\tactions\n\t{\n") + len("\tactions\n\t{\n")
+        changed = changed[:actions] + ready + changed[actions:]
+        mutated = self.source[:roster.start] + changed + self.source[roster.end:]
+        self.assert_rejected(mutated, "dopo entrambi gli handle")
+
+        conditions = validator.rule_block(roster, "conditions") or ""
+        self.assertNotIn("Is Alive(Event Player) == True;", conditions)
+        mutated = self.replace_in_rule(
+            roster,
+            "Has Spawned(Event Player) == True;",
+            "Has Spawned(Event Player) == True;\n\t\tIs Alive(Event Player) == True;",
+        )
+        self.assert_rejected(mutated, "non deve attendere Is Alive")
+
+    def test_classifier_rearms_when_a_roster_slot_is_temporarily_unavailable(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            classifier,
+            "Global.PemainSiklusGlobal = Null;",
+            "Global.PemainSiklusGlobal = Event Player;",
+        )
+        self.assert_rejected(mutated, "liberare lifecycle/lock")
+
+    def test_public_crouch_filters_exclude_pending_team_switch_targets(self) -> None:
+        protected_rules = (
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikPemain"),
+            self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif"),
+        )
+        for rule in protected_rules:
+            with self.subTest(rule=rule.name):
+                mutated = self.replace_in_rule(
+                    rule,
+                    "Player Variable(Current Array Element, SegarkanRosterTertunda) == False",
+                    "True",
+                )
+                self.assert_rejected(mutated, "deve escludere il pending team-switch")
+
+    def test_non_roster_pending_state_requeues_instead_of_remaining_hidden(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        candidates = [
+            (start, end)
+            for start, end in validator.conditional_branch_spans(fast.body)
+            if "Array Contains(Global.PemainManusia, Global.PemainAktif) == False"
+            in fast.body[start:end]
+            and "Global.PemainAktif.SegarkanRosterTertunda == True"
+            in fast.body[start:end]
+            and "Global.PemainAktif.PindahTimDiproses = False;"
+            in fast.body[start:end]
+        ]
+        self.assertEqual(len(candidates), 1)
+        start, end = candidates[0]
+        branch = fast.body[start:end]
+        changed_branch = branch.replace(
+            "Global.PemainAktif.PindahTimDiproses = False;",
+            "",
+            1,
+        )
+        changed_body = fast.body[:start] + changed_branch + fast.body[end:]
+        mutated = self.source[:fast.start] + changed_body + self.source[fast.end:]
+        self.assert_rejected(mutated, "recovery non-roster pending")
+
+    def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
+        mutated = self.source.replace(
+            "Event Player.SegarkanRosterTertunda = False;",
+            "Event Player.SegarkanRosterTertunda = Null;",
+            1,
+        )
+        self.assert_rejected(mutated, "reset setup iniziale mancante")
 
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
@@ -2509,6 +2713,28 @@ class RepositoryMetadataTests(unittest.TestCase):
                     for error in self.metadata_errors(root)
                 )
             )
+
+    def test_obsolete_current_team_switch_claim_is_rejected(self) -> None:
+        claims = (
+            "Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo.",
+            "Cambio squadra ripetuto senza cleanup/setup completo, ricostruzione HUD o reset engine.",
+            "Un cambio squadra aggiorna soltanto i campi Team.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.make_repo(root)
+                changelog = root / "CHANGELOG.md"
+                changelog.write_text(
+                    changelog.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                self.assertTrue(
+                    any(
+                        "testo lifecycle obsoleto" in error
+                        for error in self.metadata_errors(root)
+                    )
+                )
 
     def test_maintenance_workflow_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
