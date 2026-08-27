@@ -25,12 +25,14 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f'{global_name}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;', classifier)
             self.assertIn(f'{global_name}.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;', classifier)
 
-            roster = source.split(f'{rule_kw}("00b - HUD Roster: Dua belas slot global permanen")', 1)[1].split(f'{rule_kw}("00a1 - Umum:', 1)[0]
-            slot = f'Evaluate Once({global_name}.IndeksPemilih)'
+            roster = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke slot global")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            slot = 'Evaluate Once(Event Player.UrutanHUD)'
             self.assertIn(f'{global_name}.NamaSlotHUD[{slot}] != Custom String("")', roster)
             self.assertIn(f'Custom String("{{0}} - {{1}} MIN", {global_name}.NamaSlotHUD[{slot}]', roster)
             self.assertIn(f'Custom String("{{0}} - {{1}}", {global_name}.NamaSlotHUD[{slot}]', roster)
             self.assertIn(f'{global_name}.PemainSlotHUD[{slot}]', roster)
+            self.assertIn(f'{global_name}.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;', roster)
+            self.assertIn(f'{global_name}.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;', roster)
 
             inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertIn(f'{global_name}.NamaSlotHUD[Player Variable(Event Player.TargetInspeksi, UrutanHUD)]', inspect)

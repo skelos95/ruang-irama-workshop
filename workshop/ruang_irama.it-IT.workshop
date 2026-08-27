@@ -831,8 +831,8 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.SlotHUDTersedia = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		Globale.PemainSlotHUD = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);
 		Globale.NamaSlotHUD = Array(Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""), Custom String(""));
-		Globale.HudKiriPemain = Empty Array;
-		Globale.HudKananPemain = Empty Array;
+		Globale.HudKiriPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Globale.HudKananPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Globale.JarakKamera = 2.000;
 		Globale.GeserKamera = 0.550;
 		Globale.BantalanDinding = 0.200;
@@ -934,33 +934,7 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 	}
 }
 
-regola("00b - HUD Roster: Dua belas slot global permanen")
-{
-	evento
-	{
-		Ongoing - Global;
-	}
 
-	condizioni
-	{
-		Globale.Siap == True;
-		Count Of(Globale.HudKiriPemain) == 0;
-		Count Of(Globale.HudKananPemain) == 0;
-	}
-
-	azioni
-	{
-		"Dua belas pasangan HUD dimiliki konteks global. Entitas pemain hanya mengisi slot; pindah tim tidak pernah menciptakan ulang baris."
-		Globale.HudKiriPemain = Empty Array;
-		Globale.HudKananPemain = Empty Array;
-		For Global Variable(IndeksPemilih, 0, 12, 1);
-			Create HUD Text(Globale.PemainManusia, Null, Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Custom String("") ? Custom String("{0}{1}{2}", Custom String("{0} {1} {2}", Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Globale.DaftarIkon[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], IndeksIkon)] : Custom String(""), Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Hero Icon String(Is Duplicating(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)]) ? Hero Being Duplicated(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)]) : Hero Of(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)])) : Custom String(""), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)], Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], MenitLobi) : 0) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)], Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], MenitLobi) : 0) : Custom String("{0} - {1} นาที", Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)], Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], MenitLobi) : 0)), Evaluate Once(Globale.IndeksPemilih) == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Globale.PemimpinPilihan) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Globale.PemimpinPilihan) : Custom String("\n \nCHILL STAR: {0}", Globale.PemimpinPilihan) : Custom String("") : Custom String(""), And(Globale.DiagnostikPerforma == True, And(Local Player == Host Player, Evaluate Once(Globale.IndeksPemilih) == Globale.SlotHUDTerakhir)) ? Custom String("{0}\n{1}", Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBEBAN {0}% | RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 10 + Count Of(Filtered Array(Globale.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudKananPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudMenuPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.PemainManusia, And(Player Variable(Current Array Element, HudEfekNasib) != Null, Player Variable(Current Array Element, HudEfekNasib) != 0))), Count Of(Filtered Array(Globale.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.PemainManusia, And(Player Variable(Current Array Element, TeksTeleportasi) != Null, Player Variable(Current Array Element, TeksTeleportasi) != 0))) + Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, TeksVisiNasib) != Null, Player Variable(Current Array Element, TeksVisiNasib) != 0))))) : Custom String("")) : Custom String(""), Null, Left, 1 + Evaluate Once(Globale.IndeksPemilih), Custom Color(255, 255, 255, 255), Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], WarnaNama) : Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
-			Globale.HudKiriPemain = Append To Array(Globale.HudKiriPemain, Last Text ID);
-			Create HUD Text(Globale.PemainManusia, Null, Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Custom String("") ? Custom String("{0} {1} {2}", Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Globale.DaftarIkon[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], IndeksIkon)] : Custom String(""), Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Hero Icon String(Is Duplicating(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)]) ? Hero Being Duplicated(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)]) : Hero Of(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)])) : Custom String(""), Custom String("{0} - {1}", Globale.NamaSlotHUD[Evaluate Once(Globale.IndeksPemilih)], Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], MusikKhusus) != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], MusikKhusus) : Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], IndeksGenre) >= 0 ? Globale.DaftarGenre[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], IndeksGenre)] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง") : Custom String(""))) : Custom String(""), Null, Right, -13 + Evaluate Once(Globale.IndeksPemilih), Custom Color(255, 255, 255, 255), Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Globale.IndeksPemilih)], WarnaNama) : Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
-			Globale.HudKananPemain = Append To Array(Globale.HudKananPemain, Last Text ID);
-		End;
-	}
-}
 
 regola("00a1 - Umum: Mulai mode segera saat menunggu pemain")
 {
@@ -1261,17 +1235,25 @@ regola("02b - HUD Pemain: Hubungkan ke slot global")
 		Event Player.SegarkanRosterTertunda == False;
 		Event Player.NamaTampilan != Null;
 		Event Player.NamaTampilan != Custom String("");
-		Count Of(Globale.HudKiriPemain) == 12;
-		Count Of(Globale.HudKananPemain) == 12;
+		Event Player.UrutanHUD >= 0;
+		Globale.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;
 		Event Player.HudPemainDibuat == False;
 	}
 
 	azioni
 	{
-		"Baris roster sudah dimiliki slot global; player hanya menyimpan alias handle untuk kompatibilitas lifecycle."
+		"Buat pasangan HUD hanya setelah slot berisi identitas valid. Setelah dibuat, pasangan tetap hidup selama pindah tim dan hanya dihancurkan saat benar-benar keluar."
+		If(Or(Globale.HudKiriPemain[Event Player.UrutanHUD] == 0, Globale.HudKiriPemain[Event Player.UrutanHUD] == Null));
+			Create HUD Text(Globale.PemainManusia, Null, Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Custom String("") ? Custom String("{0}{1}{2}", Custom String("{0} {1} {2}", Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Globale.DaftarIkon[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksIkon)] : Custom String(""), Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Hero Icon String(Is Duplicating(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]) ? Hero Being Duplicated(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]) : Hero Of(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)])) : Custom String(""), Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)], Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MenitLobi) : 0) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)], Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MenitLobi) : 0) : Custom String("{0} - {1} นาที", Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)], Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MenitLobi) : 0)), Evaluate Once(Event Player.UrutanHUD) == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null ? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Globale.PemimpinPilihan) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Globale.PemimpinPilihan) : Custom String("\n \nCHILL STAR: {0}", Globale.PemimpinPilihan) : Custom String("") : Custom String(""), And(Globale.DiagnostikPerforma == True, And(Local Player == Host Player, Evaluate Once(Event Player.UrutanHUD) == Globale.SlotHUDTerakhir)) ? Custom String("{0}\n{1}", Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load, Server Load Average, Server Load Peak) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBEBAN {0}% | RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 10 + Count Of(Filtered Array(Globale.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudKananPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudMenuPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.PemainManusia, And(Player Variable(Current Array Element, HudEfekNasib) != Null, Player Variable(Current Array Element, HudEfekNasib) != 0))), Count Of(Filtered Array(Globale.TeksDuniaPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.PemainManusia, And(Player Variable(Current Array Element, TeksTeleportasi) != Null, Player Variable(Current Array Element, TeksTeleportasi) != 0))) + Count Of(Filtered Array(All Players(All Teams), And(Player Variable(Current Array Element, TeksVisiNasib) != Null, Player Variable(Current Array Element, TeksVisiNasib) != 0))))) : Custom String("")) : Custom String(""), Null, Left, 1 + Evaluate Once(Event Player.UrutanHUD), Custom Color(255, 255, 255, 255), Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], WarnaNama) : Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
+			Globale.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;
+		End;
+		If(Or(Globale.HudKananPemain[Event Player.UrutanHUD] == 0, Globale.HudKananPemain[Event Player.UrutanHUD] == Null));
+			Create HUD Text(Globale.PemainManusia, Null, Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Custom String("") ? Custom String("{0} {1} {2}", Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Globale.DaftarIkon[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksIkon)] : Custom String(""), Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Hero Icon String(Is Duplicating(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]) ? Hero Being Duplicated(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]) : Hero Of(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)])) : Custom String(""), Custom String("{0} - {1}", Globale.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)], Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) : Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksGenre) >= 0 ? Globale.DaftarGenre[Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksGenre)] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง") : Custom String(""))) : Custom String(""), Null, Right, -13 + Evaluate Once(Event Player.UrutanHUD), Custom Color(255, 255, 255, 255), Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)] != Null ? Player Variable(Globale.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], WarnaNama) : Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);
+			Globale.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;
+		End;
 		Event Player.HudKiri = Globale.HudKiriPemain[Event Player.UrutanHUD];
 		Event Player.HudKanan = Globale.HudKananPemain[Event Player.UrutanHUD];
-		Event Player.HudPemainDibuat = And(Event Player.HudKiri != Null, Event Player.HudKanan != Null);
+		Event Player.HudPemainDibuat = And(And(Event Player.HudKiri != Null, Event Player.HudKiri != 0), And(Event Player.HudKanan != Null, Event Player.HudKanan != 0));
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Welcome to CHILL. Pick a vibe, pick a color, stay weird.") : Event Player.IndeksBahasa == 1 ? Custom String("Selamat datang di CHILL. Pilih vibe, pilih warna, tetap aneh.") : Custom String("ยินดีต้อนรับสู่ CHILL เลือกเพลง เลือกสี แล้วกวนแบบพอดี ๆ"));
 	}
 }
@@ -4318,6 +4300,14 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 			End;
 			If(Globale.TeksDuniaPemain[Globale.IndeksPembersihan] != 0);
 				Destroy In-World Text(Globale.TeksDuniaPemain[Globale.IndeksPembersihan]);
+			End;
+			If(Globale.HudKiriPemain[Globale.IndeksUtangKeluar] != 0);
+				Destroy HUD Text(Globale.HudKiriPemain[Globale.IndeksUtangKeluar]);
+				Globale.HudKiriPemain[Globale.IndeksUtangKeluar] = 0;
+			End;
+			If(Globale.HudKananPemain[Globale.IndeksUtangKeluar] != 0);
+				Destroy HUD Text(Globale.HudKananPemain[Globale.IndeksUtangKeluar]);
+				Globale.HudKananPemain[Globale.IndeksUtangKeluar] = 0;
 			End;
 			Globale.PemainSlotHUD[Globale.IndeksUtangKeluar] = Null;
 			Globale.NamaSlotHUD[Globale.IndeksUtangKeluar] = Custom String("");
