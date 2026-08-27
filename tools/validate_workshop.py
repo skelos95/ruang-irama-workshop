@@ -1151,15 +1151,44 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in calls[0].raw,
                     f"renderer roster globale {side}: occupante non letto dallo slot",
                 )
+                checks.equal(calls[0].args[3].strip(), "Null",
+                             f"renderer roster globale {side}: Text deve essere Null")
+                if side == "Left":
+                    outer_rows = [
+                        custom for custom in iter_calls(calls[0].args[2], "Custom String")
+                        if custom.args and parse_literal(custom.args[0]) == "{0}{1}{2}"
+                    ]
+                    checks.equal(len(outer_rows), 1,
+                                 "renderer roster globale Left: diagnostica non integrata nel Subheader")
+                    if outer_rows:
+                        checks.equal(len(outer_rows[0].args), 4,
+                                     "renderer roster globale Left: segmenti Subheader")
+                        if len(outer_rows[0].args) == 4:
+                            diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[3])
+                            checks.require(diagnostic_branches is not None,
+                                           "renderer roster globale Left: ternario diagnostica assente")
+                            if diagnostic_branches:
+                                diagnostic_condition, diagnostic_text, diagnostic_fallback = diagnostic_branches
+                                for token in (
+                                    "Global.DiagnostikPerforma == True",
+                                    "Local Player == Host Player",
+                                    "Evaluate Once(Global.IndeksPemilih) == Global.SlotHUDTerakhir",
+                                ):
+                                    checks.require(token in diagnostic_condition,
+                                                   f"renderer roster globale Left: guardia diagnostica assente: {token}")
+                                checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
+                                               "renderer roster globale Left: conteggio diagnostica non nel ramo visibile")
+                                checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
+                                             "renderer roster globale Left: fallback diagnostica deve essere stringa vuota")
         checks.require(
             "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], WarnaNama)"
             in global_slot_roster.body,
             "renderer roster globale non segue Name Color dell'occupante corrente",
         )
         checks.require(
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus)"
+            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) != Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], IndeksGenre)"
             in global_slot_roster.body,
-            "renderer roster globale non conserva il profilo musicale speciale",
+            "profilo speciale roster globale: condizione profilo speciale",
         )
 
     checks.require(
@@ -1184,6 +1213,31 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Global.NamaSlotHUD[Player Variable(Event Player.CalonTargetTeleportasi, UrutanHUD)]", "nome Crouch Teleport da slot"),
     ):
         checks.require(token in source, f"roster globale persistente: {label} assente")
+
+    global_slot_binding = next(
+        (
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body
+            and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
+        ),
+        None,
+    )
+    checks.require(global_slot_binding is not None, "collegamento player ai due handle roster globali assente")
+    if global_slot_binding:
+        left_alias = "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];"
+        right_alias = "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];"
+        ready_alias = "Event Player.HudPemainDibuat = And(Event Player.HudKiri != Null, Event Player.HudKanan != Null);"
+        checks.require(ready_alias in global_slot_binding.body,
+                       "collegamento slot globale: ready flag deve verificare entrambi gli handle")
+        if ready_alias in global_slot_binding.body:
+            checks.require(
+                global_slot_binding.body.index(left_alias) < global_slot_binding.body.index(right_alias) < global_slot_binding.body.index(ready_alias),
+                "collegamento slot globale: HudPemainDibuat dopo entrambi gli handle",
+            )
+        binding_conditions = rule_block(global_slot_binding, "conditions") or ""
+        checks.require("Is Alive(Event Player) == True;" not in binding_conditions,
+                       "collegamento slot globale non deve attendere Is Alive")
 
     for forbidden, label in (
         ("Destroy HUD Text(Global.HudKiriPemain[", "destroy righe Left permanenti"),
