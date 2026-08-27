@@ -1,0 +1,24 @@
+name: Temporary inspect permanent roster validator
+
+on:
+  push:
+    branches:
+      - fix-permanent-global-roster-v3-20260827
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show residual validator contexts
+        run: |
+          grep -n -B12 -A30 'profilo speciale: renderer roster globale assente' tools/validate_workshop.py || true
+          grep -n -B20 -A45 'renderer roster lazy senza identità globale' tools/validate_workshop.py || true
+          grep -n -B20 -A45 'renderer roster lazy deve creare soltanto handle slot ancora vuoti' tools/validate_workshop.py || true
+          grep -n -B20 -A45 'renderer roster deve dichiararsi pronto dopo entrambi gli handle' tools/validate_workshop.py || true
+          grep -n -B40 -A40 'entrypoints = (' tools/validate_workshop.py || true
