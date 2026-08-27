@@ -24,5 +24,11 @@ new = '''replace_exact(
 '''
 if old not in text:
     raise SystemExit('remaining repair block not found')
-path.write_text(text.replace(old, new, 1), encoding='utf-8')
+text = text.replace(old, new, 1)
+old_regex = 'new_text, count = re.subn(pattern, replacement, text, flags=re.MULTILINE | re.DOTALL)'
+new_regex = 'new_text, count = re.subn(pattern, lambda _match: replacement, text, flags=re.MULTILINE | re.DOTALL)'
+if old_regex not in text:
+    raise SystemExit('replace_regex helper not found')
+text = text.replace(old_regex, new_regex, 1)
+path.write_text(text, encoding='utf-8')
 print('prepared remaining Ghost repair script')
