@@ -20,6 +20,9 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
+      - name: Correct patcher subroutine indentation
+        run: |
+          sed -i 's/\\t\\t57: CariPosisiTeleportAman/\\t57: CariPosisiTeleportAman/g; s/\\t\\t58: GambarGhost/\\t58: GambarGhost/g; s/\\t\\t59: TerapkanHalamanGhost/\\t59: TerapkanHalamanGhost/g' .github/maintenance/tmp_apply_ghost_menu13.py
       - name: Apply patch
         run: PYTHONPATH=. python .github/maintenance/tmp_apply_ghost_menu13.py
       - name: Remove temporary helpers
