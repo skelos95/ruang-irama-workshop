@@ -1230,14 +1230,11 @@ regola("02b - HUD Pemain: Hubungkan ke slot global")
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
 		Array Contains(Globale.PemainManusia, Event Player) == True;
-		Has Spawned(Event Player) == True;
-		Event Player.TimTerakhir == Team Of(Event Player);
-		Event Player.SegarkanRosterTertunda == False;
-		Event Player.NamaTampilan != Null;
-		Event Player.NamaTampilan != Custom String("");
 		Event Player.UrutanHUD >= 0;
+		Event Player.UrutanHUD < 12;
 		Globale.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;
-		Event Player.HudPemainDibuat == False;
+		Globale.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");
+		Or(Event Player.HudPemainDibuat == False, Or(Or(Globale.HudKiriPemain[Event Player.UrutanHUD] == 0, Globale.HudKiriPemain[Event Player.UrutanHUD] == Null), Or(Globale.HudKananPemain[Event Player.UrutanHUD] == 0, Globale.HudKananPemain[Event Player.UrutanHUD] == Null))) == True;
 	}
 
 	azioni
