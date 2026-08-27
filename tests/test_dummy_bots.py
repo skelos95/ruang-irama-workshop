@@ -11,7 +11,7 @@ class DummyBotFeatureTests(unittest.TestCase):
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
     def test_static_hud_uses_the_reference_grid_without_embedded_label_spacing(self):
-        for source in (self.it, self.en):
+        for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
             self.assertIn('Custom String("{0} [{1}]", Custom String("CHILL DEDICATED SERVER")', source)
             self.assertIn('"Hold {0}: inspect hero + HP"', source)
             self.assertIn('"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera"', source)
@@ -21,10 +21,10 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn('"LOBBY & CHILL TIME"', source)
             self.assertIn('"PLAYER VIBES"', source)
             self.assertIn("10 + Count Of(Filtered Array(", source)
-            self.assertIn("1 + Evaluate Once(Global.IndeksPemilih)", source)
-            self.assertIn("-13 + Evaluate Once(Global.IndeksPemilih)", source)
+            self.assertIn(f"1 + Evaluate Once({global_name}.IndeksPemilih)", source)
+            self.assertIn(f"-13 + Evaluate Once({global_name}.IndeksPemilih)", source)
             self.assertIn('Custom String("{0}{1}{2}"', source)
-            self.assertNotIn("-99 + Evaluate Once(Global.IndeksPemilih)", source)
+            self.assertNotIn(f"-99 + Evaluate Once({global_name}.IndeksPemilih)", source)
             self.assertNotIn("\\nLOBBY & CHILL TIME", source)
             self.assertNotIn("\\nPLAYER VIBES", source)
             self.assertNotIn(", Top, 100,", source)
