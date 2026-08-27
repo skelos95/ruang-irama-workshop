@@ -30,5 +30,10 @@ new_regex = 'new_text, count = re.subn(pattern, lambda _match: replacement, text
 if old_regex not in text:
     raise SystemExit('replace_regex helper not found')
 text = text.replace(old_regex, new_regex, 1)
+old_owners = 'owner in {"TerapkanHalamanGhost", "ProsesCepatPemain"}'
+new_owners = 'owner in {"TerapkanHalamanGhost", "ProsesCepatPemain", "ProsesSiklusPemain"}'
+if old_owners not in text:
+    raise SystemExit('Ghost owner set not found')
+text = text.replace(old_owners, new_owners, 1)
 path.write_text(text, encoding='utf-8')
 print('prepared remaining Ghost repair script')
