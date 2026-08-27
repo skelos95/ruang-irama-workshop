@@ -169,7 +169,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("For Global Variable(IndeksPemilih, 0, 12, 1);", init)
             self.assertIn(f"{g}.HudKiriPemain[{g}.IndeksPemilih] = Last Text ID;", init)
             self.assertIn(f"{g}.HudKananPemain[{g}.IndeksPemilih] = Last Text ID;", init)
-            self.assertIn("Create HUD Text(All Players(All Teams),", init)
+            self.assertIn(f"Create HUD Text({g}.PemainManusia,", init)
             self.assertIn(f"{g}.PemainSlotHUD[Evaluate Once({g}.IndeksPemilih)] != Null ?", init)
 
             bind = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke roster global permanen")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
