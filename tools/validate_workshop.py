@@ -1516,8 +1516,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 checks.equal(call.args[3].strip(), "Null", "renderer HUD roster Right: Text")
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
-    for name in ("IzinkanDummyMengikuti", "KursorIkutiDummy"):
-        checks.require(name in players, f"stato pagina 12 Dummy Follow assente: {name}")
+    for name in ("IzinkanDummyMengikuti", "KursorIkutiDummy", "GhostAktif", "KursorGhost"):
+        checks.require(name in players, f"stato pagine toggle 12/13 assente: {name}")
     checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
                    "router menu GambarMenu/GambarHalamanAktif assente")
     menu_renderers = [
@@ -1525,7 +1525,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
-    checks.equal(len(arcade_renderers), 14, "renderer menu principale + pagine 0..12")
+    checks.equal(len(arcade_renderers), 15, "renderer menu principale + pagine 0..13")
     teleport_renderer = rule_by_subroutine(rules, "GambarTeleportasi")
     checks.require(teleport_renderer is not None, "renderer GambarTeleportasi assente")
     if teleport_renderer:
@@ -1625,7 +1625,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     router = rule_by_subroutine(rules, "GambarHalamanAktif")
     checks.require(router is not None, "subroutine router pagine assente")
     if router:
-        for page in range(13):
+        for page in range(14):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
         checks.require(
@@ -1639,6 +1639,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.require(
             re.search(r"HalamanMenu\s*==\s*12.*?Call Subroutine\(GambarIkutiDummy\);", router.body, re.DOTALL) is not None,
             "router menu: pagina 12 deve aprire Dummy Follow",
+        )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*13.*?Call Subroutine\(GambarGhost\);", router.body, re.DOTALL) is not None,
+            "router menu: pagina 13 deve aprire Ghost Mode",
         )
 
     main_renderer = rule_by_subroutine(rules, "GambarUtama")
@@ -1654,6 +1658,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
             "12 - ดัมมี่ติดตาม",
+            "13 - GHOST MODE",
+            "13 - MODE GHOST",
+            "13 - โหมดผี",
         ):
             checks.require(token in main_renderer.body, f"menu principale non copre tutte le pagine localizzate: {token}")
 
@@ -1666,6 +1673,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "12 - DUMMY MENGIKUTI",
             "DUMMY MUSUH",
             "12 - ดัมมี่ติดตาม",
+            "13 - GHOST MODE",
+            "13 - MODE GHOST",
+            "13 - โหมดผี",
         ):
             checks.require(token in dummy_follow_renderer.body,
                            f"pagina 12 Dummy Follow non chiarisce il consenso localizzato: {token}")
@@ -1683,9 +1693,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
-            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;"
+            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 13)) % 14;"
             in navigation_rule.body,
-            "navigazione menu principale non usa ciclo esatto 0..12",
+            "navigazione menu principale non usa ciclo esatto 0..13",
         )
         checks.require(
             re.search(r"HalamanMenu\s*==\s*0.*?KursorWarna\s*=", navigation_rule.body, re.DOTALL) is not None,
@@ -1704,6 +1714,31 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             ) is not None,
             "navigazione menu: pagina 12 deve alternare KursorIkutiDummy",
         )
+        checks.require(
+            re.search(
+                r"HalamanMenu\s*==\s*13.*?KursorGhost\s*=\s*"
+                r"\(Event Player\.KursorGhost\s*\+\s*1\)\s*%\s*2;",
+                navigation_rule.body,
+                re.DOTALL,
+            ) is not None,
+            "navigazione menu: pagina 13 deve alternare KursorGhost",
+        )
+
+    ghost_renderer = rule_by_subroutine(rules, "GambarGhost")
+    ghost_apply = rule_by_subroutine(rules, "TerapkanHalamanGhost")
+    checks.require(ghost_renderer is not None, "renderer pagina 13 Ghost Mode assente")
+    checks.require(ghost_apply is not None, "apply pagina 13 Ghost Mode assente")
+    checks.require("SegarkanRosterTertunda" not in source, "flag roster legacy SegarkanRosterTertunda deve essere rimosso")
+    if ghost_renderer:
+        for token in ("13 - GHOST MODE", "13 - MODE GHOST", "13 - โหมดผี", "KursorGhost", "GhostAktif"):
+            checks.require(token in ghost_renderer.body, f"pagina 13 Ghost Mode incompleta: {token}")
+    if ghost_apply:
+        checks.require("Disable Movement Collision With Environment(Event Player, False);" in ghost_apply.body,
+                       "Ghost Mode ON non disabilita collisione muri/soffitti")
+        checks.require("Enable Movement Collision With Environment(Event Player);" in ghost_apply.body,
+                       "Ghost Mode OFF non ripristina collisione ambiente")
+        checks.require("Disable Movement Collision With Players" not in ghost_apply.body,
+                       "Ghost Mode non deve modificare collisione player/bot")
 
     input_router = next(
         (

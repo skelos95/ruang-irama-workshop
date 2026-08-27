@@ -685,10 +685,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         mutated = self.replace_in_rule(
             navigation,
-            "(Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;",
+            "(Event Player.PerintahMenu == 3 ? 1 : 12)) % 14;",
             "(Event Player.PerintahMenu == 3 ? 1 : 11)) % 12;",
         )
-        self.assert_rejected(mutated, "ciclo esatto 0..12")
+        self.assert_rejected(mutated, "ciclo esatto 0..13")
 
     def test_soundtrack_ability_latch_arms_only_on_page_two(self) -> None:
         router = self.rule(
@@ -733,15 +733,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_menu_open_message_announces_thirteen_pages_in_all_languages(self) -> None:
         translations = (
             (
-                "Arcade Menu online. Thirteen extremely important decisions await.",
+                "Arcade Menu online. Fourteen extremely important decisions await.",
                 "Arcade Menu online. Twelve extremely important decisions await.",
             ),
             (
-                "Menu Arcade online. Tiga belas keputusan yang sangat penting menunggu.",
+                "Menu Arcade online. Empat belas keputusan yang sangat penting menunggu.",
                 "Menu Arcade online. Dua belas keputusan yang sangat penting menunggu.",
             ),
             (
-                "เปิดเมนูอาร์เคดแล้ว มีสิบสามตัวเลือกสำคัญรอคุณอยู่",
+                "เปิดเมนูอาร์เคดแล้ว มีสิบสี่ตัวเลือกสำคัญรอคุณอยู่",
                 "เปิดเมนูอาร์เคดแล้ว มีสิบสองตัวเลือกสำคัญรอคุณอยู่",
             ),
         )
@@ -1629,24 +1629,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_team_switch_detector_never_rebuilds_registered_roster(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda = True;", fast.body)
+        self.assertNotIn("Global.PemainAktif.GhostAktif = True;", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKiriPemain[", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKananPemain[", fast.body)
         self.assertNotIn("Global.PemainAktif.HudPemainDibuat = False;", fast.body)
 
-        mutated = self.replace_in_rule(fast, "Global.PemainAktif.SegarkanRosterTertunda = False;", "Global.PemainAktif.SegarkanRosterTertunda = True;")
+        mutated = self.replace_in_rule(fast, "Global.PemainAktif.GhostAktif = False;", "Global.PemainAktif.GhostAktif = True;")
         self.assert_rejected(mutated, "dispatcher team-switch leggero incompleto")
 
 
     def test_team_switch_detector_keeps_crouch_identity_without_pending_refresh(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
         self.assertIn("Global.PemainAktif.Manusia = True;", fast.body)
-        self.assertIn("Global.PemainAktif.SegarkanRosterTertunda = False;", fast.body)
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda = True;", fast.body)
+        self.assertIn("Global.PemainAktif.GhostAktif = False;", fast.body)
+        self.assertNotIn("Global.PemainAktif.GhostAktif = True;", fast.body)
 
     def test_registered_team_switch_has_no_pending_roster_consumer(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda == True", fast.body)
+        self.assertNotIn("Global.PemainAktif.GhostAktif == True", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKiriPemain[", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKananPemain[", fast.body)
         self.assertNotIn("Global.PemainAktif.HudKiri = Null;", fast.body)
@@ -1709,13 +1709,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         for rule in protected_rules:
             with self.subTest(rule=rule.name):
-                self.assertNotIn("SegarkanRosterTertunda", rule.body)
+                self.assertNotIn("GhostAktif", rule.body)
                 mutated = self.replace_in_rule(rule, "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False", "Player Variable(Current Array Element, PrivasiInspeksiAktif) == True")
                 self.assert_rejected(mutated, "Privacy")
 
     def test_non_roster_lifecycle_does_not_reuse_roster_pending_state(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda == True", fast.body)
+        self.assertNotIn("Global.PemainAktif.GhostAktif == True", fast.body)
         self.assertIn("Global.PemainAktif.PindahTimDiproses == False", fast.body)
         self.assertIn("Global.PemainAktif.PindahTimDiproses = True;", fast.body)
 
@@ -1725,9 +1725,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
             and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
         )
         conditions = validator.rule_block(roster, "conditions") or ""
-        self.assertNotIn("SegarkanRosterTertunda", conditions)
-        self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster.body)
-        self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)
+        self.assertNotIn("GhostAktif", conditions)
+        self.assertNotIn("Event Player.GhostAktif = True;", roster.body)
+        self.assertIn("Event Player.GhostAktif = False;", roster.body)
         self.assertNotIn("Create HUD Text(", roster.body)
         self.assertIn("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", conditions)
 

@@ -12,7 +12,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 
 - HUD centrale con nome server, countdown e località configurabile, allineato su slot Top/Left/Right deterministici.
 - Roster sinistro con icona, eroe, player e minuti; roster destro con genere musicale.
-- 13 menu Arcade con preferenze individuali.
+- 14 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
 - Resurrect manuale con Jump da morto, senza usare l'azione `Respawn`.
@@ -21,7 +21,7 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
-## I 13 menu
+## I 14 menu
 
 | Pagina | Menu | Contenuto |
 |---:|---|---|
@@ -38,8 +38,9 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
 | 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default OFF |
+| 13 | Ghost Mode | OFF / ON; ON attraversa muri e soffitti ma lascia solidi i pavimenti |
 
-Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è OFF per default: il dummy resta fermo finché almeno un umano avversario non abilita volontariamente l'opt-in; fra i player con preferenza ON sceglie sempre il più vicino e si ferma nuovamente quando non resta alcun target idoneo. I default e i cursori persistono tra chiusura, riapertura e cambio squadra reference-stable; un team switch di un umano già registrato aggiorna subito lo stato dipendente dal Team e chiude/riarma Menu Arcade e overlay Teleport, ma differisce di almeno 0,25 secondi la sostituzione dei due HUD roster finché il player non è nuovamente spawned e vivo. Gli handle vengono distrutti tramite gli array globali canonici e il renderer torna pronto soltanto dopo entrambe le righe. Durante il pending il player esce temporaneamente dai soli filtri Crouch, così un testo nel mondo già aperto viene invalidato e ricreato; Camera, status, effetti e voti attivi non vengono cancellati. Se il motore sostituisce davvero il riferimento e perde le player variables, il recovery usa invece il setup fresco e riapplica i default: è un fallback distinto dal refresh leggero.
+Gli indici sono Main Menu `-1` e sottomenu `0..13`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow e Ghost Mode sono OFF per default. Ghost Mode usa la collisione ambiente nativa con `Include Floors = False`: il player attraversa muri e soffitti ma continua a stare sui pavimenti; non modifica la collisione con player/bot. Le 12 coppie di righe roster vengono create globalmente una sola volta e appartengono allo slot HUD, non all'entità player. Un cambio squadra riassocia immediatamente la nuova entità allo slot riservato e conserva nome/profilo; un vero leave svuota soltanto il payload dello slot e non distrugge le righe permanenti. Camera, status, effetti, voti e preferenze persistenti non vengono cancellati dal rebind.
 
 Il profilo riconosciuto dal nome visibile esatto `งูแท้` entra con Name Color `Silver Mist` e Player Icon `Poison 2`: sono valori iniziali, quindi il player può modificarli normalmente. Il Player Vibes è invece fissato a `Caladan Brood`; la pagina Soundtrack resta visibile ma in sola lettura e non può cambiare il valore. Questa voce dedicata non amplia il catalogo globale, che resta di 100 generi per tutti gli altri player. Il riconoscimento non usa un identificatore account: un omonimo con lo stesso nome visibile riceve lo stesso profilo e una rinomina ne impedisce l'applicazione. Un cambio squadra leggero conserva anche le eventuali modifiche a colore e icona; il repair lifecycle riasserisce il Vibes bloccato e riapplica i due default soltanto se le player variables risultano davvero azzerate. Un leave seguito da un vero rejoin esegue un nuovo setup e riapplica `Silver Mist`, `Poison 2` e il Vibes bloccato.
 
@@ -92,7 +93,7 @@ Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 H
 - 1 Hz: countdown e cache passive;
 - ogni 10 secondi: minuti lobby.
 
-Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. Il lifecycle iniziale resta serializzato da un lock globale; un cambio squadra reference-stable non entra nel cleanup/setup pesante e sincronizza Team, UI transitoria e ricreazione differita delle due righe roster. Se una nuova identità arriva mentre il cleanup ritardato occupa ancora l'ultimo slot, il classifier riarma `SudahDiperiksa` prima di uscire e riprova appena lo slot viene liberato, senza restare in uno stato senza uscita; la classificazione degli iBot avviene comunque prima di questo gate. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
+Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. Il lifecycle iniziale resta serializzato da un lock globale; un cambio squadra reference-stable non entra nel cleanup/setup pesante e sincronizza Team e UI transitoria mentre le due righe roster globali restano permanenti e vengono solo riassociate allo slot. Se una nuova identità arriva mentre il cleanup ritardato occupa ancora l'ultimo slot, il classifier riarma `SudahDiperiksa` prima di uscire e riprova appena lo slot viene liberato, senza restare in uno stato senza uscita; la classificazione degli iBot avviene comunque prima di questo gate. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
 
 Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 

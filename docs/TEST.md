@@ -357,7 +357,7 @@ Slot umani/dummy:
 
 Import: PASS/FAIL
 D.Mon: PASS/FAIL
-EN/ID/TH e 13 menu: PASS/FAIL
+EN/ID/TH e 14 menu: PASS/FAIL
 Input simultanei: PASS/FAIL
 Join/leave: PASS/FAIL
 Dummy objective routing: PASS/FAIL
@@ -391,3 +391,12 @@ La 0.8.1 resta **static-ready / live-pending** finché i test obbligatori, i lim
 ### Dummy spawn iniziale
 
 Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
+
+
+## Ghost Mode
+
+- [ ] Menu 13 mostra OFF/ON e applica solo con Crouch + Interact.
+- [ ] ON attraversa muri e soffitti ma non il pavimento.
+- [ ] OFF ripristina la collisione ambiente normale.
+- [ ] La collisione con player/bot non cambia.
+- [ ] Stato conservato dopo cambio squadra, cambio eroe e rejoin nello stesso match.

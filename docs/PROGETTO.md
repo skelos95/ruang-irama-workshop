@@ -23,7 +23,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. Preferenze e cursori persistono durante chiusura, riapertura e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
+Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..13`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. Preferenze e cursori persistono durante chiusura, riapertura e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
 
 ### Input
 
@@ -236,3 +236,8 @@ La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto
 ### Dummy bot: spawn e distanza sicura
 
 I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi cerca una posizione camminabile circa 10 m verso la propria metà mappa e rifiuta destinazioni a meno di 6 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Soltanto il dummy Workshop disabilita la collisione con pareti e soffitti mantenendo il pavimento; la collisione con player/bot resta esplicitamente abilitata. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.
+
+
+### Menu 13 — Ghost Mode
+
+Ghost Mode è OFF per default. Quando è ON usa `Disable Movement Collision With Environment(player, False)`: muri e soffitti diventano attraversabili, i pavimenti restano solidi e la collisione con player/bot non viene modificata. Lo stato è salvato nel profilo runtime e riapplicato dopo cambio squadra o cambio eroe.

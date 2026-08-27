@@ -243,7 +243,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             roster = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke roster global permanen")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Has Spawned(Event Player) == True;", roster)
             self.assertNotIn("Event Player.TimTerakhir == Team Of(Event Player);", roster)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
+            self.assertNotIn("Event Player.GhostAktif == False;", roster)
             self.assertNotIn("Event Player.NamaTampilan != Null;", roster)
             self.assertNotIn(f'{global_name}.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");', roster)
             self.assertIn(f"{global_name}.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", roster)
@@ -256,15 +256,15 @@ class RuntimeMaintenanceTests(unittest.TestCase):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
             self.assertIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
-            self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
+            self.assertNotIn(f"{global_name}.PemainAktif.GhostAktif = True;", fast)
             self.assertNotIn(f"{global_name}.PemainAktif.HudPemainDibuat = False;", fast)
             self.assertNotIn(f"Destroy HUD Text({global_name}.HudKiriPemain[", fast)
             self.assertNotIn(f"Destroy HUD Text({global_name}.HudKananPemain[", fast)
-            self.assertEqual(source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"), 0)
+            self.assertEqual(source.count("Player Variable(Current Array Element, GhostAktif) == False"), 0)
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
-            self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster)
-            self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster)
+            self.assertNotIn("Event Player.GhostAktif == False;", roster)
+            self.assertNotIn("Event Player.GhostAktif = True;", roster)
+            self.assertIn("Event Player.GhostAktif = False;", roster)
             self.assertNotIn("Create HUD Text(", roster)
 
     def test_team_switch_is_lightweight_and_leave_cleanup_is_exact(self):
@@ -283,7 +283,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             ):
                 self.assertIn(token, fast)
             for token in (
-                f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;",
+                f"{global_name}.PemainAktif.GhostAktif = True;",
                 f"Destroy HUD Text({global_name}.HudKiriPemain[",
                 f"Destroy HUD Text({global_name}.HudKananPemain[",
                 f"{global_name}.PemainAktif.HudKiri = Null;",
@@ -303,9 +303,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Event Player.TimTerakhir == Team Of(Event Player);", roster)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster)
-            self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster)
+            self.assertNotIn("Event Player.GhostAktif == False;", roster)
+            self.assertNotIn("Event Player.GhostAktif = True;", roster)
+            self.assertIn("Event Player.GhostAktif = False;", roster)
             self.assertNotIn("Is Alive(Event Player) == True;", roster)
             self.assertNotIn("Server Load < 150", roster)
             self.assertNotIn("Create HUD Text(", roster)

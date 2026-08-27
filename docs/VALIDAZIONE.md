@@ -57,7 +57,7 @@ Il gate rifiuta residui noti italiano/inglese negli elementi personalizzati e i 
 Il gate verifica:
 
 - rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
-- 13 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..12`;
+- 14 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..13`;
 - pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default OFF; il messaggio di apertura deve annunciare tredici pagine in EN/ID/TH e non può contenere le vecchie forme Twelve/Dua belas/สิบสอง;
 - 37 nomi Player Icon in tre array allineati;
 - 26 località server in tre array allineati;
@@ -241,7 +241,7 @@ La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-no
 La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 - import e D.Mon smoke test;
-- 13 menu e input in EN/ID/TH, inclusa pagina 12 Dummy Follow;
+- 14 menu e input in EN/ID/TH, inclusa pagina 12 Dummy Follow;
 - profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
 - cinque pagine Crouch Travel & Attach con Primary/Secondary per navigare e Interact per eseguire;
 - morte/Resurrect con Jump, hero swap, spectator, join/leave e team switch;
@@ -258,3 +258,8 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 ## Decisione
 
 La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+
+
+## Gate Ghost Mode
+
+Il validator richiede la pagina 13, il ciclo Main Menu `0..13`, entrambi i comandi di collisione ambiente, assenza di modifiche alla collisione player/bot e rimozione del vecchio flag `SegarkanRosterTertunda`.
