@@ -4,6 +4,8 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 ## 0.8.1 — 2026-08-25
 
+- Roster team-switch: le 12 righe Left/Right ora appartengono a slot HUD globali permanenti (`PemainSlotHUD` / `NamaSlotHUD`); il cambio squadra riassocia l'occupante senza distruggere o ricreare le righe, e Crouch usa la stessa identità globale.
+
 Stato: **live-pending**.
 
 - Corretto il secondo deadlock live del roster dopo il cambio squadra: `NamaTampilan` viene ora riparato per qualunque membro già presente in `PemainManusia`, anche quando `Manusia` e `PernahDisiapkan` restano `True`. Valori `Null` o stringa vuota non possono più bloccare `02b`; il cache viene scritto solo quando il nome live è nuovamente disponibile.
