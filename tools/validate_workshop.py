@@ -2159,45 +2159,35 @@ End;
     roster_rule = next(
         (
             rule for rule in rules
-            if "Event Player.HudPemainDibuat = True;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            and "Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]" in rule.body
+            and "MusikKhusus" in rule.body
         ),
         None,
     )
-    checks.require(
-        roster_rule is not None
-        or any(event_type(rule) == "Ongoing - Global" and "Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]" in rule.body and "MusikKhusus" in rule.body for rule in rules),
-        "profilo speciale: renderer roster globale assente",
-    )
+    checks.require(roster_rule is not None, "profilo speciale: renderer roster globale assente")
     if roster_rule:
         right_calls = [
             call for call in iter_calls(roster_rule.body, "Create HUD Text")
             if len(call.args) >= 5 and call.args[4].strip() == "Right"
         ]
         checks.equal(len(right_calls), 1, "profilo speciale: renderer roster Right")
-        vibe_calls = [
-            call
-            for call in iter_calls(right_calls[0].args[2], "Custom String")
-            if right_calls and len(call.args) == 3
-            and parse_literal(call.args[0]) == "{0} - {1}"
-            and call.args[1].strip() in {"Event Player", "Event Player.NamaTampilan"}
-        ] if right_calls else []
-        checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
-        if vibe_calls:
-            fallback = soundtrack_choice(vibe_calls[0].args[2], "profilo speciale roster")
-            triads = language_triads(fallback) if fallback is not None else []
-            checks.equal(len(triads), 1, "profilo speciale roster: fallback EN/ID/TH")
-            if triads:
-                for branch, expected in zip(
-                    triads[0],
-                    ("no soundtrack yet", "belum pilih musik", "ยังไม่ได้เลือกเพลง"),
-                ):
-                    custom = full_custom_string(branch)
-                    checks.equal(
-                        parse_literal(custom.args[0]) if custom and custom.args else None,
-                        expected,
-                        "profilo speciale roster: fallback localizzato invariato",
-                    )
+        if right_calls:
+            slot = "Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]"
+            special_music = (
+                f"Player Variable({slot}, MusikKhusus) != Null ? "
+                f"Player Variable({slot}, MusikKhusus) : Player Variable({slot}, IndeksGenre)"
+            )
+            checks.require(
+                special_music in right_calls[0].args[2],
+                "profilo speciale roster globale: condizione profilo speciale",
+            )
+            for fallback in ("no soundtrack yet", "belum pilih musik", "ยังไม่ได้เลือกเพลง"):
+                checks.require(
+                    fallback in right_calls[0].args[2],
+                    f"profilo speciale roster: fallback localizzato invariato: {fallback}",
+                )
 
     main_menu = rule_by_subroutine(rules, "GambarUtama")
     checks.require(main_menu is not None, "profilo speciale: GambarUtama assente")
@@ -3745,14 +3735,12 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     roster_hud = next((
         rule for rule in rules
         if event_type(rule) == "Ongoing - Each Player"
-        and "Event Player.HudKiri = Last Text ID;" in rule.body
-        and "Event Player.HudKanan = Last Text ID;" in rule.body
+        and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+        and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+        and "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body
+        and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
     ), None)
-    checks.require(
-        roster_hud is not None
-        or any(event_type(rule) == "Ongoing - Global" and "Global.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)]" in rule.body for rule in rules),
-        "renderer roster persistente post-team-switch assente",
-    )
+    checks.require(roster_hud is not None, "renderer roster persistente post-team-switch assente")
     if roster_hud:
         roster_conditions = rule_block(roster_hud, "conditions") or ""
         for token in (
@@ -3761,20 +3749,34 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Event Player.SegarkanRosterTertunda == False;",
         ):
             checks.require(token in roster_conditions, f"renderer roster senza guardia stabile: {token}")
+        for token in (
+            "Event Player.NamaTampilan != Null;",
+            'Event Player.NamaTampilan != Custom String("");',
+            "Event Player.UrutanHUD >= 0;",
+            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
+        ):
+            checks.require(token in roster_conditions,
+                           f"renderer roster lazy senza guardia identità: {token}")
         checks.require(
             "Is Alive(Event Player) == True;" not in roster_conditions,
             "renderer roster non deve attendere Is Alive e bloccare il lifecycle globale",
         )
         checks.require("Server Load < 150" not in roster_conditions,
                        "renderer roster non deve dipendere dal carico server")
+        checks.require(
+            "Or(Global.HudKiriPemain[Event Player.UrutanHUD] == 0, Global.HudKiriPemain[Event Player.UrutanHUD] == Null)" in roster_hud.body
+            and "Or(Global.HudKananPemain[Event Player.UrutanHUD] == 0, Global.HudKananPemain[Event Player.UrutanHUD] == Null)" in roster_hud.body,
+            "renderer roster lazy deve creare soltanto handle slot ancora vuoti",
+        )
+        ready = "Event Player.HudPemainDibuat = And(And(Event Player.HudKiri != Null, Event Player.HudKiri != 0), And(Event Player.HudKanan != Null, Event Player.HudKanan != 0));"
         ready_order = tuple(
             roster_hud.body.find(token)
             for token in (
-                "Event Player.HudKiri = Last Text ID;",
-                "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;",
-                "Event Player.HudKanan = Last Text ID;",
-                "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;",
-                "Event Player.HudPemainDibuat = True;",
+                "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;",
+                "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;",
+                "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];",
+                "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];",
+                ready,
             )
         )
         checks.require(
@@ -4403,7 +4405,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                        "SiapkanPemain non interrompe immediatamente i dummy nativi")
 
     entrypoints = (
-        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "HudPemainDibuat" in rule.body and "Global.HudKiriPemain[Event Player.UrutanHUD]" in rule.body and "Create HUD Text(" not in rule.body), None), "HUD player", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "HudPemainDibuat" in rule.body and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body), None), "HUD player", True),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Melee)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "Call Subroutine(GambarMenu);" in rule.body), None), "toggle menu", True),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and all(f"Button({button})" in rule.body for button in MENU_ACTION_BUTTONS)), None), "dispatcher menu", False),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body), None), "toggle Camera", True),

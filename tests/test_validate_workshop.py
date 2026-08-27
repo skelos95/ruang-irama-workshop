@@ -1688,6 +1688,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "collegamento slot globale non deve attendere Is Alive")
 
+    def test_lazy_roster_rows_require_assigned_identity_before_creation(self) -> None:
+        renderer = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+        )
+        conditions = validator.rule_block(renderer, "conditions") or ""
+        for guard in (
+            "Event Player.NamaTampilan != Null;",
+            'Event Player.NamaTampilan != Custom String("");',
+            "Event Player.UrutanHUD >= 0;",
+            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
+        ):
+            with self.subTest(guard=guard):
+                self.assertIn(guard, conditions)
+                mutated = self.replace_in_rule(renderer, guard, "")
+                self.assert_rejected(mutated, "renderer roster lazy senza guardia identità")
+
     def test_classifier_rearms_when_a_roster_slot_is_temporarily_unavailable(self) -> None:
         classifier = self.rule(
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
