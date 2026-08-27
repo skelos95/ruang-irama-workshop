@@ -11,7 +11,7 @@ permissions:
 jobs:
   repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -27,9 +27,29 @@ jobs:
         run: |
           sed -i 's/    expected=3,/    expected=1,/' .github/maintenance/tmp_fix_ghost_ci.py
           python .github/maintenance/tmp_fix_ghost_ci.py
+          python .github/maintenance/tmp_fix_ghost_remaining.py
 
       - name: Remove temporary maintenance files before validation
-        run: git rm -f .github/maintenance/tmp_fix_ghost_ci.py .github/workflows/tmp-fix-ghost-ci.yml
+        run: git rm -f .github/maintenance/tmp_fix_ghost_ci.py .github/maintenance/tmp_fix_ghost_remaining.py .github/workflows/tmp-fix-ghost-ci.yml
+
+      - name: Run focused Ghost and semantic checks
+        run: |
+          python -m unittest \
+            tests.test_ghost_mode \
+            tests.test_dummy_bots.DummyBotFeatureTests.test_only_native_dummies_ignore_walls_but_keep_floor_collision \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_official_source_passes_all_semantic_checks \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_interact_dispatch_is_split_into_page_handlers \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_native_dummy_wall_collision_does_not_apply_to_ibots \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_native_dummy_explicitly_keeps_player_collision_enabled \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_native_dummy_wall_collision_branch_cannot_be_made_unreachable \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_native_dummy_wall_collision_rule_cannot_have_an_impossible_condition \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_non_roster_lifecycle_does_not_reuse_roster_pending_state \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_pending_roster_refresh_cannot_block_roster_bootstrap \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_registered_team_switch_has_no_pending_roster_consumer \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_team_switch_detector_keeps_crouch_identity_without_pending_refresh \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_team_switch_detector_never_rebuilds_registered_roster
+          python tools/validate_workshop.py
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 
       - name: Run full unit suite
         run: python -m unittest discover -s tests -p 'test_*.py'
