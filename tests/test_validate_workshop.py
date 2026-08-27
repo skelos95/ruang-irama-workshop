@@ -1726,7 +1726,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         conditions = validator.rule_block(roster, "conditions") or ""
         self.assertNotIn("SegarkanRosterTertunda", conditions)
-        self.assertNotIn("SegarkanRosterTertunda", roster.body)
+        self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster.body)
+        self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)
         self.assertNotIn("Create HUD Text(", roster.body)
         self.assertIn("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", conditions)
 
