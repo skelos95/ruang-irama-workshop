@@ -3474,7 +3474,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                    "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
     joined = rules_with_event(rules, "Player Joined Match")
     left = rules_with_event(rules, "Player Left Match")
-    classifier = next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));" in rule.body and "Global.NamaSlotHUD" in rule.body), None)
+    classifier = next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));' in rule.body and "Global.NamaSlotHUD" in rule.body), None)
     checks.equal(len(joined), 0, "lifecycle join/team-switch deve essere global-first senza Player Joined Match")
     checks.equal(len(left), 1, "regola Player Left Match unica")
     if left:
