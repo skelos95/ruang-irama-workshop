@@ -204,14 +204,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_special_player_roster_main_and_locked_renderers_are_guarded(self) -> None:
         roster = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)]" in rule.body
-            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            lambda rule: validator.event_type(rule) == "Ongoing - Global"
+            and "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in rule.body
+            and "Global.HudKananPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body
         )
         roster_mutation = self.replace_in_rule(
             roster,
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) != Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksGenre)",
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) == Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], IndeksGenre)",
+            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) != Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], IndeksGenre)",
+            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) == Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], IndeksGenre)",
         )
         self.assert_rejected(roster_mutation, "profilo speciale roster globale: condizione profilo speciale")
 
@@ -224,12 +224,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(main_mutation, "profilo speciale menu principale: condizione profilo speciale")
 
         music = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarMusik")
-        locked_mutation = self.replace_in_rule(
-            music,
-            'Custom String("เพลงถูกล็อก\\nปัจจุบัน: {0}", Event Player.MusikKhusus)',
-            'Custom String("เพลงถูกล็อก\\nตอนนี้: {0}", Event Player.MusikKhusus)',
-        )
-        self.assert_rejected(locked_mutation, "testo locked")
+        music_mutation = self.replace_in_rule(music, "Event Player.MusikKhusus != Null ?", "Event Player.MusikKhusus == Null ?")
+        self.assert_rejected(music_mutation, "profilo speciale pagina musica")
 
     def test_special_player_music_navigation_guards_are_required(self) -> None:
         navigation = self.rule(
@@ -537,7 +533,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
         )
         mutated = self.inject_action(init, extra)
-        self.assert_rejected(mutated, "numero HUD fissi nella regola iniziale")
+        self.assert_rejected(mutated, "dieci HUD fissi più due renderer roster permanenti nella regola iniziale")
 
     def test_chill_grid_rejects_a_thirteenth_global_hud_outside_initialization(self) -> None:
         scheduler = self.rule(
@@ -560,13 +556,13 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "diagnostica HUD non include i dieci handle fissi")
 
     def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
-        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(renderer, "1 + Evaluate Once(Event Player.UrutanHUD)", "2 + Evaluate Once(Global.IndeksPemilih)")
+        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global" and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body)
+        mutated = self.replace_in_rule(renderer, "1 + Evaluate Once(Global.IndeksPemilih)", "2 + Evaluate Once(Global.IndeksPemilih)")
         self.assert_rejected(mutated, "renderer roster globale Left: ordinamento per slot congelato")
 
     def test_right_roster_stays_before_the_native_team_status_indicator(self) -> None:
-        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(renderer, "-13 + Evaluate Once(Event Player.UrutanHUD)", "1 + Evaluate Once(Event Player.UrutanHUD)")
+        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global" and "Global.HudKananPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body)
+        mutated = self.replace_in_rule(renderer, "-13 + Evaluate Once(Global.IndeksPemilih)", "1 + Evaluate Once(Global.IndeksPemilih)")
         self.assert_rejected(mutated, "renderer roster globale Right: ordinamento per slot congelato")
 
     def test_right_grid_requires_the_post_roster_spacer(self) -> None:
@@ -590,29 +586,22 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "HUD fisso Right sort -1: contenuto text errato")
 
     def test_left_roster_text_cannot_reintroduce_the_client_zero(self) -> None:
-        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body)
+        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global" and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body)
         call = next(
             call for call in validator.iter_calls(renderer.body, "Create HUD Text")
-            if len(call.args) >= 6 and call.args[4].strip() == "Left"
+            if len(call.args) >= 6 and call.args[4].strip() == "Left" and call.args[5].strip() == "1 + Evaluate Once(Global.IndeksPemilih)"
         )
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(
-            absolute,
-            3,
-            'Global.DiagnostikPerforma == True ? Custom String("diagnostics") : Null',
-        )
+        mutated = self.replace_call_argument(absolute, 3, 'Global.DiagnostikPerforma == True ? Custom String("diagnostics") : Null')
         self.assert_rejected(mutated, "renderer roster globale Left: Text deve essere Null")
 
     def test_left_diagnostics_remain_inside_the_subheader(self) -> None:
-        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body)
+        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global" and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body)
         call = next(
             call for call in validator.iter_calls(renderer.body, "Create HUD Text")
-            if len(call.args) >= 6 and call.args[4].strip() == "Left"
+            if len(call.args) >= 6 and call.args[4].strip() == "Left" and call.args[5].strip() == "1 + Evaluate Once(Global.IndeksPemilih)"
         )
-        outer = next(
-            custom for custom in validator.iter_calls(call.args[2], "Custom String")
-            if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}"
-        )
+        outer = next(custom for custom in validator.iter_calls(call.args[2], "Custom String") if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}")
         changed = outer.raw.replace(outer.args[3], 'Custom String("")', 1)
         changed_subheader = call.args[2][:outer.start] + changed + call.args[2][outer.end:]
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
@@ -620,15 +609,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "renderer roster globale Left: ternario diagnostica assente")
 
     def test_left_diagnostic_fallback_is_an_empty_string_not_null(self) -> None:
-        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body)
+        renderer = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global" and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body)
         call = next(
             call for call in validator.iter_calls(renderer.body, "Create HUD Text")
-            if len(call.args) >= 6 and call.args[4].strip() == "Left"
+            if len(call.args) >= 6 and call.args[4].strip() == "Left" and call.args[5].strip() == "1 + Evaluate Once(Global.IndeksPemilih)"
         )
-        outer = next(
-            custom for custom in validator.iter_calls(call.args[2], "Custom String")
-            if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}"
-        )
+        outer = next(custom for custom in validator.iter_calls(call.args[2], "Custom String") if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}")
         diagnostic = outer.args[3]
         self.assertTrue(diagnostic.rstrip().endswith('Custom String("")'))
         changed_diagnostic = diagnostic.rsplit('Custom String("")', 1)[0] + "Null"
@@ -1683,30 +1669,27 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assertNotIn("Is Alive(Event Player) == True;", conditions)
         mutated = self.replace_in_rule(
             roster,
-            'Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");',
-            'Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");\n\t\tIs Alive(Event Player) == True;',
+            "Event Player.HudPemainDibuat == False;",
+            "Event Player.HudPemainDibuat == False;\n\t\tIs Alive(Event Player) == True;",
         )
         self.assert_rejected(mutated, "collegamento slot globale non deve attendere Is Alive")
 
     def test_lazy_roster_rows_require_assigned_identity_before_creation(self) -> None:
         renderer = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
-            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            lambda rule: validator.event_type(rule) == "Ongoing - Global"
+            and "For Global Variable(IndeksPemilih, 0, 12, 1);" in rule.body
+            and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body
+            and "Global.HudKananPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body
         )
-        conditions = validator.rule_block(renderer, "conditions") or ""
-        for guard, error in (
-            ("Event Player.UrutanHUD >= 0;", "renderer roster senza guardia slot stabile"),
-            ("Event Player.UrutanHUD < 12;", "renderer roster senza guardia slot stabile"),
-            ("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", "renderer roster senza guardia slot stabile"),
-            ('Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");', "renderer roster lazy senza identità globale"),
-        ):
-            with self.subTest(guard=guard):
-                self.assertIn(guard, conditions)
-                mutated = self.replace_in_rule(renderer, guard, "")
-                self.assert_rejected(mutated, error)
-        self.assertNotIn("Event Player.NamaTampilan != Null;", conditions)
-        self.assertNotIn('Event Player.NamaTampilan != Custom String("");', conditions)
+        self.assertEqual(
+            len([call for call in validator.iter_calls(renderer.body, "Create HUD Text") if len(call.args) >= 6 and call.args[5].strip() in {"1 + Evaluate Once(Global.IndeksPemilih)", "-13 + Evaluate Once(Global.IndeksPemilih)"}]),
+            2,
+        )
+        self.assertIn("Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)] != Null ?", renderer.body)
+        self.assertIn("Global.NamaSlotHUD[Evaluate Once(Global.IndeksPemilih)]", renderer.body)
+        binder = self.rule(lambda rule: "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body)
+        self.assertNotIn("Create HUD Text(", binder.body)
+        self.assertNotIn("Has Spawned(Event Player) == True;", validator.rule_block(binder, "conditions") or "")
 
     def test_classifier_rearms_when_a_roster_slot_is_temporarily_unavailable(self) -> None:
         classifier = self.rule(
@@ -1738,13 +1721,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_pending_roster_refresh_cannot_block_roster_bootstrap(self) -> None:
         roster = self.rule(
-            lambda rule: "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
-            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            lambda rule: "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body
+            and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
         )
         conditions = validator.rule_block(roster, "conditions") or ""
-        self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", conditions)
-        self.assertIn("If(Event Player.SegarkanRosterTertunda == True);", roster.body)
+        self.assertNotIn("SegarkanRosterTertunda", conditions)
+        self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster.body)
         self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)
+        self.assertNotIn("Create HUD Text(", roster.body)
+        self.assertIn("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", conditions)
 
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
@@ -2505,13 +2490,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
 
     def test_team_switch_rebinds_stale_entity_in_place(self) -> None:
-        leave = self.rule(lambda rule: "Player Left Match;" in rule.body and "Call Subroutine(BersihkanPemain);" in rule.body)
-        mutated = self.replace_in_rule(
-            leave,
-            "Global.PemainManusia[Global.IndeksKeluar] = Global.PemainPengganti;",
-            "Global.PemainPengganti = Global.PemainPengganti;",
+        classifier = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));' in rule.body
+            and "Global.NamaSlotHUD" in rule.body
         )
-        self.assert_rejected(mutated, "medesimo slot roster")
+        mutated = self.replace_in_rule(
+            classifier,
+            "Global.PemainManusia[Global.IndeksKeluar] = Event Player;",
+            "Global.PemainManusia[Global.IndeksKeluar] = Global.PemainPengganti;",
+        )
+        self.assert_rejected(mutated, "team-switch non sostituisce immediatamente il riferimento entità nel medesimo slot roster")
 
     def test_native_match_time_is_protected_without_pausing_prematch(self) -> None:
         self.assertNotIn("Pause Match Time;", self.source)
