@@ -29,7 +29,7 @@ jobs:
           python .github/maintenance/tmp_fix_ghost_ci.py
 
       - name: Remove temporary maintenance files before validation
-        run: git rm .github/maintenance/tmp_fix_ghost_ci.py .github/workflows/tmp-fix-ghost-ci.yml
+        run: git rm -f .github/maintenance/tmp_fix_ghost_ci.py .github/workflows/tmp-fix-ghost-ci.yml
 
       - name: Run full unit suite
         run: python -m unittest discover -s tests -p 'test_*.py'
