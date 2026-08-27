@@ -1683,8 +1683,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assertNotIn("Is Alive(Event Player) == True;", conditions)
         mutated = self.replace_in_rule(
             roster,
-            "Has Spawned(Event Player) == True;",
-            "Has Spawned(Event Player) == True;\n\t\tIs Alive(Event Player) == True;",
+            'Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");',
+            'Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");\n\t\tIs Alive(Event Player) == True;',
         )
         self.assert_rejected(mutated, "collegamento slot globale non deve attendere Is Alive")
 
@@ -1695,16 +1695,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
             and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
         )
         conditions = validator.rule_block(renderer, "conditions") or ""
-        for guard in (
-            "Event Player.NamaTampilan != Null;",
-            'Event Player.NamaTampilan != Custom String("");',
-            "Event Player.UrutanHUD >= 0;",
-            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
+        for guard, error in (
+            ("Event Player.UrutanHUD >= 0;", "renderer roster senza guardia slot stabile"),
+            ("Event Player.UrutanHUD < 12;", "renderer roster senza guardia slot stabile"),
+            ("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", "renderer roster senza guardia slot stabile"),
+            ('Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");', "renderer roster lazy senza identità globale"),
         ):
             with self.subTest(guard=guard):
                 self.assertIn(guard, conditions)
                 mutated = self.replace_in_rule(renderer, guard, "")
-                self.assert_rejected(mutated, "renderer roster lazy senza guardia identità")
+                self.assert_rejected(mutated, error)
+        self.assertNotIn("Event Player.NamaTampilan != Null;", conditions)
+        self.assertNotIn('Event Player.NamaTampilan != Custom String("");', conditions)
 
     def test_classifier_rearms_when_a_roster_slot_is_temporarily_unavailable(self) -> None:
         classifier = self.rule(
@@ -1734,13 +1736,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assertIn("Global.PemainAktif.PindahTimDiproses == False", fast.body)
         self.assertIn("Global.PemainAktif.PindahTimDiproses = True;", fast.body)
 
-    def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
-        mutated = self.source.replace(
-            "Event Player.SegarkanRosterTertunda = False;",
-            "Event Player.SegarkanRosterTertunda = Null;",
-            1,
+    def test_pending_roster_refresh_cannot_block_roster_bootstrap(self) -> None:
+        roster = self.rule(
+            lambda rule: "Global.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
+            and "Global.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;" in rule.body
         )
-        self.assert_rejected(mutated, "reset setup iniziale mancante")
+        conditions = validator.rule_block(roster, "conditions") or ""
+        self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", conditions)
+        self.assertIn("If(Event Player.SegarkanRosterTertunda == True);", roster.body)
+        self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)
 
     def test_leave_cleanup_is_limited_to_the_human_roster(self) -> None:
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")

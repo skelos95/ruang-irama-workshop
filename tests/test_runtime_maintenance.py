@@ -175,8 +175,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             player_bind = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke slot global")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertEqual(player_bind.count("Create HUD Text("), 2)
-            self.assertIn("Event Player.NamaTampilan != Null;", player_bind)
-            self.assertIn('Event Player.NamaTampilan != Custom String("");', player_bind)
+            self.assertNotIn("Event Player.NamaTampilan != Null;", player_bind)
+            self.assertNotIn('Event Player.NamaTampilan != Custom String("");', player_bind)
+            self.assertIn(f'{global_name}.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");', player_bind)
             self.assertIn(f"{global_name}.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", player_bind)
             self.assertIn(f"{global_name}.HudKiriPemain[Event Player.UrutanHUD] = Last Text ID;", player_bind)
             self.assertIn(f"{global_name}.HudKananPemain[Event Player.UrutanHUD] = Last Text ID;", player_bind)
@@ -257,7 +258,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Server Load < 150", classifier)
 
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
-            self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster)
+            self.assertNotIn("Event Player.TimTerakhir == Team Of(Event Player);", roster)
             self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
             self.assertIn("If(Event Player.SegarkanRosterTertunda == True);", roster)
             self.assertNotIn("Is Alive(Event Player) == True;", roster)
