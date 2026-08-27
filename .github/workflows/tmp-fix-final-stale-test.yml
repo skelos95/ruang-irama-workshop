@@ -1,0 +1,76 @@
+name: Temporary fix final stale roster test
+
+on:
+  push:
+    branches:
+      - fix-permanent-global-roster-v3-20260827
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Align final stale assertion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tests/test_validate_workshop.py')
+          s = p.read_text(encoding='utf-8')
+          old = '''        self.assertNotIn("SegarkanRosterTertunda", conditions)\n        self.assertNotIn("SegarkanRosterTertunda", roster.body)\n        self.assertNotIn("Create HUD Text(", roster.body)'''
+          new = '''        self.assertNotIn("SegarkanRosterTertunda", conditions)\n        self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster.body)\n        self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)\n        self.assertNotIn("Create HUD Text(", roster.body)'''
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one stale assertion block, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow
+        run: rm .github/workflows/tmp-fix-final-stale-test.yml
+
+      - name: Commit clean test fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/test_validate_workshop.py .github
+          git commit -m 'Fix final permanent roster regression test'
+          git push origin HEAD:fix-permanent-global-roster-v3-20260827
+
+      - name: Run all previously failing tests
+        run: |
+          python -m unittest \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_cached_player_name_drives_roster_and_world_text \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_roster_is_owned_by_persistent_global_hud_slots \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_roster_bootstrap_depends_only_on_persistent_slot_identity \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_registered_team_switch_never_destroys_roster_or_hides_crouch_target \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_team_switch_is_lightweight_and_leave_cleanup_is_exact \
+            tests.test_dummy_bots.DummyBotFeatureTests.test_static_hud_uses_the_reference_grid_without_embedded_label_spacing \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_special_player_roster_main_and_locked_renderers_are_guarded \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_chill_grid_rejects_an_eleventh_fixed_hud \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_left_roster_rows_start_immediately_below_their_label \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_right_roster_stays_before_the_native_team_status_indicator \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_left_roster_text_cannot_reintroduce_the_client_zero \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_left_diagnostics_remain_inside_the_subheader \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_left_diagnostic_fallback_is_an_empty_string_not_null \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_roster_ready_flag_is_written_after_both_global_aliases \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_lazy_roster_rows_require_assigned_identity_before_creation \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_pending_roster_refresh_cannot_block_roster_bootstrap \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_team_switch_rebinds_stale_entity_in_place
+
+      - name: Validate Workshop source
+        run: python tools/validate_workshop.py
+
+      - name: Preflight Italian clipboard source
+        run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
