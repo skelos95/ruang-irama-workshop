@@ -220,7 +220,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn(f"Destroy HUD Text({global_name}.HudKananPemain[", fast)
             self.assertEqual(source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"), 0)
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
-            self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster)
+            self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
+            self.assertIn("If(Event Player.SegarkanRosterTertunda == True);", roster)
 
     def test_team_switch_is_lightweight_and_leave_cleanup_is_exact(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
@@ -257,7 +258,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster)
-            self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster)
+            self.assertNotIn("Event Player.SegarkanRosterTertunda == False;", roster)
+            self.assertIn("If(Event Player.SegarkanRosterTertunda == True);", roster)
             self.assertNotIn("Is Alive(Event Player) == True;", roster)
             self.assertNotIn("Server Load < 150", roster)
 
