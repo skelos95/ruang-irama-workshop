@@ -27,10 +27,11 @@ jobs:
         run: |
           sed -i 's/    expected=3,/    expected=1,/' .github/maintenance/tmp_fix_ghost_ci.py
           python .github/maintenance/tmp_fix_ghost_ci.py
+          python .github/maintenance/tmp_prepare_ghost_remaining.py
           python .github/maintenance/tmp_fix_ghost_remaining.py
 
       - name: Remove temporary maintenance files before validation
-        run: git rm -f .github/maintenance/tmp_fix_ghost_ci.py .github/maintenance/tmp_fix_ghost_remaining.py .github/workflows/tmp-fix-ghost-ci.yml
+        run: git rm -f .github/maintenance/tmp_fix_ghost_ci.py .github/maintenance/tmp_fix_ghost_remaining.py .github/maintenance/tmp_prepare_ghost_remaining.py .github/workflows/tmp-fix-ghost-ci.yml
 
       - name: Run focused Ghost and semantic checks
         run: |
