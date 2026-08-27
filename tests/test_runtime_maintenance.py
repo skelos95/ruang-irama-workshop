@@ -163,6 +163,45 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
 
 
+    def test_permanent_roster_rows_live_in_global_init_and_player_rule_only_binds(self):
+        for source, g, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
+            init = source.split(f'{rule_kw}("00 - Umum:', 1)[1].split(f'{rule_kw}("00a1 - Umum:', 1)[0]
+            self.assertIn("For Global Variable(IndeksPemilih, 0, 12, 1);", init)
+            self.assertIn(f"{g}.HudKiriPemain[{g}.IndeksPemilih] = Last Text ID;", init)
+            self.assertIn(f"{g}.HudKananPemain[{g}.IndeksPemilih] = Last Text ID;", init)
+            self.assertIn("Create HUD Text(All Players(All Teams),", init)
+            self.assertIn(f"{g}.PemainSlotHUD[Evaluate Once({g}.IndeksPemilih)] != Null ?", init)
+
+            bind = source.split(f'{rule_kw}("02b - HUD Pemain: Hubungkan ke roster global permanen")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            self.assertNotIn("Create HUD Text(", bind)
+            self.assertIn(f"Event Player.HudKiri = {g}.HudKiriPemain[Event Player.UrutanHUD];", bind)
+            self.assertIn(f"Event Player.HudKanan = {g}.HudKananPemain[Event Player.UrutanHUD];", bind)
+
+            cleanup = source.split(f'{rule_kw}("93c - Subrutin:', 1)[1].split(f'{rule_kw}("94 - Subrutin:', 1)[0]
+            self.assertNotIn(f"Destroy HUD Text({g}.HudKiriPemain[", cleanup)
+            self.assertNotIn(f"Destroy HUD Text({g}.HudKananPemain[", cleanup)
+            self.assertNotIn(f"{g}.NamaSlotHUD[{g}.IndeksUtangKeluar] = Custom String(\"\");", cleanup)
+            self.assertNotIn("Append To Array(" + g + ".SlotHUDTersedia", cleanup)
+            self.assertIn(f"{g}.PemainSlotHUD[{g}.IndeksUtangKeluar] = Null;", cleanup)
+
+    def test_team_switch_entity_adopts_reserved_slot_before_fresh_allocation(self):
+        for source, g, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
+            classifier = source.split(f'{rule_kw}("02 - Pemain:', 1)[1].split(f'{rule_kw}("02b - HUD Pemain:', 1)[0]
+            adopt = f"If(Index Of Array Value({g}.NamaSlotHUD, Event Player.NamaTampilan) >= 0);"
+            fresh = f"Event Player.UrutanHUD = First Of({g}.SlotHUDTersedia);"
+            self.assertIn(adopt, classifier)
+            self.assertIn(f"{g}.PemainManusia[{g}.IndeksKeluar] = Event Player;", classifier)
+            self.assertIn(f"{g}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;", classifier)
+            self.assertLess(classifier.index(adopt), classifier.index(fresh))
+            self.assertLess(classifier.index(f"{g}.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;"), classifier.rindex(f"{g}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;"))
+
+            leave = source.split(f'{rule_kw}("04 - Pemain Keluar:', 1)[1].split(f'{rule_kw}("04g - Utama global:', 1)[0]
+            same_identity = leave.index("Count Of(Filtered Array(All Players(All Teams)")
+            abort_after = leave.index("Abort;", same_identity)
+            cleanup = leave.index("Call Subroutine(BersihkanPemain);", same_identity)
+            self.assertLess(abort_after, cleanup)
+            self.assertNotIn(f"{g}.PemainPengganti.WaktuMasuk = Event Player.WaktuMasuk;", leave)
+
     def test_roster_is_owned_by_persistent_global_hud_slots(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             self.assertIn("63: PemainSlotHUD", source)
