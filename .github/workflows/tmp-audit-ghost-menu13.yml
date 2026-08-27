@@ -21,4 +21,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run audit
-        run: python .github/maintenance/tmp_audit_ghost_menu13.py
+        run: PYTHONPATH=. python .github/maintenance/tmp_audit_ghost_menu13.py
