@@ -3744,19 +3744,25 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if roster_hud:
         roster_conditions = rule_block(roster_hud, "conditions") or ""
         for token in (
+            "Event Player.UrutanHUD >= 0;",
+            "Event Player.UrutanHUD < 12;",
+            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
+        ):
+            checks.require(token in roster_conditions, f"renderer roster senza guardia slot stabile: {token}")
+        for token in (
+            'Global.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");',
+        ):
+            checks.require(token in roster_conditions,
+                           f"renderer roster lazy senza identità globale: {token}")
+        for forbidden in (
             "Has Spawned(Event Player) == True;",
             "Event Player.TimTerakhir == Team Of(Event Player);",
             "Event Player.SegarkanRosterTertunda == False;",
-        ):
-            checks.require(token in roster_conditions, f"renderer roster senza guardia stabile: {token}")
-        for token in (
             "Event Player.NamaTampilan != Null;",
             'Event Player.NamaTampilan != Custom String("");',
-            "Event Player.UrutanHUD >= 0;",
-            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
         ):
-            checks.require(token in roster_conditions,
-                           f"renderer roster lazy senza guardia identità: {token}")
+            checks.require(forbidden not in roster_conditions,
+                           f"renderer roster non deve dipendere da stato player transitorio: {forbidden}")
         checks.require(
             "Is Alive(Event Player) == True;" not in roster_conditions,
             "renderer roster non deve attendere Is Alive e bloccare il lifecycle globale",
