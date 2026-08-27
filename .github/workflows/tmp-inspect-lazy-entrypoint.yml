@@ -16,4 +16,5 @@ jobs:
         with:
           persist-credentials: false
       - name: Show stale entrypoint check
-        run: grep -n -C 30 'entrypoint umano assente: HUD player' tools/validate_workshop.py
+        run: |
+          grep -n -C 30 'entrypoint umano assente: HUD player' tools/validate_workshop.py
