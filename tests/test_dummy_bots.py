@@ -10,7 +10,7 @@ class DummyBotFeatureTests(unittest.TestCase):
         cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
-    def test_static_hud_uses_the_reference_grid_without_embedded_label_spacing(self):
+    def test_static_hud_uses_recyclable_roster_slots_without_embedded_label_spacing(self):
         for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
             self.assertIn('Custom String("{0} [{1}]", Custom String("CHILL DEDICATED SERVER")', source)
             self.assertIn('"Hold {0}: inspect hero + HP"', source)
@@ -21,8 +21,9 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn('"LOBBY & CHILL TIME"', source)
             self.assertIn('"PLAYER VIBES"', source)
             self.assertIn("10 + Count Of(Filtered Array(", source)
-            self.assertIn(f"1 + Evaluate Once({global_name}.IndeksPemilih)", source)
-            self.assertIn(f"-13 + Evaluate Once({global_name}.IndeksPemilih)", source)
+            self.assertIn("1 + Event Player.UrutanHUD", source)
+            self.assertIn("-13 + Event Player.UrutanHUD", source)
+            self.assertIn(f"{global_name}.SlotHUDTersedia = Sorted Array(Append To Array(", source)
             self.assertIn('Custom String("{0}{1}{2}"', source)
             self.assertNotIn(f"-99 + Evaluate Once({global_name}.IndeksPemilih)", source)
             self.assertNotIn("\\nLOBBY & CHILL TIME", source)
@@ -151,6 +152,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("IzinkanDummyMengikuti", scheduler)
             self.assertIn("Sorted Array", scheduler)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
+
     def test_dummy_follow_page_defaults_off_and_is_per_player(self):
         for source in (self.it, self.en):
             self.assertIn(
@@ -181,6 +183,7 @@ class DummyBotFeatureTests(unittest.TestCase):
                 f'{rule_kw}("03i - Bot/Dummy: Hentikan gerak saat bot mati")', 1
             )[0]
             self.assertIn("TargetDummyIkuti", cleanup)
+
 
 if __name__ == "__main__":
     unittest.main()

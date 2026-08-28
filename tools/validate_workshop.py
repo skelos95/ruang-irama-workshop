@@ -939,8 +939,6 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
     for legacy in sorted(FORBIDDEN_LEGACY_IDENTIFIERS):
         checks.require(legacy not in all_names and re.search(rf"\b{re.escape(legacy)}\b", mask_strings(source)) is None,
                        f"identificatore legacy o non indonesiano presente: {legacy}")
-    checks.require("SegarkanRosterTertunda" not in mask_strings(source),
-                   "flag legacy SegarkanRosterTertunda deve essere rimosso")
 
     code = source[:declaration_span[0]] + source[declaration_span[1]:]
     masked_code = mask_strings(code)
@@ -1117,154 +1115,6 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
 
 
 def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
-    global_slot_roster = next(
-        (
-            rule for rule in rules
-            if event_type(rule) == "Ongoing - Global"
-            and "For Global Variable(IndeksPemilih, 0, 12, 1);" in rule.body
-            and "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in rule.body
-            and "Global.NamaSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in rule.body
-            and "Global.HudKiriPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body
-            and "Global.HudKananPemain[Global.IndeksPemilih] = Last Text ID;" in rule.body
-        ),
-        None,
-    )
-    checks.require(global_slot_roster is not None,
-                   "renderer roster globale persistente a 12 slot assente")
-    if global_slot_roster:
-        slot_calls = [call for call in iter_calls(global_slot_roster.body, "Create HUD Text") if "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in call.raw]
-        checks.equal(len(slot_calls), 2,
-                     "renderer roster globale deve avere esattamente due Create HUD nel binder")
-        expected_orders = {
-            "Left": "1 + Evaluate Once(Global.IndeksPemilih)",
-            "Right": "-13 + Evaluate Once(Global.IndeksPemilih)",
-        }
-        for side, order in expected_orders.items():
-            calls = [call for call in slot_calls if len(call.args) >= 6 and call.args[4].strip() == side]
-            checks.equal(len(calls), 1, f"renderer roster globale {side}")
-            if calls:
-                checks.equal(calls[0].args[0].strip(), "Global.PemainManusia",
-                             f"renderer roster globale {side}: pubblico umano dinamico")
-                checks.equal(calls[0].args[5].strip(), order,
-                             f"renderer roster globale {side}: ordinamento per slot congelato")
-                checks.require(
-                    "Global.NamaSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in calls[0].raw,
-                    f"renderer roster globale {side}: nome non posseduto dallo slot",
-                )
-                checks.require(
-                    "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in calls[0].raw,
-                    f"renderer roster globale {side}: occupante non letto dallo slot",
-                )
-                checks.equal(calls[0].args[3].strip(), "Null",
-                             f"renderer roster globale {side}: Text deve essere Null")
-                if side == "Left":
-                    outer_rows = [
-                        custom for custom in iter_calls(calls[0].args[2], "Custom String")
-                        if custom.args and parse_literal(custom.args[0]) == "{0}{1}{2}"
-                    ]
-                    checks.equal(len(outer_rows), 1,
-                                 "renderer roster globale Left: diagnostica non integrata nel Subheader")
-                    if outer_rows:
-                        checks.equal(len(outer_rows[0].args), 4,
-                                     "renderer roster globale Left: segmenti Subheader")
-                        if len(outer_rows[0].args) == 4:
-                            diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[3])
-                            checks.require(diagnostic_branches is not None,
-                                           "renderer roster globale Left: ternario diagnostica assente")
-                            if diagnostic_branches:
-                                diagnostic_condition, diagnostic_text, diagnostic_fallback = diagnostic_branches
-                                for token in (
-                                    "Global.DiagnostikPerforma == True",
-                                    "Local Player == Host Player",
-                                    "Evaluate Once(Global.IndeksPemilih) == Global.SlotHUDTerakhir",
-                                ):
-                                    checks.require(token in diagnostic_condition,
-                                                   f"renderer roster globale Left: guardia diagnostica assente: {token}")
-                                checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
-                                               "renderer roster globale Left: conteggio diagnostica non nel ramo visibile")
-                                checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
-                                             "renderer roster globale Left: fallback diagnostica deve essere stringa vuota")
-        checks.require(
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], WarnaNama)"
-            in global_slot_roster.body,
-            "renderer roster globale non segue Name Color dell'occupante corrente",
-        )
-        checks.require(
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) != Null ? Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], MusikKhusus) : Player Variable(Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)], IndeksGenre)"
-            in global_slot_roster.body,
-            "profilo speciale roster globale: condizione profilo speciale",
-        )
-
-    checks.require(
-        "Global.PemainSlotHUD = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);"
-        in source,
-        "tabella globale PemainSlotHUD non inizializzata a 12 slot",
-    )
-    checks.require(
-        "Global.HudKiriPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);" in source
-        and "Global.HudKananPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);" in source,
-        "tabelle handle roster devono avere 12 slot vuoti stabili",
-    )
-    checks.require(
-        source.count('Custom String("")') >= 12
-        and "Global.NamaSlotHUD = Array(" in source,
-        "tabella globale NamaSlotHUD non inizializzata",
-    )
-    for token, label in (
-        ("Global.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;", "classificazione occupante slot"),
-        ("Global.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;", "classificazione nome slot"),
-        ("Global.PemainManusia[Global.IndeksKeluar] = Event Player;", "rebind entità immediato dopo cambio team"),
-        ("Event Player.UrutanHUD = Index Of Array Value(Global.NamaSlotHUD, Event Player.NamaTampilan);", "adozione slot persistente dopo cambio team"),
-        ("Global.PemainSlotHUD[Global.PemainAktif.UrutanHUD] = Global.PemainAktif;", "rebind same-entity cambio team"),
-        ("Global.PemainSlotHUD[Global.IndeksUtangKeluar] = Null;", "pulizia occupante al vero leave"),
-        ("Global.NamaSlotHUD[Player Variable(Event Player.TargetInspeksi, UrutanHUD)]", "nome Crouch Inspection da slot"),
-        ("Global.NamaSlotHUD[Player Variable(Event Player.CalonTargetTeleportasi, UrutanHUD)]", "nome Crouch Teleport da slot"),
-    ):
-        checks.require(token in source, f"roster globale persistente: {label} assente")
-
-    global_slot_binding = next(
-        (
-            rule for rule in rules
-            if event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body
-            and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
-        ),
-        None,
-    )
-    checks.require(global_slot_binding is not None, "collegamento player ai due handle roster globali assente")
-    if global_slot_binding:
-        left_alias = "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];"
-        right_alias = "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];"
-        ready_alias = "Event Player.HudPemainDibuat = And(And(Event Player.HudKiri != Null, Event Player.HudKiri != 0), And(Event Player.HudKanan != Null, Event Player.HudKanan != 0));"
-        checks.require(ready_alias in global_slot_binding.body,
-                       "collegamento slot globale: ready flag deve verificare entrambi gli handle")
-        if ready_alias in global_slot_binding.body:
-            checks.require(
-                global_slot_binding.body.index(left_alias) < global_slot_binding.body.index(right_alias) < global_slot_binding.body.index(ready_alias),
-                "collegamento slot globale: HudPemainDibuat dopo entrambi gli handle",
-            )
-        binding_conditions = rule_block(global_slot_binding, "conditions") or ""
-        checks.require("Is Alive(Event Player) == True;" not in binding_conditions,
-                       "collegamento slot globale non deve attendere Is Alive")
-
-    checks.equal(source.count("Destroy HUD Text(Global.HudKiriPemain["), 0,
-                 "roster globale permanente non deve distruggere righe Left")
-    checks.equal(source.count("Destroy HUD Text(Global.HudKananPemain["), 0,
-                 "roster globale permanente non deve distruggere righe Right")
-    for token, label in (
-        ("Global.HudKiriPemain[Global.IndeksUtangKeluar] = 0;", "reset handle Left al vero leave"),
-        ("Global.HudKananPemain[Global.IndeksUtangKeluar] = 0;", "reset handle Right al vero leave"),
-        ('Global.NamaSlotHUD[Global.IndeksUtangKeluar] = Custom String("");', "cancellazione identità riservata al vero leave"),
-        ("Append To Array(Global.SlotHUDTersedia, Global.IndeksUtangKeluar)", "riciclo slot prima del restart"),
-    ):
-        checks.require(token not in source, f"roster globale permanente vieta {label}")
-    for forbidden, label in (
-        ("Modify Global Variable(HudKiriPemain, Remove From Array By Index", "rimozione handle Left per indice"),
-        ("Modify Global Variable(HudKananPemain, Remove From Array By Index", "rimozione handle Right per indice"),
-        ("Event Player.HudKiri = Last Text ID;", "ownership roster Left per-player"),
-        ("Event Player.HudKanan = Last Text ID;", "ownership roster Right per-player"),
-    ):
-        checks.require(forbidden not in source, f"roster globale persistente vieta {label}")
     for text in (
         "Arcade Menu online. Thirteen extremely important decisions await.",
         "Menu Arcade online. Tiga belas keputusan yang sangat penting menunggu.",
@@ -1319,7 +1169,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 12, "dieci HUD fissi più due renderer roster permanenti nella regola iniziale")
+        checks.equal(len(init_hud_calls), 10, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
@@ -1462,7 +1312,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ),
         None,
     )
-    checks.require(roster_rule is not None or global_slot_roster is not None, "renderer HUD roster umano/globale assente")
+    checks.require(roster_rule is not None, "renderer HUD roster umano assente")
     if roster_rule:
         roster_calls = list(iter_calls(roster_rule.body, "Create HUD Text"))
         checks.equal(len(roster_calls), 2, "renderer HUD roster: numero handle")
@@ -1832,10 +1682,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("SiapkanPemain", "False"),
         ("TerapkanHalamanIkutiDummy", "Event Player.KursorIkutiDummy == 1"),
     }
-    allowed_follow_writers = required_follow_writers | {
-        ("TenangkanPemain", "False"),
-        ("02 - Pemain: Pisahkan manusia dari pasukan kaleng", "X Component Of(Global.ProfilSosial[Index Of Array Value(Global.ProfilNama, Event Player.NamaTampilan)]) == 1"),
-    }
+    allowed_follow_writers = required_follow_writers | {("TenangkanPemain", "False")}
     checks.require(required_follow_writers <= set(follow_writers),
                    "Dummy Follow non ha writer setup/apply obbligatori")
     checks.require(set(follow_writers) <= allowed_follow_writers,
@@ -2004,7 +1851,7 @@ End;
                 and positions[-1] < profile_match.start(),
                 "profilo speciale: matcher deve seguire i default generici",
             )
-            minute = classifier.body.find("Event Player.MenitLobi = ")
+            minute = classifier.body.find("Event Player.MenitLobi = 0;")
             roster = classifier.body.find("Append To Array(Global.PemainManusia, Event Player)")
             checks.require(
                 profile_end >= 0 and profile_end < minute < roster,
@@ -2163,37 +2010,41 @@ End;
     roster_rule = next(
         (
             rule for rule in rules
-            if event_type(rule) == "Ongoing - Global"
-            and "For Global Variable(IndeksPemilih, 0, 12, 1);" in rule.body
-            and "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in rule.body
-            and "MusikKhusus" in rule.body
+            if "Event Player.HudPemainDibuat = True;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
         ),
         None,
     )
-    checks.require(roster_rule is not None, "profilo speciale: renderer roster globale assente")
+    checks.require(roster_rule is not None, "profilo speciale: renderer roster assente")
     if roster_rule:
         right_calls = [
             call for call in iter_calls(roster_rule.body, "Create HUD Text")
-            if len(call.args) >= 5
-            and call.args[4].strip() == "Right"
-            and "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]" in call.raw
+            if len(call.args) >= 5 and call.args[4].strip() == "Right"
         ]
         checks.equal(len(right_calls), 1, "profilo speciale: renderer roster Right")
-        if right_calls:
-            slot = "Global.PemainSlotHUD[Evaluate Once(Global.IndeksPemilih)]"
-            special_music = (
-                f"Player Variable({slot}, MusikKhusus) != Null ? "
-                f"Player Variable({slot}, MusikKhusus) : Player Variable({slot}, IndeksGenre)"
-            )
-            checks.require(
-                special_music in right_calls[0].args[2],
-                "profilo speciale roster globale: condizione profilo speciale",
-            )
-            for fallback in ("no soundtrack yet", "belum pilih musik", "ยังไม่ได้เลือกเพลง"):
-                checks.require(
-                    fallback in right_calls[0].args[2],
-                    f"profilo speciale roster: fallback localizzato invariato: {fallback}",
-                )
+        vibe_calls = [
+            call
+            for call in iter_calls(right_calls[0].args[2], "Custom String")
+            if right_calls and len(call.args) == 3
+            and parse_literal(call.args[0]) == "{0} - {1}"
+            and call.args[1].strip() in {"Event Player", "Event Player.NamaTampilan"}
+        ] if right_calls else []
+        checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
+        if vibe_calls:
+            fallback = soundtrack_choice(vibe_calls[0].args[2], "profilo speciale roster")
+            triads = language_triads(fallback) if fallback is not None else []
+            checks.equal(len(triads), 1, "profilo speciale roster: fallback EN/ID/TH")
+            if triads:
+                for branch, expected in zip(
+                    triads[0],
+                    ("no soundtrack yet", "belum pilih musik", "ยังไม่ได้เลือกเพลง"),
+                ):
+                    custom = full_custom_string(branch)
+                    checks.equal(
+                        parse_literal(custom.args[0]) if custom and custom.args else None,
+                        expected,
+                        "profilo speciale roster: fallback localizzato invariato",
+                    )
 
     main_menu = rule_by_subroutine(rules, "GambarUtama")
     checks.require(main_menu is not None, "profilo speciale: GambarUtama assente")
@@ -3479,7 +3330,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                    "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
     joined = rules_with_event(rules, "Player Joined Match")
     left = rules_with_event(rules, "Player Left Match")
-    classifier = next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));' in rule.body and "Global.NamaSlotHUD" in rule.body), None)
     checks.equal(len(joined), 0, "lifecycle join/team-switch deve essere global-first senza Player Joined Match")
     checks.equal(len(left), 1, "regola Player Left Match unica")
     if left:
@@ -3488,26 +3338,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "leave deve attendere 0,500 s prima di distinguere uscita e cambio team")
         checks.require("Abort If(Entity Exists(Event Player) == True);" in body,
                        "leave deve ignorare ogni entità ancora valida dopo il grace period")
-        replacement_guard = (
-            "If(Count Of(Filtered Array(All Players(All Teams), And(Is Dummy Bot(Current Array Element) == False, "
-            "Or(Player Variable(Current Array Element, NamaTampilan) == Event Player.NamaTampilan, "
-            "Custom String(\"{0}\", Current Array Element) == Event Player.NamaTampilan)))) > 0);"
-        )
-        checks.require(replacement_guard in body,
-                       "leave non distingue il cambio squadra dalla vera uscita tramite identità persistente")
-        checks.require(classifier is not None and "Global.PemainManusia[Global.IndeksKeluar] = Event Player;" in classifier.body,
-                       "team-switch non sostituisce immediatamente il riferimento entità nel medesimo slot roster")
-        checks.require(classifier is not None and "Event Player.UrutanHUD = Index Of Array Value(Global.NamaSlotHUD, Event Player.NamaTampilan);" in classifier.body,
-                       "team-switch non riadotta lo slot HUD persistente")
-        checks.require(classifier is not None
-                       and "Global.PemainManusia[Global.IndeksPemilih].PemainDipilih == Global.PemainPengganti" in classifier.body
-                       and "Global.PemainManusia[Global.IndeksPemilih].PemainDipilih = Event Player;" in classifier.body
-                       and "Call Subroutine(HitungPilihan);" in classifier.body,
-                       "team-switch non migra voto e riferimenti sociali sulla nuova entità")
-        checks.require("Call Subroutine(SiapkanPemain);" not in body,
-                       "team-switch non deve rifare il setup completo")
-        checks.require(all(token in body for token in ("Global.ProfilNama", "Global.ProfilPreferensiA", "Global.ProfilPreferensiB", "Global.ProfilStatus", "Global.ProfilSosial", "Global.ProfilPilihanNama")),
-                       "leave non salva il profilo persistente prima del grace period")
         checks.require("Call Subroutine(BersihkanPemain);" in body,
                        "leave vero non esegue cleanup esatto roster/HUD")
         checks.require("Call Subroutine(TenangkanPemain);" not in body,
@@ -3535,19 +3365,13 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "leave iBot non deve entrare nel cleanup umano")
 
     classifier = next((rule for rule in rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body), None)
-    if classifier:
-        checks.require("Index Of Array Value(Global.ProfilNama, Event Player.NamaTampilan) >= 0" in classifier.body,
-                       "classifier non ripristina il profilo persistente al rejoin")
-        checks.require("Event Player.WaktuMasuk = X Component Of(Global.ProfilPreferensiA" in classifier.body
-                       and "Event Player.JumlahPilihan = Y Component Of(Global.ProfilSosial" in classifier.body,
-                       "rejoin non ripristina tempo CHILL e stato sociale persistente")
     checks.require(classifier is not None, "registrazione roster umano assente")
     if classifier:
         checks.require("Abort If(Array Contains(Global.PemainManusia, Event Player));" in classifier.body,
                        "join duplicato può aggiungere due volte il roster")
         checks.require("Array Contains(Global.PemainManusia, Event Player) == False;" in classifier.body,
                        "classifier non deve rieseguire sui player già registrati nel roster")
-        slot_anchor = classifier.body.find("If(And(Count Of(Global.SlotHUDTersedia) == 0, Index Of Array Value(Global.NamaSlotHUD, Evaluate Once(Custom String(\"{0}\", Event Player))) < 0));")
+        slot_anchor = classifier.body.find("If(Count Of(Global.SlotHUDTersedia) == 0);")
         slot_branches = (
             conditional_branches_containing(classifier.body, slot_anchor)
             if slot_anchor >= 0 else []
@@ -3604,6 +3428,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
             "KursorPrivasiInspeksi = 0;", "IzinkanDummyMengikuti = False;", "KursorIkutiDummy = 0;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
+            "SegarkanRosterTertunda = False;",
         )
         for token in reset_tokens:
             checks.require(token in setup.body, f"reset setup iniziale mancante: {token}")
@@ -3650,9 +3475,16 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.SudahDiperiksa = True;",
             "Global.PemainAktif.SudahSiap = True;",
             "Global.PemainAktif.PernahDisiapkan = True;",
+            "Global.PemainAktif.SegarkanRosterTertunda = True;",
+            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            "Global.PemainAktif.HudKiri = Null;",
+            "Global.PemainAktif.HudKanan = Null;",
+            "Global.PemainAktif.HudPemainDibuat = False;",
+            "Global.PemainAktif.SegarkanRosterTertunda = False;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
+            "Global.PemainAktif.WaktuSiklusTim = 0;",
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == False",
             "Global.PemainAktif.PindahTimDiproses == False",
             "Global.PemainAktif.PindahTimDiproses = True;",
@@ -3717,20 +3549,116 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                     "Global.PemainAktif.SudahDiperiksa = True;",
                     "Global.PemainAktif.SudahSiap = True;",
                     "Global.PemainAktif.PernahDisiapkan = True;",
+                    "Global.PemainAktif.SegarkanRosterTertunda = True;",
+                    "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
                     "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
                 )
             )
             checks.require(
                 all(position >= 0 for position in detector_order)
                 and detector_order == tuple(sorted(detector_order)),
-                "dispatcher team-switch: ordine detector/ack TimTerakhir",
+                "dispatcher team-switch: ordine detector/pending/ack TimTerakhir",
             )
             checks.require(
                 "Global.PemainAktif.Manusia = False;" not in mismatch,
                 "dispatcher team-switch: il detector non deve nascondere il player ai target Crouch",
             )
 
-        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 4,
+        pending_anchor = fast.body.find(
+            "Global.PemainAktif.SegarkanRosterTertunda == True"
+        )
+        pending_branches = (
+            conditional_branches_containing(fast.body, pending_anchor)
+            if pending_anchor >= 0 else []
+        )
+        checks.require(bool(pending_branches), "dispatcher team-switch: consumer roster pending non isolato")
+        if pending_branches:
+            pending = mask_strings(pending_branches[0])
+            pending_header = pending.splitlines()[0]
+            for token in (
+                "Is Dummy Bot(Global.PemainAktif) == False",
+                "Global.PemainAktif.BotOtomatis == False",
+                "Global.PemainAktif.Manusia == True",
+                "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
+                "Global.PemainAktif.SegarkanRosterTertunda == True",
+                "Global.PemainAktif.TimTerakhir == Team Of(Global.PemainAktif)",
+                "Has Spawned(Global.PemainAktif) == True",
+                "Is Alive(Global.PemainAktif) == True",
+                "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
+                "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
+                ):
+                checks.require(token in pending_header, f"consumer roster pending senza guardia: {token}")
+            checks.require("Server Load < 150" not in pending_header,
+                           "consumer roster pending non deve dipendere dal carico server")
+            checks.require(
+                "Destroy HUD Text(Global.PemainAktif.HudKiri);" not in pending
+                and "Destroy HUD Text(Global.PemainAktif.HudKanan);" not in pending,
+                "consumer roster pending deve distruggere gli handle canonici globali",
+            )
+            checks.require(
+                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", pending) is None,
+                "consumer roster pending non deve usare Abort",
+            )
+            pending_order = tuple(
+                pending.find(token)
+                for token in (
+                    "Destroy HUD Text(Global.HudKiriPemain[",
+                    "Destroy HUD Text(Global.HudKananPemain[",
+                    "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
+                    "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
+                    "Global.PemainAktif.HudKiri = Null;",
+                    "Global.PemainAktif.HudKanan = Null;",
+                    "Global.PemainAktif.HudPemainDibuat = False;",
+                    "Global.PemainAktif.WaktuSiklusTim = 0;",
+                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
+                )
+            )
+            checks.require(
+                all(position >= 0 for position in pending_order)
+                and pending_order == tuple(sorted(pending_order)),
+                "consumer roster pending: ordine destroy/clear/riarmo",
+            )
+        recovery_branches = [
+            fast.body[start:end]
+            for start, end in conditional_branch_spans(fast.body)
+            if "Array Contains(Global.PemainManusia, Global.PemainAktif) == False"
+            in fast.body[start:end]
+            and "Global.PemainAktif.SegarkanRosterTertunda == True"
+            in fast.body[start:end]
+            and "Global.PemainAktif.PindahTimDiproses = False;"
+            in fast.body[start:end]
+        ]
+        checks.equal(len(recovery_branches), 1, "team-switch: recovery non-roster pending")
+        if recovery_branches:
+            recovery = mask_strings(recovery_branches[0])
+            recovery_order = tuple(
+                recovery.find(token)
+                for token in (
+                    "Global.PemainAktif.WaktuSiklusTim = 0;",
+                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
+                    "Global.PemainAktif.PindahTimDiproses = False;",
+                )
+            )
+            checks.require(
+                all(position >= 0 for position in recovery_order)
+                and recovery_order == tuple(sorted(recovery_order)),
+                "team-switch: recovery non-roster deve liberare pending prima del requeue",
+            )
+            checks.require(
+                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", recovery) is None,
+                "team-switch: recovery non-roster pending non deve usare Abort",
+            )
+
+        pending_true_writes = sum(
+            rule.body.count("SegarkanRosterTertunda = True;") for rule in rules
+        )
+        pending_false_writes = sum(
+            rule.body.count("SegarkanRosterTertunda = False;") for rule in rules
+        )
+        checks.equal(pending_true_writes, 1, "ownership writer pending roster True")
+        checks.equal(pending_false_writes, 3, "ownership writer pending roster False")
+
+        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 6,
                      "dispatcher team-switch leggero deve escludere gli iBot in tutti i gate")
         checks.require("Call Subroutine(BersihkanPemain);" not in fast.body,
                        "team switch non deve chiamare BersihkanPemain")
@@ -3740,46 +3668,32 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     roster_hud = next((
         rule for rule in rules
         if event_type(rule) == "Ongoing - Each Player"
-        and "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body
-        and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body
+        and "Event Player.HudKiri = Last Text ID;" in rule.body
+        and "Event Player.HudKanan = Last Text ID;" in rule.body
     ), None)
-    checks.require(roster_hud is not None, "renderer roster persistente post-team-switch assente")
+    checks.require(roster_hud is not None, "renderer roster post-team-switch assente")
     if roster_hud:
         roster_conditions = rule_block(roster_hud, "conditions") or ""
         for token in (
-            "Event Player.UrutanHUD >= 0;",
-            "Event Player.UrutanHUD < 12;",
-            "Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;",
-        ):
-            checks.require(token in roster_conditions, f"renderer roster senza guardia slot stabile: {token}")
-        for forbidden in (
             "Has Spawned(Event Player) == True;",
             "Event Player.TimTerakhir == Team Of(Event Player);",
             "Event Player.SegarkanRosterTertunda == False;",
-            "Event Player.NamaTampilan != Null;",
-            'Event Player.NamaTampilan != Custom String("");',
         ):
-            checks.require(forbidden not in roster_conditions,
-                           f"renderer roster non deve dipendere da stato player transitorio: {forbidden}")
+            checks.require(token in roster_conditions, f"renderer roster senza guardia stabile: {token}")
         checks.require(
             "Is Alive(Event Player) == True;" not in roster_conditions,
             "renderer roster non deve attendere Is Alive e bloccare il lifecycle globale",
         )
         checks.require("Server Load < 150" not in roster_conditions,
                        "renderer roster non deve dipendere dal carico server")
-        checks.require(
-            "Create HUD Text(" not in roster_hud.body
-            and "Global.HudKiriPemain[Event Player.UrutanHUD]" in roster_hud.body
-            and "Global.HudKananPemain[Event Player.UrutanHUD]" in roster_hud.body,
-            "binder roster permanente deve soltanto collegare i due handle globali",
-        )
-        ready = "Event Player.HudPemainDibuat = And(And(Event Player.HudKiri != Null, Event Player.HudKiri != 0), And(Event Player.HudKanan != Null, Event Player.HudKanan != 0));"
         ready_order = tuple(
             roster_hud.body.find(token)
             for token in (
-                "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];",
-                "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];",
-                ready,
+                "Event Player.HudKiri = Last Text ID;",
+                "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;",
+                "Event Player.HudKanan = Last Text ID;",
+                "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;",
+                "Event Player.HudPemainDibuat = True;",
             )
         )
         checks.require(
@@ -3883,10 +3797,12 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         "Player Variable(Current Array Element, BotOtomatis) == True",
         "Player Variable(Current Array Element, Manusia) == True",
         "Player Variable(Current Array Element, PrivasiInspeksiAktif) == False",
+        "Player Variable(Current Array Element, SegarkanRosterTertunda) == False",
     )
     human_public_pattern_text = (
         r"And\(\s*Player Variable\(\s*Current Array Element\s*,\s*Manusia\)\s*==\s*True\s*,\s*"
-        r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False\s*\)"
+        r"And\(\s*Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False\s*,\s*"
+        r"Player Variable\(\s*Current Array Element\s*,\s*SegarkanRosterTertunda\)\s*==\s*False\s*\)\s*\)"
     )
     human_public_pattern = re.compile(human_public_pattern_text, re.DOTALL)
     public_target_pattern = re.compile(
@@ -3908,6 +3824,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False",
         re.DOTALL,
     )
+    pending_false_pattern = re.compile(
+        r"Player Variable\(\s*Current Array Element\s*,\s*SegarkanRosterTertunda\)\s*==\s*False",
+        re.DOTALL,
+    )
     privacy_read_total = 0
     parsed_privacy_filter_total = 0
     for rule in rules:
@@ -3917,7 +3837,12 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 len(human_public_pattern.findall(rule.body)),
                 privacy_reads,
-                f"{rule.name}: ogni Privacy OFF target richiede Manusia=True",
+                f"{rule.name}: ogni Privacy OFF target richiede Manusia=True e pending roster False",
+            )
+            checks.equal(
+                len(pending_false_pattern.findall(rule.body)),
+                privacy_reads,
+                f"{rule.name}: ogni target pubblico deve escludere il pending team-switch",
             )
             parsed_filters = [
                 call for call in iter_calls(rule.body, "Filtered Array")
@@ -4408,7 +4333,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                        "SiapkanPemain non interrompe immediatamente i dummy nativi")
 
     entrypoints = (
-        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "HudPemainDibuat" in rule.body and "Event Player.HudKiri = Global.HudKiriPemain[Event Player.UrutanHUD];" in rule.body and "Event Player.HudKanan = Global.HudKananPemain[Event Player.UrutanHUD];" in rule.body and "Create HUD Text(" not in rule.body), None), "HUD player", True),
+        (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "HudPemainDibuat" in rule.body and "Create HUD Text(" in rule.body), None), "HUD player", True),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Melee)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "Call Subroutine(GambarMenu);" in rule.body), None), "toggle menu", True),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and all(f"Button({button})" in rule.body for button in MENU_ACTION_BUTTONS)), None), "dispatcher menu", False),
         (next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player" and "Button(Interact)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "ModeKamera" in rule.body), None), "toggle Camera", True),
@@ -4820,16 +4745,6 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
-    checks.equal(source.count("Pause Match Time;"), 0, "Pause Match Time vietato: blocca Assemble Heroes/Setup")
-    checks.equal(source.count("Unpause Match Time;"), 0, "Unpause Match Time non necessario senza pause")
-    timer_protectors = [rule for rule in rules if "Set Match Time(600);" in rule.body]
-    checks.equal(len(timer_protectors), 1, "protezione timer nativo senza pausa")
-    if timer_protectors:
-        protector = timer_protectors[0]
-        checks.require("Is Game In Progress == True;" in protector.body, "protezione timer nativo solo in partita attiva")
-        checks.require("Is Assembling Heroes == False;" in protector.body, "protezione timer nativo deve escludere Assemble Heroes")
-        checks.require("Is In Setup == False;" in protector.body, "protezione timer nativo deve escludere Setup")
-        checks.require("Match Time < 120;" in protector.body, "soglia protezione timer nativo")
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
     if camera_rule:
