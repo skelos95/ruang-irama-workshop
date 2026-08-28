@@ -55,7 +55,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             self.assertIn("Modify Global Variable(SlotHUDPemain, Remove From Array By Index", cleanup)
             self.assertIn("Modify Global Variable(PemainManusia, Remove From Array By Index", cleanup)
 
-    def test_duplicate_and_blank_names_cannot_replace_an_existing_player(self):
+    def test_duplicate_names_use_entity_identity_and_blank_name_retries_before_slot_allocation(self):
         for path, rule_kw, global_name in SOURCES:
             source = path.read_text(encoding="utf-8")
             classifier = block(
@@ -63,9 +63,24 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
                 f'{rule_kw}("02b - HUD Pemain',
             )
-            self.assertIn(f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);", classifier)
+            capture = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
+            blank_guard = 'If(Event Player.NamaTampilan == Custom String(""));'
+            allocation = f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);"
+            self.assertIn(capture, classifier)
+            self.assertIn(blank_guard, classifier)
+            self.assertIn(allocation, classifier)
+            capture_index = classifier.index(capture)
+            guard_index = classifier.index(blank_guard)
+            allocation_index = classifier.index(allocation)
+            self.assertLess(capture_index, guard_index)
+            self.assertLess(guard_index, allocation_index)
+            retry = classifier[guard_index:allocation_index]
+            self.assertIn("Event Player.NamaTampilan = Null;", retry)
+            self.assertIn("Event Player.SudahDiperiksa = False;", retry)
+            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;", retry)
+            self.assertIn("Abort;", retry)
             self.assertIn(f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);", classifier)
-            self.assertNotIn("Index Of Array Value", classifier.split("Event Player.NamaTampilan =", 1)[1].split("Event Player.UrutanHUD =", 1)[0])
+            self.assertNotIn("Index Of Array Value", classifier[capture_index:allocation_index])
 
             roster = block(
                 source,
@@ -119,7 +134,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             self.assertIn(f"Set Damage Received({global_name}.PemainAktif, 0);", fast)
 
     def test_special_player_rejoin_uses_documented_defaults(self):
-        for path, rule_kw, global_name in SOURCES:
+        for path, rule_kw, _ in SOURCES:
             source = path.read_text(encoding="utf-8")
             classifier = block(
                 source,
@@ -133,6 +148,25 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             self.assertIn("Event Player.IndeksIkon = 23;", classifier)
             self.assertIn("Event Player.KursorIkon = 23;", classifier)
             self.assertNotIn("Profil", classifier)
+
+    def test_native_timer_guard_keeps_prematch_phases_unpaused(self):
+        for path, rule_kw, _ in SOURCES:
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("Pause Match Time;", source)
+            self.assertNotIn("Unpause Match Time;", source)
+            timer = block(
+                source,
+                f'{rule_kw}("00a4 - Umum: Jaga waktu mode tanpa membekukan fase awal")',
+                f'{rule_kw}("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")',
+            )
+            for expected in (
+                "Is Game In Progress == True;",
+                "Is Assembling Heroes == False;",
+                "Is In Setup == False;",
+                "Match Time < 120;",
+                "Set Match Time(600);",
+            ):
+                self.assertIn(expected, timer)
 
 
 if __name__ == "__main__":
