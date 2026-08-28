@@ -114,6 +114,7 @@ Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi
 - senza input direzionale il freno usa velocità corrente e impulso esattamente opposto con `Incorporate Contrary Motion`, senza forcing di posizione; il freno deve escludere l'intera finestra Acceleration di Try Your Luck;
 - toggle e cursori restano distinti, sono OFF soltanto al setup/cleanup reale e persistono durante morte, Resurrect, cambio eroe e cambio squadra leggero;
 - Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` per tutti i 10 secondi.
+- il Main Menu usa sempre `GambarUtama`: la catena localizzata termina esplicitamente con indice 12 Dummy Follow e fallback 13 Ghost/Fly; il router non può scegliere staticamente un renderer diverso in base a `KursorUtama` né ridisegnare l'HUD durante lo scroll.
 
 ### Scheduler e prestazioni statiche
 
@@ -205,9 +206,9 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Header diverso da `Null`, `Big Message` o secondo handle menu;
 - preload/HUD nascosto reintrodotto;
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
-- ciclo Main Menu diverso da `0..13`, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
+- ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a `Respawn`, senza default esatto sulla posizione di morte, raycast/candidato `Nearest Walkable Position`/fallback rimossi, `Teleport` incondizionato o duplicato, forcing/offset casuale/`Wait` reintrodotto, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- Jump tornato a `Respawn`, senza default esatto sulla posizione di morte, raycast/candidato `Nearest Walkable Position`/fallback validato rimossi, spawn non protetto, assenza di abort quando nessun terreno è sicuro, `Teleport` dopo `Resurrect`, fuori dal solo ramo vuoto o duplicato, forcing/offset casuale/`Wait` reintrodotto, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;

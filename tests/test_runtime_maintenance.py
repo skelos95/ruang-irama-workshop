@@ -147,13 +147,19 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Tidak ada posisi bangkit yang aman.", source)
             self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", resurrect)
             self.assertIn("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)", resurrect)
+            self.assertIn("Count Of(Spawn Points(Team Of(Event Player))) > 0", resurrect)
             self.assertIn("Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));", resurrect)
-            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Spawn Points(Team Of(Event Player)))));", resurrect)
+            self.assertNotIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Spawn Points(Team Of(Event Player)))));", resurrect)
             self.assertIn("Resurrect(Event Player);", resurrect)
             self.assertNotIn("Random Real(", resurrect)
             self.assertIn("Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
             self.assertEqual(resurrect.count("Teleport(Event Player, Event Player.PosisiBangkitAman);"), 1)
-            self.assertIn("If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.100);", resurrect)
+            self.assertIn("No safe ground was found.", resurrect)
+            self.assertIn("Abort;", resurrect)
+            self.assertLess(
+                resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"),
+                resurrect.index("Resurrect(Event Player);"),
+            )
             self.assertNotIn("Start Forcing Player Position(", source)
 
 

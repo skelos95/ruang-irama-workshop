@@ -691,6 +691,28 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "ciclo esatto 0..13")
 
+    def test_main_menu_preview_keeps_pages_twelve_and_thirteen_distinct(self) -> None:
+        main = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutated = self.replace_in_rule(
+            main,
+            'Event Player.KursorUtama == 12 ? Custom String("12 - DUMMY FOLLOW',
+            'Event Player.KursorUtama == 13 ? Custom String("12 - DUMMY FOLLOW',
+        )
+        self.assert_rejected(mutated, "pagina 12 e pagina 13 non sono distinte")
+
+    def test_main_menu_router_cannot_choose_a_static_renderer_for_page_thirteen(self) -> None:
+        router = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHalamanAktif")
+        mutated = self.replace_in_rule(
+            router,
+            "Call Subroutine(GambarUtama);",
+            "If(Event Player.KursorUtama == 13);\n"
+            "\t\t\t\tCall Subroutine(GambarHantuTerbang);\n"
+            "\t\t\tElse;\n"
+            "\t\t\t\tCall Subroutine(GambarUtama);\n"
+            "\t\t\tEnd;",
+        )
+        self.assert_rejected(mutated, "renderer principale non deve essere scelto staticamente")
+
     def test_soundtrack_ability_latch_arms_only_on_page_two(self) -> None:
         router = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
@@ -956,6 +978,35 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Event Player.PosisiTeleportTujuan = Event Player.PosisiMati;",
         )
         self.assert_rejected(mutated, "candidato Nearest Walkable Position")
+
+    def test_jump_resurrect_teleports_the_void_corpse_before_resurrect(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman);"
+        revive = "Resurrect(Event Player);"
+        self.assertIn(teleport, resurrect.body)
+        self.assertIn(revive, resurrect.body)
+        changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
+        changed = changed.replace(revive, teleport, 1)
+        changed = changed.replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
+        mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
+        self.assert_rejected(mutated, "teletrasportare il cadavere")
+
+    def test_jump_resurrect_requires_validated_spawn_or_aborts(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        no_spawn_guard = self.replace_in_rule(
+            resurrect,
+            "If(Count Of(Spawn Points(Team Of(Event Player))) > 0);",
+            "If(True);",
+        )
+        self.assert_rejected(no_spawn_guard, "guardia disponibilità spawn")
+
+        raw_fallback = self.replace_in_rule(
+            resurrect,
+            "Abort;",
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position("
+            "Position Of(First Of(Spawn Points(Team Of(Event Player)))));",
+        )
+        self.assert_rejected(raw_fallback, "abort quando non esiste terreno sicuro")
 
     def test_jump_resurrect_does_not_need_position_forcing(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)

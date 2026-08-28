@@ -1485,6 +1485,24 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     router = rule_by_subroutine(rules, "GambarHalamanAktif")
     checks.require(router is not None, "subroutine router pagine assente")
     if router:
+        checks.require(
+            re.search(
+                r"If\(Event Player\.HalamanMenu\s*==\s*-1\);\s*"
+                r"Call Subroutine\(GambarUtama\);\s*"
+                r"Else If\(Event Player\.HalamanMenu\s*==\s*0\);",
+                router.body,
+            ) is not None,
+            "router menu: il Main Menu deve usare sempre il renderer dinamico GambarUtama",
+        )
+        checks.require(
+            "KursorUtama" not in router.body,
+            "router menu: il renderer principale non deve essere scelto staticamente dal cursore",
+        )
+        checks.equal(
+            router.body.count("Call Subroutine(GambarHantuTerbang);"),
+            1,
+            "router menu: GambarHantuTerbang deve essere chiamato soltanto dalla pagina 13 aperta",
+        )
         for page in range(14):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
@@ -1512,14 +1530,45 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "0 - NAME COLOR",
             "2 - SOUNDTRACK",
             "12 - DUMMY FOLLOW",
+            "13 - GHOST MODE / FLY",
             "0 - WARNA NAMA",
             "2 - MUSIK",
             "12 - DUMMY MENGIKUTI",
+            "13 - MODE HANTU / TERBANG",
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
             "12 - ดัมมี่ติดตาม",
+            "13 - โหมดผี / บิน",
         ):
             checks.require(token in main_renderer.body, f"menu principale non copre tutte le pagine localizzate: {token}")
+        for page_twelve, page_thirteen in (
+            ("12 - DUMMY FOLLOW", "13 - GHOST MODE / FLY"),
+            ("12 - DUMMY MENGIKUTI", "13 - MODE HANTU / TERBANG"),
+            ("12 - ดัมมี่ติดตาม", "13 - โหมดผี / บิน"),
+        ):
+            index_twelve = main_renderer.body.find(
+                f'Event Player.KursorUtama == 12 ? Custom String("{page_twelve}'
+            )
+            index_thirteen = main_renderer.body.find(f'Custom String("{page_thirteen}')
+            checks.require(
+                index_twelve >= 0 and index_thirteen > index_twelve,
+                f"menu principale: pagina 12 e pagina 13 non sono distinte nel renderer dinamico ({page_thirteen})",
+            )
+            checks.equal(
+                main_renderer.body.count(page_thirteen),
+                1,
+                f"menu principale: anteprima pagina 13 duplicata o assente ({page_thirteen})",
+            )
+        checks.equal(
+            main_renderer.body.count("Event Player.ModeHantuAktif"),
+            3,
+            "menu principale: anteprima pagina 13 senza stato Ghost in tutte le lingue",
+        )
+        checks.equal(
+            main_renderer.body.count("Event Player.ModeTerbangAktif"),
+            3,
+            "menu principale: anteprima pagina 13 senza stato Fly in tutte le lingue",
+        )
 
     dummy_follow_renderer = rule_by_subroutine(rules, "GambarIkutiDummy")
     checks.require(dummy_follow_renderer is not None, "renderer pagina 12 Dummy Follow assente")
@@ -2574,21 +2623,29 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
 
         actions = rule_block(resurrect, "actions") or ""
         masked = mask_strings(actions)
+        void_guard = (
+            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), "
+            "Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), "
+            "Event Player.PosisiMati) > 2.500);"
+        )
+        unsafe_guard = "If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);"
         ordered = (
             "Event Player.BangkitLompatDipakai = True;",
             "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
-            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), "
-            "Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), "
-            "Event Player.PosisiMati) > 2.500);",
+            void_guard,
+            "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);",
+            "Count Of(Spawn Points(Team Of(Event Player))) > 0",
+            "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));",
+            "Abort;",
+            "Teleport(Event Player, Event Player.PosisiBangkitAman);",
             "Resurrect(Event Player);",
             "If(Is Alive(Event Player) == True);",
-            "Teleport(Event Player, Event Player.PosisiBangkitAman);",
         )
         positions = [masked.find(token) for token in ordered]
         checks.require(
             all(position >= 0 for position in positions)
             and positions == sorted(positions),
-            "Jump Resurrect deve distinguere il vuoto e confermare il recupero nello stesso tick",
+            "Jump Resurrect deve distinguere il vuoto, teletrasportare il cadavere e poi confermare Resurrect",
         )
         checks.require("Random Real(" not in masked,
                        "Jump Resurrect sicuro non deve spostare casualmente le morti valide")
@@ -2599,24 +2656,34 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             ),
             ("Call Subroutine(CariPosisiTeleportAman);", "validatore posizione sicura"),
             (
+                "Count Of(Spawn Points(Team Of(Event Player))) > 0",
+                "guardia disponibilità spawn",
+            ),
+            (
                 "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));",
-                "fallback spawn",
+                "fallback spawn validato",
             ),
-            (
-                "Event Player.PosisiBangkitAman = Nearest Walkable Position("
-                "Position Of(First Of(Spawn Points(Team Of(Event Player)))));",
-                "fallback finale camminabile",
-            ),
-            (
-                "If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.100);",
-                "Teleport soltanto quando il punto sicuro differisce dalla morte",
-            ),
+            (unsafe_guard, "rifiuto candidato non valido"),
+            ("Abort;", "abort quando non esiste terreno sicuro"),
         ):
             checks.require(token in masked, f"Jump Resurrect recupero vuoto incompleto: {label}")
+        checks.equal(
+            masked.count("Call Subroutine(CariPosisiTeleportAman);"),
+            2,
+            "Jump Resurrect: candidato Nearest Walkable e fallback spawn devono usare lo stesso validatore",
+        )
+        checks.require(
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position("
+            "Position Of(First Of(Spawn Points(Team Of(Event Player)))));" not in masked,
+            "Jump Resurrect non deve usare un fallback finale Nearest Walkable non validato",
+        )
 
         teleport_calls = list(iter_calls(actions, "Teleport"))
+        resurrect_calls = list(iter_calls(actions, "Resurrect"))
         checks.equal(len(teleport_calls), 1,
                      "Jump Resurrect: numero Teleport per recupero dal vuoto")
+        checks.equal(len(resurrect_calls), 1,
+                     "Jump Resurrect: deve esistere un solo Resurrect")
         if teleport_calls:
             checks.equal(
                 tuple(argument.strip() for argument in teleport_calls[0].args),
@@ -2625,16 +2692,22 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             )
             enclosing = conditional_branches_containing(actions, teleport_calls[0].start)
             checks.require(
-                any("Is Alive(Event Player) == True" in mask_strings(branch) for branch in enclosing),
-                "Jump Resurrect teletrasporta prima di confermare Resurrect",
+                any(void_guard in mask_strings(branch) for branch in enclosing),
+                "Jump Resurrect: Teleport deve appartenere soltanto al ramo morte nel vuoto",
             )
             checks.require(
-                any(
-                    "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.100"
-                    in mask_strings(branch)
-                    for branch in enclosing
-                ),
-                "Jump Resurrect teletrasporta anche le morti già in posizione sicura",
+                not any("Is Alive(Event Player) == True" in mask_strings(branch) for branch in enclosing),
+                "Jump Resurrect: Teleport nel vuoto non deve dipendere dallo stato Is Alive stale",
+            )
+        if teleport_calls and resurrect_calls:
+            checks.require(
+                teleport_calls[0].start < resurrect_calls[0].start,
+                "Jump Resurrect deve teletrasportare il cadavere prima di Resurrect",
+            )
+            resurrect_enclosing = conditional_branches_containing(actions, resurrect_calls[0].start)
+            checks.require(
+                not any(void_guard in mask_strings(branch) for branch in resurrect_enclosing),
+                "Jump Resurrect deve restare comune ai rami terreno sicuro e vuoto",
             )
         checks.require("Start Forcing Player Position(" not in masked,
                        "Jump Resurrect non deve usare forcing di posizione")

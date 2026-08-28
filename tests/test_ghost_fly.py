@@ -70,6 +70,11 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             "13 - MODE HANTU / TERBANG",
             "13 - โหมดผี / บิน",
         )
+        localized_tails = (
+            ("12 - DUMMY FOLLOW", "13 - GHOST MODE / FLY"),
+            ("12 - DUMMY MENGIKUTI", "13 - MODE HANTU / TERBANG"),
+            ("12 - ดัมมี่ติดตาม", "13 - โหมดผี / บิน"),
+        )
         for source, _ in self.sources:
             navigation = rule_with(source, "KursorUtama = (Event Player.KursorUtama", "PerintahMenu == 3")
             self.assertIn(
@@ -78,10 +83,27 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 navigation,
             )
             router = subroutine(source, "GambarHalamanAktif")
+            packed_router = compact(router)
+            self.assertIn(
+                "If(EventPlayer.HalamanMenu==-1);CallSubroutine(GambarUtama);ElseIf(EventPlayer.HalamanMenu==0);",
+                packed_router,
+            )
+            self.assertNotIn("If(EventPlayer.KursorUtama==13);", packed_router)
+            self.assertEqual(router.count("Call Subroutine(GambarHantuTerbang);"), 1)
             self.assertRegex(
-                compact(router),
+                packed_router,
                 r"HalamanMenu==13\);CallSubroutine\(GambarHantuTerbang\);",
             )
+            main = subroutine(source, "GambarUtama")
+            for page_twelve, page_thirteen in localized_tails:
+                with self.subTest(page_twelve=page_twelve):
+                    self.assertIn(
+                        f'Event Player.KursorUtama == 12 ? Custom String("{page_twelve}',
+                        main,
+                    )
+                    self.assertEqual(main.count(page_thirteen), 1)
+            self.assertEqual(main.count("Event Player.ModeHantuAktif"), 3)
+            self.assertEqual(main.count("Event Player.ModeTerbangAktif"), 3)
             dispatcher = rule_with(source, "Event Player.PerintahMenu == 1;", "TerapkanHalamanIkutiDummy")
             self.assertRegex(
                 compact(dispatcher),

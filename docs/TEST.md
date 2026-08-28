@@ -66,7 +66,7 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
 | Morto | Jump | `Resurrect`; stesso punto se sicuro, `Nearest Walkable Position` se morto nel vuoto; menu ancora visibile |
 
-Sul caso Jump, verificare due rami distinti. Su terreno valido il player deve riapparire esattamente nella posizione di morte, senza `Teleport`; dopo una morte nel vuoto deve invece essere eseguito un solo `Teleport` condizionale, successivo alla conferma del `Resurrect`, verso una `Nearest Walkable Position` già validata e con fallback allo spawn della squadra. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
+Sul caso Jump, verificare due rami distinti. Su terreno valido il player deve riapparire esattamente nella posizione di morte, senza `Teleport`; dopo una morte nel vuoto deve invece essere eseguito un solo `Teleport` condizionale del cadavere verso una `Nearest Walkable Position` già validata, seguito da `Resurrect`. Provare sia una caduta vicina al bordo sia un vuoto profondo: se il primo candidato fallisce, il fallback allo spawn deve essere usato soltanto quando disponibile e dopo la stessa validazione. Se non esiste alcun punto sicuro, il player deve restare morto invece di entrare in un ciclo di morti. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -94,6 +94,7 @@ Verificare esattamente 14 voci, indici e contenuti:
 Per ogni pagina e per ciascuna lingua EN/ID/TH:
 
 - aprire, navigare avanti/indietro, applicare, tornare e riaprire;
+- nel Main Menu percorrere `11→12→13→0` e poi `0→13→12`; chiudere sul 13, riaprire e tornare a 0, verificando che Dummy Follow e Ghost/Fly restino distinti e che il renderer non si blocchi;
 - verificare testo, stato, feedback e comando localizzati;
 - verificare una riga vuota tra contenuto e comandi;
 - controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0` + roster `1..12`, Right `-16/-15/-14`, roster `-13..-2` e spaziatore finale `-1`;
