@@ -23,7 +23,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. Il default è OFF, quindi senza opt-in il dummy resta fermo. Preferenze e cursori persistono durante chiusura, riapertura e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
+Main Menu usa pagina `-1`; le 14 pagine mantengono gli indici `0..13`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. La pagina 13 espone due toggle indipendenti, entrambi OFF per default: Ghost attraversa pareti e soffitti con `Include Floors = False`, mentre Fly imposta gravità zero e trasforma il throttle rispetto alla direzione 3D dello sguardo. Senza input e senza un effetto Acceleration esplicito, Fly annulla la velocità residua. Preferenze e cursori persistono durante chiusura, riapertura, cambio eroe, morte, Resurrect e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
 
 ### Input
 
@@ -34,8 +34,8 @@ Main Menu usa pagina `-1`; le 13 pagine mantengono gli indici `0..12`. La pagina
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Crouch Travel & Attach contiene cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva.
-- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Resurrect, teleport alla posizione sicura e guardia `Is Alive == True` avvengono nello stesso tick senza `Wait`; effetto e feedback vengono emessi soltanto in caso di successo. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
+- Crouch Travel & Attach contiene cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Self Kill arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte o al cambio squadra.
+- Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue `Resurrect`. Se un raycast corto trova terreno sotto `PosisiMati`, il Resurrect nativo conserva esattamente il punto di morte. Soltanto nel vuoto viene calcolata e validata una `Nearest Walkable Position`, con fallback allo spawn: dopo la conferma `Is Alive == True`, un unico `Teleport` condizionale applica il punto sicuro. Il ramo non usa `Respawn`, offset casuali o `Wait`. Se il player è ancora morto, una regola separata riapre il latch esclusivamente al rilascio di Jump.
 
 Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
 
@@ -46,7 +46,7 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 | Frequenza | Responsabilità |
 |---:|---|
 | 20 Hz | controlli rapidi, retry morte completa Revenge/Skull e avanzamento Try Your Luck |
-| 10 Hz | lifecycle reattivo, RGB e refresh visivi |
+| 10 Hz | lifecycle reattivo, RGB, refresh visivi, riapplicazione Ghost/Fly e arresto deriva |
 | 1 Hz | countdown e cache passive |
 | 0,1 Hz | minuti di permanenza in lobby |
 
@@ -74,7 +74,7 @@ Il lifecycle del menu è:
 
 Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
 
-Il ciclo del Main Menu è esattamente modulo 13; pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
+Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Pagina 13 possiede un cursore a due righe, renderer e tinta propri: applicare una riga cambia soltanto Ghost oppure Fly. I soli writer dei toggle sono setup/quiete OFF e il relativo handler; i due controller fisici dedicati sono gli unici owner di `Gravity = 0` e `Start Transforming Throttle`. Ghost non modifica mai la collisione fra player. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
 
 ### Profilo per nome visibile
 
@@ -98,7 +98,7 @@ FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback 
 
 ## Try Your Luck
 
-Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio conserva Unkillable senza scrivere modalità, cursore o stato di protezione e mantiene la pagina bloccata finché la sequenza non termina.
+Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio conserva Unkillable senza scrivere modalità, cursore o stato di protezione e mantiene la pagina bloccata finché la sequenza non termina. Nessun handler, tick o cleanup della roulette scrive gravità, trasformazione throttle, toggle Ghost/Fly o latch fisico: Fly non viene mai spento da Try Your Luck.
 
 | Esito | Durata | Comportamento |
 |---|---:|---|
@@ -113,13 +113,13 @@ Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal e
 
 Le sei icone della roulette usano la reevaluation `Visible To and Position`. `Visible To` rivaluta il roster umano anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino dell'identità catturata, senza seguire lo scratch `Global.PemainAktif`. L'indicatore off-screen resta abilitato e i bot non entrano mai nel pubblico.
 
-L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelata soltanto l'identità del beneficiario, non la sua direzione corrente. `Direction Rate and Max Speed` mantiene quindi la spinta automatica davanti, in alto e in basso senza throttle o input direzionali. Il tick globale conserva soltanto avvio, timestamp e cleanup; non vengono aggiunti loop, impulsi periodici o regole per-player.
+L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelata soltanto l'identità del beneficiario, non la sua direzione corrente. `Direction Rate and Max Speed` mantiene quindi la spinta automatica davanti, in alto e in basso senza throttle o input direzionali. Quando Fly è ON, il freno idle riconosce l'esito Acceleration ancora attivo e non lo cancella; alla sua scadenza il cleanup ferma la spinta e Fly torna immobile senza input. Il tick globale conserva soltanto avvio, timestamp e cleanup; non vengono aggiunti loop, impulsi periodici o regole per-player.
 
 ## Lifecycle player
 
 ### Join
 
-La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster.
+La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Un nome visibile ancora `Null` o vuoto riapre il classifier prima dell'allocazione, quindi non può consumare uno slot con un'identità temporanea. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster. Su un leave vero ogni `PemainDipilih` che punta al leaver viene azzerato prima della rimozione dal roster e del ricalcolo Vote Player.
 
 Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto; per gli umani, inspection, Vision e Camera rispettano sempre Privacy.
 

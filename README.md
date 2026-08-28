@@ -12,16 +12,17 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 
 - HUD centrale con nome server, countdown e località configurabile, allineato su slot Top/Left/Right deterministici.
 - Roster sinistro con icona, eroe, player e minuti; roster destro con genere musicale.
-- 13 menu Arcade con preferenze individuali.
+- 14 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
 - Camera in terza persona disponibile a menu aperto o chiuso con Crouch rilasciato; Crouch inspection e Teleport restano fuori dal menu.
-- Resurrect manuale con Jump da morto, senza usare l'azione `Respawn`.
+- Resurrect manuale con Jump da morto: mantiene esattamente la posizione di morte quando sotto esiste terreno valido; soltanto una caduta nel vuoto usa `Nearest Walkable Position` e un `Teleport` condizionale verso il punto sicuro, senza ricorrere a `Respawn`.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
+- Ghost Mode / Fly con due toggle indipendenti: attraversamento di pareti e soffitti senza perdere il pavimento, oppure volo 3D relativo alla direzione dello sguardo.
 - Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, ha respawn massimo di 3 secondi, libera il posto quando la squadra è piena, attraversa pareti e soffitti mantenendo solidi i pavimenti, conserva la collisione con player/bot e riceve normalmente danni e urti. Si muove automaticamente al 20% verso l'umano nemico vivo opt-in più vicino, fermandosi entro 4 m.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 
-## I 13 menu
+## I 14 menu
 
 | Pagina | Menu | Contenuto |
 |---:|---|---|
@@ -38,12 +39,17 @@ I gate automatici controllano struttura, localizzazione, invarianti del sorgente
 | 10 | Try Your Luck | roulette a sei esiti |
 | 11 | Vote Player | umani, self-vote incluso |
 | 12 | Dummy Follow | consente o nega al dummy nemico di seguire il player; default OFF |
+| 13 | Ghost Mode / Fly | Wall Phasing e Fly indipendenti; default entrambi OFF |
 
-Gli indici sono Main Menu `-1` e sottomenu `0..12`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è OFF per default: il dummy resta fermo finché almeno un umano avversario non abilita volontariamente l'opt-in; fra i player con preferenza ON sceglie sempre il più vicino e si ferma nuovamente quando non resta alcun target idoneo. I default e i cursori persistono tra chiusura, riapertura e cambio squadra reference-stable; un team switch di un umano già registrato aggiorna subito lo stato dipendente dal Team e chiude/riarma Menu Arcade e overlay Teleport, ma differisce di almeno 0,25 secondi la sostituzione dei due HUD roster finché il player non è nuovamente spawned e vivo. Gli handle vengono distrutti tramite gli array globali canonici e il renderer torna pronto soltanto dopo entrambe le righe. Durante il pending il player esce temporaneamente dai soli filtri Crouch, così un testo nel mondo già aperto viene invalidato e ricreato; Camera, status, effetti e voti attivi non vengono cancellati. Se il motore sostituisce davvero il riferimento e perde le player variables, il recovery usa invece il setup fresco e riapplica i default: è un fallback distinto dal refresh leggero.
+Gli indici sono Main Menu `-1` e sottomenu `0..13`. Name Color (pagina `0`) parte da bianco e guida sfumature distinte delle altre pagine menu. Dummy Follow è OFF per default: il dummy resta fermo finché almeno un umano avversario non abilita volontariamente l'opt-in; fra i player con preferenza ON sceglie sempre il più vicino e si ferma nuovamente quando non resta alcun target idoneo. I default e i cursori persistono tra chiusura, riapertura e cambio squadra reference-stable; un team switch di un umano già registrato aggiorna subito lo stato dipendente dal Team e chiude/riarma Menu Arcade e overlay Teleport, ma differisce di almeno 0,25 secondi la sostituzione dei due HUD roster finché il player non è nuovamente spawned e vivo. Gli handle vengono distrutti tramite gli array globali canonici e il renderer torna pronto soltanto dopo entrambe le righe. Durante il pending il player esce temporaneamente dai soli filtri Crouch, così un testo nel mondo già aperto viene invalidato e ricreato; Camera, status, effetti e voti attivi non vengono cancellati. Se il motore sostituisce davvero il riferimento e perde le player variables, il recovery usa invece il setup fresco e riapplica i default: è un fallback distinto dal refresh leggero.
+
+La pagina 13 espone due selezioni indipendenti. **Wall Phasing / Ghost** usa `Disable Movement Collision With Environment(..., False)`: pareti e soffitti diventano attraversabili, ma i pavimenti restano sempre solidi. **Fly** imposta la gravità a zero e trasforma il throttle WASD rispetto alla direzione completa dello sguardo: avanti segue il mirino anche verso l'alto o il basso, indietro usa la direzione opposta e gli input laterali permettono lo strafe. Senza input, un impulso esattamente contrario alla velocità residua arresta il player senza deriva o fluttuazione. I due toggle possono essere combinati; entrambi partono OFF, persistono durante cambio squadra, cambio eroe, morte e Resurrect, ma un vero leave seguito da rejoin esegue setup fresco e li riporta OFF.
 
 Il profilo riconosciuto dal nome visibile esatto `งูแท้` entra con Name Color `Silver Mist` e Player Icon `Poison 2`: sono valori iniziali, quindi il player può modificarli normalmente. Il Player Vibes è invece fissato a `Caladan Brood`; la pagina Soundtrack resta visibile ma in sola lettura e non può cambiare il valore. Questa voce dedicata non amplia il catalogo globale, che resta di 100 generi per tutti gli altri player. Il riconoscimento non usa un identificatore account: un omonimo con lo stesso nome visibile riceve lo stesso profilo e una rinomina ne impedisce l'applicazione. Un cambio squadra leggero conserva anche le eventuali modifiche a colore e icona; il repair lifecycle riasserisce il Vibes bloccato e riapplica i due default soltanto se le player variables risultano davvero azzerate. Un leave seguito da un vero rejoin esegue un nuovo setup e riapplica `Silver Mist`, `Poison 2` e il Vibes bloccato.
 
-In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP e l'inizializzazione di una nuova entità ripristinano danni, urti e collisione normali come un'unica transazione; un semplice cambio squadra non ricostruisce lo stato engine. Try Your Luck non cambia modalità o cursore Unkillable. Vision, Acceleration, Team Heal e Hacked mantengono la protezione; Burning la sospende per tutta la propria durata e la ripristina al termine. Lo Skull finale e Revenge sospendono invece temporaneamente lo status per completare la morte; dopo Resurrect il runtime riapplica la modalità selezionata e ricrea l'icona se il motore l'ha eliminata. `FULL HP` resta protetto anche in Spawn Room.
+La classificazione non prenota uno slot roster finché il nome visibile è `Null` o vuoto: il player viene ritentato quando il token torna disponibile e uno stato transitorio non può consumare erroneamente lo slot 0. Su un vero leave lo slot viene riciclato e ogni `PemainDipilih` che puntava al player uscito viene azzerato prima di ricalcolare il leader, evitando voti e riferimenti obsoleti al successivo join.
+
+In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità agli urti e assenza di collisione con player/bot. Il passaggio a OFF o 1 HP e l'inizializzazione di una nuova entità ripristinano danni, urti e collisione normali come un'unica transazione; un semplice cambio squadra non ricostruisce lo stato engine. Try Your Luck non cambia modalità o cursore Unkillable e non scrive mai gravità, trasformazione throttle o stato Ghost/Fly: Fly resta quindi attivo durante tutta la roulette. Vision, Acceleration, Team Heal e Hacked mantengono la protezione; Burning la sospende per tutta la propria durata e la ripristina al termine. Lo Skull finale e Revenge sospendono invece temporaneamente lo status per completare la morte; dopo Resurrect il runtime riapplica la modalità selezionata e ricrea l'icona se il motore l'ha eliminata. `FULL HP` resta protetto anche in Spawn Room.
 
 ## Controlli
 
@@ -58,15 +64,15 @@ In Unkillable, `FULL HP` applica insieme invulnerabilità ai danni, immunità ag
 | Menu aperto o chiuso, Crouch rilasciato | Tieni Interact 0,5 s | alterna la Camera rapida |
 | Menu chiuso | Tieni Crouch | inspection e, se abilitato, overlay Teleport |
 | Crouch Travel & Attach | Crouch + Primary / Secondary | pagina successiva / precedente |
-| Crouch Travel & Attach | Crouch + Interact | esegue la pagina attiva (Spawn / Objective / Player-Bot Travel / Player-Bot Attach / Self Kill) |
+| Crouch Travel & Attach | Crouch + Interact | esegue la pagina attiva (Spawn / Objective / Player-Bot Travel / Player-Bot Attach / Self Kill); Self Kill ha cooldown per-player di 3 s |
 | Attaccato, Menu Arcade chiuso | Crouch + Reload | sgancia dal player/bot; Reload senza Crouch resta nativo |
-| Morto | Jump | Resurrect vicino al punto di morte |
+| Morto | Jump | Resurrect nello stesso punto; se la morte è nel vuoto, `Teleport` condizionale alla `Nearest Walkable Position` sicura |
 
-Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Resurrect, teleport sicuro e verifica del successo vengono eseguiti nello stesso tick, senza `Wait`; se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
+Crouch è il modificatore obbligatorio degli input menu. Per questo `Crouch + Interact` resta riservato al menu, mentre `Interact` senza Crouch può alternare la Camera anche a menu aperto. Un latch condiviso obbliga a rilasciare `Interact` prima che l'altro sistema possa usarlo. Melee e Jump restano azioni normali dell'eroe. Da morto un menu già aperto resta visibile ma congelato: nessun comando Arcade viene eseguito e soltanto Jump attiva `Resurrect`. Il terreno sotto il punto di morte viene verificato nello stesso tick: se è valido, il Resurrect nativo conserva esattamente quel punto; se è vuoto, il runtime calcola e valida la `Nearest Walkable Position`, esegue Resurrect e soltanto allora applica un singolo `Teleport` condizionale. Il ramo non usa offset casuali né `Wait`; se il tentativo fallisce, il latch si riapre soltanto dopo il rilascio fisico di Jump, evitando spam durante un singolo hold.
 
 ## Try Your Luck
 
-L'attivazione conserva integralmente Unkillable e avvia una macchina a stati senza loop per-player. Modalità, cursore, flag runtime, status, modificatori e icona non vengono modificati all'avvio. I sei esiti sono:
+L'attivazione conserva integralmente Unkillable e avvia una macchina a stati senza loop per-player. Modalità, cursore, flag runtime, status, modificatori e icona non vengono modificati all'avvio. Try Your Luck non scrive gravità né avvia o arresta la trasformazione throttle di Fly. I sei esiti sono:
 
 | Esito | Durata | Effetto |
 |---|---:|---|
@@ -92,7 +98,7 @@ Il lavoro periodico è coordinato da un solo scheduler `Ongoing - Global` a 20 H
 - 1 Hz: countdown e cache passive;
 - ogni 10 secondi: minuti lobby.
 
-Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. Il lifecycle iniziale resta serializzato da un lock globale; un cambio squadra reference-stable non entra nel cleanup/setup pesante e sincronizza Team, UI transitoria e ricreazione differita delle due righe roster. Se una nuova identità arriva mentre il cleanup ritardato occupa ancora l'ultimo slot, il classifier riarma `SudahDiperiksa` prima di uscire e riprova appena lo slot viene liberato, senza restare in uno stato senza uscita; la classificazione degli iBot avviene comunque prima di questo gate. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale.
+Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice correnti. Il lifecycle iniziale resta serializzato da un lock globale; un cambio squadra reference-stable non entra nel cleanup/setup pesante e sincronizza Team, UI transitoria e ricreazione differita delle due righe roster. Se una nuova identità arriva mentre il cleanup ritardato occupa ancora l'ultimo slot, il classifier riarma `SudahDiperiksa` prima di uscire e riprova appena lo slot viene liberato, senza restare in uno stato senza uscita; la classificazione degli iBot avviene comunque prima di questo gate. `Ongoing - Each Player` resta riservato a input, latch, classificazione one-shot e rendering realmente individuale; riapplicazione Fly e arresto della deriva sono centralizzati nel ciclo globale a 10 Hz.
 
 Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 
@@ -174,4 +180,4 @@ Documentazione operativa:
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) richiede un nuovo import e rende inutilizzabili i replay precedenti, pur senza dichiarare modifiche Workshop. La matrice comprende inoltre D.Mon, il nuovo Team Status Indicator e le modifiche a Busan, Eichenwalde e Paraíso della [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11).
 
-La release 0.8.1 resta **static-ready / live-pending**. I gate repository sono verdi, ma la nuova matrice nel client — inclusi profilo `งูแท้`, cambio squadra leggero, Burning, cinque pagine Crouch Travel & Attach e respawn dummy a 3 secondi — deve ancora essere completata e documentata prima della chiusura della release; non viene dichiarato alcun tag finale per questa versione.
+La release 0.8.1 resta **static-ready / live-pending**. I gate repository sono verdi, ma la nuova matrice nel client — inclusi profilo `งูแท้`, cambio squadra leggero, pagina 13 Ghost/Fly, arresto Fly senza input, Self Kill con cooldown 3 s, Resurrect nello stesso punto o recupero dal vuoto con `Nearest Walkable Position`, Burning, cinque pagine Crouch Travel & Attach e respawn dummy a 3 secondi — deve ancora essere completata e documentata prima della chiusura della release; non viene dichiarato alcun tag finale per questa versione.

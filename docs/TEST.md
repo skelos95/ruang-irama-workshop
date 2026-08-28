@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra e il profilo dedicato `งูแท้`, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill e il recupero sicuro del Resurrect nel vuoto, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -64,9 +64,9 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
-| Morto | Jump | `Resurrect` e teleport vicino alla morte; menu ancora visibile |
+| Morto | Jump | `Resurrect`; stesso punto se sicuro, `Nearest Walkable Position` se morto nel vuoto; menu ancora visibile |
 
-Sul caso Jump, tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita; non deve essere usata la transizione nativa `Respawn`.
+Sul caso Jump, verificare due rami distinti. Su terreno valido il player deve riapparire esattamente nella posizione di morte, senza `Teleport`; dopo una morte nel vuoto deve invece essere eseguito un solo `Teleport` condizionale, successivo alla conferma del `Resurrect`, verso una `Nearest Walkable Position` già validata e con fallback allo spawn della squadra. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -74,7 +74,7 @@ Verificare inoltre entrambe le transizioni senza rilasciare `Interact`: dopo `Cr
 
 ## 4. Menu e localizzazione
 
-Verificare esattamente 13 voci, indici e contenuti:
+Verificare esattamente 14 voci, indici e contenuti:
 
 1. Name Color — 32 colori.
 2. Third-Person Camera — OFF, self e target valido.
@@ -89,6 +89,7 @@ Verificare esattamente 13 voci, indici e contenuti:
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
 13. Dummy Follow — il dummy nemico può seguire il player, OFF/ON (default OFF).
+14. Ghost Mode / Fly — Ghost e Fly come toggle indipendenti (default entrambi OFF).
 
 Per ogni pagina e per ciascuna lingua EN/ID/TH:
 
@@ -122,6 +123,15 @@ Focus dati:
 - Uscire davvero dalla lobby e rientrare con lo stesso nome: il setup deve riapplicare `Silver Mist`, `Poison 2` e il Vibes bloccato.
 - Entrare con un nome simile ma non identico: il profilo non deve attivarsi. Per verificare una rinomina dell'account, uscire davvero dalla lobby e rientrare con il nuovo nome prima di controllare che il profilo non venga riapplicato; nella stessa sessione resta invece attivo fino al rejoin. Entrare con un secondo player dallo stesso nome visibile esatto deve mostrare la limitazione nota del matching e applicare lo stesso profilo.
 
+### Ghost Mode / Fly
+
+- Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
+- Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
+- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D: guardando davanti si avanza, guardando in alto si sale e guardando in basso si scende.
+- In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo.
+- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100 e ferma il throttle trasformato, Ghost OFF ripristina la collisione ambientale completa.
+- Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve restare attiva per tutti i 10 secondi senza essere annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare immobile quando non ci sono input.
+
 ### Unkillable FULL HP
 
 - Applicare FULL HP e ricevere contemporaneamente fuoco, danni periodici e urti/knockback da eroi e bot: salute e posizione non devono essere alterate.
@@ -151,6 +161,7 @@ Per ciascun esito:
 - quando Skull compare soltanto come icona intermedia, il player deve restare vivo; il retry può iniziare esclusivamente se Skull è l'esito finale;
 - durante la stessa roulette eseguire join/leave di un umano: la reevaluation `Visible To and Position` deve rendere tutte le sei icone visibili al roster umano corrente, senza includere bot;
 - con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed` segua continuamente la direzione 3D corrente;
+- ripetere Acceleration con Fly ON: la propulsione Try Your Luck deve restare attiva per 10 secondi, mentre nessun ramo della roulette può scrivere gravità o avviare/fermare il throttle trasformato di Fly;
 - Unkillable non cambia all'avvio: Mode, Kursor, flag runtime, status, modificatori e icona restano invariati;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
@@ -183,7 +194,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Tenere Crouch e verificare le cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill.
 - Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva; Primary/Secondary non devono eseguire il teleport o la kill.
-- Sulla pagina Self Kill, Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold.
+- Sulla pagina Self Kill, Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte, Resurrect e cambio squadra non devono azzerare il cooldown, mentre un vero leave/rejoin deve inizializzarlo di nuovo.
 - Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
 - Da attaccati, Reload senza Crouch deve restare l'azione nativa dell'eroe.
 - Con Menu Arcade Melee chiuso, Crouch + Reload deve sganciare; con Menu Arcade Melee aperto non deve sganciare.
@@ -200,6 +211,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: il recovery non-roster deve riaccodare il setup, conservare una sola voce e non lasciare `Manusia=False` o il lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry, attendere il cleanup del vecchio riferimento e poi completare; nel fallback con player variables nuove è previsto il ripristino dei default. Per `งูแท้`, verificare inoltre che `Caladan Brood` resti bloccato e che un repair senza reset conservi le modifiche manuali a colore/icona.
 - Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il fast-path non acquisisca il lock globale del join.
 - Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il refresh leggero non deve cancellarli o ricrearli.
+- Attivare Ghost e Fly separatamente prima del cambio: il refresh leggero deve conservarli e il runtime deve riapplicare la fisica selezionata dopo il ritorno in vita.
 - Eseguire poi un leave vero durante o subito dopo il refresh: il cleanup deve rimuovere una sola volta roster e riferimenti, e il successivo rejoin deve passare dal setup fresco.
 
 ### Camera
@@ -241,8 +253,10 @@ Eseguire con HUD, menu, Camera, inspection, Teleport, Unkillable, Revenge, voto 
 
 - join umano e bot;
 - evento Join duplicato o classificazione tardiva;
+- ingresso transitorio con nome visibile `Null` o vuoto: non deve consumare uno slot roster e deve essere ritentato quando il nome diventa valido;
 - leave con menu aperto e chiuso;
 - leave durante ciascun sottosistema;
+- leave di un target votato: ogni `PemainDipilih` che lo referenziava deve essere azzerato prima della rimozione dal roster e i conteggi devono essere ricalcolati;
 - rientro nello stesso slot.
 
 Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/leave e nessun target stale.
@@ -278,7 +292,7 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti e voti attivi restano invariati; soltanto Menu Arcade e overlay Teleport vengono chiusi/riarmati e `HudKiri/HudKanan` vengono ricreati quando necessario;
-- tutte le preferenze e i cursori restano invariati, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow e il profilo dedicato `งูแท้`; soltanto stato dipendente dal Team e riferimenti transitori vengono aggiornati;
+- tutte le preferenze e i cursori restano invariati, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow, Ghost/Fly e il profilo dedicato `งูแท้`; soltanto stato dipendente dal Team e riferimenti transitori vengono aggiornati;
 - Text Count ed Entity Count non crescono rispetto allo stato equivalente precedente al cambio;
 - nessun `excessive Workshop script load`.
 
@@ -357,7 +371,7 @@ Slot umani/dummy:
 
 Import: PASS/FAIL
 D.Mon: PASS/FAIL
-EN/ID/TH e 13 menu: PASS/FAIL
+EN/ID/TH e 14 menu: PASS/FAIL
 Input simultanei: PASS/FAIL
 Join/leave: PASS/FAIL
 Dummy objective routing: PASS/FAIL
@@ -366,7 +380,10 @@ Dummy damage/knockback/collisions: PASS/FAIL
 Dummy Follow nearest/opt-out: PASS/FAIL
 FULL HP immunity/restore: PASS/FAIL
 Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
-Jump Resurrect/retry latch: PASS/FAIL
+Try Your Luck × Fly physics preserve: PASS/FAIL
+Ghost walls/floors/Fly 3D/idle: PASS/FAIL
+Self Kill cooldown 3 s: PASS/FAIL
+Jump Resurrect same-point/void-nearest/retry latch: PASS/FAIL
 Privacy Vision/inspection: PASS/FAIL
 Profilo งูแท้ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL
