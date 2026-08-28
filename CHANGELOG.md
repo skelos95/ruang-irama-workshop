@@ -4,11 +4,8 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 ## 0.8.1 — 2026-08-25
 
-- Roster team-switch: le 12 righe Left/Right ora appartengono a slot HUD globali permanenti (`PemainSlotHUD` / `NamaSlotHUD`); il cambio squadra riassocia l'occupante senza distruggere o ricreare le righe, e Crouch usa la stessa identità globale.
-
 Stato: **live-pending**.
 
-- Corretto il rendering iniziale delle righe roster globali: le coppie Left/Right non vengono più create quando `PemainSlotHUD`/`NamaSlotHUD` sono ancora vuoti. Ogni slot crea i propri due handle solo dopo l'assegnazione di un'identità valida; il cambio squadra riusa gli stessi handle, mentre un vero leave distrugge soltanto la coppia dello slot liberato. Questo elimina il caso live in cui la riga occupava spazio ma il nome restava invisibile finché `Name Color` non forzava una rivalutazione HUD.
 - Corretto il secondo deadlock live del roster dopo il cambio squadra: `NamaTampilan` viene ora riparato per qualunque membro già presente in `PemainManusia`, anche quando `Manusia` e `PernahDisiapkan` restano `True`. Valori `Null` o stringa vuota non possono più bloccare `02b`; il cache viene scritto solo quando il nome live è nuovamente disponibile.
 - Corretto il deadlock live del roster dopo il cambio squadra: il lifecycle essenziale (setup, classificazione, consumer `SegarkanRosterTertunda` e renderer `02b`) non è più bloccato da `Server Load < 150`. Un picco di carico non può quindi lasciare vuote le righe `LOBBY & CHILL TIME` / `PLAYER VIBES` né escludere indefinitamente il player dai target Crouch.
 - Corretto il nome dopo il cambio squadra: gli umani salvano `NamaTampilan` con `Evaluate Once` durante la classificazione e le due righe roster, Crouch Inspect, Crouch Teleport e Try Your Luck Vision usano la copia stabile invece del token player live; il refresh differito esistente resta invariato.
@@ -27,8 +24,6 @@ Stato: **live-pending**.
 - Il cleanup `Player Left Match` disabilita il fallback per slot HUD prima di rimuovere il roster: una vecchia entità distrutta dal cambio team non può più eliminare la nuova entità che eredita lo stesso slot.
 - Documentazione riallineata al runtime reale: dummy respawn 3 s, Burning 5% Max Health ogni secondo con bypass temporaneo di Unkillable/Damage Received, e controlli completi Crouch Travel & Attach.
 - GitHub Actions limitato ai push su `main` e alle PR, con concurrency/cancel-in-progress e timeout 30 minuti per evitare run duplicati, falsi timeout e X rossi obsoleti.
-
-- Lifecycle player: il cambio squadra non viene più scambiato per un vero leave; i veri leave salvano un profilo persistente per rejoin nella stessa partita, e il timer nativo resta in pausa fino allo zero del timer CHILL.
 
 ## 0.8.0 — 2026-08-24
 
