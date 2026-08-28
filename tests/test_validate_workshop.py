@@ -1629,24 +1629,20 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_team_switch_detector_never_rebuilds_registered_roster(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda = True;", fast.body)
+        self.assertNotIn("SegarkanRosterTertunda", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKiriPemain[", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKananPemain[", fast.body)
         self.assertNotIn("Global.PemainAktif.HudPemainDibuat = False;", fast.body)
-
-        mutated = self.replace_in_rule(fast, "Global.PemainAktif.SegarkanRosterTertunda = False;", "Global.PemainAktif.SegarkanRosterTertunda = True;")
-        self.assert_rejected(mutated, "dispatcher team-switch leggero incompleto")
 
 
     def test_team_switch_detector_keeps_crouch_identity_without_pending_refresh(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
         self.assertIn("Global.PemainAktif.Manusia = True;", fast.body)
-        self.assertIn("Global.PemainAktif.SegarkanRosterTertunda = False;", fast.body)
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda = True;", fast.body)
+        self.assertNotIn("SegarkanRosterTertunda", fast.body)
 
     def test_registered_team_switch_has_no_pending_roster_consumer(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda == True", fast.body)
+        self.assertNotIn("SegarkanRosterTertunda", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKiriPemain[", fast.body)
         self.assertNotIn("Destroy HUD Text(Global.HudKananPemain[", fast.body)
         self.assertNotIn("Global.PemainAktif.HudKiri = Null;", fast.body)
@@ -1715,7 +1711,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_non_roster_lifecycle_does_not_reuse_roster_pending_state(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        self.assertNotIn("Global.PemainAktif.SegarkanRosterTertunda == True", fast.body)
+        self.assertNotIn("SegarkanRosterTertunda", fast.body)
         self.assertIn("Global.PemainAktif.PindahTimDiproses == False", fast.body)
         self.assertIn("Global.PemainAktif.PindahTimDiproses = True;", fast.body)
 
@@ -1726,8 +1722,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         conditions = validator.rule_block(roster, "conditions") or ""
         self.assertNotIn("SegarkanRosterTertunda", conditions)
-        self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", roster.body)
-        self.assertIn("Event Player.SegarkanRosterTertunda = False;", roster.body)
+        self.assertNotIn("SegarkanRosterTertunda", roster.body)
         self.assertNotIn("Create HUD Text(", roster.body)
         self.assertIn("Global.PemainSlotHUD[Event Player.UrutanHUD] == Event Player;", conditions)
 

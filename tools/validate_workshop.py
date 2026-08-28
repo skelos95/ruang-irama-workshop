@@ -939,6 +939,8 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
     for legacy in sorted(FORBIDDEN_LEGACY_IDENTIFIERS):
         checks.require(legacy not in all_names and re.search(rf"\b{re.escape(legacy)}\b", mask_strings(source)) is None,
                        f"identificatore legacy o non indonesiano presente: {legacy}")
+    checks.require("SegarkanRosterTertunda" not in mask_strings(source),
+                   "flag legacy SegarkanRosterTertunda deve essere rimosso")
 
     code = source[:declaration_span[0]] + source[declaration_span[1]:]
     masked_code = mask_strings(code)
@@ -3602,7 +3604,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
             "KursorPrivasiInspeksi = 0;", "IzinkanDummyMengikuti = False;", "KursorIkutiDummy = 0;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
-            "SegarkanRosterTertunda = False;",
         )
         for token in reset_tokens:
             checks.require(token in setup.body, f"reset setup iniziale mancante: {token}")
@@ -3649,7 +3650,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.SudahDiperiksa = True;",
             "Global.PemainAktif.SudahSiap = True;",
             "Global.PemainAktif.PernahDisiapkan = True;",
-            "Global.PemainAktif.SegarkanRosterTertunda = False;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
@@ -3717,7 +3717,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                     "Global.PemainAktif.SudahDiperiksa = True;",
                     "Global.PemainAktif.SudahSiap = True;",
                     "Global.PemainAktif.PernahDisiapkan = True;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
                     "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
                 )
             )

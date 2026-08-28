@@ -173,8 +173,7 @@ variabili
 		103: WaktuSiklusTim
 		104: TimSiklusTarget
 		105: MusikKhusus
-		106: SegarkanRosterTertunda
-		107: NamaTampilan
+		106: NamaTampilan
 }
 
 subroutine
@@ -1271,9 +1270,6 @@ regola("02b - HUD Pemain: Hubungkan ke roster global permanen")
 		Event Player.HudKiri = Globale.HudKiriPemain[Event Player.UrutanHUD];
 		Event Player.HudKanan = Globale.HudKananPemain[Event Player.UrutanHUD];
 		Event Player.HudPemainDibuat = And(And(Event Player.HudKiri != Null, Event Player.HudKiri != 0), And(Event Player.HudKanan != Null, Event Player.HudKanan != 0));
-		If(Event Player.SegarkanRosterTertunda == True);
-			Event Player.SegarkanRosterTertunda = False;
-		End;
 	}
 }
 
@@ -1959,7 +1955,6 @@ regola("10 - Menu: Terapkan halaman aktif")
 				Event Player.KursorIkutiDummy = Event Player.IzinkanDummyMengikuti ? 1 : 0;
 			End;
 			Call Subroutine(GambarMenu);
-			Call Subroutine(TransisiWarnaMenu);
 		Else If(Event Player.HalamanMenu == 0);
 			Call Subroutine(TerapkanHalamanWarna);
 		Else If(Event Player.HalamanMenu == 1);
@@ -2422,7 +2417,6 @@ regola("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 	{
 		Event Player.HalamanMenu = -1;
 		Call Subroutine(GambarMenu);
-		Call Subroutine(TransisiWarnaMenu);
 	}
 }
 
@@ -3300,7 +3294,6 @@ regola("89a - Subrutin: Proses status cepat pemain")
 					Globale.PemainAktif.NamaTampilan = Globale.NamaSlotHUD[Globale.PemainAktif.UrutanHUD];
 				End;
 			End;
-			Globale.PemainAktif.SegarkanRosterTertunda = False;
 			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
 				If(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
 					Destroy HUD Text(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
@@ -4303,7 +4296,6 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.MenitLobi = 0;
 		Event Player.IndeksGenre = -1;
 		Event Player.MusikKhusus = Null;
-		Event Player.SegarkanRosterTertunda = False;
 		Event Player.NamaTampilan = Null;
 		Event Player.UrutanHUD = -1;
 		Event Player.HudKiri = Null;

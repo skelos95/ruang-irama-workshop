@@ -145,10 +145,10 @@ Il gate controlla:
 - guardia anti-duplicato prima della registrazione roster;
 - un solo setup e un solo set di handle per player;
 - cleanup completo su leave;
-- cambio squadra di un umano registrato implementato come refresh leggero differito: il detector preserva roster/`Manusia`, arma `SegarkanRosterTertunda` per almeno 0,25 secondi e non distrugge le righe roster; il consumer richiede scadenza raggiunta, Team stabile, spawned, alive e indice roster valido, ma non dipende dal carico server; quindi sostituisce gli handle canonici e riabilita la ricreazione mirata di `HudKiri/HudKanan` senza cleanup + setup fresco;
+- cambio squadra di un umano registrato implementato come refresh leggero immediato: il detector preserva roster/`Manusia`, mantiene le righe roster globali, riassocia lo slot e normalizza solo UI/input transitori, senza cleanup + setup fresco;
 - renderer roster privo del gate `Is Alive`, flag ready scritto solo dopo entrambi gli handle, menu distrutto tramite l'array globale canonico e classifier che, quando manca temporaneamente uno slot, riarma il lifecycle, rilascia il proprio lock globale e programma il retry dopo 0,25 secondi;
-- esclusione temporanea dei target pending da entrambi i filtri pubblici Crouch, così gli In-World Text aperti vengono invalidati e ricreati dopo la transizione;
-- recovery non-roster del pending, così un riferimento cambiato viene riaccodato al setup e non resta invisibile sia nelle due liste sia nei target Crouch; se le player variables sono state sostituite, questo fallback riapplica i default;
+- filtri pubblici Crouch indipendenti da stati pending legacy, con invalidazione/ricreazione coerente degli In-World Text durante le transizioni;
+- recovery non-roster idempotente: un riferimento cambiato viene riaccodato al setup e non resta invisibile sia nelle due liste sia nei target Crouch; se le player variables sono state sostituite, questo fallback riapplica i default;
 - conservazione di preferenze, cursori e singola voce roster nel percorso reference-stable; un vero leave rimuove soltanto l’entità attiva e conserva il profilo globale; il rejoin prima del restart CHILL ripristina quel profilo;
 - repair del profilo `งูแท้`: `Caladan Brood` viene sempre riasserito, mentre Silver Mist/Poison 2 tornano ai default soltanto quando `PernahDisiapkan` segnala un reset reale;
 - conservazione di Camera, status, effetti e voti attivi durante il cambio squadra leggero;
