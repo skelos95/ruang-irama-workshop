@@ -1875,10 +1875,6 @@ def validate_ghost_fly(
                 "volo orientato alla visuale con gravità zero",
             ),
             (
-                "If(EventPlayer.EfekNasib==2);StopAccelerating(EventPlayer);End;",
-                "Fly locale non deve mantenere accelerazione Try Your Luck fissa",
-            ),
-            (
                 "Else;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
                 "ripristino motore Fly",
             ),
@@ -1907,27 +1903,16 @@ def validate_ghost_fly(
             ),
             ("MagnitudeOf(ThrottleOf(Global.PemainAktif))>0.050", "soglia input aktif per koreksi pitch"),
             (
-                "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
-                "Global.PemainAktif.EfekNasib==2));"
-                "StopAccelerating(Global.PemainAktif);End;",
-                "Fly + esito 2: solo boost velocità senza override direzione",
+                "If((YComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
+                "ApplyImpulse(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
+                "(YComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
+                "ToWorld,CancelContraryMotion);End;",
+                "koreksi arah 3D Fly untuk input maju tanpa merusak input lain",
             ),
             (
-                "ApplyImpulse(Global.PemainAktif,Vector(0,0,"
-                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
-                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)"
-                ">ZComponentOf(VelocityOf(Global.PemainAktif))?1:-1),"
-                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
-                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)"
-                ">ZComponentOf(VelocityOf(Global.PemainAktif))?"
-                "((ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
-                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)-"
-                "ZComponentOf(VelocityOf(Global.PemainAktif))):"
-                "(ZComponentOf(VelocityOf(Global.PemainAktif))-"
-                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
-                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)),"
-                "ToWorld,IncorporateContraryMotion);",
-                "koreksi pitch vertikal Fly",
+                "Or(Global.PemainAktif.EfekNasib!=2,"
+                "Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
+                "eccezione per l'esito Acceleration ancora attivo",
             ),
             ("MagnitudeOf(ThrottleOf(Global.PemainAktif))<=0.050", "soglia input fermo"),
             ("MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010", "soglia deriva"),
@@ -1941,6 +1926,8 @@ def validate_ghost_fly(
             checks.require(token in cycle_packed, f"Ghost/Fly controller 10 Hz incompleto: {label}")
         checks.require("StartForcingPlayerPosition(" not in cycle_packed,
                        "Fly non deve immobilizzare con forcing di posizione")
+        checks.require("FacingDirectionOf(Global.PemainAktif)*-1" not in cycle_packed,
+                       "Fly non deve forzare input indietro sulla visuale")
 
     for owner, label in ((setup, "setup iniziale"), (quiet, "quiete uscita/rejoin")):
         checks.require(owner is not None, f"Ghost/Fly: {label} assente")
@@ -3316,8 +3303,12 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                 checks.require("Set Move Speed(Global.PemainAktif, 1000);" in acceleration_branch_masked,
                                "accelerazione esito 2 non imposta Move Speed 1000")
                 checks.require(
-                    "If(Global.PemainAktif.ModeTerbangAktif==False);StartAccelerating(" in acceleration_branch_compact,
-                    "accelerazione esito 2 deve evitare override direzione saat Fly aktif",
+                    "StartAccelerating(" in acceleration_branch_compact,
+                    "accelerazione esito 2 deve restare automatica",
+                )
+                checks.require(
+                    "If(Global.PemainAktif.ModeTerbangAktif==False);" not in acceleration_branch_compact,
+                    "accelerazione esito 2 deve restare automatica anche in Fly",
                 )
                 checks.require(
                     "Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;" in acceleration_branch_masked,

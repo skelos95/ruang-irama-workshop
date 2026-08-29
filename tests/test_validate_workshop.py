@@ -1106,14 +1106,22 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "visuale con gravità zero")
 
-    def test_fly_pitch_requires_vertical_steering_impulse(self) -> None:
+    def test_fly_pitch_requires_full_view_direction_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Apply Impulse(Global.PemainAktif, Vector(0, 0, (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? 1 : -1), (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? ((Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) - Z Component Of(Velocity Of(Global.PemainAktif))) : (Z Component Of(Velocity Of(Global.PemainAktif)) - (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6)), To World, Incorporate Contrary Motion);",
+            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Y Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
             "",
         )
-        self.assert_rejected(mutated, "koreksi pitch vertikal Fly")
+        self.assert_rejected(mutated, "koreksi arah 3D Fly")
+
+    def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.inject_action(
+            cycle,
+            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif) * -1, 9, To World, Cancel Contrary Motion);",
+        )
+        self.assert_rejected(mutated, "input indietro")
 
     def test_fly_idle_brake_requires_the_exact_opposite_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -1684,23 +1692,26 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "Start Accelerating globale unico")
 
-    def test_luck_acceleration_must_not_start_while_fly_is_active(self) -> None:
+    def test_luck_acceleration_must_remain_automatic_while_fly_is_active(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        start_call = "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);"
         mutated = self.replace_in_rule(
             machine,
-            "If(Global.PemainAktif.ModeTerbangAktif == False);",
-            "If(True);",
+            start_call,
+            "If(Global.PemainAktif.ModeTerbangAktif == False);\n\t\t\t\t\t\t"
+            + start_call
+            + "\n\t\t\t\t\tEnd;",
         )
-        self.assert_rejected(mutated, "override direzione saat Fly aktif")
+        self.assert_rejected(mutated, "restare automatica anche in Fly")
 
-    def test_fly_cycle_must_clear_luck_acceleration_when_effect_two_is_active(self) -> None:
+    def test_fly_idle_brake_must_skip_active_luck_acceleration(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "If(And(Global.PemainAktif.ModeTerbangAktif == True, Global.PemainAktif.EfekNasib == 2));",
-            "If(False);",
+            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010))));",
+            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010)));",
         )
-        self.assert_rejected(mutated, "solo boost velocità senza override direzione")
+        self.assert_rejected(mutated, "esito Acceleration ancora attivo")
 
     def test_luck_acceleration_call_cannot_be_shadowed_by_a_comment(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
