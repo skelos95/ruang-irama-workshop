@@ -92,7 +92,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump esatta e senza `Wait`: latch, posizione sicura inizialmente uguale alla morte, raycast corto per distinguere terreno e vuoto, candidato `Nearest Walkable Position` validato con fallback allo spawn, `Resurrect`, conferma `Is Alive` e un unico `Teleport` condizionale soltanto quando il punto sicuro differisce dalla morte; offset casuali, forcing di posizione e `Respawn` sono vietati;
+- sequenza Jump esatta e senza `Wait`: latch, `Nearest Walkable Position(PosisiMati)` sempre calcolata e validata, un unico `Teleport` del cadavere prima di `Resurrect`, conferma `Is Alive`, ripristino effetti e riapplicazione immediata Ghost/Fly; fallback alla Spawn Room, offset casuali, forcing di posizione e `Respawn` sono vietati;
 - latch rilasciati senza doppie attivazioni.
 
 ### Unkillable FULL HP
@@ -110,9 +110,9 @@ OFF, 1 HP, setup e cleanup locali/globali devono contenere il ripristino atomico
 Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi setup, applicazione locale e manutenzione globale a 10 Hz:
 
 - Ghost usa `Disable Movement Collision With Environment(player, False)`, quindi attraversa pareti e soffitti ma conserva i pavimenti; non può modificare la collisione con player/bot;
-- Fly usa gravità zero e `Start Transforming Throttle(..., Facing Direction Of(player))`, così gli input seguono la visuale in 3D; OFF deve fermare il throttle trasformato e ripristinare gravità 100;
+- Fly usa gravità zero e `Start Transforming Throttle(..., Facing Direction Of(player))`, così gli input seguono la visuale in 3D; Forward avvia una rampa `Start Accelerating` da `6 m/s²` con cap `20 m/s`; OFF deve fermare la rampa normale senza interrompere Luck Acceleration, fermare il throttle trasformato e ripristinare gravità 100;
 - senza input direzionale il freno usa velocità corrente e impulso esattamente opposto con `Incorporate Contrary Motion`, senza forcing di posizione; il freno deve escludere l'intera finestra Acceleration di Try Your Luck;
-- toggle e cursori restano distinti, sono OFF soltanto al setup/cleanup reale e persistono durante morte, Resurrect, cambio eroe e cambio squadra leggero;
+- toggle e cursori restano distinti, sono OFF soltanto al setup/cleanup reale e persistono durante morte, Resurrect, cambio eroe e cambio squadra leggero; la morte disarma immediatamente il latch fisico e Jump Resurrect riapplica Ghost/Fly nello stesso tick dopo il ripristino effetti;
 - Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` per tutti i 10 secondi.
 - il Main Menu usa sempre `GambarUtama`: la catena localizzata termina esplicitamente con indice 12 Dummy Follow e fallback 13 Ghost/Fly; il router non può scegliere staticamente un renderer diverso in base a `KursorUtama` né ridisegnare l'HUD durante lo scroll.
 
