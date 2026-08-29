@@ -1903,9 +1903,9 @@ def validate_ghost_fly(
             ),
             ("MagnitudeOf(ThrottleOf(Global.PemainAktif))>0.050", "soglia input aktif per koreksi pitch"),
             (
-                "If((YComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
+                "If((ZComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
                 "ApplyImpulse(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
-                "(YComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
+                "(ZComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
                 "ToWorld,CancelContraryMotion);End;",
                 "koreksi arah 3D Fly untuk input maju tanpa merusak input lain",
             ),
