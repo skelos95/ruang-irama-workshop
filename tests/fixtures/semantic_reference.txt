@@ -874,7 +874,6 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		"Mode dibuat tenang dan bersih tanpa penyiar serta musik bawaan mode."
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
-		Disable Built-In Game Mode Completion;
 		If(Global.DiagnostikPerforma == False);
 			Disable Inspector Recording;
 		End;
@@ -1541,6 +1540,11 @@ rule("04g - Utama global: Penjadwal pusat 20 Hz")
 			Global.SisaWaktuServer = Max(0, Round To Integer(Global.WaktuAkhirServer - Total Time Elapsed, Up));
 			Global.TeksWaktuServer = Global.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Global.SisaWaktuServer / 60, Down),
 				Global.SisaWaktuServer % 60) : Custom String("{0}:{1}", Round To Integer(Global.SisaWaktuServer / 60, Down), Global.SisaWaktuServer % 60);
+		End;
+		If(And(Is Game In Progress == True, And(Global.MulaiUlangSudahDiminta == False, Global.SisaWaktuServer > 0)));
+			"Paksa penyelesaian mode bawaan tetap mati dan sinkronkan timer native di atas nol sampai timer server selesai."
+			Disable Built-In Game Mode Completion;
+			Set Match Time(Max(1, Global.SisaWaktuServer + 5));
 		End;
 		If(And(Global.PemainSiklusGlobal != Null, Entity Exists(Global.PemainSiklusGlobal) == False));
 			Global.PemainSiklusGlobal = Null;
@@ -2370,6 +2374,9 @@ rule("99o - Subrutin: Terapkan fisika Mode Hantu / Terbang")
 		If(Event Player.ModeTerbangAktif == True);
 			Set Gravity(Event Player, 0);
 			Start Transforming Throttle(Event Player, 1, 1, Facing Direction Of(Event Player));
+			If(Event Player.EfekNasib == 2);
+				Stop Accelerating(Event Player);
+			End;
 		Else;
 			Stop Transforming Throttle(Event Player);
 			Set Gravity(Event Player, 100);
@@ -3460,11 +3467,23 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				If(Global.PemainAktif.ModeTerbangAktif == True);
 					Set Gravity(Global.PemainAktif, 0);
 					Start Transforming Throttle(Global.PemainAktif, 1, 1, Facing Direction Of(Global.PemainAktif));
+					If(Global.PemainAktif.EfekNasib == 2);
+						Stop Accelerating(Global.PemainAktif);
+					End;
 				End;
 				Global.PemainAktif.FisikaHantuTerbangDiterapkan = True;
 			End;
-			If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010))));
-				"Impuls berlawanan meniadakan drift saat tidak ada input; dengan input, throttle yang diubah mengikuti arah pandangan 3D."
+			If(And(Global.PemainAktif.ModeTerbangAktif == True, Global.PemainAktif.EfekNasib == 2));
+				Stop Accelerating(Global.PemainAktif);
+			End;
+			If(And(Global.PemainAktif.ModeTerbangAktif == True, Magnitude Of(Throttle Of(Global.PemainAktif)) > 0.050));
+				If(Or((Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > (Z Component Of(Velocity Of(Global.PemainAktif)) + 0.050), (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) < (Z Component Of(Velocity Of(Global.PemainAktif)) - 0.050)));
+					"Koreksi pitch vertikal menjaga naik/turun mengikuti arah pandangan saat ada input."
+					Apply Impulse(Global.PemainAktif, Vector(0, 0, (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? 1 : -1), (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? ((Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) - Z Component Of(Velocity Of(Global.PemainAktif))) : (Z Component Of(Velocity Of(Global.PemainAktif)) - (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6)), To World, Incorporate Contrary Motion);
+				End;
+			End;
+			If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010)));
+				"Impuls berlawanan meniadakan drift saat tidak ada input."
 				Stop Accelerating(Global.PemainAktif);
 				Apply Impulse(Global.PemainAktif, Velocity Of(Global.PemainAktif) * -1, Magnitude Of(Velocity Of(Global.PemainAktif)), To World, Incorporate Contrary Motion);
 			End;
@@ -3641,9 +3660,11 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: PUBLIC PLAYER / BOT NAMES — 15s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: NAMA PLAYER PUBLIK / BOT — 15dtk") : Custom String("เสี่ยงโชค: ชื่อผู้เล่นสาธารณะ / บอต — 15 วินาที"));
 				Else If(Global.PemainAktif.EfekNasib == 2);
 					Set Move Speed(Global.PemainAktif, 1000);
-					Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);
+					If(Global.PemainAktif.ModeTerbangAktif == False);
+						Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);
+					End;
 					Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;
-					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: AKSELERASI MENGIKUTI BIDIKAN — 10dtk") : Custom String("เสี่ยงโชค: เร่งความเร็วตามทิศเล็ง — 10 วินาที"));
+					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Global.PemainAktif.ModeTerbangAktif == True ? Custom String("TRY YOUR LUCK: FLY SPEED BOOST — 10s") : Custom String("TRY YOUR LUCK: AIM-STEERED ACCELERATION — 10s") : Global.PemainAktif.IndeksBahasa == 1 ? Global.PemainAktif.ModeTerbangAktif == True ? Custom String("COBA NASIB: BOOST KECEPATAN TERBANG — 10dtk") : Custom String("COBA NASIB: AKSELERASI MENGIKUTI BIDIKAN — 10dtk") : Global.PemainAktif.ModeTerbangAktif == True ? Custom String("เสี่ยงโชค: เพิ่มความเร็วบิน — 10 วินาที") : Custom String("เสี่ยงโชค: เร่งความเร็วตามทิศเล็ง — 10 วินาที"));
 				Else If(Global.PemainAktif.EfekNasib == 3);
 					Small Message(Global.PemainAktif, Global.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: SKULL") : Global.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: TENGKORAK") : Custom String("เสี่ยงโชค: กะโหลก"));
 					Global.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed;

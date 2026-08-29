@@ -70,6 +70,13 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("JarakBidik", source)
             self.assertIn("JarakBidik = 25;", source)
 
+    def test_native_completion_and_timer_are_bound_to_custom_countdown(self):
+        for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
+            self.assertIn("Disable Built-In Game Mode Completion;", source)
+            self.assertIn(f"Set Match Time(Max(1, {global_name}.SisaWaktuServer + 5));", source)
+            self.assertIn("Is Game In Progress == True", source)
+            self.assertIn(f"{global_name}.SisaWaktuServer > 0", source)
+
 
     def test_crouch_teleport_has_five_pages_and_single_shot_self_kill(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):

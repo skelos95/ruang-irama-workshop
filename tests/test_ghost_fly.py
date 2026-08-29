@@ -212,6 +212,28 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn("Start Accelerating(", physics)
             self.assertNotIn("Movement Collision With Players", physics)
 
+    def test_fly_throttle_input_corrects_vertical_speed_using_camera_pitch(self) -> None:
+        for source, global_name in self.sources:
+            cycle = subroutine(source, "ProsesSiklusPemain")
+            packed = compact(cycle)
+            target_vertical = (
+                f"ZComponentOf(FacingDirectionOf({global_name}.PemainAktif))*"
+                f"MagnitudeOf(ThrottleOf({global_name}.PemainAktif))*6"
+            )
+            self.assertIn(
+                f"MagnitudeOf(ThrottleOf({global_name}.PemainAktif))>0.050",
+                packed,
+            )
+            self.assertIn(
+                f"ApplyImpulse({global_name}.PemainAktif,Vector(0,0,({target_vertical})>"
+                f"ZComponentOf(VelocityOf({global_name}.PemainAktif))?1:-1),",
+                packed,
+            )
+            self.assertIn(
+                f"({target_vertical})>(ZComponentOf(VelocityOf({global_name}.PemainAktif))+0.050)",
+                packed,
+            )
+
     def test_fly_idle_cancels_velocity_with_an_exact_opposite_impulse(self) -> None:
         for source, global_name in self.sources:
             owner = rf"{global_name}\.PemainAktif"
@@ -228,15 +250,30 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 packed,
                 rf"MagnitudeOf\(ThrottleOf\({owner}\)\)<=0\.050",
             )
+            self.assertRegex(packed, opposite_velocity)
             self.assertIn(
-                f"Or({global_name}.PemainAktif.EfekNasib!=2,"
-                f"{global_name}.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
+                f"If(And({global_name}.PemainAktif.ModeTerbangAktif==True,{global_name}.PemainAktif.EfekNasib==2));"
+                f"StopAccelerating({global_name}.PemainAktif);End;",
                 packed,
             )
-            self.assertRegex(packed, opposite_velocity)
             idle_branch = packed[packed.index(f"MagnitudeOf(ThrottleOf({global_name}.PemainAktif))<=0.050") :]
             self.assertNotIn("FacingDirectionOf", idle_branch.split("End;", 1)[0])
             self.assertNotIn("MovementCollisionWithPlayers", idle_branch.split("End;", 1)[0])
+
+    def test_try_your_luck_acceleration_does_not_override_fly_direction(self) -> None:
+        for source, global_name in self.sources:
+            luck = subroutine(source, "ProsesNasibPemain")
+            branch_start = luck.rfind(f"Else If({global_name}.PemainAktif.EfekNasib == 2);")
+            branch_end = luck.index(f"Else If({global_name}.PemainAktif.EfekNasib == 3);", branch_start)
+            acceleration_branch = compact(luck[branch_start:branch_end])
+            self.assertIn(f"SetMoveSpeed({global_name}.PemainAktif,1000);", acceleration_branch)
+            self.assertIn(
+                f"If({global_name}.PemainAktif.ModeTerbangAktif==False);"
+                f"StartAccelerating({global_name}.PemainAktif,"
+                f"FacingDirectionOf(EvaluateOnce({global_name}.PemainAktif)),50,25,ToWorld,DirectionRateandMaxSpeed);"
+                f"End;",
+                acceleration_branch,
+            )
 
     def test_fresh_setup_and_true_cleanup_restore_safe_defaults(self) -> None:
         for source, _ in self.sources:
@@ -294,12 +331,16 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                     "Set Gravity(",
                     "Start Transforming Throttle(",
                     "Stop Transforming Throttle(",
-                    "ModeHantuAktif =",
-                    "ModeTerbangAktif =",
-                    "FisikaHantuTerbangDiterapkan =",
                 ):
                     with self.subTest(owner=owner_name, forbidden=forbidden):
                         self.assertNotIn(forbidden, owner)
+                for variable in (
+                    "ModeHantuAktif",
+                    "ModeTerbangAktif",
+                    "FisikaHantuTerbangDiterapkan",
+                ):
+                    with self.subTest(owner=owner_name, variable=variable):
+                        self.assertIsNone(re.search(rf"{variable}\s*=(?!=)", owner))
 
     def test_ghost_fly_rules_add_no_wait_or_loop(self) -> None:
         for source, _ in self.sources:

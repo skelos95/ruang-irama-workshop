@@ -1106,6 +1106,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "visuale con gravità zero")
 
+    def test_fly_pitch_requires_vertical_steering_impulse(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Apply Impulse(Global.PemainAktif, Vector(0, 0, (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? 1 : -1), (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) > Z Component Of(Velocity Of(Global.PemainAktif)) ? ((Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6) - Z Component Of(Velocity Of(Global.PemainAktif))) : (Z Component Of(Velocity Of(Global.PemainAktif)) - (Z Component Of(Facing Direction Of(Global.PemainAktif)) * Magnitude Of(Throttle Of(Global.PemainAktif)) * 6)), To World, Incorporate Contrary Motion);",
+            "",
+        )
+        self.assert_rejected(mutated, "koreksi pitch vertikal Fly")
+
     def test_fly_idle_brake_requires_the_exact_opposite_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
@@ -1674,6 +1683,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);",
         )
         self.assert_rejected(mutated, "Start Accelerating globale unico")
+
+    def test_luck_acceleration_must_not_start_while_fly_is_active(self) -> None:
+        machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
+        mutated = self.replace_in_rule(
+            machine,
+            "If(Global.PemainAktif.ModeTerbangAktif == False);",
+            "If(True);",
+        )
+        self.assert_rejected(mutated, "override direzione saat Fly aktif")
+
+    def test_fly_cycle_must_clear_luck_acceleration_when_effect_two_is_active(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "If(And(Global.PemainAktif.ModeTerbangAktif == True, Global.PemainAktif.EfekNasib == 2));",
+            "If(False);",
+        )
+        self.assert_rejected(mutated, "solo boost velocità senza override direzione")
 
     def test_luck_acceleration_call_cannot_be_shadowed_by_a_comment(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -2723,6 +2750,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
         mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
         self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
+        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer + 5));"
+        self.assertIn(sync_token, self.source)
+        mutated = self.source.replace(sync_token, "", 1)
+        self.assert_rejected(mutated, "timer mode bawaan tidak disinkronkan")
+        sync_rule = self.rule(
+            lambda rule: sync_token in rule.body and "Disable Built-In Game Mode Completion;" in rule.body
+        )
+        mutated = self.replace_in_rule(sync_rule, "Is Game In Progress == True", "Is Game In Progress == False")
+        self.assert_rejected(mutated, "hanya saat pertandingan berjalan")
+        mutated = self.replace_in_rule(sync_rule, "Global.SisaWaktuServer > 0", "Global.SisaWaktuServer >= 0")
+        self.assert_rejected(mutated, "pemicu tunggal restart")
 
 class RepositoryMetadataTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:

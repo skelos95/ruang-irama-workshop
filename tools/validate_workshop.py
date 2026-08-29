@@ -1875,6 +1875,10 @@ def validate_ghost_fly(
                 "volo orientato alla visuale con gravità zero",
             ),
             (
+                "If(EventPlayer.EfekNasib==2);StopAccelerating(EventPlayer);End;",
+                "Fly locale non deve mantenere accelerazione Try Your Luck fissa",
+            ),
+            (
                 "Else;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
                 "ripristino motore Fly",
             ),
@@ -1901,13 +1905,32 @@ def validate_ghost_fly(
                 "FacingDirectionOf(Global.PemainAktif));",
                 "riapplicazione movimento secondo visuale",
             ),
+            ("MagnitudeOf(ThrottleOf(Global.PemainAktif))>0.050", "soglia input aktif per koreksi pitch"),
+            (
+                "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
+                "Global.PemainAktif.EfekNasib==2));"
+                "StopAccelerating(Global.PemainAktif);End;",
+                "Fly + esito 2: solo boost velocità senza override direzione",
+            ),
+            (
+                "ApplyImpulse(Global.PemainAktif,Vector(0,0,"
+                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
+                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)"
+                ">ZComponentOf(VelocityOf(Global.PemainAktif))?1:-1),"
+                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
+                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)"
+                ">ZComponentOf(VelocityOf(Global.PemainAktif))?"
+                "((ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
+                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)-"
+                "ZComponentOf(VelocityOf(Global.PemainAktif))):"
+                "(ZComponentOf(VelocityOf(Global.PemainAktif))-"
+                "(ZComponentOf(FacingDirectionOf(Global.PemainAktif))*"
+                "MagnitudeOf(ThrottleOf(Global.PemainAktif))*6)),"
+                "ToWorld,IncorporateContraryMotion);",
+                "koreksi pitch vertikal Fly",
+            ),
             ("MagnitudeOf(ThrottleOf(Global.PemainAktif))<=0.050", "soglia input fermo"),
             ("MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010", "soglia deriva"),
-            (
-                "Or(Global.PemainAktif.EfekNasib!=2,"
-                "Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
-                "eccezione per l'esito Acceleration ancora attivo",
-            ),
             ("StopAccelerating(Global.PemainAktif);", "arresto accelerazione residua"),
             (
                 "ApplyImpulse(Global.PemainAktif,VelocityOf(Global.PemainAktif)*-1,"
@@ -2024,12 +2047,18 @@ def validate_ghost_fly(
                 ("StartTransformingThrottle(", "avvio throttle Fly"),
                 ("StopTransformingThrottle(", "arresto throttle Fly"),
                 ("StartForcingPlayerPosition(", "posizione forzata"),
-                ("ModeHantuAktif=", "toggle Ghost"),
-                ("ModeTerbangAktif=", "toggle Fly"),
-                ("FisikaHantuTerbangDiterapkan=", "latch fisica Fly"),
             ):
                 checks.require(forbidden not in luck_packed,
                                f"Try Your Luck non deve modificare {label}: {luck_owner}")
+            for variable, label in (
+                ("ModeHantuAktif", "toggle Ghost"),
+                ("ModeTerbangAktif", "toggle Fly"),
+                ("FisikaHantuTerbangDiterapkan", "latch fisica Fly"),
+            ):
+                checks.require(
+                    re.search(rf"{variable}=(?!=)", luck_packed) is None,
+                    f"Try Your Luck non deve modificare {label}: {luck_owner}",
+                )
 
 def validate_special_player_profile(
     checks: Checks,
@@ -3283,8 +3312,13 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             if branch_start >= 0 and branch_end > branch_start:
                 acceleration_branch = state_machine.body[branch_start:branch_end]
                 acceleration_branch_masked = mask_strings(acceleration_branch)
+                acceleration_branch_compact = re.sub(r"\s+", "", acceleration_branch_masked)
                 checks.require("Set Move Speed(Global.PemainAktif, 1000);" in acceleration_branch_masked,
                                "accelerazione esito 2 non imposta Move Speed 1000")
+                checks.require(
+                    "If(Global.PemainAktif.ModeTerbangAktif==False);StartAccelerating(" in acceleration_branch_compact,
+                    "accelerazione esito 2 deve evitare override direzione saat Fly aktif",
+                )
                 checks.require(
                     "Global.PemainAktif.EfekNasibBerakhir = Total Time Elapsed + 10;" in acceleration_branch_masked,
                     "accelerazione esito 2 non usa timestamp esatto di 10 secondi",
@@ -5293,7 +5327,34 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         )
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
-    checks.equal(source.count("Disable Built-In Game Mode Completion;"), 1, "blocco completamento nativo fino al timer CHILL")
+    completion_token = "Disable Built-In Game Mode Completion;"
+    checks.equal(source.count(completion_token), 1, "blocco completamento nativo fino al timer CHILL")
+    timer_sync_rule = next(
+        (
+            rule
+            for rule in rules_with_event(rules, "Ongoing - Global")
+            if completion_token in rule.body
+            and "Set Match Time(Max(1, Global.SisaWaktuServer + 5));" in rule.body
+        ),
+        None,
+    )
+    checks.require(
+        timer_sync_rule is not None,
+        "timer mode bawaan tidak disinkronkan ke countdown CHILL",
+    )
+    if timer_sync_rule:
+        checks.require(
+            "Is Game In Progress == True" in timer_sync_rule.body,
+            "sinkronisasi timer mode harus aktif hanya saat pertandingan berjalan",
+        )
+        checks.require(
+            "Global.MulaiUlangSudahDiminta == False" in timer_sync_rule.body,
+            "sinkronisasi timer mode harus berhenti setelah restart diminta",
+        )
+        checks.require(
+            "Global.SisaWaktuServer > 0" in timer_sync_rule.body,
+            "sinkronisasi timer mode harus menjaga timer custom sebagai pemicu tunggal restart",
+        )
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
     if camera_rule:
