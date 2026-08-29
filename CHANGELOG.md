@@ -6,6 +6,9 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Fly accelera gradualmente finché si mantiene avanti, seguendo il mirino: 6 m/s² fino a 20 m/s; Try Your Luck: Acceleration mantiene la priorità. La morte disarma subito il latch fisico e Jump Resurrect riapplica Ghost/Fly nello stesso tick.
+- Jump Resurrect usa sempre una `Nearest Walkable Position` validata dal punto di morte, teletrasporta il cadavere prima del `Resurrect` e non usa più fallback alla Spawn Room.
+
 - Corretto il Main Menu live: le pagine 12 e 13 ora condividono un unico renderer dinamico, con tail esplicita `12 ? Dummy Follow : Ghost Mode / Fly` in EN/ID/TH. Lo scroll `12→13→0` e `0→13→12` non può più duplicare la pagina 12 né restare bloccato sul renderer Ghost dopo una riapertura.
 - Corretto Jump Resurrect nel vuoto: `Nearest Walkable Position` viene validata e il cadavere viene teletrasportato prima del `Resurrect`, evitando che il controllo `Is Alive` dello stesso tick salti il recupero e causi morti ripetute. Il fallback spawn è protetto e validato; se nessun terreno sicuro esiste, il player resta morto e può riprovare dopo aver rilasciato Jump. Le morti con terreno valido continuano a non usare `Teleport`.
 - Aggiunta pagina `13 - Ghost Mode / Fly`, portando il Main Menu a 14 pagine (`0..13`) in EN/ID/TH. Le due voci sono toggle indipendenti e partono OFF: Wall Phasing disattiva la collisione con pareti e soffitti tramite `Include Floors = False`, mantenendo sempre solidi i pavimenti; Fly imposta gravità zero e trasforma il throttle WASD rispetto alla direzione 3D dello sguardo. Quando non esiste input direzionale, un impulso inverso annulla la velocità residua e impedisce deriva o fluttuazione. Gli stati sopravvivono a cambio squadra, cambio eroe, morte e Resurrect, ma un vero leave/rejoin li riporta ai default.

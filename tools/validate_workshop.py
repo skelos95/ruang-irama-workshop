@@ -1875,8 +1875,9 @@ def validate_ghost_fly(
                 "volo orientato alla visuale con gravità zero",
             ),
             (
-                "Else;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
-                "ripristino motore Fly",
+                "Else;If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));"
+                "StopAccelerating(EventPlayer);End;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
+                "ripristino motore Fly con arresto rampa senza interrompere Acceleration",
             ),
             ("EventPlayer.FisikaHantuTerbangDiterapkan=True;", "latch applicato"),
         ):
@@ -1901,21 +1902,20 @@ def validate_ghost_fly(
                 "FacingDirectionOf(Global.PemainAktif));",
                 "riapplicazione movimento secondo visuale",
             ),
-            ("MagnitudeOf(ThrottleOf(Global.PemainAktif))>0.050", "soglia input aktif per koreksi pitch"),
+            ("(ZComponentOf(ThrottleOf(Global.PemainAktif)))>0.050", "input maju Fly pada asse Z"),
             (
-                "If((ZComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
-                "ApplyImpulse(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
-                "(ZComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
-                "ToWorld,CancelContraryMotion);End;",
-                "koreksi arah 3D Fly untuk input maju tanpa merusak input lain",
+                "StartAccelerating(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
+                "6,20,ToWorld,DirectionRateandMaxSpeed);",
+                "accelerazione Fly graduale lungo la visuale",
             ),
             (
-                "Or(Global.PemainAktif.EfekNasib!=2,"
-                "Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
-                "eccezione per l'esito Acceleration ancora attivo",
+                "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
+                "And(Or(Global.PemainAktif.EfekNasib!=2,"
+                "Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed),"
+                "And(MagnitudeOf(ThrottleOf(Global.PemainAktif))<=0.050,"
+                "MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010))));",
+                "eccezione per l'esito Acceleration ancora attivo nel freno idle Fly",
             ),
-            ("MagnitudeOf(ThrottleOf(Global.PemainAktif))<=0.050", "soglia input fermo"),
-            ("MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010", "soglia deriva"),
             ("StopAccelerating(Global.PemainAktif);", "arresto accelerazione residua"),
             (
                 "ApplyImpulse(Global.PemainAktif,VelocityOf(Global.PemainAktif)*-1,"
@@ -2639,107 +2639,52 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
 
         actions = rule_block(resurrect, "actions") or ""
         masked = mask_strings(actions)
-        void_guard = (
-            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), "
-            "Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), "
-            "Event Player.PosisiMati) > 2.500);"
-        )
-        unsafe_guard = "If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);"
         ordered = (
             "Event Player.BangkitLompatDipakai = True;",
-            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
-            void_guard,
+            "Event Player.PosisiBangkitAman = Vector(0, 0, 0);",
             "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);",
-            "Count Of(Spawn Points(Team Of(Event Player))) > 0",
-            "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));",
+            "Call Subroutine(CariPosisiTeleportAman);",
+            "If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);",
             "Abort;",
             "Teleport(Event Player, Event Player.PosisiBangkitAman);",
             "Resurrect(Event Player);",
             "If(Is Alive(Event Player) == True);",
+            "Call Subroutine(EfekPulihkan);",
+            "Event Player.FisikaHantuTerbangDiterapkan = False;",
+            "Call Subroutine(TerapkanFisikaHantuTerbang);",
         )
         positions = [masked.find(token) for token in ordered]
         checks.require(
-            all(position >= 0 for position in positions)
-            and positions == sorted(positions),
-            "Jump Resurrect deve distinguere il vuoto, teletrasportare il cadavere e poi confermare Resurrect",
+            all(position >= 0 for position in positions) and positions == sorted(positions),
+            "Jump Resurrect deve usare sempre Nearest Walkable, teletrasportare, Resurrect e riapplicare Fly",
         )
+        checks.require("Spawn Points(Team Of(Event Player))" not in masked,
+                       "Jump Resurrect non deve usare fallback Spawn Room")
+        checks.require("Ray Cast Hit Position(Event Player.PosisiMati" not in masked,
+                       "Jump Resurrect deve usare sempre Nearest Walkable Position")
         checks.require("Random Real(" not in masked,
-                       "Jump Resurrect sicuro non deve spostare casualmente le morti valide")
-        for token, label in (
-            (
-                "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);",
-                "candidato Nearest Walkable Position dal punto nel vuoto",
-            ),
-            ("Call Subroutine(CariPosisiTeleportAman);", "validatore posizione sicura"),
-            (
-                "Count Of(Spawn Points(Team Of(Event Player))) > 0",
-                "guardia disponibilità spawn",
-            ),
-            (
-                "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));",
-                "fallback spawn validato",
-            ),
-            (unsafe_guard, "rifiuto candidato non valido"),
-            ("Abort;", "abort quando non esiste terreno sicuro"),
-        ):
-            checks.require(token in masked, f"Jump Resurrect recupero vuoto incompleto: {label}")
-        checks.equal(
-            masked.count("Call Subroutine(CariPosisiTeleportAman);"),
-            2,
-            "Jump Resurrect: candidato Nearest Walkable e fallback spawn devono usare lo stesso validatore",
-        )
-        checks.require(
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position("
-            "Position Of(First Of(Spawn Points(Team Of(Event Player)))));" not in masked,
-            "Jump Resurrect non deve usare un fallback finale Nearest Walkable non validato",
-        )
-
+                       "Jump Resurrect sicuro non deve usare offset casuali")
         teleport_calls = list(iter_calls(actions, "Teleport"))
         resurrect_calls = list(iter_calls(actions, "Resurrect"))
-        checks.equal(len(teleport_calls), 1,
-                     "Jump Resurrect: numero Teleport per recupero dal vuoto")
-        checks.equal(len(resurrect_calls), 1,
-                     "Jump Resurrect: deve esistere un solo Resurrect")
-        if teleport_calls:
-            checks.equal(
-                tuple(argument.strip() for argument in teleport_calls[0].args),
-                ("Event Player", "Event Player.PosisiBangkitAman"),
-                "Jump Resurrect: Teleport deve usare il punto camminabile validato",
-            )
-            enclosing = conditional_branches_containing(actions, teleport_calls[0].start)
-            checks.require(
-                any(void_guard in mask_strings(branch) for branch in enclosing),
-                "Jump Resurrect: Teleport deve appartenere soltanto al ramo morte nel vuoto",
-            )
-            checks.require(
-                not any("Is Alive(Event Player) == True" in mask_strings(branch) for branch in enclosing),
-                "Jump Resurrect: Teleport nel vuoto non deve dipendere dallo stato Is Alive stale",
-            )
+        checks.equal(len(teleport_calls), 1, "Jump Resurrect: numero Teleport verso Nearest Walkable")
+        checks.equal(len(resurrect_calls), 1, "Jump Resurrect: deve esistere un solo Resurrect")
         if teleport_calls and resurrect_calls:
-            checks.require(
-                teleport_calls[0].start < resurrect_calls[0].start,
-                "Jump Resurrect deve teletrasportare il cadavere prima di Resurrect",
-            )
-            resurrect_enclosing = conditional_branches_containing(actions, resurrect_calls[0].start)
-            checks.require(
-                not any(void_guard in mask_strings(branch) for branch in resurrect_enclosing),
-                "Jump Resurrect deve restare comune ai rami terreno sicuro e vuoto",
-            )
+            checks.require(teleport_calls[0].start < resurrect_calls[0].start,
+                           "Jump Resurrect deve teletrasportare il cadavere prima di Resurrect")
         checks.require("Start Forcing Player Position(" not in masked,
                        "Jump Resurrect non deve usare forcing di posizione")
-        checks.require(
-            not wait_calls(resurrect.body) and action_loop_count(resurrect.body) == 0,
-            "Jump Resurrect deve funzionare senza Wait/Loop",
-        )
-        checks.require(
-            "Event Player.BangkitLompatDipakai = False;" not in masked,
-            "Jump Resurrect non deve riarmarsi durante la stessa pressione",
-        )
-
-        checks.require(
-            not any("Start Forcing Player Position(" in rule.body for rule in rules),
-            "Start Forcing Player Position non deve essere necessario al Resurrect",
-        )
+        checks.require(not wait_calls(resurrect.body) and action_loop_count(resurrect.body) == 0,
+                       "Jump Resurrect deve funzionare senza Wait/Loop")
+        checks.require("Event Player.BangkitLompatDipakai = False;" not in masked,
+                       "Jump Resurrect non deve riarmarsi durante la stessa pressione")
+        death_rearm = next((rule for rule in rules if event_type(rule) == "Player Died" and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body), None)
+        checks.require(death_rearm is not None, "morte umana per Jump Resurrect assente")
+        if death_rearm:
+            death_actions = rule_block(death_rearm, "actions") or ""
+            checks.require("Event Player.FisikaHantuTerbangDiterapkan = False;" in death_actions,
+                           "morte deve riarmare subito la fisica Ghost/Fly")
+            checks.require("Stop Accelerating(Event Player);" in death_actions,
+                           "morte deve fermare accelerazione Fly residua")
 
     resurrect_release = next(
         (
@@ -3262,7 +3207,16 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                        "icone/accelerazione roulette devono restare global-first, senza regole Each Player")
 
         global_acceleration_calls = list(iter_calls(source, "Start Accelerating"))
-        checks.equal(len(global_acceleration_calls), 1, "Start Accelerating globale unico")
+        checks.equal(len(global_acceleration_calls), 2, "Start Accelerating globali Fly+Luck")
+        fly_cycle = next((rule for rule in rules if subroutine_target(rule) == "ProsesSiklusPemain"), None)
+        fly_acceleration_calls = list(iter_calls(fly_cycle.body, "Start Accelerating")) if fly_cycle else []
+        checks.equal(len(fly_acceleration_calls), 1, "accelerazione Fly graduale unica")
+        if len(fly_acceleration_calls) == 1:
+            checks.equal(
+                tuple(argument.strip() for argument in fly_acceleration_calls[0].args),
+                ("Global.PemainAktif", "Facing Direction Of(Global.PemainAktif)", "6", "20", "To World", "Direction Rate and Max Speed"),
+                "accelerazione Fly graduale: argomenti",
+            )
         acceleration_calls = list(iter_calls(state_machine.body, "Start Accelerating"))
         checks.equal(len(acceleration_calls), 1, "accelerazione Try Your Luck unica")
         if len(acceleration_calls) == 1:

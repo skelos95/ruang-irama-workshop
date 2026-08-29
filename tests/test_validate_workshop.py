@@ -951,62 +951,34 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "senza azioni Respawn")
 
-    def test_jump_resurrect_detects_void_before_resurrect(self) -> None:
+    def test_jump_resurrect_always_requires_nearest_walkable_candidate(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.replace_in_rule(
-            resurrect,
-            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
-            "Event Player.PosisiBangkitAman = Vector(0, 0, 0);",
-        )
-        self.assert_rejected(mutated, "distinguere il vuoto")
+        mutated = self.replace_in_rule(resurrect, "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", "Event Player.PosisiTeleportTujuan = Event Player.PosisiMati;")
+        self.assert_rejected(mutated, "sempre Nearest Walkable")
+
+    def test_jump_resurrect_cannot_use_spawn_room_fallback(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.inject_action(resurrect, "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));")
+        self.assert_rejected(mutated, "fallback Spawn Room")
+
+    def test_jump_resurrect_teleports_the_corpse_before_resurrect(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman);"
+        revive = "Resurrect(Event Player);"
+        changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
+        changed = changed.replace(revive, teleport, 1).replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
+        mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
+        self.assert_rejected(mutated, "teletrasportare il cadavere")
+
+    def test_jump_resurrect_reapplies_fly_after_effect_restore(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(resurrect, "Call Subroutine(TerapkanFisikaHantuTerbang);", "")
+        self.assert_rejected(mutated, "riapplicare Fly")
 
     def test_jump_resurrect_confirms_success_in_same_tick(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(resurrect, "If(Is Alive(Event Player) == True);", "If(True);")
-        self.assert_rejected(mutated, "distinguere il vuoto")
-
-    def test_jump_resurrect_allows_only_one_conditional_void_teleport(self) -> None:
-        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.inject_action(resurrect, "Teleport(Event Player, Event Player.PosisiBangkitAman);")
-        self.assert_rejected(mutated, "numero Teleport per recupero dal vuoto")
-
-    def test_jump_resurrect_void_candidate_must_be_nearest_walkable(self) -> None:
-        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.replace_in_rule(
-            resurrect,
-            "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);",
-            "Event Player.PosisiTeleportTujuan = Event Player.PosisiMati;",
-        )
-        self.assert_rejected(mutated, "candidato Nearest Walkable Position")
-
-    def test_jump_resurrect_teleports_the_void_corpse_before_resurrect(self) -> None:
-        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman);"
-        revive = "Resurrect(Event Player);"
-        self.assertIn(teleport, resurrect.body)
-        self.assertIn(revive, resurrect.body)
-        changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
-        changed = changed.replace(revive, teleport, 1)
-        changed = changed.replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
-        mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
-        self.assert_rejected(mutated, "teletrasportare il cadavere")
-
-    def test_jump_resurrect_requires_validated_spawn_or_aborts(self) -> None:
-        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        no_spawn_guard = self.replace_in_rule(
-            resurrect,
-            "If(Count Of(Spawn Points(Team Of(Event Player))) > 0);",
-            "If(True);",
-        )
-        self.assert_rejected(no_spawn_guard, "guardia disponibilità spawn")
-
-        raw_fallback = self.replace_in_rule(
-            resurrect,
-            "Abort;",
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position("
-            "Position Of(First Of(Spawn Points(Team Of(Event Player)))));",
-        )
-        self.assert_rejected(raw_fallback, "abort quando non esiste terreno sicuro")
+        self.assert_rejected(mutated, "riapplicare Fly")
 
     def test_jump_resurrect_does_not_need_position_forcing(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -1106,14 +1078,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "visuale con gravità zero")
 
-    def test_fly_pitch_requires_full_view_direction_impulse(self) -> None:
+    def test_fly_forward_requires_gradual_acceleration_along_full_view_direction(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Z Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
+            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 6, 20, To World, Direction Rate and Max Speed);",
             "",
         )
-        self.assert_rejected(mutated, "koreksi arah 3D Fly")
+        self.assert_rejected(mutated, "accelerazione Fly graduale")
 
     def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -1690,7 +1662,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             quick,
             "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);",
         )
-        self.assert_rejected(mutated, "Start Accelerating globale unico")
+        self.assert_rejected(mutated, "Start Accelerating globali Fly+Luck")
 
     def test_luck_acceleration_must_remain_automatic_while_fly_is_active(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -1720,7 +1692,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         end = machine.start + call.end
         self.assertEqual(self.source[end], ";")
         mutated = self.source[:start] + '"Start Accelerating(Global.PemainAktif, ...)"' + self.source[end + 1:]
-        self.assert_rejected(mutated, "Start Accelerating globale unico")
+        self.assert_rejected(mutated, "Start Accelerating globali Fly+Luck")
 
     def test_luck_acceleration_has_its_own_ten_second_timestamp(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")

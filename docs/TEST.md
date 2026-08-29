@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill e il recupero sicuro del Resurrect nel vuoto, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect sempre su `Nearest Walkable Position` e la riapplicazione Fly post-morte, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -64,9 +64,9 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
-| Morto | Jump | `Resurrect`; stesso punto se sicuro, `Nearest Walkable Position` se morto nel vuoto; menu ancora visibile |
+| Morto | Jump | `Teleport` alla `Nearest Walkable Position` validata e poi `Resurrect`; nessuna Spawn Room; menu ancora visibile |
 
-Sul caso Jump, verificare due rami distinti. Su terreno valido il player deve riapparire esattamente nella posizione di morte, senza `Teleport`; dopo una morte nel vuoto deve invece essere eseguito un solo `Teleport` condizionale del cadavere verso una `Nearest Walkable Position` già validata, seguito da `Resurrect`. Provare sia una caduta vicina al bordo sia un vuoto profondo: se il primo candidato fallisce, il fallback allo spawn deve essere usato soltanto quando disponibile e dopo la stessa validazione. Se non esiste alcun punto sicuro, il player deve restare morto invece di entrare in un ciclo di morti. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
+Sul caso Jump, provare morte su terreno normale, vicino a un bordo e nel vuoto profondo. In tutti i casi deve essere calcolata una `Nearest Walkable Position`, validata e usata da un solo `Teleport` del cadavere prima di `Resurrect`; non deve comparire alcun percorso verso la Spawn Room. Se non esiste alcun punto sicuro, il player deve restare morto invece di entrare in un ciclo di morti. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -128,9 +128,9 @@ Focus dati:
 
 - Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
 - Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
-- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D: guardando davanti si avanza, guardando in alto si sale e guardando in basso si scende.
+- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D: guardando davanti si avanza, guardando in alto si sale e guardando in basso si scende. Tenendo Forward, la velocità deve crescere gradualmente con rampa normale `6 m/s²` fino al cap `20 m/s`.
 - In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo.
-- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100 e ferma il throttle trasformato, Ghost OFF ripristina la collisione ambientale completa.
+- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100, ferma il throttle trasformato e arresta la rampa normale senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale.
 - Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve restare attiva per tutti i 10 secondi senza essere annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare immobile quando non ci sono input.
 
 ### Unkillable FULL HP
