@@ -222,8 +222,12 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             self.assertIn(
                 f"ApplyImpulse({global_name}.PemainAktif,FacingDirectionOf({global_name}.PemainAktif),"
-                f"(YComponentOf(ThrottleOf({global_name}.PemainAktif)))*9,"
+                f"(ZComponentOf(ThrottleOf({global_name}.PemainAktif)))*9,"
                 f"ToWorld,CancelContraryMotion);",
+                packed,
+            )
+            self.assertNotIn(
+                f"(YComponentOf(ThrottleOf({global_name}.PemainAktif)))*9,",
                 packed,
             )
             self.assertNotIn(f"FacingDirectionOf({global_name}.PemainAktif)*-1", packed)

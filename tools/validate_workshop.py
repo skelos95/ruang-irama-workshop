@@ -1903,9 +1903,9 @@ def validate_ghost_fly(
             ),
             ("MagnitudeOf(ThrottleOf(Global.PemainAktif))>0.050", "soglia input aktif per koreksi pitch"),
             (
-                "If((YComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
+                "If((ZComponentOf(ThrottleOf(Global.PemainAktif)))>0.050);"
                 "ApplyImpulse(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
-                "(YComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
+                "(ZComponentOf(ThrottleOf(Global.PemainAktif)))*9,"
                 "ToWorld,CancelContraryMotion);End;",
                 "koreksi arah 3D Fly untuk input maju tanpa merusak input lain",
             ),
@@ -1928,6 +1928,8 @@ def validate_ghost_fly(
                        "Fly non deve immobilizzare con forcing di posizione")
         checks.require("FacingDirectionOf(Global.PemainAktif)*-1" not in cycle_packed,
                        "Fly non deve forzare input indietro sulla visuale")
+        checks.require("YComponentOf(ThrottleOf(Global.PemainAktif))" not in cycle_packed,
+                       "Fly forward deve usare l'asse Z del throttle, non Y")
 
     for owner, label in ((setup, "setup iniziale"), (quiet, "quiete uscita/rejoin")):
         checks.require(owner is not None, f"Ghost/Fly: {label} assente")

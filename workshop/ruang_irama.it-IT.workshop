@@ -3469,8 +3469,8 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 			End;
 			If(And(Globale.PemainAktif.ModeTerbangAktif == True, Magnitude Of(Throttle Of(Globale.PemainAktif)) > 0.050));
 				"Impuls pitch hanya mengikuti input maju; input lain tetap ditangani throttle transform agar kontrol lengkap."
-				If((Y Component Of(Throttle Of(Globale.PemainAktif))) > 0.050);
-					Apply Impulse(Globale.PemainAktif, Facing Direction Of(Globale.PemainAktif), (Y Component Of(Throttle Of(Globale.PemainAktif))) * 9, To World, Cancel Contrary Motion);
+				If((Z Component Of(Throttle Of(Globale.PemainAktif))) > 0.050);
+					Apply Impulse(Globale.PemainAktif, Facing Direction Of(Globale.PemainAktif), (Z Component Of(Throttle Of(Globale.PemainAktif))) * 9, To World, Cancel Contrary Motion);
 				End;
 			End;
 			If(And(Globale.PemainAktif.ModeTerbangAktif == True, And(Or(Globale.PemainAktif.EfekNasib != 2, Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Globale.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Globale.PemainAktif)) > 0.010))));

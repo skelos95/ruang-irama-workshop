@@ -1110,10 +1110,23 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Y Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
+            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Z Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
             "",
         )
         self.assert_rejected(mutated, "koreksi arah 3D Fly")
+
+    def test_fly_pitch_requires_z_throttle_component(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "If((Z Component Of(Throttle Of(Global.PemainAktif))) > 0.050);",
+            "If((Y Component Of(Throttle Of(Global.PemainAktif))) > 0.050);",
+        )
+        old = "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Z Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);"
+        new = "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Y Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);"
+        self.assertIn(old, mutated, f"fixture token not found: {old}")
+        mutated = mutated.replace(old, new, 1)
+        self.assert_rejected(mutated, "asse Z del throttle")
 
     def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
