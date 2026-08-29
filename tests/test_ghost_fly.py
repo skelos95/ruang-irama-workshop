@@ -206,24 +206,23 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             self.assertRegex(
                 packed,
-                r"Else;StopTransformingThrottle\(EventPlayer\);SetGravity\(EventPlayer,100\);",
+                r"Else;If\(Or\(EventPlayer\.EfekNasib!=2,EventPlayer\.EfekNasibBerakhir<=TotalTimeElapsed\)\);"
+                r"StopAccelerating\(EventPlayer\);End;StopTransformingThrottle\(EventPlayer\);SetGravity\(EventPlayer,100\);",
             )
             self.assertIn("EventPlayer.FisikaHantuTerbangDiterapkan=True;", packed)
             self.assertNotIn("Start Accelerating(", physics)
             self.assertNotIn("Movement Collision With Players", physics)
 
-    def test_fly_forward_input_uses_view_direction_while_other_axes_stay_native(self) -> None:
+    def test_fly_forward_input_accelerates_gradually_along_the_full_view(self) -> None:
         for source, global_name in self.sources:
-            cycle = subroutine(source, "ProsesSiklusPemain")
-            packed = compact(cycle)
+            packed = compact(subroutine(source, "ProsesSiklusPemain"))
+            self.assertIn(f"(ZComponentOf(ThrottleOf({global_name}.PemainAktif)))>0.050", packed)
             self.assertIn(
-                f"MagnitudeOf(ThrottleOf({global_name}.PemainAktif))>0.050",
+                f"StartAccelerating({global_name}.PemainAktif,FacingDirectionOf({global_name}.PemainAktif),6,20,ToWorld,DirectionRateandMaxSpeed);",
                 packed,
             )
             self.assertIn(
-                f"ApplyImpulse({global_name}.PemainAktif,FacingDirectionOf({global_name}.PemainAktif),"
-                f"(ZComponentOf(ThrottleOf({global_name}.PemainAktif)))*9,"
-                f"ToWorld,CancelContraryMotion);",
+                f"Or({global_name}.PemainAktif.EfekNasib!=2,{global_name}.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
                 packed,
             )
             self.assertNotIn(f"FacingDirectionOf({global_name}.PemainAktif)*-1", packed)
@@ -267,6 +266,17 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 acceleration_branch,
             )
             self.assertNotIn(f"If({global_name}.PemainAktif.ModeTerbangAktif==False);", acceleration_branch)
+
+    def test_death_rearms_and_jump_resurrect_reapplies_fly_physics(self) -> None:
+        for source, _ in self.sources:
+            death = rule_with(source, "Player Died", "Event Player.PosisiMati = Position Of(Event Player);")
+            self.assertIn("Event Player.FisikaHantuTerbangDiterapkan = False;", death)
+            self.assertIn("Stop Accelerating(Event Player);", death)
+            resurrect = rule_with(source, "Resurrect(Event Player);", "Button(Jump)")
+            self.assertIn("Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
+            self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
+            self.assertLess(resurrect.index("Call Subroutine(EfekPulihkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
+            self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
 
     def test_fresh_setup_and_true_cleanup_restore_safe_defaults(self) -> None:
         for source, _ in self.sources:

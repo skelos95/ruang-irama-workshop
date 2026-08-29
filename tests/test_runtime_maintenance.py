@@ -54,7 +54,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
     def test_safe_position_is_shared_by_player_teleports_and_resurrect(self):
         for source in (self.it, self.en):
             self.assertIn("57: CariPosisiTeleportAman", source)
-            self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportAman);"), 5)
+            self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportAman);"), 4)
             self.assertIn("Ray Cast Hit Position(Event Player.PosisiTeleportTujuan + Vector(0, 1, 0)", source)
 
     def test_burning_suspends_unkillable_and_scales_with_max_health(self):
@@ -147,28 +147,19 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri", source)
             self.assertIn("Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget", source)
 
-    def test_jump_resurrect_keeps_safe_death_spot_and_teleports_only_void_rescue(self):
+    def test_jump_resurrect_always_uses_nearest_walkable_without_spawn_fallback(self):
         for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             resurrect = source.split(f'{rule_kw}("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")', 1)[1].split(f'{rule_kw}("12g - Bangkit Lompat', 1)[0]
-            self.assertNotIn("No safe resurrection position was found.", source)
-            self.assertNotIn("Tidak ada posisi bangkit yang aman.", source)
-            self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", resurrect)
-            self.assertIn("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)", resurrect)
-            self.assertIn("Count Of(Spawn Points(Team Of(Event Player))) > 0", resurrect)
-            self.assertIn("Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));", resurrect)
-            self.assertNotIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(First Of(Spawn Points(Team Of(Event Player)))));", resurrect)
-            self.assertIn("Resurrect(Event Player);", resurrect)
-            self.assertNotIn("Random Real(", resurrect)
+            self.assertIn("Event Player.PosisiBangkitAman = Vector(0, 0, 0);", resurrect)
             self.assertIn("Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
+            self.assertIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
+            self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
+            self.assertNotIn("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0)", resurrect)
             self.assertEqual(resurrect.count("Teleport(Event Player, Event Player.PosisiBangkitAman);"), 1)
-            self.assertIn("No safe ground was found.", resurrect)
-            self.assertIn("Abort;", resurrect)
-            self.assertLess(
-                resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"),
-                resurrect.index("Resurrect(Event Player);"),
-            )
+            self.assertLess(resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"), resurrect.index("Resurrect(Event Player);"))
+            self.assertIn("Event Player.FisikaHantuTerbangDiterapkan = False;", resurrect)
+            self.assertIn("Call Subroutine(TerapkanFisikaHantuTerbang);", resurrect)
             self.assertNotIn("Start Forcing Player Position(", source)
-
 
     def test_custom_string_uses_at_most_three_substitution_values(self):
         for source in (self.it, self.en):

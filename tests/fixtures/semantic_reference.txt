@@ -2375,6 +2375,9 @@ rule("99o - Subrutin: Terapkan fisika Mode Hantu / Terbang")
 			Set Gravity(Event Player, 0);
 			Start Transforming Throttle(Event Player, 1, 1, Facing Direction Of(Event Player));
 		Else;
+			If(Or(Event Player.EfekNasib != 2, Event Player.EfekNasibBerakhir <= Total Time Elapsed));
+				Stop Accelerating(Event Player);
+			End;
 			Stop Transforming Throttle(Event Player);
 			Set Gravity(Event Player, 100);
 			If(Magnitude Of(Velocity Of(Event Player)) > 0.010);
@@ -2495,10 +2498,12 @@ rule("12e - Bangkit Lompat: Simpan posisi kematian")
 	actions
 	{
 		Event Player.PosisiMati = Position Of(Event Player);
+		Event Player.FisikaHantuTerbangDiterapkan = False;
+		Stop Accelerating(Event Player);
 		Event Player.BangkitLompatDipakai = False;
 		Event Player.PerintahMenu = 0;
 		Event Player.PerintahTeleportasi = 0;
-		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: resurrect here, or at safety if you fell into the void.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit di sini, atau di tempat aman jika jatuh ke jurang.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นที่เดิม หรือจุดปลอดภัยหากตกเหว", Input Binding String(Button(Jump))));
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: resurrect at the nearest safe walkable position.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit di posisi aman terdekat.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นที่ตำแหน่งเดินได้ที่ปลอดภัยใกล้ที่สุด", Input Binding String(Button(Jump))));
 	}
 }
 
@@ -2525,27 +2530,20 @@ rule("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 	actions
 	{
 		Event Player.BangkitLompatDipakai = True;
-		Event Player.PosisiBangkitAman = Event Player.PosisiMati;
-		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500);
-			"Hanya kematian di atas jurang yang dipindah ke Nearest Walkable Position sebelum Resurrect; kematian di tanah tetap di posisi asli."
-			Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);
-			Call Subroutine(CariPosisiTeleportAman);
-			If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-				If(Count Of(Spawn Points(Team Of(Event Player))) > 0);
-					Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));
-					Call Subroutine(CariPosisiTeleportAman);
-				End;
-			End;
-			If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe ground was found. Release {0} and try again.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada tanah aman. Lepaskan {0} lalu coba lagi.", Input Binding String(Button(Jump))) : Custom String("ไม่พบพื้นปลอดภัย ปล่อย {0} แล้วลองอีกครั้ง", Input Binding String(Button(Jump))));
-				Abort;
-			End;
-			Teleport(Event Player, Event Player.PosisiBangkitAman);
+		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+		Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);
+		Call Subroutine(CariPosisiTeleportAman);
+		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe ground was found. Release {0} and try again.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada tanah aman. Lepaskan {0} lalu coba lagi.", Input Binding String(Button(Jump))) : Custom String("ไม่พบพื้นปลอดภัย ปล่อย {0} แล้วลองอีกครั้ง", Input Binding String(Button(Jump))));
+			Abort;
 		End;
+		Teleport(Event Player, Event Player.PosisiBangkitAman);
 		Resurrect(Event Player);
 		If(Is Alive(Event Player) == True);
 			Call Subroutine(EfekPulihkan);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 0.100 ? Custom String("Resurrected at your death spot.") : Custom String("Void rescue: resurrected at a safe position.") : Event Player.IndeksBahasa == 1 ? Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 0.100 ? Custom String("Bangkit kembali di lokasi kematian.") : Custom String("Diselamatkan dari jurang: bangkit di posisi aman.") : Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 0.100 ? Custom String("ฟื้นที่จุดตายแล้ว") : Custom String("ช่วยจากเหวแล้ว ฟื้นที่จุดปลอดภัย"));
+			Event Player.FisikaHantuTerbangDiterapkan = False;
+			Call Subroutine(TerapkanFisikaHantuTerbang);
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Resurrected at the nearest safe walkable position.") : Event Player.IndeksBahasa == 1 ? Custom String("Bangkit kembali di posisi aman terdekat.") : Custom String("ฟื้นที่ตำแหน่งเดินได้ที่ปลอดภัยใกล้ที่สุดแล้ว"));
 		End;
 	}
 }
@@ -3467,11 +3465,13 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				End;
 				Global.PemainAktif.FisikaHantuTerbangDiterapkan = True;
 			End;
-			If(And(Global.PemainAktif.ModeTerbangAktif == True, Magnitude Of(Throttle Of(Global.PemainAktif)) > 0.050));
-				"Impuls pitch hanya mengikuti input maju; input lain tetap ditangani throttle transform agar kontrol lengkap."
-				If((Z Component Of(Throttle Of(Global.PemainAktif))) > 0.050);
-					Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Z Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);
+			If(And(Global.PemainAktif.ModeTerbangAktif == True, (Z Component Of(Throttle Of(Global.PemainAktif))) > 0.050));
+				"Menahan maju mempercepat Fly bertahap sampai 20 m/s; Acceleration Coba Nasib tetap punya prioritas."
+				If(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed));
+					Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 6, 20, To World, Direction Rate and Max Speed);
 				End;
+			Else If(And(Global.PemainAktif.ModeTerbangAktif == True, And((Z Component Of(Throttle Of(Global.PemainAktif))) <= 0.050, Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed))));
+				Stop Accelerating(Global.PemainAktif);
 			End;
 			If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010))));
 				"Impuls berlawanan meniadakan drift saat tidak ada input."
