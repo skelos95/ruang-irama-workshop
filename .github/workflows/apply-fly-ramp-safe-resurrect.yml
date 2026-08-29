@@ -16,9 +16,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: Apply exact patch
-        run: python tools/apply_fly_resurrect_patch.py
+        run: |
+          python tools/apply_fly_resurrect_patch.py
+          python tools/apply_fly_toggle_stop_patch.py
       - name: Remove temporary helpers
-        run: rm .github/workflows/apply-fly-ramp-safe-resurrect.yml tools/apply_fly_resurrect_patch.py
+        run: rm .github/workflows/apply-fly-ramp-safe-resurrect.yml tools/apply_fly_resurrect_patch.py tools/apply_fly_toggle_stop_patch.py
       - name: Run focused runtime tests
         run: python -m unittest tests.test_ghost_fly tests.test_runtime_maintenance tests.test_validate_workshop
       - name: Validate Workshop source
