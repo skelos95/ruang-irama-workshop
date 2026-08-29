@@ -1110,7 +1110,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Y Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
+            "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), (Z Component Of(Throttle Of(Global.PemainAktif))) * 9, To World, Cancel Contrary Motion);",
             "",
         )
         self.assert_rejected(mutated, "koreksi arah 3D Fly")
