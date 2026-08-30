@@ -167,9 +167,9 @@ Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. T
 
 ## Camera, inspection e Teleport
 
-La Camera usa un solo raycast per risolvere la posizione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
+La Camera usa un solo `Start Camera` e un solo raycast per risolvere la posizione. Posizione e punto osservato restano rivalutati ogni frame, mentre `Blend Speed 75` filtra le variazioni istantanee che altrimenti renderebbero ondulante la rotazione. Target morti, non spawnati, inesistenti o umani con Privacy ON vengono rimossi; una perdita target porta a un fallback valido senza creare più Camera concorrenti. Se un target umano attiva Privacy mentre è osservato, gli osservatori custom già agganciati tornano alla visuale normale.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT con icona eroe, nome e salute rivalutata per ogni bot, dummy e umano; il nome umano proviene dal cache roster stabile. Privacy è OFF per default: quando passa ON, Camera custom, inspection, Teleport e Attach non possono creare o mantenere il riferimento identificativo dell'umano e gli osservatori Camera già attivi vengono sganciati. Vision ignora intenzionalmente questa preferenza e continua a mostrare tutti gli umani per l'intera durata dell'esito.
+Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Le targhette di inspection, Vision e Teleport condividono lo stesso contratto: un solo IWT contiene insieme icona eroe, nome e salute; `Update Every Frame` racchiude l'intero ancoraggio `Eye Position(Evaluate Once(identity)) + Vector(0, 0.450, 0)`; `Evaluate Once` cattura esclusivamente l'identità del soggetto; `Visible To Position String and Color` mantiene la rivalutazione completa di pubblico, posizione, testo e colore. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT per ogni bot, dummy e umano; il nome umano proviene dal cache roster stabile. Privacy è OFF per default: quando passa ON, Camera custom, inspection, Teleport e Attach non possono creare o mantenere il riferimento identificativo dell'umano e gli osservatori Camera già attivi vengono sganciati. Vision ignora intenzionalmente questa preferenza e continua a mostrare tutti gli umani per l'intera durata dell'esito.
 
 La destinazione Teleport viene rivalutata al click:
 
@@ -208,7 +208,7 @@ Target statici:
 - un solo `Loop` globale;
 - massimo 7 `Wait`, ciascuno associato a un percorso autorizzato;
 - stabilizzazione dummy a timestamp, mai tramite un ottavo `Wait`;
-- un solo raycast Camera;
+- un solo `Start Camera`, con `Blend Speed 75`, e un solo raycast Camera;
 - nessuna regola, variabile o subroutine inutilizzata/duplicata;
 - nessun loop o Wait dentro le subroutine chiamate durante una scansione scheduler;
 - un solo handle HUD Arcade attivo per player;

@@ -159,6 +159,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 Per ciascun esito:
 
 - durante ogni passaggio della roulette l'icona corrente deve restare agganciata a occhio/mirino con aggiornamento ogni frame; eseguire movimento, rotazione continua e inversione di 180° senza scatti o salti verso altri player;
+- durante Vision seguire un soggetto che cammina, salta, cambia salute, colore ed eroe: un'unica targhetta con icona, nome e salute deve restare fluida sopra la stessa identità e aggiornare tutti i campi; ripetere mentre un altro player entra o esce;
 - quando Skull compare soltanto come icona intermedia, il player deve restare vivo; il retry può iniziare esclusivamente se Skull è l'esito finale;
 - durante la stessa roulette eseguire join/leave di un umano: la reevaluation `Visible To and Position` deve rendere tutte le sei icone visibili al roster umano corrente, senza includere bot;
 - con Acceleration, lasciare completamente i tasti direzionali: il player deve partire da solo; ruotare poi la visuale davanti, in alto e in basso e verificare che `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed` segua continuamente la direzione 3D corrente;
@@ -223,12 +224,13 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Cambiare rapidamente target senza frame di Camera concorrenti.
 - Uccidere, far uscire o despawnare il target: il riferimento deve tornare valido.
 - Verificare collisione pareti e pitch estremo.
+- Ruotare lentamente, rapidamente e di 180° da fermi, in corsa, in salto e vicino a pareti/angoli: `Blend Speed 75` deve eliminare vibrazione ed effetto ondulante senza introdurre clipping persistente o ritardo incontrollabile.
 - Confermare che esista un solo raycast Camera dal punto di vista funzionale.
 
 ### Inspection e Privacy
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
-- Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
+- Verificare icona eroe, nome e salute nello stesso IWT, ancorato 0,450 m sopra `Eye Position`; durante corsa, strafe, salto e rotazione continua la targhetta deve seguire fluidamente la stessa identità, aggiornando salute, eroe e colore senza vibrare o trasferirsi al target successivo. Nessuna percentuale Ultimate.
 - Nuovo player o vero rejoin: Privacy OFF e cursore OFF per default; un cambio squadra leggero conserva invece lo stato e il cursore scelti.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision ne mostra icona, nome e salute.
 - Privacy ON: Camera custom, inspection, Teleport e Attach non possono scegliere o identificare il player; Vision deve comunque mostrarne icona, nome e salute.
@@ -243,6 +245,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Crouch + Primary/Secondary navigano rispettivamente alla pagina successiva/precedente; Crouch + Interact esegue la pagina attiva.
 - Spawn Room usa un punto valido della squadra.
 - All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy.
+- Nelle pagine Player/Bot Travel e Attach, muovere e cambiare stato del target: la singola targhetta icona/nome/salute deve seguire fluidamente l'identità selezionata e aggiornare testo e colore; cambiando target il vecchio handle non deve spostarsi sul nuovo soggetto.
 - Ricalcolare il target al click; morte/leave tra preview e click deve annullare o scegliere soltanto un fallback esplicito.
 - Destinazione finale sempre camminabile o annullata in sicurezza.
 

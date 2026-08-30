@@ -78,6 +78,65 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed_setup = setup.body[:closing] + f"\n\t\tEvent Player.{name} = {initial_value};" + setup.body[closing:]
         return mutated[:setup.start] + changed_setup + mutated[setup.end:]
 
+    def world_name_iwts(self) -> dict[str, tuple[validator.Rule, validator.Call, str]]:
+        specs = (
+            (
+                "inspection",
+                "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;",
+                "Event Player.TargetInspeksi",
+            ),
+            (
+                "Vision",
+                "Event Player.TeksVisiNasib = Last Text ID;",
+                "Event Player",
+            ),
+            (
+                "Teleport",
+                "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;",
+                "Event Player.CalonTargetTeleportasi",
+            ),
+        )
+        contracts: dict[str, tuple[validator.Rule, validator.Call, str]] = {}
+        for label, marker, subject in specs:
+            rule = self.rule(
+                lambda candidate, marker=marker: marker in candidate.body
+                and "Create In-World Text(" in candidate.body
+            )
+            calls = list(validator.iter_calls(rule.body, "Create In-World Text"))
+            self.assertEqual(len(calls), 1, f"IWT {label}: numero Create In-World Text")
+            call = calls[0]
+            self.assertGreaterEqual(len(call.args), 6, f"IWT {label}: chiamata malformata")
+            contracts[label] = (
+                rule,
+                validator.Call(
+                    call.name,
+                    call.raw,
+                    call.args,
+                    rule.start + call.start,
+                    rule.start + call.end,
+                ),
+                subject,
+            )
+        return contracts
+
+    def start_camera_calls(self) -> list[tuple[validator.Rule, validator.Call]]:
+        calls: list[tuple[validator.Rule, validator.Call]] = []
+        for rule in validator.extract_rules(self.source):
+            for call in validator.iter_calls(rule.body, "Start Camera"):
+                calls.append(
+                    (
+                        rule,
+                        validator.Call(
+                            call.name,
+                            call.raw,
+                            call.args,
+                            rule.start + call.start,
+                            rule.start + call.end,
+                        ),
+                    )
+                )
+        return calls
+
     def test_official_source_passes_all_semantic_checks(self) -> None:
         self.assertEqual(self.errors(self.source), [])
 
@@ -2767,6 +2826,100 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(absolute, 1, changed_text)
         self.assert_rejected(mutated, "ordine icona, nome e salute")
 
+    def test_world_name_iwts_use_one_full_frame_updated_position(self) -> None:
+        for label, (_, call, subject) in self.world_name_iwts().items():
+            with self.subTest(iwt=label):
+                expected_position = (
+                    f"Update Every Frame(Eye Position(Evaluate Once({subject})) "
+                    "+ Vector(0, 0.450, 0))"
+                )
+                self.assertEqual(
+                    re.sub(r"\s+", "", call.args[2]),
+                    re.sub(r"\s+", "", expected_position),
+                )
+                updates = list(validator.iter_calls(call.args[2], "Update Every Frame"))
+                self.assertEqual(len(updates), 1)
+                self.assertEqual(updates[0].raw.strip(), call.args[2].strip())
+                captures = list(validator.iter_calls(call.args[2], "Evaluate Once"))
+                self.assertEqual(len(captures), 1)
+                self.assertEqual(len(captures[0].args), 1)
+                self.assertEqual(captures[0].args[0].strip(), subject)
+                self.assertEqual(call.args[5].strip(), "Visible To Position String and Color")
+
+    def test_world_name_iwt_update_every_frame_must_wrap_the_whole_position_once(self) -> None:
+        for label, (_, call, subject) in self.world_name_iwts().items():
+            mutations = {
+                "missing": (
+                    f"Eye Position(Evaluate Once({subject})) + Vector(0, 0.450, 0)"
+                ),
+                "partial": (
+                    f"Update Every Frame(Eye Position(Evaluate Once({subject}))) "
+                    "+ Vector(0, 0.450, 0)"
+                ),
+                "duplicate": (
+                    "Update Every Frame(Update Every Frame("
+                    f"Eye Position(Evaluate Once({subject})) + Vector(0, 0.450, 0)))"
+                ),
+            }
+            for kind, position in mutations.items():
+                with self.subTest(iwt=label, mutation=kind):
+                    mutated = self.replace_call_argument(call, 2, position)
+                    self.assert_rejected(
+                        mutated,
+                        f"IWT {label}: posizione fluida Update Every Frame",
+                    )
+
+    def test_world_name_iwt_evaluate_once_captures_only_the_correct_subject(self) -> None:
+        wrong_subjects = {
+            "inspection": "Event Player.CalonTargetInspeksi",
+            "Vision": "Event Player.TargetInspeksi",
+            "Teleport": "Event Player.TargetTeleportasiTeks",
+        }
+        for label, (_, call, subject) in self.world_name_iwts().items():
+            mutations = {
+                "missing": (
+                    f"Update Every Frame(Eye Position({subject}) + Vector(0, 0.450, 0))"
+                ),
+                "duplicate": (
+                    "Update Every Frame(Eye Position(Evaluate Once(Evaluate Once("
+                    f"{subject}))) + Vector(0, 0.450, 0))"
+                ),
+                "whole-position": (
+                    "Update Every Frame(Evaluate Once("
+                    f"Eye Position({subject}) + Vector(0, 0.450, 0)))"
+                ),
+                "wrong-subject": (
+                    "Update Every Frame(Eye Position(Evaluate Once("
+                    f"{wrong_subjects[label]})) + Vector(0, 0.450, 0))"
+                ),
+            }
+            for kind, position in mutations.items():
+                with self.subTest(iwt=label, mutation=kind):
+                    mutated = self.replace_call_argument(call, 2, position)
+                    self.assert_rejected(
+                        mutated,
+                        f"IWT {label}: Evaluate Once deve catturare soltanto l'identità",
+                    )
+
+    def test_world_name_iwt_anchor_keeps_the_head_offset(self) -> None:
+        for label, (_, call, subject) in self.world_name_iwts().items():
+            with self.subTest(iwt=label):
+                wrong_anchor = (
+                    f"Update Every Frame(Eye Position(Evaluate Once({subject})) "
+                    "+ Vector(0, 1, 0))"
+                )
+                mutated = self.replace_call_argument(call, 2, wrong_anchor)
+                self.assert_rejected(
+                    mutated,
+                    f"IWT {label}: ancoraggio fluido sopra l'identità",
+                )
+
+    def test_world_name_iwts_keep_full_reevaluation(self) -> None:
+        for label, (_, call, _) in self.world_name_iwts().items():
+            with self.subTest(iwt=label):
+                mutated = self.replace_call_argument(call, 5, "Visible To String and Color")
+                self.assert_rejected(mutated, f"IWT {label}: reevaluation completa")
+
     def test_inspection_crouch_is_blocked_during_vision(self) -> None:
         inspection = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
@@ -2881,6 +3034,32 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.source[:camera_rule.start] + mutated_body + self.source[camera_rule.end:]
         self.assert_rejected(mutated, "raycast Camera")
+
+    def test_camera_start_is_shared_once_with_blend_speed_75(self) -> None:
+        calls = self.start_camera_calls()
+        self.assertEqual(len(calls), 1)
+        rule, call = calls[0]
+        self.assertEqual(validator.subroutine_target(rule), "MulaiKamera")
+        self.assertEqual(len(call.args), 4)
+        self.assertEqual(call.args[3].strip(), "75")
+
+    def test_camera_blend_speed_75_is_guarded(self) -> None:
+        calls = self.start_camera_calls()
+        self.assertEqual(len(calls), 1)
+        _, call = calls[0]
+        mutated = self.replace_call_argument(call, 3, "0")
+        self.assert_rejected(mutated, "Camera deve usare Blend Speed 75")
+
+    def test_camera_start_cannot_escape_the_shared_subroutine(self) -> None:
+        calls = self.start_camera_calls()
+        self.assertEqual(len(calls), 1)
+        _, call = calls[0]
+        foreign_rule = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.InteraksiKameraDipakai = False;" in rule.body
+        )
+        mutated = self.inject_action(foreign_rule, call.raw + ";")
+        self.assert_rejected(mutated, "un solo Start Camera in MulaiKamera")
 
     def test_safe_position_cannot_lose_the_vertical_floor_check(self) -> None:
         safe = self.rule(

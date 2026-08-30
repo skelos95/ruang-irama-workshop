@@ -4674,6 +4674,93 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         re.DOTALL,
     )
 
+    def validate_fluid_iwt(rule: Rule | None, label: str, identity: str) -> None:
+        if rule is None:
+            return
+        calls = list(iter_calls(rule.body, "Create In-World Text"))
+        checks.equal(
+            len(calls),
+            1,
+            f"IWT {label}: icona, nome e salute devono restare in un solo testo",
+        )
+        if len(calls) != 1:
+            return
+        call = calls[0]
+        checks.require(
+            len(call.args) >= 6,
+            f"IWT {label}: Create In-World Text malformato",
+        )
+        if len(call.args) < 6:
+            return
+
+        text = call.args[1].strip()
+        outer_texts = [
+            nested
+            for nested in iter_calls(text, "Custom String")
+            if nested.start == 0 and nested.end == len(text)
+        ]
+        single_text = len(outer_texts) == 1
+        if single_text:
+            outer_text = outer_texts[0]
+            single_text = (
+                len(outer_text.args) == 4
+                and parse_literal(outer_text.args[0]) == "{0} {1} | {2}"
+                and "Hero Icon String(" in outer_text.args[1]
+                and "NamaTampilan" in outer_text.args[2]
+                and "Health(" in outer_text.args[3]
+            )
+        checks.require(
+            single_text,
+            f"IWT {label}: icona, nome e salute devono restare in un solo testo",
+        )
+
+        position = call.args[2].strip()
+        frame_updates = list(iter_calls(position, "Update Every Frame"))
+        full_frame_update = (
+            len(frame_updates) == 1
+            and frame_updates[0].start == 0
+            and frame_updates[0].end == len(position)
+            and len(frame_updates[0].args) == 1
+        )
+        checks.require(
+            full_frame_update,
+            f"IWT {label}: posizione fluida Update Every Frame",
+        )
+        if full_frame_update:
+            dynamic_position = frame_updates[0].args[0]
+            expected_position = (
+                f"Eye Position(Evaluate Once({identity})) + Vector(0, 0.450, 0)"
+            )
+            checks.equal(
+                re.sub(r"\s+", "", dynamic_position),
+                re.sub(r"\s+", "", expected_position),
+                f"IWT {label}: ancoraggio fluido sopra l'identità",
+            )
+            captures = list(iter_calls(dynamic_position, "Evaluate Once"))
+            identity_capture = (
+                len(captures) == 1
+                and len(captures[0].args) == 1
+                and re.sub(r"\s+", "", captures[0].args[0]) == re.sub(r"\s+", "", identity)
+            )
+            if identity_capture:
+                without_capture = (
+                    dynamic_position[:captures[0].start]
+                    + dynamic_position[captures[0].end:]
+                )
+                identity_capture = re.sub(r"\s+", "", identity) not in re.sub(
+                    r"\s+", "", without_capture
+                )
+            checks.require(
+                identity_capture,
+                f"IWT {label}: Evaluate Once deve catturare soltanto l'identità",
+            )
+
+        checks.equal(
+            call.args[5].strip(),
+            "Visible To Position String and Color",
+            f"IWT {label}: reevaluation completa",
+        )
+
     privacy_false_pattern = re.compile(
         r"Player Variable\(\s*Current Array Element\s*,\s*PrivasiInspeksiAktif\)\s*==\s*False",
         re.DOTALL,
@@ -4756,6 +4843,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                        "inspection non disabilita i nameplate nativi")
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
                        "inspection può mostrare nameplate di umani privati")
+    validate_fluid_iwt(inspection_live, "inspection", "Event Player.TargetInspeksi")
 
     cycle_targets = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle_targets is not None, "scheduler 10 Hz assente per target cache")
@@ -4814,6 +4902,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                        "teleport non disabilita i nameplate nativi")
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in teleport_text.body,
                        "teleport può mostrare nameplate di umani privati")
+    validate_fluid_iwt(teleport_text, "Teleport", "Event Player.CalonTargetTeleportasi")
 
     vision_names = next(
         (
@@ -4891,6 +4980,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                     )
                 checks.equal(vision_call.args[5].strip(), "Visible To Position String and Color",
                              "Vision deve rivalutare destinatari, posizione, testo e colore")
+    validate_fluid_iwt(vision_names, "Vision", "Event Player")
 
     vision_cleanup = next(
         (
@@ -5732,8 +5822,35 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
             )
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
+    camera_calls = [
+        (rule, call)
+        for rule in rules
+        for call in iter_calls(rule.body, "Start Camera")
+    ]
+    checks.equal(
+        len(camera_calls),
+        1,
+        "Camera deve avere un solo Start Camera in MulaiKamera",
+    )
+    if len(camera_calls) == 1:
+        checks.require(
+            subroutine_target(camera_calls[0][0]) == "MulaiKamera",
+            "Camera deve avere un solo Start Camera in MulaiKamera",
+        )
     if camera_rule:
         checks.equal(camera_rule.body.count("Ray Cast Hit Position("), 1, "raycast Camera")
+        start_calls = list(iter_calls(camera_rule.body, "Start Camera"))
+        checks.equal(
+            len(start_calls),
+            1,
+            "Camera deve avere un solo Start Camera in MulaiKamera",
+        )
+        if len(start_calls) == 1:
+            checks.require(
+                len(start_calls[0].args) == 4
+                and start_calls[0].args[3].strip() == "75",
+                "Camera deve usare Blend Speed 75",
+            )
 
 
 def validate_indonesian_and_duplicates(checks: Checks, source: str, rules: list[Rule]) -> None:
