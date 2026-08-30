@@ -33,6 +33,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             teleport = source.split(f'{rule_kw}("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")', 1)[1].split(f'{rule_kw}("19e - Teleportasi Jongkok', 1)[0]
             self.assertIn("Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)", teleport)
 
+            vision = source.split(f'{rule_kw}("18i - Nasib: Visi', 1)[1].split(f'{rule_kw}("18j - Nasib: Bersihkan nama visi', 1)[0]
+            self.assertIn(
+                'Event Player.Manusia == True ? Event Player.NamaTampilan : Custom String("{0}", Event Player)',
+                vision,
+            )
+
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin', 1)[0]
             cache_invalid = f'Or({global_name}.PemainAktif.NamaTampilan == Null, {global_name}.PemainAktif.NamaTampilan == Custom String("") )'.replace('"") )', '""))')
             self.assertIn(cache_invalid, fast)
@@ -71,12 +77,27 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("JarakBidik = 25;", source)
 
     def test_native_completion_and_timer_are_bound_to_custom_countdown(self):
-        for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
+        for source, global_name, rule_kw in (
+            (self.it, "Globale", "regola"),
+            (self.en, "Global", "rule"),
+        ):
             self.assertIn("Disable Built-In Game Mode Completion;", source)
             self.assertIn(f"Set Match Time(Max(1, {global_name}.SisaWaktuServer + 5));", source)
             self.assertIn("Is Game In Progress == True", source)
             self.assertIn(f"{global_name}.SisaWaktuServer > 0", source)
-
+            scheduler = source.split(
+                f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1
+            )[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
+            cadence = (
+                f"If(And({global_name}.LangkahPenjadwal % 20 == 0, "
+                f"{global_name}.MulaiUlangSudahDiminta == False));"
+            )
+            cadence_position = scheduler.index(cadence)
+            sync_position = scheduler.index(
+                f"Set Match Time(Max(1, {global_name}.SisaWaktuServer + 5));"
+            )
+            outer_end = scheduler.index("\n\t\tEnd;", cadence_position)
+            self.assertLess(sync_position, outer_end)
 
     def test_crouch_teleport_has_five_pages_and_single_shot_self_kill(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
@@ -275,7 +296,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainPembersihan = Event Player;", cleanup)
             self.assertIn(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainPembersihan);", cleanup)
             self.assertNotIn("Index Of Array Value(" + global_name + ".SlotHUDPemain", cleanup)
-            self.assertNotIn("For Global Variable(", cleanup)
+            self.assertEqual(cleanup.count("For Global Variable("), 1)
+            self.assertIn(
+                f"For Global Variable(IndeksPemilih, 0, Count Of({global_name}.PemainManusia), 1);",
+                cleanup,
+            )
             self.assertEqual(cleanup.count("Filtered Array("), 1)
             self.assertIn(
                 f"Set Player Variable(Filtered Array({global_name}.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == {global_name}.PemainPembersihan), PemainDipilih, Null);",
@@ -284,6 +309,14 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Allow Button(", cleanup)
             self.assertNotIn("Clear Status(", cleanup)
             self.assertNotIn("Set Move Speed(", cleanup)
+            self.assertIn(
+                f"Modify Player Variable({global_name}.PemainManusia[{global_name}.IndeksPemilih], PembunuhBalasDendam, Remove From Array By Index, {global_name}.IndeksDendamKeluar);",
+                cleanup,
+            )
+            self.assertIn(
+                f"Modify Player Variable({global_name}.PemainManusia[{global_name}.IndeksPemilih], JumlahBalasDendam, Remove From Array By Index, {global_name}.IndeksDendamKeluar);",
+                cleanup,
+            )
             self.assertIn("Remove From Array By Index", cleanup)
 
 

@@ -861,6 +861,33 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
         self.assert_rejected(mutated, "14 subroutine pagina")
 
+    def test_menu_page_engine_actions_cannot_target_all_players(self) -> None:
+        apply_color = self.rule(
+            lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanWarna"
+        )
+        mutated = self.inject_action(
+            apply_color,
+            "Set Gravity(All Players(All Teams), 50);",
+        )
+        self.assert_rejected(mutated, "isolamento menu per-player")
+
+    def test_menu_subroutines_cannot_use_scheduler_scratch_or_local_viewer(self) -> None:
+        apply_color = self.rule(
+            lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanWarna"
+        )
+        mutated = self.inject_action(
+            apply_color,
+            "Global.PemainAktif.KursorWarna = 2;",
+        )
+        self.assert_rejected(mutated, "scratch globale o viewer locale")
+
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarWarna")
+        mutated = self.inject_action(
+            renderer,
+            'Small Message(Local Player, Custom String("leak"));',
+        )
+        self.assert_rejected(mutated, "scratch globale o viewer locale")
+
     def test_menu_dispatch_requires_crouch(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player" and "PerintahMenu" in rule.body and "Button(Ability 2)" in rule.body)
         mutated = self.replace_in_rule(dispatcher, "Is Button Held(Event Player, Button(Crouch)) == True;", "Is Button Held(Event Player, Button(Crouch)) == False;")
@@ -1082,10 +1109,59 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 6, 20, To World, Direction Rate and Max Speed);",
+            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 6, 20, To World, Direction Rate and Max Speed);",
             "",
         )
         self.assert_rejected(mutated, "accelerazione Fly graduale")
+
+    def test_fly_forward_requires_the_local_forward_throttle_component(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Z Component Of(Throttle Of(Global.PemainAktif))",
+            "Dot Product(Throttle Of(Global.PemainAktif), Facing Direction Of(Global.PemainAktif))",
+        )
+        self.assert_rejected(mutated, "componente locale Z")
+
+    def test_fly_forward_stop_requires_the_local_forward_throttle_component(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "Z Component Of(Throttle Of(Global.PemainAktif)) <= 0.050",
+            "Dot Product(Throttle Of(Global.PemainAktif), Facing Direction Of(Global.PemainAktif)) <= 0.050",
+        )
+        self.assert_rejected(mutated, "arresto accelerazione Fly")
+
+    def test_fly_dynamic_actions_capture_the_scheduler_player_identity(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        for captured, naked in (
+            (
+                "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
+                "Facing Direction Of(Global.PemainAktif)",
+            ),
+        ):
+            with self.subTest(action="transforming throttle"):
+                transform = (
+                    "Start Transforming Throttle(Global.PemainAktif, 1, 1, "
+                    f"{captured});"
+                )
+                mutated = self.replace_in_rule(
+                    cycle,
+                    transform,
+                    transform.replace(captured, naked),
+                )
+                self.assert_rejected(mutated, "identità player catturata")
+            with self.subTest(action="accelerating"):
+                acceleration = (
+                    "Start Accelerating(Global.PemainAktif, "
+                    f"{captured}, 6, 20, To World, Direction Rate and Max Speed);"
+                )
+                mutated = self.replace_in_rule(
+                    cycle,
+                    acceleration,
+                    acceleration.replace(captured, naked),
+                )
+                self.assert_rejected(mutated, "identità player catturata")
 
     def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -1103,6 +1179,27 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "",
         )
         self.assert_rejected(mutated, "impulso esattamente opposto alla deriva")
+
+    def test_fly_actions_cannot_escape_their_per_player_input_guards(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        for action, fragment in (
+            (
+                "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 6, 20, To World, Direction Rate and Max Speed);",
+                "guardia per-player Fly+input forward",
+            ),
+            (
+                "Apply Impulse(Global.PemainAktif, Velocity Of(Global.PemainAktif) * -1, Magnitude Of(Velocity Of(Global.PemainAktif)), To World, Incorporate Contrary Motion);",
+                "guardia idle per-player",
+            ),
+        ):
+            with self.subTest(action=action):
+                self.assertIn(action, cycle.body)
+                changed = cycle.body.replace(action, "", 1)
+                closing = changed.rfind("\n\t}")
+                self.assertGreater(closing, 0)
+                changed = changed[:closing] + f"\n\t\t{action}" + changed[closing:]
+                mutated = self.source[:cycle.start] + changed + self.source[cycle.end:]
+                self.assert_rejected(mutated, fragment)
 
     def test_try_your_luck_cannot_restore_gravity_or_fly_throttle(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
@@ -1314,10 +1411,17 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
         mutated = self.replace_in_rule(
             processor,
-            "Create Icon(All Players(All Teams), Global.PemainAktif, Halo, Visible To and Position, Global.RGB, True);",
+            "Create Icon(All Players(All Teams), Evaluate Once(Global.PemainAktif), Halo, Visible To and Position, Global.RGB, True);",
             "",
         )
         self.assert_rejected(mutated, "deve ricreare le icone 1 HP e FULL HP")
+
+        mutated = self.replace_in_rule(
+            processor,
+            "Create Icon(All Players(All Teams), Evaluate Once(Global.PemainAktif), Halo, Visible To and Position, Global.RGB, True);",
+            "Create Icon(All Players(All Teams), Global.PemainAktif, Halo, Visible To and Position, Global.RGB, True);",
+        )
+        self.assert_rejected(mutated, "identità owner catturata")
 
         mutated = self.replace_in_rule(
             processor,
@@ -1735,6 +1839,20 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(death_cleanup, "Stop Accelerating(Event Player);", "")
         self.assert_rejected(mutated, "cleanup accelerazione morte: Stop Accelerating assente")
 
+    def test_player_death_normalizes_ghost_fly_engine_state_before_rearming(self) -> None:
+        death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
+        )
+        for action in (
+            "Stop Transforming Throttle(Event Player);",
+            "Set Gravity(Event Player, 100);",
+            "Enable Movement Collision With Environment(Event Player);",
+        ):
+            with self.subTest(action=action):
+                mutated = self.replace_in_rule(death, action, "")
+                self.assert_rejected(mutated, "morte deve normalizzare")
+
     def test_roulette_icon_is_destroyed_and_cleared_on_all_lifecycle_paths(self) -> None:
         reset = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
         mutated = self.replace_in_rule(reset, "Destroy Icon(Event Player.IkonKartuNasib);", "")
@@ -1742,17 +1860,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(reset, "Event Player.IkonKartuNasib = Null;", "")
         self.assert_rejected(mutated, "cleanup icona roulette morte: azzeramento handle assente")
 
-    def test_heart_heal_excludes_bot_and_dummy_players(self) -> None:
+    def test_heart_heal_is_exclusive_to_the_roulette_owner(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(
             call for call in validator.iter_calls(machine.body, "Set Player Health")
-            if len(call.args) >= 2 and call.args[1].strip() == "9999"
+            if len(call.args) >= 2 and call.args[0].strip() == "Global.PemainAktif"
         )
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
         mutated = self.replace_call_argument(absolute, 0, "All Living Players(Team Of(Global.PemainAktif))")
-        self.assert_rejected(mutated, "cura anche bot/dummy")
+        self.assert_rejected(mutated, "soltanto il proprietario")
 
-    def test_heart_message_excludes_bot_and_dummy_players(self) -> None:
+    def test_heart_message_is_exclusive_to_the_roulette_owner(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
         call = next(
             call for call in validator.iter_calls(machine.body, "Small Message")
@@ -1760,7 +1878,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         absolute = validator.Call(call.name, call.raw, call.args, machine.start + call.start, machine.start + call.end)
         mutated = self.replace_call_argument(absolute, 0, "All Living Players(Team Of(Global.PemainAktif))")
-        self.assert_rejected(mutated, "invia HUD anche a bot/dummy")
+        self.assert_rejected(mutated, "notificare soltanto il proprietario")
 
     def test_global_lifecycle_dispatch_requires_duplicate_guard(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
@@ -2391,6 +2509,37 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 mutated = self.inject_action(cleanup, action)
                 self.assert_rejected(mutated, "BersihkanPemain deve essere atomica")
 
+    def test_leave_cleanup_destroys_every_player_owned_temporary_handle(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
+        for token, handle in (
+            ("Destroy Icon(Global.PemainPembersihan.IkonKartuNasib);", "IkonKartuNasib"),
+            ("Destroy Icon(Global.PemainPembersihan.IkonKebal);", "IkonKebal"),
+            ("Destroy HUD Text(Global.PemainPembersihan.HudEfekNasib);", "HudEfekNasib"),
+            ("Destroy In-World Text(Global.PemainPembersihan.TeksVisiNasib);", "TeksVisiNasib"),
+            ("Destroy In-World Text(Global.PemainPembersihan.TeksTeleportasi);", "TeksTeleportasi"),
+        ):
+            with self.subTest(handle=handle):
+                mutated = self.replace_in_rule(cleanup, token, "")
+                self.assert_rejected(mutated, f"handle orfano: {handle}")
+
+    def test_leave_cleanup_subtracts_the_vote_cast_by_the_leaver(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Modify Player Variable(Global.PemainPembersihan.PemainDipilih, JumlahPilihan, Subtract, 1);",
+            "",
+        )
+        self.assert_rejected(mutated, "voto espresso dal leaver")
+
+    def test_leave_cleanup_removes_revenge_attacker_and_debt_in_tandem(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
+        mutated = self.replace_in_rule(
+            cleanup,
+            "Modify Player Variable(Global.PemainManusia[Global.IndeksPemilih], JumlahBalasDendam, Remove From Array By Index, Global.IndeksDendamKeluar);",
+            "",
+        )
+        self.assert_rejected(mutated, "rimozione debito parallela")
+
     def test_team_switch_lock_releases_only_after_stable_registration(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
@@ -2550,17 +2699,36 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "If(Event Player.PrivasiNasibAktif == True);\n\t\t\tAbort;\n\t\tEnd;",
         )
         self.assert_rejected(mutated, "bypass Privacy tramite Vision")
-    def test_vision_names_exclude_private_human_subjects(self) -> None:
+    def test_vision_names_include_humans_even_with_privacy_enabled(self) -> None:
         vision = self.rule(
             lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
             and "Create In-World Text(" in rule.body
         )
         mutated = self.replace_in_rule(
             vision,
-            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
             "Event Player.Manusia == True",
+            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
         )
-        self.assert_rejected(mutated, "Vision espone un umano con Privacy ON")
+        self.assert_rejected(mutated, "anche con Privacy ON")
+
+    def test_vision_hud_declares_that_all_player_names_are_visible(self) -> None:
+        mutated = self.replace_once(
+            "VISION: ALL PLAYER / BOT NAMES",
+            "VISION: PUBLIC PLAYER / BOT NAMES",
+        )
+        self.assert_rejected(mutated, "testo Vision non dichiara tutti i nomi")
+
+    def test_vision_uses_the_cached_roster_name_for_human_subjects(self) -> None:
+        vision = self.rule(
+            lambda rule: "Event Player.TeksVisiNasib = Last Text ID;" in rule.body
+            and "Create In-World Text(" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            vision,
+            'Event Player.Manusia == True ? Event Player.NamaTampilan : Custom String("{0}", Event Player)',
+            'Custom String("{0}", Event Player)',
+        )
+        self.assert_rejected(mutated, "nome roster stabile")
 
     def test_vision_shows_hero_icon_name_and_live_health(self) -> None:
         vision = self.rule(
@@ -2639,7 +2807,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cleanup Teleport Crouch non reagisce all'avvio di Vision")
 
-    def test_vision_name_cleanup_runs_when_subject_enables_privacy(self) -> None:
+    def test_vision_name_cleanup_does_not_run_when_subject_enables_privacy(self) -> None:
         cleanup = self.rule(
             lambda rule: "Destroy In-World Text(Event Player.TeksVisiNasib);" in rule.body
             and "Event Player.TeksVisiNasib = Null;" in rule.body
@@ -2647,10 +2815,10 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.replace_in_rule(
             cleanup,
-            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True)",
-            "And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == False)",
+            "Is Alive(Event Player) == False",
+            "Or(Is Alive(Event Player) == False, And(Event Player.Manusia == True, Event Player.PrivasiInspeksiAktif == True))",
         )
-        self.assert_rejected(mutated, "cleanup Vision non rimuove subito un umano che attiva Privacy")
+        self.assert_rejected(mutated, "non deve rimuovere un umano che attiva Privacy")
 
     def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
         protected = (
@@ -2714,6 +2882,21 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.source[:camera_rule.start] + mutated_body + self.source[camera_rule.end:]
         self.assert_rejected(mutated, "raycast Camera")
 
+    def test_safe_position_cannot_lose_the_vertical_floor_check(self) -> None:
+        safe = self.rule(
+            lambda rule: validator.subroutine_target(rule) == "CariPosisiTeleportAman"
+        )
+        branch = (
+            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), "
+            "Event Player.PosisiBangkitAman - Vector(0, 20, 0), Empty Array, Empty Array, False), "
+            "Event Player.PosisiBangkitAman) > 6);\n"
+            "\t\t\tEvent Player.PosisiBangkitAman = Vector(0, 0, 0);\n"
+            "\t\t\tAbort;\n"
+            "\t\tEnd;"
+        )
+        mutated = self.replace_in_rule(safe, branch, "")
+        self.assert_rejected(mutated, "raycast terreno verticale")
+
     def test_foreign_custom_rule_title_is_rejected(self) -> None:
         rule = validator.extract_rules(self.source)[0]
         mutated = self.source[:rule.start] + rule.body.replace(rule.name, rule.name + " - English comment", 1) + self.source[rule.end:]
@@ -2744,6 +2927,34 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "hanya saat pertandingan berjalan")
         mutated = self.replace_in_rule(sync_rule, "Global.SisaWaktuServer > 0", "Global.SisaWaktuServer >= 0")
         self.assert_rejected(mutated, "pemicu tunggal restart")
+
+    def test_native_timer_sync_must_stay_inside_the_one_hz_scheduler_branch(self) -> None:
+        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer + 5));"
+        scheduler = self.rule(lambda rule: sync_token in rule.body)
+        nested = (
+            "\t\t\tIf(And(Is Game In Progress == True, Global.SisaWaktuServer > 0));\n"
+            "\t\t\t\t\"Satu kali per detik, tahan penyelesaian mode bawaan dan sinkronkan timer native di atas nol sampai timer server selesai.\"\n"
+            "\t\t\t\tDisable Built-In Game Mode Completion;\n"
+            f"\t\t\t\t{sync_token}\n"
+            "\t\t\tEnd;\n"
+        )
+        self.assertIn(nested, scheduler.body)
+        changed = scheduler.body.replace(nested, "", 1)
+        insertion = changed.index("\n\t\tIf(And(Global.PemainSiklusGlobal")
+        changed = changed[:insertion] + "\n" + nested + changed[insertion:]
+        mutated = self.source[:scheduler.start] + changed + self.source[scheduler.end:]
+        self.assert_rejected(mutated, "ramo scheduler 1 Hz")
+
+    def test_native_completion_block_cannot_run_outside_the_one_hz_branch(self) -> None:
+        token = "Disable Built-In Game Mode Completion;"
+        scheduler = self.rule(lambda rule: token in rule.body)
+        self.assertIn(token, scheduler.body)
+        changed = scheduler.body.replace(token, "", 1)
+        closing = changed.rfind("\n\t}")
+        self.assertGreater(closing, 0)
+        changed = changed[:closing] + f"\n\t\t{token}" + changed[closing:]
+        mutated = self.source[:scheduler.start] + changed + self.source[scheduler.end:]
+        self.assert_rejected(mutated, "blocco completion fuori dal ramo scheduler 1 Hz")
 
 class RepositoryMetadataTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:

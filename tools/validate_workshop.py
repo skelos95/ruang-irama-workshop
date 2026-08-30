@@ -81,6 +81,21 @@ OBSOLETE_CURRENT_TEXT_PATTERNS = (
         "team-switch descritto come solo aggiornamento dei campi Team",
         re.compile(r"(?i)cambio\s+squadra[^.\r\n]*aggiorna\s+soltanto\s+i\s+campi\s+Team"),
     ),
+    (
+        "Jump Resurrect descritto con vecchia distinzione same-point/void",
+        re.compile(
+            r"(?i)(?:resurrect[^.\r\n]{0,120}(?:nello|allo)\s+stesso\s+punto|"
+            r"jump\s+resurrect\s+same-point|morte/resurrect[^.\r\n]{0,120}stesso\s+punto)"
+        ),
+    ),
+    (
+        "Jump Resurrect descritto con vecchio ramo void/fallback spawn",
+        re.compile(
+            r"(?i)(?:soltanto\s+il\s+vuoto\s+attiva|fuori\s+dal\s+solo\s+ramo\s+vuoto|"
+            r"fallback\s+spawn\s+(?:è\s+)?(?:protetto|validato)|"
+            r"prova\s+`?nearest\s+walkable\s+position`?[^.\r\n]{0,80}poi\s+lo\s+spawn)"
+        ),
+    ),
 )
 
 MENU_ACTION_BUTTONS = {
@@ -123,6 +138,43 @@ PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanPilihan",
     "TerapkanHalamanIkutiDummy",
     "TerapkanHalamanHantuTerbang",
+}
+MENU_OWNER_STATE_VARIABLES = {
+    "MenuTerbuka",
+    "HudMenu",
+    "HalamanMenu",
+    "KursorUtama",
+    "PerintahMenu",
+    "InputMenuDikunci",
+    "KursorGenre",
+    "IndeksGenre",
+    "KursorKamera",
+    "ModeKamera",
+    "TargetKamera",
+    "KursorWarna",
+    "IndeksWarna",
+    "KursorBahasa",
+    "IndeksBahasa",
+    "KursorBalasDendam",
+    "KursorKebal",
+    "ModeKebal",
+    "KebalAktif",
+    "KursorSuara",
+    "IndeksSuara",
+    "KursorIkon",
+    "IndeksIkon",
+    "KursorTeleportasiJongkok",
+    "TeleportasiJongkokDiaktifkan",
+    "KursorPrivasiInspeksi",
+    "PrivasiInspeksiAktif",
+    "KursorPilihan",
+    "PemainDipilih",
+    "KursorIkutiDummy",
+    "IzinkanDummyMengikuti",
+    "KursorHantuTerbang",
+    "ModeHantuAktif",
+    "ModeTerbangAktif",
+    "FisikaHantuTerbangDiterapkan",
 }
 LIFECYCLE_SUBROUTINES = {"SiapkanPemain", "TenangkanPemain", "BersihkanPemain"}
 LUCK_TIMESTAMP_VARIABLES = {
@@ -1750,6 +1802,95 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.require("Create HUD Text(" not in rule.body and "Destroy HUD Text(" not in rule.body,
                            f"{name}: applicare una preferenza non deve ricreare HUD")
 
+    owner_subroutines = PAGE_APPLY_SUBROUTINES | {
+        "GambarMenu",
+        "GambarHalamanAktif",
+        "TutupMenu",
+        "TransisiWarnaMenu",
+    } | {
+        target
+        for rule in menu_renderers
+        if (target := subroutine_target(rule)) is not None
+    }
+    owner_engine_actions = (
+        "Small Message",
+        "Start Camera",
+        "Stop Camera",
+        "Set Gravity",
+        "Set Move Speed",
+        "Set Jump Vertical Speed",
+        "Set Projectile Speed",
+        "Set Damage Received",
+        "Set Knockback Received",
+        "Set Player Health",
+        "Set Status",
+        "Clear Status",
+        "Enable Movement Collision With Players",
+        "Disable Movement Collision With Players",
+        "Enable Movement Collision With Environment",
+        "Disable Movement Collision With Environment",
+        "Start Modifying Hero Voice Lines",
+        "Stop Modifying Hero Voice Lines",
+        "Start Accelerating",
+        "Stop Accelerating",
+        "Start Transforming Throttle",
+        "Stop Transforming Throttle",
+        "Apply Impulse",
+        "Teleport",
+        "Kill",
+        "Resurrect",
+    )
+    for name in sorted(owner_subroutines):
+        rule = rule_by_subroutine(rules, name)
+        if not rule:
+            continue
+        owned_masked = mask_strings(rule.body)
+        checks.require(
+            "Global.PemainAktif" not in owned_masked and "Local Player" not in owned_masked,
+            f"isolamento menu per-player: {name} usa scratch globale o viewer locale",
+        )
+        if name not in PAGE_APPLY_SUBROUTINES:
+            continue
+        for action in owner_engine_actions:
+            for call in iter_calls(rule.body, action):
+                if call.args:
+                    checks.equal(
+                        call.args[0].strip(),
+                        "Event Player",
+                        f"isolamento menu per-player: {name}/{action} owner",
+                    )
+        for action in ("Set Player Variable", "Modify Player Variable"):
+            for call in iter_calls(rule.body, action):
+                if len(call.args) >= 2 and call.args[1].strip() in MENU_OWNER_STATE_VARIABLES:
+                    checks.equal(
+                        call.args[0].strip(),
+                        "Event Player",
+                        f"isolamento menu per-player: {name}/{call.args[1].strip()} owner",
+                    )
+
+    menu_control_rules = [
+        rule
+        for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and any(
+            token in mask_strings(rule.body)
+            for token in (
+                "Event Player.MenuTerbuka",
+                "Event Player.HalamanMenu",
+                "Event Player.PerintahMenu",
+                "Event Player.InputMenuDikunci",
+                "Event Player.HudMenu",
+            )
+        )
+    ]
+    checks.require(bool(menu_control_rules), "isolamento menu per-player: controller assenti")
+    for rule in menu_control_rules:
+        control_masked = mask_strings(rule.body)
+        checks.require(
+            "Global.PemainAktif" not in control_masked and "Local Player" not in control_masked,
+            f"isolamento menu per-player: controller {rule.name} usa stato di un altro player",
+        )
+
     dummy_follow_apply = rule_by_subroutine(rules, "TerapkanHalamanIkutiDummy")
     if dummy_follow_apply:
         for token, label in (
@@ -1899,14 +2040,22 @@ def validate_ghost_fly(
             ("SetGravity(Global.PemainAktif,0);", "riapplicazione gravità zero"),
             (
                 "StartTransformingThrottle(Global.PemainAktif,1,1,"
-                "FacingDirectionOf(Global.PemainAktif));",
-                "riapplicazione movimento secondo visuale",
+                "FacingDirectionOf(EvaluateOnce(Global.PemainAktif)));",
+                "riapplicazione movimento con identità player catturata",
             ),
-            ("(ZComponentOf(ThrottleOf(Global.PemainAktif)))>0.050", "input maju Fly pada asse Z"),
             (
-                "StartAccelerating(Global.PemainAktif,FacingDirectionOf(Global.PemainAktif),"
+                "ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050",
+                "input avanti Fly ricavato dalla componente locale Z",
+            ),
+            (
+                "ZComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
+                "arresto accelerazione Fly ricavato dalla componente locale Z",
+            ),
+            (
+                "StartAccelerating(Global.PemainAktif,"
+                "FacingDirectionOf(EvaluateOnce(Global.PemainAktif)),"
                 "6,20,ToWorld,DirectionRateandMaxSpeed);",
-                "accelerazione Fly graduale lungo la visuale",
+                "accelerazione Fly graduale con identità player catturata",
             ),
             (
                 "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
@@ -1928,6 +2077,71 @@ def validate_ghost_fly(
                        "Fly non deve immobilizzare con forcing di posizione")
         checks.require("FacingDirectionOf(Global.PemainAktif)*-1" not in cycle_packed,
                        "Fly non deve forzare input indietro sulla visuale")
+        checks.require(
+            "DotProduct(ThrottleOf(Global.PemainAktif),FacingDirectionOf(Global.PemainAktif))"
+            not in cycle_packed,
+            "Fly non deve mescolare il throttle locale con una direzione world-space",
+        )
+        for call_name in ("Start Transforming Throttle", "Start Accelerating"):
+            for call in iter_calls(cycle.body, call_name):
+                if len(call.args) < 2:
+                    continue
+                direction_argument = (
+                    call.args[-1]
+                    if call_name == "Start Transforming Throttle"
+                    else call.args[1]
+                )
+                uncaptured_direction = re.sub(
+                    r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
+                    "",
+                    direction_argument,
+                )
+                checks.require(
+                    "Global.PemainAktif" not in uncaptured_direction,
+                    f"{call_name} Fly usa scratch Global.PemainAktif senza Evaluate Once",
+                )
+        fly_accelerations = list(iter_calls(cycle.body, "Start Accelerating"))
+        checks.equal(len(fly_accelerations), 1,
+                     "Fly deve avere una sola accelerazione forward nel ciclo 10 Hz")
+        if fly_accelerations:
+            acceleration_branches = conditional_branches_containing(
+                cycle.body, fly_accelerations[0].start
+            )
+            forward_branch = next(
+                (
+                    packed(branch)
+                    for branch in acceleration_branches
+                    if "Global.PemainAktif.ModeTerbangAktif == True" in mask_strings(branch)
+                    and "Z Component Of(Throttle Of(Global.PemainAktif)) > 0.050"
+                    in mask_strings(branch)
+                ),
+                "",
+            )
+            checks.require(
+                bool(forward_branch),
+                "accelerazione Fly deve restare dentro la guardia per-player Fly+input forward",
+            )
+        idle_impulses = list(iter_calls(cycle.body, "Apply Impulse"))
+        checks.equal(len(idle_impulses), 1,
+                     "Fly deve avere un solo impulso di arresto idle nel ciclo 10 Hz")
+        if idle_impulses:
+            idle_branches = conditional_branches_containing(cycle.body, idle_impulses[0].start)
+            idle_branch = next(
+                (
+                    packed(branch)
+                    for branch in idle_branches
+                    if "Global.PemainAktif.ModeTerbangAktif == True" in mask_strings(branch)
+                    and "Global.PemainAktif.EfekNasib != 2" in mask_strings(branch)
+                    and "Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed" in mask_strings(branch)
+                    and "Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050" in mask_strings(branch)
+                    and "Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010" in mask_strings(branch)
+                ),
+                "",
+            )
+            checks.require(
+                bool(idle_branch),
+                "freno Fly deve restare dentro la guardia idle per-player senza Acceleration attiva",
+            )
 
     for owner, label in ((setup, "setup iniziale"), (quiet, "quiete uscita/rejoin")):
         checks.require(owner is not None, f"Ghost/Fly: {label} assente")
@@ -2011,7 +2225,7 @@ def validate_ghost_fly(
                     "Global.PemainAktif",
                     "1",
                     "1",
-                    "Facing Direction Of(Global.PemainAktif)",
+                    "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
                 ),
             ),
         },
@@ -2681,10 +2895,20 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         checks.require(death_rearm is not None, "morte umana per Jump Resurrect assente")
         if death_rearm:
             death_actions = rule_block(death_rearm, "actions") or ""
-            checks.require("Event Player.FisikaHantuTerbangDiterapkan = False;" in death_actions,
-                           "morte deve riarmare subito la fisica Ghost/Fly")
-            checks.require("Stop Accelerating(Event Player);" in death_actions,
-                           "morte deve fermare accelerazione Fly residua")
+            death_masked = mask_strings(death_actions)
+            death_normalization = (
+                "Stop Accelerating(Event Player);",
+                "Stop Transforming Throttle(Event Player);",
+                "Set Gravity(Event Player, 100);",
+                "Enable Movement Collision With Environment(Event Player);",
+                "Event Player.FisikaHantuTerbangDiterapkan = False;",
+            )
+            death_positions = [death_masked.find(token) for token in death_normalization]
+            checks.require(
+                all(position >= 0 for position in death_positions)
+                and death_positions == sorted(death_positions),
+                "morte deve normalizzare accelerazione, throttle, gravità e collisione prima di riarmare Ghost/Fly",
+            )
 
     resurrect_release = next(
         (
@@ -2914,7 +3138,6 @@ def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
         restore_icons = [
             call for call in iter_calls(processor.body, "Create Icon")
             if len(call.args) >= 6
-            and call.args[1].strip() == "Global.PemainAktif"
             and call.args[2].strip() in {"Warning", "Halo"}
         ]
         checks.equal(len(restore_icons), 2,
@@ -2925,6 +3148,17 @@ def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
         }
         for icon in restore_icons:
             icon_type = icon.args[2].strip()
+            checks.equal(icon.args[1].strip(), "Evaluate Once(Global.PemainAktif)",
+                         f"icona Kebal {icon_type}: identità owner catturata")
+            captures = list(iter_calls(icon.args[1], "Evaluate Once"))
+            checks.equal(len(captures), 1,
+                         f"icona Kebal {icon_type}: identità owner catturata")
+            if captures:
+                checks.equal(
+                    tuple(argument.strip() for argument in captures[0].args),
+                    ("Global.PemainAktif",),
+                    f"icona Kebal {icon_type}: cattura owner",
+                )
             checks.equal(icon.args[0].strip(), "All Players(All Teams)",
                          f"icona Kebal {icon_type}: pubblico")
             checks.equal(icon.args[3].strip(), "Visible To and Position",
@@ -3214,8 +3448,24 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
         if len(fly_acceleration_calls) == 1:
             checks.equal(
                 tuple(argument.strip() for argument in fly_acceleration_calls[0].args),
-                ("Global.PemainAktif", "Facing Direction Of(Global.PemainAktif)", "6", "20", "To World", "Direction Rate and Max Speed"),
+                (
+                    "Global.PemainAktif",
+                    "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
+                    "6",
+                    "20",
+                    "To World",
+                    "Direction Rate and Max Speed",
+                ),
                 "accelerazione Fly graduale: argomenti",
+            )
+            uncaptured_fly_direction = re.sub(
+                r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
+                "",
+                fly_acceleration_calls[0].args[1],
+            )
+            checks.require(
+                "Global.PemainAktif" not in uncaptured_fly_direction,
+                "direzione accelerazione Fly usa scratch Global.PemainAktif senza Evaluate Once",
             )
         acceleration_calls = list(iter_calls(state_machine.body, "Start Accelerating"))
         checks.equal(len(acceleration_calls), 1, "accelerazione Try Your Luck unica")
@@ -3358,28 +3608,34 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                         f"cleanup icona roulette {label}: handle azzerato prima del destroy",
                     )
 
-        health_calls = [
-            call for call in iter_calls(state_machine.body, "Set Player Health")
-            if len(call.args) >= 2 and call.args[1].strip() == "9999"
-        ]
-        checks.equal(len(health_calls), 1, "cura completa team della roulette")
-        def human_recipient(expression: str) -> bool:
-            return "Global.PemainManusia" in expression or re.search(
-                r"Filtered Array\(.*?Player Variable\(Current Array Element,\s*Manusia\)\s*==\s*True",
-                expression,
-                re.DOTALL,
-            ) is not None
+        health_calls = list(iter_calls(state_machine.body, "Set Player Health"))
+        checks.equal(len(health_calls), 1, "cura completa self della roulette")
         if health_calls:
-            checks.require(human_recipient(health_calls[0].args[0]),
-                           "Heart roulette cura anche bot/dummy invece dei soli umani")
+            checks.equal(
+                tuple(argument.strip() for argument in health_calls[0].args),
+                ("Global.PemainAktif", "Max Health(Global.PemainAktif)"),
+                "Heart roulette deve curare soltanto il proprietario",
+            )
         heart_messages = [
             call for call in iter_calls(state_machine.body, "Small Message")
             if len(call.args) >= 2 and "HEART" in call.args[1]
         ]
         checks.equal(len(heart_messages), 1, "messaggio Heart roulette")
         if heart_messages:
-            checks.require(human_recipient(heart_messages[0].args[0]),
-                           "Heart roulette invia HUD anche a bot/dummy")
+            checks.equal(heart_messages[0].args[0].strip(), "Global.PemainAktif",
+                         "Heart roulette deve notificare soltanto il proprietario")
+            checks.require(
+                "Global.PemainAktif.IndeksBahasa" in heart_messages[0].args[1]
+                and "Local Player" not in heart_messages[0].args[1],
+                "Heart roulette deve usare la lingua del proprietario",
+            )
+            for text in (
+                "TRY YOUR LUCK: HEART — SELF FULL HEAL",
+                "COBA NASIB: HATI — SEMBUH PENUH DIRI",
+                "เสี่ยงโชค: หัวใจ — รักษาตัวเองเต็มพลัง",
+            ):
+                checks.require(text in heart_messages[0].args[1],
+                               f"Heart self-heal: testo localizzato assente: {text}")
 
         checks.equal(state_machine.body.count("Kill("), 0,
                      "Skull deve delegare la morte completa alla macchina globale")
@@ -3924,6 +4180,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if cleanup:
         checks.require(not wait_calls(cleanup.body) and action_loop_count(cleanup.body) == 0,
                        "BersihkanPemain deve essere atomica e senza Wait/Loop")
+        cleanup_masked = mask_strings(cleanup.body)
         for token in (
             "Global.PemainPembersihan = Event Player;",
             "Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Global.PemainPembersihan);",
@@ -3960,8 +4217,102 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             cleanup.body.find(vote_reset) < cleanup.body.find("Remove From Array By Index"),
             "cleanup leave azzera i voti dopo aver rimosso il giocatore dal roster",
         )
+        outgoing_vote_tokens = (
+            "If(And(Global.PemainPembersihan.PemainDipilih != Null, "
+            "And(Global.PemainPembersihan.PemainDipilih != Global.PemainPembersihan, "
+            "Array Contains(Global.PemainManusia, Global.PemainPembersihan.PemainDipilih))));",
+            "Modify Player Variable(Global.PemainPembersihan.PemainDipilih, "
+            "JumlahPilihan, Subtract, 1);",
+            "If(Global.PemainPembersihan.PemainDipilih.JumlahPilihan < 0);",
+            "Set Player Variable(Global.PemainPembersihan.PemainDipilih, JumlahPilihan, 0);",
+        )
+        outgoing_positions = [cleanup_masked.find(token) for token in outgoing_vote_tokens]
+        checks.require(
+            all(position >= 0 for position in outgoing_positions)
+            and outgoing_positions == sorted(outgoing_positions)
+            and outgoing_positions[-1] < cleanup_masked.find(vote_reset),
+            "cleanup leave non sottrae e limita a zero il voto espresso dal leaver prima dei riferimenti inbound",
+        )
+
+        for handle, destroy_action in (
+            ("IkonKartuNasib", "Destroy Icon"),
+            ("IkonKebal", "Destroy Icon"),
+            ("HudEfekNasib", "Destroy HUD Text"),
+            ("TeksVisiNasib", "Destroy In-World Text"),
+            ("TeksTeleportasi", "Destroy In-World Text"),
+        ):
+            guard = f"If(Global.PemainPembersihan.{handle} != Null);"
+            destroy = f"{destroy_action}(Global.PemainPembersihan.{handle});"
+            clear = f"Global.PemainPembersihan.{handle} = Null;"
+            positions = tuple(cleanup_masked.find(token) for token in (guard, destroy, clear))
+            checks.require(
+                all(position >= 0 for position in positions)
+                and positions[0] < positions[1] < positions[2],
+                f"cleanup leave non distrugge e azzera handle orfano: {handle}",
+            )
+
+        revenge_loops = list(iter_calls(cleanup.body, "For Global Variable"))
+        checks.equal(len(revenge_loops), 1,
+                     "cleanup leave: una sola scansione atomica dei survivor Revenge")
+        if revenge_loops:
+            checks.equal(
+                tuple(argument.strip() for argument in revenge_loops[0].args),
+                ("IndeksPemilih", "0", "Count Of(Global.PemainManusia)", "1"),
+                "cleanup leave: scansione survivor Revenge",
+            )
+        for token, label in (
+            (
+                "Global.IndeksDendamKeluar = Index Of Array Value(Player Variable("
+                "Global.PemainManusia[Global.IndeksPemilih], PembunuhBalasDendam), "
+                "Global.PemainPembersihan);",
+                "indice debito del leaver",
+            ),
+            (
+                "Modify Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+                "PembunuhBalasDendam, Remove From Array By Index, Global.IndeksDendamKeluar);",
+                "rimozione attacker",
+            ),
+            (
+                "Modify Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+                "JumlahBalasDendam, Remove From Array By Index, Global.IndeksDendamKeluar);",
+                "rimozione debito parallela",
+            ),
+            (
+                "Set Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+                "TargetBalasDendamTerkunci, Null);",
+                "rilascio target locked",
+            ),
+            (
+                "Set Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+                "PenagihBalasDendam, Null);",
+                "rilascio claimant",
+            ),
+            (
+                "Set Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+                "KematianBalasDendam, False);",
+                "annullamento morte Revenge",
+            ),
+        ):
+            checks.require(token in cleanup_masked,
+                           f"cleanup leave Revenge incompleto: {label}")
+        debt_remove = cleanup_masked.find(
+            "Modify Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+            "PembunuhBalasDendam, Remove From Array By Index, Global.IndeksDendamKeluar);"
+        )
+        count_remove = cleanup_masked.find(
+            "Modify Player Variable(Global.PemainManusia[Global.IndeksPemilih], "
+            "JumlahBalasDendam, Remove From Array By Index, Global.IndeksDendamKeluar);"
+        )
+        roster_remove = cleanup_masked.find(
+            "Modify Global Variable(PemainManusia, Remove From Array By Index, "
+            "Global.IndeksPembersihan);"
+        )
+        checks.require(
+            0 <= debt_remove < count_remove < roster_remove,
+            "cleanup leave deve rimuovere in tandem attacker/debito prima del roster",
+        )
         for forbidden in (
-            "For Global Variable(", "Allow Button(", "Clear Status(",
+            "Allow Button(", "Clear Status(",
             "Set Move Speed(", "Set Damage Received(", "Set Knockback Received(",
             "Call Subroutine(PulihkanNasibPemain);", "Call Subroutine(TenangkanPemain);",
         ):
@@ -4319,8 +4670,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     vision_subject_pattern = re.compile(
         r"Or\(\s*Is Dummy Bot\(Event Player\)\s*==\s*True\s*,\s*"
         r"Or\(\s*Event Player\.BotOtomatis\s*==\s*True\s*,\s*"
-        r"And\(\s*Event Player\.Manusia\s*==\s*True\s*,\s*"
-        r"Event Player\.PrivasiInspeksiAktif\s*==\s*False\s*\)\s*\)\s*\)",
+        r"Event Player\.Manusia\s*==\s*True\s*\)\s*\)",
         re.DOTALL,
     )
 
@@ -4474,15 +4824,22 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         None,
     )
     checks.require(vision_names is not None, "IWT nomi Vision assente")
+    vision_contract_text = "\n".join(rule.body for rule in rules)
+    for label in (
+        "VISION: ALL PLAYER / BOT NAMES",
+        "VISI: SEMUA NAMA PLAYER / BOT",
+        "วิสัยทัศน์: ชื่อผู้เล่นทั้งหมด / บอต",
+    ):
+        checks.require(label in vision_contract_text, f"testo Vision non dichiara tutti i nomi: {label}")
     if vision_names:
         checks.require(
             vision_subject_pattern.search(vision_names.body) is not None,
-            "Vision deve coprire bot/dummy e soltanto umani con Privacy OFF",
+            "Vision deve coprire bot/dummy e tutti gli umani anche con Privacy ON",
         )
         vision_conditions = rule_block(vision_names, "conditions") or ""
         checks.require(
-            "Event Player.PrivasiInspeksiAktif == False" in vision_conditions,
-            "Vision espone un umano con Privacy ON",
+            "Event Player.PrivasiInspeksiAktif" not in vision_conditions,
+            "Vision non deve filtrare gli umani che hanno Privacy ON",
         )
         vision_calls = list(iter_calls(vision_names.body, "Create In-World Text"))
         checks.equal(len(vision_calls), 1, "Vision deve creare un solo IWT per soggetto")
@@ -4505,7 +4862,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                 for token, label in (
                     ("Hero Icon String(", "icona eroe"),
                     ("Hero Being Duplicated(Event Player)", "icona forma duplicata"),
-                    ('Custom String("{0}", Event Player)', "nome player"),
+                    (
+                        'Event Player.Manusia == True ? Event Player.NamaTampilan : Custom String("{0}", Event Player)',
+                        "nome roster stabile per gli umani e nome live per bot/dummy",
+                    ),
                     ("Round To Integer(Health(Event Player), Down)", "salute live"),
                 ):
                     checks.require(token in vision_text, f"Vision non mostra {label}")
@@ -4520,7 +4880,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                 if outer_text:
                     expected_values = (
                         "HeroIconString(IsDuplicating(EventPlayer)?HeroBeingDuplicated(EventPlayer):HeroOf(EventPlayer))",
-                        'CustomString("{0}",EventPlayer)',
+                        'EventPlayer.Manusia==True?EventPlayer.NamaTampilan:CustomString("{0}",EventPlayer)',
                         "RoundToInteger(Health(EventPlayer),Down)",
                     )
                     checks.require(
@@ -4545,8 +4905,13 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if vision_cleanup:
         cleanup_conditions = rule_block(vision_cleanup, "conditions") or ""
         checks.require(
-            "Event Player.PrivasiInspeksiAktif == True" in cleanup_conditions,
-            "cleanup Vision non rimuove subito un umano che attiva Privacy",
+            "Event Player.PrivasiInspeksiAktif" not in cleanup_conditions,
+            "cleanup Vision non deve rimuovere un umano che attiva Privacy",
+        )
+        checks.require(
+            "Is Alive(Event Player) == False" in cleanup_conditions
+            and "PrivasiNasibAktif" in cleanup_conditions,
+            "cleanup Vision deve restare legato a morte soggetto o assenza osservatori Vision",
         )
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
@@ -5247,6 +5612,29 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                            "subroutine teleport sicura non verifica una posizione percorribile")
             checks.require("Ray Cast Hit Position(" in safe_position.body,
                            "subroutine teleport sicura non verifica terreno/percorso")
+            safe_calls = list(iter_calls(safe_position.body, "Ray Cast Hit Position"))
+            checks.require(len(safe_calls) >= 16,
+                           "subroutine teleport sicura ha perso una verifica raycast obbligatoria")
+            safe_packed = re.sub(r"\s+", "", mask_strings(safe_position.body))
+            floor_branch = (
+                "If(DistanceBetween(RayCastHitPosition("
+                "EventPlayer.PosisiBangkitAman+Vector(0,5,0),"
+                "EventPlayer.PosisiBangkitAman-Vector(0,20,0),"
+                "EmptyArray,EmptyArray,False),EventPlayer.PosisiBangkitAman)>6);"
+                "EventPlayer.PosisiBangkitAman=Vector(0,0,0);Abort;End;"
+            )
+            path_branch = (
+                "If(DistanceBetween(RayCastHitPosition("
+                "EventPlayer.PosisiTeleportTujuan+Vector(0,1,0),"
+                "EventPlayer.PosisiBangkitAman+Vector(0,1,0),"
+                "EmptyArray,EmptyArray,False),"
+                "EventPlayer.PosisiBangkitAman+Vector(0,1,0))>0.750);"
+                "EventPlayer.PosisiBangkitAman=Vector(0,0,0);End;"
+            )
+            checks.require(floor_branch in safe_packed,
+                           "subroutine teleport sicura non invalida il vuoto con il raycast terreno verticale")
+            checks.require(path_branch in safe_packed,
+                           "subroutine teleport sicura non invalida il percorso finale ostruito")
             checks.require("Vector(1.500, 1, 0)" in safe_position.body and "Vector(-1.500, 1, 0)" in safe_position.body,
                            "subroutine teleport sicura non mantiene distanza laterale dalle pareti")
             checks.require("Vector(0, 1, 1.500)" in safe_position.body and "Vector(0, 1, -1.500)" in safe_position.body,
@@ -5300,6 +5688,48 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
             "Global.SisaWaktuServer > 0" in timer_sync_rule.body,
             "sinkronisasi timer mode harus menjaga timer custom sebagai pemicu tunggal restart",
         )
+        timer_packed = re.sub(r"\s+", "", mask_strings(timer_sync_rule.body))
+        cadence_token = (
+            "If(And(Global.LangkahPenjadwal%20==0,"
+            "Global.MulaiUlangSudahDiminta==False));"
+        )
+        cadence_position = timer_packed.find(cadence_token)
+        for action_token, label in (
+            (completion_token, "blocco completion"),
+            ("Set Match Time(Max(1, Global.SisaWaktuServer + 5));", "Set Match Time"),
+        ):
+            action_position = timer_sync_rule.body.find(action_token)
+            branches = (
+                conditional_branches_containing(timer_sync_rule.body, action_position)
+                if action_position >= 0
+                else []
+            )
+            cadence_branch = next(
+                (
+                    mask_strings(branch)
+                    for branch in branches
+                    if "Global.LangkahPenjadwal % 20 == 0" in mask_strings(branch)
+                    and "Global.MulaiUlangSudahDiminta == False" in mask_strings(branch)
+                ),
+                "",
+            )
+            progress_branch = next(
+                (
+                    mask_strings(branch)
+                    for branch in branches
+                    if "Is Game In Progress == True" in mask_strings(branch)
+                    and "Global.SisaWaktuServer > 0" in mask_strings(branch)
+                ),
+                "",
+            )
+            checks.require(
+                cadence_position >= 0 and bool(cadence_branch),
+                f"sincronizzazione timer mode: {label} fuori dal ramo scheduler 1 Hz",
+            )
+            checks.require(
+                bool(progress_branch),
+                f"sincronizzazione timer mode: {label} fuori dalla guardia partita attiva",
+            )
     camera_rule = rule_by_subroutine(rules, "MulaiKamera")
     checks.require(camera_rule is not None, "subroutine Camera assente")
     if camera_rule:

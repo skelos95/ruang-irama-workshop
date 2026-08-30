@@ -216,9 +216,19 @@ class GhostFlyRuntimeTests(unittest.TestCase):
     def test_fly_forward_input_accelerates_gradually_along_the_full_view(self) -> None:
         for source, global_name in self.sources:
             packed = compact(subroutine(source, "ProsesSiklusPemain"))
-            self.assertIn(f"(ZComponentOf(ThrottleOf({global_name}.PemainAktif)))>0.050", packed)
             self.assertIn(
-                f"StartAccelerating({global_name}.PemainAktif,FacingDirectionOf({global_name}.PemainAktif),6,20,ToWorld,DirectionRateandMaxSpeed);",
+                f"ZComponentOf(ThrottleOf({global_name}.PemainAktif))>0.050",
+                packed,
+            )
+            self.assertIn(
+                f"ZComponentOf(ThrottleOf({global_name}.PemainAktif))<=0.050",
+                packed,
+            )
+            self.assertNotIn("DotProduct(ThrottleOf(", packed)
+            self.assertIn(
+                f"StartAccelerating({global_name}.PemainAktif,"
+                f"FacingDirectionOf(EvaluateOnce({global_name}.PemainAktif)),"
+                "6,20,ToWorld,DirectionRateandMaxSpeed);",
                 packed,
             )
             self.assertIn(
@@ -270,8 +280,15 @@ class GhostFlyRuntimeTests(unittest.TestCase):
     def test_death_rearms_and_jump_resurrect_reapplies_fly_physics(self) -> None:
         for source, _ in self.sources:
             death = rule_with(source, "Player Died", "Event Player.PosisiMati = Position Of(Event Player);")
-            self.assertIn("Event Player.FisikaHantuTerbangDiterapkan = False;", death)
-            self.assertIn("Stop Accelerating(Event Player);", death)
+            normalization = (
+                "Stop Accelerating(Event Player);",
+                "Stop Transforming Throttle(Event Player);",
+                "Set Gravity(Event Player, 100);",
+                "Enable Movement Collision With Environment(Event Player);",
+                "Event Player.FisikaHantuTerbangDiterapkan = False;",
+            )
+            positions = [death.index(token) for token in normalization]
+            self.assertEqual(positions, sorted(positions))
             resurrect = rule_with(source, "Resurrect(Event Player);", "Button(Jump)")
             self.assertIn("Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
@@ -309,7 +326,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"Has Spawned({global_name}.PemainAktif) == True",
                 f"Is Alive({global_name}.PemainAktif) == True",
                 f"{global_name}.PemainAktif.FisikaHantuTerbangDiterapkan == False",
-                f"Start Transforming Throttle({global_name}.PemainAktif, 1, 1, Facing Direction Of({global_name}.PemainAktif));",
+                f"Start Transforming Throttle({global_name}.PemainAktif, 1, 1, "
+                f"Facing Direction Of(Evaluate Once({global_name}.PemainAktif)));",
             ):
                 self.assertIn(token, reapply)
 

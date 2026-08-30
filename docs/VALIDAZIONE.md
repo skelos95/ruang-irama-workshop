@@ -126,7 +126,7 @@ Il gate richiede:
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
-- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, inclusa la riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine;
+- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, inclusa la riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e la sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
 - `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
 - un solo raycast Camera;
 - nessuna regola HUD contenente `Wait` o `Loop`.
@@ -139,14 +139,14 @@ Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il v
 
 | Esito | Invariante |
 |---|---|
-| Vision | durata 15 s, IWT con icona/nome/salute live e blocco/cleanup di inspection e Teleport Crouch |
+| Vision | durata 15 s, IWT con icona/nome/salute live per bot/dummy e tutti gli umani anche con Privacy ON, più blocco/cleanup di inspection e Teleport Crouch |
 | Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
 | Skull | unico esito autorizzato a bypassare temporaneamente Unkillable; trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
-| Team Heal | cura completa dei soli player umani del team |
+| Self Heal | cura completa del solo proprietario della roulette |
 | Burning | 5% max HP ogni 1 s per 10 s; rimuove Unkillable e normalizza Damage Received per l'intera durata, quindi ripristina la modalità scelta |
 | Hacked | durata 5 s e cleanup status |
 
-L'avvio della roulette non può sospendere Unkillable e un'icona Skull intermedia non può armare la morte. Vision, Acceleration, Team Heal e Hacked restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100`: modalità e cursori restano invariati, la sospensione dura per tutto l'effetto da 10 secondi, il danno è 5% Max Health ogni secondo e la protezione selezionata viene ripristinata soltanto alla fine o nel cleanup anticipato, non fra i tick. Il ramo centralizzato Skull finale/Revenge resta l'unico a usare il bypass prima di `Kill`. Nessun ramo o cleanup Try Your Luck può impostare gravità, avviare/fermare il throttle trasformato o scrivere toggle/cursori Ghost/Fly. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario. Un cambio squadra leggero conserva preferenze e cursori; leave e rejoin eseguono invece cleanup e setup fresco. Un loop o Wait per-player associato alla roulette è vietato.
+L'avvio della roulette non può sospendere Unkillable e un'icona Skull intermedia non può armare la morte. Vision, Acceleration, Self Heal e Hacked restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100`: modalità e cursori restano invariati, la sospensione dura per tutto l'effetto da 10 secondi, il danno è 5% Max Health ogni secondo e la protezione selezionata viene ripristinata soltanto alla fine o nel cleanup anticipato, non fra i tick. Il ramo centralizzato Skull finale/Revenge resta l'unico a usare il bypass prima di `Kill`. Nessun ramo o cleanup Try Your Luck può impostare gravità, avviare/fermare il throttle trasformato o scrivere toggle/cursori Ghost/Fly. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario. Un cambio squadra leggero conserva preferenze e cursori; leave e rejoin eseguono invece cleanup e setup fresco. Un loop o Wait per-player associato alla roulette è vietato.
 
 Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
 
@@ -171,7 +171,7 @@ Il gate controlla:
 - ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo per il setup iniziale e rilascio dei latch; il fast-path del team switch non acquisisce quel lock;
 - cleanup di HUD, In-World Text, effetti, status e slot sul leave vero;
 - profilo del nome visibile esatto `งูแท้`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Caladan Brood` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
-- Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON dalla Camera custom, sgancio degli osservatori già attivi, assenza di nome/nameplate privato in inspection e Vision e nessun HUD Crouch sovrapposto durante Vision;
+- Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON da Camera custom, inspection e Teleport, sgancio degli osservatori già attivi; Vision deve invece includere tutti gli umani, usare il nome roster stabile e non sovrapporre HUD Crouch;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, respawn massimo 3 secondi e riarmo alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
@@ -208,13 +208,13 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a `Respawn`, senza default esatto sulla posizione di morte, raycast/candidato `Nearest Walkable Position`/fallback validato rimossi, spawn non protetto, assenza di abort quando nessun terreno è sicuro, `Teleport` dopo `Resurrect`, fuori dal solo ramo vuoto o duplicato, forcing/offset casuale/`Wait` reintrodotto, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- Jump tornato a `Respawn`, candidato `Nearest Walkable Position(PosisiMati)` sempre calcolato o validazione sicura rimossi, fallback Spawn Room reintrodotto, assenza di abort quando nessun terreno è sicuro, `Teleport` mancante/dopo `Resurrect`/duplicato, forcing/offset casuale/`Wait` reintrodotto, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
-- accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto; Try Your Luck che imposta gravità o altera il throttle trasformato di Fly;
+- accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto; riapplicazione Fly con trasformazione throttle o accelerazione rivalutata sullo scratch globale nudo; Try Your Luck che imposta gravità o altera il throttle trasformato di Fly;
 - Ghost che include i pavimenti o altera la collisione con player, Fly senza gravità zero/throttle relativo alla visuale/ripristino OFF, freno idle non esatto o capace di annullare Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe/cambio squadra;
-- Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in inspection/Vision, osservatore non sganciato, Vision pubblica priva di icona/nome/salute o HUD Crouch sovrapposto durante Vision;
+- Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, collisione player disabilitata, collisione ambientale applicata agli iBot o con `Include Floors = True`, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
@@ -262,7 +262,7 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - cinque pagine Crouch Travel & Attach con Primary/Secondary per navigare e Interact per eseguire;
 - Ghost/Fly indipendenti, collisioni/volo 3D/freno idle/ripristino e interazione con Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
-- morte/Resurrect con Jump nello stesso punto sicuro o `Nearest Walkable Position` nel vuoto, hero swap, spectator, join/leave e team switch;
+- morte/Resurrect con Jump sempre tramite `Nearest Walkable Position` validata, teleport del cadavere prima del ritorno in vita, retry latch, hero swap, spectator, join/leave e team switch;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
 - respawn dummy entro 3 secondi;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;

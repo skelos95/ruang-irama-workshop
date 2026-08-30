@@ -128,7 +128,7 @@ Focus dati:
 
 - Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
 - Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
-- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D: guardando davanti si avanza, guardando in alto si sale e guardando in basso si scende. Tenendo Forward, la velocità deve crescere gradualmente con rampa normale `6 m/s²` fino al cap `20 m/s`.
+- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D. Ripetere Forward guardando verso i quattro orientamenti cardinali della mappa e con pitch davanti/in alto/in basso: la rampa deve partire in tutti i casi, senza dipendere dall'asse X/Z. Usa `6 m/s²` con cap Workshop richiesto di `20 m/s`; registrare la velocità effettiva per eroi diversi perché il limite orizzontale del motore deve essere confermato live.
 - In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo.
 - Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100, ferma il throttle trasformato e arresta la rampa normale senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale.
 - Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve restare attiva per tutti i 10 secondi senza essere annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare immobile quando non ci sono input.
@@ -139,7 +139,7 @@ Focus dati:
 - Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
 - Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
 - Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
-- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Team Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Un cambio squadra leggero conserva la preferenza; soltanto leave e rejoin eseguono setup fresco e ripristinano i default.
+- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Self Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Un cambio squadra leggero conserva la preferenza; soltanto leave e rejoin eseguono setup fresco e ripristinano i default.
 - Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
 - Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
@@ -149,10 +149,10 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 
 | Esito | Verifica |
 |---|---|
-| Vision | icona eroe, nome e salute live in EN/ID/TH per bot/dummy e umani con Privacy OFF; nessun nome umano con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
+| Vision | icona eroe, nome roster stabile e salute live in EN/ID/TH per bot/dummy e tutti gli umani, compresi quelli con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
-| Team Heal | salute completa per i player umani della squadra, nessun messaggio o funzione applicati ai bot |
+| Self Heal | salute completa e messaggio soltanto per il proprietario; nessun altro player o bot deve cambiare |
 | Burning | 5% max HP ogni 1 s per 10 s; Unkillable e riduzione Damage Received sospesi per l'intera durata e ripristinati al termine; stop alla morte |
 | Hacked | stato per 5 s, poi rimozione |
 
@@ -174,7 +174,7 @@ Per ciascun esito:
 Matrice obbligatoria Try Your Luck × Unkillable:
 
 - ripetere i sei esiti con Unkillable OFF, 1 HP e FULL HP;
-- con 1 HP e FULL HP, Vision, Acceleration, Team Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
+- con 1 HP e FULL HP, Vision, Acceleration, Self Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
 - con Burning, verificare che ogni secondo venga applicato il 5% della Max Health anche partendo da 1 HP/FULL HP, senza modificare Mode/Kursor; Unkillable e la riduzione Damage Received devono restare sospesi per tutti i 10 secondi, senza riapplicazione fra i tick, e tornare immediatamente al termine o dopo un cleanup anticipato;
 - con Skull finale, verificare il bypass temporaneo e la morte completa; premere Jump per Resurrect e confermare il ripristino della stessa modalità, della tripletta corretta e dell'icona entro il tick globale;
 - lasciare scadere la deadline Skull quando `Kill` viene rifiutato: menu/input devono liberarsi e Unkillable deve tornare attivo senza alterare Mode/Kursor;
@@ -230,8 +230,8 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute; nessuna percentuale Ultimate.
 - Nuovo player o vero rejoin: Privacy OFF e cursore OFF per default; un cambio squadra leggero conserva invece lo stato e il cursore scelti.
-- Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision può mostrarne icona, nome e salute.
-- Privacy ON: gli altri player non vedono nome/nameplate in inspection o Vision e nessun osservatore può scegliere il player nella Camera custom.
+- Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision ne mostra icona, nome e salute.
+- Privacy ON: Camera custom, inspection, Teleport e Attach non possono scegliere o identificare il player; Vision deve comunque mostrarne icona, nome e salute.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
 - Attivare Privacy ON mentre inspection sta già mostrando il target: nome/nameplate devono sparire entro il ciclo di cleanup e non ricomparire finché Privacy resta ON.
 - Rilasciare Crouch, aprire menu, morire, cambiare Camera o target: cleanup immediato.
@@ -301,17 +301,17 @@ Eseguire separatamente un leave vero seguito da rejoin: non devono restare rifer
 
 ## 8. Matrice modalità
 
-Lo script non deve assegnare punti o vincitori. Eseguire almeno un round o segmento significativo per riga:
+Lo script non deve assegnare punti o vincitori. Scoring e obiettivi restano nativi, mentre completion, overtime ed estensioni del timer non devono sostituire il countdown CHILL, sincronizzato una volta al secondo. Eseguire almeno un segmento significativo per riga:
 
 | Modalità | Objective/Teleport e uscita Spawn dummy | Transizioni da verificare |
 |---|---|---|
-| Push | proxy obiettivo + fallback Objective Position | robot/obiettivo, overtime |
+| Push | proxy obiettivo + fallback Objective Position | robot/obiettivo, countdown CHILL invariato |
 | Flashpoint | Objective Position dell'indice attivo | rotazione punti |
 | Capture the Flag | bandiera nemica valida | presa, caduta, ritorno, score |
-| Control | Objective Position | cambio round e lato |
+| Control | Objective Position | cattura/percentuale, countdown CHILL invariato |
 | Clash | Objective Position | avanzamento/ritiro punti |
 | Hybrid | Payload dopo la cattura | cattura → scorta |
-| Escort | Payload | checkpoint e overtime |
+| Escort | Payload | checkpoint/payload, countdown CHILL invariato |
 | Assault | Objective Position | punto A → punto B |
 
 Per ogni riga verificare sia il Teleport manuale sia l'uscita Spawn dei dummy: il punto finale deve essere percorribile, il fallback deve restare nella stessa famiglia di obiettivo e l'assenza temporanea della posizione non deve causare teleport a `Vector(0, 0, 0)` o nel vuoto.
@@ -322,7 +322,7 @@ Priorità mappe:
 - Eichenwalde — modifiche dell'11 agosto;
 - Paraíso — modifiche dell'11 agosto.
 
-In ogni modalità usare contemporaneamente Menu, Camera, inspection, Teleport e Try Your Luck senza alterare il risultato nativo.
+In ogni modalità usare contemporaneamente Menu, Camera, inspection, Teleport e Try Your Luck senza alterare scoring o avanzamento degli obiettivi; il timer nativo deve essere riallineato al countdown CHILL a 1 Hz, non a ogni tick dello scheduler.
 
 ## 9. Soak 12 slot
 
@@ -384,8 +384,8 @@ Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
 Ghost walls/floors/Fly 3D/idle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
-Jump Resurrect same-point/void-nearest/retry latch: PASS/FAIL
-Privacy Vision/inspection: PASS/FAIL
+Jump Resurrect always-nearest-walkable/retry latch: PASS/FAIL
+Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
 Profilo งูแท้ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
