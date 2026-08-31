@@ -1,0 +1,38 @@
+name: Apply Small Message and Travel UX cleanup
+
+on:
+  push:
+    branches:
+      - fix/small-message-smooth-travel-20260831
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact UX patch
+        run: python tools/apply_message_travel_cleanup.py
+      - name: Remove temporary helpers
+        run: rm .github/workflows/apply-message-travel-cleanup.yml tools/apply_message_travel_cleanup.py
+      - name: Run focused test suite
+        run: python -m unittest tests.test_validate_workshop tests.test_ghost_fly tests.test_runtime_maintenance
+      - name: Validate Workshop source
+        run: python tools/validate_workshop.py
+      - name: Preflight Italian clipboard source
+        run: python tools/check_clipboard_import.py --language it-IT
+      - name: Check whitespace
+        run: git diff --check
+      - name: Commit verified UX cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --quiet && exit 1
+          git commit -m "Clean up Small Messages and smooth Travel colors"
+          git push origin HEAD:fix/small-message-smooth-travel-20260831
