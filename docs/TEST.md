@@ -414,3 +414,8 @@ La 0.8.1 resta **static-ready / live-pending** finché i test obbligatori, i lim
 ### Dummy spawn iniziale
 
 Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
+
+### Small Message e transizione Crouch Travel
+
+- Navigare rapidamente `1→2→3→4→5→1` e in senso inverso: mint, cyan, blu, viola e rosa devono fondersi in circa 0,18 s senza scatti o ricreazioni extra del renderer.
+- Verificare che apertura/chiusura menu, selezioni riuscite, toggle, camera normale e Teleport riusciti non generino conferme Small Message ridondanti. Errori, cooldown, Attach con istruzione di detach, fallimenti Resurrect e risultati Try Your Luck/Revenge devono invece restare notificati.
