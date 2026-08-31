@@ -15,6 +15,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Adapt patch helper to both Workshop syntaxes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("tools/apply_message_travel_cleanup.py")
+          text = path.read_text(encoding="utf-8")
+          old = '        actions = "\\n\\tazioni\\n\\t{\\n"\n'
+          new = '        actions = "\\n\\tazioni\\n\\t{\\n" if "\\n\\tazioni\\n\\t{\\n" in body else "\\n\\tactions\\n\\t{\\n"\n'
+          if text.count(old) != 1:
+              raise SystemExit("localized actions helper anchor mismatch")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Apply exact UX patch
         run: python tools/apply_message_travel_cleanup.py
       - name: Remove temporary helpers
