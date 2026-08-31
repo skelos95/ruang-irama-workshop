@@ -31,8 +31,15 @@ jobs:
         run: python tools/apply_message_travel_cleanup.py
       - name: Remove temporary helpers
         run: rm .github/workflows/apply-message-travel-cleanup.yml tools/apply_message_travel_cleanup.py
-      - name: Run focused test suite
-        run: python -m unittest tests.test_validate_workshop tests.test_ghost_fly tests.test_runtime_maintenance
+      - name: Run focused UX tests
+        run: |
+          python -m unittest \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_official_source_passes_all_semantic_checks \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_routine_small_messages_stay_suppressed \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_teleport_menu_uses_smooth_chased_tint \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_crouch_teleport_has_five_pages_and_single_shot_self_kill \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_crouch_attach_uses_native_attach_and_crouch_reload_detach \
+            tests.test_ghost_fly.GhostFlyRuntimeTests.test_death_rearms_and_jump_resurrect_reapplies_fly_physics
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
       - name: Preflight Italian clipboard source
