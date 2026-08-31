@@ -98,6 +98,13 @@ OBSOLETE_CURRENT_TEXT_PATTERNS = (
             r"(?:resta|rimane)\s+morto"
         ),
     ),
+    (
+        "Jump Resurrect descritto con destinazione calcolata dalla snapshot morta",
+        re.compile(
+            r"(?i)nearest\s+walkable\s+position\s*\(\s*posisimati\s*\)|"
+            r"calcola[^.\r\n]{0,100}nearest\s+walkable[^.\r\n]{0,100}prima[^.\r\n]{0,60}resurrect"
+        ),
+    ),
 )
 
 MENU_ACTION_BUTTONS = {
@@ -1447,6 +1454,87 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                        "menu Teleport non deve mostrare simboli backslash")
         checks.require('Custom String("{0}n{1}"' not in teleport_renderer.body,
                        "menu Teleport non deve lasciare lettere n da vecchi escape")
+        teleport_calls = list(iter_calls(teleport_renderer.body, "Create HUD Text"))
+        if len(teleport_calls) == 1:
+            teleport_call = teleport_calls[0]
+            checks.equal(len(teleport_call.args), 11, "GambarTeleportasi: firma Create HUD Text")
+            if len(teleport_call.args) >= 9:
+                instruction_tokens = (
+                    "HOLD {0} | {1}: NEXT | {2}: PREVIOUS",
+                    "{0}: EXECUTE | RELEASE {1}: CLOSE",
+                    "{0} + {1}: DETACH (ATTACH PAGE)",
+                    "TAHAN {0} | {1}: BERIKUTNYA | {2}: SEBELUMNYA",
+                    "{0}: JALANKAN | LEPAS {1}: TUTUP",
+                    "{0} + {1}: LEPAS KAITAN (HALAMAN TEMPEL)",
+                    "กด {0} ค้าง | {1}: ถัดไป | {2}: ก่อนหน้า",
+                    "{0}: ดำเนินการ | ปล่อย {1}: ปิด",
+                    "{0} + {1}: ยกเลิกการเกาะ (หน้าเกาะ)",
+                )
+                for token in instruction_tokens:
+                    checks.require(
+                        token in teleport_call.args[2],
+                        f"GambarTeleportasi: istruzione ordinata EN/ID/TH assente: {token}",
+                    )
+                page_tokens = (
+                    "1/5 | TELEPORT: SPAWN ROOM",
+                    "DESTINATION: YOUR TEAM'S SPAWN ROOM",
+                    "2/5 | TELEPORT: ACTIVE OBJECTIVE",
+                    "DESTINATION: OBJECTIVE / ENEMY FLAG",
+                    "3/5 | TELEPORT: PLAYER / BOT",
+                    "DESTINATION: BESIDE SELECTED TARGET",
+                    "4/5 | ATTACH: PLAYER / BOT",
+                    "POSITION: ABOVE SELECTED TARGET",
+                    "5/5 | SELF ELIMINATION",
+                    "EFFECT: ELIMINATE CURRENT HERO FORM",
+                    "COOLDOWN: 3 SEC PER PLAYER",
+                    "1/5 | TELEPORT: RUANG MUNCUL",
+                    "TUJUAN: RUANG MUNCUL TIMMU",
+                    "2/5 | TELEPORT: OBJEKTIF AKTIF",
+                    "TUJUAN: OBJEKTIF / BENDERA MUSUH",
+                    "3/5 | TELEPORT: PLAYER / BOT",
+                    "4/5 | KAITKAN: PLAYER / BOT",
+                    "5/5 | ELIMINASI DIRI",
+                    "EFEK: ELIMINASI WUJUD HERO AKTIF",
+                    "COOLDOWN: 3 DTK PER PLAYER",
+                    "1/5 | เทเลพอร์ต: ห้องเกิด",
+                    "ปลายทาง: ห้องเกิดของทีมคุณ",
+                    "2/5 | เทเลพอร์ต: เป้าหมายภารกิจ",
+                    "ปลายทาง: เป้าหมายปัจจุบัน / ธงศัตรู",
+                    "3/5 | เทเลพอร์ต: ผู้เล่น / บอต",
+                    "4/5 | เกาะ: ผู้เล่น / บอต",
+                    "5/5 | กำจัดตัวเอง",
+                    "ผล: กำจัดร่างฮีโร่ปัจจุบัน",
+                    "คูลดาวน์: 3 วินาทีต่อผู้เล่น",
+                )
+                for token in page_tokens:
+                    checks.require(
+                        token in teleport_call.args[3],
+                        f"GambarTeleportasi: testo pagina specifico EN/ID/TH assente: {token}",
+                    )
+                pastel_palette = (
+                    "Event Player.KursorTeleportasi == 0 ? Custom Color(205, 255, 225, 255) : "
+                    "Event Player.KursorTeleportasi == 1 ? Custom Color(200, 245, 255, 255) : "
+                    "Event Player.KursorTeleportasi == 2 ? Custom Color(215, 225, 255, 255) : "
+                    "Event Player.KursorTeleportasi == 3 ? Custom Color(235, 215, 255, 255) : "
+                    "Custom Color(255, 215, 230, 255)"
+                )
+                neon_palette = (
+                    "Event Player.KursorTeleportasi == 0 ? Custom Color(80, 255, 160, 255) : "
+                    "Event Player.KursorTeleportasi == 1 ? Custom Color(65, 225, 255, 255) : "
+                    "Event Player.KursorTeleportasi == 2 ? Custom Color(95, 150, 255, 255) : "
+                    "Event Player.KursorTeleportasi == 3 ? Custom Color(195, 100, 255, 255) : "
+                    "Custom Color(255, 85, 135, 255)"
+                )
+                checks.equal(
+                    teleport_call.args[7].strip(),
+                    pastel_palette,
+                    "GambarTeleportasi: palette pastello per-player delle cinque pagine",
+                )
+                checks.equal(
+                    teleport_call.args[8].strip(),
+                    neon_palette,
+                    "GambarTeleportasi: palette neon per-player delle cinque pagine",
+                )
     teleport_interact = next((rule for rule in rules if rule.name.startswith("19e - Teleportasi Jongkok: Interact")), None)
     checks.require(teleport_interact is not None, "handler Interact Teleport assente")
     if teleport_interact:
@@ -2866,6 +2954,10 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
 
         actions = rule_block(resurrect, "actions") or ""
         masked = mask_strings(actions)
+        live_nearest_teleport = (
+            "Teleport(Event Player, Nearest Walkable Position("
+            "Last Of(Position Of(Event Player))));"
+        )
         void_guard = (
             "If(Distance Between(Ray Cast Hit Position("
             "Event Player.PosisiMati + Vector(0, 1, 0), "
@@ -2874,10 +2966,8 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         )
         ordered = (
             "Event Player.BangkitLompatDipakai = True;",
-            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);",
             "Resurrect(Event Player);",
-            "Teleport(Event Player, Event Player.PosisiBangkitAman);",
+            live_nearest_teleport,
             "If(Is Alive(Event Player) == True);",
             "Call Subroutine(EfekPulihkan);",
             "Event Player.FisikaHantuTerbangDiterapkan = False;",
@@ -2886,15 +2976,19 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         positions = [masked.find(token) for token in ordered]
         checks.require(
             all(position >= 0 for position in positions) and positions == sorted(positions),
-            "Jump Resurrect deve conservare il punto sicuro, calcolare il recupero dal vuoto, Resurrect, Teleport e riapplicare Fly",
+            "Jump Resurrect deve tornare in vita, calcolare il punto camminabile dalla posizione live, Teleport e riapplicare Fly",
         )
-        checks.equal(masked.count(void_guard), 2, "Jump Resurrect: guardia vuoto verticale prima e dopo Resurrect")
-        checks.equal(masked.count("Ray Cast Hit Position("), 2, "Jump Resurrect: numero raycast vuoto")
+        checks.equal(masked.count(void_guard), 1, "Jump Resurrect: unica guardia vuoto verticale dopo Resurrect")
+        checks.equal(masked.count("Ray Cast Hit Position("), 1, "Jump Resurrect: unico raycast vuoto post-Resurrect")
         checks.equal(
-            masked.count("Nearest Walkable Position(Event Player.PosisiMati)"),
+            masked.count(live_nearest_teleport),
             1,
-            "Jump Resurrect: Nearest Walkable deve appartenere soltanto al ramo vuoto",
+            "Jump Resurrect: Teleport deve usare direttamente Nearest Walkable sulla posizione live confermata",
         )
+        checks.require("PosisiBangkitAman" not in masked,
+                       "Jump Resurrect non deve riusare uno scratch calcolato mentre il player è morto")
+        checks.require("Nearest Walkable Position(Event Player.PosisiMati)" not in masked,
+                       "Jump Resurrect non deve calcolare Nearest Walkable dalla snapshot PosisiMati")
         checks.require("Call Subroutine(CariPosisiTeleportAman);" not in masked,
                        "Jump Resurrect non deve dipendere dal validatore Teleport che può annullare il recupero")
         checks.require("Abort;" not in masked and "Abort If(" not in masked,
@@ -2906,9 +3000,11 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         teleport_calls = list(iter_calls(actions, "Teleport"))
         resurrect_calls = list(iter_calls(actions, "Resurrect"))
         nearest_calls = list(iter_calls(actions, "Nearest Walkable Position"))
-        checks.equal(len(teleport_calls), 1, "Jump Resurrect: unico Teleport riservato al vuoto")
+        last_calls = list(iter_calls(actions, "Last Of"))
+        checks.equal(len(teleport_calls), 1, "Jump Resurrect: unico Teleport live riservato al vuoto")
         checks.equal(len(resurrect_calls), 1, "Jump Resurrect: deve esistere un solo Resurrect")
-        checks.equal(len(nearest_calls), 1, "Jump Resurrect: unico candidato Nearest Walkable nel vuoto")
+        checks.equal(len(nearest_calls), 1, "Jump Resurrect: unico Nearest Walkable live nel vuoto")
+        checks.equal(len(last_calls), 1, "Jump Resurrect: deve mantenere Last Of sulla posizione live verificata nel client")
         if teleport_calls and resurrect_calls:
             checks.require(resurrect_calls[0].start < teleport_calls[0].start,
                            "Jump Resurrect deve tornare in vita prima del Teleport dal vuoto")
@@ -2920,6 +3016,12 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             checks.require(
                 any(void_guard in mask_strings(branch) for branch in teleport_branches),
                 "Jump Resurrect: Teleport deve essere confinato alla guardia vuoto",
+            )
+            checks.require(
+                len(teleport_calls[0].args) == 2
+                and teleport_calls[0].args[1].strip()
+                == "Nearest Walkable Position(Last Of(Position Of(Event Player)))",
+                "Jump Resurrect: destinazione Teleport live non conforme al pattern verificato nel client",
             )
         if nearest_calls:
             nearest_branches = conditional_branches_containing(actions, nearest_calls[0].start)

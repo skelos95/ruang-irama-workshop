@@ -290,12 +290,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             positions = [death.index(token) for token in normalization]
             self.assertEqual(positions, sorted(positions))
             resurrect = rule_with(source, "Resurrect(Event Player);", "Button(Jump)")
-            self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", resurrect)
-            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
+            live_teleport = "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));"
+            self.assertIn(live_teleport, resurrect)
+            self.assertNotIn("Event Player.PosisiBangkitAman", resurrect)
+            self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
             self.assertNotIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
-            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"))
+            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
             self.assertLess(resurrect.index("Call Subroutine(EfekPulihkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
             self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
 

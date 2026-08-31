@@ -57,7 +57,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("CalonTargetTeleportasi", scheduler)
             self.assertIn(f"Call Subroutine(SegarkanTargetPublikAktif);", scheduler)
 
-    def test_safe_position_is_shared_by_player_teleports_and_resurrect(self):
+    def test_safe_position_validator_is_shared_by_player_teleports(self):
         for source in (self.it, self.en):
             self.assertIn("57: CariPosisiTeleportAman", source)
             self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportAman);"), 4)
@@ -107,13 +107,45 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Event Player.PerintahTeleportasi = 3;", source)
             self.assertIn("PerintahTeleportasi == 3;", source)
             self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 4)) % 5", source)
-            self.assertIn("PLAYER / BOT ATTACH 4/5", source)
-            self.assertIn("SELF KILL 5/5", source)
-
             teleport_render = source.split(f'{rule_kw}("91g - Subrutin: Gambar menu teleportasi")', 1)[1].split(f'{rule_kw}("', 1)[0]
             self.assertNotIn("\\", teleport_render)
             self.assertNotIn('Custom String("{0}n{1}"', teleport_render)
-            self.assertIn('Custom String("{0}\n{1}", Custom String("{0}\n{1}",'.replace("\\n", "\n"), teleport_render)
+            self.assertIn('Custom String("{0}\n{1}", Custom String("HOLD'.replace("\\n", "\n"), teleport_render)
+            for token in (
+                "1/5 | TELEPORT: SPAWN ROOM",
+                "2/5 | TELEPORT: ACTIVE OBJECTIVE",
+                "3/5 | TELEPORT: PLAYER / BOT",
+                "4/5 | ATTACH: PLAYER / BOT",
+                "5/5 | SELF ELIMINATION",
+                "1/5 | TELEPORT: RUANG MUNCUL",
+                "2/5 | TELEPORT: OBJEKTIF AKTIF",
+                "3/5 | TELEPORT: PLAYER / BOT",
+                "4/5 | KAITKAN: PLAYER / BOT",
+                "5/5 | ELIMINASI DIRI",
+                "1/5 | เทเลพอร์ต: ห้องเกิด",
+                "2/5 | เทเลพอร์ต: เป้าหมายภารกิจ",
+                "3/5 | เทเลพอร์ต: ผู้เล่น / บอต",
+                "4/5 | เกาะ: ผู้เล่น / บอต",
+                "5/5 | กำจัดตัวเอง",
+                "NO AVAILABLE PUBLIC TARGET",
+                "TIDAK ADA TARGET PUBLIK TERSEDIA",
+                "ไม่มีเป้าหมายสาธารณะที่พร้อมใช้",
+            ):
+                self.assertIn(token, teleport_render)
+            for color in (
+                "Custom Color(205, 255, 225, 255)",
+                "Custom Color(200, 245, 255, 255)",
+                "Custom Color(215, 225, 255, 255)",
+                "Custom Color(235, 215, 255, 255)",
+                "Custom Color(255, 215, 230, 255)",
+                "Custom Color(80, 255, 160, 255)",
+                "Custom Color(65, 225, 255, 255)",
+                "Custom Color(95, 150, 255, 255)",
+                "Custom Color(195, 100, 255, 255)",
+                "Custom Color(255, 85, 135, 255)",
+            ):
+                self.assertIn(color, teleport_render)
+            self.assertNotIn("Global.KursorTeleportasi", teleport_render)
             self.assertIn("Vector(1.500, 1, 0)", source)
             self.assertIn("Vector(-1.500, 1, 0)", source)
             self.assertIn("Vector(0, 1, 1.500)", source)
@@ -157,7 +189,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", manual_detach)
             self.assertNotIn("Disallow Button(Event Player, Button(Reload));", attach_rule)
             self.assertNotIn("Allow Button(Event Player, Button(Reload));", detach_rules)
-            self.assertIn("CROUCH + RELOAD: DETACH", source)
+            self.assertIn("{0} + {1}: DETACH (ATTACH PAGE)", source)
+            self.assertIn("Input Binding String(Button(Crouch))", source)
+            self.assertIn("Input Binding String(Button(Reload))", source)
+            self.assertNotIn("CROUCH + RELOAD: DETACH", source)
             self.assertIn("99: TargetLampiranTeleportasi", source)
             self.assertIn("100: LampiranTeleportasiAktif", source)
 
@@ -171,15 +206,17 @@ class RuntimeMaintenanceTests(unittest.TestCase):
     def test_jump_resurrect_keeps_safe_deaths_in_place_and_recovers_void_deaths(self):
         for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             resurrect = source.split(f'{rule_kw}("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")', 1)[1].split(f'{rule_kw}("12g - Bangkit Lompat', 1)[0]
-            self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", resurrect)
-            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
-            self.assertEqual(resurrect.count("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)"), 2)
+            live_teleport = "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));"
+            self.assertIn(live_teleport, resurrect)
+            self.assertNotIn("Event Player.PosisiBangkitAman", resurrect)
+            self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
+            self.assertEqual(resurrect.count("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)"), 1)
             self.assertNotIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
-            self.assertEqual(resurrect.count("Teleport(Event Player, Event Player.PosisiBangkitAman);"), 1)
-            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"))
+            self.assertEqual(resurrect.count(live_teleport), 1)
+            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
             self.assertIn("Event Player.FisikaHantuTerbangDiterapkan = False;", resurrect)
             self.assertIn("Call Subroutine(TerapkanFisikaHantuTerbang);", resurrect)
             self.assertNotIn("Start Forcing Player Position(", source)

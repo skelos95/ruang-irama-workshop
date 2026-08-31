@@ -554,6 +554,38 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "\\nHold CROUCH + command")
         self.assert_rejected(mutated, "riga vuota artificiale")
 
+    def test_teleport_menu_requires_specific_trilingual_copy(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
+        mutations = (
+            ("EFFECT: ELIMINATE CURRENT HERO FORM", "EFFECT: SELF KILL"),
+            ("TUJUAN: RUANG MUNCUL TIMMU", "TUJUAN: SPAWN"),
+            ("ปลายทาง: เป้าหมายปัจจุบัน / ธงศัตรู", "ปลายทาง: เป้าหมาย"),
+        )
+        for old, new in mutations:
+            with self.subTest(old=old):
+                mutated = self.replace_in_rule(renderer, old, new)
+                self.assert_rejected(mutated, "testo pagina specifico EN/ID/TH assente")
+
+    def test_teleport_menu_keeps_dynamic_binding_help(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
+        mutated = self.replace_in_rule(
+            renderer,
+            "{0}: EXECUTE | RELEASE {1}: CLOSE",
+            "INTERACT: EXECUTE | RELEASE CROUCH: CLOSE",
+        )
+        self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
+
+    def test_teleport_menu_keeps_pastel_and_neon_page_palettes(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
+        mutations = (
+            ("Custom Color(200, 245, 255, 255)", "Custom Color(201, 245, 255, 255)", "palette pastello"),
+            ("Custom Color(195, 100, 255, 255)", "Custom Color(194, 100, 255, 255)", "palette neon"),
+        )
+        for old, new, message in mutations:
+            with self.subTest(message=message):
+                mutated = self.replace_in_rule(renderer, old, new)
+                self.assert_rejected(mutated, message)
+
     def test_revenge_no_target_branch_keeps_trilingual_crouch_help(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarBalasDendam")
         call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
@@ -1037,23 +1069,23 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "senza azioni Respawn")
 
-    def test_jump_resurrect_void_branch_requires_nearest_walkable_candidate(self) -> None:
+    def test_jump_resurrect_void_branch_requires_live_nearest_walkable_teleport(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);",
-            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
+            "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));",
+            "Teleport(Event Player, Nearest Walkable Position(Event Player.PosisiMati));",
         )
-        self.assert_rejected(mutated, "calcolare il recupero dal vuoto")
+        self.assert_rejected(mutated, "posizione live")
 
-    def test_jump_resurrect_safe_ground_starts_at_exact_death_position(self) -> None:
+    def test_jump_resurrect_keeps_the_live_confirmed_last_of_wrapper(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
-            "Event Player.PosisiBangkitAman = Vector(0, 0, 0);",
+            "Nearest Walkable Position(Last Of(Position Of(Event Player)))",
+            "Nearest Walkable Position(Position Of(Event Player))",
         )
-        self.assert_rejected(mutated, "conservare il punto sicuro")
+        self.assert_rejected(mutated, "posizione live")
 
     def test_jump_resurrect_cannot_be_gated_by_crouch_or_other_features(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -1074,7 +1106,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_jump_resurrect_returns_to_life_before_void_teleport(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman);"
+        teleport = "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));"
         revive = "Resurrect(Event Player);"
         changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
         changed = changed.replace(revive, teleport, 1).replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
@@ -1093,18 +1125,22 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_jump_resurrect_is_unconditional_outside_the_void_branch(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        old = (
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);\n"
-            "\t\tEnd;\n"
-            "\t\tResurrect(Event Player);"
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Resurrect(Event Player);",
+            "If(True);\n\t\t\tResurrect(Event Player);\n\t\tEnd;",
         )
-        new = (
-            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);\n"
-            "\t\t\tResurrect(Event Player);\n"
-            "\t\tEnd;"
-        )
-        mutated = self.replace_in_rule(resurrect, old, new)
         self.assert_rejected(mutated, "deve essere incondizionato")
+
+    def test_jump_resurrect_teleport_remains_confined_to_the_void_branch(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        void_guard = (
+            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), "
+            "Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), "
+            "Event Player.PosisiMati) > 2.500);"
+        )
+        mutated = self.replace_in_rule(resurrect, void_guard, "If(True);")
+        self.assert_rejected(mutated, "guardia vuoto")
 
     def test_jump_resurrect_reapplies_fly_after_effect_restore(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -3366,6 +3402,7 @@ class RepositoryMetadataTests(unittest.TestCase):
             "Jump Resurrect usa sempre Nearest Walkable Position.",
             "Teleport del cadavere prima di Resurrect.",
             "Se non esiste un terreno sicuro il player resta morto.",
+            "Nel vuoto usa Nearest Walkable Position(PosisiMati).",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:

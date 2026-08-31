@@ -66,7 +66,7 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
 | Morto | Jump | `Resurrect` sempre; resta sul punto con terreno, oppure usa `Nearest Walkable Position` e Teleport post-resurrezione nel vuoto; menu ancora visibile |
 
-Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto il raycast deve selezionare una sola `Nearest Walkable Position`, eseguire `Resurrect` senza condizioni e poi un solo Teleport del player vivo. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; dopo un raro rifiuto del motore, rilasciare Jump e premerlo di nuovo deve consentire un nuovo tentativo. Effetto e messaggio di successo devono apparire soltanto dopo la conferma del ritorno in vita.
+Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto l'unico raycast deve aprire il ramo di recupero, eseguire `Resurrect` senza condizioni e poi un solo `Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))))` del player vivo. La destinazione non deve provenire da `PosisiMati` o da uno scratch calcolato prima della resurrezione. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; dopo un raro rifiuto del motore, rilasciare Jump e premerlo di nuovo deve consentire un nuovo tentativo. Effetto e messaggio di successo devono apparire soltanto dopo la conferma del ritorno in vita.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -84,7 +84,7 @@ Verificare esattamente 14 voci, indici e contenuti:
 6. Unkillable — OFF, 1 HP, FULL HP.
 7. Hero Voice — 5 preset.
 8. Player Icon — Nothing + 36 icone.
-9. Crouch Teleport — OFF/ON.
+9. Crouch Travel & Attach — OFF/ON.
 10. Crouch Privacy — OFF/ON (default OFF).
 11. Try Your Luck — sei esiti.
 12. Vote Player — umani, self-vote incluso.
@@ -194,9 +194,11 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 ### Crouch Travel & Attach
 
-- Tenere Crouch e verificare le cinque pagine: Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill.
+- Tenere Crouch e verificare le cinque pagine EN: `1/5 | TELEPORT: SPAWN ROOM`, `2/5 | TELEPORT: ACTIVE OBJECTIVE`, `3/5 | TELEPORT: PLAYER / BOT`, `4/5 | ATTACH: PLAYER / BOT` e `5/5 | SELF ELIMINATION`; ripetere con gli equivalenti specifici ID e TH.
+- Verificare che ogni pagina mostri nell'ordine titolo, destinazione/posizione, target quando applicabile e azione; i comandi devono riflettere i binding reali, compreso dopo una rimappatura degli input.
+- Verificare il singolo HUD per-player e la progressione 1→5 mint, cyan, blu, viola e rosa: istruzioni in tinta pastello e contenuto in tinta neon, senza contaminare cursore, colori o handle di un altro player.
 - Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva; Primary/Secondary non devono eseguire il teleport o la kill.
-- Sulla pagina Self Kill, Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte, Resurrect e cambio squadra non devono azzerare il cooldown, mentre un vero leave/rejoin deve inizializzarlo di nuovo.
+- Sulla pagina Self Elimination, testo ed effetto devono specificare la forma eroe corrente. Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte, Resurrect e cambio squadra non devono azzerare il cooldown, mentre un vero leave/rejoin deve inizializzarlo di nuovo.
 - Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
 - Da attaccati, Reload senza Crouch deve restare l'azione nativa dell'eroe.
 - Con Menu Arcade Melee chiuso, Crouch + Reload deve sganciare; con Menu Arcade Melee aperto non deve sganciare.
@@ -244,7 +246,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Attivare Menu 8, chiudere menu e tenere Crouch.
 - Crouch + Primary/Secondary navigano rispettivamente alla pagina successiva/precedente; Crouch + Interact esegue la pagina attiva.
 - Spawn Room usa un punto valido della squadra.
-- All Players sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy.
+- Player / Bot sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy.
 - Nelle pagine Player/Bot Travel e Attach, muovere e cambiare stato del target: la singola targhetta icona/nome/salute deve seguire fluidamente l'identità selezionata e aggiornare testo e colore; cambiando target il vecchio handle non deve spostarsi sul nuovo soggetto.
 - Ricalcolare il target al click; morte/leave tra preview e click deve annullare o scegliere soltanto un fallback esplicito.
 - Destinazione finale sempre camminabile o annullata in sicurezza.
@@ -387,7 +389,7 @@ Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
 Ghost walls/floors/Fly 3D/idle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
-Jump Resurrect same-point/void-nearest-walkable/retry latch: PASS/FAIL
+Jump Resurrect same-point/void-live-nearest-walkable/retry latch: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
 Profilo งูแท้ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL

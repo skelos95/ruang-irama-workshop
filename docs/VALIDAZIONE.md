@@ -92,7 +92,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump esatta e senza percorsi bloccanti: le sole condizioni ammesse sono identità umana, morte, latch e Jump; il punto di morte resta invariato sul terreno, mentre due guardie raycast identiche confinano `Nearest Walkable Position(PosisiMati)` e l'unico Teleport al ramo vuoto. L'unico `Resurrect` è incondizionato e precede il Teleport; conferma `Is Alive`, ripristino effetti e riapplicazione Ghost/Fly restano obbligatori. Validatore Travel condiviso, `Abort`, fallback Spawn Room, offset casuali, forcing, `Respawn`, `Wait` e `Loop` sono vietati;
+- sequenza Jump esatta e senza percorsi bloccanti: le sole condizioni ammesse sono identità umana, morte, latch e Jump; l'unico `Resurrect` è incondizionato e precede un'unica guardia raycast. Soltanto il ramo vuoto contiene l'unico `Teleport`, con destinazione esatta `Nearest Walkable Position(Last Of(Position Of(Event Player)))` calcolata dalla posizione live post-resurrezione; scratch `PosisiBangkitAman` e destinazioni calcolate dalla snapshot di morte sono vietati. Conferma `Is Alive`, ripristino effetti e riapplicazione Ghost/Fly restano obbligatori, così come l'assenza di validatore Travel, `Abort`, fallback Spawn Room, offset casuali, forcing, `Respawn`, `Wait` e `Loop`;
 - latch rilasciati senza doppie attivazioni.
 
 ### Unkillable FULL HP
@@ -182,7 +182,7 @@ Il gate controlla:
 - filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
 - ownership Dummy Follow limitata al default setup OFF, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
 - ownership Ghost/Fly limitata al setup/cleanup reale, all'applicazione della pagina 13 e alla manutenzione fisica dedicata; il cambio squadra leggero non può azzerare i toggle.
-- Crouch Travel & Attach composto da cinque pagine — Spawn Travel, Objective Travel, Player/Bot Travel, Player/Bot Attach e Self Kill — con Primary/Secondary riservati alla navigazione e Interact riservato all'esecuzione; Self Kill usa un timestamp per-player, arma esattamente `+3` secondi prima di `Kill`, rifiuta lo spam durante la finestra e non viene azzerato da morte o cambio squadra.
+- Crouch Travel & Attach composto da cinque pagine — Teleport: Spawn Room, Teleport: Active Objective, Teleport: Player / Bot, Attach: Player / Bot e Self Elimination — con copia ordinata e localizzata EN/ID/TH, binding dinamici, un solo HUD/cursore per-player e palette mint → cyan → blu → viola → rosa (istruzioni pastello, contenuto neon). Primary/Secondary restano riservati alla navigazione e Interact all'esecuzione; Self Elimination usa un timestamp per-player, arma esattamente `+3` secondi prima di `Kill`, rifiuta lo spam durante la finestra e non viene azzerato da morte o cambio squadra.
 
 ### Otto modalità
 
@@ -210,7 +210,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a `Respawn`, guardie di Menu/Crouch/Camera/Luck aggiunte, punto di morte non conservato sul terreno, raycast vuoto o `Nearest Walkable Position(PosisiMati)` rimossi/spostati fuori ramo, dipendenza dal validatore Travel, `Abort` o fallback Spawn Room reintrodotti, `Resurrect` condizionale/dopo Teleport/duplicato, Teleport assente/fuori dal vuoto/duplicato, forcing/offset casuale/`Wait`/`Loop` reintrodotti, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- Jump tornato a `Respawn`, guardie di Menu/Crouch/Camera/Luck aggiunte, raycast vuoto assente/duplicato/spostato prima di `Resurrect`, destinazione diversa da `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, snapshot `PosisiMati` o scratch `PosisiBangkitAman` riutilizzati per il Teleport, dipendenza dal validatore Travel, `Abort` o fallback Spawn Room reintrodotti, `Resurrect` condizionale/dopo Teleport/duplicato, Teleport assente/fuori dal vuoto/duplicato, forcing/offset casuale/`Wait`/`Loop` reintrodotti, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
@@ -229,7 +229,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker, pending non ripulito su timeout/leave oppure pending perso/duplicato durante un cambio squadra leggero;
 - guardia Join, filtro nome `Null`/vuoto, cleanup Leave o refresh team-switch rimossi, voti verso il leaver non ripuliti, preferenze/Camera/status/effetti/voti cancellati durante un cambio leggero oppure default non riapplicati dopo un vero rejoin;
 - profilo `งูแท้` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Caladan Brood` aggiunto al catalogo globale o conteggio generi diverso da 100;
-- Crouch Travel & Attach con meno di cinque pagine, Self Kill assente o privo del cooldown per-player di 3 secondi, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
+- Crouch Travel & Attach con meno di cinque pagine, copia EN/ID/TH mancante o non specifica, binding hard-coded, palette pastello/neon incompleta, cursore condiviso, Self Elimination assente o priva del cooldown per-player di 3 secondi, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
 - una delle otto modalità o un ramo Teleport mancante;
 - divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;
 - workflow di scrittura, automazione di commit, marker, trigger o patcher one-shot reintrodotto sotto `.github`.
@@ -261,10 +261,10 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - import e D.Mon smoke test;
 - 14 menu e input in EN/ID/TH, incluse pagina 12 Dummy Follow e pagina 13 Ghost Mode / Fly;
 - profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
-- cinque pagine Crouch Travel & Attach con Primary/Secondary per navigare e Interact per eseguire;
+- cinque pagine Crouch Travel & Attach con copia ordinata EN/ID/TH, binding reali, palette pastello/neon per pagina, Primary/Secondary per navigare e Interact per eseguire;
 - Ghost/Fly indipendenti, collisioni/volo 3D/freno idle/ripristino e interazione con Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
-- morte/Resurrect con Jump nello stesso punto su terreno e `Nearest Walkable Position` più Teleport post-resurrezione soltanto nel vuoto, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
+- morte/Resurrect con Jump nello stesso punto su terreno e Teleport post-resurrezione nel vuoto verso `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
 - respawn dummy entro 3 secondi;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;
