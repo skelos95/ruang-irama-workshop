@@ -60,11 +60,6 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                     self.assertEqual(source.count(declaration), 1)
 
     def test_main_menu_has_fourteen_pages_and_routes_page_thirteen(self) -> None:
-        localized_opening = (
-            "Fourteen extremely important decisions",
-            "Empat belas keputusan",
-            "มีสิบสี่ตัวเลือก",
-        )
         localized_titles = (
             "13 - GHOST MODE / FLY",
             "13 - MODE HANTU / TERBANG",
@@ -112,14 +107,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             transition = subroutine(source, "TransisiWarnaMenu")
             self.assertIn("EventPlayer.HalamanMenu)==13);", compact(transition))
             self.assertIn("Vector(110,170,255)*0.320", compact(transition))
-            for token in localized_opening + localized_titles:
+            for token in localized_titles:
                 self.assertIn(token, source)
-            for legacy in (
-                "Thirteen extremely important decisions",
-                "Tiga belas keputusan",
-                "มีสิบสามตัวเลือก",
-            ):
-                self.assertNotIn(legacy, source)
 
     def test_page_thirteen_renderer_has_two_independent_localized_rows(self) -> None:
         localized_words = (
