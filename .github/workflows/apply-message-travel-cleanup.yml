@@ -29,6 +29,24 @@ jobs:
           PY
       - name: Apply exact UX patch
         run: python tools/apply_message_travel_cleanup.py
+      - name: Align Self Elimination cooldown contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          old = 'Self Kill ready in {0} s.'
+          new = 'Self Elimination ready in {0}s.'
+          changed = 0
+          for name in ("tools/validate_workshop.py", "tests/test_validate_workshop.py"):
+              path = Path(name)
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count:
+                  text = text.replace(old, new)
+                  path.write_text(text, encoding="utf-8")
+                  changed += count
+          if changed == 0:
+              raise SystemExit("Self Elimination cooldown contract anchor missing")
+          PY
       - name: Remove temporary helpers
         run: rm .github/workflows/apply-message-travel-cleanup.yml tools/apply_message_travel_cleanup.py
       - name: Run focused UX tests
