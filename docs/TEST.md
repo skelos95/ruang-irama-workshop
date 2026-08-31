@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect sempre su `Nearest Walkable Position` e la riapplicazione Fly post-morte, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -64,9 +64,9 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
-| Morto | Jump | `Teleport` alla `Nearest Walkable Position` validata e poi `Resurrect`; nessuna Spawn Room; menu ancora visibile |
+| Morto | Jump | `Resurrect` sempre; resta sul punto con terreno, oppure usa `Nearest Walkable Position` e Teleport post-resurrezione nel vuoto; menu ancora visibile |
 
-Sul caso Jump, provare morte su terreno normale, vicino a un bordo e nel vuoto profondo. In tutti i casi deve essere calcolata una `Nearest Walkable Position`, validata e usata da un solo `Teleport` del cadavere prima di `Resurrect`; non deve comparire alcun percorso verso la Spawn Room. Se non esiste alcun punto sicuro, il player deve restare morto invece di entrare in un ciclo di morti. Non sono ammessi offset casuali, forcing di posizione, `Respawn` o `Wait`. Tenere premuto il pulsante dopo un tentativo fallito: non devono partire chiamate ripetute. Rilasciare Jump e premerlo di nuovo deve consentire esattamente un nuovo tentativo. Dopo un successo, effetto e messaggio devono apparire soltanto dopo la conferma del ritorno in vita.
+Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto il raycast deve selezionare una sola `Nearest Walkable Position`, eseguire `Resurrect` senza condizioni e poi un solo Teleport del player vivo. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; dopo un raro rifiuto del motore, rilasciare Jump e premerlo di nuovo deve consentire un nuovo tentativo. Effetto e messaggio di successo devono apparire soltanto dopo la conferma del ritorno in vita.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -224,7 +224,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Cambiare rapidamente target senza frame di Camera concorrenti.
 - Uccidere, far uscire o despawnare il target: il riferimento deve tornare valido.
 - Verificare collisione pareti e pitch estremo.
-- Ruotare lentamente, rapidamente e di 180° da fermi, in corsa, in salto e vicino a pareti/angoli: `Blend Speed 75` deve eliminare vibrazione ed effetto ondulante senza introdurre clipping persistente o ritardo incontrollabile.
+- Ruotare lentamente, rapidamente e di 180° da fermi, in corsa, in strafe, in salto e vicino a pareti/angoli: posizione e look-at per-frame con `Blend Speed 0` devono seguire la traslazione senza vibrazione, recuperi ritardati o clipping persistente. Ripetere sia sulla propria Camera sia osservando ciascun altro player.
 - Confermare che esista un solo raycast Camera dal punto di vista funzionale.
 
 ### Inspection e Privacy
@@ -387,7 +387,7 @@ Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
 Ghost walls/floors/Fly 3D/idle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
-Jump Resurrect always-nearest-walkable/retry latch: PASS/FAIL
+Jump Resurrect same-point/void-nearest-walkable/retry latch: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
 Profilo งูแท้ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL

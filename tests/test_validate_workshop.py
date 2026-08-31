@@ -1037,24 +1037,74 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "senza azioni Respawn")
 
-    def test_jump_resurrect_always_requires_nearest_walkable_candidate(self) -> None:
+    def test_jump_resurrect_void_branch_requires_nearest_walkable_candidate(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.replace_in_rule(resurrect, "Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", "Event Player.PosisiTeleportTujuan = Event Player.PosisiMati;")
-        self.assert_rejected(mutated, "sempre Nearest Walkable")
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);",
+            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
+        )
+        self.assert_rejected(mutated, "calcolare il recupero dal vuoto")
+
+    def test_jump_resurrect_safe_ground_starts_at_exact_death_position(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;",
+            "Event Player.PosisiBangkitAman = Vector(0, 0, 0);",
+        )
+        self.assert_rejected(mutated, "conservare il punto sicuro")
+
+    def test_jump_resurrect_cannot_be_gated_by_crouch_or_other_features(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        for condition in (
+            "Event Player.TeleportasiJongkokAktif == False;",
+            "Event Player.MenuTerbuka == False;",
+            "Event Player.ModeKamera == 0;",
+            "Event Player.KartuNasibAktif == False;",
+        ):
+            with self.subTest(condition=condition):
+                mutated = self.inject_condition(resurrect, condition)
+                self.assert_rejected(mutated, "deve dipendere solo da identità umana, morte, latch e Jump")
 
     def test_jump_resurrect_cannot_use_spawn_room_fallback(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.inject_action(resurrect, "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));")
         self.assert_rejected(mutated, "fallback Spawn Room")
 
-    def test_jump_resurrect_teleports_the_corpse_before_resurrect(self) -> None:
+    def test_jump_resurrect_returns_to_life_before_void_teleport(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman);"
         revive = "Resurrect(Event Player);"
         changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
         changed = changed.replace(revive, teleport, 1).replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
         mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
-        self.assert_rejected(mutated, "teletrasportare il cadavere")
+        self.assert_rejected(mutated, "tornare in vita prima del Teleport")
+
+    def test_jump_resurrect_has_no_abort_or_generic_safe_teleport_dependency(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        for action, message in (
+            ("Abort;", "non deve avere percorsi Abort"),
+            ("Call Subroutine(CariPosisiTeleportAman);", "non deve dipendere dal validatore Teleport"),
+        ):
+            with self.subTest(action=action):
+                mutated = self.inject_action(resurrect, action)
+                self.assert_rejected(mutated, message)
+
+    def test_jump_resurrect_is_unconditional_outside_the_void_branch(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        old = (
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);\n"
+            "\t\tEnd;\n"
+            "\t\tResurrect(Event Player);"
+        )
+        new = (
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);\n"
+            "\t\t\tResurrect(Event Player);\n"
+            "\t\tEnd;"
+        )
+        mutated = self.replace_in_rule(resurrect, old, new)
+        self.assert_rejected(mutated, "deve essere incondizionato")
 
     def test_jump_resurrect_reapplies_fly_after_effect_restore(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -3035,20 +3085,43 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.source[:camera_rule.start] + mutated_body + self.source[camera_rule.end:]
         self.assert_rejected(mutated, "raycast Camera")
 
-    def test_camera_start_is_shared_once_with_blend_speed_75(self) -> None:
+    def test_camera_start_is_shared_once_with_per_frame_blend_speed_zero(self) -> None:
         calls = self.start_camera_calls()
         self.assertEqual(len(calls), 1)
         rule, call = calls[0]
         self.assertEqual(validator.subroutine_target(rule), "MulaiKamera")
         self.assertEqual(len(call.args), 4)
-        self.assertEqual(call.args[3].strip(), "75")
+        self.assertTrue(call.args[1].strip().startswith("Update Every Frame("))
+        self.assertTrue(call.args[2].strip().startswith("Update Every Frame("))
+        self.assertEqual(call.args[3].strip(), "0")
 
-    def test_camera_blend_speed_75_is_guarded(self) -> None:
+    def test_camera_nonzero_blend_cannot_chase_a_per_frame_target(self) -> None:
         calls = self.start_camera_calls()
         self.assertEqual(len(calls), 1)
         _, call = calls[0]
-        mutated = self.replace_call_argument(call, 3, "0")
-        self.assert_rejected(mutated, "Camera deve usare Blend Speed 75")
+        mutated = self.replace_call_argument(call, 3, "75")
+        self.assert_rejected(mutated, "Camera per-frame deve usare Blend Speed 0")
+
+    def test_camera_eye_and_look_at_remain_per_frame(self) -> None:
+        calls = self.start_camera_calls()
+        self.assertEqual(len(calls), 1)
+        _, call = calls[0]
+        for argument in (1, 2):
+            with self.subTest(argument=argument):
+                mutated = self.replace_call_argument(call, argument, "Eye Position(Event Player.TargetKamera)")
+                self.assert_rejected(mutated, "Camera per-frame deve usare Blend Speed 0")
+
+    def test_camera_self_watch_and_quick_toggle_share_the_same_subroutine(self) -> None:
+        rules = validator.extract_rules(self.source)
+        callers = [
+            rule
+            for rule in rules
+            if "Call Subroutine(MulaiKamera);" in rule.body
+        ]
+        self.assertEqual(sum(rule.body.count("Call Subroutine(MulaiKamera);") for rule in callers), 3)
+        quick_toggle = next(rule for rule in callers if "Wait(0.500, Abort When False);" in rule.body)
+        mutated = self.replace_in_rule(quick_toggle, "Call Subroutine(MulaiKamera);", "Abort;")
+        self.assert_rejected(mutated, "Camera personale, watch e toggle rapido devono condividere MulaiKamera")
 
     def test_camera_start_cannot_escape_the_shared_subroutine(self) -> None:
         calls = self.start_camera_calls()
@@ -3271,6 +3344,28 @@ class RepositoryMetadataTests(unittest.TestCase):
             "Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo.",
             "Cambio squadra ripetuto senza cleanup/setup completo, ricostruzione HUD o reset engine.",
             "Un cambio squadra aggiorna soltanto i campi Team.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.make_repo(root)
+                changelog = root / "CHANGELOG.md"
+                changelog.write_text(
+                    changelog.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                self.assertTrue(
+                    any(
+                        "testo lifecycle obsoleto" in error
+                        for error in self.metadata_errors(root)
+                    )
+                )
+
+    def test_obsolete_jump_resurrect_claim_is_rejected(self) -> None:
+        claims = (
+            "Jump Resurrect usa sempre Nearest Walkable Position.",
+            "Teleport del cadavere prima di Resurrect.",
+            "Se non esiste un terreno sicuro il player resta morto.",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:

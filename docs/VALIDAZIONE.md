@@ -92,7 +92,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump esatta e senza `Wait`: latch, `Nearest Walkable Position(PosisiMati)` sempre calcolata e validata, un unico `Teleport` del cadavere prima di `Resurrect`, conferma `Is Alive`, ripristino effetti e riapplicazione immediata Ghost/Fly; fallback alla Spawn Room, offset casuali, forcing di posizione e `Respawn` sono vietati;
+- sequenza Jump esatta e senza percorsi bloccanti: le sole condizioni ammesse sono identità umana, morte, latch e Jump; il punto di morte resta invariato sul terreno, mentre due guardie raycast identiche confinano `Nearest Walkable Position(PosisiMati)` e l'unico Teleport al ramo vuoto. L'unico `Resurrect` è incondizionato e precede il Teleport; conferma `Is Alive`, ripristino effetti e riapplicazione Ghost/Fly restano obbligatori. Validatore Travel condiviso, `Abort`, fallback Spawn Room, offset casuali, forcing, `Respawn`, `Wait` e `Loop` sono vietati;
 - latch rilasciati senza doppie attivazioni.
 
 ### Unkillable FULL HP
@@ -128,7 +128,7 @@ Il gate richiede:
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
 - attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, inclusa la riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e la sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
 - `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
-- un solo `Start Camera`, posseduto da `MulaiKamera` e con `Blend Speed 75`, e un solo raycast Camera;
+- un solo `Start Camera`, posseduto da `MulaiKamera`, con entrambi i vettori per-frame, `Blend Speed 0` e un solo raycast Camera; camera personale, watch e toggle rapido devono convergere nei tre richiami alla stessa subroutine;
 - nessuna regola HUD contenente `Wait` o `Loop`.
 
 Le categorie Wait autorizzabili sono soltanto: tick scheduler, ordinamento join/leave, primo frame della classificazione bot e hold input. Resurrect e cleanup roster sono atomici e senza `Wait`; la stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo. Qualsiasi Wait fuori allowlist, un ottavo `Wait`, una durata diversa o un secondo Loop fa fallire il gate.
@@ -210,7 +210,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a `Respawn`, candidato `Nearest Walkable Position(PosisiMati)` sempre calcolato o validazione sicura rimossi, fallback Spawn Room reintrodotto, assenza di abort quando nessun terreno è sicuro, `Teleport` mancante/dopo `Resurrect`/duplicato, forcing/offset casuale/`Wait` reintrodotto, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- Jump tornato a `Respawn`, guardie di Menu/Crouch/Camera/Luck aggiunte, punto di morte non conservato sul terreno, raycast vuoto o `Nearest Walkable Position(PosisiMati)` rimossi/spostati fuori ramo, dipendenza dal validatore Travel, `Abort` o fallback Spawn Room reintrodotti, `Resurrect` condizionale/dopo Teleport/duplicato, Teleport assente/fuori dal vuoto/duplicato, forcing/offset casuale/`Wait`/`Loop` reintrodotti, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
@@ -224,7 +224,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
-- secondo `Start Camera`, chiamata fuori da `MulaiKamera`, `Blend Speed` diverso da 75 o secondo raycast Camera;
+- secondo `Start Camera`, chiamata fuori da `MulaiKamera`, vettore non per-frame, `Blend Speed` diverso da 0, ingresso personale/watch/toggle non condiviso o secondo raycast Camera;
 - esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning che non sospende Unkillable/Damage Received per tutti i 10 secondi, riapplica la protezione fra i tick, modifica Mode/Kursor o non la ripristina al termine, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
 - Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker, pending non ripulito su timeout/leave oppure pending perso/duplicato durante un cambio squadra leggero;
 - guardia Join, filtro nome `Null`/vuoto, cleanup Leave o refresh team-switch rimossi, voti verso il leaver non ripuliti, preferenze/Camera/status/effetti/voti cancellati durante un cambio leggero oppure default non riapplicati dopo un vero rejoin;
@@ -264,7 +264,7 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - cinque pagine Crouch Travel & Attach con Primary/Secondary per navigare e Interact per eseguire;
 - Ghost/Fly indipendenti, collisioni/volo 3D/freno idle/ripristino e interazione con Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
-- morte/Resurrect con Jump sempre tramite `Nearest Walkable Position` validata, teleport del cadavere prima del ritorno in vita, retry latch, hero swap, spectator, join/leave e team switch;
+- morte/Resurrect con Jump nello stesso punto su terreno e `Nearest Walkable Position` più Teleport post-resurrezione soltanto nel vuoto, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
 - respawn dummy entro 3 secondi;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;

@@ -2508,7 +2508,7 @@ regola("12e - Bangkit Lompat: Simpan posisi kematian")
 		Event Player.BangkitLompatDipakai = False;
 		Event Player.PerintahMenu = 0;
 		Event Player.PerintahTeleportasi = 0;
-		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: resurrect at the nearest safe walkable position.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit di posisi aman terdekat.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นที่ตำแหน่งเดินได้ที่ปลอดภัยใกล้ที่สุด", Input Binding String(Button(Jump))));
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: resurrect here, or move to walkable ground after a void death.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit di sini, atau pindah ke tanah yang bisa dilalui setelah jatuh ke jurang.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นตรงนี้ หรือย้ายไปยังพื้นที่เดินได้หลังตกเหว", Input Binding String(Button(Jump))));
 	}
 }
 
@@ -2527,7 +2527,6 @@ regola("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
 		Is Alive(Event Player) == False;
-		Event Player.TeleportasiJongkokAktif == False;
 		Event Player.BangkitLompatDipakai == False;
 		Is Button Held(Event Player, Button(Jump)) == True;
 	}
@@ -2535,20 +2534,21 @@ regola("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 	azioni
 	{
 		Event Player.BangkitLompatDipakai = True;
-		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
-		Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);
-		Call Subroutine(CariPosisiTeleportAman);
-		If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("No safe ground was found. Release {0} and try again.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tidak ada tanah aman. Lepaskan {0} lalu coba lagi.", Input Binding String(Button(Jump))) : Custom String("ไม่พบพื้นปลอดภัย ปล่อย {0} แล้วลองอีกครั้ง", Input Binding String(Button(Jump))));
-			Abort;
+		Event Player.PosisiBangkitAman = Event Player.PosisiMati;
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500);
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);
 		End;
-		Teleport(Event Player, Event Player.PosisiBangkitAman);
 		Resurrect(Event Player);
+		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500);
+			Teleport(Event Player, Event Player.PosisiBangkitAman);
+		End;
 		If(Is Alive(Event Player) == True);
 			Call Subroutine(EfekPulihkan);
 			Event Player.FisikaHantuTerbangDiterapkan = False;
 			Call Subroutine(TerapkanFisikaHantuTerbang);
-			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Resurrected at the nearest safe walkable position.") : Event Player.IndeksBahasa == 1 ? Custom String("Bangkit kembali di posisi aman terdekat.") : Custom String("ฟื้นที่ตำแหน่งเดินได้ที่ปลอดภัยใกล้ที่สุดแล้ว"));
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Resurrected safely.") : Event Player.IndeksBahasa == 1 ? Custom String("Berhasil bangkit dengan aman.") : Custom String("ฟื้นอย่างปลอดภัยแล้ว"));
+		Else;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Resurrect was not ready. Release {0} and try again.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Bangkit belum siap. Lepaskan {0} lalu coba lagi.", Input Binding String(Button(Jump))) : Custom String("การฟื้นยังไม่พร้อม ปล่อย {0} แล้วลองอีกครั้ง", Input Binding String(Button(Jump))));
 		End;
 	}
 }
@@ -4248,8 +4248,8 @@ regola("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 	{
 		Abort If(Event Player.TargetKamera == Null);
 		Abort If(Entity Exists(Event Player.TargetKamera) == False);
-		"Ganti kamera langsung tanpa Stop Camera agar perpindahan target tidak berkedip satu bingkai."
-		Start Camera(Event Player, Update Every Frame(First Of(Mapped Array(Array(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0), Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0) - Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Globale.JarakKamera, Globale.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) + Cross Product(Direction From Angles(Horizontal Facing Angle Of(Event Player.TargetKamera), 0), Vector(0, 1, 0)) * Min(1.350, Max(Globale.GeserKamera, Globale.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)), Empty Array, Empty Array, False)), Current Array Element + Direction Towards(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Min(Globale.BantalanDinding, Distance Between(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * 0.250)))), Update Every Frame(Eye Position(Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Globale.JarakBidik), 75);
+		"Ikuti translasi target setiap frame tanpa blend yang mengejar tujuan bergerak dan menimbulkan getaran."
+		Start Camera(Event Player, Update Every Frame(First Of(Mapped Array(Array(Ray Cast Hit Position(Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0), Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0) - Facing Direction Of(Event Player.TargetKamera) * Min(4.500, Max(Globale.JarakKamera, Globale.JarakKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0055)) + Cross Product(Direction From Angles(Horizontal Facing Angle Of(Event Player.TargetKamera), 0), Vector(0, 1, 0)) * Min(1.350, Max(Globale.GeserKamera, Globale.GeserKamera + (Max Health(Event Player.TargetKamera) - 200) * 0.0016)), Empty Array, Empty Array, False)), Current Array Element + Direction Towards(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * Min(Globale.BantalanDinding, Distance Between(Current Array Element, Eye Position(Event Player.TargetKamera) + Vector(0, Min(0.750, Max(0.450, 0.450 + (Max Health(Event Player.TargetKamera) - 200) * 0.0006)), 0)) * 0.250)))), Update Every Frame(Eye Position(Event Player.TargetKamera) + Facing Direction Of(Event Player.TargetKamera) * Globale.JarakBidik), 0);
 	}
 }
 

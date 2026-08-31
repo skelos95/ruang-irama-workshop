@@ -168,16 +168,18 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri", source)
             self.assertIn("Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget", source)
 
-    def test_jump_resurrect_always_uses_nearest_walkable_without_spawn_fallback(self):
+    def test_jump_resurrect_keeps_safe_deaths_in_place_and_recovers_void_deaths(self):
         for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             resurrect = source.split(f'{rule_kw}("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")', 1)[1].split(f'{rule_kw}("12g - Bangkit Lompat', 1)[0]
-            self.assertIn("Event Player.PosisiBangkitAman = Vector(0, 0, 0);", resurrect)
-            self.assertIn("Event Player.PosisiTeleportTujuan = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
-            self.assertIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
+            self.assertIn("Event Player.PosisiBangkitAman = Event Player.PosisiMati;", resurrect)
+            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati);", resurrect)
+            self.assertEqual(resurrect.count("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)"), 2)
+            self.assertNotIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
+            self.assertNotIn("Abort;", resurrect)
+            self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
-            self.assertNotIn("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0)", resurrect)
             self.assertEqual(resurrect.count("Teleport(Event Player, Event Player.PosisiBangkitAman);"), 1)
-            self.assertLess(resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"), resurrect.index("Resurrect(Event Player);"))
+            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index("Teleport(Event Player, Event Player.PosisiBangkitAman);"))
             self.assertIn("Event Player.FisikaHantuTerbangDiterapkan = False;", resurrect)
             self.assertIn("Call Subroutine(TerapkanFisikaHantuTerbang);", resurrect)
             self.assertNotIn("Start Forcing Player Position(", source)
