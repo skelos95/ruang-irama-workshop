@@ -278,3 +278,5 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 ## Decisione
 
 La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+
+- UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.

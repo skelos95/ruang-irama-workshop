@@ -575,16 +575,27 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
-    def test_teleport_menu_keeps_pastel_and_neon_page_palettes(self) -> None:
+    def test_teleport_menu_uses_smooth_chased_tint(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
-        mutations = (
-            ("Custom Color(200, 245, 255, 255)", "Custom Color(201, 245, 255, 255)", "palette pastello"),
-            ("Custom Color(195, 100, 255, 255)", "Custom Color(194, 100, 255, 255)", "palette neon"),
-        )
-        for old, new, message in mutations:
-            with self.subTest(message=message):
-                mutated = self.replace_in_rule(renderer, old, new)
-                self.assert_rejected(mutated, message)
+        for token in (
+            "Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250",
+            "Custom Color(X Component Of(Event Player.WarnaMenu)",
+            "Visible To String and Color",
+        ):
+            self.assertIn(token, renderer.body)
+        transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransisiWarnaMenu")
+        for token in (
+            "Event Player.TeleportasiJongkokAktif == True",
+            "Vector(80, 255, 160)",
+            "Vector(65, 225, 255)",
+            "Vector(95, 150, 255)",
+            "Vector(195, 100, 255)",
+            "Vector(255, 85, 135)",
+            "0.180, Destination and Duration",
+        ):
+            self.assertIn(token, transition.body)
+        mutated = self.replace_in_rule(renderer, "Visible To String and Color", "Visible To and String")
+        self.assert_rejected(mutated, "colore deve rivalutarsi")
 
     def test_revenge_no_target_branch_keeps_trilingual_crouch_help(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarBalasDendam")
@@ -844,25 +855,27 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "salto Soundtrack ±10 deve consumare i comandi sulla pagina 2")
 
-    def test_menu_open_message_announces_fourteen_pages_in_all_languages(self) -> None:
-        translations = (
-            (
-                "Arcade Menu online. Fourteen extremely important decisions await.",
-                "Arcade Menu online. Thirteen extremely important decisions await.",
-            ),
-            (
-                "Menu Arcade online. Empat belas keputusan yang sangat penting menunggu.",
-                "Menu Arcade online. Tiga belas keputusan yang sangat penting menunggu.",
-            ),
-            (
-                "เปิดเมนูอาร์เคดแล้ว มีสิบสี่ตัวเลือกสำคัญรอคุณอยู่",
-                "เปิดเมนูอาร์เคดแล้ว มีสิบสามตัวเลือกสำคัญรอคุณอยู่",
-            ),
+    def test_routine_small_messages_stay_suppressed(self) -> None:
+        noisy = (
+            "Arcade Menu online.",
+            "Arcade Menu closed.",
+            "Soundtrack: {0}.",
+            "Third person on.",
+            "Name color: {0}.",
+            "Hero voice updated.",
+            "Player icon: {0}.",
+            "Crouch Teleport enabled.",
+            "Crouch privacy enabled.",
+            "Vote registered for {0}.",
+            "Enemy dummy follow enabled.",
+            "Wall phasing enabled.",
+            "Fly enabled.",
+            "Resurrected safely.",
+            "Teleported to your Spawn Room.",
         )
-        for current, legacy in translations:
-            with self.subTest(language=current):
-                mutated = self.replace_once(current, legacy)
-                self.assert_rejected(mutated, "messaggio apertura menu a 14 pagine assente")
+        for marker in noisy:
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, self.source)
 
     def test_menu_open_message_rejects_legacy_thirteen_page_wording(self) -> None:
         for legacy in (

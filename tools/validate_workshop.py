@@ -1177,12 +1177,25 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
 
 
 def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
-    for text in (
-        "Arcade Menu online. Fourteen extremely important decisions await.",
-        "Menu Arcade online. Empat belas keputusan yang sangat penting menunggu.",
-        "เปิดเมนูอาร์เคดแล้ว มีสิบสี่ตัวเลือกสำคัญรอคุณอยู่",
-    ):
-        checks.require(text in source, f"messaggio apertura menu a 14 pagine assente: {text}")
+    routine_noise = (
+        "Arcade Menu online.",
+        "Arcade Menu closed.",
+        "Soundtrack: {0}.",
+        "Third person on.",
+        "Name color: {0}.",
+        "Hero voice updated.",
+        "Player icon: {0}.",
+        "Crouch Teleport enabled.",
+        "Crouch privacy enabled.",
+        "Vote registered for {0}.",
+        "Enemy dummy follow enabled.",
+        "Wall phasing enabled.",
+        "Fly enabled.",
+        "Resurrected safely.",
+        "Teleported to your Spawn Room.",
+    )
+    for text in routine_noise:
+        checks.require(text not in source, f"Small Message routine ridondante ancora presente: {text}")
     for legacy in (
         "Thirteen extremely important decisions",
         "Tiga belas keputusan",
@@ -1511,30 +1524,51 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         token in teleport_call.args[3],
                         f"GambarTeleportasi: testo pagina specifico EN/ID/TH assente: {token}",
                     )
-                pastel_palette = (
-                    "Event Player.KursorTeleportasi == 0 ? Custom Color(205, 255, 225, 255) : "
-                    "Event Player.KursorTeleportasi == 1 ? Custom Color(200, 245, 255, 255) : "
-                    "Event Player.KursorTeleportasi == 2 ? Custom Color(215, 225, 255, 255) : "
-                    "Event Player.KursorTeleportasi == 3 ? Custom Color(235, 215, 255, 255) : "
-                    "Custom Color(255, 215, 230, 255)"
+                smooth_pastel = (
+                    "Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250, "
+                    "190 + Y Component Of(Event Player.WarnaMenu) * 0.250, "
+                    "190 + Z Component Of(Event Player.WarnaMenu) * 0.250, 255)"
                 )
-                neon_palette = (
-                    "Event Player.KursorTeleportasi == 0 ? Custom Color(80, 255, 160, 255) : "
-                    "Event Player.KursorTeleportasi == 1 ? Custom Color(65, 225, 255, 255) : "
-                    "Event Player.KursorTeleportasi == 2 ? Custom Color(95, 150, 255, 255) : "
-                    "Event Player.KursorTeleportasi == 3 ? Custom Color(195, 100, 255, 255) : "
-                    "Custom Color(255, 85, 135, 255)"
+                smooth_neon = (
+                    "Custom Color(X Component Of(Event Player.WarnaMenu), "
+                    "Y Component Of(Event Player.WarnaMenu), "
+                    "Z Component Of(Event Player.WarnaMenu), 255)"
                 )
                 checks.equal(
                     teleport_call.args[7].strip(),
-                    pastel_palette,
-                    "GambarTeleportasi: palette pastello per-player delle cinque pagine",
+                    smooth_pastel,
+                    "GambarTeleportasi: tinta pastello fluida guidata da WarnaMenu",
                 )
                 checks.equal(
                     teleport_call.args[8].strip(),
-                    neon_palette,
-                    "GambarTeleportasi: palette neon per-player delle cinque pagine",
+                    smooth_neon,
+                    "GambarTeleportasi: tinta neon fluida guidata da WarnaMenu",
                 )
+                checks.equal(
+                    teleport_call.args[9].strip(),
+                    "Visible To String and Color",
+                    "GambarTeleportasi: colore deve rivalutarsi durante la chase",
+                )
+    travel_transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
+    checks.require(travel_transition is not None, "transizione Travel assente")
+    if travel_transition:
+        for token in (
+            "Event Player.TeleportasiJongkokAktif == True",
+            "Vector(80, 255, 160)",
+            "Vector(65, 225, 255)",
+            "Vector(95, 150, 255)",
+            "Vector(195, 100, 255)",
+            "Vector(255, 85, 135)",
+            "0.180, Destination and Duration",
+        ):
+            checks.require(token in travel_transition.body,
+                           f"transizione Travel fluida incompleta: {token}")
+    travel_open = next((rule for rule in rules if rule.name.startswith("19 - Teleportasi Jongkok: Buka")), None)
+    travel_nav = next((rule for rule in rules if rule.name.startswith("19c - Teleportasi Jongkok:")), None)
+    checks.require(travel_open is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_open.body,
+                   "apertura Travel non avvia la transizione colore")
+    checks.require(travel_nav is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_nav.body,
+                   "navigazione Travel non avvia la transizione colore")
     teleport_interact = next((rule for rule in rules if rule.name.startswith("19e - Teleportasi Jongkok: Interact")), None)
     checks.require(teleport_interact is not None, "handler Interact Teleport assente")
     if teleport_interact:
@@ -3851,7 +3885,7 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                     f"Self Kill cooldown incompleto: {label} deve precedere Kill",
                 )
         for text, label in (
-            ("Self Kill ready in {0} s.", "EN"),
+            ("Self Elimination ready in {0}s.", "EN"),
             ("Bunuh Diri siap dalam {0} dtk.", "ID"),
             ("ฆ่าตัวเองได้อีกครั้งใน {0} วินาที", "TH"),
         ):

@@ -132,19 +132,20 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 "ไม่มีเป้าหมายสาธารณะที่พร้อมใช้",
             ):
                 self.assertIn(token, teleport_render)
+            self.assertIn("Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250", teleport_render)
+            self.assertIn("Custom Color(X Component Of(Event Player.WarnaMenu)", teleport_render)
+            self.assertIn("Visible To String and Color", teleport_render)
+            transition = source.split(f'{rule_kw}("91k - Subrutin: Transisi warna menu tanpa lompatan")', 1)[1].split(f'{rule_kw}("91l - Subrutin', 1)[0]
             for color in (
-                "Custom Color(205, 255, 225, 255)",
-                "Custom Color(200, 245, 255, 255)",
-                "Custom Color(215, 225, 255, 255)",
-                "Custom Color(235, 215, 255, 255)",
-                "Custom Color(255, 215, 230, 255)",
-                "Custom Color(80, 255, 160, 255)",
-                "Custom Color(65, 225, 255, 255)",
-                "Custom Color(95, 150, 255, 255)",
-                "Custom Color(195, 100, 255, 255)",
-                "Custom Color(255, 85, 135, 255)",
+                "Vector(80, 255, 160)",
+                "Vector(65, 225, 255)",
+                "Vector(95, 150, 255)",
+                "Vector(195, 100, 255)",
+                "Vector(255, 85, 135)",
             ):
-                self.assertIn(color, teleport_render)
+                self.assertIn(color, transition)
+            self.assertIn("Event Player.TeleportasiJongkokAktif == True", transition)
+            self.assertIn("0.180, Destination and Duration", transition)
             self.assertNotIn("Global.KursorTeleportasi", teleport_render)
             self.assertIn("Vector(1.500, 1, 0)", source)
             self.assertIn("Vector(-1.500, 1, 0)", source)
