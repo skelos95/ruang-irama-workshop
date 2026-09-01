@@ -66,7 +66,7 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
 | Morto | Jump | `Resurrect` sempre; resta sul punto con terreno, oppure usa `Nearest Walkable Position` e Teleport post-resurrezione nel vuoto; menu ancora visibile |
 
-Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto l'unico raycast deve aprire il ramo di recupero, eseguire `Resurrect` senza condizioni e poi un solo `Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))))` del player vivo. La destinazione non deve provenire da `PosisiMati` o da uno scratch calcolato prima della resurrezione. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; dopo un raro rifiuto del motore, rilasciare Jump e premerlo di nuovo deve consentire un nuovo tentativo. Effetto e messaggio di successo devono apparire soltanto dopo la conferma del ritorno in vita.
+Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto l'unico raycast deve aprire il ramo di recupero, eseguire `Resurrect` senza condizioni e poi un solo `Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))))` del player vivo. La destinazione non deve provenire da `PosisiMati` o da uno scratch calcolato prima della resurrezione. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; rilasciare Jump e premerlo di nuovo deve sempre riarmare un nuovo tentativo. Gli effetti di ripristino devono partire soltanto dopo la conferma del ritorno in vita e non deve mai comparire il vecchio `Small Message` “Resurrect unavailable” o una sua traduzione.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -104,6 +104,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
 - verificare che il promemoria `Crouch + command` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server.
+- sulla riga Fly della pagina 13, verificare la guida `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s` / `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` / `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`, senza testo obsoleto sulla sola direzione dello sguardo.
 
 Focus dati:
 
@@ -112,6 +113,7 @@ Focus dati:
 - Name Color parte da bianco (default) e la sua scelta aggiorna le sfumature degli altri menu senza renderle identiche tra loro;
 - 37 icone con nome localizzato e indice 0 `Nothing`;
 - 26 località server nello stesso ordine;
+- label della località in ambra neon `Custom Color(255, 205, 110, 255)`, nettamente distinta dal cyan di `LOBBY & CHILL TIME`, in tutte e tre le lingue;
 - roster con `MIN`, `MENIT` e `นาที` corretti;
 - CHILL, generi, nomi player ed eroi invariati come nomi propri.
 
@@ -128,10 +130,11 @@ Focus dati:
 
 - Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
 - Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
-- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D. Ripetere Forward guardando verso i quattro orientamenti cardinali della mappa e con pitch davanti/in alto/in basso: la rampa deve partire in tutti i casi, senza dipendere dall'asse X/Z. Usa `6 m/s²` con cap Workshop richiesto di `20 m/s`; registrare la velocità effettiva per eroi diversi perché il limite orizzontale del motore deve essere confermato live.
-- In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo.
+- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D. Ripetere Forward puro guardando verso i quattro orientamenti cardinali della mappa e con pitch davanti/in alto/in basso: la rampa deve partire in tutti i casi, senza dipendere dall'asse X/Z mondo. Il throttle locale deve rispettare `Z > 0.050` e `-0.050 ≤ X ≤ 0.050`. Al primo movimento Forward la velocità deve essere `100%`; mantenendolo senza interruzioni deve risultare circa `180%` a 5 secondi, `260%` a 10 secondi e `500%` a 25 secondi, senza superare il cap. Registrare anche la velocità effettiva per eroi diversi come gate live.
+- In Fly, usare soltanto destra, sinistra o indietro: il movimento deve restare al `100%` e non deve armare la rampa. Durante una rampa Forward, rilasciare Forward o aggiungere uno strafe/diagonale: velocità e timer devono tornare subito a `100%`; una nuova pressione Forward pura deve ripartire dal valore normale.
+- In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo e dal `100%` se Forward era stato rilasciato.
 - Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100, ferma il throttle trasformato e arresta la rampa normale senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale.
-- Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve restare attiva per tutti i 10 secondi senza essere annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare immobile quando non ci sono input.
+- Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve possedere velocità e propulsione per tutti i 10 secondi senza essere sovrascritta dalla rampa Forward o annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare al `100%` e restare immobile quando non ci sono input, mentre un nuovo Forward avvia una rampa fresca.
 
 ### Unkillable FULL HP
 
@@ -387,7 +390,7 @@ Dummy Follow nearest/opt-out: PASS/FAIL
 FULL HP immunity/restore: PASS/FAIL
 Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
-Ghost walls/floors/Fly 3D/idle: PASS/FAIL
+Ghost walls/floors/Fly 3D/ramp 100→500/idle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
 Jump Resurrect same-point/void-live-nearest-walkable/retry latch: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
@@ -418,4 +421,4 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 ### Small Message e transizione Crouch Travel
 
 - Navigare rapidamente `1→2→3→4→5→1` e in senso inverso: mint, cyan, blu, viola e rosa devono fondersi in circa 0,18 s senza scatti o ricreazioni extra del renderer.
-- Verificare che apertura/chiusura menu, selezioni riuscite, toggle, camera normale e Teleport riusciti non generino conferme Small Message ridondanti. Errori, cooldown, Attach con istruzione di detach, fallimenti Resurrect e risultati Try Your Luck/Revenge devono invece restare notificati.
+- Verificare che apertura/chiusura menu, selezioni riuscite, toggle, camera normale e Teleport riusciti non generino conferme Small Message ridondanti. Errori delle altre funzioni, cooldown, Attach con istruzione di detach e risultati Try Your Luck/Revenge devono restare notificati; il percorso Jump Resurrect non deve invece mostrare “Resurrect unavailable” né le equivalenti stringhe ID/TH, anche se il motore non conferma subito il ritorno in vita.

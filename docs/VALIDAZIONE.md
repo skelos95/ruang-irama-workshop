@@ -59,9 +59,9 @@ Il gate verifica:
 - rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
 - 14 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..13`;
 - pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default OFF;
-- pagina 13 Ghost Mode / Fly completa di renderer EN/ID/TH, due cursori/toggle indipendenti, dispatcher, tinta dedicata e default OFF; il messaggio di apertura deve annunciare quattordici pagine in EN/ID/TH e non può contenere le vecchie forme Thirteen/Tiga belas/สิบสาม;
+- pagina 13 Ghost Mode / Fly completa di renderer EN/ID/TH, due cursori/toggle indipendenti, dispatcher, tinta dedicata e default OFF; il messaggio di apertura deve annunciare quattordici pagine in EN/ID/TH e non può contenere le vecchie forme Thirteen/Tiga belas/สิบสาม; la riga Fly deve insegnare `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s`, `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` e `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`;
 - 37 nomi Player Icon in tre array allineati;
-- 26 località server in tre array allineati;
+- 26 località server in tre array allineati e label localizzata in ambra neon `Custom Color(255, 205, 110, 255)`, distinta dal cyan di `LOBBY & CHILL TIME`;
 - equivalenza di placeholder e argomenti tra le traduzioni;
 - minuti roster `MIN / MENIT / นาที`;
 - riga vuota coerente tra contenuto e comandi.
@@ -77,7 +77,7 @@ Ogni azione `Create HUD Text` deve:
 - usare soltanto Subheader/Text;
 - registrare l'handle previsto per il cleanup.
 
-Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi. Il gate richiede esattamente dieci HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
+Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente dieci HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
 
 Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
 
@@ -92,7 +92,7 @@ Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore rich
 - latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
 - inspection e Teleport soltanto a menu chiuso e da vivi;
 - menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump esatta e senza percorsi bloccanti: le sole condizioni ammesse sono identità umana, morte, latch e Jump; l'unico `Resurrect` è incondizionato e precede un'unica guardia raycast. Soltanto il ramo vuoto contiene l'unico `Teleport`, con destinazione esatta `Nearest Walkable Position(Last Of(Position Of(Event Player)))` calcolata dalla posizione live post-resurrezione; scratch `PosisiBangkitAman` e destinazioni calcolate dalla snapshot di morte sono vietati. Conferma `Is Alive`, ripristino effetti e riapplicazione Ghost/Fly restano obbligatori, così come l'assenza di validatore Travel, `Abort`, fallback Spawn Room, offset casuali, forcing, `Respawn`, `Wait` e `Loop`;
+- sequenza Jump esatta e senza percorsi bloccanti: le sole condizioni ammesse sono identità umana, morte, latch e Jump; l'unico `Resurrect` è incondizionato e precede un'unica guardia raycast. Soltanto il ramo vuoto contiene l'unico `Teleport`, con destinazione esatta `Nearest Walkable Position(Last Of(Position Of(Event Player)))` calcolata dalla posizione live post-resurrezione; scratch `PosisiBangkitAman` e destinazioni calcolate dalla snapshot di morte sono vietati. Conferma `Is Alive`, ripristino effetti e riapplicazione Ghost/Fly restano obbligatori, così come l'assenza di validatore Travel, `Abort`, fallback Spawn Room, offset casuali, forcing, `Respawn`, `Wait`, `Loop` e qualunque `Small Message` di fallimento post-tentativo;
 - latch rilasciati senza doppie attivazioni.
 
 ### Unkillable FULL HP
@@ -110,10 +110,11 @@ OFF, 1 HP, setup e cleanup locali/globali devono contenere il ripristino atomico
 Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi setup, applicazione locale e manutenzione globale a 10 Hz:
 
 - Ghost usa `Disable Movement Collision With Environment(player, False)`, quindi attraversa pareti e soffitti ma conserva i pavimenti; non può modificare la collisione con player/bot;
-- Fly usa gravità zero e `Start Transforming Throttle(..., Facing Direction Of(player))`, così gli input seguono la visuale in 3D; Forward avvia una rampa `Start Accelerating` da `6 m/s²` con cap `20 m/s`; OFF deve fermare la rampa normale senza interrompere Luck Acceleration, fermare il throttle trasformato e ripristinare gravità 100;
+- Fly usa gravità zero e `Start Transforming Throttle(..., Facing Direction Of(player))`, così gli input seguono la visuale in 3D; soltanto Forward puro (`Z > 0.050` e X fra `-0.050` e `0.050` nel throttle locale) inizializza un timestamp per-player e applica `Set Move Speed` con formula lineare `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)`, quindi parte da `100%` e raggiunge `500%` dopo 25 secondi; il ramo normale non può usare `Start Accelerating`;
+- rilascio Forward, input diagonale/laterale/indietro, OFF, morte, setup e cleanup azzerano il timestamp e ripristinano `Move Speed = 100%`; OFF deve inoltre fermare il throttle trasformato e ripristinare gravità 100 senza interrompere Luck Acceleration ancora attiva;
 - senza input direzionale il freno usa velocità corrente e impulso esattamente opposto con `Incorporate Contrary Motion`, senza forcing di posizione; il freno deve escludere l'intera finestra Acceleration di Try Your Luck;
 - toggle e cursori restano distinti, sono OFF soltanto al setup/cleanup reale e persistono durante morte, Resurrect, cambio eroe e cambio squadra leggero; la morte disarma immediatamente il latch fisico e Jump Resurrect riapplica Ghost/Fly nello stesso tick dopo il ripristino effetti;
-- Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` per tutti i 10 secondi.
+- Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` e la proprietà della velocità per tutti i 10 secondi, mentre la rampa Fly resta sospesa e riparte da `100%` soltanto dopo la scadenza.
 - il Main Menu usa sempre `GambarUtama`: la catena localizzata termina esplicitamente con indice 12 Dummy Follow e fallback 13 Ghost/Fly; il router non può scegliere staticamente un renderer diverso in base a `KursorUtama` né ridisegnare l'HUD durante lo scroll.
 
 ### Scheduler e prestazioni statiche
@@ -210,12 +211,12 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
 - ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
 - latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a `Respawn`, guardie di Menu/Crouch/Camera/Luck aggiunte, raycast vuoto assente/duplicato/spostato prima di `Resurrect`, destinazione diversa da `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, snapshot `PosisiMati` o scratch `PosisiBangkitAman` riutilizzati per il Teleport, dipendenza dal validatore Travel, `Abort` o fallback Spawn Room reintrodotti, `Resurrect` condizionale/dopo Teleport/duplicato, Teleport assente/fuori dal vuoto/duplicato, forcing/offset casuale/`Wait`/`Loop` reintrodotti, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
+- Jump tornato a `Respawn`, guardie di Menu/Crouch/Camera/Luck aggiunte, raycast vuoto assente/duplicato/spostato prima di `Resurrect`, destinazione diversa da `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, snapshot `PosisiMati` o scratch `PosisiBangkitAman` riutilizzati per il Teleport, dipendenza dal validatore Travel, `Abort` o fallback Spawn Room reintrodotti, `Resurrect` condizionale/dopo Teleport/duplicato, Teleport assente/fuori dal vuoto/duplicato, forcing/offset casuale/`Wait`/`Loop` reintrodotti, normalizzazione Ghost/Fly alla morte incompleta, conferma `Is Alive` rimossa, messaggio “Resurrect unavailable” reintrodotto, latch riarmato durante lo stesso hold o regola di rilascio Jump assente/non isolata dai bot;
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
 - accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto; riapplicazione Fly con trasformazione throttle o accelerazione rivalutata sullo scratch globale nudo; Try Your Luck che imposta gravità o altera il throttle trasformato di Fly;
-- Ghost che include i pavimenti o altera la collisione con player, Fly senza gravità zero/throttle relativo alla visuale/ripristino OFF, freno idle non esatto o capace di annullare Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe/cambio squadra;
+- Ghost che include i pavimenti o altera la collisione con player, Fly senza gravità zero/throttle relativo alla visuale/rampa Forward pura `100% → 500%` in 25 secondi/reset `100%`/ripristino OFF, progressione attivata da diagonale/strafe/indietro, normale `Start Accelerating` reintrodotto, freno idle non esatto o capace di annullare Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe/cambio squadra;
 - Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch; una delle tre IWT che separa icona/nome/salute, altera l'ancoraggio `Eye Position + Vector(0, 0.450, 0)`, rivaluta soltanto una parte della posizione, cattura più dell'identità o perde `Visible To Position String and Color`;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
@@ -262,7 +263,7 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - 14 menu e input in EN/ID/TH, incluse pagina 12 Dummy Follow e pagina 13 Ghost Mode / Fly;
 - profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
 - cinque pagine Crouch Travel & Attach con copia ordinata EN/ID/TH, binding reali, palette pastello/neon per pagina, Primary/Secondary per navigare e Interact per eseguire;
-- Ghost/Fly indipendenti, collisioni/volo 3D/freno idle/ripristino e interazione con Try Your Luck;
+- Ghost/Fly indipendenti, collisioni/volo 3D, rampa Forward pura `100% → 500%` in 25 secondi, reset diagonal/side/back/release, freno idle/ripristino e priorità Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
 - morte/Resurrect con Jump nello stesso punto su terreno e Teleport post-resurrezione nel vuoto verso `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;

@@ -50,6 +50,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             "109: ModeTerbangAktif",
             "110: KursorHantuTerbang",
             "111: FisikaHantuTerbangDiterapkan",
+            "113: WaktuMulaiTerbangMaju",
             "58: GambarHantuTerbang",
             "59: TerapkanHalamanHantuTerbang",
             "60: TerapkanFisikaHantuTerbang",
@@ -134,6 +135,12 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "กด ย่อ + คำสั่ง",
             ):
                 self.assertIn(instruction, renderer)
+            for fly_hint in (
+                "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
+                "ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk",
+                "บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ",
+            ):
+                self.assertIn(fly_hint, renderer)
 
     def test_page_thirteen_navigation_selects_exactly_two_rows(self) -> None:
         for source, _ in self.sources:
@@ -189,42 +196,86 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             packed = compact(physics)
             self.assertRegex(
                 packed,
+                r"EventPlayer.WaktuMulaiTerbangMaju=-1;"
                 r"If\(EventPlayer.ModeTerbangAktif==True\);"
+                r"If\(Or\(EventPlayer\.EfekNasib!=2,EventPlayer\.EfekNasibBerakhir<=TotalTimeElapsed\)\);"
+                r"SetMoveSpeed\(EventPlayer,100\);End;"
                 r"SetGravity\(EventPlayer,0\);"
                 r"StartTransformingThrottle\(EventPlayer,1,1,FacingDirectionOf\(EventPlayer\)\);",
             )
             self.assertRegex(
                 packed,
                 r"Else;If\(Or\(EventPlayer\.EfekNasib!=2,EventPlayer\.EfekNasibBerakhir<=TotalTimeElapsed\)\);"
-                r"StopAccelerating\(EventPlayer\);End;StopTransformingThrottle\(EventPlayer\);SetGravity\(EventPlayer,100\);",
+                r"SetMoveSpeed\(EventPlayer,100\);End;StopTransformingThrottle\(EventPlayer\);SetGravity\(EventPlayer,100\);",
             )
             self.assertIn("EventPlayer.FisikaHantuTerbangDiterapkan=True;", packed)
             self.assertNotIn("Start Accelerating(", physics)
+            self.assertNotIn("Stop Accelerating(", physics)
             self.assertNotIn("Movement Collision With Players", physics)
 
-    def test_fly_forward_input_accelerates_gradually_along_the_full_view(self) -> None:
+    def test_only_pure_forward_builds_the_per_player_speed_ramp(self) -> None:
         for source, global_name in self.sources:
             packed = compact(subroutine(source, "ProsesSiklusPemain"))
-            self.assertIn(
-                f"ZComponentOf(ThrottleOf({global_name}.PemainAktif))>0.050",
-                packed,
+            owner = f"{global_name}.PemainAktif"
+            luck = (
+                f"If(And({owner}.ModeTerbangAktif==True,"
+                f"And({owner}.EfekNasib==2,{owner}.EfekNasibBerakhir>TotalTimeElapsed)));"
             )
-            self.assertIn(
-                f"ZComponentOf(ThrottleOf({global_name}.PemainAktif))<=0.050",
-                packed,
+            pure_forward = (
+                f"ElseIf(And({owner}.ModeTerbangAktif==True,"
+                f"And(ZComponentOf(ThrottleOf({owner}))>0.050,"
+                f"And(XComponentOf(ThrottleOf({owner}))>=-0.050,"
+                f"XComponentOf(ThrottleOf({owner}))<=0.050))));"
             )
+            timestamp_start = (
+                f"If({owner}.WaktuMulaiTerbangMaju<0);"
+                f"{owner}.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;"
+            )
+            speed_formula = (
+                f"SetMoveSpeed({owner},Min(500,100+Max(0,TotalTimeElapsed-"
+                f"{owner}.WaktuMulaiTerbangMaju)*16));"
+            )
+            reset = (
+                f"ElseIf({owner}.ModeTerbangAktif==True);"
+                f"{owner}.WaktuMulaiTerbangMaju=-1;"
+                f"SetMoveSpeed({owner},100);End;"
+            )
+
+            for token in (luck, pure_forward, timestamp_start, speed_formula, reset):
+                self.assertIn(token, packed)
+            self.assertLess(packed.index(luck), packed.index(pure_forward))
+            self.assertLess(packed.index(pure_forward), packed.index(reset))
             self.assertNotIn("DotProduct(ThrottleOf(", packed)
-            self.assertIn(
-                f"StartAccelerating({global_name}.PemainAktif,"
-                f"FacingDirectionOf(EvaluateOnce({global_name}.PemainAktif)),"
-                "6,20,ToWorld,DirectionRateandMaxSpeed);",
-                packed,
+            self.assertNotIn("StartAccelerating(", packed)
+            self.assertNotIn("StopAccelerating(", packed)
+            self.assertNotIn(f"{global_name}.WaktuMulaiTerbangMaju", source)
+
+    def test_side_back_diagonal_and_release_all_take_the_reset_branch(self) -> None:
+        """The sole ramp branch is pure Forward; every other Fly throttle reaches Else If."""
+        for source, global_name in self.sources:
+            packed = compact(subroutine(source, "ProsesSiklusPemain"))
+            owner = f"{global_name}.PemainAktif"
+            forward = packed.index(
+                f"ZComponentOf(ThrottleOf({owner}))>0.050"
             )
-            self.assertIn(
-                f"Or({global_name}.PemainAktif.EfekNasib!=2,{global_name}.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
-                packed,
+            lower_x = packed.index(
+                f"XComponentOf(ThrottleOf({owner}))>=-0.050",
+                forward,
             )
-            self.assertNotIn(f"FacingDirectionOf({global_name}.PemainAktif)*-1", packed)
+            upper_x = packed.index(
+                f"XComponentOf(ThrottleOf({owner}))<=0.050",
+                lower_x,
+            )
+            reset = packed.index(
+                f"ElseIf({owner}.ModeTerbangAktif==True);",
+                upper_x,
+            )
+            self.assertLess(forward, lower_x)
+            self.assertLess(lower_x, upper_x)
+            self.assertLess(upper_x, reset)
+            reset_branch = packed[reset : packed.index("End;", reset) + len("End;")]
+            self.assertEqual(reset_branch.count(f"{owner}.WaktuMulaiTerbangMaju=-1;"), 1)
+            self.assertEqual(reset_branch.count(f"SetMoveSpeed({owner},100);"), 1)
 
     def test_fly_idle_cancels_velocity_with_an_exact_opposite_impulse(self) -> None:
         for source, global_name in self.sources:
@@ -266,15 +317,32 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             self.assertNotIn(f"If({global_name}.PemainAktif.ModeTerbangAktif==False);", acceleration_branch)
 
+            fly_physics = subroutine(source, "TerapkanFisikaHantuTerbang")
+            fly_cycle = subroutine(source, "ProsesSiklusPemain")
+            self.assertNotIn("Start Accelerating(", fly_physics)
+            self.assertNotIn("Stop Accelerating(", fly_physics)
+            self.assertNotIn("Start Accelerating(", fly_cycle)
+            self.assertNotIn("Stop Accelerating(", fly_cycle)
+
+            packed_luck = compact(luck)
+            self.assertIn(
+                f"If({global_name}.PemainAktif.EfekNasib==2);"
+                f"StopAccelerating({global_name}.PemainAktif);"
+                f"SetMoveSpeed({global_name}.PemainAktif,100);End;",
+                packed_luck,
+            )
+
     def test_death_rearms_and_jump_resurrect_reapplies_fly_physics(self) -> None:
         for source, _ in self.sources:
             death = rule_with(source, "Player Died", "Event Player.PosisiMati = Position Of(Event Player);")
             normalization = (
                 "Stop Accelerating(Event Player);",
+                "Set Move Speed(Event Player, 100);",
                 "Stop Transforming Throttle(Event Player);",
                 "Set Gravity(Event Player, 100);",
                 "Enable Movement Collision With Environment(Event Player);",
                 "Event Player.FisikaHantuTerbangDiterapkan = False;",
+                "Event Player.WaktuMulaiTerbangMaju = -1;",
             )
             positions = [death.index(token) for token in normalization]
             self.assertEqual(positions, sorted(positions))
@@ -289,6 +357,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
             self.assertLess(resurrect.index("Call Subroutine(EfekPulihkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
             self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
+            self.assertNotIn("Small Message(", resurrect)
+            self.assertNotIn("Resurrect unavailable", source)
+            self.assertNotIn("Bangkit tidak tersedia", source)
+            self.assertNotIn("ยังฟื้นไม่ได้", source)
 
     def test_fresh_setup_and_true_cleanup_restore_safe_defaults(self) -> None:
         for source, _ in self.sources:
@@ -298,6 +370,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "Event Player.ModeTerbangAktif = False;",
                 "Event Player.KursorHantuTerbang = 0;",
                 "Event Player.FisikaHantuTerbangDiterapkan = False;",
+                "Event Player.WaktuMulaiTerbangMaju = -1;",
             ):
                 self.assertIn(token, setup)
 
@@ -308,6 +381,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "Stop Transforming Throttle(Event Player);",
                 "Enable Movement Collision With Environment(Event Player);",
                 "Set Gravity(Event Player, 100);",
+                "Set Move Speed(Event Player, 100);",
+                "Event Player.WaktuMulaiTerbangMaju = -1;",
             ):
                 self.assertIn(token, cleanup)
 
@@ -333,6 +408,16 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             team_branch = fast[team_change:next_pending]
             self.assertNotIn(f"{global_name}.PemainAktif.ModeHantuAktif = False;", team_branch)
             self.assertNotIn(f"{global_name}.PemainAktif.ModeTerbangAktif = False;", team_branch)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuMulaiTerbangMaju = -1;", team_branch)
+            self.assertIn(f"Set Move Speed({global_name}.PemainAktif, 100);", team_branch)
+
+            hero_change = reapply.index(
+                f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"
+            )
+            hero_branch = reapply[hero_change:]
+            self.assertIn(f"{global_name}.PemainAktif.FisikaHantuTerbangDiterapkan = False;", hero_branch)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuMulaiTerbangMaju = -1;", hero_branch)
+            self.assertIn(f"Set Move Speed({global_name}.PemainAktif, 100);", hero_branch)
 
     def test_try_your_luck_never_owns_gravity_or_fly_throttle(self) -> None:
         for source, _ in self.sources:

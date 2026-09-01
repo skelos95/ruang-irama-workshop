@@ -1327,7 +1327,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     for slot, (field, expected_labels) in {
         ("Left", "-2"): ("subheader", ("Hold {0}: inspect hero + HP", "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
         ("Left", "0"): ("text", ("LOBBY & CHILL TIME", "LOBI & WAKTU SANTAI", "ล็อบบี้ & เวลาชิล")),
-        ("Right", "-16"): ("subheader", ("Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera", "Tahan {0} 0,5dtk: Menu Arcade | {1} 0,5dtk: Kamera", "กด {0} 0.5วิ: เมนูอาร์เคด | {1} 0.5วิ: กล้อง")),
+        ("Right", "-16"): ("subheader", ("Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera", "Tahan {0} 0,5dtk: Menu Arcade | Tahan {1} 0,5dtk: Kamera", "กด {0} ค้าง 0.5วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5วิ: กล้อง")),
         ("Right", "-14"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
     }.items():
         call = fixed_hud.get(slot)
@@ -1337,6 +1337,21 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for label in expected_labels:
             checks.require(label in localized_field,
                            f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
+
+    server_location = fixed_hud.get(("Top", "1"))
+    lobby_time = fixed_hud.get(("Left", "0"))
+    if server_location:
+        checks.equal(
+            re.sub(r"\s+", "", server_location.args[7]),
+            "CustomColor(255,205,110,255)",
+            "SERVER LOCATION: colore subheader pastel gold esatto",
+        )
+    if server_location and lobby_time:
+        checks.require(
+            re.sub(r"\s+", "", server_location.args[7])
+            != re.sub(r"\s+", "", lobby_time.args[8]),
+            "SERVER LOCATION deve avere un colore distinto da LOBBY & CHILL TIME",
+        )
 
     def full_custom_string(expression: str) -> Call | None:
         expression = expression.strip()
@@ -1616,6 +1631,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     f"{subroutine_target(rule)}: sottotitolo menu inizia con una riga vuota artificiale",
                 )
 
+    thai_close_help = "กด {1} ค้าง 0.5 วินาที: ปิด"
+    checks.equal(
+        source.count(thai_close_help),
+        3,
+        "help Thai chiusura menu: tre renderer devono dichiarare il hold di 0,5 secondi",
+    )
+    checks.require(
+        "กด {1} ค้างเพื่อปิด" not in source,
+        "help Thai chiusura menu conserva il testo obsoleto senza durata",
+    )
+
     luck_hud_rule = next((rule for rule in rules if "Event Player.HudEfekNasib = Last Text ID;" in rule.body), None)
     checks.require(luck_hud_rule is not None, "HUD effetto Try Your Luck assente")
     if luck_hud_rule:
@@ -1766,12 +1792,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
             "FLY MODE",
+            "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
             "13 - MODE HANTU / TERBANG",
             "TEMBUS DINDING",
             "MODE TERBANG",
+            "ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk",
             "13 - โหมดผี / บิน",
             "ทะลุกำแพง",
             "โหมดบิน",
+            "บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ",
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -2088,6 +2117,7 @@ def validate_ghost_fly(
         "ModeTerbangAktif": 109,
         "KursorHantuTerbang": 110,
         "FisikaHantuTerbangDiterapkan": 111,
+        "WaktuMulaiTerbangMaju": 113,
     }
     for name, index in expected_variables.items():
         declarations = [entry for entry in player_entries if entry.name == name]
@@ -2135,18 +2165,31 @@ def validate_ghost_fly(
                 "collisione pareti indipendente con pavimenti solidi",
             ),
             (
-                "If(EventPlayer.ModeTerbangAktif==True);SetGravity(EventPlayer,0);"
+                "EventPlayer.WaktuMulaiTerbangMaju=-1;"
+                "If(EventPlayer.ModeTerbangAktif==True);"
+                "If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));"
+                "SetMoveSpeed(EventPlayer,100);End;SetGravity(EventPlayer,0);"
                 "StartTransformingThrottle(EventPlayer,1,1,FacingDirectionOf(EventPlayer));",
-                "volo orientato alla visuale con gravità zero",
+                "volo orientato alla visuale, rampa riarmata e gravità zero",
             ),
             (
                 "Else;If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));"
-                "StopAccelerating(EventPlayer);End;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
-                "ripristino motore Fly con arresto rampa senza interrompere Acceleration",
+                "SetMoveSpeed(EventPlayer,100);End;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
+                "ripristino motore Fly senza interrompere Acceleration di Try Your Luck",
+            ),
+            (
+                "If(MagnitudeOf(VelocityOf(EventPlayer))>0.010);"
+                "ApplyImpulse(EventPlayer,VelocityOf(EventPlayer)*-1,MagnitudeOf(VelocityOf(EventPlayer)),"
+                "ToWorld,IncorporateContraryMotion);End;",
+                "arresto deriva locale a Fly disattivato",
             ),
             ("EventPlayer.FisikaHantuTerbangDiterapkan=True;", "latch applicato"),
         ):
             checks.require(token in physics_packed, f"Ghost/Fly fisica locale incompleta: {label}")
+        checks.require(
+            "StartAccelerating(" not in physics_packed and "StopAccelerating(" not in physics_packed,
+            "Ghost/Fly: il controller locale non deve possedere Start/Stop Accelerating",
+        )
         checks.require("MovementCollisionWithPlayers" not in physics_packed,
                        "Ghost/Fly non deve modificare la collisione fra giocatori")
         checks.require(not wait_calls(physics.body) and action_loop_count(physics.body) == 0,
@@ -2172,14 +2215,22 @@ def validate_ghost_fly(
                 "input avanti Fly ricavato dalla componente locale Z",
             ),
             (
-                "ZComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
-                "arresto accelerazione Fly ricavato dalla componente locale Z",
+                "XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050",
+                "input Fly laterale sinistro escluso dalla rampa",
             ),
             (
-                "StartAccelerating(Global.PemainAktif,"
-                "FacingDirectionOf(EvaluateOnce(Global.PemainAktif)),"
-                "6,20,ToWorld,DirectionRateandMaxSpeed);",
-                "accelerazione Fly graduale con identità player catturata",
+                "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
+                "input Fly laterale destro escluso dalla rampa",
+            ),
+            (
+                "If(Global.PemainAktif.WaktuMulaiTerbangMaju<0);"
+                "Global.PemainAktif.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;",
+                "timestamp per-player avviato al primo tick Forward",
+            ),
+            (
+                "SetMoveSpeed(Global.PemainAktif,Min(500,100+Max(0,TotalTimeElapsed-"
+                "Global.PemainAktif.WaktuMulaiTerbangMaju)*16));",
+                "rampa Fly lineare 100%-500% in 25 secondi",
             ),
             (
                 "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
@@ -2189,7 +2240,6 @@ def validate_ghost_fly(
                 "MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010))));",
                 "eccezione per l'esito Acceleration ancora attivo nel freno idle Fly",
             ),
-            ("StopAccelerating(Global.PemainAktif);", "arresto accelerazione residua"),
             (
                 "ApplyImpulse(Global.PemainAktif,VelocityOf(Global.PemainAktif)*-1,"
                 "MagnitudeOf(VelocityOf(Global.PemainAktif)),ToWorld,IncorporateContraryMotion);",
@@ -2206,44 +2256,72 @@ def validate_ghost_fly(
             not in cycle_packed,
             "Fly non deve mescolare il throttle locale con una direzione world-space",
         )
-        for call_name in ("Start Transforming Throttle", "Start Accelerating"):
-            for call in iter_calls(cycle.body, call_name):
-                if len(call.args) < 2:
-                    continue
-                direction_argument = (
-                    call.args[-1]
-                    if call_name == "Start Transforming Throttle"
-                    else call.args[1]
-                )
-                uncaptured_direction = re.sub(
-                    r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
-                    "",
-                    direction_argument,
-                )
-                checks.require(
-                    "Global.PemainAktif" not in uncaptured_direction,
-                    f"{call_name} Fly usa scratch Global.PemainAktif senza Evaluate Once",
-                )
-        fly_accelerations = list(iter_calls(cycle.body, "Start Accelerating"))
-        checks.equal(len(fly_accelerations), 1,
-                     "Fly deve avere una sola accelerazione forward nel ciclo 10 Hz")
-        if fly_accelerations:
-            acceleration_branches = conditional_branches_containing(
-                cycle.body, fly_accelerations[0].start
+        checks.require(
+            "StartAccelerating(" not in cycle_packed and "StopAccelerating(" not in cycle_packed,
+            "Ghost/Fly: il ciclo globale non deve possedere Start/Stop Accelerating",
+        )
+        for call in iter_calls(cycle.body, "Start Transforming Throttle"):
+            if len(call.args) < 2:
+                continue
+            direction_argument = call.args[-1]
+            uncaptured_direction = re.sub(
+                r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
+                "",
+                direction_argument,
             )
+            checks.require(
+                "Global.PemainAktif" not in uncaptured_direction,
+                "Start Transforming Throttle Fly usa scratch Global.PemainAktif senza Evaluate Once",
+            )
+
+        luck_priority = (
+            "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
+            "And(Global.PemainAktif.EfekNasib==2,"
+            "Global.PemainAktif.EfekNasibBerakhir>TotalTimeElapsed)));"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
+            "ElseIf(And(Global.PemainAktif.ModeTerbangAktif==True,"
+            "And(ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050,"
+            "And(XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050,"
+            "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050))));"
+        )
+        checks.require(
+            luck_priority in cycle_packed,
+            "Fly: Try Your Luck Acceleration deve avere precedenza e resettare soltanto il timestamp",
+        )
+        non_forward_reset = (
+            "ElseIf(Global.PemainAktif.ModeTerbangAktif==True);"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
+            "SetMoveSpeed(Global.PemainAktif,100);End;"
+        )
+        checks.require(
+            non_forward_reset in cycle_packed,
+            "Fly: laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%",
+        )
+
+        ramp_calls = [
+            call
+            for call in iter_calls(cycle.body, "Set Move Speed")
+            if len(call.args) == 2
+            and re.sub(r"\s+", "", call.args[1])
+            == "Min(500,100+Max(0,TotalTimeElapsed-Global.PemainAktif.WaktuMulaiTerbangMaju)*16)"
+        ]
+        checks.equal(len(ramp_calls), 1, "Fly deve avere una sola rampa Move Speed progressiva")
+        if ramp_calls:
+            ramp_branches = conditional_branches_containing(cycle.body, ramp_calls[0].start)
             forward_branch = next(
                 (
                     packed(branch)
-                    for branch in acceleration_branches
+                    for branch in ramp_branches
                     if "Global.PemainAktif.ModeTerbangAktif == True" in mask_strings(branch)
-                    and "Z Component Of(Throttle Of(Global.PemainAktif)) > 0.050"
-                    in mask_strings(branch)
+                    and "Z Component Of(Throttle Of(Global.PemainAktif)) > 0.050" in mask_strings(branch)
+                    and "X Component Of(Throttle Of(Global.PemainAktif)) >= -0.050" in mask_strings(branch)
+                    and "X Component Of(Throttle Of(Global.PemainAktif)) <= 0.050" in mask_strings(branch)
                 ),
                 "",
             )
             checks.require(
                 bool(forward_branch),
-                "accelerazione Fly deve restare dentro la guardia per-player Fly+input forward",
+                "rampa Move Speed deve restare nella guardia per-player di puro Forward",
             )
         idle_impulses = list(iter_calls(cycle.body, "Apply Impulse"))
         checks.equal(len(idle_impulses), 1,
@@ -2276,6 +2354,8 @@ def validate_ghost_fly(
                 "EventPlayer.ModeTerbangAktif=False;",
                 "EventPlayer.KursorHantuTerbang=0;",
                 "EventPlayer.FisikaHantuTerbangDiterapkan=False;",
+                "EventPlayer.WaktuMulaiTerbangMaju=-1;",
+                "SetMoveSpeed(EventPlayer,100);",
                 "StopTransformingThrottle(EventPlayer);",
                 "SetGravity(EventPlayer,100);",
                 "EnableMovementCollisionWithEnvironment(EventPlayer);",
@@ -2291,12 +2371,39 @@ def validate_ghost_fly(
             "SetGravity(Global.PemainAktif,100);",
             "EnableMovementCollisionWithEnvironment(Global.PemainAktif);",
             "Global.PemainAktif.FisikaHantuTerbangDiterapkan=False;",
+            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;",
+            "SetMoveSpeed(Global.PemainAktif,100);",
         ):
             checks.require(token in fast_packed, f"Ghost/Fly cambio squadra incompleto: {token}")
         checks.require("Global.PemainAktif.ModeHantuAktif=False;" not in fast_packed,
                        "Ghost deve persistere al cambio squadra")
         checks.require("Global.PemainAktif.ModeTerbangAktif=False;" not in fast_packed,
                        "Fly deve persistere al cambio squadra")
+
+    timestamp_writers: list[tuple[str, str]] = []
+    for rule in rules:
+        owner = subroutine_target(rule) or rule.name
+        for target in ("Event Player", "Global.PemainAktif"):
+            for match in re.finditer(
+                rf"{re.escape(target)}\.WaktuMulaiTerbangMaju\s*=(?!=)\s*([^;\r\n]+);",
+                mask_strings(rule.body),
+            ):
+                timestamp_writers.append((owner, re.sub(r"\s+", "", match.group(1))))
+    checks.equal(len(timestamp_writers), 11, "Fly: numero writer timestamp setup/lifecycle/runtime")
+    checks.equal(
+        sum(value == "-1" for _, value in timestamp_writers),
+        10,
+        "Fly: reset timestamp a -1",
+    )
+    checks.equal(
+        sum(value == "TotalTimeElapsed" for _, value in timestamp_writers),
+        1,
+        "Fly: unico avvio timestamp da Total Time Elapsed",
+    )
+    checks.require(
+        ("ProsesSiklusPemain", "TotalTimeElapsed") in timestamp_writers,
+        "Fly: timestamp Forward deve essere avviato dal controller per-player 10 Hz",
+    )
 
     for variable in ("ModeHantuAktif", "ModeTerbangAktif"):
         writers: list[tuple[str, str]] = []
@@ -3065,6 +3172,19 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             )
         checks.require("Start Forcing Player Position(" not in masked,
                        "Jump Resurrect non deve usare forcing di posizione")
+        checks.require(
+            "Small Message(" not in masked,
+            "Jump Resurrect non deve mostrare Small Message dopo il tentativo",
+        )
+        for forbidden_text, language in (
+            ("Resurrect unavailable", "EN"),
+            ("Bangkit belum siap", "ID"),
+            ("การฟื้นยังไม่พร้อม", "TH"),
+        ):
+            checks.require(
+                forbidden_text not in resurrect.body,
+                f"Jump Resurrect conserva il vecchio messaggio unavailable {language}",
+            )
         checks.require(not wait_calls(resurrect.body) and action_loop_count(resurrect.body) == 0,
                        "Jump Resurrect deve funzionare senza Wait/Loop")
         checks.require("Event Player.BangkitLompatDipakai = False;" not in masked,
@@ -3076,10 +3196,12 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             death_masked = mask_strings(death_actions)
             death_normalization = (
                 "Stop Accelerating(Event Player);",
+                "Set Move Speed(Event Player, 100);",
                 "Stop Transforming Throttle(Event Player);",
                 "Set Gravity(Event Player, 100);",
                 "Enable Movement Collision With Environment(Event Player);",
                 "Event Player.FisikaHantuTerbangDiterapkan = False;",
+                "Event Player.WaktuMulaiTerbangMaju = -1;",
             )
             death_positions = [death_masked.find(token) for token in death_normalization]
             checks.require(
@@ -3087,6 +3209,15 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                 and death_positions == sorted(death_positions),
                 "morte deve normalizzare accelerazione, throttle, gravità e collisione prima di riarmare Ghost/Fly",
             )
+            for prompt, language in (
+                ("Press {0}: resurrect here; after a void death, you'll be moved to walkable ground.", "EN"),
+                ("Tekan {0}: bangkit di sini; setelah jatuh ke jurang, kamu akan dipindahkan ke tanah yang bisa dilalui.", "ID"),
+                ("กด {0}: ฟื้นตรงนี้; หลังตกเหว ระบบจะย้ายคุณไปยังพื้นที่เดินได้", "TH"),
+            ):
+                checks.require(
+                    prompt in death_rearm.body,
+                    f"prompt morte non descrive il recupero automatico dal vuoto: {language}",
+                )
 
     resurrect_release = next(
         (
@@ -3619,32 +3750,10 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                        "icone/accelerazione roulette devono restare global-first, senza regole Each Player")
 
         global_acceleration_calls = list(iter_calls(source, "Start Accelerating"))
-        checks.equal(len(global_acceleration_calls), 2, "Start Accelerating globali Fly+Luck")
+        checks.equal(len(global_acceleration_calls), 1, "Start Accelerating globale riservato a Try Your Luck")
         fly_cycle = next((rule for rule in rules if subroutine_target(rule) == "ProsesSiklusPemain"), None)
         fly_acceleration_calls = list(iter_calls(fly_cycle.body, "Start Accelerating")) if fly_cycle else []
-        checks.equal(len(fly_acceleration_calls), 1, "accelerazione Fly graduale unica")
-        if len(fly_acceleration_calls) == 1:
-            checks.equal(
-                tuple(argument.strip() for argument in fly_acceleration_calls[0].args),
-                (
-                    "Global.PemainAktif",
-                    "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
-                    "6",
-                    "20",
-                    "To World",
-                    "Direction Rate and Max Speed",
-                ),
-                "accelerazione Fly graduale: argomenti",
-            )
-            uncaptured_fly_direction = re.sub(
-                r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
-                "",
-                fly_acceleration_calls[0].args[1],
-            )
-            checks.require(
-                "Global.PemainAktif" not in uncaptured_fly_direction,
-                "direzione accelerazione Fly usa scratch Global.PemainAktif senza Evaluate Once",
-            )
+        checks.equal(len(fly_acceleration_calls), 0, "Fly normale non deve usare Start Accelerating")
         acceleration_calls = list(iter_calls(state_machine.body, "Start Accelerating"))
         checks.equal(len(acceleration_calls), 1, "accelerazione Try Your Luck unica")
         if len(acceleration_calls) == 1:
@@ -3717,6 +3826,27 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             ):
                 checks.require(token in expiry_cleanup_masked,
                                f"cleanup scadenza accelerazione incompleto: {label}")
+            expiry_stop_calls = list(iter_calls(expiry_cleanup, "Stop Accelerating"))
+            expiry_speed_calls = [
+                call for call in iter_calls(expiry_cleanup, "Set Move Speed")
+                if len(call.args) == 2 and call.args[1].strip() == "100"
+            ]
+            checks.equal(len(expiry_stop_calls), 1,
+                         "cleanup scadenza: unico Stop Accelerating per l'esito 2")
+            checks.equal(len(expiry_speed_calls), 1,
+                         "cleanup scadenza: unico Move Speed 100 per l'esito 2")
+            for call, label in (
+                *((call, "Stop Accelerating") for call in expiry_stop_calls),
+                *((call, "Move Speed 100") for call in expiry_speed_calls),
+            ):
+                branches = conditional_branches_containing(expiry_cleanup, call.start)
+                checks.require(
+                    any(
+                        "Global.PemainAktif.EfekNasib == 2" in mask_strings(branch)
+                        for branch in branches
+                    ),
+                    f"cleanup scadenza: {label} deve appartenere soltanto a Luck Acceleration",
+                )
 
         final_icon_cleanup = if_block_containing("Global.PemainAktif.WaktuIkonNasibBerakhir > 0")
         checks.require(final_icon_cleanup is not None, "cleanup finale handle icona roulette non analizzabile")
@@ -3739,6 +3869,36 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
         player_luck_reset = rule_by_subroutine(rules, "PulihkanNasibPemain")
         checks.require(player_luck_reset is not None, "subroutine PulihkanNasibPemain assente")
         player_luck_reset_masked = mask_strings(player_luck_reset.body) if player_luck_reset else ""
+
+        for reset_name, player_expression in (
+            ("PulihkanNasibPemain", "Event Player"),
+            ("PulihkanNasibAktif", "Global.PemainAktif"),
+        ):
+            reset_rule = rule_by_subroutine(rules, reset_name)
+            checks.require(reset_rule is not None, f"subroutine {reset_name} assente")
+            if not reset_rule:
+                continue
+            stop_calls = list(iter_calls(reset_rule.body, "Stop Accelerating"))
+            speed_calls = [
+                call for call in iter_calls(reset_rule.body, "Set Move Speed")
+                if len(call.args) == 2
+                and call.args[0].strip() == player_expression
+                and call.args[1].strip() == "100"
+            ]
+            checks.equal(len(stop_calls), 1, f"{reset_name}: unico Stop Accelerating")
+            checks.equal(len(speed_calls), 1, f"{reset_name}: unico Move Speed 100")
+            for call, label in (
+                *((call, "Stop Accelerating") for call in stop_calls),
+                *((call, "Move Speed 100") for call in speed_calls),
+            ):
+                branches = conditional_branches_containing(reset_rule.body, call.start)
+                checks.require(
+                    any(
+                        f"{player_expression}.EfekNasib == 2" in mask_strings(branch)
+                        for branch in branches
+                    ),
+                    f"{reset_name}: {label} deve essere riservato all'esito Acceleration",
+                )
 
         death_cleanup = next(
             (rule for rule in rules_with_event(rules, "Player Died") if "KartuNasibAktif" in rule.body),

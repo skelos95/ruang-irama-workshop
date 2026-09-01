@@ -549,6 +549,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "Hold DUCK + command")
         self.assert_rejected(mutated, "istruzione Crouch menu assente")
 
+    def test_thai_menu_close_help_keeps_the_half_second_hold(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutated = self.replace_in_rule(
+            renderer,
+            "กด {1} ค้าง 0.5 วินาที: ปิด",
+            "กด {1} ค้างเพื่อปิด",
+        )
+        self.assert_rejected(mutated, "help Thai chiusura menu")
+
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "\\nHold CROUCH + command")
@@ -758,6 +767,29 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(call, 2, changed_subheader)
         self.assert_rejected(mutated, "HUD comando Right EN: binding Melee/Interact ordinati")
 
+    def test_server_location_keeps_its_distinct_pastel_gold_color(self) -> None:
+        calls = list(validator.iter_calls(self.source, "Create HUD Text"))
+        server_location = next(
+            call for call in calls
+            if len(call.args) >= 9
+            and call.args[4].strip() == "Top"
+            and call.args[5].strip() == "1"
+        )
+        lobby_time = next(
+            call for call in calls
+            if len(call.args) >= 9
+            and call.args[4].strip() == "Left"
+            and call.args[5].strip() == "0"
+        )
+        mutated = self.replace_call_argument(
+            server_location,
+            7,
+            "Custom Color(254, 205, 110, 255)",
+        )
+        self.assert_rejected(mutated, "SERVER LOCATION: colore subheader pastel gold esatto")
+        mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
+        self.assert_rejected(mutated, "colore distinto da LOBBY & CHILL TIME")
+
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
@@ -781,6 +813,27 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHalamanAktif")
         mutated = self.replace_in_rule(router, "HalamanMenu == 13", "HalamanMenu == 14")
         self.assert_rejected(mutated, "pagina 13")
+
+    def test_page_thirteen_keeps_the_progressive_fly_copy_in_all_languages(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHantuTerbang")
+        mutations = (
+            (
+                "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
+                "LOOK TO STEER | HOLD FORWARD TO ACCELERATE",
+            ),
+            (
+                "ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk",
+                "ARAHKAN PANDANGAN | TAHAN MAJU UNTUK MELAJU",
+            ),
+            (
+                "บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ",
+                "บังคับด้วยมุมมอง | กดเดินหน้าค้างเพื่อเร่งความเร็ว",
+            ),
+        )
+        for old, new in mutations:
+            with self.subTest(copy=old):
+                mutated = self.replace_in_rule(renderer, old, new)
+                self.assert_rejected(mutated, "pagina 13 Ghost/Fly non localizzata")
 
     def test_main_menu_cycles_exactly_over_pages_zero_through_thirteen(self) -> None:
         navigation = self.rule(
@@ -1136,6 +1189,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 mutated = self.inject_action(resurrect, action)
                 self.assert_rejected(mutated, message)
 
+    def test_jump_resurrect_never_shows_an_unavailable_small_message(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.inject_action(
+            resurrect,
+            'Small Message(Event Player, Custom String("Resurrect unavailable"));',
+        )
+        self.assert_rejected(mutated, "non deve mostrare Small Message dopo il tentativo")
+
     def test_jump_resurrect_is_unconditional_outside_the_void_branch(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
@@ -1261,16 +1322,31 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Start Transforming Throttle(Event Player, 1, 1, Facing Direction Of(Event Player));",
             "Start Transforming Throttle(Event Player, 1, 1, Up);",
         )
-        self.assert_rejected(mutated, "visuale con gravità zero")
+        self.assert_rejected(mutated, "volo orientato alla visuale")
 
-    def test_fly_forward_requires_gradual_acceleration_along_full_view_direction(self) -> None:
+    def test_fly_forward_requires_the_exact_progressive_move_speed_formula(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
-        mutated = self.replace_in_rule(
-            cycle,
-            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 6, 20, To World, Direction Rate and Max Speed);",
-            "",
+        mutations = (
+            (
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "Min(450, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "cap 500%",
+            ),
+            (
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "Min(500, 120 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "base 100%",
+            ),
+            (
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 8)",
+                "pendenza 16 punti/s",
+            ),
         )
-        self.assert_rejected(mutated, "accelerazione Fly graduale")
+        for old, new, contract in mutations:
+            with self.subTest(contract=contract):
+                mutated = self.replace_in_rule(cycle, old, new)
+                self.assert_rejected(mutated, "rampa Fly lineare 100%-500% in 25 secondi")
 
     def test_fly_forward_requires_the_local_forward_throttle_component(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -1281,45 +1357,73 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "componente locale Z")
 
-    def test_fly_forward_stop_requires_the_local_forward_throttle_component(self) -> None:
+    def test_fly_forward_requires_pure_forward_without_lateral_input(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutations = (
+            (
+                "X Component Of(Throttle Of(Global.PemainAktif)) >= -0.050",
+                "X Component Of(Throttle Of(Global.PemainAktif)) >= -1",
+                "laterale sinistro escluso dalla rampa",
+            ),
+            (
+                "X Component Of(Throttle Of(Global.PemainAktif)) <= 0.050",
+                "X Component Of(Throttle Of(Global.PemainAktif)) <= 1",
+                "laterale destro escluso dalla rampa",
+            ),
+        )
+        for old, new, fragment in mutations:
+            with self.subTest(gate=fragment):
+                mutated = self.replace_in_rule(cycle, old, new)
+                self.assert_rejected(mutated, fragment)
+
+    def test_fly_non_forward_input_rearms_speed_and_timestamp(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Z Component Of(Throttle Of(Global.PemainAktif)) <= 0.050",
-            "Dot Product(Throttle Of(Global.PemainAktif), Facing Direction Of(Global.PemainAktif)) <= 0.050",
+            "Else If(Global.PemainAktif.ModeTerbangAktif == True);\n"
+            "\t\t\t\tGlobal.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
+            "\t\t\t\tSet Move Speed(Global.PemainAktif, 100);\n"
+            "\t\t\tEnd;",
+            "Else If(Global.PemainAktif.ModeTerbangAktif == True);\n"
+            "\t\t\t\tGlobal.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
+            "\t\t\t\tSet Move Speed(Global.PemainAktif, 150);\n"
+            "\t\t\tEnd;",
         )
-        self.assert_rejected(mutated, "arresto accelerazione Fly")
+        self.assert_rejected(mutated, "laterale, indietro o rilascio Forward")
+
+    def test_fly_luck_acceleration_has_priority_over_forward_ramp(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        mutated = self.replace_in_rule(
+            cycle,
+            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Global.PemainAktif.EfekNasib == 2, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));",
+            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Global.PemainAktif.EfekNasib == 1, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));",
+        )
+        self.assert_rejected(mutated, "Try Your Luck Acceleration deve avere precedenza")
+
+    def test_fly_cycle_cannot_use_start_or_stop_accelerating(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        for action in (
+            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 1, 1, To World, Direction Rate and Max Speed);",
+            "Stop Accelerating(Global.PemainAktif);",
+        ):
+            with self.subTest(action=action):
+                mutated = self.inject_action(cycle, action)
+                self.assert_rejected(mutated, "ciclo globale non deve possedere Start/Stop Accelerating")
 
     def test_fly_dynamic_actions_capture_the_scheduler_player_identity(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
-        for captured, naked in (
-            (
-                "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
-                "Facing Direction Of(Global.PemainAktif)",
-            ),
-        ):
-            with self.subTest(action="transforming throttle"):
-                transform = (
-                    "Start Transforming Throttle(Global.PemainAktif, 1, 1, "
-                    f"{captured});"
-                )
-                mutated = self.replace_in_rule(
-                    cycle,
-                    transform,
-                    transform.replace(captured, naked),
-                )
-                self.assert_rejected(mutated, "identità player catturata")
-            with self.subTest(action="accelerating"):
-                acceleration = (
-                    "Start Accelerating(Global.PemainAktif, "
-                    f"{captured}, 6, 20, To World, Direction Rate and Max Speed);"
-                )
-                mutated = self.replace_in_rule(
-                    cycle,
-                    acceleration,
-                    acceleration.replace(captured, naked),
-                )
-                self.assert_rejected(mutated, "identità player catturata")
+        captured = "Facing Direction Of(Evaluate Once(Global.PemainAktif))"
+        naked = "Facing Direction Of(Global.PemainAktif)"
+        transform = (
+            "Start Transforming Throttle(Global.PemainAktif, 1, 1, "
+            f"{captured});"
+        )
+        mutated = self.replace_in_rule(
+            cycle,
+            transform,
+            transform.replace(captured, naked),
+        )
+        self.assert_rejected(mutated, "identità player catturata")
 
     def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -1342,8 +1446,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         for action, fragment in (
             (
-                "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 6, 20, To World, Direction Rate and Max Speed);",
-                "guardia per-player Fly+input forward",
+                "Set Move Speed(Global.PemainAktif, Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16));",
+                "guardia per-player di puro Forward",
             ),
             (
                 "Apply Impulse(Global.PemainAktif, Velocity Of(Global.PemainAktif) * -1, Magnitude Of(Velocity Of(Global.PemainAktif)), To World, Incorporate Contrary Motion);",
@@ -1924,7 +2028,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             quick,
             "Start Accelerating(Global.PemainAktif, Facing Direction Of(Evaluate Once(Global.PemainAktif)), 50, 25, To World, Direction Rate and Max Speed);",
         )
-        self.assert_rejected(mutated, "Start Accelerating globali Fly+Luck")
+        self.assert_rejected(mutated, "Start Accelerating globale riservato a Try Your Luck")
 
     def test_luck_acceleration_must_remain_automatic_while_fly_is_active(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -1954,7 +2058,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         end = machine.start + call.end
         self.assertEqual(self.source[end], ";")
         mutated = self.source[:start] + '"Start Accelerating(Global.PemainAktif, ...)"' + self.source[end + 1:]
-        self.assert_rejected(mutated, "Start Accelerating globali Fly+Luck")
+        self.assert_rejected(mutated, "Start Accelerating globale riservato a Try Your Luck")
 
     def test_luck_acceleration_has_its_own_ten_second_timestamp(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesNasibPemain")
@@ -2010,6 +2114,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
             with self.subTest(action=action):
                 mutated = self.replace_in_rule(death, action, "")
                 self.assert_rejected(mutated, "morte deve normalizzare")
+
+    def test_death_prompt_describes_automatic_void_recovery(self) -> None:
+        death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            death,
+            "Press {0}: resurrect here; after a void death, you'll be moved to walkable ground.",
+            "Press {0}: resurrect here, or move to walkable ground after a void death.",
+        )
+        self.assert_rejected(mutated, "prompt morte non descrive il recupero automatico dal vuoto: EN")
 
     def test_roulette_icon_is_destroyed_and_cleared_on_all_lifecycle_paths(self) -> None:
         reset = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")

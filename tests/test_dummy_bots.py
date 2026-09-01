@@ -14,7 +14,7 @@ class DummyBotFeatureTests(unittest.TestCase):
         for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
             self.assertIn('Custom String("{0} [{1}]", Custom String("CHILL DEDICATED SERVER")', source)
             self.assertIn('"Hold {0}: inspect hero + HP"', source)
-            self.assertIn('"Hold {0} 0.5s: Arcade Menu | {1} 0.5s: Camera"', source)
+            self.assertIn('"Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera"', source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)
