@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il test utente della precedente revisione Fly ha dato esito negativo su diversi eroi: velocità costante e impossibilità di salire/scendere. La nuova implementazione 3D a impulsi non ha ancora un esito live documentato; la segnalazione precedente non dimostra da sola un difetto del timer. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -130,11 +130,21 @@ Focus dati:
 
 - Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
 - Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
-- Con solo Fly ON, verificare gravità zero e collisione ambientale normale. Forward/Back e Left/Right devono muovere lungo la visuale e il relativo strafe 3D. Ripetere Forward puro guardando verso i quattro orientamenti cardinali della mappa e con pitch davanti/in alto/in basso: la rampa deve partire in tutti i casi, senza dipendere dall'asse X/Z mondo. Il throttle locale deve rispettare `Z > 0.050` e `-0.050 ≤ X ≤ 0.050`. Al primo movimento Forward la velocità deve essere `100%`; mantenendolo senza interruzioni deve risultare circa `180%` a 5 secondi, `260%` a 10 secondi e `500%` a 25 secondi, senza superare il cap. Registrare anche la velocità effettiva per eroi diversi come gate live.
-- In Fly, usare soltanto destra, sinistra o indietro: il movimento deve restare al `100%` e non deve armare la rampa. Durante una rampa Forward, rilasciare Forward o aggiungere uno strafe/diagonale: velocità e timer devono tornare subito a `100%`; una nuova pressione Forward pura deve ripartire dal valore normale.
-- In Fly, rilasciare tutti gli input dopo movimento o knockback: il player deve arrestarsi e restare immobile, senza deriva o fluttuazione. Riapplicando un input, il movimento deve riprendere subito nella direzione corrente dello sguardo e dal `100%` se Forward era stato rilasciato.
-- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità 100, ferma il throttle trasformato e arresta la rampa normale senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale.
-- Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve possedere velocità e propulsione per tutti i 10 secondi senza essere sovrascritta dalla rampa Forward o annullata dal freno idle di Fly; alla sua scadenza, Fly deve tornare al `100%` e restare immobile quando non ci sono input, mentre un nuovo Forward avvia una rampa fresca.
+- Con solo Fly ON, verificare gravità zero, `Move Speed` nativo zero e collisione ambientale normale: il movimento deve provenire dal motore 3D, non dal throttle trasformato. Usare un'area libera sufficientemente ampia e registrare eroe, mappa, input, tempo e velocità effettiva; ripetere su più eroi senza buff di movimento prima delle prove con abilità. La baseline Fly uniforme è `5,5 m/s = 100%`, non una percentuale della velocità specifica dell'eroe.
+
+| Prova | Risultato da verificare nel client |
+|---|---|
+| Orientamento | Con yaw nei quattro orientamenti cardinali e pitch `0°`, `+45°`, `−45°`, `+90°`, `−90°`, Forward segue sempre il mirino e Back la direzione opposta, compresa salita/discesa verticale. Left/Right restano strafe relativo all'eroe senza inversioni durante la rotazione. |
+| Rampa Forward pura | Con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`, partire da circa `5,5 m/s` (`100%`); dopo 5 s circa `9,9 m/s` (`180%`), dopo 10 s circa `14,3 m/s` (`260%`), dopo 25 s circa `27,5 m/s` (`500%`). Continuare oltre 25 s senza superare il cap e ripetere guardando in alto/basso. |
+| Reset e analogico | Side/Back/diagonali non armano la rampa e restano alla baseline. Durante Forward aggiungere strafe, invertire o rilasciare: il timer si riarma e il nuovo Forward riparte dal `100%`. Con controller, input parziale riduce proporzionalmente la velocità; le diagonali non ricevono un bonus di modulo. |
+| Hover | Rilasciare ogni input dopo volo orizzontale, verticale, rotazione e knockback: arresto al tick del motore e nessuna deriva persistente. Riprendere gli input senza scatto nella vecchia direzione. |
+| Isolamento | Due player, anche con eroi diversi: uno tiene Forward per 25 s, l'altro fa strafe, hover o commuta Fly. Timer, velocità, direzione e toggle del primo non devono cambiare per azioni del secondo; ripetere invertendo i ruoli. |
+| Unkillable | Ripetere salita/discesa, hover e misure a 0/5/25 s con Unkillable OFF, 1 HP e FULL HP. La protezione dagli urti non deve impedire gli impulsi di movimento Fly; questa interazione richiede conferma nel client. |
+| Collisioni | Fly senza Ghost deve fermarsi contro muri/soffitti/pavimenti; con Ghost attraversa muri/soffitti ma non pavimenti. Verificare angoli, porte strette, cambi di pendenza e contatto con umani/dummy: nessun attraversamento non previsto o impulso trasferito a un altro player. |
+| Ergonomia e fluidità | Provare rotazioni lente/rapide, inversioni avanti-indietro, passaggio per il pitch verticale e avvio/arresto sia in prima sia in terza persona. Annotare vibrazione, scatti, ritardo input, nausea e controllo a 500%; i gate statici non certificano questi aspetti. |
+
+- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità e movimento nativo normali e arresta la rampa senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale. Ripetere durante rampa e hover dopo cambio eroe, cambio squadra e transizioni spawned/non-spawned; non deve rimanere `Move Speed = 0` quando Fly è OFF.
+- Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve possedere velocità e propulsione per tutti i 10 secondi: il motore Fly non deve applicare impulsi, freno idle o blocco del movimento nativo. Alla scadenza Fly riparte dal `100%` con una rampa fresca se Forward è tenuto, oppure resta immobile senza input. Ripetere entrando/uscendo da Fly a metà Acceleration e con un secondo player in Fly normale.
 
 ### Unkillable FULL HP
 
@@ -390,7 +400,11 @@ Dummy Follow nearest/opt-out: PASS/FAIL
 FULL HP immunity/restore: PASS/FAIL
 Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
-Ghost walls/floors/Fly 3D/ramp 100→500/idle: PASS/FAIL
+Ghost walls/floors and Fly collisions: PASS/FAIL
+Fly yaw cardinali/pitch 0° ±45° ±90°/strafe: PASS/FAIL
+Fly 5,5→27,5 m/s / rampa 100→500 in 25 s / reset: PASS/FAIL
+Fly analogico/diagonali/hover/ergonomia: PASS/FAIL
+Fly due player indipendenti/lifecycle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
 Jump Resurrect same-point/void-live-nearest-walkable/retry latch: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL

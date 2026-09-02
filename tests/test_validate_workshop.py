@@ -1315,17 +1315,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "pavimenti solidi")
 
-    def test_fly_throttle_must_follow_the_full_view_direction(self) -> None:
+    def test_fly_uses_raw_input_without_transforming_throttle(self) -> None:
         physics = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanFisikaHantuTerbang")
-        mutated = self.replace_in_rule(
+        mutated = self.inject_action(
             physics,
             "Start Transforming Throttle(Event Player, 1, 1, Facing Direction Of(Event Player));",
-            "Start Transforming Throttle(Event Player, 1, 1, Up);",
         )
-        self.assert_rejected(mutated, "volo orientato alla visuale")
+        self.assert_rejected(mutated, "input devono restare locali")
 
-    def test_fly_forward_requires_the_exact_progressive_move_speed_formula(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+    def test_fly_forward_requires_the_exact_progressive_percentage_formula(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutations = (
             (
                 "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
@@ -1349,7 +1348,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 self.assert_rejected(mutated, "rampa Fly lineare 100%-500% in 25 secondi")
 
     def test_fly_forward_requires_the_local_forward_throttle_component(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Z Component Of(Throttle Of(Global.PemainAktif))",
@@ -1358,7 +1357,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "componente locale Z")
 
     def test_fly_forward_requires_pure_forward_without_lateral_input(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutations = (
             (
                 "X Component Of(Throttle Of(Global.PemainAktif)) >= -0.050",
@@ -1377,56 +1376,43 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 self.assert_rejected(mutated, fragment)
 
     def test_fly_non_forward_input_rearms_speed_and_timestamp(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Else If(Global.PemainAktif.ModeTerbangAktif == True);\n"
-            "\t\t\t\tGlobal.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
-            "\t\t\t\tSet Move Speed(Global.PemainAktif, 100);\n"
-            "\t\t\tEnd;",
-            "Else If(Global.PemainAktif.ModeTerbangAktif == True);\n"
-            "\t\t\t\tGlobal.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
-            "\t\t\t\tSet Move Speed(Global.PemainAktif, 150);\n"
-            "\t\t\tEnd;",
+            "Global.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
+            "\t\t\t\t\tGlobal.PemainAktif.PersenTerbang = 100;",
+            "Global.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
+            "\t\t\t\t\tGlobal.PemainAktif.PersenTerbang = 150;",
         )
         self.assert_rejected(mutated, "laterale, indietro o rilascio Forward")
 
     def test_fly_luck_acceleration_has_priority_over_forward_ramp(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Global.PemainAktif.EfekNasib == 2, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));",
-            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Global.PemainAktif.EfekNasib == 1, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));",
+            "If(And(Global.PemainAktif.EfekNasib == 2, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed));",
+            "If(And(Global.PemainAktif.EfekNasib == 1, Global.PemainAktif.EfekNasibBerakhir > Total Time Elapsed));",
         )
         self.assert_rejected(mutated, "Try Your Luck Acceleration deve avere precedenza")
 
-    def test_fly_cycle_cannot_use_start_or_stop_accelerating(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
-        for action in (
-            "Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 1, 1, To World, Direction Rate and Max Speed);",
-            "Stop Accelerating(Global.PemainAktif);",
-        ):
-            with self.subTest(action=action):
-                mutated = self.inject_action(cycle, action)
-                self.assert_rejected(mutated, "ciclo globale non deve possedere Start/Stop Accelerating")
+    def test_fly_cycle_and_motor_cannot_use_start_or_stop_accelerating(self) -> None:
+        for owner in ("ProsesSiklusPemain", "ProsesTerbangPemain"):
+            cycle = self.rule(lambda rule: validator.subroutine_target(rule) == owner)
+            for action in (
+                "Start Accelerating(Global.PemainAktif, Facing Direction Of(Global.PemainAktif), 1, 1, To World, Direction Rate and Max Speed);",
+                "Stop Accelerating(Global.PemainAktif);",
+            ):
+                with self.subTest(owner=owner, action=action):
+                    mutated = self.inject_action(cycle, action)
+                    self.assert_rejected(mutated, "Start/Stop Accelerating")
 
-    def test_fly_dynamic_actions_capture_the_scheduler_player_identity(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
-        captured = "Facing Direction Of(Evaluate Once(Global.PemainAktif))"
-        naked = "Facing Direction Of(Global.PemainAktif)"
-        transform = (
-            "Start Transforming Throttle(Global.PemainAktif, 1, 1, "
-            f"{captured});"
-        )
-        mutated = self.replace_in_rule(
-            cycle,
-            transform,
-            transform.replace(captured, naked),
-        )
-        self.assert_rejected(mutated, "identità player catturata")
+    def test_fly_motor_rejects_another_player_as_the_movement_target(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        mutated = self.replace_in_rule(motor, "Apply Impulse(Global.PemainAktif,", "Apply Impulse(Host Player,")
+        self.assert_rejected(mutated, "unico impulso delta non nullo")
 
     def test_fly_backward_input_must_not_be_forced_by_view_impulse(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.inject_action(
             cycle,
             "Apply Impulse(Global.PemainAktif, Facing Direction Of(Global.PemainAktif) * -1, 9, To World, Cancel Contrary Motion);",
@@ -1434,24 +1420,24 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "input indietro")
 
     def test_fly_idle_brake_requires_the_exact_opposite_impulse(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Apply Impulse(Global.PemainAktif, Velocity Of(Global.PemainAktif) * -1, Magnitude Of(Velocity Of(Global.PemainAktif)), To World, Incorporate Contrary Motion);",
-            "",
+            "Global.PemainAktif.DeltaTerbang = Velocity Of(Global.PemainAktif) * -1;",
+            "Global.PemainAktif.DeltaTerbang = Vector(0, 0, 0);",
         )
         self.assert_rejected(mutated, "impulso esattamente opposto alla deriva")
 
     def test_fly_actions_cannot_escape_their_per_player_input_guards(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         for action, fragment in (
             (
-                "Set Move Speed(Global.PemainAktif, Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16));",
+                "Global.PemainAktif.PersenTerbang = Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16);",
                 "guardia per-player di puro Forward",
             ),
             (
-                "Apply Impulse(Global.PemainAktif, Velocity Of(Global.PemainAktif) * -1, Magnitude Of(Velocity Of(Global.PemainAktif)), To World, Incorporate Contrary Motion);",
-                "guardia idle per-player",
+                "Apply Impulse(Global.PemainAktif, Global.PemainAktif.DeltaTerbang, Magnitude Of(Global.PemainAktif.DeltaTerbang), To World, Incorporate Contrary Motion);",
+                "guardia per-player umano vivo",
             ),
         ):
             with self.subTest(action=action):
@@ -1462,6 +1448,96 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 changed = changed[:closing] + f"\n\t\t{action}" + changed[closing:]
                 mutated = self.source[:cycle.start] + changed + self.source[cycle.end:]
                 self.assert_rejected(mutated, fragment)
+
+    def test_fly_motor_requires_every_per_player_lifecycle_guard(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        for token in (
+            "Global.PemainAktif.Manusia == True",
+            "Global.PemainAktif.BotOtomatis == False",
+            "Is Dummy Bot(Global.PemainAktif) == False",
+            "Has Spawned(Global.PemainAktif) == True",
+            "Is Alive(Global.PemainAktif) == True",
+            "Global.PemainAktif.ModeTerbangAktif == True",
+            "Global.PemainAktif.FisikaHantuTerbangDiterapkan == True",
+        ):
+            with self.subTest(guard=token):
+                mutated = self.replace_in_rule(motor, token, "True")
+                self.assert_rejected(mutated, "guardia per-player umano vivo")
+
+    def test_fly_motor_requires_full_pitch_and_signed_strafe(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        for old, new in (
+            ("Facing Direction Of(Global.PemainAktif) * Z Component Of(Throttle Of(Global.PemainAktif))",
+             "World Vector Of(Forward, Global.PemainAktif, Rotation)"),
+            ("World Vector Of(Vector(X Component Of(Throttle Of(Global.PemainAktif)), 0, 0), Global.PemainAktif, Rotation)",
+             "World Vector Of(Vector(1, 0, 0), Global.PemainAktif, Rotation)"),
+        ):
+            with self.subTest(direction=old):
+                mutated = self.replace_in_rule(motor, old, new)
+                self.assert_rejected(mutated, "direzione 3D da visuale e input locali")
+
+    def test_fly_target_velocity_is_normalized_capped_and_subtracts_current_velocity(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        for old, new in (
+            ("Normalize(Global.PemainAktif.ArahTerbang)", "Global.PemainAktif.ArahTerbang"),
+            ("* 5.500 *", "* 10 *"),
+            ("Min(1, Magnitude Of(Throttle Of(Global.PemainAktif)))", "Magnitude Of(Throttle Of(Global.PemainAktif))"),
+            ("- Velocity Of(Global.PemainAktif);", "+ Velocity Of(Global.PemainAktif);"),
+        ):
+            with self.subTest(target=old):
+                mutated = self.replace_in_rule(motor, old, new)
+                self.assert_rejected(mutated, "velocità target 3D")
+
+    def test_fly_delta_impulse_cannot_cancel_or_repeat_existing_motion(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        for old, new in (
+            ("To World, Incorporate Contrary Motion);", "To World, Cancel Contrary Motion);"),
+            ("If(Magnitude Of(Global.PemainAktif.DeltaTerbang) > 0.010);", "If(True);"),
+        ):
+            with self.subTest(impulse=old):
+                mutated = self.replace_in_rule(motor, old, new)
+                self.assert_rejected(mutated, "unico impulso delta non nullo")
+
+    def test_fly_motor_must_disable_native_locomotion(self) -> None:
+        for owner, old, new, fragment in (
+            ("TerapkanFisikaHantuTerbang", "Set Move Speed(Event Player, 0);",
+             "Set Move Speed(Event Player, 100);", "locomozione nativa disabilitata"),
+            ("ProsesTerbangPemain", "Set Move Speed(Global.PemainAktif, 0);",
+             "Set Move Speed(Global.PemainAktif, 100);", "senza scritture fisiche"),
+        ):
+            with self.subTest(owner=owner):
+                rule = self.rule(lambda rule: validator.subroutine_target(rule) == owner)
+                self.assert_rejected(self.replace_in_rule(rule, old, new), fragment)
+
+    def test_fly_motor_must_run_at_twenty_hz_after_luck(self) -> None:
+        scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
+        call = "Call Subroutine(ProsesTerbangPemain);"
+        mutated = self.replace_in_rule(scheduler, call, "If(Global.LangkahPenjadwal % 2 == 0);\n"
+                                       f"\t\t\t\t\t{call}\n\t\t\t\tEnd;")
+        self.assert_rejected(mutated, "motore 20 Hz subito dopo Try Your Luck")
+
+    def test_fly_state_cannot_be_written_from_another_controller(self) -> None:
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        for variable in ("PersenTerbang", "ArahTerbang", "DeltaTerbang"):
+            with self.subTest(variable=variable):
+                mutated = self.inject_action(cycle, f"Global.PemainAktif.{variable} = 0;")
+                self.assert_rejected(mutated, f"owner per-player esclusivi di {variable}")
+
+    def test_fly_state_cannot_be_written_to_another_player(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        for variable in ("PersenTerbang", "ArahTerbang", "DeltaTerbang"):
+            with self.subTest(variable=variable):
+                mutated = self.inject_action(motor, f"Set Player Variable(Host Player, {variable}, 0);")
+                self.assert_rejected(mutated, f"scritture {variable} fuori dai target per-player")
+
+    def test_fly_off_brake_must_not_cancel_luck_acceleration(self) -> None:
+        physics = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanFisikaHantuTerbang")
+        action = "Apply Impulse(Event Player, Velocity Of(Event Player) * -1, Magnitude Of(Velocity Of(Event Player)), To World, Incorporate Contrary Motion);"
+        changed = physics.body.replace(action, "", 1)
+        closing = changed.rfind("\n\t}")
+        changed = changed[:closing] + f"\n\t\t{action}" + changed[closing:]
+        mutated = self.source[:physics.start] + changed + self.source[physics.end:]
+        self.assert_rejected(mutated, "freno locale non deve cancellare Acceleration")
 
     def test_try_your_luck_cannot_restore_gravity_or_fly_throttle(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "PulihkanNasibPemain")
@@ -2043,11 +2119,12 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "restare automatica anche in Fly")
 
     def test_fly_idle_brake_must_skip_active_luck_acceleration(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010))));",
-            "If(And(Global.PemainAktif.ModeTerbangAktif == True, And(Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010)));",
+            "Global.PemainAktif.WaktuMulaiTerbangMaju = -1;",
+            "Global.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
+            "\t\t\t\tApply Impulse(Global.PemainAktif, Global.PemainAktif.DeltaTerbang, Magnitude Of(Global.PemainAktif.DeltaTerbang), To World, Incorporate Contrary Motion);",
         )
         self.assert_rejected(mutated, "esito Acceleration ancora attivo")
 

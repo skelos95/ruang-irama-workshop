@@ -23,7 +23,17 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 | 1 | Bahasa Indonesia |
 | 2 | ไทย |
 
-Main Menu usa pagina `-1`; le 14 pagine mantengono gli indici `0..13`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. La pagina 13 espone due toggle indipendenti, entrambi OFF per default: Ghost attraversa pareti e soffitti con `Include Floors = False`, mentre Fly imposta gravità zero e trasforma il throttle rispetto alla direzione 3D dello sguardo. Il gate Forward puro richiede Z locale del throttle maggiore di `0.050` e X compresa fra `-0.050` e `0.050`, indipendentemente dall'orientamento mondo; la trasformazione successiva converte il movimento nella direzione 3D dello sguardo. Le azioni continue catturano il player con `Evaluate Once` ma rivalutano la sua mira. Al primo tick Forward puro Fly applica `Move Speed = 100%`; finché resta premuto senza input laterali il valore aumenta linearmente di `16` punti percentuali al secondo, con cap `500%` raggiunto dopo 25 secondi. Rilasciare Forward, aggiungere un input laterale o usare destra, sinistra o indietro azzera il timestamp per-player e ripristina `100%`; il prossimo Forward puro riparte da `100%`. L'esito Try Your Luck: Acceleration possiede invece velocità e propulsione per l'intera finestra attiva, durante la quale la rampa normale non può scriverle. Senza alcun input e senza Acceleration attiva, Fly annulla inoltre la velocità residua. Alla morte normalizza velocità, accelerazione, throttle, gravità e collisione ambientale prima di disarmare il latch. Preferenze e cursori persistono durante chiusura, riapertura, cambio eroe, morte, Resurrect e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
+Main Menu usa pagina `-1`; le 14 pagine mantengono gli indici `0..13`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. La pagina 13 espone due toggle indipendenti, entrambi OFF per default: Ghost attraversa pareti e soffitti con `Include Floors = False`; Fly usa il motore 3D esplicito descritto sotto. Preferenze e cursori persistono durante chiusura, riapertura, cambio eroe, morte, Resurrect e cambio squadra leggero. Soltanto un leave vero seguito da rejoin crea una nuova sessione player e riapplica i default di setup.
+
+### Motore Fly 3D
+
+Il test utente della revisione precedente ha rilevato assenza di progressione della velocità e di salita/discesa su diversi eroi. Il solo esito visivo non identifica con certezza un guasto del timer. La precedente combinazione di `Start Transforming Throttle` e `Set Move Speed` viene sostituita: Blizzard descrive la prima azione come trasformazione dell'input direzionale, non come una propulsione verticale garantita. Questa distinzione motiva la scelta del motore esplicito, ma non sostituisce una verifica nel client. Fonte: [note Blizzard di agosto 2019](https://overwatch.blizzard.com/en-gb/news/patch-notes/live/2019/08/).
+
+`ProsesTerbangPemain` viene richiamata dal solo scheduler globale a 20 Hz per ogni umano idoneo, senza nuovi `Wait` o loop per-player. Il volo normale imposta gravità zero e `Move Speed` nativo zero, evitando che il movimento engine si sommi a quello richiesto. Legge `Throttle Of(player)` non trasformato, dove X positivo è sinistra e Z positivo è avanti. Il vettore richiesto combina `Facing Direction Of(player) * Z` con lo strafe `World Vector Of(Vector(X, 0, 0), player, Rotation)`: avanti/indietro seguono il pitch, mentre lo strafe resta relativo alla rotazione dell'eroe. La normalizzazione mantiene la direzione e l'intensità analogica viene limitata a 1, evitando un bonus diagonale. La scelta di mira più strafe e impulsi, con movimento nativo disattivato, ha un precedente nell'[esempio originale di Shattered sul forum Blizzard](https://us.forums.blizzard.com/en/overwatch/t/%E2%9C%85-how-to-make-reaper-exc-changes/600253/2); qui è adattata al scheduler globale e alla rampa per-player, senza copiarne il loop.
+
+La baseline Fly uniforme è `5,5 m/s = 100%`, una convenzione del motore e non la velocità nativa esatta di ogni eroe, buff o abilità. Soltanto Forward puro, con Z locale maggiore di `0.050` e X fra `-0.050` e `0.050`, arma il timestamp. La percentuale è `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)` e scala la baseline fino a `27,5 m/s = 500%` dopo 25 secondi. Rilascio, laterali, diagonali e indietro azzerano la rampa; il movimento successivo parte dal `100%`, mentre a input zero la velocità richiesta è zero. Timer, percentuale, direzione e delta di velocità sono player-local. A ogni tick il motore calcola `velocità richiesta - Velocity Of(player)` e applica il relativo impulso `To World` con `Incorporate Contrary Motion`, senza forcing o Teleport: lo stesso controllo governa movimento e hover.
+
+Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio e ripristinano la fisica prevista senza cancellare le preferenze conservate dal lifecycle. Jump Resurrect riapplica le modalità selezionate. Il motore 3D, la baseline, la fluidità e le interazioni con collisioni/abilità restano da validare nella matrice live di [`TEST.md`](TEST.md).
 
 ### Input
 
@@ -46,8 +56,8 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 
 | Frequenza | Responsabilità |
 |---:|---|
-| 20 Hz | controlli rapidi, retry morte completa Revenge/Skull e avanzamento Try Your Luck |
-| 10 Hz | lifecycle reattivo, RGB, refresh visivi, riapplicazione Ghost/Fly e arresto deriva |
+| 20 Hz | controlli rapidi, retry morte completa Revenge/Skull, avanzamento Try Your Luck e motore Fly 3D `ProsesTerbangPemain` |
+| 10 Hz | lifecycle reattivo, RGB, refresh visivi e riapplicazione Ghost/Fly dopo normalizzazioni engine |
 | 1 Hz | countdown, sincronizzazione timer nativo e cache passive |
 | 0,1 Hz | minuti di permanenza in lobby |
 
@@ -75,7 +85,7 @@ Il lifecycle del menu è:
 
 Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
 
-Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Pagina 13 possiede un cursore a due righe, renderer e tinta propri: applicare una riga cambia soltanto Ghost oppure Fly. I soli writer dei toggle sono setup/quiete OFF e il relativo handler; i due controller fisici dedicati sono gli unici owner di `Gravity = 0` e `Start Transforming Throttle`. Ghost non modifica mai la collisione fra player. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
+Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Pagina 13 possiede un cursore a due righe, renderer e tinta propri: applicare una riga cambia soltanto Ghost oppure Fly. I soli writer dei toggle sono setup/quiete OFF e il relativo handler; applicazione fisica e motore Fly dedicati possiedono `Gravity = 0` e il blocco del movimento nativo. Non è ammesso `Start Transforming Throttle`; il delta di velocità viene applicato soltanto al player della scansione in corso. Ghost non modifica mai la collisione fra player. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
 
 ### Profilo per nome visibile
 
@@ -114,7 +124,7 @@ Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Self Heal e
 
 Le sei icone della roulette usano la reevaluation `Visible To and Position`. `Visible To` rivaluta il roster umano anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino dell'identità catturata, senza seguire lo scratch `Global.PemainAktif`. L'indicatore off-screen resta abilitato e i bot non entrano mai nel pubblico.
 
-L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelata soltanto l'identità del beneficiario, non la sua direzione corrente. `Direction Rate and Max Speed` mantiene quindi la spinta automatica davanti, in alto e in basso senza throttle o input direzionali. Quando Fly è ON, il freno idle riconosce l'esito Acceleration ancora attivo e non lo cancella; alla sua scadenza il cleanup ferma la spinta e Fly torna immobile senza input. Il tick globale conserva soltanto avvio, timestamp e cleanup; non vengono aggiunti loop, impulsi periodici o regole per-player.
+L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelata soltanto l'identità del beneficiario, non la sua direzione corrente. `Direction Rate and Max Speed` mantiene quindi la spinta automatica davanti, in alto e in basso senza throttle o input direzionali. Quando Fly è ON, tutto il suo motore a impulsi cede la precedenza all'esito Acceleration, compreso il freno idle; alla scadenza il cleanup ferma la spinta e Fly riparte con una rampa fresca o torna immobile senza input. Il ramo Luck del tick globale conserva soltanto avvio, timestamp e cleanup; Luck non usa impulsi periodici e non aggiunge loop o regole per-player.
 
 ## Lifecycle player
 
@@ -228,6 +238,7 @@ La release 0.8.1 resta **static-ready / live-pending**: i gate statici sono sodd
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;
+- regressione del nuovo motore Fly 3D dopo il fallimento live precedente: pitch fino a ±90°, orientamenti cardinali, baseline uniforme 5,5 m/s e cap 27,5 m/s, rampa 25 s, hover, due player indipendenti, collisioni, ergonomia e priorità Luck;
 - stress join/leave/team switch;
 - matrice sulle otto modalità, compresa l'uscita Spawn dei dummy;
 - soak di almeno 30 minuti con 12 slot;

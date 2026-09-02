@@ -131,6 +131,7 @@ SCHEDULER_SUBROUTINES = {
     "ProsesSiklusPemain",
     "ProsesCachePemain",
     "ProsesNasibPemain",
+    "ProsesTerbangPemain",
 }
 PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanMusik",
@@ -2118,6 +2119,9 @@ def validate_ghost_fly(
         "KursorHantuTerbang": 110,
         "FisikaHantuTerbangDiterapkan": 111,
         "WaktuMulaiTerbangMaju": 113,
+        "PersenTerbang": 114,
+        "ArahTerbang": 115,
+        "DeltaTerbang": 116,
     }
     for name, index in expected_variables.items():
         declarations = [entry for entry in player_entries if entry.name == name]
@@ -2129,13 +2133,17 @@ def validate_ghost_fly(
         "GambarHantuTerbang",
         "TerapkanHalamanHantuTerbang",
         "TerapkanFisikaHantuTerbang",
+        "ProsesTerbangPemain",
     }
     checks.require(required_subroutines <= subroutines,
                    "Ghost/Fly: subroutine pagina 13 incomplete")
+    checks.require(re.search(r"(?m)^\s*61:\s*ProsesTerbangPemain\s*$", source) is not None,
+                   "Fly: indice subroutine motore 20 Hz deve essere 61")
 
     apply = rule_by_subroutine(rules, "TerapkanHalamanHantuTerbang")
     physics = rule_by_subroutine(rules, "TerapkanFisikaHantuTerbang")
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    motor = rule_by_subroutine(rules, "ProsesTerbangPemain")
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     quiet = rule_by_subroutine(rules, "TenangkanPemain")
     fast = rule_by_subroutine(rules, "ProsesCepatPemain")
@@ -2165,16 +2173,14 @@ def validate_ghost_fly(
                 "collisione pareti indipendente con pavimenti solidi",
             ),
             (
-                "EventPlayer.WaktuMulaiTerbangMaju=-1;"
                 "If(EventPlayer.ModeTerbangAktif==True);"
                 "If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));"
-                "SetMoveSpeed(EventPlayer,100);End;SetGravity(EventPlayer,0);"
-                "StartTransformingThrottle(EventPlayer,1,1,FacingDirectionOf(EventPlayer));",
-                "volo orientato alla visuale, rampa riarmata e gravità zero",
+                "SetMoveSpeed(EventPlayer,0);End;SetGravity(EventPlayer,0);",
+                "locomozione nativa disabilitata e gravità zero nel volo 3D",
             ),
             (
                 "Else;If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));"
-                "SetMoveSpeed(EventPlayer,100);End;StopTransformingThrottle(EventPlayer);SetGravity(EventPlayer,100);",
+                "SetMoveSpeed(EventPlayer,100);",
                 "ripristino motore Fly senza interrompere Acceleration di Try Your Luck",
             ),
             (
@@ -2184,6 +2190,9 @@ def validate_ghost_fly(
                 "arresto deriva locale a Fly disattivato",
             ),
             ("EventPlayer.FisikaHantuTerbangDiterapkan=True;", "latch applicato"),
+            ("StopTransformingThrottle(EventPlayer);", "input locali non trasformati"),
+            ("EventPlayer.WaktuMulaiTerbangMaju=-1;", "riarmo rampa"),
+            ("SetGravity(EventPlayer,100);", "ripristino gravità a Fly OFF"),
         ):
             checks.require(token in physics_packed, f"Ghost/Fly fisica locale incompleta: {label}")
         checks.require(
@@ -2194,6 +2203,13 @@ def validate_ghost_fly(
                        "Ghost/Fly non deve modificare la collisione fra giocatori")
         checks.require(not wait_calls(physics.body) and action_loop_count(physics.body) == 0,
                        "Ghost/Fly: controller fisica locale deve essere atomico")
+        for call in iter_calls(physics.body, "Apply Impulse"):
+            headers = [packed(branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(physics.body, call.start)]
+            checks.require(
+                "If(Or(EventPlayer.EfekNasib!=2,EventPlayer.EfekNasibBerakhir<=TotalTimeElapsed));" in headers,
+                "Fly OFF: il freno locale non deve cancellare Acceleration di Try Your Luck",
+            )
 
     checks.require(cycle is not None, "Ghost/Fly: controller globale 10 Hz assente")
     if cycle:
@@ -2205,46 +2221,8 @@ def validate_ghost_fly(
             ("Global.PemainAktif.FisikaHantuTerbangDiterapkan==False", "riapplicazione a latch"),
             ("DisableMovementCollisionWithEnvironment(Global.PemainAktif,False);", "riapplicazione pareti"),
             ("SetGravity(Global.PemainAktif,0);", "riapplicazione gravità zero"),
-            (
-                "StartTransformingThrottle(Global.PemainAktif,1,1,"
-                "FacingDirectionOf(EvaluateOnce(Global.PemainAktif)));",
-                "riapplicazione movimento con identità player catturata",
-            ),
-            (
-                "ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050",
-                "input avanti Fly ricavato dalla componente locale Z",
-            ),
-            (
-                "XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050",
-                "input Fly laterale sinistro escluso dalla rampa",
-            ),
-            (
-                "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
-                "input Fly laterale destro escluso dalla rampa",
-            ),
-            (
-                "If(Global.PemainAktif.WaktuMulaiTerbangMaju<0);"
-                "Global.PemainAktif.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;",
-                "timestamp per-player avviato al primo tick Forward",
-            ),
-            (
-                "SetMoveSpeed(Global.PemainAktif,Min(500,100+Max(0,TotalTimeElapsed-"
-                "Global.PemainAktif.WaktuMulaiTerbangMaju)*16));",
-                "rampa Fly lineare 100%-500% in 25 secondi",
-            ),
-            (
-                "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
-                "And(Or(Global.PemainAktif.EfekNasib!=2,"
-                "Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed),"
-                "And(MagnitudeOf(ThrottleOf(Global.PemainAktif))<=0.050,"
-                "MagnitudeOf(VelocityOf(Global.PemainAktif))>0.010))));",
-                "eccezione per l'esito Acceleration ancora attivo nel freno idle Fly",
-            ),
-            (
-                "ApplyImpulse(Global.PemainAktif,VelocityOf(Global.PemainAktif)*-1,"
-                "MagnitudeOf(VelocityOf(Global.PemainAktif)),ToWorld,IncorporateContraryMotion);",
-                "impulso esattamente opposto alla deriva",
-            ),
+            ("SetMoveSpeed(Global.PemainAktif,Global.PemainAktif.ModeTerbangAktif==True?0:100);",
+             "riapplicazione motore 3D senza locomozione nativa"),
         ):
             checks.require(token in cycle_packed, f"Ghost/Fly controller 10 Hz incompleto: {label}")
         checks.require("StartForcingPlayerPosition(" not in cycle_packed,
@@ -2260,90 +2238,101 @@ def validate_ghost_fly(
             "StartAccelerating(" not in cycle_packed and "StopAccelerating(" not in cycle_packed,
             "Ghost/Fly: il ciclo globale non deve possedere Start/Stop Accelerating",
         )
-        for call in iter_calls(cycle.body, "Start Transforming Throttle"):
-            if len(call.args) < 2:
-                continue
-            direction_argument = call.args[-1]
-            uncaptured_direction = re.sub(
-                r"Evaluate\s+Once\(\s*Global\.PemainAktif\s*\)",
-                "",
-                direction_argument,
-            )
-            checks.require(
-                "Global.PemainAktif" not in uncaptured_direction,
-                "Start Transforming Throttle Fly usa scratch Global.PemainAktif senza Evaluate Once",
-            )
+        checks.equal(len(list(iter_calls(cycle.body, "Apply Impulse"))), 0,
+                     "Fly: il ciclo 10 Hz non deve possedere impulsi del motore 20 Hz")
 
-        luck_priority = (
-            "If(And(Global.PemainAktif.ModeTerbangAktif==True,"
-            "And(Global.PemainAktif.EfekNasib==2,"
-            "Global.PemainAktif.EfekNasibBerakhir>TotalTimeElapsed)));"
-            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
-            "ElseIf(And(Global.PemainAktif.ModeTerbangAktif==True,"
-            "And(ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050,"
-            "And(XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050,"
-            "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050))));"
+    checks.require(motor is not None, "Fly: motore 3D per-player 20 Hz assente")
+    if motor:
+        motor_packed = packed(motor.body)
+        guard_tokens = (
+            "Global.PemainAktif.Manusia==True",
+            "Global.PemainAktif.BotOtomatis==False",
+            "IsDummyBot(Global.PemainAktif)==False",
+            "HasSpawned(Global.PemainAktif)==True",
+            "IsAlive(Global.PemainAktif)==True",
+            "Global.PemainAktif.ModeTerbangAktif==True",
+            "Global.PemainAktif.FisikaHantuTerbangDiterapkan==True",
         )
-        checks.require(
-            luck_priority in cycle_packed,
-            "Fly: Try Your Luck Acceleration deve avere precedenza e resettare soltanto il timestamp",
+        forward_tokens = (
+            "ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050",
+            "XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050",
+            "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
         )
-        non_forward_reset = (
-            "ElseIf(Global.PemainAktif.ModeTerbangAktif==True);"
-            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
-            "SetMoveSpeed(Global.PemainAktif,100);End;"
+        ramp = (
+            "Global.PemainAktif.PersenTerbang=Min(500,100+Max(0,TotalTimeElapsed-"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju)*16);"
         )
-        checks.require(
-            non_forward_reset in cycle_packed,
-            "Fly: laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%",
-        )
+        for token, label in (
+            (forward_tokens[0], "input avanti Fly ricavato dalla componente locale Z"),
+            (forward_tokens[1], "input Fly laterale sinistro escluso dalla rampa"),
+            (forward_tokens[2], "input Fly laterale destro escluso dalla rampa"),
+            ("If(Global.PemainAktif.WaktuMulaiTerbangMaju<0);"
+             "Global.PemainAktif.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;",
+             "timestamp per-player avviato al primo tick Forward"),
+            (ramp, "rampa Fly lineare 100%-500% in 25 secondi"),
+            ("Else;Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
+             "Global.PemainAktif.PersenTerbang=100;End;",
+             "laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%"),
+            ("Global.PemainAktif.ArahTerbang=FacingDirectionOf(Global.PemainAktif)*"
+             "ZComponentOf(ThrottleOf(Global.PemainAktif))+WorldVectorOf(Vector("
+             "XComponentOf(ThrottleOf(Global.PemainAktif)),0,0),Global.PemainAktif,Rotation);",
+             "direzione 3D da visuale e input locali senza trasformazione throttle"),
+            ("If(MagnitudeOf(Global.PemainAktif.ArahTerbang)>0.050);"
+             "Global.PemainAktif.DeltaTerbang=Normalize(Global.PemainAktif.ArahTerbang)*5.500*"
+             "Global.PemainAktif.PersenTerbang/100*Min(1,MagnitudeOf(ThrottleOf(Global.PemainAktif)))-"
+             "VelocityOf(Global.PemainAktif);",
+             "velocità target 3D con baseline 5.5 m/s, limite diagonale e sottrazione velocità attuale"),
+            ("Else;Global.PemainAktif.DeltaTerbang=VelocityOf(Global.PemainAktif)*-1;End;",
+             "impulso esattamente opposto alla deriva senza input"),
+            ("If(MagnitudeOf(Global.PemainAktif.DeltaTerbang)>0.010);"
+             "ApplyImpulse(Global.PemainAktif,Global.PemainAktif.DeltaTerbang,"
+             "MagnitudeOf(Global.PemainAktif.DeltaTerbang),ToWorld,IncorporateContraryMotion);End;",
+             "correzione velocità tramite unico impulso delta non nullo"),
+        ):
+            checks.require(token in motor_packed, f"Fly motore 3D incompleto: {label}")
 
-        ramp_calls = [
-            call
-            for call in iter_calls(cycle.body, "Set Move Speed")
-            if len(call.args) == 2
-            and re.sub(r"\s+", "", call.args[1])
-            == "Min(500,100+Max(0,TotalTimeElapsed-Global.PemainAktif.WaktuMulaiTerbangMaju)*16)"
-        ]
-        checks.equal(len(ramp_calls), 1, "Fly deve avere una sola rampa Move Speed progressiva")
-        if ramp_calls:
-            ramp_branches = conditional_branches_containing(cycle.body, ramp_calls[0].start)
-            forward_branch = next(
-                (
-                    packed(branch)
-                    for branch in ramp_branches
-                    if "Global.PemainAktif.ModeTerbangAktif == True" in mask_strings(branch)
-                    and "Z Component Of(Throttle Of(Global.PemainAktif)) > 0.050" in mask_strings(branch)
-                    and "X Component Of(Throttle Of(Global.PemainAktif)) >= -0.050" in mask_strings(branch)
-                    and "X Component Of(Throttle Of(Global.PemainAktif)) <= 0.050" in mask_strings(branch)
-                ),
-                "",
-            )
-            checks.require(
-                bool(forward_branch),
-                "rampa Move Speed deve restare nella guardia per-player di puro Forward",
-            )
-        idle_impulses = list(iter_calls(cycle.body, "Apply Impulse"))
-        checks.equal(len(idle_impulses), 1,
-                     "Fly deve avere un solo impulso di arresto idle nel ciclo 10 Hz")
-        if idle_impulses:
-            idle_branches = conditional_branches_containing(cycle.body, idle_impulses[0].start)
-            idle_branch = next(
-                (
-                    packed(branch)
-                    for branch in idle_branches
-                    if "Global.PemainAktif.ModeTerbangAktif == True" in mask_strings(branch)
-                    and "Global.PemainAktif.EfekNasib != 2" in mask_strings(branch)
-                    and "Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed" in mask_strings(branch)
-                    and "Magnitude Of(Throttle Of(Global.PemainAktif)) <= 0.050" in mask_strings(branch)
-                    and "Magnitude Of(Velocity Of(Global.PemainAktif)) > 0.010" in mask_strings(branch)
-                ),
-                "",
-            )
-            checks.require(
-                bool(idle_branch),
-                "freno Fly deve restare dentro la guardia idle per-player senza Acceleration attiva",
-            )
+        luck_prefix = (
+            "If(And(Global.PemainAktif.EfekNasib==2,"
+            "Global.PemainAktif.EfekNasibBerakhir>TotalTimeElapsed));"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
+            "Global.PemainAktif.PersenTerbang=100;"
+            "Global.PemainAktif.ArahTerbang=Vector(0,0,0);"
+            "Global.PemainAktif.DeltaTerbang=Vector(0,0,0);"
+            "Else;SetMoveSpeed(Global.PemainAktif,0);"
+        )
+        checks.require(luck_prefix in motor_packed,
+                       "Fly: Try Your Luck Acceleration deve avere precedenza senza scritture fisiche")
+        motor_actions = list(iter_calls(motor.body, "Apply Impulse")) + list(iter_calls(motor.body, "Set Move Speed"))
+        checks.equal(len(list(iter_calls(motor.body, "Apply Impulse"))), 1,
+                     "Fly deve avere un solo impulso delta nel motore 20 Hz")
+        checks.equal(len(list(iter_calls(motor.body, "Set Move Speed"))), 1,
+                     "Fly deve disabilitare una sola volta la locomozione nativa nel motore 20 Hz")
+        for call in motor_actions:
+            branches = conditional_branches_containing(motor.body, call.start)
+            headers = [packed(branch.splitlines()[0]) for branch in branches]
+            checks.require(any(all(token in header for token in guard_tokens) for header in headers),
+                           "motore Fly deve restare nella guardia per-player umano vivo Fly ON con latch")
+            checks.require(any(packed(branch).startswith("Else;SetMoveSpeed(Global.PemainAktif,0);")
+                               for branch in branches),
+                           "motore e freno Fly devono saltare l'esito Acceleration ancora attivo")
+        ramp_matches = list(re.finditer(r"Global\.PemainAktif\.PersenTerbang\s*=\s*Min\(", mask_strings(motor.body)))
+        checks.equal(len(ramp_matches), 1, "Fly deve avere una sola rampa percentuale progressiva")
+        if ramp_matches:
+            headers = [packed(branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(motor.body, ramp_matches[0].start())]
+            checks.require(any(all(token in header for token in forward_tokens) for header in headers),
+                           "rampa percentuale deve restare nella guardia per-player di puro Forward")
+        for forbidden, label in (
+            ("StartAccelerating(", "Start/Stop Accelerating"),
+            ("StopAccelerating(", "Start/Stop Accelerating"),
+            ("StartForcingPlayerPosition(", "forcing di posizione"),
+            ("StartForcingThrottle(", "forcing degli input"),
+            ("StartThrottleInDirection(", "forcing degli input"),
+            ("FacingDirectionOf(Global.PemainAktif)*-1", "input indietro forzato"),
+        ):
+            checks.require(forbidden not in motor_packed, f"Fly: il motore non deve usare {label}")
+        checks.require(not wait_calls(motor.body) and action_loop_count(motor.body) == 0,
+                       "Fly: motore 3D deve essere atomico senza Wait/Loop")
 
     for owner, label in ((setup, "setup iniziale"), (quiet, "quiete uscita/rejoin")):
         checks.require(owner is not None, f"Ghost/Fly: {label} assente")
@@ -2355,6 +2344,9 @@ def validate_ghost_fly(
                 "EventPlayer.KursorHantuTerbang=0;",
                 "EventPlayer.FisikaHantuTerbangDiterapkan=False;",
                 "EventPlayer.WaktuMulaiTerbangMaju=-1;",
+                "EventPlayer.PersenTerbang=100;",
+                "EventPlayer.ArahTerbang=Vector(0,0,0);",
+                "EventPlayer.DeltaTerbang=Vector(0,0,0);",
                 "SetMoveSpeed(EventPlayer,100);",
                 "StopTransformingThrottle(EventPlayer);",
                 "SetGravity(EventPlayer,100);",
@@ -2401,9 +2393,29 @@ def validate_ghost_fly(
         "Fly: unico avvio timestamp da Total Time Elapsed",
     )
     checks.require(
-        ("ProsesSiklusPemain", "TotalTimeElapsed") in timestamp_writers,
-        "Fly: timestamp Forward deve essere avviato dal controller per-player 10 Hz",
+        ("ProsesTerbangPemain", "TotalTimeElapsed") in timestamp_writers,
+        "Fly: timestamp Forward deve essere avviato dal motore per-player 20 Hz",
     )
+    for variable, count in (("PersenTerbang", 5), ("ArahTerbang", 4), ("DeltaTerbang", 5)):
+        writers = []
+        all_writes = 0
+        for rule in rules:
+            all_writes += len(re.findall(rf"\b{variable}\s*=(?!=)", mask_strings(rule.body)))
+            for action in ("Set Player Variable", "Modify Player Variable", "Set Player Variable At Index",
+                           "Modify Player Variable At Index"):
+                all_writes += sum(len(call.args) >= 2 and call.args[1].strip() == variable
+                                  for call in iter_calls(rule.body, action))
+            for match in re.finditer(
+                rf"(Event Player|Global\.PemainAktif)\.{variable}\s*=(?!=)", mask_strings(rule.body)
+            ):
+                writers.append((subroutine_target(rule), match.group(1)))
+        checks.equal(len(writers), count, f"Fly: numero writer {variable}")
+        checks.equal(all_writes, len(writers), f"Fly: scritture {variable} fuori dai target per-player autorizzati")
+        checks.equal(set(writers), {
+            ("SiapkanPemain", "Event Player"),
+            ("TenangkanPemain", "Event Player"),
+            ("ProsesTerbangPemain", "Global.PemainAktif"),
+        }, f"Fly: owner per-player esclusivi di {variable}")
 
     for variable in ("ModeHantuAktif", "ModeTerbangAktif"):
         writers: list[tuple[str, str]] = []
@@ -2443,26 +2455,7 @@ def validate_ghost_fly(
         for rule in rules
         for call in iter_calls(rule.body, "Start Transforming Throttle")
     ]
-    checks.equal(
-        set(throttle_owners),
-        {
-            (
-                "TerapkanFisikaHantuTerbang",
-                ("Event Player", "1", "1", "Facing Direction Of(Event Player)"),
-            ),
-            (
-                "ProsesSiklusPemain",
-                (
-                    "Global.PemainAktif",
-                    "1",
-                    "1",
-                    "Facing Direction Of(Evaluate Once(Global.PemainAktif))",
-                ),
-            ),
-        },
-        "Ghost/Fly: trasformazione throttle scritta fuori dai due controller dedicati",
-    )
-    checks.equal(len(throttle_owners), 2, "Ghost/Fly: numero writer trasformazione throttle")
+    checks.equal(throttle_owners, [], "Fly: input devono restare locali senza Start Transforming Throttle")
 
     for luck_owner in (
         "TerapkanHalamanNasib",
@@ -3522,6 +3515,17 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
         for name in sorted(SCHEDULER_SUBROUTINES):
             checks.require(f"Call Subroutine({name});" in scheduler.body,
                            f"scheduler non chiama {name}")
+        scheduler_packed = re.sub(r"\s+", "", mask_strings(scheduler.body))
+        checks.require(
+            "If(Or(Global.PemainSiklusGlobal==Null,Global.PemainAktif==Global.PemainSiklusGlobal));"
+            "CallSubroutine(ProsesCepatPemain);CallSubroutine(ProsesNasibPemain);"
+            "CallSubroutine(ProsesTerbangPemain);End;" in scheduler_packed,
+            "Fly: scheduler deve chiamare il motore 20 Hz subito dopo Try Your Luck nello stesso ramo per-player",
+        )
+        motor_calls = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
+                       if call.args == ("ProsesTerbangPemain",)]
+        checks.require(len(motor_calls) == 1 and motor_calls[0][0].start == scheduler.start,
+                       "Fly: unico owner chiamante motore deve essere lo scheduler globale")
         for cadence in (2, 20):
             checks.require(re.search(rf"LangkahPenjadwal\s*%\s*{cadence}\b", scheduler.body) is not None,
                            f"cadenza scheduler %{cadence} assente")

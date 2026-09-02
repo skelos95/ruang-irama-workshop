@@ -107,14 +107,15 @@ OFF, 1 HP, setup e cleanup locali/globali devono contenere il ripristino atomico
 
 ### Ghost Mode / Fly
 
-Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi setup, applicazione locale e manutenzione globale a 10 Hz:
+Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi setup, applicazione locale, motore `ProsesTerbangPemain` a 20 Hz e manutenzione lifecycle globale a 10 Hz:
 
 - Ghost usa `Disable Movement Collision With Environment(player, False)`, quindi attraversa pareti e soffitti ma conserva i pavimenti; non può modificare la collisione con player/bot;
-- Fly usa gravità zero e `Start Transforming Throttle(..., Facing Direction Of(player))`, così gli input seguono la visuale in 3D; soltanto Forward puro (`Z > 0.050` e X fra `-0.050` e `0.050` nel throttle locale) inizializza un timestamp per-player e applica `Set Move Speed` con formula lineare `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)`, quindi parte da `100%` e raggiunge `500%` dopo 25 secondi; il ramo normale non può usare `Start Accelerating`;
-- rilascio Forward, input diagonale/laterale/indietro, OFF, morte, setup e cleanup azzerano il timestamp e ripristinano `Move Speed = 100%`; OFF deve inoltre fermare il throttle trasformato e ripristinare gravità 100 senza interrompere Luck Acceleration ancora attiva;
-- senza input direzionale il freno usa velocità corrente e impulso esattamente opposto con `Incorporate Contrary Motion`, senza forcing di posizione; il freno deve escludere l'intera finestra Acceleration di Try Your Luck;
+- Fly normale usa gravità zero e `Move Speed` nativo zero; `Start Transforming Throttle` è vietato. La direzione esplicita somma mira per componente Z del throttle grezzo e strafe `World Vector Of(Vector(X, 0, 0), player, Rotation)`, con X positivo verso sinistra e Z positivo in avanti; direzione normalizzata e intensità analogica limitata a 1 evitano bonus diagonali;
+- soltanto Forward puro (`Z > 0.050` e X fra `-0.050` e `0.050` nel throttle locale) inizializza il timestamp e la percentuale per-player `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)`: la baseline uniforme `5,5 m/s = 100%` raggiunge `27,5 m/s = 500%` dopo 25 secondi. La percentuale non viene passata a `Set Move Speed` e non rappresenta una misura della velocità nativa di ogni eroe/buff;
+- rilascio Forward e input diagonale/laterale/indietro riarmano il timer e la percentuale al `100%`; OFF, morte e transizioni lifecycle disarmano la rampa e normalizzano la fisica prevista. Setup e quiete reale inizializzano anche percentuale, direzione e delta per-player; ogni tick Fly normale li ricalcola prima dell'impulso, senza riutilizzare scratch precedenti. Il movimento nativo resta zero durante Fly normale; OFF lo ripristina insieme alla gravità senza interrompere Luck Acceleration ancora attiva;
+- il motore calcola il delta fra velocità richiesta e corrente, quindi applica un impulso `To World` con `Incorporate Contrary Motion`; senza input la velocità richiesta è zero e lo stesso controllo annulla la deriva. Non usa forcing di posizione, Teleport, nuovi `Wait`, loop per-player, `Start Accelerating` o `Stop Accelerating`;
 - toggle e cursori restano distinti, sono OFF soltanto al setup/cleanup reale e persistono durante morte, Resurrect, cambio eroe e cambio squadra leggero; la morte disarma immediatamente il latch fisico e Jump Resurrect riapplica Ghost/Fly nello stesso tick dopo il ripristino effetti;
-- Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` e la proprietà della velocità per tutti i 10 secondi, mentre la rampa Fly resta sospesa e riparte da `100%` soltanto dopo la scadenza.
+- Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` e la proprietà totale della velocità per tutti i 10 secondi: Fly non applica impulsi né blocco del movimento nativo. La rampa resta riarmata e riparte fresca da `100%` soltanto dopo la scadenza;
 - il Main Menu usa sempre `GambarUtama`: la catena localizzata termina esplicitamente con indice 12 Dummy Follow e fallback 13 Ghost/Fly; il router non può scegliere staticamente un renderer diverso in base a `KursorUtama` né ridisegnare l'HUD durante lo scroll.
 
 ### Scheduler e prestazioni statiche
@@ -127,7 +128,7 @@ Il gate richiede:
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
-- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, inclusa la riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e la sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
+- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, incluso `ProsesTerbangPemain` a 20 Hz senza yield, riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
 - `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
 - un solo `Start Camera`, posseduto da `MulaiKamera`, con entrambi i vettori per-frame, `Blend Speed 0` e un solo raycast Camera; camera personale, watch e toggle rapido devono convergere nei tre richiami alla stessa subroutine;
 - nessuna regola HUD contenente `Wait` o `Loop`.
@@ -215,8 +216,8 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
 - promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
 - icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
-- accelerazione senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto; riapplicazione Fly con trasformazione throttle o accelerazione rivalutata sullo scratch globale nudo; Try Your Luck che imposta gravità o altera il throttle trasformato di Fly;
-- Ghost che include i pavimenti o altera la collisione con player, Fly senza gravità zero/throttle relativo alla visuale/rampa Forward pura `100% → 500%` in 25 secondi/reset `100%`/ripristino OFF, progressione attivata da diagonale/strafe/indietro, normale `Start Accelerating` reintrodotto, freno idle non esatto o capace di annullare Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe/cambio squadra;
+- Acceleration di Luck senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto nel ramo Luck; Try Your Luck che imposta gravità o trasforma il throttle di Fly;
+- Ghost che include i pavimenti o altera la collisione con player; Fly senza motore esplicito a 20 Hz, gravità e movimento nativo zero, formula mira/strafe 3D, normalizzazione analogica, delta esatto world o isolamento per-player; `Start Transforming Throttle` reintrodotto, rampa diversa da `5,5 → 27,5 m/s` / `100% → 500%` in 25 secondi, progressione attivata da diagonale/strafe/indietro, reset `100%` o ripristino OFF assenti, `Start Accelerating`/`Stop Accelerating` nel motore Fly, impulsi o blocco del movimento durante Luck Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe/cambio squadra;
 - Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch; una delle tre IWT che separa icona/nome/salute, altera l'ancoraggio `Eye Position + Vector(0, 0.450, 0)`, rivaluta soltanto una parte della posizione, cattura più dell'identità o perde `Visible To Position String and Color`;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
@@ -263,7 +264,7 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - 14 menu e input in EN/ID/TH, incluse pagina 12 Dummy Follow e pagina 13 Ghost Mode / Fly;
 - profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
 - cinque pagine Crouch Travel & Attach con copia ordinata EN/ID/TH, binding reali, palette pastello/neon per pagina, Primary/Secondary per navigare e Interact per eseguire;
-- Ghost/Fly indipendenti, collisioni/volo 3D, rampa Forward pura `100% → 500%` in 25 secondi, reset diagonal/side/back/release, freno idle/ripristino e priorità Try Your Luck;
+- Ghost/Fly indipendenti: collisioni, volo 3D con yaw cardinali e pitch fino a ±90°, baseline uniforme `5,5 m/s` e rampa Forward pura fino a `27,5 m/s` / `500%` in 25 secondi, reset diagonal/side/back/release, analogico, hover/ripristino, due player indipendenti, fluidità/ergonomia e priorità totale Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
 - morte/Resurrect con Jump nello stesso punto su terreno e Teleport post-resurrezione nel vuoto verso `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
@@ -278,6 +279,6 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 ## Decisione
 
-La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Il test utente della revisione Fly precedente ha rilevato velocità costante e assenza di salita/discesa su più eroi: i gate statici non avevano certificato la fisica engine. Il nuovo motore a impulsi richiede un nuovo test live e non consente ancora una dichiarazione di successo; la segnalazione non prova da sola che il timer fosse la causa. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice da compilare in [`TEST.md`](TEST.md). Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
 
 - UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.

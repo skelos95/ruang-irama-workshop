@@ -173,6 +173,9 @@ variabili
 		111: FisikaHantuTerbangDiterapkan
 		112: WaktuBunuhDiriBerikut
 		113: WaktuMulaiTerbangMaju
+		114: PersenTerbang
+		115: ArahTerbang
+		116: DeltaTerbang
 }
 
 subroutine
@@ -238,6 +241,7 @@ subroutine
 	58: GambarHantuTerbang
 	59: TerapkanHalamanHantuTerbang
 	60: TerapkanFisikaHantuTerbang
+	61: ProsesTerbangPemain
 }
 
 regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -1559,6 +1563,7 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 			If(Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal));
 				Call Subroutine(ProsesCepatPemain);
 				Call Subroutine(ProsesNasibPemain);
+				Call Subroutine(ProsesTerbangPemain);
 			End;
 			If(And(Globale.LangkahPenjadwal % 2 == 0, Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal)));
 				Call Subroutine(ProsesSiklusPemain);
@@ -2353,21 +2358,20 @@ regola("99o - Subrutin: Terapkan fisika Mode Hantu / Terbang")
 			Enable Movement Collision With Environment(Event Player);
 		End;
 		Event Player.WaktuMulaiTerbangMaju = -1;
+		Stop Transforming Throttle(Event Player);
 		If(Event Player.ModeTerbangAktif == True);
 			If(Or(Event Player.EfekNasib != 2, Event Player.EfekNasibBerakhir <= Total Time Elapsed));
-				Set Move Speed(Event Player, 100);
+				Set Move Speed(Event Player, 0);
 			End;
 			Set Gravity(Event Player, 0);
-			Start Transforming Throttle(Event Player, 1, 1, Facing Direction Of(Event Player));
 		Else;
 			If(Or(Event Player.EfekNasib != 2, Event Player.EfekNasibBerakhir <= Total Time Elapsed));
 				Set Move Speed(Event Player, 100);
+				If(Magnitude Of(Velocity Of(Event Player)) > 0.010);
+					Apply Impulse(Event Player, Velocity Of(Event Player) * -1, Magnitude Of(Velocity Of(Event Player)), To World, Incorporate Contrary Motion);
+				End;
 			End;
-			Stop Transforming Throttle(Event Player);
 			Set Gravity(Event Player, 100);
-			If(Magnitude Of(Velocity Of(Event Player)) > 0.010);
-				Apply Impulse(Event Player, Velocity Of(Event Player) * -1, Magnitude Of(Velocity Of(Event Player)), To World, Incorporate Contrary Motion);
-			End;
 		End;
 		Event Player.FisikaHantuTerbangDiterapkan = True;
 	}
@@ -3409,6 +3413,51 @@ regola("89a - Subrutin: Proses status cepat pemain")
 	}
 }
 
+regola("89a2 - Subrutin: Mesin terbang 3D per pemain 20 Hz")
+{
+	evento
+	{
+		Subroutine;
+		ProsesTerbangPemain;
+	}
+
+	azioni
+	{
+		If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.BotOtomatis == False, And(Is Dummy Bot(Globale.PemainAktif) == False, And(Has Spawned(Globale.PemainAktif) == True, And(Is Alive(Globale.PemainAktif) == True, And(Globale.PemainAktif.ModeTerbangAktif == True, Globale.PemainAktif.FisikaHantuTerbangDiterapkan == True)))))));
+			If(And(Globale.PemainAktif.EfekNasib == 2, Globale.PemainAktif.EfekNasibBerakhir > Total Time Elapsed));
+				"Acceleration Coba Nasib tetap memiliki gerak; motor Fly tidak menimpa kecepatannya."
+				Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
+				Globale.PemainAktif.PersenTerbang = 100;
+				Globale.PemainAktif.ArahTerbang = Vector(0, 0, 0);
+				Globale.PemainAktif.DeltaTerbang = Vector(0, 0, 0);
+			Else;
+				"Gerak native dinonaktifkan; impuls 3D mengatur kecepatan dunia, termasuk naik dan turun."
+				Set Move Speed(Globale.PemainAktif, 0);
+				If(And(Z Component Of(Throttle Of(Globale.PemainAktif)) > 0.050, And(X Component Of(Throttle Of(Globale.PemainAktif)) >= -0.050, X Component Of(Throttle Of(Globale.PemainAktif)) <= 0.050)));
+					If(Globale.PemainAktif.WaktuMulaiTerbangMaju < 0);
+						Globale.PemainAktif.WaktuMulaiTerbangMaju = Total Time Elapsed;
+					End;
+					Globale.PemainAktif.PersenTerbang = Min(500, 100 + Max(0, Total Time Elapsed - Globale.PemainAktif.WaktuMulaiTerbangMaju) * 16);
+				Else;
+					Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
+					Globale.PemainAktif.PersenTerbang = 100;
+				End;
+				"Throttle Z maju/mundur, X kiri/kanan. Facing membawa pitch; World Vector menjaga strafe horizontal."
+				Globale.PemainAktif.ArahTerbang = Facing Direction Of(Globale.PemainAktif) * Z Component Of(Throttle Of(Globale.PemainAktif)) + World Vector Of(Vector(X Component Of(Throttle Of(Globale.PemainAktif)), 0, 0), Globale.PemainAktif, Rotation);
+				If(Magnitude Of(Globale.PemainAktif.ArahTerbang) > 0.050);
+					"100% Fly = 5.5 m/s, 500% = 27.5 m/s; diagonal dibatasi dan kekuatan analog tetap dipakai."
+					Globale.PemainAktif.DeltaTerbang = Normalize(Globale.PemainAktif.ArahTerbang) * 5.500 * Globale.PemainAktif.PersenTerbang / 100 * Min(1, Magnitude Of(Throttle Of(Globale.PemainAktif))) - Velocity Of(Globale.PemainAktif);
+				Else;
+					Globale.PemainAktif.DeltaTerbang = Velocity Of(Globale.PemainAktif) * -1;
+				End;
+				If(Magnitude Of(Globale.PemainAktif.DeltaTerbang) > 0.010);
+					Apply Impulse(Globale.PemainAktif, Globale.PemainAktif.DeltaTerbang, Magnitude Of(Globale.PemainAktif.DeltaTerbang), To World, Incorporate Contrary Motion);
+				End;
+			End;
+		End;
+	}
+}
+
 regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 {
 	evento
@@ -3445,7 +3494,7 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 			If(Globale.PemainAktif.FisikaHantuTerbangDiterapkan == False);
 				Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 				If(Or(Globale.PemainAktif.EfekNasib != 2, Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed));
-					Set Move Speed(Globale.PemainAktif, 100);
+					Set Move Speed(Globale.PemainAktif, Globale.PemainAktif.ModeTerbangAktif == True ? 0 : 100);
 				End;
 				Stop Transforming Throttle(Globale.PemainAktif);
 				Set Gravity(Globale.PemainAktif, 100);
@@ -3455,26 +3504,8 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 				End;
 				If(Globale.PemainAktif.ModeTerbangAktif == True);
 					Set Gravity(Globale.PemainAktif, 0);
-					Start Transforming Throttle(Globale.PemainAktif, 1, 1, Facing Direction Of(Evaluate Once(Globale.PemainAktif)));
 				End;
 				Globale.PemainAktif.FisikaHantuTerbangDiterapkan = True;
-			End;
-			If(And(Globale.PemainAktif.ModeTerbangAktif == True, And(Globale.PemainAktif.EfekNasib == 2, Globale.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));
-				"Acceleration Coba Nasib ha priorità assoluta e sospende la rampa Forward normale."
-				Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
-			Else If(And(Globale.PemainAktif.ModeTerbangAktif == True, And(Z Component Of(Throttle Of(Globale.PemainAktif)) > 0.050, And(X Component Of(Throttle Of(Globale.PemainAktif)) >= -0.050, X Component Of(Throttle Of(Globale.PemainAktif)) <= 0.050))));
-				"Solo Forward puro aumenta Move Speed: 100% subito, +16 punti percentuali al secondo, massimo 500% dopo 25 secondi."
-				If(Globale.PemainAktif.WaktuMulaiTerbangMaju < 0);
-					Globale.PemainAktif.WaktuMulaiTerbangMaju = Total Time Elapsed;
-				End;
-				Set Move Speed(Globale.PemainAktif, Min(500, 100 + Max(0, Total Time Elapsed - Globale.PemainAktif.WaktuMulaiTerbangMaju) * 16));
-			Else If(Globale.PemainAktif.ModeTerbangAktif == True);
-				Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
-				Set Move Speed(Globale.PemainAktif, 100);
-			End;
-			If(And(Globale.PemainAktif.ModeTerbangAktif == True, And(Or(Globale.PemainAktif.EfekNasib != 2, Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed), And(Magnitude Of(Throttle Of(Globale.PemainAktif)) <= 0.050, Magnitude Of(Velocity Of(Globale.PemainAktif)) > 0.010))));
-				"Impuls berlawanan meniadakan drift saat tidak ada input."
-				Apply Impulse(Globale.PemainAktif, Velocity Of(Globale.PemainAktif) * -1, Magnitude Of(Velocity Of(Globale.PemainAktif)), To World, Incorporate Contrary Motion);
 			End;
 		End;
 		If(And(Globale.PemainAktif.Manusia == True, And(Has Spawned(Globale.PemainAktif) == True, Is Alive(Globale.PemainAktif) == True)));
@@ -4334,6 +4365,9 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.FisikaHantuTerbangDiterapkan = False;
 		Event Player.WaktuBunuhDiriBerikut = 0;
 		Event Player.WaktuMulaiTerbangMaju = -1;
+		Event Player.PersenTerbang = 100;
+		Event Player.ArahTerbang = Vector(0, 0, 0);
+		Event Player.DeltaTerbang = Vector(0, 0, 0);
 	}
 }
 
@@ -4558,6 +4592,9 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.FisikaHantuTerbangDiterapkan = False;
 		Event Player.WaktuBunuhDiriBerikut = 0;
 		Event Player.WaktuMulaiTerbangMaju = -1;
+		Event Player.PersenTerbang = 100;
+		Event Player.ArahTerbang = Vector(0, 0, 0);
+		Event Player.DeltaTerbang = Vector(0, 0, 0);
 		Event Player.CalonTargetInspeksi = Null;
 		Event Player.PosisiTeleportTujuan = Vector(0, 0, 0);
 		Event Player.TargetLampiranTeleportasi = Null;
