@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il test utente della precedente revisione Fly ha dato esito negativo su diversi eroi: velocità costante e impossibilità di salire/scendere. La nuova implementazione 3D a impulsi non ha ancora un esito live documentato; la segnalazione precedente non dimostra da sola un difetto del timer. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il reset completo al cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il test utente della precedente revisione Fly ha dato esito negativo su diversi eroi: velocità costante e impossibilità di salire/scendere. La nuova implementazione 3D a impulsi non ha ancora un esito live documentato; la segnalazione precedente non dimostra da sola un difetto del timer. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -120,7 +120,7 @@ Focus dati:
 ### Profilo `งูแท้`
 
 - Entrare con il nome visibile esatto `งูแท้`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Caladan Brood`.
-- Modificare colore e icona dal menu, chiudere/riaprire e cambiare squadra: entrambe le scelte devono restare modificabili e persistenti.
+- Modificare colore e icona dal menu, chiudere/riaprire e cambiare squadra: chiusura/riapertura deve conservare le modifiche, mentre il cambio squadra deve rieseguire il setup e riportare i default del profilo.
 - Aprire Soundtrack: la pagina deve risultare read-only e Primary/Secondary, Interact e Ability 1/2 non devono cambiare `Caladan Brood`.
 - Verificare che `Caladan Brood` non aumenti il catalogo globale: gli altri player continuano ad avere esattamente 100 generi e il normale wrap `0..99`.
 - Uscire davvero dalla lobby e rientrare con lo stesso nome: il setup deve riapplicare `Silver Mist`, `Poison 2` e il Vibes bloccato.
@@ -128,13 +128,13 @@ Focus dati:
 
 ### Ghost Mode / Fly
 
-- Al setup e dopo un vero leave/rejoin, verificare che Ghost e Fly siano entrambi OFF; il cambio squadra, il cambio eroe, la morte e il Resurrect devono invece conservarne separatamente le scelte.
+- Al setup e dopo leave/rejoin o cambio squadra, verificare che Ghost e Fly siano entrambi OFF; cambio eroe, morte e Resurrect devono invece conservarne separatamente le scelte.
 - Con solo Ghost ON, attraversare pareti e soffitti ma non pavimenti; la collisione con player, bot e dummy deve restare normale.
 - Con solo Fly ON, verificare gravità zero, `Move Speed` nativo zero e collisione ambientale normale: il movimento deve provenire dal motore 3D, non dal throttle trasformato. Usare un'area libera sufficientemente ampia e registrare eroe, mappa, input, tempo e velocità effettiva; ripetere su più eroi senza buff di movimento prima delle prove con abilità. La baseline Fly uniforme è `5,5 m/s = 100%`, non una percentuale della velocità specifica dell'eroe.
 
 | Prova | Risultato da verificare nel client |
 |---|---|
-| Orientamento | Con yaw nei quattro orientamenti cardinali e pitch `0°`, `+45°`, `−45°`, `+90°`, `−90°`, Forward segue sempre il mirino e Back la direzione opposta, compresa salita/discesa verticale. Left/Right restano strafe relativo all'eroe senza inversioni durante la rotazione. |
+| Orientamento | Con yaw nei quattro orientamenti cardinali e pitch `0°`, `+45°`, `−45°`, `+90°`, `−90°`, Forward segue sempre il mirino (anche verticale). Back resta opposto solo sul piano orizzontale; Left/Right restano strafe orizzontale relativo all'eroe senza inversioni durante la rotazione. |
 | Rampa Forward pura | Con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`, partire da circa `5,5 m/s` (`100%`); dopo 5 s circa `9,9 m/s` (`180%`), dopo 10 s circa `14,3 m/s` (`260%`), dopo 25 s circa `27,5 m/s` (`500%`). Continuare oltre 25 s senza superare il cap e ripetere guardando in alto/basso. |
 | Reset e analogico | Side/Back/diagonali non armano la rampa e restano alla baseline. Durante Forward aggiungere strafe, invertire o rilasciare: il timer si riarma e il nuovo Forward riparte dal `100%`. Con controller, input parziale riduce proporzionalmente la velocità; le diagonali non ricevono un bonus di modulo. |
 | Hover | Rilasciare ogni input dopo volo orizzontale, verticale, rotazione e knockback: arresto al tick del motore e nessuna deriva persistente. Riprendere gli input senza scatto nella vecchia direzione. |
@@ -143,7 +143,7 @@ Focus dati:
 | Collisioni | Fly senza Ghost deve fermarsi contro muri/soffitti/pavimenti; con Ghost attraversa muri/soffitti ma non pavimenti. Verificare angoli, porte strette, cambi di pendenza e contatto con umani/dummy: nessun attraversamento non previsto o impulso trasferito a un altro player. |
 | Ergonomia e fluidità | Provare rotazioni lente/rapide, inversioni avanti-indietro, passaggio per il pitch verticale e avvio/arresto sia in prima sia in terza persona. Annotare vibrazione, scatti, ritardo input, nausea e controllo a 500%; i gate statici non certificano questi aspetti. |
 
-- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità e movimento nativo normali e arresta la rampa senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale. Ripetere durante rampa e hover dopo cambio eroe, cambio squadra e transizioni spawned/non-spawned; non deve rimanere `Move Speed = 0` quando Fly è OFF.
+- Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità e movimento nativo normali e arresta la rampa senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale. Ripetere durante rampa e hover dopo cambio eroe, cambio squadra (riattivando Fly dal menu dopo il reset) e transizioni spawned/non-spawned; non deve rimanere `Move Speed = 0` quando Fly è OFF.
 - Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve possedere velocità e propulsione per tutti i 10 secondi: il motore Fly non deve applicare impulsi, freno idle o blocco del movimento nativo. Alla scadenza Fly riparte dal `100%` con una rampa fresca se Forward è tenuto, oppure resta immobile senza input. Ripetere entrando/uscendo da Fly a metà Acceleration e con un secondo player in Fly normale.
 
 ### Unkillable FULL HP
@@ -152,7 +152,7 @@ Focus dati:
 - Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
 - Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
 - Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
-- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Self Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Un cambio squadra leggero conserva la preferenza; soltanto leave e rejoin eseguono setup fresco e ripristinano i default.
+- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Self Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Cambio squadra e leave/rejoin eseguono setup fresco e ripristinano i default.
 - Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
 - Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
@@ -165,7 +165,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Vision | icona eroe, nome roster stabile e salute live in EN/ID/TH per bot/dummy e tutti gli umani, compresi quelli con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
-| Self Heal | salute completa e messaggio soltanto per il proprietario; nessun altro player o bot deve cambiare |
+| Self Heal | salute completa a tutti i player vivi della squadra del proprietario; il messaggio resta solo al proprietario |
 | Burning | 5% max HP ogni 1 s per 10 s; Unkillable e riduzione Damage Received sospesi per l'intera durata e ripristinati al termine; stop alla morte |
 | Hacked | stato per 5 s, poi rimozione |
 
@@ -180,7 +180,7 @@ Per ciascun esito:
 - Unkillable non cambia all'avvio: Mode, Kursor, flag runtime, status, modificatori e icona restano invariati;
 - il menu non accetta comandi incompatibili durante lo stato bloccato;
 - il countdown non salta o duplica tick;
-- morte, timeout e hero swap annullano stato/status/effetti temporanei senza cancellare Mode/Kursor Unkillable; salvo il periodo Burning intenzionale, un hero swap da vivo non deve lasciare interrotti status/tripletta/icona Unkillable. Il cambio squadra leggero conserva preferenze, Camera, status, effetti e voti attivi, mentre leave e rejoin eseguono cleanup e setup fresco;
+- morte, timeout e hero swap annullano stato/status/effetti temporanei senza cancellare Mode/Kursor Unkillable; salvo il periodo Burning intenzionale, un hero swap da vivo non deve lasciare interrotti status/tripletta/icona Unkillable. Cambio squadra e leave/rejoin eseguono cleanup e setup fresco;
 - rimuovere un iBot vivo durante Vision e verificare che il suo IWT sparisca senza creare roster, HUD o lifecycle umano;
 - nessuna seconda roulette per lo stesso player parte mentre la prima è attiva;
 - chiusure e riaperture non duplicano HUD, In-World Text o effetti.
@@ -200,7 +200,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Durante il demech non devono comparire il prompt Jump né una falsa posizione di morte; entrambi devono essere registrati soltanto alla morte completa.
 - Con Echo duplicata, verificare che la fine della copia non consumi il debito e che il retry prosegua fino alla morte della forma base.
 - Un secondo claimant sullo stesso target deve essere rifiutato; se un altro attacker completa la kill, il primo claimant non consuma alcun debito e la morte viene registrata normalmente.
-- Il cambio squadra leggero di claimant o target deve conservare il pending senza consumare il debito, duplicare il claim o mostrare un falso successo; soltanto morte completa valida o timeout ne chiudono l'esecuzione. Un leave vero deve annullarlo e liberare i riferimenti.
+- Il cambio squadra di claimant o target deve annullare il pending senza consumare il debito, duplicare il claim o mostrare un falso successo; i riferimenti devono essere liberati come nel leave.
 - Mercy, Torbjörn e altre forme/armi alternative non devono essere trattate come casi speciali: il criterio terminale resta esclusivamente `Is Alive == False`.
 
 ## 6. Camera, inspection e Teleport
@@ -220,16 +220,16 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 ### Cambio squadra / lifecycle 0.8.1
 
 - Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load` e che il roster conservi una sola voce.
-- Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: ciascun player già registrato deve percorrere il refresh leggero senza entrare nel setup iniziale serializzato.
-- Durante la transizione verificare che vengano aggiornati soltanto stato dipendente dal Team, UI transitoria e, quando necessario, `HudKiri/HudKanan`; roster, preferenze e cursori devono restare stabili.
-- Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: le righe esistenti non devono essere distrutte dal detector. Dopo spawn e ritorno in vita, entrambe le righe devono comparire una sola volta per tutti i viewer.
-- Eseguire anche uno switch diretto mentre il player risulta ancora spawned/vivo: il consumer non deve partire nello stesso tick del detector, ma soltanto dopo almeno 0,25 secondi e con stato ancora stabile.
-- Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: durante il pending il target deve uscire dal filtro, il vecchio In-World Text deve sparire e, appena concluso il pending, nome, icona eroe e HP devono tornare senza rilasciare Crouch o cambiare Privacy. Ripetere iniziando Crouch sia durante sia dopo il pending.
-- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: il recovery non-roster deve riaccodare il setup, conservare una sola voce e non lasciare `Manusia=False` o il lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry, attendere il cleanup del vecchio riferimento e poi completare; nel fallback con player variables nuove è previsto il ripristino dei default. Per `งูแท้`, verificare inoltre che `Caladan Brood` resti bloccato e che un repair senza reset conservi le modifiche manuali a colore/icona.
+- Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: ciascun player già registrato deve attraversare il reset completo (`TenangkanPemain` + `BersihkanPemain`) e rientrare dal classifier/setup senza duplicazioni.
+- Durante la transizione verificare che la vecchia voce roster venga rimossa e ricreata una sola volta dopo la nuova registrazione; nessun handle precedente deve restare vivo.
+- Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: il cleanup deve restare atomico e il setup deve ricostruire correttamente HUD/stato appena l'entità torna valida.
+- Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: il reset completo deve liberare subito lock e riferimenti, senza percorsi `Abort` o dipendenze da `Server Load`.
+- Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: il vecchio In-World Text deve sparire durante il cleanup e tornare solo dopo la nuova registrazione con nome, icona eroe e HP corretti.
+- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Caladan Brood`.
 - Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il fast-path non acquisisca il lock globale del join.
-- Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il refresh leggero non deve cancellarli o ricrearli.
-- Attivare Ghost e Fly separatamente prima del cambio: il refresh leggero deve conservarli e il runtime deve riapplicare la fisica selezionata dopo il ritorno in vita.
-- Eseguire poi un leave vero durante o subito dopo il refresh: il cleanup deve rimuovere una sola volta roster e riferimenti, e il successivo rejoin deve passare dal setup fresco.
+- Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il reset completo deve chiuderli/pulirli in modo deterministico, senza riferimenti ereditati.
+- Attivare Ghost e Fly separatamente prima del cambio: dopo il reset devono tornare OFF e riattivarsi solo da menu.
+- Eseguire poi un leave vero durante o subito dopo il cambio: il cleanup deve rimuovere una sola volta roster e riferimenti, senza doppio passaggio.
 
 ### Camera
 
@@ -246,7 +246,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Con menu chiuso, tenere Crouch su alleati, nemici, bot e se stessi.
 - Verificare icona eroe, nome e salute nello stesso IWT, ancorato 0,450 m sopra `Eye Position`; durante corsa, strafe, salto e rotazione continua la targhetta deve seguire fluidamente la stessa identità, aggiornando salute, eroe e colore senza vibrare o trasferirsi al target successivo. Nessuna percentuale Ultimate.
-- Nuovo player o vero rejoin: Privacy OFF e cursore OFF per default; un cambio squadra leggero conserva invece lo stato e il cursore scelti.
+- Nuovo player, cambio squadra o vero rejoin: Privacy OFF e cursore OFF per default.
 - Privacy OFF: gli altri player vedono la riga completa e possono scegliere il player nella Camera custom; Vision ne mostra icona, nome e salute.
 - Privacy ON: Camera custom, inspection, Teleport e Attach non possono scegliere o identificare il player; Vision deve comunque mostrarne icona, nome e salute.
 - Attivare Privacy ON mentre uno o più player osservano il target con la Camera custom: tutti tornano alla visuale normale entro il ciclo lifecycle.
@@ -310,12 +310,12 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 Dopo ogni cambio:
 
 - nessun doppione roster o handle;
-- Camera, status, effetti e voti attivi restano invariati; soltanto Menu Arcade e overlay Teleport vengono chiusi/riarmati e `HudKiri/HudKanan` vengono ricreati quando necessario;
-- tutte le preferenze e i cursori restano invariati, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow, Ghost/Fly e il profilo dedicato `งูแท้`; soltanto stato dipendente dal Team e riferimenti transitori vengono aggiornati;
+- Camera, status, effetti, voti e overlay attivi devono essere puliti senza lasciare riferimenti stale;
+- tutte le preferenze e i cursori devono tornare ai default di setup, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow, Ghost/Fly e profilo `งูแท้`;
 - Text Count ed Entity Count non crescono rispetto allo stato equivalente precedente al cambio;
 - nessun `excessive Workshop script load`.
 
-Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Caladan Brood` bloccato.
+Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Caladan Brood` bloccato.
 
 ## 8. Matrice modalità
 

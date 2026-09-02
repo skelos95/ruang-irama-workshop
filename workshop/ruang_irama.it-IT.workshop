@@ -3258,89 +3258,19 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			Globale.PemainAktif.PernahDisiapkan = True;
 		End;
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif)))));
-			"Perubahan tim pemain terdaftar mempertahankan roster, preferensi, dan status persisten; hanya UI sementara serta baris nama yang dipasang ulang."
-			Globale.PemainAktif.Manusia = True;
-			Globale.PemainAktif.SudahDiperiksa = True;
-			Globale.PemainAktif.SudahSiap = True;
-			Globale.PemainAktif.PernahDisiapkan = True;
-			"Overwatch mengaktifkan kembali tampilan mode dan dapat meninggalkan pengunci masukan saat pindah tim. Segarkan hanya keadaan tampilan dan mesin yang diperlukan tanpa pembersihan siklus penuh."
-			Disable Game Mode HUD(Globale.PemainAktif);
-			Disable Game Mode In-World UI(Globale.PemainAktif);
-			Stop Transforming Throttle(Globale.PemainAktif);
-			Set Gravity(Globale.PemainAktif, 100);
-			Enable Movement Collision With Environment(Globale.PemainAktif);
-			Globale.PemainAktif.FisikaHantuTerbangDiterapkan = False;
-			Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
-			If(Or(Globale.PemainAktif.EfekNasib != 2, Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed));
-				Set Move Speed(Globale.PemainAktif, 100);
-			End;
-			"Tunda penggantian dua baris daftar sampai entitas tim baru sudah spawned; roster dan identitas manusia tetap aktif selama transisi."
-			Globale.PemainAktif.SegarkanRosterTertunda = True;
-			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
-			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
-				If(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
-					Destroy HUD Text(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
-				End;
-				Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
-			End;
-			Globale.PemainAktif.HudMenu = Null;
-			Globale.PemainAktif.MenuTerbuka = False;
-			Globale.PemainAktif.HalamanMenu = -1;
-			Globale.PemainAktif.SeranganDekatDipakai = False;
-			Globale.PemainAktif.PerintahMenu = 0;
-			Globale.PemainAktif.InputMenuDikunci = False;
-			Globale.PemainAktif.InteraksiKameraDipakai = False;
-			Globale.PemainAktif.TeleportasiJongkokAktif = False;
-			Globale.PemainAktif.PerintahTeleportasi = 0;
-			If(Globale.PemainAktif.TeksTeleportasi != Null);
-				Destroy In-World Text(Globale.PemainAktif.TeksTeleportasi);
-			End;
-			Globale.PemainAktif.TeksTeleportasi = Null;
-			Globale.PemainAktif.TargetTeleportasiTeks = Null;
-			If(Globale.PemainAktif.PelatNamaDinonaktifkan == True);
-				Enable Nameplates(All Players(All Teams), Globale.PemainAktif);
-				Globale.PemainAktif.PelatNamaDinonaktifkan = False;
-			End;
-			Allow Button(Globale.PemainAktif, Button(Melee));
-			Allow Button(Globale.PemainAktif, Button(Primary Fire));
-			Allow Button(Globale.PemainAktif, Button(Secondary Fire));
-			Allow Button(Globale.PemainAktif, Button(Interact));
-			Allow Button(Globale.PemainAktif, Button(Reload));
-			Allow Button(Globale.PemainAktif, Button(Ability 1));
-			Allow Button(Globale.PemainAktif, Button(Ability 2));
-			Allow Button(Globale.PemainAktif, Button(Ultimate));
-			Globale.PemainAktif.TimTerakhir = Team Of(Globale.PemainAktif);
-			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
+			"Perubahan tim pemain terdaftar kini menjalankan reset penuh agar slot roster, HUD, dan status lama benar-benar dilepas."
+			Call Subroutine(TenangkanPemain);
+			Call Subroutine(BersihkanPemain);
+			Globale.PemainAktif.SegarkanRosterTertunda = False;
 			Globale.PemainAktif.PindahTimDiproses = False;
 			Globale.PemainAktif.SiklusPemainAktif = False;
+			Globale.PemainAktif.TimTerakhir = Team Of(Globale.PemainAktif);
+			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
+			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
 			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
 				Globale.PemainSiklusGlobal = Null;
 				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 			End;
-		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Globale.PemainAktif.Manusia == True, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Globale.PemainAktif.SegarkanRosterTertunda == True, And(Globale.PemainAktif.TimTerakhir == Team Of(Globale.PemainAktif), And(Has Spawned(Globale.PemainAktif) == True, And(Is Alive(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.PemainAktif.WaktuSiklusTim, Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0))))))))));
-			"Ganti handle daftar kanonis hanya setelah entitas tim baru stabil; 02b membuat ulang kedua baris pada konteks pemain yang baru."
-			If(Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif) >= 0);
-				If(Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
-					Destroy HUD Text(Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
-				End;
-				If(Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] != 0);
-					Destroy HUD Text(Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]);
-				End;
-				Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
-				Globale.HudKananPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)] = 0;
-			End;
-			Globale.PemainAktif.HudKiri = Null;
-			Globale.PemainAktif.HudKanan = Null;
-			Globale.PemainAktif.HudPemainDibuat = False;
-			Globale.PemainAktif.WaktuSiklusTim = 0;
-			Globale.PemainAktif.SegarkanRosterTertunda = False;
-		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.SegarkanRosterTertunda == True))));
-			"Jika referensi pemain berubah saat pindah tim, lepaskan pending ringan agar jalur setup awal dapat mendaftarkan entitas baru tanpa limbo."
-			Globale.PemainAktif.WaktuSiklusTim = 0;
-			Globale.PemainAktif.SegarkanRosterTertunda = False;
-			Globale.PemainAktif.PindahTimDiproses = False;
 		End;
 		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.PindahTimDiproses == False))));
 			Globale.PemainAktif.PindahTimDiproses = True;
@@ -3442,8 +3372,8 @@ regola("89a2 - Subrutin: Mesin terbang 3D per pemain 20 Hz")
 					Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 					Globale.PemainAktif.PersenTerbang = 100;
 				End;
-				"Throttle Z maju/mundur, X kiri/kanan. Facing membawa pitch; World Vector menjaga strafe horizontal."
-				Globale.PemainAktif.ArahTerbang = Facing Direction Of(Globale.PemainAktif) * Z Component Of(Throttle Of(Globale.PemainAktif)) + World Vector Of(Vector(X Component Of(Throttle Of(Globale.PemainAktif)), 0, 0), Globale.PemainAktif, Rotation);
+				"Throttle Z maju memakai pitch bidikan, sedangkan mundur/strafe tetap pada bidang horizontal."
+				Globale.PemainAktif.ArahTerbang = Facing Direction Of(Globale.PemainAktif) * Max(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0) * Min(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Cross Product(Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0), Vector(0, 1, 0)) * X Component Of(Throttle Of(Globale.PemainAktif));
 				If(Magnitude Of(Globale.PemainAktif.ArahTerbang) > 0.050);
 					"100% Fly = 5.5 m/s, 500% = 27.5 m/s; diagonal dibatasi dan kekuatan analog tetap dipakai."
 					Globale.PemainAktif.DeltaTerbang = Normalize(Globale.PemainAktif.ArahTerbang) * 5.500 * Globale.PemainAktif.PersenTerbang / 100 * Min(1, Magnitude Of(Throttle Of(Globale.PemainAktif))) - Velocity Of(Globale.PemainAktif);
@@ -3692,8 +3622,8 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 					Globale.PemainAktif.WaktuPaksaBerikut = Total Time Elapsed;
 					Globale.PemainAktif.WaktuPaksaBerakhir = Total Time Elapsed + 5;
 				Else If(Globale.PemainAktif.EfekNasib == 4);
-					Set Player Health(Globale.PemainAktif, Max Health(Globale.PemainAktif));
-					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: HEART — SELF FULL HEAL") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: HATI — SEMBUH PENUH DIRI") : Custom String("เสี่ยงโชค: หัวใจ — รักษาตัวเองเต็มพลัง"));
+					Set Player Health(All Living Players(Team Of(Globale.PemainAktif)), 9999);
+					Small Message(Globale.PemainAktif, Globale.PemainAktif.IndeksBahasa == 0 ? Custom String("TRY YOUR LUCK: HEART — TEAM FULL HEAL") : Globale.PemainAktif.IndeksBahasa == 1 ? Custom String("COBA NASIB: HATI — SEMBUH PENUH SATU TIM") : Custom String("เสี่ยงโชค: หัวใจ — ฮีลเต็มทีม"));
 					Globale.PemainAktif.EfekNasib = 0;
 					Globale.PemainAktif.KartuNasibAktif = False;
 				Else If(Globale.PemainAktif.EfekNasib == 5);

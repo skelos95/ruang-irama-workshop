@@ -295,8 +295,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"IsAlive({owner})==True",
                 f"{owner}.ModeTerbangAktif==True",
                 f"{owner}.FisikaHantuTerbangDiterapkan==True",
-                f"{owner}.ArahTerbang=FacingDirectionOf({owner})*ZComponentOf(ThrottleOf({owner}))"
-                f"+WorldVectorOf(Vector(XComponentOf(ThrottleOf({owner})),0,0),{owner},Rotation);",
+                f"{owner}.ArahTerbang=FacingDirectionOf({owner})*Max(0,ZComponentOf(ThrottleOf({owner})))"
+                f"+DirectionFromAngles(HorizontalFacingAngleOf({owner}),0)*Min(0,ZComponentOf(ThrottleOf({owner})))"
+                f"+CrossProduct(DirectionFromAngles(HorizontalFacingAngleOf({owner}),0),Vector(0,1,0))*"
+                f"XComponentOf(ThrottleOf({owner}));",
                 f"MagnitudeOf({owner}.ArahTerbang)>0.050",
                 f"{owner}.DeltaTerbang=Normalize({owner}.ArahTerbang)*5.500*{owner}.PersenTerbang/100"
                 f"*Min(1,MagnitudeOf(ThrottleOf({owner})))-VelocityOf({owner});",
@@ -421,14 +423,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 self.assertIn(token, reapply)
 
             fast = subroutine(source, "ProsesCepatPemain")
-            self.assertIn(f"{global_name}.PemainAktif.FisikaHantuTerbangDiterapkan = False;", fast)
             team_change = fast.index(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)")
-            next_pending = fast.index(f"{global_name}.PemainAktif.SegarkanRosterTertunda == True", team_change)
-            team_branch = fast[team_change:next_pending]
-            self.assertNotIn(f"{global_name}.PemainAktif.ModeHantuAktif = False;", team_branch)
-            self.assertNotIn(f"{global_name}.PemainAktif.ModeTerbangAktif = False;", team_branch)
-            self.assertIn(f"{global_name}.PemainAktif.WaktuMulaiTerbangMaju = -1;", team_branch)
-            self.assertIn(f"Set Move Speed({global_name}.PemainAktif, 100);", team_branch)
+            queue_registration = fast.index(f"{global_name}.PemainAktif.PindahTimDiproses == False", team_change)
+            team_branch = fast[team_change:queue_registration]
+            self.assertIn("Call Subroutine(TenangkanPemain);", team_branch)
+            self.assertIn("Call Subroutine(BersihkanPemain);", team_branch)
+            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = False;", team_branch)
+            self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = False;", team_branch)
+            self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", team_branch)
 
             hero_change = reapply.index(
                 f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"

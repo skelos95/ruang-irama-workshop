@@ -2274,9 +2274,11 @@ def validate_ghost_fly(
              "Global.PemainAktif.PersenTerbang=100;End;",
              "laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%"),
             ("Global.PemainAktif.ArahTerbang=FacingDirectionOf(Global.PemainAktif)*"
-             "ZComponentOf(ThrottleOf(Global.PemainAktif))+WorldVectorOf(Vector("
-             "XComponentOf(ThrottleOf(Global.PemainAktif)),0,0),Global.PemainAktif,Rotation);",
-             "direzione 3D da visuale e input locali senza trasformazione throttle"),
+             "Max(0,ZComponentOf(ThrottleOf(Global.PemainAktif)))+DirectionFromAngles("
+             "HorizontalFacingAngleOf(Global.PemainAktif),0)*Min(0,ZComponentOf(ThrottleOf("
+             "Global.PemainAktif)))+CrossProduct(DirectionFromAngles(HorizontalFacingAngleOf("
+             "Global.PemainAktif),0),Vector(0,1,0))*XComponentOf(ThrottleOf(Global.PemainAktif));",
+             "direzione Fly: solo l'input avanti usa il pitch, mentre indietro/strafe restano orizzontali"),
             ("If(MagnitudeOf(Global.PemainAktif.ArahTerbang)>0.050);"
              "Global.PemainAktif.DeltaTerbang=Normalize(Global.PemainAktif.ArahTerbang)*5.500*"
              "Global.PemainAktif.PersenTerbang/100*Min(1,MagnitudeOf(ThrottleOf(Global.PemainAktif)))-"
@@ -2357,20 +2359,39 @@ def validate_ghost_fly(
 
     checks.require(fast is not None, "Ghost/Fly: lifecycle cambio squadra assente")
     if fast:
-        fast_packed = packed(fast.body)
-        for token in (
-            "StopTransformingThrottle(Global.PemainAktif);",
-            "SetGravity(Global.PemainAktif,100);",
-            "EnableMovementCollisionWithEnvironment(Global.PemainAktif);",
-            "Global.PemainAktif.FisikaHantuTerbangDiterapkan=False;",
-            "Global.PemainAktif.WaktuMulaiTerbangMaju=-1;",
-            "SetMoveSpeed(Global.PemainAktif,100);",
-        ):
-            checks.require(token in fast_packed, f"Ghost/Fly cambio squadra incompleto: {token}")
-        checks.require("Global.PemainAktif.ModeHantuAktif=False;" not in fast_packed,
-                       "Ghost deve persistere al cambio squadra")
-        checks.require("Global.PemainAktif.ModeTerbangAktif=False;" not in fast_packed,
-                       "Fly deve persistere al cambio squadra")
+        mismatch_anchor = fast.body.find(
+            "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
+        )
+        mismatch_branches = (
+            conditional_branches_containing(fast.body, mismatch_anchor)
+            if mismatch_anchor >= 0 else []
+        )
+        checks.require(bool(mismatch_branches), "Ghost/Fly: detector cambio squadra non isolato")
+        if mismatch_branches:
+            mismatch = mask_strings(mismatch_branches[0])
+            for token in (
+                "Call Subroutine(TenangkanPemain);",
+                "Call Subroutine(BersihkanPemain);",
+                "Global.PemainAktif.SegarkanRosterTertunda = False;",
+                "Global.PemainAktif.PindahTimDiproses = False;",
+                "Global.PemainAktif.SiklusPemainAktif = False;",
+                "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
+                "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            ):
+                checks.require(token in mismatch, f"Ghost/Fly cambio squadra incompleto: {token}")
+            checks.require(
+                mismatch.find("Call Subroutine(TenangkanPemain);")
+                < mismatch.find("Call Subroutine(BersihkanPemain);"),
+                "Ghost/Fly cambio squadra: tenangkan harus sebelum bersihkan",
+            )
+            checks.require(
+                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", mismatch) is None,
+                "Ghost/Fly cambio squadra non deve usare Abort",
+            )
+        checks.require(
+            "Global.PemainAktif.SegarkanRosterTertunda = True;" not in fast.body,
+            "Ghost/Fly cambio squadra non deve usare pending roster ringan",
+        )
 
     timestamp_writers: list[tuple[str, str]] = []
     for rule in rules:
@@ -2381,10 +2402,10 @@ def validate_ghost_fly(
                 mask_strings(rule.body),
             ):
                 timestamp_writers.append((owner, re.sub(r"\s+", "", match.group(1))))
-    checks.equal(len(timestamp_writers), 11, "Fly: numero writer timestamp setup/lifecycle/runtime")
+    checks.equal(len(timestamp_writers), 10, "Fly: numero writer timestamp setup/lifecycle/runtime")
     checks.equal(
         sum(value == "-1" for _, value in timestamp_writers),
-        10,
+        9,
         "Fly: reset timestamp a -1",
     )
     checks.equal(
@@ -3955,8 +3976,8 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
         if health_calls:
             checks.equal(
                 tuple(argument.strip() for argument in health_calls[0].args),
-                ("Global.PemainAktif", "Max Health(Global.PemainAktif)"),
-                "Heart roulette deve curare soltanto il proprietario",
+                ("All Living Players(Team Of(Global.PemainAktif))", "9999"),
+                "Heart roulette deve curare al massimo tutta la squadra del proprietario",
             )
         heart_messages = [
             call for call in iter_calls(state_machine.body, "Small Message")
@@ -3972,12 +3993,12 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                 "Heart roulette deve usare la lingua del proprietario",
             )
             for text in (
-                "TRY YOUR LUCK: HEART — SELF FULL HEAL",
-                "COBA NASIB: HATI — SEMBUH PENUH DIRI",
-                "เสี่ยงโชค: หัวใจ — รักษาตัวเองเต็มพลัง",
+                "TRY YOUR LUCK: HEART — TEAM FULL HEAL",
+                "COBA NASIB: HATI — SEMBUH PENUH SATU TIM",
+                "เสี่ยงโชค: หัวใจ — ฮีลเต็มทีม",
             ):
                 checks.require(text in heart_messages[0].args[1],
-                               f"Heart self-heal: testo localizzato assente: {text}")
+                               f"Heart team-heal: testo localizzato assente: {text}")
 
         checks.equal(state_machine.body.count("Kill("), 0,
                      "Skull deve delegare la morte completa alla macchina globale")
@@ -4667,21 +4688,14 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
             "Global.PemainAktif.PernahDisiapkan == False",
             "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)",
-            "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
-            "Global.PemainAktif.Manusia = True;",
-            "Global.PemainAktif.SudahDiperiksa = True;",
-            "Global.PemainAktif.SudahSiap = True;",
-            "Global.PemainAktif.PernahDisiapkan = True;",
-            "Global.PemainAktif.SegarkanRosterTertunda = True;",
-            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
-            "Global.PemainAktif.HudKiri = Null;",
-            "Global.PemainAktif.HudKanan = Null;",
-            "Global.PemainAktif.HudPemainDibuat = False;",
+            "Call Subroutine(TenangkanPemain);",
+            "Call Subroutine(BersihkanPemain);",
             "Global.PemainAktif.SegarkanRosterTertunda = False;",
-            "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
-            "Global.PemainAktif.WaktuSiklusTim = 0;",
+            "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
+            "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
+            "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == False",
             "Global.PemainAktif.PindahTimDiproses == False",
             "Global.PemainAktif.PindahTimDiproses = True;",
@@ -4692,10 +4706,24 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainSiklusGlobal = Global.PemainAktif;",
             "Has Spawned(Global.PemainAktif) == True",
         ):
-            checks.require(token in fast.body, f"dispatcher team-switch leggero incompleto: {token}")
+            checks.require(token in fast.body, f"dispatcher team-switch cleanup incompleto: {token}")
 
-        checks.require("Server Load < 150" not in fast.body,
-                       "dispatcher team-switch non deve dipendere da Server Load < 150")
+        checks.require(
+            "Server Load < 150" not in fast.body,
+            "dispatcher team-switch non deve dipendere da Server Load < 150",
+        )
+        checks.require(
+            "Global.PemainAktif.SegarkanRosterTertunda = True;" not in fast.body,
+            "dispatcher team-switch non deve più usare pending roster ringan",
+        )
+        checks.require(
+            fast.body.count("Global.PemainAktif.BotOtomatis == False") >= 4,
+            "dispatcher team-switch deve escludere gli iBot in tutti i gate essenziali",
+        )
+        checks.require(
+            "Call Subroutine(SiapkanPemain);" not in fast.body,
+            "team switch non deve chiamare SiapkanPemain",
+        )
 
         mismatch_anchor = fast.body.find(
             "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
@@ -4707,160 +4735,22 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require(bool(mismatch_branches), "dispatcher team-switch: detector mismatch non isolato")
         if mismatch_branches:
             mismatch = mask_strings(mismatch_branches[0])
+            for token in (
+                "Call Subroutine(TenangkanPemain);",
+                "Call Subroutine(BersihkanPemain);",
+                "Global.PemainAktif.SegarkanRosterTertunda = False;",
+                "Global.PemainAktif.PindahTimDiproses = False;",
+            ):
+                checks.require(token in mismatch, f"detector team-switch cleanup incompleto: {token}")
             checks.require(
-                "Destroy HUD Text(Global.PemainAktif.HudKiri);" not in mismatch
-                and "Destroy HUD Text(Global.PemainAktif.HudKanan);" not in mismatch
-                and "Destroy HUD Text(Global.HudKiriPemain[" not in mismatch
-                and "Destroy HUD Text(Global.HudKananPemain[" not in mismatch
-                and "Global.PemainAktif.HudPemainDibuat = False;" not in mismatch,
-                "dispatcher team-switch: il detector non deve distruggere il roster prima dello spawn stabile",
+                mismatch.find("Call Subroutine(TenangkanPemain);")
+                < mismatch.find("Call Subroutine(BersihkanPemain);"),
+                "detector team-switch: tenangkan deve precedere bersihkan",
             )
             checks.require(
                 re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", mismatch) is None,
                 "dispatcher team-switch: il detector non deve usare Abort",
             )
-            mismatch_header = mismatch.splitlines()[0]
-            checks.require(
-                "Global.PemainAktif.PernahDisiapkan == True" not in mismatch_header,
-                "dispatcher team-switch: membership roster deve essere autorevole nel detector",
-            )
-            checks.require(
-                "Destroy HUD Text(Global.PemainAktif.HudMenu);" not in mismatch
-                and "Destroy HUD Text(Global.HudMenuPemain[" in mismatch,
-                "dispatcher team-switch: il menu deve usare l'handle canonico globale",
-            )
-            for token in (
-                "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                "Global.PemainAktif.HudKiri = Null;",
-                "Global.PemainAktif.HudKanan = Null;",
-            ):
-                checks.require(
-                    token not in mismatch,
-                    "dispatcher team-switch: il detector non deve azzerare il roster prima dello spawn stabile",
-                )
-            detector_order = tuple(
-                mismatch.find(token)
-                for token in (
-                    "Global.PemainAktif.Manusia = True;",
-                    "Global.PemainAktif.SudahDiperiksa = True;",
-                    "Global.PemainAktif.SudahSiap = True;",
-                    "Global.PemainAktif.PernahDisiapkan = True;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = True;",
-                    "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
-                    "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
-                )
-            )
-            checks.require(
-                all(position >= 0 for position in detector_order)
-                and detector_order == tuple(sorted(detector_order)),
-                "dispatcher team-switch: ordine detector/pending/ack TimTerakhir",
-            )
-            checks.require(
-                "Global.PemainAktif.Manusia = False;" not in mismatch,
-                "dispatcher team-switch: il detector non deve nascondere il player ai target Crouch",
-            )
-
-        pending_anchor = fast.body.find(
-            "Global.PemainAktif.SegarkanRosterTertunda == True"
-        )
-        pending_branches = (
-            conditional_branches_containing(fast.body, pending_anchor)
-            if pending_anchor >= 0 else []
-        )
-        checks.require(bool(pending_branches), "dispatcher team-switch: consumer roster pending non isolato")
-        if pending_branches:
-            pending = mask_strings(pending_branches[0])
-            pending_header = pending.splitlines()[0]
-            for token in (
-                "Is Dummy Bot(Global.PemainAktif) == False",
-                "Global.PemainAktif.BotOtomatis == False",
-                "Global.PemainAktif.Manusia == True",
-                "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
-                "Global.PemainAktif.SegarkanRosterTertunda == True",
-                "Global.PemainAktif.TimTerakhir == Team Of(Global.PemainAktif)",
-                "Has Spawned(Global.PemainAktif) == True",
-                "Is Alive(Global.PemainAktif) == True",
-                "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim",
-                "Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0",
-                ):
-                checks.require(token in pending_header, f"consumer roster pending senza guardia: {token}")
-            checks.require("Server Load < 150" not in pending_header,
-                           "consumer roster pending non deve dipendere dal carico server")
-            checks.require(
-                "Destroy HUD Text(Global.PemainAktif.HudKiri);" not in pending
-                and "Destroy HUD Text(Global.PemainAktif.HudKanan);" not in pending,
-                "consumer roster pending deve distruggere gli handle canonici globali",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", pending) is None,
-                "consumer roster pending non deve usare Abort",
-            )
-            pending_order = tuple(
-                pending.find(token)
-                for token in (
-                    "Destroy HUD Text(Global.HudKiriPemain[",
-                    "Destroy HUD Text(Global.HudKananPemain[",
-                    "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                    "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;",
-                    "Global.PemainAktif.HudKiri = Null;",
-                    "Global.PemainAktif.HudKanan = Null;",
-                    "Global.PemainAktif.HudPemainDibuat = False;",
-                    "Global.PemainAktif.WaktuSiklusTim = 0;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                )
-            )
-            checks.require(
-                all(position >= 0 for position in pending_order)
-                and pending_order == tuple(sorted(pending_order)),
-                "consumer roster pending: ordine destroy/clear/riarmo",
-            )
-        recovery_branches = [
-            fast.body[start:end]
-            for start, end in conditional_branch_spans(fast.body)
-            if "Array Contains(Global.PemainManusia, Global.PemainAktif) == False"
-            in fast.body[start:end]
-            and "Global.PemainAktif.SegarkanRosterTertunda == True"
-            in fast.body[start:end]
-            and "Global.PemainAktif.PindahTimDiproses = False;"
-            in fast.body[start:end]
-        ]
-        checks.equal(len(recovery_branches), 1, "team-switch: recovery non-roster pending")
-        if recovery_branches:
-            recovery = mask_strings(recovery_branches[0])
-            recovery_order = tuple(
-                recovery.find(token)
-                for token in (
-                    "Global.PemainAktif.WaktuSiklusTim = 0;",
-                    "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                    "Global.PemainAktif.PindahTimDiproses = False;",
-                )
-            )
-            checks.require(
-                all(position >= 0 for position in recovery_order)
-                and recovery_order == tuple(sorted(recovery_order)),
-                "team-switch: recovery non-roster deve liberare pending prima del requeue",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", recovery) is None,
-                "team-switch: recovery non-roster pending non deve usare Abort",
-            )
-
-        pending_true_writes = sum(
-            rule.body.count("SegarkanRosterTertunda = True;") for rule in rules
-        )
-        pending_false_writes = sum(
-            rule.body.count("SegarkanRosterTertunda = False;") for rule in rules
-        )
-        checks.equal(pending_true_writes, 1, "ownership writer pending roster True")
-        checks.equal(pending_false_writes, 3, "ownership writer pending roster False")
-
-        checks.equal(fast.body.count("Global.PemainAktif.BotOtomatis == False"), 6,
-                     "dispatcher team-switch leggero deve escludere gli iBot in tutti i gate")
-        checks.require("Call Subroutine(BersihkanPemain);" not in fast.body,
-                       "team switch non deve chiamare BersihkanPemain")
-        checks.require("Call Subroutine(SiapkanPemain);" not in fast.body,
-                       "team switch non deve chiamare SiapkanPemain")
 
     roster_hud = next((
         rule for rule in rules
