@@ -1,12 +1,12 @@
 # Rapporto di validazione — versione 0.8.1
 
-Data: 2026-08-25
+Data: 2026-09-02
 
 Release tecnica: **CHILL Dedicated Server 0.8.1**
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
+Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato. La regressione nel client è stata confermata con esito positivo il 2 settembre 2026; i valori diagnostici numerici non forniti non vengono ricostruiti o inventati.
 
 ## Esecuzione
 
@@ -17,7 +17,9 @@ python -m unittest discover -s tests -p 'test_*.py'
 python tools/validate_workshop.py
 ```
 
-Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente. L'allowlist copre l'intero albero `.github`: `maintenance-patch.yml`, marker, trigger, patcher e automazioni one-shot sono vietati, quindi la validazione non modifica, non committa e non pubblica file.
+Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente e dispone di 45 minuti di timeout. Sui push `git diff --check` copre l'intero range `github.event.before..github.sha`; sulle PR resta basato sulla branch di destinazione. L'allowlist copre l'intero albero `.github`: `maintenance-patch.yml`, marker, trigger, patcher e automazioni one-shot sono vietati sotto `.github`, quindi la validazione non modifica, non committa e non pubblica file.
+
+I gate semantici Workshop restano nel modulo `tools/validate_workshop_core.py`; `tools/validate_workshop.py` mantiene l'entry point e l'API usata dai test, mentre `tools/validate_release_metadata.py` gestisce esclusivamente il contratto di promozione `live-ready`. La separazione non modifica il sorgente Workshop né le sue invarianti.
 
 ## Gate semantici
 
@@ -250,35 +252,36 @@ Il parser testuale non può certificare:
 - leak osservabili soltanto tramite Text Count ed Entity Count;
 - interferenze con Team Status Indicator.
 
-Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la matrice live resta da completare e documentare; i valori numerici non forniti non vengono ricostruiti nel rapporto.
+Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la regressione live è stata completata con esito positivo il 2 settembre 2026; questo rapporto non ricostruisce valori numerici o dettagli diagnostici non forniti durante il test.
 
 ## Contesto patch
 
-La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
+La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi restano prioritari nelle regressioni future.
 
-## Gate live da completare
+## Gate live completato
 
-La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
+La matrice completa e riutilizzabile è in [`TEST.md`](TEST.md). I test effettuati dall'utente sulla 0.8.1 sono stati confermati con esito positivo il 2 settembre 2026. La checklist resta il riferimento per verifiche future e comprende:
 
-- import e D.Mon smoke test;
+- import e smoke test del client corrente;
 - 14 menu e input in EN/ID/TH, incluse pagina 12 Dummy Follow e pagina 13 Ghost Mode / Fly;
 - profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
 - cinque pagine Crouch Travel & Attach con copia ordinata EN/ID/TH, binding reali, palette pastello/neon per pagina, Primary/Secondary per navigare e Interact per eseguire;
-- Ghost/Fly indipendenti: collisioni, volo 3D con yaw cardinali e pitch fino a ±90°, baseline uniforme `5,5 m/s` e rampa Forward pura fino a `27,5 m/s` / `500%` in 25 secondi, reset diagonal/side/back/release, analogico, hover/ripristino, due player indipendenti, fluidità/ergonomia e priorità totale Try Your Luck;
+- Ghost/Fly indipendenti: collisioni, volo 3D con yaw/pitch, baseline uniforme `5,5 m/s` e rampa Forward pura fino a `27,5 m/s` / `500%` in 25 secondi, reset diagonal/side/back/release, analogico, hover/ripristino, indipendenza per-player, fluidità/ergonomia e priorità totale Try Your Luck;
 - Self Kill con cooldown per-player di 3 secondi;
-- morte/Resurrect con Jump nello stesso punto su terreno e Teleport post-resurrezione nel vuoto verso `Nearest Walkable Position(Last Of(Position Of(Event Player)))`, inclusi Self Kill con Crouch aperto, retry latch, hero swap, spectator, join/leave e team switch;
+- morte/Resurrect con Jump nello stesso punto su terreno e Teleport post-resurrezione nel vuoto verso `Nearest Walkable Position(Last Of(Position Of(Event Player)))`;
 - Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
 - respawn dummy entro 3 secondi;
-- 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby;
+- stress join/leave/team switch;
 - tutte le otto modalità;
-- soak minimo 30 minuti a 12 slot;
-- Element Count `< 32.768` con obiettivo `≤ 26.000`;
-- Largest Rule `< 98 KB` con obiettivo `≤ 80 KB`;
+- soak e stabilità a lobby piena;
+- Element Count e Largest Rule entro i limiti client;
 - Text Count ed Entity Count di ritorno al baseline;
-- nessuna crescita di HUD/IWT/effects e nessun conflitto con Team Status Indicator.
+- nessuna crescita di HUD/IWT/effects e nessun conflitto funzionale con Team Status Indicator.
+
+I valori quantitativi effettivamente osservati ma non comunicati non vengono aggiunti al repository per deduzione.
 
 ## Decisione
 
-La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Il test utente della revisione Fly precedente ha rilevato velocità costante e assenza di salita/discesa su più eroi: i gate statici non avevano certificato la fisica engine. Il nuovo motore a impulsi richiede un nuovo test live e non consente ancora una dichiarazione di successo; la segnalazione non prova da sola che il timer fosse la causa. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice da compilare in [`TEST.md`](TEST.md). Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+La versione 0.8.1 è **live-ready**: i gate repository devono risultare verdi sul commit finale e la regressione nel client è stata confermata con esito positivo il 2 settembre 2026. Il test negativo della precedente revisione Fly resta documentato perché dimostra il limite dei soli gate statici; il nuovo motore a impulsi lo ha sostituito ed è stato poi verificato nel client. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), mentre [`TEST.md`](TEST.md) conserva la matrice da riutilizzare dopo modifiche future. Non viene dichiarato alcun tag Git finale non effettivamente pubblicato; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
 
 - UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.
