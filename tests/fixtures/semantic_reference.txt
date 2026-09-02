@@ -1078,20 +1078,25 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.BotOtomatis = False;
 		Event Player.Manusia = False;
 		Event Player.WarnaNama = Color(White);
-		Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
-		Wait(0.016, Ignore Condition);
-		Abort If(Entity Exists(Event Player) == False);
-		If(Or(Event Player.SudahSiap == False, Has Spawned(Event Player) == False));
-			Stop Forcing Dummy Bot Name(Event Player);
-			Event Player.SudahDiperiksa = False;
-			Abort;
-		End;
-		If(Custom String("{0}", Event Player) == Custom String("​"));
-			Event Player.BotOtomatis = True;
-		Else;
+		If(And(Event Player.PernahDisiapkan == True, And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))));
+			"Gunakan nama cache saat pindah tim agar pemain manusia terdaftar tidak terjebak probe iBot."
 			Event Player.BotOtomatis = False;
+		Else;
+			Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
+			Wait(0.016, Ignore Condition);
+			Abort If(Entity Exists(Event Player) == False);
+			If(Or(Event Player.SudahSiap == False, Has Spawned(Event Player) == False));
+				Stop Forcing Dummy Bot Name(Event Player);
+				Event Player.SudahDiperiksa = False;
+				Abort;
+			End;
+			If(Custom String("{0}", Event Player) == Custom String("​"));
+				Event Player.BotOtomatis = True;
+			Else;
+				Event Player.BotOtomatis = False;
+			End;
+			Stop Forcing Dummy Bot Name(Event Player);
 		End;
-		Stop Forcing Dummy Bot Name(Event Player);
 		If(Event Player.BotOtomatis == True);
 			Cancel Primary Action(Event Player);
 			Call Subroutine(KunciBot);
@@ -3262,6 +3267,13 @@ rule("89a - Subrutin: Proses status cepat pemain")
 			Call Subroutine(TenangkanPemain);
 			Call Subroutine(BersihkanPemain);
 			Global.PemainAktif.SegarkanRosterTertunda = False;
+			Global.PemainAktif.HudPemainDibuat = False;
+			Global.PemainAktif.HudKiri = Null;
+			Global.PemainAktif.HudKanan = Null;
+			Global.PemainAktif.HudMenu = Null;
+			Global.PemainAktif.InputMenuDikunci = False;
+			Global.PemainAktif.SudahDiperiksa = False;
+			Global.PemainAktif.BotOtomatis = False;
 			Global.PemainAktif.PindahTimDiproses = False;
 			Global.PemainAktif.SiklusPemainAktif = False;
 			Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);
@@ -4259,6 +4271,9 @@ rule("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 	actions
 	{
 		"Bersihkan Coba Nasib segera sebelum pendaftaran tim baru; bagian ini tidak pernah menjeda pemindaian."
+		If(Or(Event Player.MenuTerbuka == True, Event Player.InputMenuDikunci == True));
+			Call Subroutine(TutupMenu);
+		End;
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
 		Event Player.KursorKebal = 0;
@@ -4298,6 +4313,12 @@ rule("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.PersenTerbang = 100;
 		Event Player.ArahTerbang = Vector(0, 0, 0);
 		Event Player.DeltaTerbang = Vector(0, 0, 0);
+		Event Player.HudKiri = Null;
+		Event Player.HudKanan = Null;
+		Event Player.HudMenu = Null;
+		Event Player.HudPemainDibuat = False;
+		Event Player.SudahDiperiksa = False;
+		Event Player.BotOtomatis = False;
 	}
 }
 
@@ -4337,6 +4358,12 @@ rule("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 			Global.PemainPembersihan.HudEfekNasib = Null;
 			Global.PemainPembersihan.TeksVisiNasib = Null;
 			Global.PemainPembersihan.TeksTeleportasi = Null;
+			Global.PemainPembersihan.HudKiri = Null;
+			Global.PemainPembersihan.HudKanan = Null;
+			Global.PemainPembersihan.HudMenu = Null;
+			Global.PemainPembersihan.TeksDunia = Null;
+			Global.PemainPembersihan.HudPemainDibuat = False;
+			Global.PemainPembersihan.SudahDiperiksa = False;
 			"Kurangi pilihan keluar dari target yang masih aktif agar bintang CHILL tidak menyimpan suara hantu."
 			If(And(Global.PemainPembersihan.PemainDipilih != Null, And(Global.PemainPembersihan.PemainDipilih != Global.PemainPembersihan, Array Contains(Global.PemainManusia, Global.PemainPembersihan.PemainDipilih))));
 				Modify Player Variable(Global.PemainPembersihan.PemainDipilih, JumlahPilihan, Subtract, 1);
@@ -4427,7 +4454,9 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.IndeksGenre = -1;
 		Event Player.MusikKhusus = Null;
 		Event Player.SegarkanRosterTertunda = False;
-		Event Player.NamaTampilan = Null;
+		If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));
+			Event Player.NamaTampilan = Null;
+		End;
 		Event Player.UrutanHUD = -1;
 		Event Player.HudKiri = Null;
 		Event Player.HudKanan = Null;
