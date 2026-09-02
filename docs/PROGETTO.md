@@ -1,8 +1,8 @@
 # Progetto tecnico — CHILL Dedicated Server 0.8.1
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la 0.8.1 resta live-pending finché non viene completata una nuova regressione nel client, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la regressione nel client della 0.8.1 è stata completata con esito positivo il 2 settembre 2026, compreso il comportamento dopo cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`. I valori diagnostici numerici non forniti non vengono ricostruiti o inventati.
 
 ## Obiettivi
 
@@ -27,13 +27,13 @@ Main Menu usa pagina `-1`; le 14 pagine mantengono gli indici `0..13`. La pagina
 
 ### Motore Fly 3D
 
-Il test utente della revisione precedente ha rilevato assenza di progressione della velocità e di salita/discesa su diversi eroi. Il solo esito visivo non identifica con certezza un guasto del timer. La precedente combinazione di `Start Transforming Throttle` e `Set Move Speed` viene sostituita: Blizzard descrive la prima azione come trasformazione dell'input direzionale, non come una propulsione verticale garantita. Questa distinzione motiva la scelta del motore esplicito, ma non sostituisce una verifica nel client. Fonte: [note Blizzard di agosto 2019](https://overwatch.blizzard.com/en-gb/news/patch-notes/live/2019/08/).
+Il test utente della revisione precedente ha rilevato assenza di progressione della velocità e di salita/discesa su diversi eroi. Il solo esito visivo non identificava con certezza un guasto del timer. La precedente combinazione di `Start Transforming Throttle` e `Set Move Speed` è stata sostituita: Blizzard descrive la prima azione come trasformazione dell'input direzionale, non come una propulsione verticale garantita. Questa distinzione ha motivato la scelta del motore esplicito; la successiva regressione live della 0.8.1 ne ha poi confermato il funzionamento nel client. Fonte: [note Blizzard di agosto 2019](https://overwatch.blizzard.com/en-gb/news/patch-notes/live/2019/08/).
 
 `ProsesTerbangPemain` viene richiamata dal solo scheduler globale a 20 Hz per ogni umano idoneo, senza nuovi `Wait` o loop per-player. Il volo normale imposta gravità zero e `Move Speed` nativo zero, evitando che il movimento engine si sommi a quello richiesto. Legge `Throttle Of(player)` non trasformato, dove X positivo è sinistra e Z positivo è avanti. Il vettore richiesto combina `Facing Direction Of(player) * Z` con lo strafe `World Vector Of(Vector(X, 0, 0), player, Rotation)`: avanti/indietro seguono il pitch, mentre lo strafe resta relativo alla rotazione dell'eroe. La normalizzazione mantiene la direzione e l'intensità analogica viene limitata a 1, evitando un bonus diagonale. La scelta di mira più strafe e impulsi, con movimento nativo disattivato, ha un precedente nell'[esempio originale di Shattered sul forum Blizzard](https://us.forums.blizzard.com/en/overwatch/t/%E2%9C%85-how-to-make-reaper-exc-changes/600253/2); qui è adattata al scheduler globale e alla rampa per-player, senza copiarne il loop.
 
 La baseline Fly uniforme è `5,5 m/s = 100%`, una convenzione del motore e non la velocità nativa esatta di ogni eroe, buff o abilità. Soltanto Forward puro, con Z locale maggiore di `0.050` e X fra `-0.050` e `0.050`, arma il timestamp. La percentuale è `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)` e scala la baseline fino a `27,5 m/s = 500%` dopo 25 secondi. Rilascio, laterali, diagonali e indietro azzerano la rampa; il movimento successivo parte dal `100%`, mentre a input zero la velocità richiesta è zero. Timer, percentuale, direzione e delta di velocità sono player-local. A ogni tick il motore calcola `velocità richiesta - Velocity Of(player)` e applica il relativo impulso `To World` con `Incorporate Contrary Motion`, senza forcing o Teleport: lo stesso controllo governa movimento e hover.
 
-Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio e ripristinano la fisica prevista senza cancellare le preferenze conservate dal lifecycle. Jump Resurrect riapplica le modalità selezionate. Il motore 3D, la baseline, la fluidità e le interazioni con collisioni/abilità restano da validare nella matrice live di [`TEST.md`](TEST.md).
+Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio e ripristinano la fisica prevista senza cancellare le preferenze conservate dal lifecycle. Jump Resurrect riapplica le modalità selezionate. Il motore 3D, la baseline, la fluidità e le interazioni principali con il lifecycle sono stati verificati nella regressione live della 0.8.1; [`TEST.md`](TEST.md) conserva la matrice come procedura ripetibile per le regressioni future.
 
 ### Input
 
@@ -176,7 +176,7 @@ La griglia HUD usa dieci handle globali fissi e slot dinamici separati:
 
 Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include i dieci handle fissi. La diagnostica opzionale è il terzo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`.
 
-Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. Il test live con 1, 6 e 12 player deve confermare il confine effettivo con indicatore e kill feed.
+Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. La regressione live della 0.8.1 ha confermato che il layout non introduce problemi funzionali; eventuali valori diagnostici numerici non forniti non vengono ricostruiti.
 
 ## Camera, inspection e Teleport
 
@@ -232,16 +232,18 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 ## Repository e release
 
-Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
+Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il job dispone di 45 minuti di timeout; sui push il controllo whitespace usa l'intero range `github.event.before..github.sha`, mentre sulle pull request resta basato sulla branch di destinazione. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sotto `.github` sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
 
-La release 0.8.1 resta **static-ready / live-pending**: i gate statici sono soddisfatti, ma la matrice nel client non è ancora documentata come completata e non viene dichiarato alcun tag finale. Per chiudere la regressione restano obbligatorie le prove seguenti:
+I gate semantici Workshop sono conservati in `tools/validate_workshop_core.py`; il piccolo entry point `tools/validate_workshop.py` mantiene l'API esistente e delega il solo contratto di stato release a `tools/validate_release_metadata.py`. In questo modo la promozione di una release testata non richiede modifiche alla semantica Workshop.
 
-- import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
+La release 0.8.1 è **live-ready**: i gate statici sono soddisfatti e i test nel client sono stati confermati con esito positivo il 2 settembre 2026. Non viene dichiarato alcun tag Git finale non effettivamente pubblicato e i valori diagnostici non forniti restano non dichiarati. La matrice seguente viene mantenuta come checklist di regressione per modifiche future:
+
+- import pulito e smoke test del client corrente;
 - matrice input/menu/localizzazione;
-- regressione del nuovo motore Fly 3D dopo il fallimento live precedente: pitch fino a ±90°, orientamenti cardinali, baseline uniforme 5,5 m/s e cap 27,5 m/s, rampa 25 s, hover, due player indipendenti, collisioni, ergonomia e priorità Luck;
+- regressione del motore Fly 3D: pitch, orientamenti, baseline e cap, rampa, hover, indipendenza per-player, collisioni, ergonomia e priorità Luck;
 - stress join/leave/team switch;
 - matrice sulle otto modalità, compresa l'uscita Spawn dei dummy;
-- soak di almeno 30 minuti con 12 slot;
+- soak e controllo di stabilità a lobby piena;
 - diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
 La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md).
