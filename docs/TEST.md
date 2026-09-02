@@ -1,8 +1,8 @@
 # Piano di test — versione 0.8.1
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il test utente della precedente revisione Fly ha dato esito negativo su diversi eroi: velocità costante e impossibilità di salire/scendere. La nuova implementazione 3D a impulsi non ha ancora un esito live documentato; la segnalazione precedente non dimostra da sola un difetto del timer. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+La regressione live della 0.8.1 è stata completata con esito positivo il 2 settembre 2026. La release comprende il refresh leggero del cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale. La precedente revisione Fly aveva dato esito negativo su diversi eroi — velocità costante e impossibilità di salire/scendere — ed è stata sostituita dal motore 3D a impulsi ora confermato nel client. Questo documento resta la matrice ripetibile per le regressioni future; eventuali valori diagnostici numerici non forniti non vengono inventati o ricostruiti retroattivamente.
 
 ## 1. Gate statici
 
@@ -29,7 +29,7 @@ Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`]
 
 ## 2. Preparazione client
 
-1. Aggiornare Overwatch alla build del **19 agosto 2026**.
+1. Aggiornare Overwatch alla build del **19 agosto 2026** o a una build successiva da validare.
 2. Impostare la lingua testo del client su Italiano e importare da zero `workshop/ruang_irama.it-IT.workshop` dalla vista Raw; non riutilizzare un replay precedente alla patch.
 3. Annotare codice import, build client, regione, data/ora e piattaforma.
 4. Abilitare la diagnostica host quando si acquisiscono le metriche.
@@ -139,7 +139,7 @@ Focus dati:
 | Reset e analogico | Side/Back/diagonali non armano la rampa e restano alla baseline. Durante Forward aggiungere strafe, invertire o rilasciare: il timer si riarma e il nuovo Forward riparte dal `100%`. Con controller, input parziale riduce proporzionalmente la velocità; le diagonali non ricevono un bonus di modulo. |
 | Hover | Rilasciare ogni input dopo volo orizzontale, verticale, rotazione e knockback: arresto al tick del motore e nessuna deriva persistente. Riprendere gli input senza scatto nella vecchia direzione. |
 | Isolamento | Due player, anche con eroi diversi: uno tiene Forward per 25 s, l'altro fa strafe, hover o commuta Fly. Timer, velocità, direzione e toggle del primo non devono cambiare per azioni del secondo; ripetere invertendo i ruoli. |
-| Unkillable | Ripetere salita/discesa, hover e misure a 0/5/25 s con Unkillable OFF, 1 HP e FULL HP. La protezione dagli urti non deve impedire gli impulsi di movimento Fly; questa interazione richiede conferma nel client. |
+| Unkillable | Ripetere salita/discesa, hover e misure a 0/5/25 s con Unkillable OFF, 1 HP e FULL HP. La protezione dagli urti non deve impedire gli impulsi di movimento Fly; questa interazione va ricontrollata a ogni futura modifica della fisica. |
 | Collisioni | Fly senza Ghost deve fermarsi contro muri/soffitti/pavimenti; con Ghost attraversa muri/soffitti ma non pavimenti. Verificare angoli, porte strette, cambi di pendenza e contatto con umani/dummy: nessun attraversamento non previsto o impulso trasferito a un altro player. |
 | Ergonomia e fluidità | Provare rotazioni lente/rapide, inversioni avanti-indietro, passaggio per il pitch verticale e avvio/arresto sia in prima sia in terza persona. Annotare vibrazione, scatti, ritardo input, nausea e controllo a 500%; i gate statici non certificano questi aspetti. |
 
@@ -379,7 +379,7 @@ Annotare anche Server Load corrente/medio/picco se disponibile. L'assenza di lea
 
 ## 11. Rapporto da restituire
 
-Usare questo schema:
+Usare questo schema nelle regressioni future o quando si vogliono conservare metriche quantitative:
 
 ```text
 Build client:
@@ -425,7 +425,7 @@ Screenshot/video:
 Note e riproduzione problemi:
 ```
 
-La 0.8.1 resta **static-ready / live-pending** finché i test obbligatori, i limiti e ogni anomalia riproducibile non vengono verificati nel client. Il blocco precedente è un modello da compilare, non un verbale numerico ricostruito retroattivamente.
+La 0.8.1 è **live-ready** sulla base dei test live confermati il 2 settembre 2026. Il blocco precedente resta un modello per future regressioni e per registrare metriche quantitative; non viene compilato retroattivamente con valori non comunicati.
 
 
 ### Dummy spawn iniziale
