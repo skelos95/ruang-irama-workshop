@@ -44,7 +44,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(cache_invalid, fast)
             self.assertIn(f'Custom String("{{0}}", {global_name}.PemainAktif) != Custom String("")', fast)
             self.assertIn(f'{global_name}.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{{0}}", {global_name}.PemainAktif));', fast)
-            self.assertLess(fast.index(cache_invalid), fast.index(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)"))
+            self.assertLess(fast.index(cache_invalid), fast.index(f"{global_name}.PemainAktif.Manusia = True;"))
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
@@ -235,8 +235,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
             self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == True", fast)
-            self.assertIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
-            self.assertIn(f"{global_name}.PemainAktif.TimTerakhir = Team Of({global_name}.PemainAktif);", fast)
+            self.assertNotIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
             self.assertIn(f"{global_name}.PemainAktif.Manusia = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SudahDiperiksa = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
@@ -264,17 +263,27 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 classifier.index("Call Subroutine(KunciBot);"),
                 classifier.index(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);"),
             )
-            self.assertIn("Call Subroutine(TenangkanPemain);", fast)
-            self.assertIn("Call Subroutine(BersihkanPemain);", fast)
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
+            switch = source.split(f'{rule_kw}("01a - Siklus tim: Reset penuh pada konteks pemain")', 1)[1].split(f'{rule_kw}("01b - Siklus tim:', 1)[0]
+            self.assertIn("Ongoing - Each Player;", switch)
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == True;", switch)
+            self.assertIn("Event Player.TimTerakhir != Team Of(Event Player);", switch)
+            self.assertIn("Call Subroutine(TenangkanPemain);", switch)
+            self.assertIn("Call Subroutine(BersihkanPemain);", switch)
             self.assertLess(
-                fast.index("Call Subroutine(TenangkanPemain);"),
-                fast.index("Call Subroutine(BersihkanPemain);"),
+                switch.index("Call Subroutine(TenangkanPemain);"),
+                switch.index("Call Subroutine(BersihkanPemain);"),
             )
+            self.assertLess(switch.index("Call Subroutine(BersihkanPemain);"),
+                            switch.index("Event Player.TimTerakhir = Team Of(Event Player);"))
+            self.assertNotIn("Wait(", switch)
+            self.assertNotIn(f"{global_name}.PemainAktif", switch)
             self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
             self.assertIn(f"Has Spawned({global_name}.PemainAktif) == True", fast)
-            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = False;", fast)
-            self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = False;", fast)
+            self.assertIn("Event Player.SegarkanRosterTertunda = False;", switch)
+            self.assertIn("Event Player.PindahTimDiproses = False;", switch)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False", fast)
             self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
             self.assertNotIn("Server Load < 150", fast)

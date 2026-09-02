@@ -4,6 +4,14 @@ This deliberately small evaluator covers only the mathematical expressions and
 control flow used by ProsesTerbangPemain. It is not an Overwatch engine simulator:
 collision, friction, networking, and native hero behavior still require live QA.
 The controller's standard Fly 100% is 5.5 m/s, not an individual hero's speed.
+
+The test pose uses a synthetic world frame: yaw zero faces +Z, positive yaw
+turns toward +X, and positive test pitch looks up. These are not assertions
+about the client's displayed angle zero/sign. HorizontalFacingAngleOf and
+DirectionFromAngles(angle, 0) form a paired round trip in this frame; only that
+horizontal form is supported here. The directional conventions are Workshop's:
+raw throttle +X means left, +Z means forward, +Y world means up, and left cross
+up equals forward. Thus up cross horizontal-forward must mean player-left.
 """
 
 from __future__ import annotations
@@ -223,7 +231,20 @@ class FlySourceEvaluator:
             return arguments[0].normalized()
         if name in ("XComponentOf", "YComponentOf", "ZComponentOf"):
             return getattr(arguments[0], name[0].lower())
-        player_functions = {"ThrottleOf": "throttle", "VelocityOf": "velocity", "HasSpawned": "spawned", "IsAlive": "alive", "IsDummyBot": "dummy"}
+        if name == "CrossProduct":
+            left, right = arguments
+            return Vector(
+                left.y * right.z - left.z * right.y,
+                left.z * right.x - left.x * right.z,
+                left.x * right.y - left.y * right.x,
+            )
+        if name == "DirectionFromAngles":
+            horizontal, vertical = arguments
+            if vertical != 0:
+                raise AssertionError("only the source's horizontal DirectionFromAngles(angle, 0) is modeled")
+            yaw = math.radians(horizontal)
+            return Vector(math.sin(yaw), 0, math.cos(yaw))
+        player_functions = {"ThrottleOf": "throttle", "VelocityOf": "velocity", "HasSpawned": "spawned", "IsAlive": "alive", "IsDummyBot": "dummy", "HorizontalFacingAngleOf": "yaw"}
         if name in player_functions:
             return self.players[arguments[0]][player_functions[name]]
         if name == "FacingDirectionOf":
@@ -296,6 +317,18 @@ class FlyMotionExpressionTests(unittest.TestCase):
         for axis in ("x", "y", "z"):
             self.assertAlmostEqual(getattr(actual, axis), getattr(expected, axis), places=8, msg=f"{axis}: {actual} != {expected}")
 
+    def test_evaluator_preserves_workshop_cross_product_handedness_and_horizontal_round_trip(self) -> None:
+        evaluator = FlySourceEvaluator(())
+        left, up, forward = Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1)
+        for first, second, expected in ((left, up, forward), (up, forward, left), (forward, up, -left)):
+            self.assertVectorClose(evaluator.call("CrossProduct", [first, second]), expected)
+        for yaw, forward in ((0, Vector(0, 0, 1)), (90, Vector(1, 0, 0)), (180, Vector(0, 0, -1)), (270, Vector(-1, 0, 0))):
+            evaluator.players["one"].update(yaw=yaw, pitch=90)
+            angle = evaluator.call("HorizontalFacingAngleOf", ["one"])
+            self.assertVectorClose(evaluator.call("DirectionFromAngles", [angle, 0]), forward)
+        with self.assertRaisesRegex(AssertionError, "only the source's horizontal"):
+            evaluator.call("DirectionFromAngles", [0, 45])
+
     def test_standard_fly_ramp_uses_the_source_formula_and_caps_after_twenty_five_seconds(self) -> None:
         """100% is the explicit 5.5 m/s Fly baseline, irrespective of hero selection."""
         for name, program in self.programs:
@@ -328,22 +361,66 @@ class FlyMotionExpressionTests(unittest.TestCase):
     def test_positive_x_is_left_and_negative_x_is_right_even_when_looking_vertical(self) -> None:
         for name, program in self.programs:
             for yaw, left in ((0, Vector(5.5, 0, 0)), (90, Vector(0, 0, -5.5)), (180, Vector(-5.5, 0, 0)), (270, Vector(0, 0, 5.5))):
-                for x in (-1, 1):
-                    with self.subTest(source=name, yaw=yaw, throttle_x=x):
-                        player = player_state(throttle=Vector(x, 0, 0), yaw=yaw, pitch=90)
-                        FlySourceEvaluator(program, {"one": player}).step(100)
-                        self.assertVectorClose(player["velocity"], left * x)
-                        self.assertEqual(player["WaktuMulaiTerbangMaju"], -1)
+                for pitch in (-90, -45, 0, 45, 90):
+                    for x in (-1, 1):
+                        with self.subTest(source=name, yaw=yaw, pitch=pitch, throttle_x=x):
+                            player = player_state(throttle=Vector(x, 0, 0), yaw=yaw, pitch=pitch)
+                            FlySourceEvaluator(program, {"one": player}).step(100)
+                            self.assertVectorClose(player["velocity"], left * x)
+                            self.assertEqual(player["WaktuMulaiTerbangMaju"], -1)
 
-    def test_backward_reverses_the_view_direction_without_ramping(self) -> None:
+    def test_swapping_the_source_cross_product_operands_reverses_strafe_and_fails_the_oracle(self) -> None:
         for name, program in self.programs:
             with self.subTest(source=name):
-                player = player_state(throttle=Vector(0, 0, -1), pitch=45)
-                evaluator = FlySourceEvaluator(program, {"one": player})
-                evaluator.step(100)
-                evaluator.step(130)
-                self.assertVectorClose(player["velocity"], Vector(0, -5.5 / math.sqrt(2), -5.5 / math.sqrt(2)))
-                self.assertEqual(player["PersenTerbang"], 100)
+                pattern = re.compile(
+                    r"CrossProduct\(Vector\(0,1,0\),(DirectionFromAngles\(HorizontalFacingAngleOf\("
+                    r"(?:Global|Globale)\.PemainAktif\),0\))\)"
+                )
+                mutations = [pattern.subn(r"CrossProduct(\1,Vector(0,1,0))", statement) for statement in program]
+                self.assertEqual(sum(count for _, count in mutations), 1)
+                mutated_program = tuple(statement for statement, _ in mutations)
+                expected_left = Vector(5.5, 0, 0)
+                original = player_state(throttle=Vector(1, 0, 0), pitch=90)
+                mutated = player_state(throttle=Vector(1, 0, 0), pitch=90)
+                FlySourceEvaluator(program, {"one": original}).step(100)
+                FlySourceEvaluator(mutated_program, {"one": mutated}).step(100)
+                self.assertVectorClose(original["velocity"], expected_left)
+                self.assertVectorClose(mutated["velocity"], -expected_left)
+                with self.assertRaises(AssertionError):
+                    self.assertVectorClose(mutated["velocity"], expected_left)
+
+    def test_backward_stays_horizontal_for_every_pitch_and_never_ramps(self) -> None:
+        for name, program in self.programs:
+            for yaw, backward in ((0, Vector(0, 0, -5.5)), (90, Vector(-5.5, 0, 0)), (180, Vector(0, 0, 5.5)), (270, Vector(5.5, 0, 0))):
+                for pitch in (-90, -45, 0, 45, 90):
+                    with self.subTest(source=name, yaw=yaw, pitch=pitch):
+                        player = player_state(throttle=Vector(0, 0, -1), yaw=yaw, pitch=pitch)
+                        evaluator = FlySourceEvaluator(program, {"one": player})
+                        evaluator.step(100)
+                        evaluator.step(130)
+                        self.assertVectorClose(player["velocity"], backward)
+                        self.assertEqual(player["PersenTerbang"], 100)
+                        self.assertEqual(player["WaktuMulaiTerbangMaju"], -1)
+
+    def test_forward_and_backward_diagonals_keep_the_correct_side_and_height(self) -> None:
+        diagonal = 5.5 / math.sqrt(2)
+        cases = (
+            (Vector(1, 0, 1), 45, Vector(diagonal, 2.75, 2.75)),
+            (Vector(-1, 0, 1), 45, Vector(-diagonal, 2.75, 2.75)),
+            (Vector(1, 0, -1), 45, Vector(diagonal, 0, -diagonal)),
+            (Vector(-1, 0, -1), -45, Vector(-diagonal, 0, -diagonal)),
+            (Vector(1, 0, 1), 90, Vector(diagonal, diagonal, 0)),
+            (Vector(-1, 0, 1), -90, Vector(-diagonal, -diagonal, 0)),
+        )
+        for name, program in self.programs:
+            for throttle, pitch, expected in cases:
+                with self.subTest(source=name, throttle=throttle, pitch=pitch):
+                    player = player_state(throttle=throttle, pitch=pitch)
+                    evaluator = FlySourceEvaluator(program, {"one": player})
+                    evaluator.step(100)
+                    evaluator.step(130)
+                    self.assertVectorClose(player["velocity"], expected)
+                    self.assertEqual(player["PersenTerbang"], 100)
 
     def test_diagonal_input_is_normalized_and_never_receives_the_forward_ramp(self) -> None:
         for name, program in self.programs:

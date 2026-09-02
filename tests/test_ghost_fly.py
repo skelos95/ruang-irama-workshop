@@ -297,7 +297,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"{owner}.FisikaHantuTerbangDiterapkan==True",
                 f"{owner}.ArahTerbang=FacingDirectionOf({owner})*Max(0,ZComponentOf(ThrottleOf({owner})))"
                 f"+DirectionFromAngles(HorizontalFacingAngleOf({owner}),0)*Min(0,ZComponentOf(ThrottleOf({owner})))"
-                f"+CrossProduct(DirectionFromAngles(HorizontalFacingAngleOf({owner}),0),Vector(0,1,0))*"
+                f"+CrossProduct(Vector(0,1,0),DirectionFromAngles(HorizontalFacingAngleOf({owner}),0))*"
                 f"XComponentOf(ThrottleOf({owner}));",
                 f"MagnitudeOf({owner}.ArahTerbang)>0.050",
                 f"{owner}.DeltaTerbang=Normalize({owner}.ArahTerbang)*5.500*{owner}.PersenTerbang/100"
@@ -423,14 +423,17 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 self.assertIn(token, reapply)
 
             fast = subroutine(source, "ProsesCepatPemain")
-            team_change = fast.index(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)")
-            queue_registration = fast.index(f"{global_name}.PemainAktif.PindahTimDiproses == False", team_change)
-            team_branch = fast[team_change:queue_registration]
-            self.assertIn("Call Subroutine(TenangkanPemain);", team_branch)
-            self.assertIn("Call Subroutine(BersihkanPemain);", team_branch)
-            self.assertIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = False;", team_branch)
-            self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = False;", team_branch)
-            self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", team_branch)
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
+            team_rule = rule_with(source, '01a - Siklus tim: Reset penuh pada konteks pemain')
+            self.assertIn("Ongoing - Each Player;", team_rule)
+            self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", team_rule)
+            self.assertIn("Event Player.SegarkanRosterTertunda = False;", team_rule)
+            self.assertIn("Event Player.PindahTimDiproses = False;", team_rule)
+            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", team_rule)
+            self.assertLess(team_rule.index("Call Subroutine(TenangkanPemain);"), team_rule.index("Call Subroutine(BersihkanPemain);"))
+            self.assertNotIn(f"{global_name}.PemainAktif", team_rule)
+            self.assertNotIn("Wait(", team_rule)
 
             hero_change = reapply.index(
                 f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"

@@ -8,6 +8,58 @@ from pathlib import Path
 from tools import validate_workshop as validator
 
 
+class PlayerContextCallGraphTests(unittest.TestCase):
+    def errors(self, source: str) -> list[str]:
+        return validator.global_player_context_errors(validator.extract_rules(source))
+
+    def fixture(self, origin_actions: str, middle_actions: str = "") -> str:
+        return f'''
+rule("global") {{ event {{ Ongoing - Global; }} actions {{ {origin_actions} }} }}
+rule("middle") {{ event {{ Subroutine; Middle; }} actions {{ {middle_actions} }} }}
+rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Player); }} }}
+'''
+
+    def test_current_runtime_has_no_global_event_player_dependencies(self) -> None:
+        self.assertEqual(self.errors(validator.SOURCE.read_text(encoding="utf-8")), [])
+
+    def test_direct_global_event_player_use_is_rejected(self) -> None:
+        self.assertTrue(self.errors(self.fixture("Stop Camera(Event Player);")))
+
+    def test_direct_and_indirect_player_subroutines_are_rejected(self) -> None:
+        self.assertTrue(self.errors(self.fixture("Call Subroutine(Local);")))
+        errors = self.errors(self.fixture("Call Subroutine(Middle);", "Call Subroutine(Local);"))
+        self.assertTrue(any("global -> Middle -> Local" in error for error in errors))
+
+    def test_start_rule_also_inherits_global_context(self) -> None:
+        errors = self.errors(self.fixture("Start Rule(Middle, Do Nothing);", "Call Subroutine(Local);"))
+        self.assertTrue(any("global -> Middle -> Local" in error for error in errors))
+
+    def test_recursive_subroutines_terminate_context_analysis(self) -> None:
+        errors = self.errors(self.fixture("Call Subroutine(Middle);",
+                                         "Call Subroutine(Middle); Call Subroutine(Local);"))
+        self.assertEqual(len(errors), 1)
+
+    def test_player_local_callers_and_comment_tokens_are_not_false_positives(self) -> None:
+        source = self.fixture('"Call Subroutine(Local); Event Player"', "")
+        source += 'rule("player") { event { Ongoing - Each Player; All; All; } actions { Call Subroutine(Local); } }'
+        self.assertEqual(self.errors(source), [])
+
+    def test_old_team_switch_calls_fail_even_through_an_extra_shared_subroutine(self) -> None:
+        source = validator.SOURCE.read_text(encoding="utf-8")
+        rules = validator.extract_rules(source)
+        fast = validator.rule_by_subroutine(rules, "ProsesCepatPemain")
+        shared = validator.rule_by_subroutine(rules, "HitungPilihan")
+        self.assertIsNotNone(fast)
+        self.assertIsNotNone(shared)
+        for callee in ("TenangkanPemain", "BersihkanPemain"):
+            with self.subTest(callee=callee):
+                changed_fast = fast.body.replace("\tactions\n\t{", "\tactions\n\t{\n\t\tCall Subroutine(HitungPilihan);", 1)
+                changed_shared = shared.body.replace("\tactions\n\t{", f"\tactions\n\t{{\n\t\tCall Subroutine({callee});", 1)
+                mutated = source.replace(fast.body, changed_fast, 1).replace(shared.body, changed_shared, 1)
+                self.assertTrue(any(f"ProsesCepatPemain -> HitungPilihan -> {callee}" in error
+                                    for error in self.errors(mutated)))
+
+
 class SemanticWorkshop081Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -1476,8 +1528,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 "Facing Direction Of(Global.PemainAktif) * Min(0, Z Component Of(Throttle Of(Global.PemainAktif)))",
             ),
             (
-                "Cross Product(Direction From Angles(Horizontal Facing Angle Of(Global.PemainAktif), 0), Vector(0, 1, 0)) * X Component Of(Throttle Of(Global.PemainAktif))",
-                "Cross Product(Direction From Angles(Horizontal Facing Angle Of(Global.PemainAktif), 0), Vector(0, 1, 0)) * 1",
+                "Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(Global.PemainAktif), 0)) * X Component Of(Throttle Of(Global.PemainAktif))",
+                "Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(Global.PemainAktif), 0)) * 1",
             ),
         ):
             with self.subTest(direction=old):
@@ -2265,33 +2317,90 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "dispatcher team-switch deve escludere gli iBot")
 
     def test_team_switch_detector_requires_full_cleanup_calls(self) -> None:
-        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                           and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
             with self.subTest(token=token):
-                mutated = self.replace_in_rule(fast, token, "")
+                mutated = self.replace_in_rule(worker, token, "")
                 self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
 
-        sequence = "Call Subroutine(TenangkanPemain);\n\t\t\tCall Subroutine(BersihkanPemain);"
-        swapped = "Call Subroutine(BersihkanPemain);\n\t\t\tCall Subroutine(TenangkanPemain);"
-        mutated = self.replace_in_rule(fast, sequence, swapped)
+        sequence = "Call Subroutine(TenangkanPemain);\n\t\tCall Subroutine(BersihkanPemain);"
+        swapped = "Call Subroutine(BersihkanPemain);\n\t\tCall Subroutine(TenangkanPemain);"
+        mutated = self.replace_in_rule(worker, sequence, swapped)
         self.assert_rejected(mutated, "tenangkan deve precedere bersihkan")
 
-    def test_team_switch_detector_disallows_abort_paths(self) -> None:
+    def test_old_global_team_cleanup_is_rejected_by_transitive_context_gate(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
-        marker = '"Perubahan tim pemain terdaftar kini menjalankan reset penuh agar slot roster, HUD, dan status lama benar-benar dilepas."'
-        mutated = self.replace_in_rule(
-            fast,
-            marker,
-            marker + "\n\t\t\tAbort;",
-        )
+        mutated = self.inject_action(fast, "Call Subroutine(TenangkanPemain);")
+        self.assert_rejected(mutated, "contesto Event Player non disponibile da Ongoing - Global")
+
+    def test_team_switch_worker_requires_owner_and_registered_identity_guards(self) -> None:
+        worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                           and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
+        for token in ("Is Dummy Bot(Event Player) == False;",
+                      "Event Player.BotOtomatis == False;",
+                      "Array Contains(Global.PemainManusia, Event Player) == True;"):
+            with self.subTest(token=token):
+                self.assert_rejected(self.replace_in_rule(worker, token, ""),
+                                     "detector team-switch senza guardia")
+
+    def test_team_reset_restores_engine_before_discarding_runtime_latches(self) -> None:
+        quiet = self.rule(lambda rule: validator.subroutine_target(rule) == "TenangkanPemain")
+        for token in ("Stop Camera(Event Player);",
+                      "Stop Modifying Hero Voice Lines(Event Player);",
+                      "Stop Chasing Player Variable(Event Player, WarnaMenu);",
+                      "Detach Players(Event Player);",
+                      "Enable Nameplates(All Players(All Teams), Event Player);",
+                      "Allow Button(Event Player, Button(Melee));",
+                      "Call Subroutine(PulihkanNasibPemain);"):
+            with self.subTest(token=token):
+                self.assert_rejected(self.replace_in_rule(quiet, token, ""), "reset engine completo")
+        token = "Call Subroutine(TutupMenu);"
+        mutated = self.replace_in_rule(quiet, token, f"If(Event Player.MenuTerbuka == True); {token} End;")
+        self.assert_rejected(mutated, "reset engine completo deve essere incondizionato")
+
+    def test_slot_cleanup_cannot_recycle_twice_or_discard_undestroyed_handles(self) -> None:
+        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
+        mutated = self.replace_in_rule(cleanup, "If(Global.IndeksKeluar >= 0);", "If(True);")
+        self.assert_rejected(mutated, "riciclo slot deve essere idempotente")
+        for array, action in (("HudKiriPemain", "Destroy HUD Text"),
+                              ("HudKananPemain", "Destroy HUD Text"),
+                              ("HudMenuPemain", "Destroy HUD Text"),
+                              ("TeksDuniaPemain", "Destroy In-World Text")):
+            with self.subTest(array=array):
+                token = f"{action}(Global.{array}[Global.IndeksPembersihan]);"
+                self.assert_rejected(self.replace_in_rule(cleanup, token, ""), "distruzione handle prima del riciclo")
+
+    def test_pending_lifecycle_rejects_stale_team_target_and_early_reservation(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(fast, "Global.PemainAktif.TimSiklusTarget != Team Of(Global.PemainAktif)", "False")
+        self.assert_rejected(mutated, "secondo cambio squadra")
+        mutated = self.replace_in_rule(fast, "Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim", "True")
+        self.assert_rejected(mutated, "entrambe le scadenze")
+        scheduler = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global"
+                              and "Call Subroutine(ProsesCepatPemain);" in rule.body)
+        mutated = self.replace_in_rule(scheduler, "Has Spawned(Global.PemainSiklusGlobal) == False", "False")
+        self.assert_rejected(mutated, "player non spawned")
+
+    def test_menu_canonical_handle_must_be_destroyed_before_its_reference_is_lost(self) -> None:
+        close_menu = self.rule(lambda rule: validator.subroutine_target(rule) == "TutupMenu")
+        canonical = "Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]"
+        mutated = self.replace_in_rule(close_menu, f"Destroy HUD Text({canonical});", "")
+        self.assert_rejected(mutated, "chiusura menu deve distruggere prima il canonico")
+
+    def test_team_switch_detector_disallows_abort_paths(self) -> None:
+        worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                           and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
+        mutated = self.inject_action(worker, "Abort;")
         self.assert_rejected(mutated, "detector non deve usare Abort")
 
     def test_team_switch_detector_rejects_pending_roster_model(self) -> None:
-        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                           and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         mutated = self.replace_in_rule(
-            fast,
-            "Global.PemainAktif.SegarkanRosterTertunda = False;",
-            "Global.PemainAktif.SegarkanRosterTertunda = True;",
+            worker,
+            "Event Player.SegarkanRosterTertunda = False;",
+            "Event Player.SegarkanRosterTertunda = True;",
         )
         self.assert_rejected(mutated, "pending roster ringan")
 
@@ -2343,19 +2452,21 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 self.assert_rejected(mutated, "deve escludere il pending team-switch")
 
     def test_team_switch_cleanup_branch_requires_requeue_reset(self) -> None:
-        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                           and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         mutated = self.replace_in_rule(
-            fast,
-            "Global.PemainAktif.PindahTimDiproses = False;",
+            worker,
+            "Event Player.PindahTimDiproses = False;",
             "",
         )
         self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
 
     def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
-        mutated = self.source.replace(
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        mutated = self.replace_in_rule(
+            setup,
             "Event Player.SegarkanRosterTertunda = False;",
             "Event Player.SegarkanRosterTertunda = Null;",
-            1,
         )
         self.assert_rejected(mutated, "reset setup iniziale mancante")
 

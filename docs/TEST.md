@@ -2,7 +2,7 @@
 
 Stato: **static-ready / live-pending**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il reset completo al cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il test utente della precedente revisione Fly ha dato esito negativo su diversi eroi: velocità costante e impossibilità di salire/scendere. La nuova implementazione 3D a impulsi non ha ancora un esito live documentato; la segnalazione precedente non dimostra da sola un difetto del timer. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il reset completo al cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il vecchio Fly basato sul movimento nativo aveva dato esito negativo su diversi eroi; l'utente ha poi confermato il funzionamento della correzione 3D a impulsi. Quel riscontro non copre però la revisione corrente della formula laterale e del reset squadra: le prove mirate sotto sono ancora da eseguire e non equivalgono a una certificazione completa della 0.8.1. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -152,7 +152,7 @@ Focus dati:
 - Attraversare e farsi attraversare da un umano e da un dummy: FULL HP non deve avere collisione con player/bot.
 - Passare da FULL HP a OFF e ripetere le prove: danni, urti e collisione devono tornare normali.
 - Passare da FULL HP a 1 HP: collisione e urti devono tornare normali, mentre resta soltanto la semantica curabile della modalità 1 HP.
-- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Self Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Cambio squadra e leave/rejoin eseguono setup fresco e ripristinano i default.
+- Partire da FULL HP e attivare Try Your Luck: modalità e cursore devono restare invariati. Vision, Acceleration, Team Heal e Hacked conservano status, immunità a danni/urti, assenza di collisione e icona; Burning li sospende per tutti i 10 secondi e li ripristina al termine. Soltanto lo Skull finale sospende la protezione per completare la morte; dopo Resurrect la preferenza e l'icona devono riattivarsi. Cambio squadra e leave/rejoin eseguono setup fresco e ripristinano i default.
 - Partire da FULL HP, entrare/uscire dalla Spawn Room e morire: la scelta non deve essere cancellata. Dopo Resurrect verificare nuovamente danni zero, urti zero e assenza di collisione con player/bot; la stessa protezione deve restare attiva dentro la Spawn Room.
 - Verificare con più player che l'immunità di un utente non venga trasferita al player successivo dello scheduler e non venga mai applicata a dummy/iBot.
 
@@ -165,7 +165,7 @@ Forzare o ripetere l'attivazione fino a osservare tutti gli esiti:
 | Vision | icona eroe, nome roster stabile e salute live in EN/ID/TH per bot/dummy e tutti gli umani, compresi quelli con Privacy ON; Crouch non crea inspection/Teleport o altri HUD; cleanup dopo 15 s |
 | Acceleration | da fermo e senza input direzionali, propulsione automatica lungo la mira 3D; cleanup dopo 10 s |
 | Skull | unico esito che bypassa Unkillable; D.Va: distruzione mech seguita dalla morte pilota; Echo: fine duplicazione seguita dalla morte base; cleanup/menu soltanto alla morte completa; protezione ripristinata dopo Resurrect |
-| Self Heal | salute completa a tutti i player vivi della squadra del proprietario; il messaggio resta solo al proprietario |
+| Team Heal (Heart) | salute completa a tutti i player vivi della squadra del proprietario; il messaggio resta solo al proprietario |
 | Burning | 5% max HP ogni 1 s per 10 s; Unkillable e riduzione Damage Received sospesi per l'intera durata e ripristinati al termine; stop alla morte |
 | Hacked | stato per 5 s, poi rimozione |
 
@@ -188,11 +188,13 @@ Per ciascun esito:
 Matrice obbligatoria Try Your Luck × Unkillable:
 
 - ripetere i sei esiti con Unkillable OFF, 1 HP e FULL HP;
-- con 1 HP e FULL HP, Vision, Acceleration, Self Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
+- con 1 HP e FULL HP, Vision, Acceleration, Team Heal e Hacked non devono mai rimuovere status, cambiare modalità/cursore o far sparire stabilmente l'icona;
 - con Burning, verificare che ogni secondo venga applicato il 5% della Max Health anche partendo da 1 HP/FULL HP, senza modificare Mode/Kursor; Unkillable e la riduzione Damage Received devono restare sospesi per tutti i 10 secondi, senza riapplicazione fra i tick, e tornare immediatamente al termine o dopo un cleanup anticipato;
 - con Skull finale, verificare il bypass temporaneo e la morte completa; premere Jump per Resurrect e confermare il ripristino della stessa modalità, della tripletta corretta e dell'icona entro il tick globale;
 - lasciare scadere la deadline Skull quando `Kill` viene rifiutato: menu/input devono liberarsi e Unkillable deve tornare attivo senza alterare Mode/Kursor;
 - ripetere un Revenge su target 1 HP e FULL HP: deve usare lo stesso bypass temporaneo, ma claimant, consumo debito, condizioni di commit e timeout devono restare identici ai test Revenge esistenti.
+
+Verifica specifica HEART: ferire il proprietario, un alleato e un avversario, lasciando un altro alleato morto; l'esito deve riportare a salute piena soltanto tutti i vivi della squadra del proprietario, senza resuscitare i morti o curare gli avversari. Il messaggio resta soltanto al proprietario. Ripetere dopo un cambio squadra per verificare che venga usata la squadra corrente, senza cambiare menu, cursori o preferenze degli alleati.
 
 ### Revenge e morte completa
 
@@ -211,7 +213,7 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 - Verificare che ogni pagina mostri nell'ordine titolo, destinazione/posizione, target quando applicabile e azione; i comandi devono riflettere i binding reali, compreso dopo una rimappatura degli input.
 - Verificare il singolo HUD per-player e la progressione 1→5 mint, cyan, blu, viola e rosa: istruzioni in tinta pastello e contenuto in tinta neon, senza contaminare cursore, colori o handle di un altro player.
 - Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva; Primary/Secondary non devono eseguire il teleport o la kill.
-- Sulla pagina Self Elimination, testo ed effetto devono specificare la forma eroe corrente. Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte, Resurrect e cambio squadra non devono azzerare il cooldown, mentre un vero leave/rejoin deve inizializzarlo di nuovo.
+- Sulla pagina Self Elimination, testo ed effetto devono specificare la forma eroe corrente. Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte e Resurrect non devono azzerare il cooldown, mentre cambio squadra e vero leave/rejoin devono inizializzarlo di nuovo con il setup fresco.
 - Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
 - Da attaccati, Reload senza Crouch deve restare l'azione nativa dell'eroe.
 - Con Menu Arcade Melee chiuso, Crouch + Reload deve sganciare; con Menu Arcade Melee aperto non deve sganciare.
@@ -221,15 +223,15 @@ Matrice obbligatoria Try Your Luck × Unkillable:
 
 - Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load` e che il roster conservi una sola voce.
 - Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: ciascun player già registrato deve attraversare il reset completo (`TenangkanPemain` + `BersihkanPemain`) e rientrare dal classifier/setup senza duplicazioni.
-- Durante la transizione verificare che la vecchia voce roster venga rimossa e ricreata una sola volta dopo la nuova registrazione; nessun handle precedente deve restare vivo.
+- Durante la transizione verificare che `01a` esegua il cleanup con l'`Event Player` del player che cambia squadra: la vecchia voce roster viene rimossa prima del retry a 0,25 s e ricreata una sola volta dopo la nuova registrazione. Nessun handle precedente deve restare vivo: gli array canonici devono conservare il riferimento fino alla distruzione e al rilascio dello slot; lo scheduler globale non deve eseguire cleanup locali fuori contesto.
 - Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: il cleanup deve restare atomico e il setup deve ricostruire correttamente HUD/stato appena l'entità torna valida.
 - Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: il reset completo deve liberare subito lock e riferimenti, senza percorsi `Abort` o dipendenze da `Server Load`.
 - Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: il vecchio In-World Text deve sparire durante il cleanup e tornare solo dopo la nuova registrazione con nome, icona eroe e HP corretti.
 - Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Caladan Brood`.
-- Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il fast-path non acquisisca il lock globale del join.
-- Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il reset completo deve chiuderli/pulirli in modo deterministico, senza riferimenti ereditati.
+- Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il detector individuale non acquisisca il lock globale del join.
+- Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il reset completo deve chiuderli/pulirli in modo deterministico, senza riferimenti ereditati. Ripetere Team 1 → Team 2 → Team 1 rapidamente con menu, Camera self/watch, Fly e ciascun effetto Luck attivi: nessuna Camera, accelerazione, gravità zero o status deve sopravvivere al reset; con Fly OFF il movimento nativo deve essere normale.
 - Attivare Ghost e Fly separatamente prima del cambio: dopo il reset devono tornare OFF e riattivarsi solo da menu.
-- Eseguire poi un leave vero durante o subito dopo il cambio: il cleanup deve rimuovere una sola volta roster e riferimenti, senza doppio passaggio.
+- Eseguire poi un leave vero durante o subito dopo il cambio: il cleanup deve rimuovere una sola volta roster e riferimenti, senza doppio passaggio. Con due player, tenere il secondo su un menu diverso e in Fly/Luck mentre il primo cambia due volte squadra: cursore, timer, fisica e HUD del secondo devono restare invariati, salvo i riferimenti sociali esplicitamente invalidati.
 
 ### Camera
 
@@ -276,7 +278,9 @@ Eseguire con HUD, menu, Camera, inspection, Teleport, Unkillable, Revenge, voto 
 - leave con menu aperto e chiuso;
 - leave durante ciascun sottosistema;
 - leave di un target votato: ogni `PemainDipilih` che lo referenziava deve essere azzerato prima della rimozione dal roster e i conteggi devono essere ricalcolati;
-- rientro nello stesso slot.
+- rientro nello stesso slot;
+- con tutti i 12 slot occupati, far uscire un umano con menu, Camera, Vision, effetto Luck e voti attivi e far entrare un player diverso: dopo la guardia leave di 0,5 s lo slot deve essere libero e il nuovo setup deve partire dai default, senza dati Revenge, voti, timer, privacy o HUD ereditati;
+- ripetere alternando due identità nello stesso slot e facendo join mentre il cleanup è ancora in attesa: un evento leave tardivo non deve cancellare le nuove righe HUD. Confrontare Text Count ed Entity Count in stati equivalenti prima e dopo, per rilevare anche handle persi che non compaiono più negli array di tracking.
 
 Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/leave e nessun target stale.
 

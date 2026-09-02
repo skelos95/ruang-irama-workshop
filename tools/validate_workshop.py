@@ -2276,8 +2276,8 @@ def validate_ghost_fly(
             ("Global.PemainAktif.ArahTerbang=FacingDirectionOf(Global.PemainAktif)*"
              "Max(0,ZComponentOf(ThrottleOf(Global.PemainAktif)))+DirectionFromAngles("
              "HorizontalFacingAngleOf(Global.PemainAktif),0)*Min(0,ZComponentOf(ThrottleOf("
-             "Global.PemainAktif)))+CrossProduct(DirectionFromAngles(HorizontalFacingAngleOf("
-             "Global.PemainAktif),0),Vector(0,1,0))*XComponentOf(ThrottleOf(Global.PemainAktif));",
+             "Global.PemainAktif)))+CrossProduct(Vector(0,1,0),DirectionFromAngles(HorizontalFacingAngleOf("
+             "Global.PemainAktif),0))*XComponentOf(ThrottleOf(Global.PemainAktif));",
              "direzione Fly: solo l'input avanti usa il pitch, mentre indietro/strafe restano orizzontali"),
             ("If(MagnitudeOf(Global.PemainAktif.ArahTerbang)>0.050);"
              "Global.PemainAktif.DeltaTerbang=Normalize(Global.PemainAktif.ArahTerbang)*5.500*"
@@ -2357,41 +2357,12 @@ def validate_ghost_fly(
                 checks.require(token in owner_packed,
                                f"Ghost/Fly {label} incompleto: {token}")
 
-    checks.require(fast is not None, "Ghost/Fly: lifecycle cambio squadra assente")
-    if fast:
-        mismatch_anchor = fast.body.find(
-            "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
-        )
-        mismatch_branches = (
-            conditional_branches_containing(fast.body, mismatch_anchor)
-            if mismatch_anchor >= 0 else []
-        )
-        checks.require(bool(mismatch_branches), "Ghost/Fly: detector cambio squadra non isolato")
-        if mismatch_branches:
-            mismatch = mask_strings(mismatch_branches[0])
-            for token in (
-                "Call Subroutine(TenangkanPemain);",
-                "Call Subroutine(BersihkanPemain);",
-                "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                "Global.PemainAktif.PindahTimDiproses = False;",
-                "Global.PemainAktif.SiklusPemainAktif = False;",
-                "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
-                "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
-            ):
-                checks.require(token in mismatch, f"Ghost/Fly cambio squadra incompleto: {token}")
-            checks.require(
-                mismatch.find("Call Subroutine(TenangkanPemain);")
-                < mismatch.find("Call Subroutine(BersihkanPemain);"),
-                "Ghost/Fly cambio squadra: tenangkan harus sebelum bersihkan",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", mismatch) is None,
-                "Ghost/Fly cambio squadra non deve usare Abort",
-            )
-        checks.require(
-            "Global.PemainAktif.SegarkanRosterTertunda = True;" not in fast.body,
-            "Ghost/Fly cambio squadra non deve usare pending roster ringan",
-        )
+    team_switch = team_switch_worker(rules)
+    checks.require(team_switch is not None, "Ghost/Fly: lifecycle cambio squadra Each Player assente")
+    if team_switch:
+        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
+            checks.require(token in mask_strings(team_switch.body),
+                           f"Ghost/Fly cambio squadra incompleto: {token}")
 
     timestamp_writers: list[tuple[str, str]] = []
     for rule in rules:
@@ -3520,7 +3491,44 @@ def validate_unkillable_full_hp(checks: Checks, rules: list[Rule]) -> None:
             checks.require(token in masked, f"ripristino modalità 1 HP in Spawn Room incompleto: {token}")
 
 
+def global_player_context_errors(rules: list[Rule]) -> list[str]:
+    """Follow the call graph: subroutines inherit, never create, Event Player."""
+    subroutine_rules = {subroutine_target(rule): rule for rule in rules
+                        if subroutine_target(rule) is not None}
+    errors: list[str] = []
+    for origin in rules_with_event(rules, "Ongoing - Global"):
+        pending = [(origin, (origin.name,))]
+        visited: set[int] = set()
+        while pending:
+            rule, path = pending.pop()
+            if rule.start in visited:
+                continue
+            visited.add(rule.start)
+            masked = mask_strings(rule.body)
+            if re.search(r"\bEvent\s+Player\b", masked):
+                errors.append(
+                    "contesto Event Player non disponibile da Ongoing - Global: "
+                    + " -> ".join(path)
+                )
+            # Start Rule copies the same context, even though execution is asynchronous.
+            for action in ("Call Subroutine", "Start Rule"):
+                for call in iter_calls(masked, action):
+                    if call.args and call.args[0].strip() in subroutine_rules:
+                        name = call.args[0].strip()
+                        pending.append((subroutine_rules[name], path + (name,)))
+    return errors
+
+
+def team_switch_worker(rules: list[Rule]) -> Rule | None:
+    return next((rule for rule in rules
+                 if event_type(rule) == "Ongoing - Each Player"
+                 and "Event Player.TimTerakhir != Team Of(Event Player)"
+                 in (rule_block(rule, "conditions") or "")), None)
+
+
 def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
+    for error in global_player_context_errors(rules):
+        checks.require(False, error)
     masked = mask_strings(source)
     checks.equal(action_loop_count(source), 1, "numero Loop Workshop")
     scheduler_candidates = [rule for rule in rules if action_loop_count(rule.body) == 1]
@@ -4427,7 +4435,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                    "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
     joined = rules_with_event(rules, "Player Joined Match")
     left = rules_with_event(rules, "Player Left Match")
-    checks.equal(len(joined), 0, "lifecycle join/team-switch deve essere global-first senza Player Joined Match")
+    checks.equal(len(joined), 0, "lifecycle join deve essere global-first senza Player Joined Match")
     checks.equal(len(left), 1, "regola Player Left Match unica")
     if left:
         body = left[0].body
@@ -4535,8 +4543,62 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if quiet:
         checks.require(not wait_calls(quiet.body) and action_loop_count(quiet.body) == 0,
                        "TenangkanPemain deve essere atomica e senza Wait/Loop")
-        checks.require("Call Subroutine(PulihkanNasibPemain);" not in quiet.body,
-                       "TenangkanPemain non deve duplicare il reset pesante")
+        quiet_masked = mask_strings(quiet.body)
+        for token in (
+            "Call Subroutine(TutupMenu);",
+            "Allow Button(Event Player, Button(Melee));",
+            "Stop Camera(Event Player);",
+            "Stop Modifying Hero Voice Lines(Event Player);",
+            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
+            "Detach Players(Event Player);",
+            "Enable Nameplates(All Players(All Teams), Event Player);",
+            "Event Player.PelatNamaDinonaktifkan = False;",
+            "Event Player.LampiranTeleportasiAktif = False;",
+            "Event Player.TargetLampiranTeleportasi = Null;",
+            "Event Player.ModeKebal = 0;",
+            "Call Subroutine(PulihkanNasibPemain);",
+        ):
+            checks.require(token in quiet_masked, f"reset engine completo mancante: {token}")
+        # Flow is delimited by semicolons, not newlines: an inline If must not hide a gated reset.
+        required_unconditional = {"Call Subroutine(TutupMenu)": [],
+                                  "Call Subroutine(PulihkanNasibPemain)": []}
+        depth = 0
+        for statement in mask_strings(rule_block(quiet, "actions") or "").split(";"):
+            statement = statement.strip()
+            if re.match(r"^(?:If|While|For Global Variable|For Player Variable)\s*\(", statement):
+                depth += 1
+            elif statement == "End":
+                depth -= 1
+            elif statement in required_unconditional:
+                required_unconditional[statement].append(depth)
+        for token, levels in required_unconditional.items():
+            checks.require(bool(levels) and all(level == 0 for level in levels),
+                           f"reset engine completo deve essere incondizionato: {token};")
+        checks.require(0 <= quiet_masked.find("Event Player.ModeKebal = 0;")
+                       < quiet_masked.find("Call Subroutine(PulihkanNasibPemain);"),
+                       "reset engine completo deve spegnere Unkillable prima del ripristino condiviso")
+        for engine_action, field_reset in (
+            ("Detach Players(Event Player);", "Event Player.LampiranTeleportasiAktif = False;"),
+            ("Enable Nameplates(All Players(All Teams), Event Player);", "Event Player.PelatNamaDinonaktifkan = False;"),
+        ):
+            checks.require(0 <= quiet_masked.find(engine_action) < quiet_masked.find(field_reset),
+                           f"reset engine completo azzera il latch prima del ripristino: {field_reset}")
+        checks.require("Event Player.IkonKebal = Null;" not in quiet_masked,
+                       "reset engine deve conservare IkonKebal fino alla distruzione canonica")
+
+    close_menu = rule_by_subroutine(rules, "TutupMenu")
+    if close_menu:
+        masked = mask_strings(close_menu.body)
+        canonical = "Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]"
+        positions = tuple(masked.find(token) for token in (
+            f"Destroy HUD Text({canonical});",
+            f"If(Event Player.HudMenu == {canonical});",
+            "Event Player.HudMenu = Null;",
+            f"{canonical} = 0;",
+            "Destroy HUD Text(Event Player.HudMenu);",
+        ))
+        checks.require(all(position >= 0 for position in positions) and positions == tuple(sorted(positions)),
+                       "chiusura menu deve distruggere prima il canonico, evitare doppio destroy e poi liberare il fallback locale")
 
     cleanup = rule_by_subroutine(rules, "BersihkanPemain")
     checks.require(cleanup is not None, "BersihkanPemain assente")
@@ -4554,6 +4616,34 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             checks.require(token in cleanup.body, f"cleanup leave esatto incompleto: {token}")
         checks.require("Index Of Array Value(Global.SlotHUDPemain" not in cleanup.body,
                        "cleanup leave non deve usare fallback slot HUD")
+        recycle = ("Global.SlotHUDTersedia = Sorted Array(Append To Array("
+                   "Global.SlotHUDTersedia, Global.IndeksUtangKeluar), Current Array Element);")
+        recycle_position = cleanup_masked.find(recycle)
+        checks.require(recycle_position >= 0, "cleanup leave non ricicla lo slot HUD canonico")
+        if recycle_position >= 0:
+            headers = [re.sub(r"\s+", "", branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(cleanup.body, recycle_position)]
+            checks.require("If(Global.IndeksKeluar>=0);" in headers,
+                           "cleanup leave: riciclo slot deve essere idempotente e protetto da identità registrata")
+        slot_read = cleanup_masked.find("Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];")
+        removal_positions = []
+        for array, destroy_action in (
+            ("HudKiriPemain", "Destroy HUD Text"),
+            ("HudKananPemain", "Destroy HUD Text"),
+            ("HudMenuPemain", "Destroy HUD Text"),
+            ("TeksDuniaPemain", "Destroy In-World Text"),
+        ):
+            destroy = f"{destroy_action}(Global.{array}[Global.IndeksPembersihan]);"
+            removal = f"Modify Global Variable({array}, Remove From Array By Index, Global.IndeksPembersihan);"
+            positions = tuple(cleanup_masked.find(token) for token in (destroy, recycle, removal))
+            checks.require(all(position >= 0 for position in positions) and positions == tuple(sorted(positions)),
+                           f"cleanup leave: distruzione handle prima del riciclo/rimozione richiesta: {array}")
+            removal_positions.append(positions[-1])
+        slot_remove = cleanup_masked.find("Modify Global Variable(SlotHUDPemain, Remove From Array By Index, Global.IndeksPembersihan);")
+        roster_remove = cleanup_masked.find("Modify Global Variable(PemainManusia, Remove From Array By Index, Global.IndeksPembersihan);")
+        checks.require(0 <= slot_read < recycle_position < slot_remove < roster_remove
+                       and all(0 <= position < roster_remove for position in removal_positions),
+                       "cleanup leave: rimuovere roster soltanto dopo handle paralleli e slot canonico")
         vote_cleanup = list(iter_calls(cleanup.body, "Filtered Array"))
         checks.equal(len(vote_cleanup), 1,
                      "cleanup leave: numero filtri per cancellare voti verso il leaver")
@@ -4687,13 +4777,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for token in (
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
             "Global.PemainAktif.PernahDisiapkan == False",
-            "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)",
-            "Call Subroutine(TenangkanPemain);",
-            "Call Subroutine(BersihkanPemain);",
-            "Global.PemainAktif.SegarkanRosterTertunda = False;",
-            "Global.PemainAktif.PindahTimDiproses = False;",
             "Global.PemainAktif.SiklusPemainAktif = False;",
-            "Global.PemainAktif.TimTerakhir = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
             "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == False",
@@ -4717,7 +4801,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "dispatcher team-switch non deve più usare pending roster ringan",
         )
         checks.require(
-            fast.body.count("Global.PemainAktif.BotOtomatis == False") >= 4,
+            fast.body.count("Global.PemainAktif.BotOtomatis == False") >= 3,
             "dispatcher team-switch deve escludere gli iBot in tutti i gate essenziali",
         )
         checks.require(
@@ -4725,32 +4809,71 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "team switch non deve chiamare SiapkanPemain",
         )
 
-        mismatch_anchor = fast.body.find(
-            "Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
-        )
-        mismatch_branches = (
-            conditional_branches_containing(fast.body, mismatch_anchor)
-            if mismatch_anchor >= 0 else []
-        )
-        checks.require(bool(mismatch_branches), "dispatcher team-switch: detector mismatch non isolato")
-        if mismatch_branches:
-            mismatch = mask_strings(mismatch_branches[0])
-            for token in (
-                "Call Subroutine(TenangkanPemain);",
-                "Call Subroutine(BersihkanPemain);",
-                "Global.PemainAktif.SegarkanRosterTertunda = False;",
-                "Global.PemainAktif.PindahTimDiproses = False;",
-            ):
-                checks.require(token in mismatch, f"detector team-switch cleanup incompleto: {token}")
-            checks.require(
-                mismatch.find("Call Subroutine(TenangkanPemain);")
-                < mismatch.find("Call Subroutine(BersihkanPemain);"),
-                "detector team-switch: tenangkan deve precedere bersihkan",
-            )
-            checks.require(
-                re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", mismatch) is None,
-                "dispatcher team-switch: il detector non deve usare Abort",
-            )
+        checks.require("Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
+                       not in mask_strings(fast.body),
+                       "team switch registrato deve essere gestito nel contesto Each Player")
+        pending_position = fast.body.find("Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);")
+        pending_branches = conditional_branches_containing(fast.body, pending_position) if pending_position >= 0 else []
+        pending = mask_strings(min(pending_branches, key=len)) if pending_branches else ""
+        checks.require("Or(Global.PemainAktif.PindahTimDiproses == False, Global.PemainAktif.TimSiklusTarget != Team Of(Global.PemainAktif))" in pending,
+                       "lifecycle pending deve aggiornare il target dopo un secondo cambio squadra")
+        for token in ("If(Global.PemainSiklusGlobal == Global.PemainAktif);",
+                      "Global.PemainSiklusGlobal = Null;",
+                      "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;"):
+            checks.require(token in pending, "lifecycle pending deve rilasciare la propria vecchia prenotazione")
+        claim_position = fast.body.find("Global.PemainSiklusGlobal = Global.PemainAktif;")
+        claim_branches = conditional_branches_containing(fast.body, claim_position) if claim_position >= 0 else []
+        claim = mask_strings(min(claim_branches, key=len)) if claim_branches else ""
+        checks.require("And(Total Time Elapsed >= Global.WaktuSiklusGlobal, Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim)" in claim,
+                       "lifecycle prenotazione deve attendere entrambe le scadenze prima del lock")
+
+    team_switch = team_switch_worker(rules)
+    checks.require(team_switch is not None, "detector team-switch Each Player assente")
+    if team_switch:
+        conditions = mask_strings(rule_block(team_switch, "conditions") or "")
+        for token in (
+            "Global.Siap == True;",
+            "Is Dummy Bot(Event Player) == False;",
+            "Event Player.BotOtomatis == False;",
+            "Array Contains(Global.PemainManusia, Event Player) == True;",
+            "Event Player.TimTerakhir != Team Of(Event Player);",
+        ):
+            checks.require(token in conditions,
+                           f"detector team-switch senza guardia: {token}")
+        actions = mask_strings(rule_block(team_switch, "actions") or "")
+        for token in (
+            "Call Subroutine(TenangkanPemain);",
+            "Call Subroutine(BersihkanPemain);",
+            "Event Player.SegarkanRosterTertunda = False;",
+            "Event Player.PindahTimDiproses = False;",
+            "Event Player.SiklusPemainAktif = False;",
+            "Event Player.TimTerakhir = Team Of(Event Player);",
+            "Event Player.TimSiklusTarget = Team Of(Event Player);",
+            "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            "If(Global.PemainSiklusGlobal == Event Player);",
+            "Global.PemainSiklusGlobal = Null;",
+            "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;",
+        ):
+            checks.require(token in actions, f"detector team-switch cleanup incompleto: {token}")
+        order = tuple(actions.find(token) for token in (
+            "Call Subroutine(TenangkanPemain);",
+            "Call Subroutine(BersihkanPemain);",
+            "Event Player.TimTerakhir = Team Of(Event Player);",
+        ))
+        checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
+                       "detector team-switch: tenangkan deve precedere bersihkan e il commit del team")
+        checks.require(not wait_calls(team_switch.body) and action_loop_count(team_switch.body) == 0,
+                       "detector team-switch deve essere atomico senza Wait/Loop")
+        checks.require(re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", actions) is None,
+                       "detector team-switch: il detector non deve usare Abort")
+        checks.require("Server Load" not in conditions,
+                       "detector team-switch non deve dipendere dal carico server")
+        checks.require("Event Player.SegarkanRosterTertunda = True;" not in actions,
+                       "detector team-switch non deve usare pending roster ringan")
+        checks.require("Call Subroutine(SiapkanPemain);" not in actions,
+                       "team switch deve attendere il worker di setup serializzato")
+        checks.require("Global.PemainAktif" not in actions,
+                       "detector team-switch non deve riusare lo scratch del scheduler")
 
     roster_hud = next((
         rule for rule in rules
@@ -4789,13 +4912,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "renderer roster deve dichiararsi pronto dopo entrambi gli handle",
         )
 
-    cleanup_worker = next((
-        rule for rule in rules
-        if event_type(rule) == "Ongoing - Each Player"
-        and "Call Subroutine(BersihkanPemain);" in rule.body
-        and "Event Player.WaktuSiklusTim" in rule.body
-    ), None)
-    checks.require(cleanup_worker is None, "il vecchio worker cleanup team-switch non deve esistere")
+    cleanup_workers = [rule for rule in rules
+                       if event_type(rule) == "Ongoing - Each Player"
+                       and "Call Subroutine(BersihkanPemain);" in mask_strings(rule.body)]
+    checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == team_switch,
+                   "cleanup team-switch deve avere un solo worker Each Player con mismatch team")
 
     setup_worker = next((
         rule for rule in rules
@@ -4838,6 +4959,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null)",
         ):
             checks.require(token in scheduler.body, f"scheduler lifecycle iniziale incompleto: {token}")
+        checks.require("Or(Entity Exists(Global.PemainSiklusGlobal) == False, Has Spawned(Global.PemainSiklusGlobal) == False)" in mask_strings(scheduler.body),
+                       "scheduler lifecycle deve rilasciare la prenotazione di un player non spawned")
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle is not None, "ProsesSiklusPemain assente")

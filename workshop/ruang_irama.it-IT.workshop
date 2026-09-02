@@ -1022,6 +1022,42 @@ regola("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")
 	}
 }
 
+regola("01a - Siklus tim: Reset penuh pada konteks pemain")
+{
+	evento
+	{
+		Ongoing - Each Player;
+		Tutti;
+		Tutti;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Dummy Bot(Event Player) == False;
+		Event Player.BotOtomatis == False;
+		Array Contains(Globale.PemainManusia, Event Player) == True;
+		Event Player.TimTerakhir != Team Of(Event Player);
+	}
+
+	azioni
+	{
+		"Reset atomik memakai Event Player yang benar; slot dan HUD lama dilepas sebelum antrean penyiapan baru."
+		Call Subroutine(TenangkanPemain);
+		Call Subroutine(BersihkanPemain);
+		Event Player.SegarkanRosterTertunda = False;
+		Event Player.PindahTimDiproses = False;
+		Event Player.SiklusPemainAktif = False;
+		Event Player.TimTerakhir = Team Of(Event Player);
+		Event Player.TimSiklusTarget = Team Of(Event Player);
+		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;
+		If(Globale.PemainSiklusGlobal == Event Player);
+			Globale.PemainSiklusGlobal = Null;
+			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+		End;
+	}
+}
+
 regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 {
 	evento
@@ -1558,7 +1594,7 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 				Set Match Time(Max(1, Globale.SisaWaktuServer + 5));
 			End;
 		End;
-		If(And(Globale.PemainSiklusGlobal != Null, Entity Exists(Globale.PemainSiklusGlobal) == False));
+		If(And(Globale.PemainSiklusGlobal != Null, Or(Entity Exists(Globale.PemainSiklusGlobal) == False, Has Spawned(Globale.PemainSiklusGlobal) == False)));
 			Globale.PemainSiklusGlobal = Null;
 			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 		End;
@@ -3262,37 +3298,20 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			Globale.PemainAktif.SudahSiap = True;
 			Globale.PemainAktif.PernahDisiapkan = True;
 		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Globale.PemainAktif.TimTerakhir != Team Of(Globale.PemainAktif)))));
-			"Perubahan tim pemain terdaftar kini menjalankan reset penuh agar slot roster, HUD, dan status lama benar-benar dilepas."
-			Call Subroutine(TenangkanPemain);
-			Call Subroutine(BersihkanPemain);
-			Globale.PemainAktif.SegarkanRosterTertunda = False;
-			Globale.PemainAktif.HudPemainDibuat = False;
-			Globale.PemainAktif.HudKiri = Null;
-			Globale.PemainAktif.HudKanan = Null;
-			Globale.PemainAktif.HudMenu = Null;
-			Globale.PemainAktif.InputMenuDikunci = False;
-			Globale.PemainAktif.SudahDiperiksa = False;
-			Globale.PemainAktif.BotOtomatis = False;
-			Globale.PemainAktif.PindahTimDiproses = False;
-			Globale.PemainAktif.SiklusPemainAktif = False;
-			Globale.PemainAktif.TimTerakhir = Team Of(Globale.PemainAktif);
-			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
-			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
-			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
-				Globale.PemainSiklusGlobal = Null;
-				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
-			End;
-		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.PindahTimDiproses == False))));
+		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Or(Globale.PemainAktif.PindahTimDiproses == False, Globale.PemainAktif.TimSiklusTarget != Team Of(Globale.PemainAktif))))));
 			Globale.PemainAktif.PindahTimDiproses = True;
 			Globale.PemainAktif.SiklusPemainAktif = False;
 			Globale.PemainAktif.SudahSiap = False;
 			Globale.PemainAktif.Manusia = False;
 			Globale.PemainAktif.TimSiklusTarget = Team Of(Globale.PemainAktif);
 			Globale.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;
+			"Perubahan tim saat antre harus memperbarui target dan melepas reservasi lama."
+			If(Globale.PemainSiklusGlobal == Globale.PemainAktif);
+				Globale.PemainSiklusGlobal = Null;
+				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
 		End;
-		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, And(Entity Exists(Globale.PemainAktif) == True, And(Has Spawned(Globale.PemainAktif) == True, Total Time Elapsed >= Globale.WaktuSiklusGlobal)))))));
+		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, And(Entity Exists(Globale.PemainAktif) == True, And(Has Spawned(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Total Time Elapsed >= Globale.PemainAktif.WaktuSiklusTim))))))));
 			Globale.PemainSiklusGlobal = Globale.PemainAktif;
 		End;
 		If(And(Globale.PemainAktif.Manusia == True, Or(Globale.PemainAktif.KematianBalasDendam == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.EfekNasib == 3, And(Globale.PemainAktif.PutaranKartuNasib == 0, Globale.PemainAktif.WaktuPaksaBerakhir > 0))))));
@@ -3385,7 +3404,7 @@ regola("89a2 - Subrutin: Mesin terbang 3D per pemain 20 Hz")
 					Globale.PemainAktif.PersenTerbang = 100;
 				End;
 				"Throttle Z maju memakai pitch bidikan, sedangkan mundur/strafe tetap pada bidang horizontal."
-				Globale.PemainAktif.ArahTerbang = Facing Direction Of(Globale.PemainAktif) * Max(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0) * Min(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Cross Product(Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0), Vector(0, 1, 0)) * X Component Of(Throttle Of(Globale.PemainAktif));
+				Globale.PemainAktif.ArahTerbang = Facing Direction Of(Globale.PemainAktif) * Max(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0) * Min(0, Z Component Of(Throttle Of(Globale.PemainAktif))) + Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0)) * X Component Of(Throttle Of(Globale.PemainAktif));
 				If(Magnitude Of(Globale.PemainAktif.ArahTerbang) > 0.050);
 					"100% Fly = 5.5 m/s, 500% = 27.5 m/s; diagonal dibatasi dan kekuatan analog tetap dipakai."
 					Globale.PemainAktif.DeltaTerbang = Normalize(Globale.PemainAktif.ArahTerbang) * 5.500 * Globale.PemainAktif.PersenTerbang / 100 * Min(1, Magnitude Of(Throttle Of(Globale.PemainAktif))) - Velocity Of(Globale.PemainAktif);
@@ -3723,11 +3742,18 @@ regola("90 - Subrutin: Tutup menu dan pulihkan tombol")
 
 	azioni
 	{
+		"Handle kanonik tetap dibersihkan walau variabel HUD lokal hilang saat transisi."
+		If(Index Of Array Value(Globale.PemainManusia, Event Player) >= 0);
+			If(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] != 0);
+				Destroy HUD Text(Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]);
+				If(Event Player.HudMenu == Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]);
+					Event Player.HudMenu = Null;
+				End;
+			End;
+			Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = 0;
+		End;
 		If(Event Player.HudMenu != Null);
 			Destroy HUD Text(Event Player.HudMenu);
-		End;
-		If(Index Of Array Value(Globale.PemainManusia, Event Player) >= 0);
-			Globale.HudMenuPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = 0;
 		End;
 		Event Player.HudMenu = Null;
 		Event Player.MenuTerbuka = False;
@@ -4270,17 +4296,27 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 
 	azioni
 	{
-		"Bersihkan Coba Nasib segera sebelum pendaftaran tim baru; bagian ini tidak pernah menjeda pemindaian."
-		If(Or(Event Player.MenuTerbuka == True, Event Player.InputMenuDikunci == True));
-			Call Subroutine(TutupMenu);
+		"Pulihkan efek mesin sebelum penyiapan menghapus variabel; hanya dipanggil dari konteks Event Player."
+		Call Subroutine(TutupMenu);
+		Allow Button(Event Player, Button(Melee));
+		Stop Camera(Event Player);
+		Stop Modifying Hero Voice Lines(Event Player);
+		Stop Chasing Player Variable(Event Player, WarnaMenu);
+		If(Event Player.LampiranTeleportasiAktif == True);
+			Detach Players(Event Player);
 		End;
+		Event Player.LampiranTeleportasiAktif = False;
+		Event Player.TargetLampiranTeleportasi = Null;
+		Event Player.PahlawanLampiranSendiri = Null;
+		Event Player.PahlawanLampiranTarget = Null;
+		If(Event Player.PelatNamaDinonaktifkan == True);
+			Enable Nameplates(All Players(All Teams), Event Player);
+		End;
+		Event Player.PelatNamaDinonaktifkan = False;
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
 		Event Player.KursorKebal = 0;
-		If(Event Player.IkonKartuNasib != Null);
-			Destroy Icon(Event Player.IkonKartuNasib);
-		End;
-		Event Player.IkonKartuNasib = Null;
+		Call Subroutine(PulihkanNasibPemain);
 		Stop Accelerating(Event Player);
 		Stop Transforming Throttle(Event Player);
 		Set Move Speed(Event Player, 100);
