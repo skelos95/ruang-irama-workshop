@@ -71,6 +71,17 @@ OBSOLETE_CURRENT_TEXT_PATTERNS = (
         ),
     ),
     (
+        "team-switch senza alcuna ricostruzione HUD",
+        re.compile(
+            r"(?i)cambio\s+squadra[^.\r\n]*senza\s+cleanup/setup\s+completo,\s*"
+            r"ricostruzione\s+HUD\s+o\s+reset\s+engine"
+        ),
+    ),
+    (
+        "team-switch descritto come solo aggiornamento dei campi Team",
+        re.compile(r"(?i)cambio\s+squadra[^.\r\n]*aggiorna\s+soltanto\s+i\s+campi\s+Team"),
+    ),
+    (
         "Jump Resurrect descritto erroneamente come always-nearest-walkable",
         re.compile(
             r"(?i)(?:(?:usa|calcola|passa\s+da)\s+sempre"
@@ -2347,17 +2358,12 @@ def validate_ghost_fly(
                                f"Ghost/Fly {label} incompleto: {token}")
 
     team_switch = team_switch_worker(rules)
-    checks.require(team_switch is not None, "Ghost/Fly: lifecycle cambio squadra leggero assente")
+    checks.require(team_switch is not None, "Ghost/Fly: lifecycle cambio squadra Each Player assente")
     if team_switch:
-        masked = mask_strings(team_switch.body)
-        for forbidden in (
-            "Call Subroutine(TenangkanPemain);",
-            "Call Subroutine(BersihkanPemain);",
-            "Event Player.ModeHantuAktif =",
-            "Event Player.ModeTerbangAktif =",
-            "Event Player.FisikaHantuTerbangDiterapkan =",
-        ):
-            checks.require(forbidden not in masked, f"Ghost/Fly cambio squadra leggero non deve azzerare runtime: {forbidden}")
+        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
+            checks.require(token in mask_strings(team_switch.body),
+                           f"Ghost/Fly cambio squadra incompleto: {token}")
+
     timestamp_writers: list[tuple[str, str]] = []
     for rule in rules:
         owner = subroutine_target(rule) or rule.name
@@ -4822,47 +4828,53 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "lifecycle prenotazione deve attendere entrambe le scadenze prima del lock")
 
     team_switch = team_switch_worker(rules)
-    checks.require(team_switch is not None, "lifecycle cambio squadra leggero Each Player assente")
+    checks.require(team_switch is not None, "detector team-switch Each Player assente")
     if team_switch:
-        conditions = rule_block(team_switch, "conditions") or ""
-        actions = rule_block(team_switch, "actions") or ""
-        masked_actions = mask_strings(actions)
+        conditions = mask_strings(rule_block(team_switch, "conditions") or "")
         for token in (
+            "Global.Siap == True;",
             "Is Dummy Bot(Event Player) == False;",
             "Event Player.BotOtomatis == False;",
             "Array Contains(Global.PemainManusia, Event Player) == True;",
             "Event Player.TimTerakhir != Team Of(Event Player);",
         ):
-            checks.require(token in conditions, f"detector team-switch senza guardia: {token}")
+            checks.require(token in conditions,
+                           f"detector team-switch senza guardia: {token}")
+        actions = mask_strings(rule_block(team_switch, "actions") or "")
         for token in (
+            "Call Subroutine(TenangkanPemain);",
+            "Call Subroutine(BersihkanPemain);",
             "Event Player.SegarkanRosterTertunda = False;",
             "Event Player.PindahTimDiproses = False;",
             "Event Player.SiklusPemainAktif = False;",
             "Event Player.TimTerakhir = Team Of(Event Player);",
             "Event Player.TimSiklusTarget = Team Of(Event Player);",
-            "Event Player.WaktuSiklusTim = 0;",
+            "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;",
             "If(Global.PemainSiklusGlobal == Event Player);",
             "Global.PemainSiklusGlobal = Null;",
             "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;",
         ):
-            checks.require(token in masked_actions, f"detector team-switch leggero incompleto: {token}")
-        for forbidden in (
+            checks.require(token in actions, f"detector team-switch cleanup incompleto: {token}")
+        order = tuple(actions.find(token) for token in (
             "Call Subroutine(TenangkanPemain);",
             "Call Subroutine(BersihkanPemain);",
-            "Call Subroutine(SiapkanPemain);",
-            "Wait(",
-            "Loop;",
-            "For Global Variable(",
-            "Event Player.SegarkanRosterTertunda = True;",
-            "Global.PemainAktif",
-        ):
-            checks.require(forbidden not in masked_actions, f"detector team-switch leggero non deve eseguire teardown/setup: {forbidden}")
-        checks.require(re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", masked_actions) is None,
-                       "detector team-switch leggero non deve usare Abort")
+            "Event Player.TimTerakhir = Team Of(Event Player);",
+        ))
+        checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
+                       "detector team-switch: tenangkan deve precedere bersihkan e il commit del team")
+        checks.require(not wait_calls(team_switch.body) and action_loop_count(team_switch.body) == 0,
+                       "detector team-switch deve essere atomico senza Wait/Loop")
+        checks.require(re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", actions) is None,
+                       "detector team-switch: il detector non deve usare Abort")
         checks.require("Server Load" not in conditions,
                        "detector team-switch non deve dipendere dal carico server")
-        checks.require(not wait_calls(team_switch.body) and action_loop_count(team_switch.body) == 0,
-                       "detector team-switch leggero deve essere atomico senza Wait/Loop")
+        checks.require("Event Player.SegarkanRosterTertunda = True;" not in actions,
+                       "detector team-switch non deve usare pending roster ringan")
+        checks.require("Call Subroutine(SiapkanPemain);" not in actions,
+                       "team switch deve attendere il worker di setup serializzato")
+        checks.require("Global.PemainAktif" not in actions,
+                       "detector team-switch non deve riusare lo scratch del scheduler")
+
     roster_hud = next((
         rule for rule in rules
         if event_type(rule) == "Ongoing - Each Player"
@@ -4900,15 +4912,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "renderer roster deve dichiararsi pronto dopo entrambi gli handle",
         )
 
-    cleanup_workers = [
-        rule for rule in rules
-        if event_type(rule) == "Ongoing - Each Player"
-        and "Call Subroutine(BersihkanPemain);" in mask_strings(rule.body)
-    ]
-    checks.require(
-        len(cleanup_workers) == 0,
-        "team-switch leggero non deve eseguire BersihkanPemain in worker Each Player",
-    )
+    cleanup_workers = [rule for rule in rules
+                       if event_type(rule) == "Ongoing - Each Player"
+                       and "Call Subroutine(BersihkanPemain);" in mask_strings(rule.body)]
+    checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == team_switch,
+                   "cleanup team-switch deve avere un solo worker Each Player con mismatch team")
 
     setup_worker = next((
         rule for rule in rules

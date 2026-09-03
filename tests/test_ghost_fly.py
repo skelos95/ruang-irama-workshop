@@ -428,13 +428,12 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             team_rule = rule_with(source, '01a - Siklus tim: Reset penuh pada konteks pemain')
             self.assertIn("Ongoing - Each Player;", team_rule)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", team_rule)
-            self.assertIn("Event Player.TimTerakhir = Team Of(Event Player);", team_rule)
-            self.assertIn("Event Player.TimSiklusTarget = Team Of(Event Player);", team_rule)
-            self.assertNotIn("Call Subroutine(", team_rule)
+            self.assertIn("Event Player.SegarkanRosterTertunda = False;", team_rule)
+            self.assertIn("Event Player.PindahTimDiproses = False;", team_rule)
+            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", team_rule)
+            self.assertLess(team_rule.index("Call Subroutine(TenangkanPemain);"), team_rule.index("Call Subroutine(BersihkanPemain);"))
+            self.assertNotIn(f"{global_name}.PemainAktif", team_rule)
             self.assertNotIn("Wait(", team_rule)
-            self.assertNotIn("Event Player.ModeHantuAktif =", team_rule)
-            self.assertNotIn("Event Player.ModeTerbangAktif =", team_rule)
-            self.assertNotIn("Event Player.FisikaHantuTerbangDiterapkan =", team_rule)
 
             hero_change = reapply.index(
                 f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"

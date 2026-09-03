@@ -269,57 +269,121 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
 
 
-    def test_team_switch_is_lightweight_and_leave_cleanup_is_exact(self):
+    def test_team_switch_uses_full_cleanup_and_leave_cleanup_is_exact(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
-            switch = source.split(
-                f'{rule_kw}("01a - Siklus tim: Reset penuh pada konteks pemain")',
-                1,
-            )[1].split(
-                f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")',
-                1,
-            )[0]
+            self.assertNotIn(f'{rule_kw}("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")', source)
+
+            fast = source.split(f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")', 1)[1].split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[0]
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == True", fast)
+            self.assertNotIn(f"{global_name}.PemainAktif.TimTerakhir != Team Of({global_name}.PemainAktif)", fast)
+            self.assertIn(f"{global_name}.PemainAktif.Manusia = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SudahDiperiksa = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.PernahDisiapkan = True;", fast)
+            self.assertIn(
+                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
+                fast,
+            )
+            self.assertIn(
+                f'{global_name}.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
+                fast,
+            )
+            classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", classifier)
+            self.assertIn(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
+            self.assertIn("Event Player.SudahDiperiksa = False;", classifier)
+            self.assertIn("Event Player.SudahSiap = False;", classifier)
+            self.assertIn("Event Player.PindahTimDiproses = False;", classifier)
+            self.assertIn(f"If({global_name}.PemainSiklusGlobal == Event Player);", classifier)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", classifier)
+            self.assertIn(f"{global_name}.WaktuSiklusGlobal = Total Time Elapsed + 0.250;", classifier)
+            self.assertNotIn(f"Abort If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
+            self.assertNotIn("Server Load < 150", classifier)
+            self.assertLess(
+                classifier.index("Call Subroutine(KunciBot);"),
+                classifier.index(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);"),
+            )
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
+            switch = source.split(f'{rule_kw}("01a - Siklus tim: Reset penuh pada konteks pemain")', 1)[1].split(f'{rule_kw}("01b - Siklus tim:', 1)[0]
+            self.assertIn("Ongoing - Each Player;", switch)
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == True;", switch)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player);", switch)
-            for token in (
-                "Event Player.SegarkanRosterTertunda = False;",
-                "Event Player.PindahTimDiproses = False;",
-                "Event Player.SiklusPemainAktif = False;",
-                "Event Player.TimTerakhir = Team Of(Event Player);",
-                "Event Player.TimSiklusTarget = Team Of(Event Player);",
-                "Event Player.WaktuSiklusTim = 0;",
-            ):
-                self.assertIn(token, switch)
-            for forbidden in (
-                "Call Subroutine(TenangkanPemain);",
-                "Call Subroutine(BersihkanPemain);",
-                "Call Subroutine(SiapkanPemain);",
-                "Wait(",
-                "Loop;",
-                "For Global Variable(",
-            ):
-                self.assertNotIn(forbidden, switch)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", switch)
+            self.assertIn("Call Subroutine(TenangkanPemain);", switch)
+            self.assertIn("Call Subroutine(BersihkanPemain);", switch)
+            self.assertLess(
+                switch.index("Call Subroutine(TenangkanPemain);"),
+                switch.index("Call Subroutine(BersihkanPemain);"),
+            )
+            self.assertLess(switch.index("Call Subroutine(BersihkanPemain);"),
+                            switch.index("Event Player.TimTerakhir = Team Of(Event Player);"))
+            self.assertNotIn("Wait(", switch)
             self.assertNotIn(f"{global_name}.PemainAktif", switch)
-            setup_worker = source.split(
-                f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")',
-                1,
-            )[1].split(
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
-                1,
-            )[0]
-            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", setup_worker)
-            self.assertIn("Call Subroutine(TenangkanPemain);", setup_worker)
-            self.assertIn("Call Subroutine(SiapkanPemain);", setup_worker)
-            leave = source.split(
-                f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")',
-                1,
-            )[1].split(
-                f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")',
-                1,
-            )[0]
-            expected_wait = "Wait(0.500, Ignora condizione);" if global_name == "Globale" else "Wait(0.500, Ignore Condition);"
-            self.assertIn(expected_wait, leave)
-            self.assertIn("Abort If(Entity Exists(Event Player) == True);", leave)
-            self.assertIn("Call Subroutine(BersihkanPemain);", leave)
+            self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
+            self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
+            self.assertIn(f"Has Spawned({global_name}.PemainAktif) == True", fast)
+            self.assertIn("Event Player.SegarkanRosterTertunda = False;", switch)
+            self.assertIn("Event Player.PindahTimDiproses = False;", switch)
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False", fast)
+            self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
+            self.assertNotIn("Server Load < 150", fast)
+            setup_worker = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain', 1)[0]
+            self.assertNotIn("Server Load < 150", setup_worker)
+            self.assertNotIn("Call Subroutine(SiapkanPemain);", fast)
+
+            roster_hud = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
+            self.assertNotIn("Server Load < 150", roster_hud)
+            self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster_hud)
+            self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster_hud)
+            self.assertGreater(
+                roster_hud.index("Event Player.HudPemainDibuat = True;"),
+                roster_hud.index(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKanan;"),
+            )
+            self.assertEqual(
+                source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"),
+                2,
+            )
+
+            setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
+            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", setup)
+            self.assertIn("Call Subroutine(TenangkanPemain);", setup)
+            self.assertIn("Call Subroutine(SiapkanPemain);", setup)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", setup)
+
+            left = source.split(f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")', 1)[1].split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[0]
+            self.assertIn("Wait(0.500,", left)
+            self.assertIn("Abort If(Entity Exists(Event Player) == True);", left)
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", left)
+            self.assertIn("Call Subroutine(BersihkanPemain);", left)
+
+            cleanup = source.split(f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")', 1)[1].split(f'{rule_kw}("94 - Subrutin: Siapkan pemain', 1)[0]
+            self.assertIn(f"{global_name}.PemainPembersihan = Event Player;", cleanup)
+            self.assertIn(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainPembersihan);", cleanup)
+            self.assertNotIn("Index Of Array Value(" + global_name + ".SlotHUDPemain", cleanup)
+            self.assertEqual(cleanup.count("For Global Variable("), 1)
+            self.assertIn(
+                f"For Global Variable(IndeksPemilih, 0, Count Of({global_name}.PemainManusia), 1);",
+                cleanup,
+            )
+            self.assertEqual(cleanup.count("Filtered Array("), 1)
+            self.assertIn(
+                f"Set Player Variable(Filtered Array({global_name}.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == {global_name}.PemainPembersihan), PemainDipilih, Null);",
+                cleanup,
+            )
+            self.assertNotIn("Allow Button(", cleanup)
+            self.assertNotIn("Clear Status(", cleanup)
+            self.assertNotIn("Set Move Speed(", cleanup)
+            self.assertIn(
+                f"Modify Player Variable({global_name}.PemainManusia[{global_name}.IndeksPemilih], PembunuhBalasDendam, Remove From Array By Index, {global_name}.IndeksDendamKeluar);",
+                cleanup,
+            )
+            self.assertIn(
+                f"Modify Player Variable({global_name}.PemainManusia[{global_name}.IndeksPemilih], JumlahBalasDendam, Remove From Array By Index, {global_name}.IndeksDendamKeluar);",
+                cleanup,
+            )
+            self.assertIn("Remove From Array By Index", cleanup)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2316,15 +2316,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "dispatcher team-switch deve escludere gli iBot")
 
-    def test_team_switch_detector_forbids_full_cleanup_calls(self) -> None:
+    def test_team_switch_detector_requires_full_cleanup_calls(self) -> None:
         worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
-        for action in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);", "Call Subroutine(SiapkanPemain);"):
-            with self.subTest(action=action):
-                mutated = self.inject_action(worker, action)
-                self.assert_rejected(mutated, "detector team-switch leggero non deve eseguire teardown/setup")
-        mutated = self.replace_in_rule(worker, "Event Player.WaktuSiklusTim = 0;", "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;")
-        self.assert_rejected(mutated, "detector team-switch leggero incompleto")
+        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
+            with self.subTest(token=token):
+                mutated = self.replace_in_rule(worker, token, "")
+                self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
+
+        sequence = "Call Subroutine(TenangkanPemain);\n\t\tCall Subroutine(BersihkanPemain);"
+        swapped = "Call Subroutine(BersihkanPemain);\n\t\tCall Subroutine(TenangkanPemain);"
+        mutated = self.replace_in_rule(worker, sequence, swapped)
+        self.assert_rejected(mutated, "tenangkan deve precedere bersihkan")
 
     def test_old_global_team_cleanup_is_rejected_by_transitive_context_gate(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
@@ -2389,7 +2392,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         mutated = self.inject_action(worker, "Abort;")
-        self.assert_rejected(mutated, "non deve usare Abort")
+        self.assert_rejected(mutated, "detector non deve usare Abort")
 
     def test_team_switch_detector_rejects_pending_roster_model(self) -> None:
         worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
@@ -2399,7 +2402,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Event Player.SegarkanRosterTertunda = False;",
             "Event Player.SegarkanRosterTertunda = True;",
         )
-        self.assert_rejected(mutated, "non deve eseguire teardown/setup")
+        self.assert_rejected(mutated, "pending roster ringan")
 
     def test_roster_ready_flag_is_written_after_both_recreated_handles(self) -> None:
         roster = self.rule(
@@ -2456,7 +2459,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Event Player.PindahTimDiproses = False;",
             "",
         )
-        self.assert_rejected(mutated, "detector team-switch leggero incompleto")
+        self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
 
     def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
@@ -3614,6 +3617,8 @@ class RepositoryMetadataTests(unittest.TestCase):
     def test_obsolete_current_team_switch_claim_is_rejected(self) -> None:
         claims = (
             "Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo.",
+            "Cambio squadra ripetuto senza cleanup/setup completo, ricostruzione HUD o reset engine.",
+            "Un cambio squadra aggiorna soltanto i campi Team.",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
