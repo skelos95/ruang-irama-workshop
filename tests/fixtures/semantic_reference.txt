@@ -1042,15 +1042,13 @@ rule("01a - Siklus tim: Reset penuh pada konteks pemain")
 
 	actions
 	{
-		"Reset atomik memakai Event Player yang benar; slot dan HUD lama dilepas sebelum antrean penyiapan baru."
-		Call Subroutine(TenangkanPemain);
-		Call Subroutine(BersihkanPemain);
+		"Perubahan tim pemain terdaftar hanya memperbarui identitas tim; roster, HUD, menu, pilihan, dan status tidak dibangun ulang."
 		Event Player.SegarkanRosterTertunda = False;
 		Event Player.PindahTimDiproses = False;
 		Event Player.SiklusPemainAktif = False;
 		Event Player.TimTerakhir = Team Of(Event Player);
 		Event Player.TimSiklusTarget = Team Of(Event Player);
-		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;
+		Event Player.WaktuSiklusTim = 0;
 		If(Global.PemainSiklusGlobal == Event Player);
 			Global.PemainSiklusGlobal = Null;
 			Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
