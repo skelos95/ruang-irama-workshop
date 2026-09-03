@@ -1,0 +1,113 @@
+name: Team Switch Bootstrap V6
+
+on:
+  push:
+    branches:
+      - fix/team-switch-crash
+    paths:
+      - .github/workflows/team-switch-bootstrap-v6.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Apply patch and repair runtime regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- \
+            workshop/ruang_irama.it-IT.workshop \
+            tests/fixtures/semantic_reference.txt \
+            tests/test_runtime_maintenance.py \
+            tests/test_ghost_fly.py \
+            tests/test_validate_workshop.py \
+            tools/validate_workshop.py \
+            README.md \
+            docs/PROGETTO.md \
+            docs/VALIDAZIONE.md \
+            docs/TEST.md \
+            CHANGELOG.md
+          python - <<'PY'
+          from pathlib import Path
+          workflow = Path('.github/workflows/team-switch-bootstrap-v4.yml').read_text(encoding='utf-8')
+          marker = "          python - <<'PY'\n"
+          script = workflow.split(marker, 1)[1].split("\n          PY", 1)[0]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          exec(compile(script, 'team-switch-v4-patch', 'exec'), {})
+          PY
+
+          git checkout origin/main -- tests/test_runtime_maintenance.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tests/test_runtime_maintenance.py')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace(
+              '    def test_team_switch_uses_full_cleanup_and_leave_cleanup_is_exact(self):',
+              '    def test_team_switch_is_lightweight_and_leave_cleanup_is_exact(self):',
+              1,
+          )
+          old = "\n".join([
+              '            self.assertIn("Call Subroutine(TenangkanPemain);", switch)',
+              '            self.assertIn("Call Subroutine(BersihkanPemain);", switch)',
+              '            self.assertLess(',
+              '                switch.index("Call Subroutine(TenangkanPemain);"),',
+              '                switch.index("Call Subroutine(BersihkanPemain);"),',
+              '            )',
+              '            self.assertLess(switch.index("Call Subroutine(BersihkanPemain);"),',
+              '                            switch.index("Event Player.TimTerakhir = Team Of(Event Player);"))',
+          ])
+          new = "\n".join([
+              '            self.assertNotIn("Call Subroutine(TenangkanPemain);", switch)',
+              '            self.assertNotIn("Call Subroutine(BersihkanPemain);", switch)',
+              '            self.assertNotIn("Call Subroutine(SiapkanPemain);", switch)',
+              '            self.assertIn("Event Player.TimTerakhir = Team Of(Event Player);", switch)',
+              '            self.assertIn("Event Player.TimSiklusTarget = Team Of(Event Player);", switch)',
+              '            self.assertIn("Event Player.WaktuSiklusTim = 0;", switch)',
+          ])
+          if old not in text:
+              raise SystemExit('original full-cleanup expectation block not found')
+          text = text.replace(old, new, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/team-switch-bootstrap.yml \
+            .github/workflows/team-switch-bootstrap-v2.yml \
+            .github/workflows/team-switch-bootstrap-v3.yml \
+            .github/workflows/team-switch-bootstrap-v4.yml \
+            .github/workflows/team-switch-bootstrap-v5.yml \
+            .github/workflows/team-switch-bootstrap-v6.yml
+
+      - name: Validate team-switch regression and static gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/validate_workshop.py tests/test_runtime_maintenance.py tests/test_validate_workshop.py tests/test_ghost_fly.py
+          python -m unittest \
+            tests.test_runtime_maintenance.RuntimeMaintenanceTests.test_team_switch_is_lightweight_and_leave_cleanup_is_exact \
+            tests.test_ghost_fly.GhostFlyRuntimeTests \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_team_switch_detector_forbids_full_cleanup_calls \
+            tests.test_validate_workshop.SemanticWorkshop081Tests.test_team_switch_worker_requires_owner_and_registered_identity_guards \
+            tests.test_validate_workshop.PlayerContextCallGraphTests.test_current_runtime_has_no_global_event_player_dependencies
+          python tools/validate_workshop.py
+          python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+          git diff --check
+
+      - name: Commit validated fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix team-switch crash with lightweight lifecycle"
+          git push origin HEAD:fix/team-switch-crash
