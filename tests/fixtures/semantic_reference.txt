@@ -4352,8 +4352,11 @@ rule("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Global.PemainPembersihan);
 		If(Global.IndeksKeluar >= 0);
 			Global.IndeksPembersihan = Global.IndeksKeluar;
-			If(And(Global.IndeksPembersihan < Count Of(Global.SlotHUDPemain), And(Global.IndeksPembersihan < Count Of(Global.HudKiriPemain), And(Global.IndeksPembersihan < Count Of(Global.HudKananPemain), And(Global.IndeksPembersihan < Count Of(Global.HudMenuPemain), Global.IndeksPembersihan < Count Of(Global.TeksDuniaPemain))))));
-				Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];
+			If(Or(Global.IndeksPembersihan >= Count Of(Global.SlotHUDPemain), Or(Global.IndeksPembersihan >= Count Of(Global.HudKiriPemain), Or(Global.IndeksPembersihan >= Count Of(Global.HudKananPemain), Or(Global.IndeksPembersihan >= Count Of(Global.HudMenuPemain), Global.IndeksPembersihan >= Count Of(Global.TeksDuniaPemain))))));
+				"Perlindungan mogok: jika indeks daftar pemain tidak sinkron dengan susunan teks, hentikan pembersihan ini."
+				Abort;
+			End;
+			Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];
 				If(Global.PemainPembersihan.IkonKartuNasib != Null);
 					Destroy Icon(Global.PemainPembersihan.IkonKartuNasib);
 				End;
@@ -4433,9 +4436,6 @@ rule("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 				Global.IndeksPemilih = Count Of(Global.SlotHUDPemain);
 				Global.SlotHUDTerakhir = Global.IndeksPemilih == 0 ? -1 : Last Of(Sorted Array(Global.SlotHUDPemain, Current Array Element));
 				Call Subroutine(HitungPilihan);
-			Else;
-				"Proteksi anti-crash: jika indeks roster tidak sinkron dengan array handle, lewati recycle indeks ini."
-			End;
 		End;
 		Global.IndeksKeluar = -1;
 		Global.IndeksPembersihan = -1;
