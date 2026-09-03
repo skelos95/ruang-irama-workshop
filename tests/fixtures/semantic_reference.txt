@@ -3164,49 +3164,28 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 	conditions
 	{
 		Event Player.LampiranTeleportasiAktif == True;
+		Or(
+			Or(
+				Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False),
+				Or(Event Player.TargetLampiranTeleportasi == Null, Entity Exists(Event Player.TargetLampiranTeleportasi) == False)
+			),
+			Or(
+				Or(Has Spawned(Event Player.TargetLampiranTeleportasi) == False, Is Alive(Event Player.TargetLampiranTeleportasi) == False),
+				Or(
+					Or(Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri, Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget),
+					And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True)
+				)
+			)
+		) == True;
 	}
 
 	actions
 	{
-		If(Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False));
 		Detach Players(Event Player);
 		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
 		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
 		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
 		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-			Abort;
-		End;
-		If(Or(Event Player.TargetLampiranTeleportasi == Null, Entity Exists(Event Player.TargetLampiranTeleportasi) == False));
-		Detach Players(Event Player);
-		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
-		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
-		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
-		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-			Abort;
-		End;
-		If(Or(Has Spawned(Event Player.TargetLampiranTeleportasi) == False, Is Alive(Event Player.TargetLampiranTeleportasi) == False));
-		Detach Players(Event Player);
-		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
-		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
-		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
-		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-			Abort;
-		End;
-		If(Or(Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri, Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget));
-		Detach Players(Event Player);
-		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
-		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
-		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
-		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-			Abort;
-		End;
-		If(And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True));
-		Detach Players(Event Player);
-		Set Player Variable(Event Player, LampiranTeleportasiAktif, False);
-		Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);
-		Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);
-		Set Player Variable(Event Player, PahlawanLampiranTarget, Null);
-		End;
 	}
 }
 

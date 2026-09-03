@@ -176,6 +176,46 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"Kill({global_name}.PemainAktif, {global_name}.PemainAktif.KematianBalasDendam == True ?", fast)
             self.assertEqual(source.count("Kill("), 2)
 
+    def test_crouch_attach_auto_detach_reacts_to_invalidating_state(self):
+        for source, rule_kw, conditions_kw, actions_kw in (
+            (self.it, "regola", "condizioni", "azioni"),
+            (self.en, "rule", "conditions", "actions"),
+        ):
+            auto_detach = source.split(
+                f'{rule_kw}("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")', 1
+            )[1].split(f'{rule_kw}("19g - Teleportasi Jongkok', 1)[0]
+            conditions = auto_detach.split(f"\t{conditions_kw}\n\t{{", 1)[1].split(
+                f"\n\t}}\n\n\t{actions_kw}", 1
+            )[0]
+            actions = auto_detach.split(f"\t{actions_kw}\n\t{{", 1)[1]
+
+            for token in (
+                "Event Player.LampiranTeleportasiAktif == True;",
+                "Has Spawned(Event Player) == False",
+                "Is Alive(Event Player) == False",
+                "Event Player.TargetLampiranTeleportasi == Null",
+                "Entity Exists(Event Player.TargetLampiranTeleportasi) == False",
+                "Has Spawned(Event Player.TargetLampiranTeleportasi) == False",
+                "Is Alive(Event Player.TargetLampiranTeleportasi) == False",
+                "Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri",
+                "Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget",
+                "Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True",
+                "Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True",
+            ):
+                self.assertIn(token, conditions)
+
+            self.assertEqual(actions.count("Detach Players(Event Player);"), 1)
+            for clear in (
+                "Set Player Variable(Event Player, LampiranTeleportasiAktif, False);",
+                "Set Player Variable(Event Player, TargetLampiranTeleportasi, Null);",
+                "Set Player Variable(Event Player, PahlawanLampiranSendiri, Null);",
+                "Set Player Variable(Event Player, PahlawanLampiranTarget, Null);",
+            ):
+                self.assertEqual(actions.count(clear), 1)
+            self.assertNotIn("\t\tIf(", actions)
+            self.assertNotIn("Wait(", auto_detach)
+            self.assertNotIn("Loop", auto_detach)
+
     def test_crouch_attach_uses_native_attach_and_crouch_reload_detach(self):
         for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
             self.assertIn("Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0,", source)

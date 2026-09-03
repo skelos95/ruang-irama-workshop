@@ -15,9 +15,10 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  whitespace:
+    name: Whitespace
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -30,20 +31,93 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git diff --check "origin/${{ github.base_ref }}...HEAD"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            git diff --check "${{ github.event.before }}..${{ github.sha }}"
           else
             git diff --check HEAD^ HEAD
           fi
+
+  unit-tests:
+    name: Unit tests (${{ matrix.shard }}/6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
-      - name: Run validator unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run unittest shard
+        env:
+          SHARD: ${{ matrix.shard }}
+          TOTAL_SHARDS: '6'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import unittest
+
+          def flatten(suite):
+              for item in suite:
+                  if isinstance(item, unittest.TestSuite):
+                      yield from flatten(item)
+                  else:
+                      yield item
+
+          shard = int(os.environ["SHARD"])
+          total_shards = int(os.environ["TOTAL_SHARDS"])
+          discovered = unittest.defaultTestLoader.discover("tests", pattern="test_*.py")
+          tests = sorted(flatten(discovered), key=lambda test: test.id())
+          selected = [test for index, test in enumerate(tests) if index % total_shards == shard]
+          print(f"Running shard {shard + 1}/{total_shards}: {len(selected)} of {len(tests)} tests")
+          result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(selected))
+          sys.exit(0 if result.wasSuccessful() else 1)
+          PY
+
+  semantic:
+    name: Semantic gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
 
       - name: Validate Workshop source
         run: python tools/validate_workshop.py
 
       - name: Preflight Italian clipboard source
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+
+  required:
+    name: Required checks
+    if: always()
+    needs:
+      - whitespace
+      - unit-tests
+      - semantic
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all validation jobs
+        shell: bash
+        run: |
+          [[ "${{ needs.whitespace.result }}" == "success" ]]
+          [[ "${{ needs.unit-tests.result }}" == "success" ]]
+          [[ "${{ needs.semantic.result }}" == "success" ]]
