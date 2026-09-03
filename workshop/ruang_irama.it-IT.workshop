@@ -4350,13 +4350,14 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		"Pembersihan keluar hanya menyentuh handle dan roster global; entitas yang sudah hilang tidak dinormalisasi ulang."
 		Globale.PemainPembersihan = Event Player;
 		Globale.IndeksKeluar = Index Of Array Value(Globale.PemainManusia, Globale.PemainPembersihan);
-		If(Globale.IndeksKeluar >= 0);
-			Globale.IndeksPembersihan = Globale.IndeksKeluar;
-			If(Or(Globale.IndeksPembersihan >= Count Of(Globale.SlotHUDPemain), Or(Globale.IndeksPembersihan >= Count Of(Globale.HudKiriPemain), Or(Globale.IndeksPembersihan >= Count Of(Globale.HudKananPemain), Or(Globale.IndeksPembersihan >= Count Of(Globale.HudMenuPemain), Globale.IndeksPembersihan >= Count Of(Globale.TeksDuniaPemain))))));
-				"Perlindungan mogok: jika indeks daftar pemain tidak sinkron dengan susunan teks, hentikan pembersihan ini."
-				Abort;
+		If(Globale.IndeksKeluar > -1);
+			If(Or(Globale.IndeksKeluar >= Count Of(Globale.SlotHUDPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudKiriPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudKananPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudMenuPemain), Globale.IndeksKeluar >= Count Of(Globale.TeksDuniaPemain))))));
+				"Perlindungan mogok: jika indeks roster tidak sinkron, lewati jalur pembersihan kanonik ini tanpa Abort."
+				Globale.IndeksKeluar = -1;
 			End;
-			Globale.IndeksUtangKeluar = Globale.SlotHUDPemain[Globale.IndeksPembersihan];
+			If(Globale.IndeksKeluar >= 0);
+				Globale.IndeksPembersihan = Globale.IndeksKeluar;
+				Globale.IndeksUtangKeluar = Globale.SlotHUDPemain[Globale.IndeksPembersihan];
 				If(Globale.PemainPembersihan.IkonKartuNasib != Null);
 					Destroy Icon(Globale.PemainPembersihan.IkonKartuNasib);
 				End;
@@ -4436,6 +4437,7 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 				Globale.IndeksPemilih = Count Of(Globale.SlotHUDPemain);
 				Globale.SlotHUDTerakhir = Globale.IndeksPemilih == 0 ? -1 : Last Of(Sorted Array(Globale.SlotHUDPemain, Current Array Element));
 				Call Subroutine(HitungPilihan);
+			End;
 		End;
 		Globale.IndeksKeluar = -1;
 		Globale.IndeksPembersihan = -1;
