@@ -1,0 +1,29 @@
+name: Team Switch Bootstrap
+
+on:
+  push:
+    branches:
+      - fix/team-switch-crash
+    paths:
+      - .github/workflows/team-switch-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inspect team-switch contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -n -B 12 -A 32 'detector team-switch cleanup incompleto' tools/validate_workshop.py || true
+          grep -n -B 8 -A 20 'Ghost/Fly: lifecycle cambio squadra' tools/validate_workshop.py || true
+          grep -n -B 8 -A 30 'test_team_switch_detector_requires_full_cleanup_calls' tests/test_validate_workshop.py || true
+          grep -n -B 8 -A 30 'test_team_switch_worker_requires_owner_and_registered_identity_guards' tests/test_validate_workshop.py || true
+          grep -n -B 10 -A 28 'team_rule = rule_with' tests/test_ghost_fly.py || true
