@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Hotfix del 4 settembre (import): corretta la condizione della regola `00a4` con confronto esplicito `Or(...) == True`, risolvendo l'errore parser Workshop "richiesto un operatore di confronto dopo 'False'" (riga 1015).
 - Hardening del 4 settembre (team-switch/loading): i due skip bootstrap `Set Match Time(0)` (hero select/setup) ora richiedono anche roster umano vuoto e lock lifecycle libero, e una nuova regola `00a4` li blocca definitivamente appena il match è in progress. Il cambio squadra non può più riattivare gli skip iniziali e saltare il caricamento naturale di Overwatch.
 - Hardening del 4 settembre (dummy/team-switch): le regole di create/release dummy (`03d`, `03d1`, `03e`, `03e1`) ora girano solo quando `PemainSiklusGlobal == Null`. Durante un cambio squadra in corso il sistema non fa churn create/destroy dei bot, riducendo i picchi di carico nel passaggio.
 - Hotfix del 4 settembre: `BersihkanPemain` ora include un fallback di recovery su mismatch indici. Se roster e array canonici sono desincronizzati, il cleanup rimuove comunque l'entità e distrugge gli handle validi per evitare leak progressivi (HUD/IWT/Icon) e picchi di carico script durante cambio squadra.

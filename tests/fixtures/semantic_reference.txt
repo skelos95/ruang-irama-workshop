@@ -1012,7 +1012,7 @@ rule("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")
 	{
 		Global.Siap == True;
 		Is Game In Progress == True;
-		Or(Global.PilihPahlawanDilewati == False, Global.PersiapanDilewati == False);
+		Or(Global.PilihPahlawanDilewati == False, Global.PersiapanDilewati == False) == True;
 	}
 
 	actions

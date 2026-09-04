@@ -125,7 +125,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )[0]
             for token in (
                 "Is Game In Progress == True;",
-                f"Or({global_name}.PilihPahlawanDilewati == False, {global_name}.PersiapanDilewati == False);",
+                f"Or({global_name}.PilihPahlawanDilewati == False, {global_name}.PersiapanDilewati == False) == True;",
                 f"{global_name}.PilihPahlawanDilewati = True;",
                 f"{global_name}.PersiapanDilewati = True;",
             ):
