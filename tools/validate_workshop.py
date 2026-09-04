@@ -4988,21 +4988,19 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale non deve dipendere dal carico server")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
-        checks.require("Disable Game Mode HUD(Event Player);" in setup_worker.body,
-                       "worker setup iniziale deve riapplicare il blocco HUD nativo post-team-switch")
-        checks.require("Disable Game Mode In-World UI(Event Player);" in setup_worker.body,
-                       "worker setup iniziale deve riapplicare il blocco objective marker post-team-switch")
         checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
                        "worker setup iniziale deve separare il path team-switch dal join iniziale")
         checks.require("Call Subroutine(BersihkanPemain);" in setup_worker.body,
                        "worker setup iniziale deve fare cleanup solo dopo stabilizzazione")
         checks.require("Call Subroutine(SiapkanPemain);" in setup_worker.body,
                        "setup iniziale non chiama SiapkanPemain")
+        checks.require("Disable Game Mode HUD(Event Player);" not in setup_worker.body,
+                       "worker setup iniziale non deve toccare HUD nativo prima di SiapkanPemain")
+        checks.require("Disable Game Mode In-World UI(Event Player);" not in setup_worker.body,
+                       "worker setup iniziale non deve toccare objective marker prima di SiapkanPemain")
         order = tuple(
             setup_worker.body.find(token)
             for token in (
-                "Disable Game Mode HUD(Event Player);",
-                "Disable Game Mode In-World UI(Event Player);",
                 "Call Subroutine(TenangkanPemain);",
                 "If(Array Contains(Global.PemainManusia, Event Player));",
                 "Call Subroutine(BersihkanPemain);",
@@ -5010,7 +5008,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             )
         )
         checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
-                       "worker setup iniziale deve seguire ordine reapply HUD -> tenangkan -> cleanup opzionale -> siapkan")
+                       "worker setup iniziale deve seguire ordine tenangkan -> cleanup opzionale -> siapkan")
         checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == setup_worker,
                        "cleanup team-switch deve vivere solo nel worker setup serializzato")
         checks.require(not wait_calls(setup_worker.body), "worker setup iniziale non deve usare Wait")

@@ -1106,8 +1106,6 @@ rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	actions
 	{
-		Disable Game Mode HUD(Event Player);
-		Disable Game Mode In-World UI(Event Player);
 		Call Subroutine(TenangkanPemain);
 		If(Array Contains(Global.PemainManusia, Event Player));
 			Call Subroutine(BersihkanPemain);

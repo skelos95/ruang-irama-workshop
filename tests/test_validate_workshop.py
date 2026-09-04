@@ -2491,21 +2491,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
         self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 
-    def test_setup_worker_reapplies_native_hud_blocks_before_reset(self) -> None:
+    def test_setup_worker_keeps_native_hud_toggles_inside_siapkan_only(self) -> None:
         setup_worker = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Call Subroutine(SiapkanPemain);" in rule.body
             and "Event Player.WaktuSiklusTim" in rule.body
         )
-        for token in ("Disable Game Mode HUD(Event Player);", "Disable Game Mode In-World UI(Event Player);"):
-            with self.subTest(token=token):
-                mutated = self.replace_in_rule(setup_worker, token, "")
-                self.assert_rejected(mutated, "riapplicare")
-
-        sequence = "Disable Game Mode In-World UI(Event Player);\n\t\tCall Subroutine(TenangkanPemain);"
-        reordered = "Call Subroutine(TenangkanPemain);\n\t\tDisable Game Mode In-World UI(Event Player);"
-        mutated = self.replace_in_rule(setup_worker, sequence, reordered)
-        self.assert_rejected(mutated, "ordine reapply HUD")
+        self.assertNotIn("Disable Game Mode HUD(Event Player);", setup_worker.body)
+        self.assertNotIn("Disable Game Mode In-World UI(Event Player);", setup_worker.body)
+        mutated = self.inject_action(setup_worker, "Disable Game Mode HUD(Event Player);")
+        self.assert_rejected(mutated, "non deve toccare HUD nativo")
+        mutated = self.inject_action(setup_worker, "Disable Game Mode In-World UI(Event Player);")
+        self.assert_rejected(mutated, "non deve toccare objective marker")
 
     def test_classifier_preserves_cached_name_on_team_switch_rejoin(self) -> None:
         classifier = self.rule(

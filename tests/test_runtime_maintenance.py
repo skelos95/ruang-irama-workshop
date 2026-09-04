@@ -394,14 +394,13 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
-            self.assertIn("Disable Game Mode HUD(Event Player);", setup)
-            self.assertIn("Disable Game Mode In-World UI(Event Player);", setup)
+            self.assertNotIn("Disable Game Mode HUD(Event Player);", setup)
+            self.assertNotIn("Disable Game Mode In-World UI(Event Player);", setup)
             self.assertIn("Call Subroutine(TenangkanPemain);", setup)
             self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
             self.assertIn("Call Subroutine(BersihkanPemain);", setup)
             self.assertIn("Call Subroutine(SiapkanPemain);", setup)
             self.assertNotIn("Wait(", setup)
-            self.assertLess(setup.index("Disable Game Mode HUD(Event Player);"), setup.index("Call Subroutine(TenangkanPemain);"))
 
             scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
             self.assertIn(f"{global_name}.DaftarPemainSnapshot = All Players(All Teams);", scheduler)
