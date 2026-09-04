@@ -1106,6 +1106,8 @@ rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	actions
 	{
+		Disable Game Mode HUD(Event Player);
+		Disable Game Mode In-World UI(Event Player);
 		Call Subroutine(TenangkanPemain);
 		If(Array Contains(Global.PemainManusia, Event Player));
 			Call Subroutine(BersihkanPemain);
@@ -1179,8 +1181,10 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			End;
 			Abort;
 		End;
-		"Bekukan nama manusia sekali saat identitasnya valid. HUD roster dan teks dunia memakai salinan ini agar token player tidak kosong setelah pindah tim."
-		Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));
+		"Nama cache yang sudah valid tidak boleh ditimpa token kosong saat transisi tim."
+		If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(""))));
+			Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));
+		End;
 		If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));
 			"Nama manusia yang masih kosong belum merupakan identitas stabil: jangan pakai slot roster dan jadwalkan ulang setup ringan."
 			Event Player.SudahDiperiksa = False;

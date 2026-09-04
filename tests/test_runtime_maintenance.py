@@ -19,6 +19,14 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("107: NamaTampilan", source)
 
             classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
+            name_guard = "If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\"))));"
+            name_assign = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
+            empty_guard = 'If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));'
+            self.assertIn(name_guard, classifier)
+            self.assertIn(name_assign, classifier)
+            self.assertIn(empty_guard, classifier)
+            self.assertLess(classifier.index(name_guard), classifier.index(name_assign))
+            self.assertLess(classifier.index(name_assign), classifier.index(empty_guard))
             self.assertIn('Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));', classifier)
 
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
@@ -386,11 +394,14 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
+            self.assertIn("Disable Game Mode HUD(Event Player);", setup)
+            self.assertIn("Disable Game Mode In-World UI(Event Player);", setup)
             self.assertIn("Call Subroutine(TenangkanPemain);", setup)
             self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
             self.assertIn("Call Subroutine(BersihkanPemain);", setup)
             self.assertIn("Call Subroutine(SiapkanPemain);", setup)
             self.assertNotIn("Wait(", setup)
+            self.assertLess(setup.index("Disable Game Mode HUD(Event Player);"), setup.index("Call Subroutine(TenangkanPemain);"))
 
             scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
             self.assertIn(f"{global_name}.DaftarPemainSnapshot = All Players(All Teams);", scheduler)

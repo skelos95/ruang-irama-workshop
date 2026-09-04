@@ -4548,6 +4548,17 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         )
         checks.require(classifier.body.find("Event Player.Manusia = True;") < classifier.body.find("Event Player.PahlawanTerakhir = Hero Of(Event Player);"),
                        "classificazione umana non inizializza PahlawanTerakhir dopo Manusia=True")
+        name_guard = "If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\"))));"
+        name_assign = "Event Player.NamaTampilan = Evaluate Once(Custom String(\"{0}\", Event Player));"
+        name_empty = "If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\")));"
+        guard_pos = classifier.body.find(name_guard)
+        assign_pos = classifier.body.find(name_assign)
+        empty_pos = classifier.body.find(name_empty)
+        checks.require(guard_pos >= 0, "classifier deve proteggere NamaTampilan cache durante team-switch")
+        checks.require(assign_pos >= 0, "classifier deve poter acquisire NamaTampilan su join iniziale")
+        checks.require(empty_pos >= 0, "classifier senza guardia nome vuoto")
+        checks.require(guard_pos < assign_pos < empty_pos,
+                       "classifier deve aggiornare NamaTampilan solo sotto guardia e prima del check nome vuoto")
 
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "SiapkanPemain assente")
@@ -4977,6 +4988,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale non deve dipendere dal carico server")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
+        checks.require("Disable Game Mode HUD(Event Player);" in setup_worker.body,
+                       "worker setup iniziale deve riapplicare il blocco HUD nativo post-team-switch")
+        checks.require("Disable Game Mode In-World UI(Event Player);" in setup_worker.body,
+                       "worker setup iniziale deve riapplicare il blocco objective marker post-team-switch")
         checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
                        "worker setup iniziale deve separare il path team-switch dal join iniziale")
         checks.require("Call Subroutine(BersihkanPemain);" in setup_worker.body,
@@ -4986,6 +5001,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         order = tuple(
             setup_worker.body.find(token)
             for token in (
+                "Disable Game Mode HUD(Event Player);",
+                "Disable Game Mode In-World UI(Event Player);",
                 "Call Subroutine(TenangkanPemain);",
                 "If(Array Contains(Global.PemainManusia, Event Player));",
                 "Call Subroutine(BersihkanPemain);",
@@ -4993,7 +5010,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             )
         )
         checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
-                       "worker setup iniziale deve seguire ordine tenangkan -> cleanup opzionale -> siapkan")
+                       "worker setup iniziale deve seguire ordine reapply HUD -> tenangkan -> cleanup opzionale -> siapkan")
         checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == setup_worker,
                        "cleanup team-switch deve vivere solo nel worker setup serializzato")
         checks.require(not wait_calls(setup_worker.body), "worker setup iniziale non deve usare Wait")

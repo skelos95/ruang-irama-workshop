@@ -2491,6 +2491,36 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
         self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 
+    def test_setup_worker_reapplies_native_hud_blocks_before_reset(self) -> None:
+        setup_worker = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        )
+        for token in ("Disable Game Mode HUD(Event Player);", "Disable Game Mode In-World UI(Event Player);"):
+            with self.subTest(token=token):
+                mutated = self.replace_in_rule(setup_worker, token, "")
+                self.assert_rejected(mutated, "riapplicare")
+
+        sequence = "Disable Game Mode In-World UI(Event Player);\n\t\tCall Subroutine(TenangkanPemain);"
+        reordered = "Call Subroutine(TenangkanPemain);\n\t\tDisable Game Mode In-World UI(Event Player);"
+        mutated = self.replace_in_rule(setup_worker, sequence, reordered)
+        self.assert_rejected(mutated, "ordine reapply HUD")
+
+    def test_classifier_preserves_cached_name_on_team_switch_rejoin(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+        )
+        guard = "If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\"))));"
+        mutated = self.replace_in_rule(classifier, guard, "")
+        self.assert_rejected(mutated, "proteggere NamaTampilan cache")
+        mutated = self.replace_in_rule(
+            classifier,
+            "Event Player.NamaTampilan = Evaluate Once(Custom String(\"{0}\", Event Player));",
+            "",
+        )
+        self.assert_rejected(mutated, "acquisire NamaTampilan su join iniziale")
+
     def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
