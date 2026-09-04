@@ -5435,6 +5435,7 @@ def validate_dummy_slot_management(
                 expected_create_conditions = f"""
                     Global.Siap == True;
                     Is Game In Progress == True;
+                    Global.PemainSiklusGlobal == Null;
                     Number Of Players({team}) < Number Of Slots({team}) - 1;
                     Count Of(Spawn Points({team})) > 0;
                     Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
@@ -5483,6 +5484,7 @@ def validate_dummy_slot_management(
                 expected_release_conditions = f"""
                     Global.Siap == True;
                     Is Game In Progress == True;
+                    Global.PemainSiklusGlobal == Null;
                     Number Of Players({team}) >= Number Of Slots({team});
                     Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;
                 """

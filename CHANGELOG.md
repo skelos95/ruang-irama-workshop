@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
+- Hardening del 4 settembre (dummy/team-switch): le regole di create/release dummy (`03d`, `03d1`, `03e`, `03e1`) ora girano solo quando `PemainSiklusGlobal == Null`. Durante un cambio squadra in corso il sistema non fa churn create/destroy dei bot, riducendo i picchi di carico nel passaggio.
 - Hotfix del 4 settembre: `BersihkanPemain` ora include un fallback di recovery su mismatch indici. Se roster e array canonici sono desincronizzati, il cleanup rimuove comunque l'entità e distrugge gli handle validi per evitare leak progressivi (HUD/IWT/Icon) e picchi di carico script durante cambio squadra.
 - Hardening del 4 settembre (team-switch): aggiunte guardie bounds-safe anche sui punti menu/inspection che leggono `HudMenuPemain` e `TeksDuniaPemain` via indice roster. In stato desincronizzato, i rami non accedono più a indici invalidi, evitando retry incontrollati e nuovo carico script.
 - Correzione del 2 settembre: il reset completo del cambio squadra viene eseguito dalla regola `01a - Siklus tim: Reset penuh pada konteks pemain` (`Ongoing - Each Player`), così `TenangkanPemain` e `BersihkanPemain` ricevono l'`Event Player` corretto. Gli effetti engine vengono fermati prima del nuovo setup; gli handle HUD canonici e i riferimenti vengono distrutti prima di liberare lo slot e riaccodare il setup con timestamp di 0,25 s, senza nuovi `Wait`. Il vero leave mantiene la guardia di 0,5 s e la rimozione per identità esatta, prima del riuso dello slot.

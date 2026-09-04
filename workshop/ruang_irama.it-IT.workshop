@@ -1310,6 +1310,7 @@ regola("03d - Bot/Dummy: Buat satu bot acak untuk Tim 1")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
+		Globale.PemainSiklusGlobal == Null;
 		Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;
 		Count Of(Spawn Points(Team 1)) > 0;
 		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
@@ -1333,6 +1334,7 @@ regola("03d1 - Bot/Dummy: Kosongkan slot Tim 1 untuk pemain")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
+		Globale.PemainSiklusGlobal == Null;
 		Number Of Players(Team 1) >= Number Of Slots(Team 1);
 		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) > 0;
 	}
@@ -1355,6 +1357,7 @@ regola("03e - Bot/Dummy: Buat satu bot acak untuk Tim 2")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
+		Globale.PemainSiklusGlobal == Null;
 		Number Of Players(Team 2) < Number Of Slots(Team 2) - 1;
 		Count Of(Spawn Points(Team 2)) > 0;
 		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
@@ -1378,6 +1381,7 @@ regola("03e1 - Bot/Dummy: Kosongkan slot Tim 2 untuk pemain")
 	{
 		Globale.Siap == True;
 		Is Game In Progress == True;
+		Globale.PemainSiklusGlobal == Null;
 		Number Of Players(Team 2) >= Number Of Slots(Team 2);
 		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) > 0;
 	}
