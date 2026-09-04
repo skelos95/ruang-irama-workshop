@@ -2316,18 +2316,23 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "dispatcher team-switch deve escludere gli iBot")
 
-    def test_team_switch_detector_requires_full_cleanup_calls(self) -> None:
+    def test_team_switch_detector_requires_quarantine_and_defers_heavy_cleanup(self) -> None:
         worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
-        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
+        for token in (
+            "Event Player.PindahTimDiproses = True;",
+            "Event Player.SiklusPemainAktif = True;",
+            "Event Player.SudahSiap = False;",
+            "Event Player.Manusia = False;",
+            "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;",
+        ):
             with self.subTest(token=token):
                 mutated = self.replace_in_rule(worker, token, "")
                 self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
-
-        sequence = "Call Subroutine(TenangkanPemain);\n\t\tCall Subroutine(BersihkanPemain);"
-        swapped = "Call Subroutine(BersihkanPemain);\n\t\tCall Subroutine(TenangkanPemain);"
-        mutated = self.replace_in_rule(worker, sequence, swapped)
-        self.assert_rejected(mutated, "tenangkan deve precedere bersihkan")
+        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
+            with self.subTest(token=token):
+                mutated = self.inject_action(worker, token)
+                self.assert_rejected(mutated, "transizione nativa")
 
     def test_old_global_team_cleanup_is_rejected_by_transitive_context_gate(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
@@ -2381,6 +2386,22 @@ rule("999x - Nasib: Renderer pemain tambahan")
                               and "Call Subroutine(ProsesCepatPemain);" in rule.body)
         mutated = self.replace_in_rule(scheduler, "Has Spawned(Global.PemainSiklusGlobal) == False", "False")
         self.assert_rejected(mutated, "player non spawned")
+
+    def test_scheduler_iterates_players_from_a_snapshot(self) -> None:
+        scheduler = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Global"
+                              and "Call Subroutine(ProsesCepatPemain);" in rule.body)
+        mutated = self.replace_in_rule(
+            scheduler,
+            "Global.DaftarPemainSnapshot = All Players(All Teams);",
+            "",
+        )
+        self.assert_rejected(mutated, "snapshot roster")
+        mutated = self.replace_in_rule(
+            scheduler,
+            "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];",
+            "Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];",
+        )
+        self.assert_rejected(mutated, "non deve iterare direttamente")
 
     def test_menu_canonical_handle_must_be_destroyed_before_its_reference_is_lost(self) -> None:
         close_menu = self.rule(lambda rule: validator.subroutine_target(rule) == "TutupMenu")
@@ -2456,10 +2477,19 @@ rule("999x - Nasib: Renderer pemain tambahan")
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         mutated = self.replace_in_rule(
             worker,
-            "Event Player.PindahTimDiproses = False;",
+            "Event Player.PindahTimDiproses = True;",
             "",
         )
         self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
+
+    def test_setup_worker_performs_cleanup_only_after_stability_gate(self) -> None:
+        setup_worker = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        )
+        mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
+        self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 
     def test_pending_roster_refresh_starts_false_in_fresh_setup(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
