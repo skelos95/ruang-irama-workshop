@@ -970,9 +970,8 @@ rule("00a2 - Umum: Lewati pemilihan pahlawan")
 
 	actions
 	{
-		"Jalankan satu kali hanya pada fase awal; pindah tim saat pertandingan berjalan tidak boleh memanggil Set Match Time berulang kali."
+		"Kunci bootstrap sekali pada fase awal; jangan paksa fase mode agar perpindahan tim tetap memakai loading native."
 		Global.PilihPahlawanDilewati = True;
-		Set Match Time(0);
 	}
 }
 
@@ -995,9 +994,8 @@ rule("00a3 - Umum: Lewati persiapan awal")
 
 	actions
 	{
-		"Lewati persiapan sekali saja agar aturan global tidak menembak Set Match Time terus-menerus."
+		"Kunci bootstrap persiapan sekali saja; jangan paksa waktu mode bawaan."
 		Global.PersiapanDilewati = True;
-		Set Match Time(0);
 	}
 }
 
