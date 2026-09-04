@@ -1736,7 +1736,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_scans_cannot_yield(self) -> None:
         scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
-        token = "Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];"
+        token = "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];"
         mutated = self.replace_in_rule(scheduler, token, token + "\n\t\t\tWait(0.001, Ignore Condition);")
         self.assert_rejected(mutated, "yield durante scansione")
 
