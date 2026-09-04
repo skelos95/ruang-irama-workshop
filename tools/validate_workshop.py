@@ -2360,9 +2360,24 @@ def validate_ghost_fly(
     team_switch = team_switch_worker(rules)
     checks.require(team_switch is not None, "Ghost/Fly: lifecycle cambio squadra Each Player assente")
     if team_switch:
-        for token in ("Call Subroutine(TenangkanPemain);", "Call Subroutine(BersihkanPemain);"):
-            checks.require(token in mask_strings(team_switch.body),
-                           f"Ghost/Fly cambio squadra incompleto: {token}")
+        masked_switch = mask_strings(team_switch.body)
+        checks.require("Call Subroutine(TenangkanPemain);" not in masked_switch,
+                       "Ghost/Fly: detector team-switch non deve resettare engine durante transizione nativa")
+        checks.require("Call Subroutine(BersihkanPemain);" not in masked_switch,
+                       "Ghost/Fly: detector team-switch non deve fare cleanup durante transizione nativa")
+        setup_worker = next((
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        ), None)
+        checks.require(setup_worker is not None, "Ghost/Fly: worker setup serializzato team-switch assente")
+        if setup_worker:
+            masked_setup = mask_strings(setup_worker.body)
+            checks.require("Call Subroutine(TenangkanPemain);" in masked_setup,
+                           "Ghost/Fly: reset engine team-switch deve avvenire nel worker serializzato")
+            checks.require("Call Subroutine(BersihkanPemain);" in masked_setup,
+                           "Ghost/Fly: cleanup team-switch deve avvenire nel worker serializzato")
 
     timestamp_writers: list[tuple[str, str]] = []
     for rule in rules:
@@ -3535,12 +3550,22 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
     checks.equal(len(scheduler_candidates), 1, "scheduler periodico unico")
     scheduler = scheduler_candidates[0] if len(scheduler_candidates) == 1 else None
     checks.require("LangkahPenjadwal" in globals_, "contatore scheduler LangkahPenjadwal assente")
+    checks.require("DaftarPemainSnapshot" in globals_, "snapshot roster scheduler assente")
     if scheduler:
         checks.equal(event_type(scheduler), "Ongoing - Global", "scheduler 20 Hz: evento")
         checks.require("Wait(0.050, Ignore Condition);" in scheduler.body,
                        "scheduler non gira a 20 Hz")
         checks.require("Global.LangkahPenjadwal" in scheduler.body,
                        "scheduler non incrementa LangkahPenjadwal")
+        for token in (
+            "Global.DaftarPemainSnapshot = All Players(All Teams);",
+            "For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.DaftarPemainSnapshot), 1);",
+            "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];",
+            "Global.DaftarPemainSnapshot = Empty Array;",
+        ):
+            checks.require(token in scheduler.body, f"scheduler snapshot roster incompleto: {token}")
+        checks.require("All Players(All Teams)[Global.IndeksPemainGlobal]" not in scheduler.body,
+                       "scheduler non deve iterare direttamente la lista nativa mentre cambia team")
         for name in sorted(SCHEDULER_SUBROUTINES):
             checks.require(f"Call Subroutine({name});" in scheduler.body,
                            f"scheduler non chiama {name}")
@@ -4787,6 +4812,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Global.PemainAktif.Manusia = False;",
             "Global.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;",
             "Global.PemainSiklusGlobal == Null",
+            "Or(Array Contains(Global.PemainManusia, Global.PemainAktif) == False, Global.PemainAktif.SiklusPemainAktif == True)",
+            "Global.PemainAktif.TimSiklusTarget == Team Of(Global.PemainAktif)",
             "Global.PemainSiklusGlobal = Global.PemainAktif;",
             "Has Spawned(Global.PemainAktif) == True",
         ):
@@ -4824,6 +4851,10 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         claim_position = fast.body.find("Global.PemainSiklusGlobal = Global.PemainAktif;")
         claim_branches = conditional_branches_containing(fast.body, claim_position) if claim_position >= 0 else []
         claim = mask_strings(min(claim_branches, key=len)) if claim_branches else ""
+        checks.require("Or(Array Contains(Global.PemainManusia, Global.PemainAktif) == False, Global.PemainAktif.SiklusPemainAktif == True)" in claim,
+                       "lifecycle prenotazione deve accettare join iniziale o quarantena team-switch")
+        checks.require("Global.PemainAktif.TimSiklusTarget == Team Of(Global.PemainAktif)" in claim,
+                       "lifecycle prenotazione deve richiedere team target stabile")
         checks.require("And(Total Time Elapsed >= Global.WaktuSiklusGlobal, Total Time Elapsed >= Global.PemainAktif.WaktuSiklusTim)" in claim,
                        "lifecycle prenotazione deve attendere entrambe le scadenze prima del lock")
 
@@ -4842,32 +4873,38 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                            f"detector team-switch senza guardia: {token}")
         actions = mask_strings(rule_block(team_switch, "actions") or "")
         for token in (
-            "Call Subroutine(TenangkanPemain);",
-            "Call Subroutine(BersihkanPemain);",
             "Event Player.SegarkanRosterTertunda = False;",
-            "Event Player.PindahTimDiproses = False;",
-            "Event Player.SiklusPemainAktif = False;",
+            "Event Player.PindahTimDiproses = True;",
+            "Event Player.SiklusPemainAktif = True;",
+            "Event Player.SudahSiap = False;",
+            "Event Player.Manusia = False;",
             "Event Player.TimTerakhir = Team Of(Event Player);",
             "Event Player.TimSiklusTarget = Team Of(Event Player);",
-            "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;",
+            "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;",
             "If(Global.PemainSiklusGlobal == Event Player);",
             "Global.PemainSiklusGlobal = Null;",
             "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;",
         ):
             checks.require(token in actions, f"detector team-switch cleanup incompleto: {token}")
         order = tuple(actions.find(token) for token in (
-            "Call Subroutine(TenangkanPemain);",
-            "Call Subroutine(BersihkanPemain);",
+            "Event Player.PindahTimDiproses = True;",
+            "Event Player.SiklusPemainAktif = True;",
+            "Event Player.SudahSiap = False;",
+            "Event Player.Manusia = False;",
             "Event Player.TimTerakhir = Team Of(Event Player);",
         ))
         checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
-                       "detector team-switch: tenangkan deve precedere bersihkan e il commit del team")
+                       "detector team-switch deve attivare quarantena prima del commit del team")
         checks.require(not wait_calls(team_switch.body) and action_loop_count(team_switch.body) == 0,
                        "detector team-switch deve essere atomico senza Wait/Loop")
         checks.require(re.search(r"\bAbort(?:\s+If)?\s*(?:\(|;)", actions) is None,
                        "detector team-switch: il detector non deve usare Abort")
         checks.require("Server Load" not in conditions,
                        "detector team-switch non deve dipendere dal carico server")
+        checks.require("Call Subroutine(TenangkanPemain);" not in actions,
+                       "detector team-switch non deve fare reset engine durante la transizione nativa")
+        checks.require("Call Subroutine(BersihkanPemain);" not in actions,
+                       "detector team-switch non deve fare cleanup roster durante la transizione nativa")
         checks.require("Event Player.SegarkanRosterTertunda = True;" not in actions,
                        "detector team-switch non deve usare pending roster ringan")
         checks.require("Call Subroutine(SiapkanPemain);" not in actions,
@@ -4915,8 +4952,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     cleanup_workers = [rule for rule in rules
                        if event_type(rule) == "Ongoing - Each Player"
                        and "Call Subroutine(BersihkanPemain);" in mask_strings(rule.body)]
-    checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == team_switch,
-                   "cleanup team-switch deve avere un solo worker Each Player con mismatch team")
+    checks.require(len(cleanup_workers) == 1,
+                   "cleanup team-switch deve avere un solo worker Each Player serializzato")
 
     setup_worker = next((
         rule for rule in rules
@@ -4930,10 +4967,8 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for token in (
             "Event Player.PindahTimDiproses == True;",
             "Global.PemainSiklusGlobal == Event Player;",
-            "Array Contains(Global.PemainManusia, Event Player) == False;",
             "Event Player.TimSiklusTarget == Team Of(Event Player);",
             "Has Spawned(Event Player) == True;",
-            "Event Player.SiklusPemainAktif == False;",
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
         ):
@@ -4942,10 +4977,25 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale non deve dipendere dal carico server")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
+        checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
+                       "worker setup iniziale deve separare il path team-switch dal join iniziale")
+        checks.require("Call Subroutine(BersihkanPemain);" in setup_worker.body,
+                       "worker setup iniziale deve fare cleanup solo dopo stabilizzazione")
         checks.require("Call Subroutine(SiapkanPemain);" in setup_worker.body,
                        "setup iniziale non chiama SiapkanPemain")
-        checks.require("Call Subroutine(BersihkanPemain);" not in setup_worker.body,
-                       "setup iniziale non deve fare cleanup roster")
+        order = tuple(
+            setup_worker.body.find(token)
+            for token in (
+                "Call Subroutine(TenangkanPemain);",
+                "If(Array Contains(Global.PemainManusia, Event Player));",
+                "Call Subroutine(BersihkanPemain);",
+                "Call Subroutine(SiapkanPemain);",
+            )
+        )
+        checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
+                       "worker setup iniziale deve seguire ordine tenangkan -> cleanup opzionale -> siapkan")
+        checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == setup_worker,
+                       "cleanup team-switch deve vivere solo nel worker setup serializzato")
         checks.require(not wait_calls(setup_worker.body), "worker setup iniziale non deve usare Wait")
 
     scheduler = next((rule for rule in rules if event_type(rule) == "Ongoing - Global" and action_loop_count(rule.body) == 1), None)
@@ -4957,6 +5007,9 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Call Subroutine(ProsesCepatPemain);",
             "Call Subroutine(ProsesNasibPemain);",
             "And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null)",
+            "Global.DaftarPemainSnapshot = All Players(All Teams);",
+            "Count Of(Global.DaftarPemainSnapshot)",
+            "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];",
         ):
             checks.require(token in scheduler.body, f"scheduler lifecycle iniziale incompleto: {token}")
         checks.require("Or(Entity Exists(Global.PemainSiklusGlobal) == False, Has Spawned(Global.PemainSiklusGlobal) == False)" in mask_strings(scheduler.body),

@@ -58,6 +58,7 @@ variabili
 		54: PemainSiklusGlobal
 		55: WaktuSiklusGlobal
 		56: IndeksDendamKeluar
+		57: DaftarPemainSnapshot
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -1066,15 +1067,15 @@ regola("01a - Siklus tim: Reset penuh pada konteks pemain")
 
 	azioni
 	{
-		"Reset atomik memakai Event Player yang benar; slot dan HUD lama dilepas sebelum antrean penyiapan baru."
-		Call Subroutine(TenangkanPemain);
-		Call Subroutine(BersihkanPemain);
+		"Karantina ringan: tunda teardown penuh sampai transisi tim native stabil."
 		Event Player.SegarkanRosterTertunda = False;
-		Event Player.PindahTimDiproses = False;
-		Event Player.SiklusPemainAktif = False;
+		Event Player.PindahTimDiproses = True;
+		Event Player.SiklusPemainAktif = True;
+		Event Player.SudahSiap = False;
+		Event Player.Manusia = False;
 		Event Player.TimTerakhir = Team Of(Event Player);
 		Event Player.TimSiklusTarget = Team Of(Event Player);
-		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.250;
+		Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;
 		If(Globale.PemainSiklusGlobal == Event Player);
 			Globale.PemainSiklusGlobal = Null;
 			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
@@ -1095,12 +1096,10 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 	{
 		Is Dummy Bot(Event Player) == False;
 		Event Player.BotOtomatis == False;
-		Array Contains(Globale.PemainManusia, Event Player) == False;
 		Event Player.PindahTimDiproses == True;
 		Globale.PemainSiklusGlobal == Event Player;
 		Event Player.TimSiklusTarget == Team Of(Event Player);
 		Has Spawned(Event Player) == True;
-		Event Player.SiklusPemainAktif == False;
 		Event Player.SudahSiap == False;
 		Total Time Elapsed >= Event Player.WaktuSiklusTim;
 	}
@@ -1108,6 +1107,9 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 	azioni
 	{
 		Call Subroutine(TenangkanPemain);
+		If(Array Contains(Globale.PemainManusia, Event Player));
+			Call Subroutine(BersihkanPemain);
+		End;
 		Call Subroutine(SiapkanPemain);
 	}
 }
@@ -1630,9 +1632,10 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 			Globale.PemainSiklusGlobal = Null;
 			Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 		End;
-		"Indeks dan pemain aktif hanya dimiliki penjadwal; tidak ada jeda selama pemindaian."
-		For Global Variable(IndeksPemainGlobal, 0, Count Of(All Players(All Teams)), 1);
-			Globale.PemainAktif = All Players(All Teams)[Globale.IndeksPemainGlobal];
+		"Snapshot roster mencegah koleksi aktif berubah saat iterasi scheduler."
+		Globale.DaftarPemainSnapshot = All Players(All Teams);
+		For Global Variable(IndeksPemainGlobal, 0, Count Of(Globale.DaftarPemainSnapshot), 1);
+			Globale.PemainAktif = Globale.DaftarPemainSnapshot[Globale.IndeksPemainGlobal];
 			If(Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal));
 				Call Subroutine(ProsesCepatPemain);
 				Call Subroutine(ProsesNasibPemain);
@@ -1649,6 +1652,7 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 			End;
 		End;
 		Globale.PemainAktif = Null;
+		Globale.DaftarPemainSnapshot = Empty Array;
 		Wait(0.050, Ignora condizione);
 		Loop If Condition Is True;
 	}
@@ -3332,7 +3336,7 @@ regola("89a - Subrutin: Proses status cepat pemain")
 				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 			End;
 		End;
-		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, And(Entity Exists(Globale.PemainAktif) == True, And(Has Spawned(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Total Time Elapsed >= Globale.PemainAktif.WaktuSiklusTim))))))));
+		If(And(Globale.PemainSiklusGlobal == Null, And(Globale.PemainAktif.PindahTimDiproses == True, And(Globale.PemainAktif.BotOtomatis == False, And(Or(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == False, Globale.PemainAktif.SiklusPemainAktif == True), And(Globale.PemainAktif.TimSiklusTarget == Team Of(Globale.PemainAktif), And(Entity Exists(Globale.PemainAktif) == True, And(Has Spawned(Globale.PemainAktif) == True, And(Total Time Elapsed >= Globale.WaktuSiklusGlobal, Total Time Elapsed >= Globale.PemainAktif.WaktuSiklusTim)))))))));
 			Globale.PemainSiklusGlobal = Globale.PemainAktif;
 		End;
 		If(And(Globale.PemainAktif.Manusia == True, Or(Globale.PemainAktif.KematianBalasDendam == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.EfekNasib == 3, And(Globale.PemainAktif.PutaranKartuNasib == 0, Globale.PemainAktif.WaktuPaksaBerakhir > 0))))));

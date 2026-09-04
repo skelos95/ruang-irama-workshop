@@ -343,27 +343,33 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Ongoing - Each Player;", switch)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == True;", switch)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player);", switch)
-            self.assertIn("Call Subroutine(TenangkanPemain);", switch)
-            self.assertIn("Call Subroutine(BersihkanPemain);", switch)
-            self.assertLess(
-                switch.index("Call Subroutine(TenangkanPemain);"),
-                switch.index("Call Subroutine(BersihkanPemain);"),
-            )
-            self.assertLess(switch.index("Call Subroutine(BersihkanPemain);"),
-                            switch.index("Event Player.TimTerakhir = Team Of(Event Player);"))
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", switch)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", switch)
             self.assertNotIn("Wait(", switch)
             self.assertNotIn(f"{global_name}.PemainAktif", switch)
             self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
             self.assertIn(f"Has Spawned({global_name}.PemainAktif) == True", fast)
             self.assertIn("Event Player.SegarkanRosterTertunda = False;", switch)
-            self.assertIn("Event Player.PindahTimDiproses = False;", switch)
+            self.assertIn("Event Player.PindahTimDiproses = True;", switch)
+            self.assertIn("Event Player.SiklusPemainAktif = True;", switch)
+            self.assertIn("Event Player.SudahSiap = False;", switch)
+            self.assertIn("Event Player.Manusia = False;", switch)
+            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;", switch)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False", fast)
             self.assertIn(f"{global_name}.PemainAktif.PindahTimDiproses = True;", fast)
             self.assertNotIn("Server Load < 150", fast)
             setup_worker = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain', 1)[0]
             self.assertNotIn("Server Load < 150", setup_worker)
             self.assertNotIn("Call Subroutine(SiapkanPemain);", fast)
+            self.assertIn(
+                f"Or(Array Contains({global_name}.PemainManusia, {global_name}.PemainAktif) == False, {global_name}.PemainAktif.SiklusPemainAktif == True)",
+                fast,
+            )
+            self.assertIn(
+                f"{global_name}.PemainAktif.TimSiklusTarget == Team Of({global_name}.PemainAktif)",
+                fast,
+            )
 
             roster_hud = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
@@ -380,10 +386,18 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
-            self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", setup)
             self.assertIn("Call Subroutine(TenangkanPemain);", setup)
+            self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
+            self.assertIn("Call Subroutine(BersihkanPemain);", setup)
             self.assertIn("Call Subroutine(SiapkanPemain);", setup)
-            self.assertNotIn("Call Subroutine(BersihkanPemain);", setup)
+            self.assertNotIn("Wait(", setup)
+
+            scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
+            self.assertIn(f"{global_name}.DaftarPemainSnapshot = All Players(All Teams);", scheduler)
+            self.assertIn(
+                f"{global_name}.PemainAktif = {global_name}.DaftarPemainSnapshot[{global_name}.IndeksPemainGlobal];",
+                scheduler,
+            )
 
             left = source.split(f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")', 1)[1].split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[0]
             self.assertIn("Wait(0.500,", left)

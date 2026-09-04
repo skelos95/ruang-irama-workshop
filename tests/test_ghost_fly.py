@@ -429,11 +429,20 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertIn("Ongoing - Each Player;", team_rule)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", team_rule)
             self.assertIn("Event Player.SegarkanRosterTertunda = False;", team_rule)
-            self.assertIn("Event Player.PindahTimDiproses = False;", team_rule)
+            self.assertIn("Event Player.PindahTimDiproses = True;", team_rule)
+            self.assertIn("Event Player.SiklusPemainAktif = True;", team_rule)
+            self.assertIn("Event Player.SudahSiap = False;", team_rule)
+            self.assertIn("Event Player.Manusia = False;", team_rule)
+            self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;", team_rule)
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", team_rule)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", team_rule)
             self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", team_rule)
-            self.assertLess(team_rule.index("Call Subroutine(TenangkanPemain);"), team_rule.index("Call Subroutine(BersihkanPemain);"))
             self.assertNotIn(f"{global_name}.PemainAktif", team_rule)
             self.assertNotIn("Wait(", team_rule)
+            setup_worker = rule_with(source, '01b - Siklus tim: Pekerja penyiapan dari penjadwal global')
+            self.assertIn("Call Subroutine(TenangkanPemain);", setup_worker)
+            self.assertIn("Call Subroutine(BersihkanPemain);", setup_worker)
+            self.assertIn("Call Subroutine(SiapkanPemain);", setup_worker)
 
             hero_change = reapply.index(
                 f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"
