@@ -962,6 +962,8 @@ regola("00a2 - Umum: Lewati pemilihan pahlawan")
 	{
 		Globale.Siap == True;
 		Globale.PilihPahlawanDilewati == False;
+		Count Of(Globale.PemainManusia) == 0;
+		Globale.PemainSiklusGlobal == Null;
 		Is Game In Progress == False;
 		Is Assembling Heroes == True;
 	}
@@ -985,6 +987,8 @@ regola("00a3 - Umum: Lewati persiapan awal")
 	{
 		Globale.Siap == True;
 		Globale.PersiapanDilewati == False;
+		Count Of(Globale.PemainManusia) == 0;
+		Globale.PemainSiklusGlobal == Null;
 		Is Game In Progress == False;
 		Is In Setup == True;
 	}
@@ -994,6 +998,28 @@ regola("00a3 - Umum: Lewati persiapan awal")
 		"Lewati persiapan sekali saja agar aturan global tidak menembak Set Match Time terus-menerus."
 		Globale.PersiapanDilewati = True;
 		Set Match Time(0);
+	}
+}
+
+regola("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")
+{
+	evento
+	{
+		Ongoing - Global;
+	}
+
+	condizioni
+	{
+		Globale.Siap == True;
+		Is Game In Progress == True;
+		Or(Globale.PilihPahlawanDilewati == False, Globale.PersiapanDilewati == False);
+	}
+
+	azioni
+	{
+		"Setelah mode berjalan, skip fase awal dikunci agar pindah tim tidak menembak Set Match Time(0)."
+		Globale.PilihPahlawanDilewati = True;
+		Globale.PersiapanDilewati = True;
 	}
 }
 

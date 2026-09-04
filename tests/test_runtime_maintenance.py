@@ -99,6 +99,38 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             outer_end = scheduler.index("\n\t\tEnd;", cadence_position)
             self.assertLess(sync_position, outer_end)
 
+    def test_initial_skip_rules_are_bootstrap_only_and_locked_after_match_start(self):
+        for source, global_name, rule_kw in (
+            (self.it, "Globale", "regola"),
+            (self.en, "Global", "rule"),
+        ):
+            skip_heroes = source.split(
+                f'{rule_kw}("00a2 - Umum: Lewati pemilihan pahlawan")', 1
+            )[1].split(f'{rule_kw}("00a3 - Umum: Lewati persiapan awal")', 1)[0]
+            self.assertIn(f"Count Of({global_name}.PemainManusia) == 0;", skip_heroes)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Null;", skip_heroes)
+
+            skip_setup = source.split(
+                f'{rule_kw}("00a3 - Umum: Lewati persiapan awal")', 1
+            )[1].split(
+                f'{rule_kw}("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")', 1
+            )[0]
+            self.assertIn(f"Count Of({global_name}.PemainManusia) == 0;", skip_setup)
+            self.assertIn(f"{global_name}.PemainSiklusGlobal == Null;", skip_setup)
+
+            bootstrap_lock = source.split(
+                f'{rule_kw}("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")', 1
+            )[1].split(
+                f'{rule_kw}("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")', 1
+            )[0]
+            for token in (
+                "Is Game In Progress == True;",
+                f"Or({global_name}.PilihPahlawanDilewati == False, {global_name}.PersiapanDilewati == False);",
+                f"{global_name}.PilihPahlawanDilewati = True;",
+                f"{global_name}.PersiapanDilewati = True;",
+            ):
+                self.assertIn(token, bootstrap_lock)
+
     def test_crouch_teleport_has_five_pages_and_single_shot_self_kill(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
             self.assertIn("KursorTeleportasi %= 5;", source)
