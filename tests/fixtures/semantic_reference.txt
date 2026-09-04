@@ -1249,14 +1249,18 @@ rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 			1 + Event Player.UrutanHUD, Color(White), Event Player.WarnaNama, Color(White),
 			Visible To String and Color, Visible Never);
 		Event Player.HudKiri = Last Text ID;
-		Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;
+		If(And(Index Of Array Value(Global.PemainManusia, Event Player) >= 0, Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudKiriPemain)));
+			Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;
+		End;
 		Create HUD Text(Global.PemainManusia, Null, Custom String("{0} {1} {2}", Global.DaftarIkon[Event Player.IndeksIkon],
 			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player.NamaTampilan,
 			Event Player.MusikKhusus != Null ? Event Player.MusikKhusus : Event Player.IndeksGenre >= 0 ? Global.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Null, Right, -13 + Event Player.UrutanHUD,
 			Color(White), Event Player.WarnaNama, Color(White), Visible To String and Color, Visible Never);
 		Event Player.HudKanan = Last Text ID;
-		Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;
+		If(And(Index Of Array Value(Global.PemainManusia, Event Player) >= 0, Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudKananPemain)));
+			Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;
+		End;
 		Event Player.HudPemainDibuat = True;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String(
 			"Welcome to CHILL. Pick a vibe, pick a color, stay weird.") : Event Player.IndeksBahasa == 1 ? Custom String(
@@ -2632,7 +2636,9 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.TeksDuniaPemain));
+				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			End;
 		End;
 		Event Player.TeksDunia = Null;
 		Call Subroutine(SegarkanTargetInspeksi);
@@ -2640,7 +2646,9 @@ rule("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")
 		Create In-World Text(Event Player, Custom String("{0} {1} | {2}", Hero Icon String(Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)), Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, NamaTampilan) : Custom String("{0}", Event Player.TargetInspeksi), Round To Integer(Health(Event Player.TargetInspeksi), Down)), Update Every Frame(Eye Position(Evaluate Once(Event Player.TargetInspeksi)) + Vector(0, 0.450, 0)), 1.100, Do Not Clip, Visible To Position String and Color, Player Variable(Event Player.TargetInspeksi, Manusia) == True ? Player Variable(Event Player.TargetInspeksi, WarnaNama) : Custom Color(236, 153, 0, 255), Visible Never);
 		Event Player.TeksDunia = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.TeksDuniaPemain));
+				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.TeksDunia;
+			End;
 		End;
 	}
 }
@@ -3011,7 +3019,9 @@ rule("19c - Teleportasi Jongkok: Primary maju dan Secondary mundur lima halaman"
 				Destroy In-World Text(Event Player.TeksDunia);
 			End;
 			If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+				If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.TeksDuniaPemain));
+					Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+				End;
 			End;
 			Event Player.TeksDunia = Null;
 			Event Player.TargetInspeksi = Null;
@@ -3210,7 +3220,9 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 			Destroy HUD Text(Event Player.HudMenu);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudMenuPemain));
+				Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			End;
 		End;
 		Event Player.HudMenu = Null;
 		Event Player.TeleportasiJongkokAktif = False;
@@ -3232,7 +3244,9 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 			Destroy In-World Text(Event Player.TeksDunia);
 		End;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.TeksDuniaPemain));
+				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			End;
 		End;
 		Event Player.TeksDunia = Null;
 		Event Player.TargetInspeksi = Null;
@@ -3505,7 +3519,9 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				Destroy In-World Text(Global.PemainAktif.TeksDunia);
 			End;
 			If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
-				Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+				If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) < Count Of(Global.TeksDuniaPemain));
+					Global.TeksDuniaPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+				End;
 			End;
 			Global.PemainAktif.TeksDunia = Null;
 			Global.PemainAktif.TargetInspeksi = Null;
@@ -3603,7 +3619,9 @@ rule("89d - Subrutin: Proses mesin status Coba Nasib")
 						Destroy HUD Text(Global.PemainAktif.HudMenu);
 					End;
 					If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) >= 0);
-						Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+						If(Index Of Array Value(Global.PemainManusia, Global.PemainAktif) < Count Of(Global.HudMenuPemain));
+							Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Global.PemainAktif)] = 0;
+						End;
 					End;
 					Global.PemainAktif.HudMenu = Null;
 					Global.PemainAktif.MenuTerbuka = False;
@@ -3723,13 +3741,15 @@ rule("90 - Subrutin: Tutup menu dan pulihkan tombol")
 	{
 		"Handle kanonik tetap dibersihkan walau variabel HUD lokal hilang saat transisi."
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			If(Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] != 0);
-				Destroy HUD Text(Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]);
-				If(Event Player.HudMenu == Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]);
-					Event Player.HudMenu = Null;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudMenuPemain));
+				If(Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] != 0);
+					Destroy HUD Text(Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]);
+					If(Event Player.HudMenu == Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]);
+						Event Player.HudMenu = Null;
+					End;
 				End;
+				Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 			End;
-			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
 		End;
 		If(Event Player.HudMenu != Null);
 			Destroy HUD Text(Event Player.HudMenu);
@@ -3773,7 +3793,9 @@ rule("91 - Subrutin: Gambar satu HUD menu aktif")
 		Call Subroutine(GambarHalamanAktif);
 		Call Subroutine(TransisiWarnaMenu);
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudMenuPemain));
+				Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+			End;
 		End;
 	}
 }
@@ -3884,7 +3906,9 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 		End;
 		Event Player.HudMenu = Null;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudMenuPemain));
+				Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = 0;
+			End;
 		End;
 		Event Player.KursorTeleportasi %= 5;
 		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}
@@ -3935,7 +3959,9 @@ COOLDOWN: 3 DTK PER PLAYER") : Event Player.KursorTeleportasi == 0 ? Custom Stri
 คูลดาวน์: 3 วินาทีต่อผู้เล่น"), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250, 190 + Y Component Of(Event Player.WarnaMenu) * 0.250, 190 + Z Component Of(Event Player.WarnaMenu) * 0.250, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 		If(Index Of Array Value(Global.PemainManusia, Event Player) >= 0);
-			Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+			If(Index Of Array Value(Global.PemainManusia, Event Player) < Count Of(Global.HudMenuPemain));
+				Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;
+			End;
 		End;
 	}
 }
