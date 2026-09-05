@@ -2497,6 +2497,28 @@ rule("999x - Nasib: Renderer pemain tambahan")
             and "Call Subroutine(SiapkanPemain);" in rule.body
             and "Event Player.WaktuSiklusTim" in rule.body
         )
+        for token in (
+            "If(And(Event Player.SiklusPemainAktif == True, And(Array Contains(Global.PemainManusia, Event Player) == True, Event Player.HudPemainDibuat == True)));",
+            "Event Player.TimTerakhir = Team Of(Event Player);",
+            "Event Player.TimSiklusTarget = Team Of(Event Player);",
+            "Event Player.BotOtomatis = False;",
+            "Event Player.Manusia = True;",
+            "Event Player.SudahDiperiksa = True;",
+            "Event Player.SudahSiap = True;",
+            "Event Player.PahlawanTerakhir = Hero Of(Event Player);",
+        ):
+            self.assertIn(token, setup_worker.body)
+        self.assertNotIn("Event Player.PindahTimDiproses = False;", setup_worker.body)
+        self.assertNotIn("Event Player.SiklusPemainAktif = False;", setup_worker.body)
+        self.assertNotIn("Event Player.WaktuSiklusTim = 0;", setup_worker.body)
+        mutated = self.replace_in_rule(setup_worker, "Event Player.SudahSiap = True;", "")
+        self.assert_rejected(mutated, "worker setup team-switch incompleto")
+        mutated = self.replace_in_rule(
+            setup_worker,
+            "Event Player.SudahSiap = True;",
+            "Event Player.SudahSiap = True;\n\t\t\tEvent Player.PindahTimDiproses = False;",
+        )
+        self.assert_rejected(mutated, "non deve rilasciare PindahTimDiproses")
         mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
         self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 

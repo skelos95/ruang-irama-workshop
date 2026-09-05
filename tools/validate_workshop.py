@@ -4992,6 +4992,21 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             checks.require(token in conditions, f"worker setup iniziale senza guardia: {token}")
         checks.require("Server Load < 150" not in conditions,
                        "worker setup iniziale non deve dipendere dal carico server")
+        checks.require(
+            "If(And(Event Player.SiklusPemainAktif == True, And(Array Contains(Global.PemainManusia, Event Player) == True, Event Player.HudPemainDibuat == True)));" in setup_worker.body,
+            "worker setup iniziale deve distinguere team-switch già registrato",
+        )
+        for token in (
+            "Event Player.TimTerakhir = Team Of(Event Player);",
+            "Event Player.TimSiklusTarget = Team Of(Event Player);",
+            "Event Player.BotOtomatis = False;",
+            "Event Player.Manusia = True;",
+            "Event Player.SudahDiperiksa = True;",
+            "Event Player.SudahSiap = True;",
+            "Event Player.PahlawanTerakhir = Hero Of(Event Player);",
+            "Else;",
+        ):
+            checks.require(token in setup_worker.body, f"worker setup team-switch incompleto: {token}")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
         checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
@@ -5004,6 +5019,21 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale non deve toccare HUD nativo prima di SiapkanPemain")
         checks.require("Disable Game Mode In-World UI(Event Player);" not in setup_worker.body,
                        "worker setup iniziale non deve toccare objective marker prima di SiapkanPemain")
+        team_ready_position = setup_worker.body.find("Event Player.Manusia = True;")
+        team_ready_branches = conditional_branches_containing(setup_worker.body, team_ready_position) if team_ready_position >= 0 else []
+        team_ready = mask_strings(min(team_ready_branches, key=len)) if team_ready_branches else ""
+        checks.require("Call Subroutine(TenangkanPemain);" not in team_ready,
+                       "path team-switch registrato non deve fare reset engine")
+        checks.require("Call Subroutine(BersihkanPemain);" not in team_ready,
+                       "path team-switch registrato non deve fare cleanup roster/HUD")
+        checks.require("Call Subroutine(SiapkanPemain);" not in team_ready,
+                       "path team-switch registrato non deve riusare setup join")
+        checks.require("Event Player.PindahTimDiproses = False;" not in team_ready,
+                       "path team-switch registrato non deve rilasciare PindahTimDiproses")
+        checks.require("Event Player.SiklusPemainAktif = False;" not in team_ready,
+                       "path team-switch registrato non deve rilasciare SiklusPemainAktif")
+        checks.require("Event Player.WaktuSiklusTim = 0;" not in team_ready,
+                       "path team-switch registrato non deve azzerare WaktuSiklusTim")
         order = tuple(
             setup_worker.body.find(token)
             for token in (
@@ -5678,10 +5708,51 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         if re.search(r"Event Player\.Manusia\s*=\s*True;", mask_strings(rule.body)) is not None
         or "Set Player Variable(Event Player, Manusia, True);" in rule.body
     ]
-    checks.equal(len(human_writers), 1, "numero writer di Manusia=True")
-    if human_writers and classifier:
-        checks.equal(human_writers[0].start, classifier.start,
-                     "Manusia=True scritto fuori dal classificatore umano/iBot")
+    setup_worker = next((
+        rule for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and "Call Subroutine(SiapkanPemain);" in rule.body
+        and "Event Player.WaktuSiklusTim" in rule.body
+    ), None)
+    expected_human_writer_starts: set[int] = set()
+    if classifier:
+        expected_human_writer_starts.add(classifier.start)
+    if setup_worker:
+        expected_human_writer_starts.add(setup_worker.start)
+    checks.equal(len(human_writers), len(expected_human_writer_starts), "numero writer di Manusia=True")
+    if expected_human_writer_starts:
+        checks.equal(
+            {rule.start for rule in human_writers},
+            expected_human_writer_starts,
+            "Manusia=True scritto fuori dal classificatore umano/iBot o worker setup team-switch",
+        )
+    if setup_worker:
+        setup_conditions = rule_block(setup_worker, "conditions") or ""
+        checks.require("Event Player.PindahTimDiproses == True;" in setup_conditions,
+                       "worker setup team-switch senza guardia PindahTimDiproses")
+        team_ready_position = setup_worker.body.find("Event Player.Manusia = True;")
+        team_ready_branches = conditional_branches_containing(setup_worker.body, team_ready_position) if team_ready_position >= 0 else []
+        team_ready = mask_strings(min(team_ready_branches, key=len)) if team_ready_branches else ""
+        for token in (
+            "Event Player.SiklusPemainAktif == True",
+            "Array Contains(Global.PemainManusia, Event Player) == True",
+            "Event Player.HudPemainDibuat == True",
+        ):
+            checks.require(token in team_ready,
+                           f"worker setup team-switch non isola il path registrato: {token}")
+        checks.require("Event Player.PindahTimDiproses = False;" not in team_ready,
+                       "worker setup team-switch non deve rilasciare PindahTimDiproses")
+        checks.require("Event Player.SiklusPemainAktif = False;" not in team_ready,
+                       "worker setup team-switch non deve rilasciare SiklusPemainAktif")
+        checks.require("Event Player.WaktuSiklusTim = 0;" not in team_ready,
+                       "worker setup team-switch non deve azzerare WaktuSiklusTim")
+        checks.require("Call Subroutine(TenangkanPemain);" not in team_ready,
+                       "worker setup team-switch non deve fare reset engine")
+        checks.require("Call Subroutine(BersihkanPemain);" not in team_ready,
+                       "worker setup team-switch non deve fare cleanup roster/HUD")
+        checks.require("Call Subroutine(SiapkanPemain);" not in team_ready,
+                       "worker setup team-switch non deve riusare setup join")
+    if classifier:
         human_write = max(
             classifier.body.find("Event Player.Manusia = True;"),
             classifier.body.find("Set Player Variable(Event Player, Manusia, True);"),

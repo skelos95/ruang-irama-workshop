@@ -1106,11 +1106,23 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	azioni
 	{
-		Call Subroutine(TenangkanPemain);
-		If(Array Contains(Globale.PemainManusia, Event Player));
-			Call Subroutine(BersihkanPemain);
+		If(And(Event Player.SiklusPemainAktif == True, And(Array Contains(Globale.PemainManusia, Event Player) == True, Event Player.HudPemainDibuat == True)));
+			"Team-switch di player già registrato: conserva roster e HUD."
+			Event Player.TimTerakhir = Team Of(Event Player);
+			Event Player.TimSiklusTarget = Team Of(Event Player);
+			Event Player.BotOtomatis = False;
+			Event Player.Manusia = True;
+			Event Player.SudahDiperiksa = True;
+			Event Player.SudahSiap = True;
+			Event Player.PahlawanTerakhir = Hero Of(Event Player);
+		Else;
+			"Bootstrap/rejoin normale: conserva il percorso già validato."
+			Call Subroutine(TenangkanPemain);
+			If(Array Contains(Globale.PemainManusia, Event Player));
+				Call Subroutine(BersihkanPemain);
+			End;
+			Call Subroutine(SiapkanPemain);
 		End;
-		Call Subroutine(SiapkanPemain);
 	}
 }
 
