@@ -1107,7 +1107,7 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 	azioni
 	{
 		Call Subroutine(TenangkanPemain);
-		If(Array Contains(Globale.PemainManusia, Event Player));
+		If(Or(Array Contains(Globale.PemainManusia, Event Player), Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD) >= 0));
 			Call Subroutine(BersihkanPemain);
 		End;
 		Call Subroutine(SiapkanPemain);
@@ -4410,6 +4410,9 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		"Pembersihan keluar hanya menyentuh handle dan roster global; entitas yang sudah hilang tidak dinormalisasi ulang."
 		Globale.PemainPembersihan = Event Player;
 		Globale.IndeksKeluar = Index Of Array Value(Globale.PemainManusia, Globale.PemainPembersihan);
+		If(And(Globale.IndeksKeluar < 0, And(Event Player.UrutanHUD >= 0, Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD) >= 0)));
+			Globale.IndeksKeluar = Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD);
+		End;
 		If(Globale.IndeksKeluar > -1);
 			If(Or(Globale.IndeksKeluar >= Count Of(Globale.SlotHUDPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudKiriPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudKananPemain), Or(Globale.IndeksKeluar >= Count Of(Globale.HudMenuPemain), Globale.IndeksKeluar >= Count Of(Globale.TeksDuniaPemain))))));
 				"Perlindungan mogok: tandai fallback lalu eksekusi pemulihan darurat setelah jalur kanonik."

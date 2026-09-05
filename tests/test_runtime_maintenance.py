@@ -398,7 +398,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Disable Game Mode HUD(Event Player);", setup)
             self.assertNotIn("Disable Game Mode In-World UI(Event Player);", setup)
             self.assertIn("Call Subroutine(TenangkanPemain);", setup)
-            self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
+            self.assertIn(
+                f"If(Or(Array Contains({global_name}.PemainManusia, Event Player), Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD) >= 0));",
+                setup,
+            )
             self.assertIn("Call Subroutine(BersihkanPemain);", setup)
             self.assertIn("Call Subroutine(SiapkanPemain);", setup)
             self.assertNotIn("Wait(", setup)
@@ -419,7 +422,18 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             cleanup = source.split(f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")', 1)[1].split(f'{rule_kw}("94 - Subrutin: Siapkan pemain', 1)[0]
             self.assertIn(f"{global_name}.PemainPembersihan = Event Player;", cleanup)
             self.assertIn(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainPembersihan);", cleanup)
-            self.assertNotIn("Index Of Array Value(" + global_name + ".SlotHUDPemain", cleanup)
+            self.assertIn(
+                f"If(And({global_name}.IndeksKeluar < 0, And(Event Player.UrutanHUD >= 0, Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD) >= 0)));",
+                cleanup,
+            )
+            self.assertIn(
+                f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD);",
+                cleanup,
+            )
+            self.assertLess(
+                cleanup.index(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainPembersihan);"),
+                cleanup.index(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD);"),
+            )
             self.assertEqual(cleanup.count("For Global Variable("), 1)
             self.assertIn(
                 f"For Global Variable(IndeksPemilih, 0, Count Of({global_name}.PemainManusia), 1);",
