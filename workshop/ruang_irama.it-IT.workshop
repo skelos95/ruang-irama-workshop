@@ -3305,7 +3305,7 @@ regola("89a - Subrutin: Proses status cepat pemain")
 		If(And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Or(Globale.PemainAktif.NamaTampilan == Null, Globale.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Globale.PemainAktif) != Custom String(""))));
 			Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
 		End;
-		If(And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Or(Globale.PemainAktif.Manusia == False, Globale.PemainAktif.PernahDisiapkan == False)))));
+		If(And(Globale.PemainAktif.SiklusPemainAktif == False, And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Or(Globale.PemainAktif.Manusia == False, Globale.PemainAktif.PernahDisiapkan == False))))));
 			If(And(Or(Globale.PemainAktif.NamaTampilan == Null, Globale.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Globale.PemainAktif) != Custom String("")));
 				Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
 			End;

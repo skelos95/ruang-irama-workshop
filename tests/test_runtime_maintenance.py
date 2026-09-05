@@ -347,6 +347,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
+            self.assertIn(f"{global_name}.PemainAktif.SiklusPemainAktif == False", fast)
             switch = source.split(f'{rule_kw}("01a - Siklus tim: Reset penuh pada konteks pemain")', 1)[1].split(f'{rule_kw}("01b - Siklus tim:', 1)[0]
             self.assertIn("Ongoing - Each Player;", switch)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == True;", switch)

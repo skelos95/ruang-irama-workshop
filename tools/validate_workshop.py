@@ -4812,6 +4812,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if fast:
         for token in (
             "Array Contains(Global.PemainManusia, Global.PemainAktif) == True",
+            "Global.PemainAktif.SiklusPemainAktif == False",
             "Global.PemainAktif.PernahDisiapkan == False",
             "Global.PemainAktif.SiklusPemainAktif = False;",
             "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);",
@@ -4850,6 +4851,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require("Global.PemainAktif.TimTerakhir != Team Of(Global.PemainAktif)"
                        not in mask_strings(fast.body),
                        "team switch registrato deve essere gestito nel contesto Each Player")
+        repair_position = fast.body.find("Global.PemainAktif.Manusia = True;")
+        repair_branches = conditional_branches_containing(fast.body, repair_position) if repair_position >= 0 else []
+        repair = mask_strings(min(repair_branches, key=len)) if repair_branches else ""
+        checks.require("Global.PemainAktif.SiklusPemainAktif == False" in repair,
+                       "repair roster non deve riattivare un player mentre il team-switch è in quarantena")
         pending_position = fast.body.find("Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);")
         pending_branches = conditional_branches_containing(fast.body, pending_position) if pending_position >= 0 else []
         pending = mask_strings(min(pending_branches, key=len)) if pending_branches else ""

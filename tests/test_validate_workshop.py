@@ -2316,6 +2316,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "dispatcher team-switch deve escludere gli iBot")
 
+    def test_roster_repair_is_blocked_during_team_switch_quarantine(self) -> None:
+        fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
+        mutated = self.replace_in_rule(
+            fast,
+            "Global.PemainAktif.SiklusPemainAktif == False",
+            "Global.PemainAktif.SiklusPemainAktif == True",
+        )
+        self.assert_rejected(mutated, "team-switch è in quarantena")
+
     def test_team_switch_detector_requires_quarantine_and_defers_heavy_cleanup(self) -> None:
         worker = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
