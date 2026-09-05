@@ -1415,8 +1415,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         roster_calls = list(iter_calls(roster_rule.body, "Create HUD Text"))
         checks.equal(len(roster_calls), 2, "renderer HUD roster: numero handle")
         roster_orders = {
-            "Left": "1 + Event Player.UrutanHUD",
-            "Right": "-13 + Event Player.UrutanHUD",
+            "Left": "1 + Evaluate Once(Event Player.UrutanHUD)",
+            "Right": "-13 + Evaluate Once(Event Player.UrutanHUD)",
         }
         for side in ("Left", "Right"):
             side_calls = [call for call in roster_calls if len(call.args) >= 6 and call.args[4].strip() == side]
@@ -1454,7 +1454,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                             for token in (
                                 "Global.DiagnostikPerforma == True",
                                 "Local Player == Host Player",
-                                "Event Player.UrutanHUD == Global.SlotHUDTerakhir",
+                                "Evaluate Once(Event Player.UrutanHUD) == Global.SlotHUDTerakhir",
                             ):
                                 checks.require(token in diagnostic_condition,
                                                f"renderer HUD roster Left: guardia diagnostica assente: {token}")
@@ -2531,14 +2531,18 @@ def validate_special_player_profile(
         if special is None:
             return None
         special_condition, special_value, ordinary = special
-        checks.equal(
-            code(special_condition),
-            "EventPlayer.MusikKhusus!=Null",
+        checks.require(
+            code(special_condition) in {
+                "EventPlayer.MusikKhusus!=Null",
+                "PlayerVariable(Global.PemainSlotHUD[EvaluateOnce(EventPlayer.UrutanHUD)],MusikKhusus)!=Null",
+            },
             f"{label}: condizione profilo speciale",
         )
-        checks.equal(
-            code(special_value),
-            "EventPlayer.MusikKhusus",
+        checks.require(
+            code(special_value) in {
+                "EventPlayer.MusikKhusus",
+                "PlayerVariable(Global.PemainSlotHUD[EvaluateOnce(EventPlayer.UrutanHUD)],MusikKhusus)",
+            },
             f"{label}: valore profilo speciale",
         )
         generic = parse_top_level_ternary(ordinary)
@@ -2546,14 +2550,18 @@ def validate_special_player_profile(
         if generic is None:
             return None
         genre_condition, genre_value, fallback = generic
-        checks.equal(
-            code(genre_condition),
-            "EventPlayer.IndeksGenre>=0",
+        checks.require(
+            code(genre_condition) in {
+                "EventPlayer.IndeksGenre>=0",
+                "PlayerVariable(Global.PemainSlotHUD[EvaluateOnce(EventPlayer.UrutanHUD)],IndeksGenre)>=0",
+            },
             f"{label}: condizione genere ordinario",
         )
-        checks.equal(
-            code(genre_value),
-            "Global.DaftarGenre[EventPlayer.IndeksGenre]",
+        checks.require(
+            code(genre_value) in {
+                "Global.DaftarGenre[EventPlayer.IndeksGenre]",
+                "Global.DaftarGenre[PlayerVariable(Global.PemainSlotHUD[EvaluateOnce(EventPlayer.UrutanHUD)],IndeksGenre)]",
+            },
             f"{label}: lookup genere ordinario",
         )
         return fallback
@@ -2816,7 +2824,11 @@ End;
             for call in iter_calls(right_calls[0].args[2], "Custom String")
             if right_calls and len(call.args) == 3
             and parse_literal(call.args[0]) == "{0} - {1}"
-            and call.args[1].strip() in {"Event Player", "Event Player.NamaTampilan"}
+            and call.args[1].strip() in {
+                "Event Player",
+                "Event Player.NamaTampilan",
+                "Global.NamaSlotHUD[Evaluate Once(Event Player.UrutanHUD)]",
+            }
         ] if right_calls else []
         checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
         if vibe_calls:
@@ -5678,10 +5690,30 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         if re.search(r"Event Player\.Manusia\s*=\s*True;", mask_strings(rule.body)) is not None
         or "Set Player Variable(Event Player, Manusia, True);" in rule.body
     ]
-    checks.equal(len(human_writers), 1, "numero writer di Manusia=True")
+    setup_worker = next(
+        (
+            rule
+            for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Event Player.PindahTimDiproses == True;" in rule.body
+            and "Event Player.TimSiklusTarget == Team Of(Event Player);" in rule.body
+            and "Event Player.HudPemainDibuat = True;" in rule.body
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+        ),
+        None,
+    )
+    checks.require(setup_worker is not None,
+                   "worker team-switch per ripristino Manusia=True assente")
+    checks.equal(len(human_writers), 2, "numero writer di Manusia=True")
+    allowed_writer_starts = {
+        classifier.start if classifier else None,
+        setup_worker.start if setup_worker else None,
+    }
+    checks.require(
+        all(rule.start in allowed_writer_starts for rule in human_writers),
+        "Manusia=True scritto fuori dal classificatore umano/iBot e dal worker team-switch",
+    )
     if human_writers and classifier:
-        checks.equal(human_writers[0].start, classifier.start,
-                     "Manusia=True scritto fuori dal classificatore umano/iBot")
         human_write = max(
             classifier.body.find("Event Player.Manusia = True;"),
             classifier.body.find("Set Player Variable(Event Player, Manusia, True);"),
