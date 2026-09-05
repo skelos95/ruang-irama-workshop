@@ -2491,34 +2491,21 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "detector team-switch cleanup incompleto")
 
-    def test_setup_worker_finalizes_team_switch_without_roster_teardown(self) -> None:
-        setup_worker = validator.team_switch_finalize_worker(validator.extract_rules(self.source))
-        self.assertIsNotNone(setup_worker, "fixture role not found")
-        if setup_worker is None:
-            return
-        for token in (
-            "Event Player.TimTerakhir = Team Of(Event Player);",
-            "Event Player.TimSiklusTarget = Team Of(Event Player);",
-            "Event Player.BotOtomatis = False;",
-            "Event Player.Manusia = True;",
-            "Event Player.SudahDiperiksa = True;",
-            "Event Player.SudahSiap = True;",
-            "Event Player.SiklusPemainAktif = False;",
-            "Event Player.PindahTimDiproses = False;",
-            "Event Player.WaktuSiklusTim = 0;",
-            "Event Player.PahlawanTerakhir = Hero Of(Event Player);",
-        ):
-            self.assertIn(token, setup_worker.body)
-        mutated = self.replace_in_rule(setup_worker, "Event Player.PindahTimDiproses = False;", "")
-        self.assert_rejected(mutated, "worker finalize team-switch incompleto")
-        mutated = self.inject_action(setup_worker, "Call Subroutine(BersihkanPemain);")
-        self.assert_rejected(mutated, "non deve toccare cleanup leave")
+    def test_setup_worker_performs_cleanup_only_after_stability_gate(self) -> None:
+        setup_worker = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        )
+        mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
+        self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 
     def test_setup_worker_keeps_native_hud_toggles_inside_siapkan_only(self) -> None:
-        setup_worker = validator.team_switch_finalize_worker(validator.extract_rules(self.source))
-        self.assertIsNotNone(setup_worker, "fixture role not found")
-        if setup_worker is None:
-            return
+        setup_worker = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        )
         self.assertNotIn("Disable Game Mode HUD(Event Player);", setup_worker.body)
         self.assertNotIn("Disable Game Mode In-World UI(Event Player);", setup_worker.body)
         mutated = self.inject_action(setup_worker, "Disable Game Mode HUD(Event Player);")

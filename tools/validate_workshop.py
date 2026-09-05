@@ -1021,11 +1021,9 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
     declarations = {entry.name for entry in subroutines}
     calls = [call.args[0].strip() for call in iter_calls(source, "Call Subroutine") if call.args]
     implementations = [subroutine_target(rule) for rule in rules if subroutine_target(rule)]
-    optional_runtime_subroutines = {"SiapkanPemain", "TenangkanPemain"}
     for name in sorted(declarations):
         checks.equal(implementations.count(name), 1, f"implementazione subroutine {name}")
-        if name not in optional_runtime_subroutines:
-            checks.require(name in calls, f"subroutine dichiarata ma mai chiamata: {name}")
+        checks.require(name in calls, f"subroutine dichiarata ma mai chiamata: {name}")
     for name in sorted(set(calls) - declarations):
         checks.require(False, f"chiamata a subroutine non dichiarata: {name}")
     for name in sorted(set(implementations) - declarations):
@@ -2367,16 +2365,19 @@ def validate_ghost_fly(
                        "Ghost/Fly: detector team-switch non deve resettare engine durante transizione nativa")
         checks.require("Call Subroutine(BersihkanPemain);" not in masked_switch,
                        "Ghost/Fly: detector team-switch non deve fare cleanup durante transizione nativa")
-        setup_worker = team_switch_finalize_worker(rules)
-        checks.require(setup_worker is not None, "Ghost/Fly: worker finalize serializzato team-switch assente")
+        setup_worker = next((
+            rule for rule in rules
+            if event_type(rule) == "Ongoing - Each Player"
+            and "Call Subroutine(SiapkanPemain);" in rule.body
+            and "Event Player.WaktuSiklusTim" in rule.body
+        ), None)
+        checks.require(setup_worker is not None, "Ghost/Fly: worker setup serializzato team-switch assente")
         if setup_worker:
             masked_setup = mask_strings(setup_worker.body)
-            checks.require("Call Subroutine(TenangkanPemain);" not in masked_setup,
-                           "Ghost/Fly: finalize team-switch non deve resettare engine")
-            checks.require("Call Subroutine(BersihkanPemain);" not in masked_setup,
-                           "Ghost/Fly: finalize team-switch non deve fare cleanup roster/HUD")
-            checks.require("Call Subroutine(SiapkanPemain);" not in masked_setup,
-                           "Ghost/Fly: finalize team-switch non deve riusare setup join iniziale")
+            checks.require("Call Subroutine(TenangkanPemain);" in masked_setup,
+                           "Ghost/Fly: reset engine team-switch deve avvenire nel worker serializzato")
+            checks.require("Call Subroutine(BersihkanPemain);" in masked_setup,
+                           "Ghost/Fly: cleanup team-switch deve avvenire nel worker serializzato")
 
     timestamp_writers: list[tuple[str, str]] = []
     for rule in rules:
@@ -3538,19 +3539,6 @@ def team_switch_worker(rules: list[Rule]) -> Rule | None:
                  if event_type(rule) == "Ongoing - Each Player"
                  and "Event Player.TimTerakhir != Team Of(Event Player)"
                  in (rule_block(rule, "conditions") or "")), None)
-
-
-def team_switch_finalize_worker(rules: list[Rule]) -> Rule | None:
-    return next((
-        rule for rule in rules
-        if event_type(rule) == "Ongoing - Each Player"
-        and "Event Player.PindahTimDiproses == True;" in (rule_block(rule, "conditions") or "")
-        and "Global.PemainSiklusGlobal == Event Player;" in (rule_block(rule, "conditions") or "")
-        and "Event Player.TimSiklusTarget == Team Of(Event Player);" in (rule_block(rule, "conditions") or "")
-        and "Has Spawned(Event Player) == True;" in (rule_block(rule, "conditions") or "")
-        and "Event Player.SudahSiap == False;" in (rule_block(rule, "conditions") or "")
-        and "Total Time Elapsed >= Event Player.WaktuSiklusTim;" in (rule_block(rule, "conditions") or "")
-    ), None)
 
 
 def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
@@ -4979,13 +4967,18 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         )
 
     cleanup_workers = [rule for rule in rules
-                       if event_type(rule) == "Player Left Match"
+                       if event_type(rule) == "Ongoing - Each Player"
                        and "Call Subroutine(BersihkanPemain);" in mask_strings(rule.body)]
     checks.require(len(cleanup_workers) == 1,
-                   "cleanup leave deve avere un solo worker Player Left Match")
+                   "cleanup team-switch deve avere un solo worker Each Player serializzato")
 
-    setup_worker = team_switch_finalize_worker(rules)
-    checks.require(setup_worker is not None, "worker finalize team-switch accodato dal globale assente")
+    setup_worker = next((
+        rule for rule in rules
+        if event_type(rule) == "Ongoing - Each Player"
+        and "Call Subroutine(SiapkanPemain);" in rule.body
+        and "Event Player.WaktuSiklusTim" in rule.body
+    ), None)
+    checks.require(setup_worker is not None, "worker setup iniziale accodato dal globale assente")
     if setup_worker:
         conditions = rule_block(setup_worker, "conditions") or ""
         for token in (
@@ -4996,48 +4989,35 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Event Player.SudahSiap == False;",
             "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
         ):
-            checks.require(token in conditions, f"worker finalize team-switch senza guardia: {token}")
+            checks.require(token in conditions, f"worker setup iniziale senza guardia: {token}")
         checks.require("Server Load < 150" not in conditions,
-                       "worker finalize team-switch non deve dipendere dal carico server")
-        for token in (
-            "Event Player.TimTerakhir = Team Of(Event Player);",
-            "Event Player.TimSiklusTarget = Team Of(Event Player);",
-            "Event Player.BotOtomatis = False;",
-            "Event Player.Manusia = True;",
-            "Event Player.SudahDiperiksa = True;",
-            "Event Player.SudahSiap = True;",
-            "Event Player.SiklusPemainAktif = False;",
-            "Event Player.PindahTimDiproses = False;",
-            "Event Player.WaktuSiklusTim = 0;",
-            "Event Player.PahlawanTerakhir = Hero Of(Event Player);",
-            "If(Global.PemainSiklusGlobal == Event Player);",
-            "Global.PemainSiklusGlobal = Null;",
-            "Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;",
-        ):
-            checks.require(token in setup_worker.body,
-                           f"worker finalize team-switch incompleto: {token}")
-        for forbidden, label in (
-            ("Call Subroutine(TenangkanPemain);", "reset engine"),
-            ("Call Subroutine(BersihkanPemain);", "cleanup leave"),
-            ("Call Subroutine(SiapkanPemain);", "setup join"),
-            ("Disable Game Mode HUD(Event Player);", "HUD nativo"),
-            ("Disable Game Mode In-World UI(Event Player);", "objective marker"),
-            ("Event Player.NamaTampilan =", "nome cache"),
-            ("Event Player.UrutanHUD =", "indice HUD"),
-            ("Event Player.HudKiri =", "handle HUD sinistro"),
-            ("Event Player.HudKanan =", "handle HUD destro"),
-            ("Event Player.HudPemainDibuat =", "flag HUD"),
-            ("Append To Array(Global.PemainManusia, Event Player);", "append roster"),
-            ("Modify Global Variable(PemainManusia, Remove From Array By Index", "remove roster"),
-            ("Global.SlotHUDPemain[", "slot HUD"),
-            ("Global.HudKiriPemain[", "cache HUD sinistro"),
-            ("Global.HudKananPemain[", "cache HUD destro"),
-        ):
-            checks.require(forbidden not in setup_worker.body,
-                           f"worker finalize team-switch non deve toccare {label}")
-        checks.require(not wait_calls(setup_worker.body), "worker finalize team-switch non deve usare Wait")
-        checks.require(setup_worker not in cleanup_workers,
-                       "worker finalize team-switch non deve chiamare BersihkanPemain")
+                       "worker setup iniziale non deve dipendere dal carico server")
+        checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
+                       "setup iniziale deve quietare la nuova entità")
+        checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
+                       "worker setup iniziale deve separare il path team-switch dal join iniziale")
+        checks.require("Call Subroutine(BersihkanPemain);" in setup_worker.body,
+                       "worker setup iniziale deve fare cleanup solo dopo stabilizzazione")
+        checks.require("Call Subroutine(SiapkanPemain);" in setup_worker.body,
+                       "setup iniziale non chiama SiapkanPemain")
+        checks.require("Disable Game Mode HUD(Event Player);" not in setup_worker.body,
+                       "worker setup iniziale non deve toccare HUD nativo prima di SiapkanPemain")
+        checks.require("Disable Game Mode In-World UI(Event Player);" not in setup_worker.body,
+                       "worker setup iniziale non deve toccare objective marker prima di SiapkanPemain")
+        order = tuple(
+            setup_worker.body.find(token)
+            for token in (
+                "Call Subroutine(TenangkanPemain);",
+                "If(Array Contains(Global.PemainManusia, Event Player));",
+                "Call Subroutine(BersihkanPemain);",
+                "Call Subroutine(SiapkanPemain);",
+            )
+        )
+        checks.require(all(position >= 0 for position in order) and order == tuple(sorted(order)),
+                       "worker setup iniziale deve seguire ordine tenangkan -> cleanup opzionale -> siapkan")
+        checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == setup_worker,
+                       "cleanup team-switch deve vivere solo nel worker setup serializzato")
+        checks.require(not wait_calls(setup_worker.body), "worker setup iniziale non deve usare Wait")
 
     scheduler = next((rule for rule in rules if event_type(rule) == "Ongoing - Global" and action_loop_count(rule.body) == 1), None)
     checks.require(scheduler is not None, "scheduler globale lifecycle assente")
@@ -5698,26 +5678,10 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         if re.search(r"Event Player\.Manusia\s*=\s*True;", mask_strings(rule.body)) is not None
         or "Set Player Variable(Event Player, Manusia, True);" in rule.body
     ]
-    finalize_worker = team_switch_finalize_worker(rules)
-    expected_human_writer_starts: set[int] = set()
-    if classifier:
-        expected_human_writer_starts.add(classifier.start)
-    if finalize_worker:
-        expected_human_writer_starts.add(finalize_worker.start)
-    checks.equal(len(human_writers), len(expected_human_writer_starts), "numero writer di Manusia=True")
-    if expected_human_writer_starts:
-        checks.equal(
-            {rule.start for rule in human_writers},
-            expected_human_writer_starts,
-            "Manusia=True scritto fuori dal classificatore umano/iBot o finalize team-switch",
-        )
-    if finalize_worker:
-        finalize_conditions = rule_block(finalize_worker, "conditions") or ""
-        checks.require("Event Player.PindahTimDiproses == True;" in finalize_conditions,
-                       "finalize team-switch senza guardia PindahTimDiproses")
-        checks.require("Event Player.SiklusPemainAktif = False;" in finalize_worker.body,
-                       "finalize team-switch deve chiudere la quarantena")
-    if classifier:
+    checks.equal(len(human_writers), 1, "numero writer di Manusia=True")
+    if human_writers and classifier:
+        checks.equal(human_writers[0].start, classifier.start,
+                     "Manusia=True scritto fuori dal classificatore umano/iBot")
         human_write = max(
             classifier.body.find("Event Player.Manusia = True;"),
             classifier.body.find("Set Player Variable(Event Player, Manusia, True);"),

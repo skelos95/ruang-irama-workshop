@@ -311,7 +311,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
 
 
-    def test_team_switch_uses_variable_only_finalize_and_leave_cleanup_is_exact(self):
+    def test_team_switch_uses_full_cleanup_and_leave_cleanup_is_exact(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             self.assertNotIn(f'{rule_kw}("01 - Siklus tim: Pekerja pembersihan dari penjadwal global")', source)
 
@@ -395,24 +395,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
-            self.assertIn("Event Player.TimTerakhir = Team Of(Event Player);", setup)
-            self.assertIn("Event Player.TimSiklusTarget = Team Of(Event Player);", setup)
-            self.assertIn("Event Player.BotOtomatis = False;", setup)
-            self.assertIn("Event Player.Manusia = True;", setup)
-            self.assertIn("Event Player.SudahDiperiksa = True;", setup)
-            self.assertIn("Event Player.SudahSiap = True;", setup)
-            self.assertIn("Event Player.SiklusPemainAktif = False;", setup)
-            self.assertIn("Event Player.PindahTimDiproses = False;", setup)
-            self.assertIn("Event Player.WaktuSiklusTim = 0;", setup)
-            self.assertIn("Event Player.PahlawanTerakhir = Hero Of(Event Player);", setup)
-            self.assertIn(f"If({global_name}.PemainSiklusGlobal == Event Player);", setup)
-            self.assertIn(f"{global_name}.PemainSiklusGlobal = Null;", setup)
-            self.assertIn(f"{global_name}.WaktuSiklusGlobal = Total Time Elapsed + 0.250;", setup)
-            self.assertNotIn("Call Subroutine(TenangkanPemain);", setup)
-            self.assertNotIn("Call Subroutine(BersihkanPemain);", setup)
-            self.assertNotIn("Call Subroutine(SiapkanPemain);", setup)
             self.assertNotIn("Disable Game Mode HUD(Event Player);", setup)
             self.assertNotIn("Disable Game Mode In-World UI(Event Player);", setup)
+            self.assertIn("Call Subroutine(TenangkanPemain);", setup)
+            self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
+            self.assertIn("Call Subroutine(BersihkanPemain);", setup)
+            self.assertIn("Call Subroutine(SiapkanPemain);", setup)
             self.assertNotIn("Wait(", setup)
 
             scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
