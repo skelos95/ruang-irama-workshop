@@ -4645,19 +4645,13 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         for token in (
             "Global.PemainPembersihan = Event Player;",
             "Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Global.PemainPembersihan);",
-            "If(And(Global.IndeksKeluar < 0, And(Event Player.UrutanHUD >= 0, Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) >= 0)));",
-            "Global.IndeksKeluar = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);",
             "Global.IndeksPembersihan = Global.IndeksKeluar;",
             "Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];",
             "Remove From Array By Index",
         ):
             checks.require(token in cleanup.body, f"cleanup leave esatto incompleto: {token}")
-        primary_lookup = cleanup_masked.find("Global.IndeksKeluar = Index Of Array Value(Global.PemainManusia, Global.PemainPembersihan);")
-        fallback_lookup = cleanup_masked.find("Global.IndeksKeluar = Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD);")
-        checks.require(
-            primary_lookup >= 0 and fallback_lookup > primary_lookup,
-            "cleanup leave deve tentare prima il lookup roster e poi il fallback slot HUD",
-        )
+        checks.require("Index Of Array Value(Global.SlotHUDPemain" not in cleanup.body,
+                       "cleanup leave non deve usare fallback slot HUD")
         recycle = ("Global.SlotHUDTersedia = Sorted Array(Append To Array("
                    "Global.SlotHUDTersedia, Global.IndeksUtangKeluar), Current Array Element);")
         recycle_position = cleanup_masked.find(recycle)
@@ -5000,7 +4994,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale non deve dipendere dal carico server")
         checks.require("Call Subroutine(TenangkanPemain);" in setup_worker.body,
                        "setup iniziale deve quietare la nuova entità")
-        checks.require("If(Or(Array Contains(Global.PemainManusia, Event Player), Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) >= 0));" in setup_worker.body,
+        checks.require("If(Array Contains(Global.PemainManusia, Event Player));" in setup_worker.body,
                        "worker setup iniziale deve separare il path team-switch dal join iniziale")
         checks.require("Call Subroutine(BersihkanPemain);" in setup_worker.body,
                        "worker setup iniziale deve fare cleanup solo dopo stabilizzazione")
@@ -5014,7 +5008,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             setup_worker.body.find(token)
             for token in (
                 "Call Subroutine(TenangkanPemain);",
-                "If(Or(Array Contains(Global.PemainManusia, Event Player), Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) >= 0));",
+                "If(Array Contains(Global.PemainManusia, Event Player));",
                 "Call Subroutine(BersihkanPemain);",
                 "Call Subroutine(SiapkanPemain);",
             )
