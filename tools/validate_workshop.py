@@ -5000,6 +5000,9 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require("Server Load < 150" not in conditions,
                        "worker finalize team-switch non deve dipendere dal carico server")
         for token in (
+            "Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) >= 0",
+            "Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) < Count Of(Global.PemainManusia)",
+            "Global.PemainManusia[Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;",
             "Event Player.TimTerakhir = Team Of(Event Player);",
             "Event Player.TimSiklusTarget = Team Of(Event Player);",
             "Event Player.BotOtomatis = False;",
@@ -5029,12 +5032,21 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             ("Event Player.HudPemainDibuat =", "flag HUD"),
             ("Append To Array(Global.PemainManusia, Event Player);", "append roster"),
             ("Modify Global Variable(PemainManusia, Remove From Array By Index", "remove roster"),
-            ("Global.SlotHUDPemain[", "slot HUD"),
+            ("Modify Global Variable(SlotHUDPemain", "mutazione slot HUD"),
+            ("Global.SlotHUDPemain = ", "mutazione slot HUD"),
             ("Global.HudKiriPemain[", "cache HUD sinistro"),
             ("Global.HudKananPemain[", "cache HUD destro"),
         ):
             checks.require(forbidden not in setup_worker.body,
                            f"worker finalize team-switch non deve toccare {label}")
+        rebind = setup_worker.body.find(
+            "Global.PemainManusia[Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;"
+        )
+        close_quarantine = setup_worker.body.find("Event Player.PindahTimDiproses = False;")
+        checks.require(
+            rebind >= 0 and close_quarantine >= 0 and rebind < close_quarantine,
+            "worker finalize team-switch deve riassociare il roster prima di chiudere la quarantena",
+        )
         checks.require(not wait_calls(setup_worker.body), "worker finalize team-switch non deve usare Wait")
         checks.require(setup_worker not in cleanup_workers,
                        "worker finalize team-switch non deve chiamare BersihkanPemain")

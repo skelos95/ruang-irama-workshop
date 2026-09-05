@@ -2497,6 +2497,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
         if setup_worker is None:
             return
         for token in (
+            "Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) >= 0",
+            "Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD) < Count Of(Global.PemainManusia)",
+            "Global.PemainManusia[Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;",
             "Event Player.TimTerakhir = Team Of(Event Player);",
             "Event Player.TimSiklusTarget = Team Of(Event Player);",
             "Event Player.BotOtomatis = False;",
@@ -2510,6 +2513,12 @@ rule("999x - Nasib: Renderer pemain tambahan")
         ):
             self.assertIn(token, setup_worker.body)
         mutated = self.replace_in_rule(setup_worker, "Event Player.PindahTimDiproses = False;", "")
+        self.assert_rejected(mutated, "worker finalize team-switch incompleto")
+        mutated = self.replace_in_rule(
+            setup_worker,
+            "Global.PemainManusia[Index Of Array Value(Global.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;",
+            "",
+        )
         self.assert_rejected(mutated, "worker finalize team-switch incompleto")
         mutated = self.inject_action(setup_worker, "Call Subroutine(BersihkanPemain);")
         self.assert_rejected(mutated, "non deve toccare cleanup leave")

@@ -1106,7 +1106,10 @@ regola("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	azioni
 	{
-		"Il cambio squadra conserva identità roster e HUD; qui termina solo la quarantena."
+		"Riassocia il contesto player corrente allo slot roster già esistente."
+		If(And(Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD) >= 0, Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD) < Count Of(Globale.PemainManusia)));
+			Globale.PemainManusia[Index Of Array Value(Globale.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;
+		End;
 		Event Player.TimTerakhir = Team Of(Event Player);
 		Event Player.TimSiklusTarget = Team Of(Event Player);
 		Event Player.BotOtomatis = False;
