@@ -306,7 +306,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             classifier = block(
                 source,
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
-                f'{rule_kw}("02b - HUD Pemain',
+                f'{rule_kw}("03c - Bot/Dummy',
             )
             capture = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
             allocation = f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);"
@@ -320,11 +320,13 @@ class RosterRejoinRegressionTests(unittest.TestCase):
 
             roster = block(
                 source,
-                f'{rule_kw}("02b - HUD Pemain',
+                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            self.assertIn("Event Player.NamaTampilan != Null;", roster)
-            self.assertIn('Event Player.NamaTampilan != Custom String("");', roster)
+            self.assertIn(
+                'And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))',
+                roster,
+            )
 
             fast = block(
                 source,
@@ -346,7 +348,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             classifier = block(
                 source,
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
-                f'{rule_kw}("02b - HUD Pemain',
+                f'{rule_kw}("03c - Bot/Dummy',
             )
             capture = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
             allocation = f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);"
@@ -419,7 +421,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             classifier = block(
                 source,
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
-                f'{rule_kw}("02b - HUD Pemain',
+                f'{rule_kw}("03c - Bot/Dummy',
             )
             self.assertIn('If(Custom String("{0}", Event Player) == Custom String("งูแท้"));', classifier)
             self.assertIn('Event Player.MusikKhusus = Custom String("Caladan Brood");', classifier)

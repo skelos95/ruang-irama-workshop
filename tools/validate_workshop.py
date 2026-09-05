@@ -5642,14 +5642,25 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.require(rule is not None, f"entrypoint umano assente: {label}")
         if not rule:
             return
-        tokens = ["Event Player.Manusia == True;"]
+        create_hud_pos = rule.body.find("Create HUD Text(")
+
+        human_guard = "Event Player.Manusia == True;" in rule.body
+        if not human_guard and label == "HUD player":
+            human_assign = rule.body.find("Event Player.Manusia = True;")
+            human_guard = human_assign >= 0 and (create_hud_pos < 0 or human_assign < create_hud_pos)
+        checks.require(human_guard, f"{label} non isola bot/dummy: Event Player.Manusia == True;")
+
         if triple:
-            tokens.extend((
-                "Event Player.BotOtomatis == False;",
-                "Is Dummy Bot(Event Player) == False;",
-            ))
-        for token in tokens:
-            checks.require(token in rule.body, f"{label} non isola bot/dummy: {token}")
+            bot_guard = "Event Player.BotOtomatis == False;" in rule.body
+            if not bot_guard and label == "HUD player":
+                bot_assign = rule.body.find("Event Player.BotOtomatis = False;")
+                bot_guard = bot_assign >= 0 and (create_hud_pos < 0 or bot_assign < create_hud_pos)
+            checks.require(bot_guard, f"{label} non isola bot/dummy: Event Player.BotOtomatis == False;")
+
+            checks.require(
+                "Is Dummy Bot(Event Player) == False;" in rule.body,
+                f"{label} non isola bot/dummy: Is Dummy Bot(Event Player) == False;",
+            )
 
     classifier = next(
         (

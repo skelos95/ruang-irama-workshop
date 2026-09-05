@@ -18,7 +18,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
             self.assertIn("107: NamaTampilan", source)
 
-            classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
+            classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             name_guard = "If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\"))));"
             name_assign = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
             empty_guard = 'If(Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String("")));'
@@ -29,9 +29,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertLess(classifier.index(name_assign), classifier.index(empty_guard))
             self.assertIn('Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));', classifier)
 
-            roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
-            self.assertIn("Event Player.NamaTampilan != Null;", roster)
-            self.assertIn('Event Player.NamaTampilan != Custom String("");', roster)
+            roster = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            self.assertIn(
+                'And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))',
+                roster,
+            )
             self.assertIn('Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)', roster)
             self.assertIn('Custom String("{0} - {1}", Evaluate Once(Event Player.NamaTampilan),', roster)
 
@@ -330,7 +332,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 f'{global_name}.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
                 fast,
             )
-            classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("02b - HUD Pemain', 1)[0]
+            classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == False;", classifier)
             self.assertIn(f"If(Count Of({global_name}.SlotHUDTersedia) == 0);", classifier)
             self.assertIn("Event Player.SudahDiperiksa = False;", classifier)
@@ -379,12 +381,17 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 f"{global_name}.PemainAktif.TimSiklusTarget == Team Of({global_name}.PemainAktif)",
                 fast,
             )
+            self.assertNotIn(f'{rule_kw}("02b - HUD Pemain', source)
 
-            roster_hud = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            roster_hud = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
             self.assertNotIn("Server Load < 150", roster_hud)
-            self.assertIn("Event Player.TimTerakhir == Team Of(Event Player);", roster_hud)
-            self.assertIn("Event Player.SegarkanRosterTertunda == False;", roster_hud)
+            self.assertIn("Call Subroutine(HitungPilihan);", roster_hud)
+            self.assertIn("Create HUD Text(", roster_hud)
+            self.assertLess(
+                roster_hud.index("Call Subroutine(HitungPilihan);"),
+                roster_hud.index("Create HUD Text("),
+            )
             self.assertGreater(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),
                 roster_hud.index(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKanan;"),
