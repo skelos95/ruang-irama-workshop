@@ -440,9 +440,17 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn(f"{global_name}.PemainAktif", team_rule)
             self.assertNotIn("Wait(", team_rule)
             setup_worker = rule_with(source, '01b - Siklus tim: Pekerja penyiapan dari penjadwal global')
-            self.assertIn("Call Subroutine(TenangkanPemain);", setup_worker)
-            self.assertIn("Call Subroutine(BersihkanPemain);", setup_worker)
-            self.assertIn("Call Subroutine(SiapkanPemain);", setup_worker)
+            self.assertIn("Event Player.TimTerakhir = Team Of(Event Player);", setup_worker)
+            self.assertIn("Event Player.TimSiklusTarget = Team Of(Event Player);", setup_worker)
+            self.assertIn("Event Player.Manusia = True;", setup_worker)
+            self.assertIn("Event Player.SudahDiperiksa = True;", setup_worker)
+            self.assertIn("Event Player.SudahSiap = True;", setup_worker)
+            self.assertIn("Event Player.SiklusPemainAktif = False;", setup_worker)
+            self.assertIn("Event Player.PindahTimDiproses = False;", setup_worker)
+            self.assertIn("Event Player.PahlawanTerakhir = Hero Of(Event Player);", setup_worker)
+            self.assertNotIn("Call Subroutine(TenangkanPemain);", setup_worker)
+            self.assertNotIn("Call Subroutine(BersihkanPemain);", setup_worker)
+            self.assertNotIn("Call Subroutine(SiapkanPemain);", setup_worker)
 
             hero_change = reapply.index(
                 f"Hero Of({global_name}.PemainAktif) != {global_name}.PemainAktif.PahlawanTerakhir"
