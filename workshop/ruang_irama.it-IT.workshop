@@ -1136,6 +1136,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 
 	azioni
 	{
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("DBG 02 ENTER") : Event Player.IndeksBahasa == 1 ? Custom String("DBG 02 MASUK") : Custom String("DBG 02 เข้า"));
 		Event Player.SudahDiperiksa = True;
 		Event Player.BotOtomatis = False;
 		Event Player.Manusia = False;
@@ -1192,6 +1193,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 				Globale.PemainSiklusGlobal = Null;
 				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
 			End;
+			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("DBG NAME EMPTY") : Event Player.IndeksBahasa == 1 ? Custom String("DBG NAMA KOSONG") : Custom String("DBG ชื่อว่าง"));
 			Abort;
 		End;
 		"Sembunyikan bilah, objektif, dan ikon mode tanpa mengganggu HUD pahlawan serta HUD buatan kita."
@@ -1223,6 +1225,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Globale.SlotHUDPemain = Append To Array(Globale.SlotHUDPemain, Event Player.UrutanHUD);
 		Event Player.Manusia = True;
 		Event Player.PahlawanTerakhir = Hero Of(Event Player);
+		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("DBG 02 OK") : Event Player.IndeksBahasa == 1 ? Custom String("DBG 02 SIAP") : Custom String("DBG 02 พร้อม"));
 		Call Subroutine(HitungPilihan);
 	}
 }
