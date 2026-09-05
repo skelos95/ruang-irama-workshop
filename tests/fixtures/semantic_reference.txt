@@ -1230,6 +1230,74 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 	}
 }
 
+rule("02x - DEBUG gate 02b")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.PindahTimDiproses == True;
+		Event Player.Manusia == True;
+		Event Player.SudahDiperiksa == True;
+	}
+
+	actions
+	{
+		Small Message(
+			Event Player,
+			Event Player.IndeksBahasa == 0 ? Custom String(
+			"A M={0} R={1} S={2}",
+			Event Player.Manusia == True,
+			Array Contains(Global.PemainManusia, Event Player) == True,
+			Has Spawned(Event Player) == True) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"A M={0} R={1} S={2}",
+			Event Player.Manusia == True,
+			Array Contains(Global.PemainManusia, Event Player) == True,
+			Has Spawned(Event Player) == True) : Custom String(
+			"ก A M={0} R={1} S={2}",
+			Event Player.Manusia == True,
+			Array Contains(Global.PemainManusia, Event Player) == True,
+			Has Spawned(Event Player) == True));
+
+		Small Message(
+			Event Player,
+			Event Player.IndeksBahasa == 0 ? Custom String(
+			"B T={0} G={1} N={2}",
+			Event Player.TimTerakhir == Team Of(Event Player),
+			Event Player.SegarkanRosterTertunda == False,
+			And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"B T={0} G={1} N={2}",
+			Event Player.TimTerakhir == Team Of(Event Player),
+			Event Player.SegarkanRosterTertunda == False,
+			And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))) : Custom String(
+			"ข B T={0} G={1} N={2}",
+			Event Player.TimTerakhir == Team Of(Event Player),
+			Event Player.SegarkanRosterTertunda == False,
+			And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))));
+
+		Small Message(
+			Event Player,
+			Event Player.IndeksBahasa == 0 ? Custom String(
+			"C H={0} L={1} R={2}",
+			Event Player.HudPemainDibuat == False,
+			Event Player.HudKiri == Null,
+			Event Player.HudKanan == Null) : Event Player.IndeksBahasa == 1 ? Custom String(
+			"C H={0} L={1} R={2}",
+			Event Player.HudPemainDibuat == False,
+			Event Player.HudKiri == Null,
+			Event Player.HudKanan == Null) : Custom String(
+			"ค C H={0} L={1} R={2}",
+			Event Player.HudPemainDibuat == False,
+			Event Player.HudKiri == Null,
+			Event Player.HudKanan == Null));
+	}
+}
+
 rule("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 {
 	event
