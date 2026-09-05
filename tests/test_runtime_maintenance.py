@@ -395,12 +395,6 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]
-            self.assertIn(f"Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD) >= 0", setup)
-            self.assertIn(f"Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD) < Count Of({global_name}.PemainManusia)", setup)
-            self.assertIn(
-                f"{global_name}.PemainManusia[Index Of Array Value({global_name}.SlotHUDPemain, Event Player.UrutanHUD)] = Event Player;",
-                setup,
-            )
             self.assertIn("Event Player.TimTerakhir = Team Of(Event Player);", setup)
             self.assertIn("Event Player.TimSiklusTarget = Team Of(Event Player);", setup)
             self.assertIn("Event Player.BotOtomatis = False;", setup)
