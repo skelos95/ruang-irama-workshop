@@ -1258,7 +1258,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
 		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0}{1}{2}", Custom String("{0} {1} {2}",
 			Globale.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Event Player.NamaTampilan, Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Event Player.NamaTampilan, Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Event Player.NamaTampilan, Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
 			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Globale.PemimpinPilihan)
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Globale.PemimpinPilihan)
 			: Custom String("\n \nCHILL STAR: {0}", Globale.PemimpinPilihan) : Custom String("") : Custom String(""),
@@ -1281,7 +1281,7 @@ regola("02b - HUD Pemain: Buat segera setelah klasifikasi selesai")
 			Globale.HudKiriPemain[Index Of Array Value(Globale.PemainManusia, Event Player)] = Event Player.HudKiri;
 		End;
 		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0} {1} {2}", Globale.DaftarIkon[Event Player.IndeksIkon],
-			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Event Player.NamaTampilan,
+			Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.NamaTampilan),
 			Event Player.MusikKhusus != Null ? Event Player.MusikKhusus : Event Player.IndeksGenre >= 0 ? Globale.DaftarGenre[Event Player.IndeksGenre] : Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("no soundtrack yet")
 			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("belum pilih musik") : Custom String("ยังไม่ได้เลือกเพลง"))), Null, Right, -13 + Event Player.UrutanHUD,
 			Custom Color(255, 255, 255, 255), Event Player.WarnaNama, Custom Color(255, 255, 255, 255), Visible To String and Color, Visible Never);

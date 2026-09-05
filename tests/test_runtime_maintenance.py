@@ -32,8 +32,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             roster = source.split(f'{rule_kw}("02b - HUD Pemain', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertIn("Event Player.NamaTampilan != Null;", roster)
             self.assertIn('Event Player.NamaTampilan != Custom String("");', roster)
-            self.assertIn('Custom String("{0} - {1} MIN", Event Player.NamaTampilan, Event Player.MenitLobi)', roster)
-            self.assertIn('Custom String("{0} - {1}", Event Player.NamaTampilan,', roster)
+            self.assertIn('Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)', roster)
+            self.assertIn('Custom String("{0} - {1}", Evaluate Once(Event Player.NamaTampilan),', roster)
 
             inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertIn("Player Variable(Event Player.TargetInspeksi, NamaTampilan)", inspect)
