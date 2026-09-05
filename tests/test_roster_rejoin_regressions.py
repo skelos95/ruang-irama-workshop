@@ -260,7 +260,7 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
 
 class RosterRejoinRegressionTests(unittest.TestCase):
     def test_visible_name_is_never_persistent_roster_identity(self):
-        for path, rule_kw, global_name in SOURCES:
+        for path, _, _ in SOURCES:
             source = path.read_text(encoding="utf-8")
             for forbidden in (
                 "ProfilNama",
@@ -269,22 +269,10 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 "ProfilStatus",
                 "ProfilSosial",
                 "ProfilPilihanNama",
+                "NamaSlotHUD",
                 "PemainPengganti",
             ):
                 self.assertNotIn(forbidden, source, f"{path.name}: {forbidden} must not own player identity")
-            classifier = block(
-                source,
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
-                f'{rule_kw}("02b - HUD Pemain',
-            )
-            self.assertIn(
-                f"{global_name}.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;",
-                classifier,
-            )
-            self.assertIn(
-                f"{global_name}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;",
-                classifier,
-            )
 
     def test_true_leave_recycles_the_roster_slot(self):
         for path, rule_kw, global_name in SOURCES:
@@ -327,11 +315,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);", classifier)
             between_capture_and_slot = classifier.split(capture, 1)[1].split(allocation, 1)[0]
             self.assertNotIn("Index Of Array Value", between_capture_and_slot)
-            slot_name_assignment = f"{global_name}.NamaSlotHUD[Event Player.UrutanHUD] = Event Player.NamaTampilan;"
-            slot_player_assignment = f"{global_name}.PemainSlotHUD[Event Player.UrutanHUD] = Event Player;"
-            self.assertIn(slot_name_assignment, classifier)
-            self.assertIn(slot_player_assignment, classifier)
-            self.assertLess(classifier.index(slot_name_assignment), classifier.index(slot_player_assignment))
+            self.assertNotIn("NamaSlotHUD", classifier)
             self.assertNotIn("PemainPengganti", classifier)
 
             roster = block(
@@ -339,9 +323,8 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 f'{rule_kw}("02b - HUD Pemain',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            self.assertIn(f"{global_name}.NamaSlotHUD[Event Player.UrutanHUD] != Null;", roster)
-            self.assertIn(f'{global_name}.NamaSlotHUD[Event Player.UrutanHUD] != Custom String("");', roster)
-            self.assertNotIn("Event Player.NamaTampilan", roster)
+            self.assertIn("Event Player.NamaTampilan != Null;", roster)
+            self.assertIn('Event Player.NamaTampilan != Custom String("");', roster)
 
             fast = block(
                 source,
