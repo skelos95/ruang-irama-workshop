@@ -320,8 +320,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         roster_mutation = self.replace_in_rule(
             roster,
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) != Null ?",
-            "Player Variable(Global.PemainSlotHUD[Evaluate Once(Event Player.UrutanHUD)], MusikKhusus) == Null ?",
+            "Event Player.MusikKhusus != Null ? Event Player.MusikKhusus : Event Player.IndeksGenre",
+            "Event Player.MusikKhusus == Null ? Event Player.MusikKhusus : Event Player.IndeksGenre",
         )
         self.assert_rejected(roster_mutation, "profilo speciale roster: condizione profilo speciale")
 
@@ -723,20 +723,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(
-            renderer,
-            "1 + Evaluate Once(Event Player.UrutanHUD)",
-            "2 + Evaluate Once(Event Player.UrutanHUD)",
-        )
+        mutated = self.replace_in_rule(renderer, "1 + Event Player.UrutanHUD", "2 + Event Player.UrutanHUD")
         self.assert_rejected(mutated, "renderer HUD roster Left: ordinamento")
 
     def test_right_roster_stays_before_the_native_team_status_indicator(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKanan = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(
-            renderer,
-            "-13 + Evaluate Once(Event Player.UrutanHUD)",
-            "1 + Evaluate Once(Event Player.UrutanHUD)",
-        )
+        mutated = self.replace_in_rule(renderer, "-13 + Event Player.UrutanHUD", "1 + Event Player.UrutanHUD")
         self.assert_rejected(mutated, "renderer HUD roster Right: ordinamento")
 
     def test_right_grid_requires_the_post_roster_spacer(self) -> None:

@@ -6,7 +6,6 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-pending**.
 
-- Stabilizzazione live del 5 settembre (Fase A slot ownership): revertito il fallback `UrutanHUD` del cleanup (`6dbd3cd`) che causava crash in team-switch. Introdotte le globali `PemainSlotHUD`, `NamaSlotHUD`, `HudKiriSlot`, `HudKananSlot`; `01b` ora separa il ramo team-switch già registrato (rebind alias HUD + ripristino stato umano) dal bootstrap/rejoin classico (`Tenangkan` → `Bersihkan` opzionale → `Siapkan`). `02` assegna l'identità persistente allo slot, `02b` costruisce le due righe roster leggendo nome/icona/hero/vibes dal proprietario di slot, e `BersihkanPemain` libera il payload slot persistente solo nel vero leave.
 - Hotfix del 4 settembre (import): corretta la condizione della regola `00a4` con confronto esplicito `Or(...) == True`, risolvendo l'errore parser Workshop "richiesto un operatore di confronto dopo 'False'" (riga 1015).
 - Hotfix live del 4 settembre (post team-switch): il classifier `02` non sovrascrive più `NamaTampilan` già valido quando il token player torna temporaneamente vuoto dopo cambio squadra; il refresh nome resta consentito su primo join o cache vuota.
 - Hotfix live del 4 settembre (HUD nativi): rimosso il reapply diretto da `01b` (`Disable Game Mode HUD` / `Disable Game Mode In-World UI`) perché reintroduceva crash nel team-switch. Le due istruzioni restano nel percorso normale di `SiapkanPemain`, raggiungibile ora grazie alla protezione di `NamaTampilan`.
