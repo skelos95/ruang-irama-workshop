@@ -801,13 +801,13 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             and call.args[4].strip() == "Left"
             and call.args[5].strip() == "13"
         )
-        changed_text = call.args[3].replace(
-            "Custom String(\"\\n \\nCHILL STAR: {0}\", Global.NamaPemimpinPilihan)",
-            "Custom String(\"\\n \\nCHILL STAR: {0}\", Player Variable(Global.PemimpinPilihan, NamaTampilan))",
+        changed_text = call.args[2].replace(
+            "Custom String(\"\\nCHILL STAR: {0}\", Global.NamaPemimpinPilihan)",
+            "Custom String(\"\\nCHILL STAR: {0}\", Player Variable(Global.PemimpinPilihan, NamaTampilan))",
             1,
         )
-        self.assertNotEqual(changed_text, call.args[3])
-        mutated = self.replace_call_argument(call, 3, changed_text)
+        self.assertNotEqual(changed_text, call.args[2])
+        mutated = self.replace_call_argument(call, 2, changed_text)
         self.assert_rejected(mutated, "non deve dereferenziare direttamente PemimpinPilihan per il nome")
 
     def test_chill_star_hud_uses_cached_color(self) -> None:
@@ -817,8 +817,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             and call.args[4].strip() == "Left"
             and call.args[5].strip() == "13"
         )
-        mutated = self.replace_call_argument(call, 8, "Color(White)")
-        self.assert_rejected(mutated, "colore deve usare la cache globale")
+        mutated = self.replace_call_argument(call, 7, "Color(White)")
+        self.assert_rejected(mutated, "colore Subheader deve usare la cache leader")
 
     def test_complete_global_control_help_is_required(self) -> None:
         mutated = self.replace_once("Hold {0}: inspect hero + HP", "Hold {0}:")

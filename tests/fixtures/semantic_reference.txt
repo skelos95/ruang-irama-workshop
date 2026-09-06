@@ -913,11 +913,11 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			"LOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOBI & WAKTU SANTAI") : Custom String("ล็อบบี้ & เวลาชิล"),
 			Left, 0, Color(White), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
-		Create HUD Text(Global.PemainManusia, Null, Null, Global.NamaPemimpinPilihan != Custom String("") ? Player Variable(Local Player, IndeksBahasa) == 0
-			? Custom String("\n \nCHILL STAR: {0}", Global.NamaPemimpinPilihan)
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Global.NamaPemimpinPilihan)
-			: Custom String("\n \nดาวสายชิล: {0}", Global.NamaPemimpinPilihan) : Custom String(""), Left, 13, Color(White),
-			Color(White), Global.WarnaPemimpinPilihan, Visible To String and Color, Visible Never);
+		Create HUD Text(Global.PemainManusia, Null, Global.NamaPemimpinPilihan != Custom String("") ? Player Variable(Local Player, IndeksBahasa) == 0
+			? Custom String("\nCHILL STAR: {0}", Global.NamaPemimpinPilihan)
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\nBINTANG CHILL: {0}", Global.NamaPemimpinPilihan)
+			: Custom String("\nดาวสายชิล: {0}", Global.NamaPemimpinPilihan) : Custom String(""), Null, Left, 13, Color(White),
+			Global.WarnaPemimpinPilihan, Color(White), Visible To String and Color, Visible Never);
 		Create HUD Text(Global.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | Tahan {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(

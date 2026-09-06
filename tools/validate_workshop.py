@@ -1303,7 +1303,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "-2"): ("subheader", "Button(Crouch)"),
         ("Left", "-1"): ("subheader", 'Custom String(" ")'),
         ("Left", "0"): ("text", "LOBBY & CHILL TIME"),
-        ("Left", "13"): ("text", "Global.NamaPemimpinPilihan"),
+        ("Left", "13"): ("subheader", "Global.NamaPemimpinPilihan"),
         ("Right", "-16"): ("subheader", "Button(Interact)"),
         ("Right", "-15"): ("text", 'Custom String("  ")'),
         ("Right", "-14"): ("text", "PLAYER VIBES"),
@@ -1330,7 +1330,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     for slot, (field, expected_labels) in {
         ("Left", "-2"): ("subheader", ("Hold {0}: inspect hero + HP", "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
         ("Left", "0"): ("text", ("LOBBY & CHILL TIME", "LOBI & WAKTU SANTAI", "ล็อบบี้ & เวลาชิล")),
-        ("Left", "13"): ("text", ("CHILL STAR: {0}", "BINTANG CHILL: {0}", "ดาวสายชิล: {0}")),
+        ("Left", "13"): ("subheader", ("CHILL STAR: {0}", "BINTANG CHILL: {0}", "ดาวสายชิล: {0}")),
         ("Right", "-16"): ("subheader", ("Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera", "Tahan {0} 0,5dtk: Menu Arcade | Tahan {1} 0,5dtk: Kamera", "กด {0} ค้าง 0.5วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5วิ: กล้อง")),
         ("Right", "-14"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
     }.items():
@@ -1360,18 +1360,18 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     chill_star = fixed_hud.get(("Left", "13"))
     checks.require(chill_star is not None, "HUD CHILL STAR dedicato assente")
     if chill_star:
-        checks.equal(chill_star.args[2].strip(), "Null", "HUD CHILL STAR: Subheader")
-        checks.require(chill_star.args[3].strip().startswith("Global.NamaPemimpinPilihan != Custom String(\"\")"),
+        checks.require(chill_star.args[2].strip().startswith("Global.NamaPemimpinPilihan != Custom String(\"\")"),
                        "HUD CHILL STAR: guardia nome cache assente")
-        checks.require("Global.NamaPemimpinPilihan" in chill_star.args[3],
-                       "HUD CHILL STAR: nome leader deve usare la cache globale")
-        checks.equal(chill_star.args[8].strip(), "Global.WarnaPemimpinPilihan",
-                     "HUD CHILL STAR: colore deve usare la cache globale")
+        checks.require("Global.NamaPemimpinPilihan" in chill_star.args[2],
+                       "HUD CHILL STAR: Subheader deve usare la cache nome leader")
+        checks.equal(chill_star.args[3].strip(), "Null", "HUD CHILL STAR: Text deve restare vuoto")
+        checks.equal(chill_star.args[7].strip(), "Global.WarnaPemimpinPilihan",
+                     "HUD CHILL STAR: colore Subheader deve usare la cache leader")
         checks.equal(chill_star.args[9].strip(), "Visible To String and Color",
                      "HUD CHILL STAR: deve rivalutare testo e colore")
-        checks.require("Player Variable(Global.PemimpinPilihan, NamaTampilan)" not in chill_star.args[3],
+        checks.require("Player Variable(Global.PemimpinPilihan, NamaTampilan)" not in chill_star.args[2],
                        "HUD CHILL STAR non deve dereferenziare direttamente PemimpinPilihan per il nome")
-        checks.require("Player Variable(Global.PemimpinPilihan, WarnaNama)" not in chill_star.args[3],
+        checks.require("Player Variable(Global.PemimpinPilihan, WarnaNama)" not in chill_star.args[2],
                        "HUD CHILL STAR non deve dereferenziare direttamente PemimpinPilihan per il colore")
     checks.require("Global.NamaPemimpinPilihan = Custom String(\"\");" in source,
                    "cache nome CHILL STAR deve essere sempre inizializzata/resettata")
