@@ -97,9 +97,9 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - nel Main Menu percorrere `11→12→13→0` e poi `0→13→12`; chiudere sul 13, riaprire e tornare a 0, verificando che Dummy Follow e Ghost/Fly restino distinti e che il renderer non si blocchi;
 - verificare testo, stato, feedback e comando localizzati;
 - verificare una riga vuota tra contenuto e comandi;
-- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0` + roster `1..12`, Right `-16/-15/-14`, roster `-13..-2` e spaziatore finale `-1`;
+- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0/13` + roster `1..12`, Right `-16/-15/-14`, roster `-13..-2` e spaziatore finale `-1`;
 - verificare con 1, 6 e 12 player che il Team Status Indicator e il kill feed nativi seguano l'ultimo nome Right dopo una riga vuota, senza inserirsi fra `PLAYER VIBES` e il roster;
-- confermare che sotto il roster Left non compaia uno `0` isolato con diagnostica disattivata e che i promemoria completi/`LOBBY & CHILL TIME` siano corretti in EN/ID/TH;
+- confermare che sotto il roster Left non compaia uno `0` isolato con diagnostica disattivata, che i promemoria completi/`LOBBY & CHILL TIME` siano corretti in EN/ID/TH e che `CHILL STAR` compaia come HUD dedicato colorato (non incollato all'ultima riga roster);
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;

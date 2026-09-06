@@ -6,6 +6,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 Stato: **live-ready**.
 
+- Rifattorizzato `CHILL STAR`: rimosso dal Subheader dell'ultima riga roster Left e spostato in un HUD globale dedicato (`Left 13`) con cache stabile `NamaPemimpinPilihan`/`WarnaPemimpinPilihan`. `HitungPilihan` ora aggiorna la cache solo a leader definitivo (no pareggio), mentre la pagina colore sincronizza in tempo reale il colore del leader quando cambia senza ricalcolare i voti. La diagnostica Left resta nel Subheader ma conta ora undici handle fissi.
 - Hardening del 6 settembre (validator/test): congelata l'architettura `02` inline. Il gate ora rifiuta ogni separazione asincrona tra classifier umano e renderer roster (es. una seconda `Ongoing - Each Player` tipo `02b`/`02x`), e la suite runtime blocca il reinserimento di regole/debug `DBG 02` nel sorgente.
 - Hotfix del 6 settembre (profilo speciale): il matcher `งูแท้` usa ora `NamaTampilan` stabile sia nel classifier `02` sia nel repair `89a`, evitando il token player live durante il team-switch. Rimossi inoltre due write ridondanti di `BotOtomatis=False` nel classifier e il secondo repair duplicato di `NamaTampilan` nel worker 20 Hz.
 - Hotfix del 4 settembre (import): corretta la condizione della regola `00a4` con confronto esplicito `Or(...) == True`, risolvendo l'errore parser Workshop "richiesto un operatore di confronto dopo 'False'" (riga 1015).

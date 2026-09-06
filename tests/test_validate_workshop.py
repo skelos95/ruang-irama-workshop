@@ -718,15 +718,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
         )
         mutated = self.inject_action(scheduler, extra)
-        self.assert_rejected(mutated, "numero HUD globali: dieci fissi e due roster")
+        self.assert_rejected(mutated, "numero HUD globali: undici fissi e due roster")
 
     def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
-        token = "10 + Count Of(Filtered Array(Global.HudKiriPemain"
-        mutated = self.replace_once(token, "9 + Count Of(Filtered Array(Global.HudKiriPemain")
+        token = "11 + Count Of(Filtered Array(Global.HudKiriPemain"
+        mutated = self.replace_once(token, "10 + Count Of(Filtered Array(Global.HudKiriPemain")
         comment_anchor = '"Urutan ini sengaja bergerak dari paling tenang ke paling kacau. Jangan diacak tanpa alasan yang sangat musikal."'
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
-        self.assert_rejected(mutated, "diagnostica HUD non include i dieci handle fissi")
+        self.assert_rejected(mutated, "diagnostica HUD non include gli undici handle fissi")
 
     def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
@@ -773,7 +773,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "Text deve essere Null per evitare lo zero client")
 
     def test_left_diagnostics_remain_inside_the_subheader(self) -> None:
-        mutated = self.replace_once('Custom String("{0}{1}{2}"', 'Custom String("{0}{1}"')
+        mutated = self.replace_once('Custom String("{0}{1}"', 'Custom String("{0}{1}{2}"')
         self.assert_rejected(mutated, "diagnostica non integrata nel Subheader")
 
     def test_left_diagnostic_fallback_is_an_empty_string_not_null(self) -> None:
@@ -784,15 +784,41 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         outer = next(
             custom for custom in validator.iter_calls(call.args[2], "Custom String")
-            if len(custom.args) == 4 and validator.parse_literal(custom.args[0]) == "{0}{1}{2}"
+            if len(custom.args) == 3 and validator.parse_literal(custom.args[0]) == "{0}{1}"
         )
-        diagnostic = outer.args[3]
+        diagnostic = outer.args[2]
         self.assertTrue(diagnostic.rstrip().endswith('Custom String("")'))
         changed_diagnostic = diagnostic.rsplit('Custom String("")', 1)[0] + "Null"
         changed_subheader = call.args[2][:outer.start] + outer.raw.replace(diagnostic, changed_diagnostic, 1) + call.args[2][outer.end:]
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         mutated = self.replace_call_argument(absolute, 2, changed_subheader)
         self.assert_rejected(mutated, "fallback diagnostica deve essere stringa vuota")
+
+    def test_chill_star_hud_uses_cached_name_instead_of_leader_dereference(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 6
+            and call.args[4].strip() == "Left"
+            and call.args[5].strip() == "13"
+        )
+        changed_text = call.args[3].replace(
+            "Custom String(\"CHILL STAR: {0}\", Global.NamaPemimpinPilihan)",
+            "Custom String(\"CHILL STAR: {0}\", Player Variable(Global.PemimpinPilihan, NamaTampilan))",
+            1,
+        )
+        self.assertNotEqual(changed_text, call.args[3])
+        mutated = self.replace_call_argument(call, 3, changed_text)
+        self.assert_rejected(mutated, "non deve dereferenziare direttamente PemimpinPilihan per il nome")
+
+    def test_chill_star_hud_uses_cached_color(self) -> None:
+        call = next(
+            call for call in validator.iter_calls(self.source, "Create HUD Text")
+            if len(call.args) >= 9
+            and call.args[4].strip() == "Left"
+            and call.args[5].strip() == "13"
+        )
+        mutated = self.replace_call_argument(call, 8, "Color(White)")
+        self.assert_rejected(mutated, "colore deve usare la cache globale")
 
     def test_complete_global_control_help_is_required(self) -> None:
         mutated = self.replace_once("Hold {0}: inspect hero + HP", "Hold {0}:")

@@ -59,6 +59,8 @@ variabili
 		55: WaktuSiklusGlobal
 		56: IndeksDendamKeluar
 		57: DaftarPemainSnapshot
+		58: NamaPemimpinPilihan
+		59: WarnaPemimpinPilihan
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -385,6 +387,8 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.PemimpinPilihan = Null;
 		Globale.PilihanTerbanyak = 0;
 		Globale.PilihanSeri = False;
+		Globale.NamaPemimpinPilihan = Custom String("");
+		Globale.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);
 		Globale.IndeksPemilih = 0;
 		Globale.IndeksDendamKeluar = -1;
 		Globale.PilihPahlawanDilewati = False;
@@ -909,6 +913,11 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			"LOBBY & CHILL TIME") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("LOBI & WAKTU SANTAI") : Custom String("ล็อบบี้ & เวลาชิล"),
 			Left, 0, Custom Color(255, 255, 255, 255), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255),
 			Visible To and String, Visible Never);
+		Create HUD Text(Globale.PemainManusia, Null, Null, Globale.NamaPemimpinPilihan != Custom String("") ? Player Variable(Local Player, IndeksBahasa) == 0
+			? Custom String("CHILL STAR: {0}", Globale.NamaPemimpinPilihan)
+			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("BINTANG CHILL: {0}", Globale.NamaPemimpinPilihan)
+			: Custom String("ดาวสายชิล: {0}", Globale.NamaPemimpinPilihan) : Custom String(""), Left, 13, Custom Color(255, 255, 255, 255),
+			Custom Color(255, 255, 255, 255), Globale.WarnaPemimpinPilihan, Visible To String and Color, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String(
 			"Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Player Variable(Local Player,
 			IndeksBahasa) == 1 ? Custom String("Tahan {0} 0,5dtk: Menu Arcade | Tahan {1} 0,5dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String(
@@ -1228,18 +1237,15 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Call Subroutine(HitungPilihan);
 
 		"Klasifikasi manusia dan bot sudah selesai. HUD pemain dibuat sekali pada keadaan muncul yang stabil."
-		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0}{1}{2}", Custom String("{0} {1} {2}",
+		Create HUD Text(Globale.PemainManusia, Null, Custom String("{0}{1}", Custom String("{0} {1} {2}",
 			Globale.DaftarIkon[Event Player.IndeksIkon], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)),
-			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)), Event Player.UrutanHUD == Globale.SlotHUDTerakhir ? Globale.PemimpinPilihan != Null
-			? Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nดาวสายชิล: {0}", Globale.PemimpinPilihan)
-			: Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("\n \nBINTANG CHILL: {0}", Globale.PemimpinPilihan)
-			: Custom String("\n \nCHILL STAR: {0}", Globale.PemimpinPilihan) : Custom String("") : Custom String(""),
+			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("{0} - {1} MENIT", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi) : Custom String("{0} - {1} นาที", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)),
 			And(Globale.DiagnostikPerforma == True, And(Local Player == Host Player, Event Player.UrutanHUD == Globale.SlotHUDTerakhir)) ? Custom String("{0}\n{1}",
 			Player Variable(Local Player, IndeksBahasa) == 2 ? Custom String("\n \nโหลด {0}% | เฉลี่ย {1}% | สูงสุด {2}%", Server Load,
 			Server Load Average, Server Load Peak) : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String(
 			"\n \nBEBAN {0}% | RATA {1}% | PUNCAK {2}%", Server Load, Server Load Average, Server Load Peak) : Custom String(
 			"\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}",
-			10 + Count Of(Filtered Array(Globale.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudKananPemain,
+			11 + Count Of(Filtered Array(Globale.HudKiriPemain, Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudKananPemain,
 			Current Array Element != 0)) + Count Of(Filtered Array(Globale.HudMenuPemain, Current Array Element != 0)) + Count Of(
 			Filtered Array(Globale.PemainManusia, And(Player Variable(Current Array Element, HudEfekNasib) != Null, Player Variable(
 			Current Array Element, HudEfekNasib) != 0))), Count Of(Filtered Array(Globale.TeksDuniaPemain, Current Array Element != 0)) + Count Of(
@@ -2051,6 +2057,9 @@ regola("99c - Subrutin: Terapkan halaman warna")
 		If(Event Player.IndeksWarna != Event Player.KursorWarna);
 			Event Player.IndeksWarna = Event Player.KursorWarna;
 			Event Player.WarnaNama = Globale.DaftarWarna[Event Player.IndeksWarna];
+			If(Globale.PemimpinPilihan == Event Player);
+				Globale.WarnaPemimpinPilihan = Event Player.WarnaNama;
+			End;
 			If(Event Player.IndeksWarna == 0);
 				Call Subroutine(EfekPulihkan);
 			Else;
@@ -4234,6 +4243,8 @@ regola("91q - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 		Globale.PemimpinPilihan = Null;
 		Globale.PilihanTerbanyak = 0;
 		Globale.PilihanSeri = False;
+		Globale.NamaPemimpinPilihan = Custom String("");
+		Globale.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);
 		If(Count Of(Globale.PemainManusia) > 0);
 			Globale.PemimpinPilihan = First Of(Sorted Array(Globale.PemainManusia, 0 - Player Variable(Current Array Element, JumlahPilihan)));
 			Globale.PilihanTerbanyak = Player Variable(Globale.PemimpinPilihan, JumlahPilihan);
@@ -4245,6 +4256,10 @@ regola("91q - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 			Else;
 				Globale.PemimpinPilihan = Null;
 			End;
+		End;
+		If(Globale.PemimpinPilihan != Null);
+			Globale.NamaPemimpinPilihan = Player Variable(Globale.PemimpinPilihan, NamaTampilan);
+			Globale.WarnaPemimpinPilihan = Player Variable(Globale.PemimpinPilihan, WarnaNama);
 		End;
 	}
 }

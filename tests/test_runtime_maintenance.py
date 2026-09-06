@@ -207,6 +207,61 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             ):
                 self.assertIn(token, bootstrap_lock)
 
+    def test_chill_star_uses_cached_name_and_color_in_a_dedicated_hud(self):
+        for source, global_name, rule_kw in (
+            (self.it, "Globale", "regola"),
+            (self.en, "Global", "rule"),
+        ):
+            self.assertIn("58: NamaPemimpinPilihan", source)
+            self.assertIn("59: WarnaPemimpinPilihan", source)
+            self.assertIn(f"{global_name}.NamaPemimpinPilihan = Custom String(\"\");", source)
+            self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);", source)
+
+            init = source.split(f'{rule_kw}("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")', 1)[1].split(
+                f'{rule_kw}("00a1 - Umum: Mulai mode segera saat menunggu pemain")', 1
+            )[0]
+            self.assertIn(
+                f"{global_name}.NamaPemimpinPilihan != Custom String(\"\") ?",
+                init,
+            )
+            self.assertIn("Left, 13", init)
+            self.assertIn(f"{global_name}.WarnaPemimpinPilihan", init)
+            self.assertIn("CHILL STAR: {0}", init)
+            self.assertIn("BINTANG CHILL: {0}", init)
+            self.assertIn("ดาวสายชิล: {0}", init)
+
+            roster = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(
+                f'{rule_kw}("03c - Bot/Dummy', 1
+            )[0]
+            self.assertIn('Custom String("{0}{1}"', roster)
+            self.assertNotIn('Custom String("{0}{1}{2}"', roster)
+            self.assertNotIn("CHILL STAR:", roster)
+            self.assertIn(
+                f"11 + Count Of(Filtered Array({global_name}.HudKiriPemain, Current Array Element != 0))",
+                roster,
+            )
+
+            leader_calc = source.split(f'{rule_kw}("91q - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")', 1)[1].split(
+                f'{rule_kw}("93 - Subrutin: Mulai kamera dinamis di bahu kiri")', 1
+            )[0]
+            self.assertIn(f"{global_name}.NamaPemimpinPilihan = Custom String(\"\");", leader_calc)
+            self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);", leader_calc)
+            self.assertIn(f"If({global_name}.PemimpinPilihan != Null);", leader_calc)
+            self.assertIn(
+                f"{global_name}.NamaPemimpinPilihan = Player Variable({global_name}.PemimpinPilihan, NamaTampilan);",
+                leader_calc,
+            )
+            self.assertIn(
+                f"{global_name}.WarnaPemimpinPilihan = Player Variable({global_name}.PemimpinPilihan, WarnaNama);",
+                leader_calc,
+            )
+
+            color_page = source.split(f'{rule_kw}("99c - Subrutin: Terapkan halaman warna")', 1)[1].split(
+                f'{rule_kw}("99d - Subrutin: Terapkan halaman bahasa")', 1
+            )[0]
+            self.assertIn(f"If({global_name}.PemimpinPilihan == Event Player);", color_page)
+            self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Event Player.WarnaNama;", color_page)
+
     def test_crouch_teleport_has_five_pages_and_single_shot_self_kill(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
             self.assertIn("KursorTeleportasi %= 5;", source)

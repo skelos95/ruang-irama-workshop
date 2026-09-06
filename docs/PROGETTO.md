@@ -170,15 +170,15 @@ La fase 2 è serializzata da `01b`: quando il player è spawned, il team resta u
 - La riga Fly della pagina 13 comunica guida e rampa con testo equivalente nelle tre lingue: `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s`, `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` e `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`.
 - La label localizzata `SERVER LOCATION` / `LOKASI SERVER` / `ตำแหน่งเซิร์ฟเวอร์` usa l'ambra neon `Custom Color(255, 205, 110, 255)`, volutamente distinto dal cyan di `LOBBY & CHILL TIME`.
 
-La griglia HUD usa dieci handle globali fissi e slot dinamici separati:
+La griglia HUD usa undici handle globali fissi e slot dinamici separati:
 
 | Area | Slot fissi | Slot dinamici |
 |---|---|---|
 | Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
-| Left | comando completo `-2`, spaziatore `-1`, `LOBBY & CHILL TIME` `0` | roster/minuti `1..12` |
+| Left | comando completo `-2`, spaziatore `-1`, `LOBBY & CHILL TIME` `0`, `CHILL STAR` `13` | roster/minuti `1..12` |
 | Right | comando completo `-16`, spaziatore superiore `-15`, `PLAYER VIBES` `-14`, spaziatore finale `-1` | roster/musica `-13..-2` |
 
-Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include i dieci handle fissi. La diagnostica opzionale è il terzo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`.
+Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include gli undici handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
 
 Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. Il test live con 1, 6 e 12 player deve confermare il confine effettivo con indicatore e kill feed.
 

@@ -77,7 +77,7 @@ Ogni azione `Create HUD Text` deve:
 - usare soltanto Subheader/Text;
 - registrare l'handle previsto per il cleanup.
 
-Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente dieci HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
+Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente undici HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0/13` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`, mentre `Left 13` è riservato al renderer dedicato `CHILL STAR` basato su cache nome/colore leader. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
 
 Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
 

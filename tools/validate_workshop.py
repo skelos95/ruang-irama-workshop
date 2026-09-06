@@ -1252,13 +1252,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 10, "numero HUD fissi nella regola iniziale")
+        checks.equal(len(init_hud_calls), 11, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
         if call.args and call.args[0].strip() == "Global.PemainManusia"
     ]
-    checks.equal(len(global_hud_calls), 12, "numero HUD globali: dieci fissi e due roster")
+    checks.equal(len(global_hud_calls), 13, "numero HUD globali: undici fissi e due roster")
 
     slot_assignments = re.findall(
         r"Global\.SlotHUDTersedia\s*=\s*Array\(([^;]*)\);",
@@ -1276,6 +1276,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "-2"),
         ("Left", "-1"),
         ("Left", "0"),
+        ("Left", "13"),
         ("Right", "-16"),
         ("Right", "-15"),
         ("Right", "-14"),
@@ -1296,12 +1297,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
         if matches:
             fixed_hud[slot] = matches[0]
-    checks.equal(len(fixed_hud), 10, "griglia HUD fissa Top/Left/Right")
+    checks.equal(len(fixed_hud), 11, "griglia HUD fissa Top/Left/Right")
 
     field_contract = {
         ("Left", "-2"): ("subheader", "Button(Crouch)"),
         ("Left", "-1"): ("subheader", 'Custom String(" ")'),
         ("Left", "0"): ("text", "LOBBY & CHILL TIME"),
+        ("Left", "13"): ("text", "Global.NamaPemimpinPilihan"),
         ("Right", "-16"): ("subheader", "Button(Interact)"),
         ("Right", "-15"): ("text", 'Custom String("  ")'),
         ("Right", "-14"): ("text", "PLAYER VIBES"),
@@ -1328,6 +1330,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     for slot, (field, expected_labels) in {
         ("Left", "-2"): ("subheader", ("Hold {0}: inspect hero + HP", "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
         ("Left", "0"): ("text", ("LOBBY & CHILL TIME", "LOBI & WAKTU SANTAI", "ล็อบบี้ & เวลาชิล")),
+        ("Left", "13"): ("text", ("CHILL STAR: {0}", "BINTANG CHILL: {0}", "ดาวสายชิล: {0}")),
         ("Right", "-16"): ("subheader", ("Hold {0} 0.5s: Arcade Menu | Hold {1} 0.5s: Camera", "Tahan {0} 0,5dtk: Menu Arcade | Tahan {1} 0,5dtk: Kamera", "กด {0} ค้าง 0.5วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5วิ: กล้อง")),
         ("Right", "-14"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
     }.items():
@@ -1353,6 +1356,38 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             != re.sub(r"\s+", "", lobby_time.args[8]),
             "SERVER LOCATION deve avere un colore distinto da LOBBY & CHILL TIME",
         )
+
+    chill_star = fixed_hud.get(("Left", "13"))
+    checks.require(chill_star is not None, "HUD CHILL STAR dedicato assente")
+    if chill_star:
+        checks.equal(chill_star.args[2].strip(), "Null", "HUD CHILL STAR: Subheader")
+        checks.require(chill_star.args[3].strip().startswith("Global.NamaPemimpinPilihan != Custom String(\"\")"),
+                       "HUD CHILL STAR: guardia nome cache assente")
+        checks.require("Global.NamaPemimpinPilihan" in chill_star.args[3],
+                       "HUD CHILL STAR: nome leader deve usare la cache globale")
+        checks.equal(chill_star.args[8].strip(), "Global.WarnaPemimpinPilihan",
+                     "HUD CHILL STAR: colore deve usare la cache globale")
+        checks.equal(chill_star.args[9].strip(), "Visible To String and Color",
+                     "HUD CHILL STAR: deve rivalutare testo e colore")
+        checks.require("Player Variable(Global.PemimpinPilihan, NamaTampilan)" not in chill_star.args[3],
+                       "HUD CHILL STAR non deve dereferenziare direttamente PemimpinPilihan per il nome")
+        checks.require("Player Variable(Global.PemimpinPilihan, WarnaNama)" not in chill_star.args[3],
+                       "HUD CHILL STAR non deve dereferenziare direttamente PemimpinPilihan per il colore")
+    checks.require("Global.NamaPemimpinPilihan = Custom String(\"\");" in source,
+                   "cache nome CHILL STAR deve essere sempre inizializzata/resettata")
+    checks.require("Global.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);" in source,
+                   "cache colore CHILL STAR deve essere sempre inizializzata/resettata")
+    checks.require("Global.NamaPemimpinPilihan = Player Variable(Global.PemimpinPilihan, NamaTampilan);" in source,
+                   "HitungPilihan deve aggiornare la cache nome CHILL STAR")
+    checks.require("Global.WarnaPemimpinPilihan = Player Variable(Global.PemimpinPilihan, WarnaNama);" in source,
+                   "HitungPilihan deve aggiornare la cache colore CHILL STAR")
+    color_page = rule_by_subroutine(rules, "TerapkanHalamanWarna")
+    checks.require(color_page is not None, "subroutine TerapkanHalamanWarna assente")
+    if color_page:
+        checks.require("If(Global.PemimpinPilihan == Event Player);" in color_page.body,
+                       "pagina colore deve verificare se sta modificando il CHILL STAR corrente")
+        checks.require("Global.WarnaPemimpinPilihan = Event Player.WarnaNama;" in color_page.body,
+                       "pagina colore deve sincronizzare il colore CHILL STAR quando cambia il leader")
 
     def full_custom_string(expression: str) -> Call | None:
         expression = expression.strip()
@@ -1397,8 +1432,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         f"HUD comando Right {language}: binding Melee/Interact ordinati",
                     )
 
-    checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
-                   "diagnostica HUD non include i dieci handle fissi")
+    checks.require("11 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
+                   "diagnostica HUD non include gli undici handle fissi")
 
     roster_rule = next(
         (
@@ -1436,17 +1471,20 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if side == "Left":
                 checks.equal(call.args[3].strip(), "Null",
                              "renderer HUD roster Left: Text deve essere Null per evitare lo zero client")
+                for legacy_token in ("CHILL STAR:", "BINTANG CHILL:", "ดาวสายชิล:"):
+                    checks.require(legacy_token not in call.args[2],
+                                   "renderer HUD roster Left non deve incorporare la riga CHILL STAR")
                 outer_rows = [
                     custom for custom in iter_calls(call.args[2], "Custom String")
-                    if custom.args and parse_literal(custom.args[0]) == "{0}{1}{2}"
+                    if custom.args and parse_literal(custom.args[0]) == "{0}{1}"
                 ]
                 checks.equal(len(outer_rows), 1,
                              "renderer HUD roster Left: diagnostica non integrata nel Subheader")
                 if outer_rows:
-                    checks.equal(len(outer_rows[0].args), 4,
+                    checks.equal(len(outer_rows[0].args), 3,
                                  "renderer HUD roster Left: segmenti Subheader")
-                    if len(outer_rows[0].args) == 4:
-                        diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[3])
+                    if len(outer_rows[0].args) == 3:
+                        diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[2])
                         checks.require(diagnostic_branches is not None,
                                        "renderer HUD roster Left: ternario diagnostica assente")
                         if diagnostic_branches:
@@ -1458,7 +1496,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                             ):
                                 checks.require(token in diagnostic_condition,
                                                f"renderer HUD roster Left: guardia diagnostica assente: {token}")
-                            checks.require("10 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
+                            checks.require("11 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
                                            "renderer HUD roster Left: conteggio diagnostica non nel ramo visibile")
                             checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
                                          "renderer HUD roster Left: fallback diagnostica deve essere stringa vuota")
