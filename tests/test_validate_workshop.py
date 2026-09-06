@@ -3448,10 +3448,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
             inspection,
             'Evaluate Once(Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? '
             'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
-            'Custom String("{0}", Event Player.TargetInspeksi))',
+            'Custom String("{0}", Is Duplicating(Event Player.TargetInspeksi) ? '
+            'Hero Being Duplicated(Event Player.TargetInspeksi) : '
+            'Hero Of(Event Player.TargetInspeksi)))',
             'Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? '
             'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
-            'Custom String("{0}", Event Player.TargetInspeksi)',
+            'Custom String("{0}", Is Duplicating(Event Player.TargetInspeksi) ? '
+            'Hero Being Duplicated(Event Player.TargetInspeksi) : '
+            'Hero Of(Event Player.TargetInspeksi))',
         )
         self.assert_rejected(mutated, "inspection deve usare Evaluate Once sul nome target")
 
@@ -3464,12 +3468,44 @@ rule("999x - Nasib: Renderer pemain tambahan")
             teleport,
             'Evaluate Once(Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? '
             'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
-            'Custom String("{0}", Event Player.CalonTargetTeleportasi))',
+            'Custom String("{0}", Is Duplicating(Event Player.CalonTargetTeleportasi) ? '
+            'Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : '
+            'Hero Of(Event Player.CalonTargetTeleportasi)))',
             'Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? '
             'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
-            'Custom String("{0}", Event Player.CalonTargetTeleportasi)',
+            'Custom String("{0}", Is Duplicating(Event Player.CalonTargetTeleportasi) ? '
+            'Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : '
+            'Hero Of(Event Player.CalonTargetTeleportasi))',
         )
         self.assert_rejected(mutated, "teleport deve usare Evaluate Once sul nome target")
+
+    def test_inspection_renderer_nonhuman_fallback_uses_hero_name(self) -> None:
+        inspection = self.rule(
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            inspection,
+            'Custom String("{0}", Is Duplicating(Event Player.TargetInspeksi) ? '
+            'Hero Being Duplicated(Event Player.TargetInspeksi) : '
+            'Hero Of(Event Player.TargetInspeksi))',
+            'Custom String("{0}", Event Player.TargetInspeksi)',
+        )
+        self.assert_rejected(mutated, "inspection non deve mostrare identity token grezzo ai dummy")
+
+    def test_teleport_renderer_nonhuman_fallback_uses_hero_name(self) -> None:
+        teleport = self.rule(
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            teleport,
+            'Custom String("{0}", Is Duplicating(Event Player.CalonTargetTeleportasi) ? '
+            'Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : '
+            'Hero Of(Event Player.CalonTargetTeleportasi))',
+            'Custom String("{0}", Event Player.CalonTargetTeleportasi)',
+        )
+        self.assert_rejected(mutated, "teleport non deve mostrare identity token grezzo ai dummy")
 
     def test_camera_target_cache_excludes_private_humans(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")

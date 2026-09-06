@@ -47,6 +47,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 f'Evaluate Once(Array Contains({global_name}.PemainManusia, '
                 'Event Player.TargetInspeksi) == True ? '
                 'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
+                'Custom String("{0}", Is Duplicating(Event Player.TargetInspeksi) ? '
+                'Hero Being Duplicated(Event Player.TargetInspeksi) : '
+                'Hero Of(Event Player.TargetInspeksi)))',
+                inspect,
+            )
+            self.assertNotIn(
                 'Custom String("{0}", Event Player.TargetInspeksi))',
                 inspect,
             )
@@ -72,6 +78,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 f'Evaluate Once(Array Contains({global_name}.PemainManusia, '
                 'Event Player.CalonTargetTeleportasi) == True ? '
                 'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
+                'Custom String("{0}", Is Duplicating(Event Player.CalonTargetTeleportasi) ? '
+                'Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : '
+                'Hero Of(Event Player.CalonTargetTeleportasi)))',
+                teleport,
+            )
+            self.assertNotIn(
                 'Custom String("{0}", Event Player.CalonTargetTeleportasi))',
                 teleport,
             )

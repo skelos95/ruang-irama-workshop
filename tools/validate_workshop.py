@@ -5295,7 +5295,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         checks.require(
             "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
             "Player Variable(Event Player.TargetInspeksi, NamaTampilan) : "
-            'Custom String("{0}", Event Player.TargetInspeksi))' in inspection_live.body,
+            'Custom String("{0}", Is Duplicating(Event Player.TargetInspeksi) ? Hero Being Duplicated(Event Player.TargetInspeksi) : Hero Of(Event Player.TargetInspeksi)))' in inspection_live.body,
             "inspection deve usare Evaluate Once sul nome target",
         )
         checks.require(
@@ -5307,6 +5307,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
             "Player Variable(Event Player.TargetInspeksi, NamaTampilan)" not in inspection_live.body,
             "inspection non deve usare Manusia come guardia NamaTampilan",
+        )
+        checks.require(
+            'Custom String("{0}", Event Player.TargetInspeksi))' not in inspection_live.body,
+            "inspection non deve mostrare identity token grezzo ai dummy",
         )
     validate_fluid_iwt(inspection_live, "inspection", "Event Player.TargetInspeksi")
 
@@ -5370,7 +5374,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         checks.require(
             "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
             "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : "
-            'Custom String("{0}", Event Player.CalonTargetTeleportasi))' in teleport_text.body,
+            'Custom String("{0}", Is Duplicating(Event Player.CalonTargetTeleportasi) ? Hero Being Duplicated(Event Player.CalonTargetTeleportasi) : Hero Of(Event Player.CalonTargetTeleportasi)))' in teleport_text.body,
             "teleport deve usare Evaluate Once sul nome target",
         )
         checks.require(
@@ -5382,6 +5386,10 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             "Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? "
             "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)" not in teleport_text.body,
             "teleport non deve usare Manusia come guardia NamaTampilan",
+        )
+        checks.require(
+            'Custom String("{0}", Event Player.CalonTargetTeleportasi))' not in teleport_text.body,
+            "teleport non deve mostrare identity token grezzo ai dummy",
         )
     validate_fluid_iwt(teleport_text, "Teleport", "Event Player.CalonTargetTeleportasi")
 
