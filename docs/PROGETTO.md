@@ -91,7 +91,7 @@ Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OF
 
 Il nome visibile esatto `งูแท้` abilita un profilo dedicato durante il setup. Name Color `Silver Mist` e Player Icon `Poison 2` sono default iniziali e restano modificabili dal player; Player Vibes è invece fissato a `Caladan Brood`, perciò la pagina Soundtrack è visibile ma read-only e nessun input può modificarne il valore. `Caladan Brood` è una voce dedicata al profilo e non entra nel catalogo globale, che resta di 100 generi per i player generici.
 
-Il matching usa esclusivamente il nome visibile, non un identificatore account: due omonimi esatti ricevono lo stesso profilo, mentre una rinomina non viene riconosciuta. Cambio squadra e leave/rejoin eseguono nuovamente il setup e riapplicano `Silver Mist`, `Poison 2` e `Caladan Brood`.
+Il matching usa esclusivamente il nome visibile, non un identificatore account: due omonimi esatti ricevono lo stesso profilo, mentre una rinomina non viene riconosciuta. Il matcher legge la cache stabile `NamaTampilan` dopo la cattura del nome, quindi durante un team-switch non dipende dal token player live che può risultare temporaneamente vuoto. Cambio squadra e leave/rejoin eseguono nuovamente il setup e riapplicano `Silver Mist`, `Poison 2` e `Caladan Brood`.
 
 Tutti i menu seguono lo stesso layout:
 

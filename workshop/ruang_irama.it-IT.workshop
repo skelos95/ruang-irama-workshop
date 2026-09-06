@@ -1145,7 +1145,6 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.WarnaNama = Custom Color(255, 255, 255, 255);
 		If(And(Event Player.PernahDisiapkan == True, And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))));
 			"Gunakan nama cache saat pindah tim agar pemain manusia terdaftar tidak terjebak probe iBot."
-			Event Player.BotOtomatis = False;
 		Else;
 			Start Forcing Dummy Bot Name(Event Player, Custom String("​"));
 			Wait(0.016, Ignora condizione);
@@ -1157,8 +1156,6 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			End;
 			If(Custom String("{0}", Event Player) == Custom String("​"));
 				Event Player.BotOtomatis = True;
-			Else;
-				Event Player.BotOtomatis = False;
 			End;
 			Stop Forcing Dummy Bot Name(Event Player);
 		End;
@@ -1203,7 +1200,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Globale.DaftarWarna[Event Player.IndeksWarna];
-		If(Custom String("{0}", Event Player) == Custom String("งูแท้"));
+		If(Event Player.NamaTampilan == Custom String("งูแท้"));
 			Event Player.MusikKhusus = Custom String("Caladan Brood");
 			Event Player.IndeksWarna = 1;
 			Event Player.KursorWarna = 1;
@@ -3279,10 +3276,7 @@ regola("89a - Subrutin: Proses status cepat pemain")
 			Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
 		End;
 		If(And(Globale.PemainAktif.SiklusPemainAktif == False, And(Is Dummy Bot(Globale.PemainAktif) == False, And(Globale.PemainAktif.BotOtomatis == False, And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, Or(Globale.PemainAktif.Manusia == False, Globale.PemainAktif.PernahDisiapkan == False))))));
-			If(And(Or(Globale.PemainAktif.NamaTampilan == Null, Globale.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Globale.PemainAktif) != Custom String("")));
-				Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
-			End;
-			If(Custom String("{0}", Globale.PemainAktif) == Custom String("งูแท้"));
+			If(Globale.PemainAktif.NamaTampilan == Custom String("งูแท้"));
 				Globale.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
 				If(Globale.PemainAktif.PernahDisiapkan == False);
 					Globale.PemainAktif.IndeksWarna = 1;

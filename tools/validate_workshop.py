@@ -2580,11 +2580,15 @@ def validate_special_player_profile(
     profile_match: re.Match[str] | None = None
     if classifier:
         profile_match = re.search(
-            r'If\s*\(\s*Custom String\s*\(\s*"\{0\}"\s*,\s*Event Player\s*\)\s*'
+            r'If\s*\(\s*Event Player\.NamaTampilan\s*'
             r'==\s*Custom String\s*\(\s*"งูแท้"\s*\)\s*\)\s*;',
             classifier.body,
         )
-        checks.require(profile_match is not None, "profilo speciale: matcher Unicode esatto งูแท้ assente")
+        checks.require(profile_match is not None, "profilo speciale: matcher งูแท้ deve usare NamaTampilan stabile")
+        checks.require(
+            'If(Custom String("{0}", Event Player) == Custom String("งูแท้"));' not in classifier.body,
+            "profilo speciale: vietato usare il token player live dopo la cache Nome",
+        )
         checks.equal(classifier.body.count('Custom String("งูแท้")'), 1,
                      "profilo speciale: numero matcher Unicode งูแท้")
         if profile_match:
@@ -2592,7 +2596,7 @@ def validate_special_player_profile(
             checks.require(bool(enclosing), "profilo speciale: matcher fuori da un ramo If isolato")
             if enclosing:
                 expected_branch = '''
-If(Custom String("{0}", Event Player) == Custom String("งูแท้"));
+If(Event Player.NamaTampilan == Custom String("งูแท้"));
     Event Player.MusikKhusus = Custom String("Caladan Brood");
     Event Player.IndeksWarna = 1;
     Event Player.KursorWarna = 1;
@@ -2659,7 +2663,7 @@ End;
     repair_match: re.Match[str] | None = None
     if fast:
         repair_match = re.search(
-            r'If\s*\(\s*Custom String\s*\(\s*"\{0\}"\s*,\s*Global\.PemainAktif\s*\)\s*'
+            r'If\s*\(\s*Global\.PemainAktif\.NamaTampilan\s*'
             r'==\s*Custom String\s*\(\s*"งูแท้"\s*\)\s*\)\s*;',
             fast.body,
         )
@@ -2682,7 +2686,7 @@ End;
                 )
                 repair_branch = fast.body[repair_start:repair_end]
                 expected_repair = '''
-If(Custom String("{0}", Global.PemainAktif) == Custom String("งูแท้"));
+If(Global.PemainAktif.NamaTampilan == Custom String("งูแท้"));
     Global.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
     If(Global.PemainAktif.PernahDisiapkan == False);
         Global.PemainAktif.IndeksWarna = 1;

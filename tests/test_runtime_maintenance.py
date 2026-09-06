@@ -54,6 +54,12 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(cache_invalid, fast)
             self.assertIn(f'Custom String("{{0}}", {global_name}.PemainAktif) != Custom String("")', fast)
             self.assertIn(f'{global_name}.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{{0}}", {global_name}.PemainAktif));', fast)
+            self.assertEqual(
+                fast.count(
+                    f'{global_name}.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{{0}}", {global_name}.PemainAktif));'
+                ),
+                1,
+            )
             self.assertLess(fast.index(cache_invalid), fast.index(f"{global_name}.PemainAktif.Manusia = True;"))
 
     def test_aim_scans_are_scheduler_cached(self):
@@ -325,6 +331,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.PernahDisiapkan = True;", fast)
             self.assertIn(
+                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแท้"));',
+                fast,
+            )
+            self.assertNotIn(
                 f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
                 fast,
             )

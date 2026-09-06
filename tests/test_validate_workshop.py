@@ -208,12 +208,19 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             ),
             (
                 self.source.replace('Custom String("งูแท้")', 'Custom String("งูเท้")', 1),
-                "matcher Unicode esatto งูแท้",
+                "matcher งูแท้ deve usare NamaTampilan stabile",
             ),
         )
         for mutated, fragment in mutations:
             with self.subTest(fragment=fragment):
                 self.assert_rejected(mutated, fragment)
+
+    def test_special_profile_must_use_cached_display_name(self) -> None:
+        mutated = self.replace_once(
+            'If(Event Player.NamaTampilan == Custom String("งูแท้"));',
+            'If(Custom String("{0}", Event Player) == Custom String("งูแท้"));',
+        )
+        self.assert_rejected(mutated, "matcher งูแท้ deve usare NamaTampilan stabile")
 
     def test_special_player_indices_and_cursors_are_guarded(self) -> None:
         classifier = self.rule(

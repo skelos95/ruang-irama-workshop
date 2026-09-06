@@ -7,6 +7,7 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 Stato: **live-pending**.
 
 - Hardening del 6 settembre (validator/test): congelata l'architettura `02` inline. Il gate ora rifiuta ogni separazione asincrona tra classifier umano e renderer roster (es. una seconda `Ongoing - Each Player` tipo `02b`/`02x`), e la suite runtime blocca il reinserimento di regole/debug `DBG 02` nel sorgente.
+- Hotfix del 6 settembre (profilo speciale): il matcher `งูแท้` usa ora `NamaTampilan` stabile sia nel classifier `02` sia nel repair `89a`, evitando il token player live durante il team-switch. Rimossi inoltre due write ridondanti di `BotOtomatis=False` nel classifier e il secondo repair duplicato di `NamaTampilan` nel worker 20 Hz.
 - Hotfix del 4 settembre (import): corretta la condizione della regola `00a4` con confronto esplicito `Or(...) == True`, risolvendo l'errore parser Workshop "richiesto un operatore di confronto dopo 'False'" (riga 1015).
 - Hotfix live del 4 settembre (post team-switch): il classifier `02` non sovrascrive più `NamaTampilan` già valido quando il token player torna temporaneamente vuoto dopo cambio squadra; il refresh nome resta consentito su primo join o cache vuota.
 - Hotfix live del 4 settembre (HUD nativi): rimosso il reapply diretto da `01b` (`Disable Game Mode HUD` / `Disable Game Mode In-World UI`) perché reintroduceva crash nel team-switch. Le due istruzioni restano nel percorso normale di `SiapkanPemain`, raggiungibile ora grazie alla protezione di `NamaTampilan`.

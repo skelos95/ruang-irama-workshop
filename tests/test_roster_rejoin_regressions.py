@@ -416,20 +416,35 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             self.assertIn(f"Set Damage Received({global_name}.PemainAktif, 0);", fast)
 
     def test_special_player_rejoin_uses_documented_defaults(self):
-        for path, rule_kw, _ in SOURCES:
+        for path, rule_kw, global_name in SOURCES:
             source = path.read_text(encoding="utf-8")
             classifier = block(
                 source,
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            self.assertIn('If(Custom String("{0}", Event Player) == Custom String("งูแท้"));', classifier)
+            self.assertIn('If(Event Player.NamaTampilan == Custom String("งูแท้"));', classifier)
+            self.assertNotIn('If(Custom String("{0}", Event Player) == Custom String("งูแท้"));', classifier)
             self.assertIn('Event Player.MusikKhusus = Custom String("Caladan Brood");', classifier)
             self.assertIn("Event Player.IndeksWarna = 1;", classifier)
             self.assertIn("Event Player.KursorWarna = 1;", classifier)
             self.assertIn("Event Player.IndeksIkon = 23;", classifier)
             self.assertIn("Event Player.KursorIkon = 23;", classifier)
             self.assertNotIn("Profil", classifier)
+
+            fast = block(
+                source,
+                f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")',
+                f'{rule_kw}("89b - Subrutin',
+            )
+            self.assertIn(
+                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแท้"));',
+                fast,
+            )
+            self.assertNotIn(
+                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
+                fast,
+            )
 
 
 if __name__ == "__main__":
