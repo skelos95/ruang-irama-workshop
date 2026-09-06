@@ -169,7 +169,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )[1].split(f'{rule_kw}("00a3 - Umum: Lewati persiapan awal")', 1)[0]
             self.assertIn(f"Count Of({global_name}.PemainManusia) == 0;", skip_heroes)
             self.assertIn(f"{global_name}.PemainSiklusGlobal == Null;", skip_heroes)
-            self.assertNotIn("Set Match Time(0);", skip_heroes)
+            self.assertEqual(skip_heroes.count("Set Match Time(0);"), 1)
 
             skip_setup = source.split(
                 f'{rule_kw}("00a3 - Umum: Lewati persiapan awal")', 1
@@ -178,7 +178,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )[0]
             self.assertIn(f"Count Of({global_name}.PemainManusia) == 0;", skip_setup)
             self.assertIn(f"{global_name}.PemainSiklusGlobal == Null;", skip_setup)
-            self.assertNotIn("Set Match Time(0);", skip_setup)
+            self.assertEqual(skip_setup.count("Set Match Time(0);"), 1)
+            self.assertEqual(source.count("Set Match Time(0);"), 2)
 
             bootstrap_lock = source.split(
                 f'{rule_kw}("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")', 1

@@ -3609,6 +3609,50 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(sync_rule, "Global.SisaWaktuServer > 0", "Global.SisaWaktuServer >= 0")
         self.assert_rejected(mutated, "pemicu tunggal restart")
 
+    def test_bootstrap_skips_use_exactly_two_match_time_zero_calls(self) -> None:
+        token = "Set Match Time(0);"
+        self.assertEqual(self.source.count(token), 2)
+        mutated = self.source.replace(token, "", 1)
+        self.assert_rejected(mutated, "tepat dua Set Match Time(0)")
+        mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
+        self.assert_rejected(mutated, "tepat dua Set Match Time(0)")
+
+    def test_bootstrap_skip_heroes_keeps_assemble_guard_and_latch_order(self) -> None:
+        skip_heroes = self.rule(
+            lambda rule: rule.name.startswith("00a2 - Umum: Lewati pemilihan pahlawan")
+        )
+        self.assertEqual(skip_heroes.body.count("Set Match Time(0);"), 1)
+        mutated = self.replace_in_rule(skip_heroes, "Is Assembling Heroes == True;", "Is Assembling Heroes == False;")
+        self.assert_rejected(mutated, "Is Assembling Heroes == True")
+        mutated = self.replace_regex_in_rule(
+            skip_heroes,
+            r"Global\.PilihPahlawanDilewati\s*=\s*True;\s*Set Match Time\(0\);",
+            "Set Match Time(0);\n\t\tGlobal.PilihPahlawanDilewati = True;",
+        )
+        self.assert_rejected(mutated, "latch sebelum Set Match Time(0)")
+
+    def test_bootstrap_skip_setup_keeps_setup_guard_and_latch_order(self) -> None:
+        skip_setup = self.rule(
+            lambda rule: rule.name.startswith("00a3 - Umum: Lewati persiapan awal")
+        )
+        self.assertEqual(skip_setup.body.count("Set Match Time(0);"), 1)
+        mutated = self.replace_in_rule(skip_setup, "Is In Setup == True;", "Is In Setup == False;")
+        self.assert_rejected(mutated, "Is In Setup == True")
+        mutated = self.replace_regex_in_rule(
+            skip_setup,
+            r"Global\.PersiapanDilewati\s*=\s*True;\s*Set Match Time\(0\);",
+            "Set Match Time(0);\n\t\tGlobal.PersiapanDilewati = True;",
+        )
+        self.assert_rejected(mutated, "latch sebelum Set Match Time(0)")
+
+    def test_bootstrap_lock_rule_never_sets_match_time_zero(self) -> None:
+        lock = self.rule(
+            lambda rule: rule.name.startswith("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")
+        )
+        self.assertEqual(lock.body.count("Set Match Time(0);"), 0)
+        mutated = self.inject_action(lock, "Set Match Time(0);")
+        self.assert_rejected(mutated, "00a4 tidak boleh menembak Set Match Time(0)")
+
     def test_native_timer_sync_must_stay_inside_the_one_hz_scheduler_branch(self) -> None:
         sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer + 5));"
         scheduler = self.rule(lambda rule: sync_token in rule.body)

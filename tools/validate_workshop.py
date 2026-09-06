@@ -6242,6 +6242,80 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
             or "Button(Interact)" in objective_rule.body,
             "destinazione teleport non viene valutata al click",
         )
+    bootstrap_skip_token = "Set Match Time(0);"
+    checks.equal(
+        source.count(bootstrap_skip_token),
+        2,
+        "bootstrap skip fase awal harus tepat dua Set Match Time(0)",
+    )
+    bootstrap_skip_heroes = next(
+        (rule for rule in rules if rule.name.startswith("00a2 - Umum: Lewati pemilihan pahlawan")),
+        None,
+    )
+    checks.require(bootstrap_skip_heroes is not None, "rule 00a2 bootstrap Assemble Heroes assente")
+    if bootstrap_skip_heroes:
+        checks.equal(
+            bootstrap_skip_heroes.body.count(bootstrap_skip_token),
+            1,
+            "00a2 harus menembak Set Match Time(0) tepat sekali",
+        )
+        for guard in (
+            "Global.PilihPahlawanDilewati == False;",
+            "Count Of(Global.PemainManusia) == 0;",
+            "Global.PemainSiklusGlobal == Null;",
+            "Is Game In Progress == False;",
+            "Is Assembling Heroes == True;",
+        ):
+            checks.require(guard in bootstrap_skip_heroes.body, f"00a2 guard bootstrap hilang: {guard}")
+        hero_latch_position = bootstrap_skip_heroes.body.find("Global.PilihPahlawanDilewati = True;")
+        hero_skip_position = bootstrap_skip_heroes.body.find(bootstrap_skip_token)
+        checks.require(
+            0 <= hero_latch_position < hero_skip_position,
+            "00a2 harus menulis latch sebelum Set Match Time(0)",
+        )
+
+    bootstrap_skip_setup = next(
+        (rule for rule in rules if rule.name.startswith("00a3 - Umum: Lewati persiapan awal")),
+        None,
+    )
+    checks.require(bootstrap_skip_setup is not None, "rule 00a3 bootstrap Setup assente")
+    if bootstrap_skip_setup:
+        checks.equal(
+            bootstrap_skip_setup.body.count(bootstrap_skip_token),
+            1,
+            "00a3 harus menembak Set Match Time(0) tepat sekali",
+        )
+        for guard in (
+            "Global.PersiapanDilewati == False;",
+            "Count Of(Global.PemainManusia) == 0;",
+            "Global.PemainSiklusGlobal == Null;",
+            "Is Game In Progress == False;",
+            "Is In Setup == True;",
+        ):
+            checks.require(guard in bootstrap_skip_setup.body, f"00a3 guard bootstrap hilang: {guard}")
+        setup_latch_position = bootstrap_skip_setup.body.find("Global.PersiapanDilewati = True;")
+        setup_skip_position = bootstrap_skip_setup.body.find(bootstrap_skip_token)
+        checks.require(
+            0 <= setup_latch_position < setup_skip_position,
+            "00a3 harus menulis latch sebelum Set Match Time(0)",
+        )
+
+    bootstrap_lock_rule = next(
+        (rule for rule in rules if rule.name.startswith("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")),
+        None,
+    )
+    checks.require(bootstrap_lock_rule is not None, "rule 00a4 lock bootstrap assente")
+    if bootstrap_lock_rule:
+        checks.equal(
+            bootstrap_lock_rule.body.count(bootstrap_skip_token),
+            0,
+            "00a4 tidak boleh menembak Set Match Time(0)",
+        )
+        for guard in (
+            "Is Game In Progress == True;",
+            "Or(Global.PilihPahlawanDilewati == False, Global.PersiapanDilewati == False) == True;",
+        ):
+            checks.require(guard in bootstrap_lock_rule.body, f"00a4 guard lock hilang: {guard}")
     for token in FORBIDDEN_RESULT_ACTIONS:
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     completion_token = "Disable Built-In Game Mode Completion;"

@@ -971,8 +971,9 @@ regola("00a2 - Umum: Lewati pemilihan pahlawan")
 
 	azioni
 	{
-		"Kunci bootstrap sekali pada fase awal; jangan paksa fase mode agar perpindahan tim tetap memakai loading native."
+		"Khusus bootstrap awal: tutup Assemble Heroes sekali saja."
 		Globale.PilihPahlawanDilewati = True;
+		Set Match Time(0);
 	}
 }
 
@@ -995,8 +996,9 @@ regola("00a3 - Umum: Lewati persiapan awal")
 
 	azioni
 	{
-		"Kunci bootstrap persiapan sekali saja; jangan paksa waktu mode bawaan."
+		"Khusus bootstrap awal: tutup fase setup/pre-match sekali saja."
 		Globale.PersiapanDilewati = True;
+		Set Match Time(0);
 	}
 }
 
