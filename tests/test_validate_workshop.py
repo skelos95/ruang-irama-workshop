@@ -2456,6 +2456,27 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "non deve attendere Is Alive")
 
+    def test_classifier_and_roster_renderer_must_stay_in_the_same_rule(self) -> None:
+        classifier = self.rule(
+            lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
+            and "Create HUD Text(" in rule.body
+            and "Event Player.HudKiri = Last Text ID;" in rule.body
+            and "Event Player.HudKanan = Last Text ID;" in rule.body
+            and "Event Player.HudPemainDibuat = True;" in rule.body
+        )
+        duplicate = re.sub(
+            r'(regola|rule)\("([^"]+)"\)',
+            r'\1("02c - DEBUG split renderer")',
+            classifier.body,
+            count=1,
+        )
+        self.assertNotEqual(duplicate, classifier.body)
+        mutated = self.source + "\n\n" + duplicate
+        self.assert_rejected(
+            mutated,
+            "classifier e renderer roster devono restare nella stessa regola",
+        )
+
     def test_classifier_rearms_when_a_roster_slot_is_temporarily_unavailable(self) -> None:
         classifier = self.rule(
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body

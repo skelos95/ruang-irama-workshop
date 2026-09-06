@@ -4933,13 +4933,25 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         checks.require("Global.PemainAktif" not in actions,
                        "detector team-switch non deve riusare lo scratch del scheduler")
 
-    roster_hud = next((
+    roster_hud_rules = [
         rule for rule in rules
         if event_type(rule) == "Ongoing - Each Player"
+        and "Create HUD Text(" in rule.body
         and "Event Player.HudKiri = Last Text ID;" in rule.body
         and "Event Player.HudKanan = Last Text ID;" in rule.body
-    ), None)
-    checks.require(roster_hud is not None, "renderer roster post-team-switch assente")
+        and "Event Player.HudPemainDibuat = True;" in rule.body
+    ]
+    checks.require(bool(roster_hud_rules), "renderer roster post-team-switch assente")
+    checks.require(
+        len(roster_hud_rules) == 1,
+        "classifier e renderer roster devono restare nella stessa regola per evitare il retrigger asincrono post team-switch",
+    )
+    roster_hud = roster_hud_rules[0] if roster_hud_rules else None
+    if classifier and roster_hud:
+        checks.require(
+            classifier.start == roster_hud.start,
+            "classifier e renderer roster devono restare nella stessa regola per evitare il retrigger asincrono post team-switch",
+        )
     if roster_hud:
         roster_conditions = rule_block(roster_hud, "conditions") or ""
         for token in (

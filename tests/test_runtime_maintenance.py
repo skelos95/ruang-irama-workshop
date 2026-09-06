@@ -382,19 +382,33 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 fast,
             )
             self.assertNotIn(f'{rule_kw}("02b - HUD Pemain', source)
+            self.assertNotIn(f'{rule_kw}("02x - DEBUG', source)
+            self.assertNotIn("DBG 02", source)
 
             roster_hud = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
             self.assertNotIn("Server Load < 150", roster_hud)
             self.assertIn("Call Subroutine(HitungPilihan);", roster_hud)
             self.assertIn("Create HUD Text(", roster_hud)
+            append_roster = f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);"
+            left_create = roster_hud.index("Create HUD Text(")
+            right_create = roster_hud.index("Create HUD Text(", left_create + 1)
+            self.assertLess(roster_hud.index(append_roster), roster_hud.index("Event Player.Manusia = True;"))
+            self.assertLess(roster_hud.index("Event Player.Manusia = True;"), roster_hud.index("Call Subroutine(HitungPilihan);"))
             self.assertLess(
                 roster_hud.index("Call Subroutine(HitungPilihan);"),
-                roster_hud.index("Create HUD Text("),
+                left_create,
             )
+            self.assertLess(left_create, roster_hud.index("Event Player.HudKiri = Last Text ID;"))
+            self.assertLess(roster_hud.index("Event Player.HudKiri = Last Text ID;"), right_create)
+            self.assertLess(right_create, roster_hud.index("Event Player.HudKanan = Last Text ID;"))
             self.assertGreater(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),
                 roster_hud.index(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKanan;"),
+            )
+            self.assertLess(
+                roster_hud.index("Event Player.HudPemainDibuat = True;"),
+                roster_hud.index("Welcome to CHILL. Pick a vibe, pick a color, stay weird."),
             )
             self.assertEqual(
                 source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"),
