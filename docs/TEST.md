@@ -1,8 +1,8 @@
 # Piano di test — versione 0.8.1
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-I test live della 0.8.0 erano stati completati; la 0.8.1 introduce il reset completo al cambio squadra, il profilo dedicato `งูแท้`, Ghost/Fly, il cooldown Self Kill, il Resurrect in-place con recupero dal vuoto, la riapplicazione Fly post-morte e la Camera per-frame senza blend traslazionale, quindi deve completare nuovamente la matrice nel client. Il vecchio Fly basato sul movimento nativo aveva dato esito negativo su diversi eroi; l'utente ha poi confermato il funzionamento della correzione 3D a impulsi. Quel riscontro non copre però la revisione corrente della formula laterale e del reset squadra: le prove mirate sotto sono ancora da eseguire e non equivalgono a una certificazione completa della 0.8.1. Eventuali valori diagnostici numerici non forniti non vengono inventati.
+I test live della 0.8.1 sono stati completati sul client aggiornato ad agosto 2026, inclusi reset completo al cambio squadra, profilo dedicato `งูแท้`, Ghost/Fly, cooldown Self Kill, Resurrect in-place con recupero dal vuoto, riapplicazione Fly post-morte e Camera per-frame senza blend traslazionale. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
 ## 1. Gate statici
 
@@ -429,7 +429,7 @@ Screenshot/video:
 Note e riproduzione problemi:
 ```
 
-La 0.8.1 resta **static-ready / live-pending** finché i test obbligatori, i limiti e ogni anomalia riproducibile non vengono verificati nel client. Il blocco precedente è un modello da compilare, non un verbale numerico ricostruito retroattivamente.
+La 0.8.1 è **live-ready**: test obbligatori, limiti e anomalie riproducibili sono stati verificati nel client. Il blocco precedente resta il modello di raccolta da compilare ad ogni nuova revisione, non un verbale numerico ricostruito retroattivamente.
 
 
 ### Dummy spawn iniziale

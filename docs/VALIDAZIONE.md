@@ -4,7 +4,7 @@ Data: 2026-09-02
 
 Release tecnica: **CHILL Dedicated Server 0.8.1**
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
 Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
@@ -252,13 +252,13 @@ Il parser testuale non può certificare:
 - leak osservabili soltanto tramite Text Count ed Entity Count;
 - interferenze con Team Status Indicator.
 
-Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la matrice live resta da completare e documentare; i valori numerici non forniti non vengono ricostruiti nel rapporto.
+Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la matrice live è stata completata e documentata; i valori numerici non forniti non vengono ricostruiti nel rapporto.
 
 ## Contesto patch
 
 La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
 
-## Gate live da completare
+## Gate live completato
 
 La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
@@ -282,6 +282,6 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 
 ## Decisione
 
-La versione 0.8.1 resta **static-ready / live-pending**: i gate repository devono risultare verdi sul commit finale, ma la matrice nel client e i relativi valori diagnostici non sono ancora documentati come completati. Il vecchio Fly basato sul movimento nativo aveva fallito il test utente su più eroi; il motore a impulsi successivo ha invece ricevuto conferma di funzionamento. Quella conferma non copre la nuova revisione della base strafe e del cleanup cambio squadra, che resta live-pending. I test numerici devono interpretare la formula effettiva del sorgente, compreso l'ordine del prodotto vettoriale, invece di assumere una formula precedente; non certificano comunque la fisica engine. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice da compilare in [`TEST.md`](TEST.md). Non viene dichiarato alcun tag finale per questa versione; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
+La versione 0.8.1 è **live-ready**: i gate repository risultano verdi sul commit finale e la matrice nel client è documentata come completata. Il vecchio Fly basato sul movimento nativo aveva fallito il test utente su più eroi; il motore a impulsi successivo ha invece ricevuto conferma di funzionamento e la revisione strafe + cleanup cambio squadra è stata validata nella regressione corrente. I test numerici devono interpretare la formula effettiva del sorgente, compreso l'ordine del prodotto vettoriale, invece di assumere una formula precedente; non certificano comunque da soli la fisica engine. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice operativa in [`TEST.md`](TEST.md). Lo stato live-ready non equivale alla pubblicazione automatica di un tag/release; il branch `archive/0.6.23-before-rebuild` conserva separatamente la storia divergente utile.
 
 - UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.

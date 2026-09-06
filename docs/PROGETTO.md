@@ -1,8 +1,8 @@
 # Progetto tecnico — CHILL Dedicated Server 0.8.1
 
-Stato: **static-ready / live-pending**
+Stato: **live-ready**
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; la 0.8.1 resta live-pending finché non viene completata una nuova regressione nel client, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; per la 0.8.1 la regressione client è stata completata, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 
 ## Obiettivi
 
@@ -33,7 +33,7 @@ Il test utente del vecchio motore basato sul movimento nativo ha rilevato assenz
 
 La baseline Fly uniforme è `5,5 m/s = 100%`, una convenzione del motore e non la velocità nativa esatta di ogni eroe, buff o abilità. Soltanto Forward puro, con Z locale maggiore di `0.050` e X fra `-0.050` e `0.050`, arma il timestamp. La percentuale è `Min(500, 100 + Max(0, Total Time Elapsed - start) * 16)` e scala la baseline fino a `27,5 m/s = 500%` dopo 25 secondi. Rilascio, laterali, diagonali e indietro azzerano la rampa; il movimento successivo parte dal `100%`, mentre a input zero la velocità richiesta è zero. Timer, percentuale, direzione e delta di velocità sono player-local. A ogni tick il motore calcola `velocità richiesta - Velocity Of(player)` e applica il relativo impulso `To World` con `Incorporate Contrary Motion`, senza forcing o Teleport: lo stesso controllo governa movimento e hover.
 
-Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio; nel caso cambio squadra il setup successivo riapplica i default. Jump Resurrect riapplica le modalità selezionate. La formula laterale corretta, il reset squadra e la regressione completa di baseline, fluidità e interazioni con collisioni/abilità restano da validare nella matrice live di [`TEST.md`](TEST.md).
+Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio; nel caso cambio squadra il setup successivo riapplica i default. Jump Resurrect riapplica le modalità selezionate. Formula laterale corretta, reset squadra e regressione completa di baseline, fluidità e interazioni con collisioni/abilità sono stati validati nella matrice live di [`TEST.md`](TEST.md).
 
 ### Input
 
@@ -238,7 +238,7 @@ Gli ultimi due valori devono essere letti nel client: non sono deducibili con pr
 
 Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
 
-La release 0.8.1 resta **static-ready / live-pending**: i gate statici devono risultare verdi sul commit finale, ma la matrice nel client non è ancora documentata come completata e non viene dichiarato alcun tag finale. Per chiudere la regressione restano obbligatorie le prove seguenti:
+La release 0.8.1 è **live-ready**: i gate statici risultano verdi e la matrice nel client è documentata come completata. La regressione è stata chiusa includendo le prove seguenti:
 
 - import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
 - matrice input/menu/localizzazione;
@@ -248,7 +248,7 @@ La release 0.8.1 resta **static-ready / live-pending**: i gate statici devono ri
 - soak di almeno 30 minuti con 12 slot;
 - diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
-La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md).
+La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md). Lo stato live-ready non implica automaticamente la pubblicazione di un tag/release.
 
 
 ### Dummy bot: spawn e distanza sicura

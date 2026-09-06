@@ -889,14 +889,14 @@ def validate_metadata(checks: Checks, root: Path) -> None:
             text = path.read_text(encoding="utf-8")
             checks.require(CURRENT_VERSION in text, f"documento non allineato a {CURRENT_VERSION}: {relative}")
             checks.require(
-                "Stato: **static-ready / live-pending**" in text,
-                f"documento non dichiara Stato: **static-ready / live-pending**: {relative}",
+                "Stato: **live-ready**" in text,
+                f"documento non dichiara Stato: **live-ready**: {relative}",
             )
-            live_ready, published = current_release_claims(text)
             checks.require(
-                not live_ready,
-                f"documento contiene un'affermazione live-ready assertiva per {CURRENT_VERSION}: {relative}",
+                "static-ready / live-pending" not in text,
+                f"documento contiene stato obsoleto static-ready / live-pending: {relative}",
             )
+            _, published = current_release_claims(text)
             checks.require(
                 not published,
                 f"documento dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente: {relative}",
@@ -923,16 +923,16 @@ def validate_metadata(checks: Checks, root: Path) -> None:
             current_section = current_section_match.group(0)
             checks.require(
                 re.search(
-                    r"(?im)^\s*Stato:\s*\*\*live-pending\*\*\.\s*$",
+                    r"(?im)^\s*Stato:\s*\*\*live-ready\*\*\.\s*$",
                     current_section,
                 ) is not None,
-                f"CHANGELOG.md: la sezione {CURRENT_VERSION} deve restare live-pending",
+                f"CHANGELOG.md: la sezione {CURRENT_VERSION} deve essere live-ready",
             )
-            live_ready, published = current_release_claims(current_section)
             checks.require(
-                not live_ready,
-                f"CHANGELOG.md contiene un'affermazione live-ready assertiva per {CURRENT_VERSION}",
+                "live-pending" not in current_section.lower(),
+                f"CHANGELOG.md: la sezione {CURRENT_VERSION} contiene stato live-pending obsoleto",
             )
+            _, published = current_release_claims(current_section)
             checks.require(
                 not published,
                 f"CHANGELOG.md dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente",

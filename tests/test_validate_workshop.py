@@ -3645,9 +3645,9 @@ class RepositoryMetadataTests(unittest.TestCase):
         for relative in validator.CORE_DOCS:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("CHILL 0.8.1\nStato: **static-ready / live-pending**\n", encoding="utf-8")
+            path.write_text("CHILL 0.8.1\nStato: **live-ready**\n", encoding="utf-8")
         (root / "CHANGELOG.md").write_text(
-            "## 0.8.1\n\nStato: **live-pending**.\n",
+            "## 0.8.1\n\nStato: **live-ready**.\n",
             encoding="utf-8",
         )
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
@@ -3674,18 +3674,24 @@ class RepositoryMetadataTests(unittest.TestCase):
             (root / "VERSION").write_text("0.7.2\n", encoding="utf-8")
             self.assertTrue(any("VERSION" in error for error in self.metadata_errors(root)))
 
-    def test_live_ready_document_is_rejected_before_client_regression(self) -> None:
+    def test_live_pending_document_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             (root / "README.md").write_text(
-                "CHILL 0.8.1\nStato: **live-ready**\n",
+                "CHILL 0.8.1\nStato: **static-ready / live-pending**\n",
                 encoding="utf-8",
             )
             errors = self.metadata_errors(root)
-            self.assertTrue(any("live-ready" in error or "live-pending" in error for error in errors))
+            self.assertTrue(
+                any(
+                    "Stato: **live-ready**" in error
+                    or "static-ready / live-pending" in error
+                    for error in errors
+                )
+            )
 
-    def test_assertive_current_live_ready_claim_is_rejected_with_valid_state_marker(self) -> None:
+    def test_current_live_ready_claim_is_allowed_with_valid_state_marker(self) -> None:
         claims = (
             "La versione 0.8.1 è live-ready.",
             "La versione v0.8.1 è live-ready.",
@@ -3699,12 +3705,7 @@ class RepositoryMetadataTests(unittest.TestCase):
                     readme.read_text(encoding="utf-8") + f"\n{claim}\n",
                     encoding="utf-8",
                 )
-                self.assertTrue(
-                    any(
-                        "affermazione live-ready assertiva" in error
-                        for error in self.metadata_errors(root)
-                    )
-                )
+                self.assertEqual(self.metadata_errors(root), [])
 
     def test_published_current_tag_or_release_claim_is_rejected(self) -> None:
         claims = (
@@ -3744,26 +3745,26 @@ class RepositoryMetadataTests(unittest.TestCase):
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
-                "## 0.8.1\nStato: **live-pending**.\n"
-                "## 0.8.0\nStato: **live-ready**\n",
+                "## 0.8.1\nStato: **live-ready**.\n"
+                "## 0.8.0\nStato: **live-pending**\n",
                 encoding="utf-8",
             )
             self.assertEqual(self.metadata_errors(root), [])
 
-    def test_assertive_current_changelog_claim_is_rejected(self) -> None:
+    def test_current_changelog_live_pending_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
                 "## 0.8.1 — 2026-08-25\n\n"
                 "Stato: **live-pending**.\n\n"
-                "La versione v0.8.1 è live-ready.\n\n"
                 "## 0.8.0\n\nStato: **live-ready**.\n",
                 encoding="utf-8",
             )
             self.assertTrue(
                 any(
-                    "CHANGELOG.md contiene un'affermazione live-ready" in error
+                    "deve essere live-ready" in error
+                    or "live-pending obsoleto" in error
                     for error in self.metadata_errors(root)
                 )
             )
