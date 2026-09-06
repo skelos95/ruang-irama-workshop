@@ -5292,6 +5292,16 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                        "inspection non disabilita i nameplate nativi")
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
                        "inspection può mostrare nameplate di umani privati")
+        checks.require(
+            "Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, NamaTampilan)" in inspection_live.body,
+            "inspection deve usare roster canonico come guardia NamaTampilan",
+        )
+        checks.require(
+            "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, NamaTampilan)" not in inspection_live.body,
+            "inspection non deve usare Manusia come guardia NamaTampilan",
+        )
     validate_fluid_iwt(inspection_live, "inspection", "Event Player.TargetInspeksi")
 
     cycle_targets = rule_by_subroutine(rules, "ProsesSiklusPemain")
@@ -5351,6 +5361,16 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
                        "teleport non disabilita i nameplate nativi")
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in teleport_text.body,
                        "teleport può mostrare nameplate di umani privati")
+        checks.require(
+            "Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)" in teleport_text.body,
+            "teleport deve usare roster canonico come guardia NamaTampilan",
+        )
+        checks.require(
+            "Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)" not in teleport_text.body,
+            "teleport non deve usare Manusia come guardia NamaTampilan",
+        )
     validate_fluid_iwt(teleport_text, "Teleport", "Event Player.CalonTargetTeleportasi")
 
     vision_names = next(

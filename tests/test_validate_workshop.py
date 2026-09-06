@@ -3411,6 +3411,34 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 )
                 self.assert_rejected(mutated, "nameplate")
 
+    def test_inspection_renderer_uses_roster_membership_for_cached_name(self) -> None:
+        inspection = self.rule(
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            inspection,
+            "Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, NamaTampilan)",
+            "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, NamaTampilan)",
+        )
+        self.assert_rejected(mutated, "inspection non deve usare Manusia come guardia NamaTampilan")
+
+    def test_teleport_renderer_uses_roster_membership_for_cached_name(self) -> None:
+        teleport = self.rule(
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            teleport,
+            "Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)",
+            "Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)",
+        )
+        self.assert_rejected(mutated, "teleport non deve usare Manusia come guardia NamaTampilan")
+
     def test_camera_target_cache_excludes_private_humans(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
         mutated = self.replace_in_rule(

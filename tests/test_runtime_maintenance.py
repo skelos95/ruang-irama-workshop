@@ -39,9 +39,27 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertIn("Player Variable(Event Player.TargetInspeksi, NamaTampilan)", inspect)
+            self.assertIn(
+                f"Array Contains({global_name}.PemainManusia, Event Player.TargetInspeksi) == True",
+                inspect,
+            )
+            self.assertNotIn(
+                "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
+                "Player Variable(Event Player.TargetInspeksi, NamaTampilan)",
+                inspect,
+            )
 
             teleport = source.split(f'{rule_kw}("19d - Teleportasi Jongkok: Buat ulang nama saat target berubah")', 1)[1].split(f'{rule_kw}("19e - Teleportasi Jongkok', 1)[0]
             self.assertIn("Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)", teleport)
+            self.assertIn(
+                f"Array Contains({global_name}.PemainManusia, Event Player.CalonTargetTeleportasi) == True",
+                teleport,
+            )
+            self.assertNotIn(
+                "Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? "
+                "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)",
+                teleport,
+            )
 
             vision = source.split(f'{rule_kw}("18i - Nasib: Visi', 1)[1].split(f'{rule_kw}("18j - Nasib: Bersihkan nama visi', 1)[0]
             self.assertIn(
