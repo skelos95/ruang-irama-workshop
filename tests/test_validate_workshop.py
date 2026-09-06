@@ -3439,6 +3439,38 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "teleport non deve usare Manusia come guardia NamaTampilan")
 
+    def test_inspection_renderer_snapshots_cached_name_with_evaluate_once(self) -> None:
+        inspection = self.rule(
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            inspection,
+            'Evaluate Once(Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? '
+            'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
+            'Custom String("{0}", Event Player.TargetInspeksi))',
+            'Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? '
+            'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
+            'Custom String("{0}", Event Player.TargetInspeksi)',
+        )
+        self.assert_rejected(mutated, "inspection deve usare Evaluate Once sul nome target")
+
+    def test_teleport_renderer_snapshots_cached_name_with_evaluate_once(self) -> None:
+        teleport = self.rule(
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            and "Create In-World Text(Event Player" in rule.body
+        )
+        mutated = self.replace_in_rule(
+            teleport,
+            'Evaluate Once(Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? '
+            'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
+            'Custom String("{0}", Event Player.CalonTargetTeleportasi))',
+            'Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? '
+            'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
+            'Custom String("{0}", Event Player.CalonTargetTeleportasi)',
+        )
+        self.assert_rejected(mutated, "teleport deve usare Evaluate Once sul nome target")
+
     def test_camera_target_cache_excludes_private_humans(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
         mutated = self.replace_in_rule(

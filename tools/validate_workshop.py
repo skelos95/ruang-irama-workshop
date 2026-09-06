@@ -5293,9 +5293,15 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in inspection_live.body,
                        "inspection può mostrare nameplate di umani privati")
         checks.require(
-            "Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
-            "Player Variable(Event Player.TargetInspeksi, NamaTampilan)" in inspection_live.body,
-            "inspection deve usare roster canonico come guardia NamaTampilan",
+            "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, NamaTampilan) : "
+            'Custom String("{0}", Event Player.TargetInspeksi))' in inspection_live.body,
+            "inspection deve usare Evaluate Once sul nome target",
+        )
+        checks.require(
+            "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.TargetInspeksi) == True ? "
+            "Player Variable(Event Player.TargetInspeksi, WarnaNama)" in inspection_live.body,
+            "inspection deve usare Evaluate Once sul colore target",
         )
         checks.require(
             "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
@@ -5362,9 +5368,15 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         checks.require("Enable Nameplates(All Players(All Teams), Event Player);" not in teleport_text.body,
                        "teleport può mostrare nameplate di umani privati")
         checks.require(
-            "Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
-            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)" in teleport_text.body,
-            "teleport deve usare roster canonico come guardia NamaTampilan",
+            "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : "
+            'Custom String("{0}", Event Player.CalonTargetTeleportasi))' in teleport_text.body,
+            "teleport deve usare Evaluate Once sul nome target",
+        )
+        checks.require(
+            "Evaluate Once(Array Contains(Global.PemainManusia, Event Player.CalonTargetTeleportasi) == True ? "
+            "Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama)" in teleport_text.body,
+            "teleport deve usare Evaluate Once sul colore target",
         )
         checks.require(
             "Player Variable(Event Player.CalonTargetTeleportasi, Manusia) == True ? "

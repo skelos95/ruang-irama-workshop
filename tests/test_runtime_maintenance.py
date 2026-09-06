@@ -43,6 +43,19 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 f"Array Contains({global_name}.PemainManusia, Event Player.TargetInspeksi) == True",
                 inspect,
             )
+            self.assertIn(
+                f'Evaluate Once(Array Contains({global_name}.PemainManusia, '
+                'Event Player.TargetInspeksi) == True ? '
+                'Player Variable(Event Player.TargetInspeksi, NamaTampilan) : '
+                'Custom String("{0}", Event Player.TargetInspeksi))',
+                inspect,
+            )
+            self.assertIn(
+                f"Evaluate Once(Array Contains({global_name}.PemainManusia, "
+                "Event Player.TargetInspeksi) == True ? "
+                "Player Variable(Event Player.TargetInspeksi, WarnaNama)",
+                inspect,
+            )
             self.assertNotIn(
                 "Player Variable(Event Player.TargetInspeksi, Manusia) == True ? "
                 "Player Variable(Event Player.TargetInspeksi, NamaTampilan)",
@@ -53,6 +66,19 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan)", teleport)
             self.assertIn(
                 f"Array Contains({global_name}.PemainManusia, Event Player.CalonTargetTeleportasi) == True",
+                teleport,
+            )
+            self.assertIn(
+                f'Evaluate Once(Array Contains({global_name}.PemainManusia, '
+                'Event Player.CalonTargetTeleportasi) == True ? '
+                'Player Variable(Event Player.CalonTargetTeleportasi, NamaTampilan) : '
+                'Custom String("{0}", Event Player.CalonTargetTeleportasi))',
+                teleport,
+            )
+            self.assertIn(
+                f"Evaluate Once(Array Contains({global_name}.PemainManusia, "
+                "Event Player.CalonTargetTeleportasi) == True ? "
+                "Player Variable(Event Player.CalonTargetTeleportasi, WarnaNama)",
                 teleport,
             )
             self.assertNotIn(
