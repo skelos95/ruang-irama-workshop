@@ -802,8 +802,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             and call.args[5].strip() == "13"
         )
         changed_text = call.args[3].replace(
-            "Custom String(\"CHILL STAR: {0}\", Global.NamaPemimpinPilihan)",
-            "Custom String(\"CHILL STAR: {0}\", Player Variable(Global.PemimpinPilihan, NamaTampilan))",
+            "Custom String(\"\\n \\nCHILL STAR: {0}\", Global.NamaPemimpinPilihan)",
+            "Custom String(\"\\n \\nCHILL STAR: {0}\", Player Variable(Global.PemimpinPilihan, NamaTampilan))",
             1,
         )
         self.assertNotEqual(changed_text, call.args[3])

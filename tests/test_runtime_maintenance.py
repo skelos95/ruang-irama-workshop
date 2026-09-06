@@ -226,9 +226,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertIn("Left, 13", init)
             self.assertIn(f"{global_name}.WarnaPemimpinPilihan", init)
-            self.assertIn("CHILL STAR: {0}", init)
-            self.assertIn("BINTANG CHILL: {0}", init)
-            self.assertIn("ดาวสายชิล: {0}", init)
+            self.assertIn("\\n \\nCHILL STAR: {0}", init)
+            self.assertIn("\\n \\nBINTANG CHILL: {0}", init)
+            self.assertIn("\\n \\nดาวสายชิล: {0}", init)
 
             roster = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(
                 f'{rule_kw}("03c - Bot/Dummy', 1
