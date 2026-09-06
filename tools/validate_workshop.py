@@ -6328,12 +6328,16 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         checks.require(token not in source, f"risultato deve restare alla modalità nativa: {token}")
     completion_token = "Disable Built-In Game Mode Completion;"
     checks.equal(source.count(completion_token), 1, "blocco completamento nativo fino al timer CHILL")
+    checks.require(
+        "SisaWaktuServer + 5" not in source,
+        "sinkronisasi timer mode tidak boleh menambah offset +5",
+    )
     timer_sync_rule = next(
         (
             rule
             for rule in rules_with_event(rules, "Ongoing - Global")
             if completion_token in rule.body
-            and "Set Match Time(Max(1, Global.SisaWaktuServer + 5));" in rule.body
+            and "Set Match Time(Max(1, Global.SisaWaktuServer));" in rule.body
         ),
         None,
     )
@@ -6362,7 +6366,7 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         cadence_position = timer_packed.find(cadence_token)
         for action_token, label in (
             (completion_token, "blocco completion"),
-            ("Set Match Time(Max(1, Global.SisaWaktuServer + 5));", "Set Match Time"),
+            ("Set Match Time(Max(1, Global.SisaWaktuServer));", "Set Match Time"),
         ):
             action_position = timer_sync_rule.body.find(action_token)
             branches = (

@@ -3633,7 +3633,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
         mutated = self.source.replace(token, token + "\n\t\t" + token, 1)
         self.assert_rejected(mutated, "completamento nativo fino al timer CHILL")
-        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer + 5));"
+        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer));"
+        self.assertNotIn("SisaWaktuServer + 5", self.source)
         self.assertIn(sync_token, self.source)
         mutated = self.source.replace(sync_token, "", 1)
         self.assert_rejected(mutated, "timer mode bawaan tidak disinkronkan")
@@ -3690,7 +3691,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "00a4 tidak boleh menembak Set Match Time(0)")
 
     def test_native_timer_sync_must_stay_inside_the_one_hz_scheduler_branch(self) -> None:
-        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer + 5));"
+        sync_token = "Set Match Time(Max(1, Global.SisaWaktuServer));"
         scheduler = self.rule(lambda rule: sync_token in rule.body)
         nested = (
             "\t\t\tIf(And(Is Game In Progress == True, Global.SisaWaktuServer > 0));\n"

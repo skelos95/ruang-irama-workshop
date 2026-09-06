@@ -1599,7 +1599,7 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 			If(And(Is Game In Progress == True, Globale.SisaWaktuServer > 0));
 				"Satu kali per detik, tahan penyelesaian mode bawaan dan sinkronkan timer native di atas nol sampai timer server selesai."
 				Disable Built-In Game Mode Completion;
-				Set Match Time(Max(1, Globale.SisaWaktuServer + 5));
+				Set Match Time(Max(1, Globale.SisaWaktuServer));
 			End;
 		End;
 		If(And(Globale.PemainSiklusGlobal != Null, Or(Entity Exists(Globale.PemainSiklusGlobal) == False, Has Spawned(Globale.PemainSiklusGlobal) == False)));

@@ -154,7 +154,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             (self.en, "Global", "rule"),
         ):
             self.assertIn("Disable Built-In Game Mode Completion;", source)
-            self.assertIn(f"Set Match Time(Max(1, {global_name}.SisaWaktuServer + 5));", source)
+            self.assertIn(f"Set Match Time(Max(1, {global_name}.SisaWaktuServer));", source)
+            self.assertNotIn("SisaWaktuServer + 5", source)
             self.assertIn("Is Game In Progress == True", source)
             self.assertIn(f"{global_name}.SisaWaktuServer > 0", source)
             scheduler = source.split(
@@ -166,7 +167,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             cadence_position = scheduler.index(cadence)
             sync_position = scheduler.index(
-                f"Set Match Time(Max(1, {global_name}.SisaWaktuServer + 5));"
+                f"Set Match Time(Max(1, {global_name}.SisaWaktuServer));"
             )
             outer_end = scheduler.index("\n\t\tEnd;", cadence_position)
             self.assertLess(sync_position, outer_end)
