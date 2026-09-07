@@ -508,7 +508,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn(f'{rule_kw}("02x - DEBUG', source)
             self.assertNotIn("DBG 02", source)
 
-            roster_hud = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
+            roster_hud = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
             self.assertNotIn("Server Load < 150", roster_hud)
             self.assertIn("Call Subroutine(HitungPilihan);", roster_hud)
