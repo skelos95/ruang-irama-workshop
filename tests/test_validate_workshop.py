@@ -2514,11 +2514,11 @@ rule("999x - Nasib: Renderer pemain tambahan")
         classifier = self.rule(
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
         )
-        mutated = self.replace_in_rule(
-            classifier,
-            "Global.PemainSiklusGlobal = Null;",
-            "Global.PemainSiklusGlobal = Event Player;",
-        )
+        start = classifier.body.index("If(Count Of(Global.SlotHUDTersedia) == 0);")
+        end = classifier.body.index("Abort;", start) + len("Abort;")
+        retry = classifier.body[start:end]
+        mutated = self.replace_in_rule(classifier, retry, retry.replace(
+            "Global.PemainSiklusGlobal = Null;", "Global.PemainSiklusGlobal = Event Player;"))
         self.assert_rejected(mutated, "liberare lifecycle/lock")
 
     def test_public_crouch_filters_exclude_pending_team_switch_targets(self) -> None:
@@ -3013,11 +3013,30 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 mutated = self.inject_action(cleanup, action)
                 self.assert_rejected(mutated, "BersihkanPemain deve essere atomica")
 
+    def test_registration_reservation_cannot_gate_other_players_runtime(self) -> None:
+        scheduler = self.rule(lambda rule: rule.name.startswith("04g -"))
+        mutated = self.replace_in_rule(scheduler, "If(Global.LangkahPenjadwal % 20 == 0);",
+                                       "If(And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null));")
+        self.assert_rejected(mutated, "non deve sospendere gli altri player")
+
+    def test_icon_mirrors_are_required_on_global_creation_and_effect_reset(self) -> None:
+        for routine, owner, icon, value in (
+            ("ProsesCepatPemain", "Global.PemainAktif", "IkonKebal", "Global.PemainAktif.IkonKebal"),
+            ("PulihkanNasibPemain", "Event Player", "IkonKartuNasib", "0"),
+            ("PulihkanNasibAktif", "Global.PemainAktif", "IkonKartuNasib", "0"),
+        ):
+            with self.subTest(routine=routine):
+                rule = self.rule(lambda rule: validator.subroutine_target(rule) == routine)
+                token = (f"Global.{icon}Pemain[Global.SlotHUDPemain["
+                         f"Index Of Array Value(Global.PemainManusia, {owner})]] = {value};")
+                mutated = self.replace_in_rule(rule, token, "")
+                self.assert_rejected(mutated, "mirror icona canonico mancante")
+
     def test_leave_cleanup_destroys_every_player_owned_temporary_handle(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
         for token, handle in (
-            ("Destroy Icon(Global.PemainPembersihan.IkonKartuNasib);", "IkonKartuNasib"),
-            ("Destroy Icon(Global.PemainPembersihan.IkonKebal);", "IkonKebal"),
+            ("Destroy Icon(Global.IkonKartuNasibPemain[Global.IndeksUtangKeluar]);", "IkonKartuNasib"),
+            ("Destroy Icon(Global.IkonKebalPemain[Global.IndeksUtangKeluar]);", "IkonKebal"),
             ("Destroy HUD Text(Global.PemainPembersihan.HudEfekNasib);", "HudEfekNasib"),
             ("Destroy In-World Text(Global.PemainPembersihan.TeksVisiNasib);", "TeksVisiNasib"),
             ("Destroy In-World Text(Global.PemainPembersihan.TeksTeleportasi);", "TeksTeleportasi"),
@@ -3026,14 +3045,14 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 mutated = self.replace_in_rule(cleanup, token, "")
                 self.assert_rejected(mutated, f"handle orfano: {handle}")
 
-    def test_leave_cleanup_subtracts_the_vote_cast_by_the_leaver(self) -> None:
-        cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
+    def test_leave_cleanup_recounts_votes_from_surviving_voters(self) -> None:
+        recount = self.rule(lambda rule: validator.subroutine_target(rule) == "HitungPilihan")
         mutated = self.replace_in_rule(
-            cleanup,
-            "Modify Player Variable(Global.PemainPembersihan.PemainDipilih, JumlahPilihan, Subtract, 1);",
-            "",
+            recount,
+            "Player Variable(Current Array Element, PemainDipilih) == Global.PemainManusia[Global.IndeksPemilih]",
+            "True",
         )
-        self.assert_rejected(mutated, "voto espresso dal leaver")
+        self.assert_rejected(mutated, "riferimenti dei voter rimasti")
 
     def test_leave_cleanup_removes_revenge_attacker_and_debt_in_tandem(self) -> None:
         cleanup = self.rule(lambda rule: validator.subroutine_target(rule) == "BersihkanPemain")
@@ -3814,7 +3833,7 @@ class RepositoryMetadataTests(unittest.TestCase):
                 )
                 self.assertEqual(self.metadata_errors(root), [])
 
-    def test_published_current_tag_or_release_claim_is_rejected(self) -> None:
+    def test_offline_metadata_does_not_claim_a_remote_release_is_missing(self) -> None:
         claims = (
             "Il tag finale v0.8.1 identifica il commit pubblicato e validato.",
             "La release 0.8.1 è stata pubblicata.",
@@ -3830,9 +3849,7 @@ class RepositoryMetadataTests(unittest.TestCase):
                     readme.read_text(encoding="utf-8") + f"\n{claim}\n",
                     encoding="utf-8",
                 )
-                self.assertTrue(
-                    any("tag/release v0.8.1" in error for error in self.metadata_errors(root))
-                )
+                self.assertEqual(self.metadata_errors(root), [])
 
     def test_future_live_ready_explanation_and_planned_tag_are_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

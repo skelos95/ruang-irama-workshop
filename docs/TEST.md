@@ -4,6 +4,8 @@ Stato: **live-ready**
 
 I test live della 0.8.1 sono stati completati sul client aggiornato ad agosto 2026, inclusi reset completo al cambio squadra, profilo dedicato `งูแท้`, Ghost/Fly, cooldown Self Kill, Resurrect in-place con recupero dal vuoto, riapplicazione Fly post-morte e Camera per-frame senza blend traslazionale. Eventuali valori diagnostici numerici non forniti non vengono inventati.
 
+Questa attestazione conserva il riscontro storico della 0.8.1. La release `v0.8.1` e il sorgente successivo su `main` sono revisioni distinte, come indicato nel [`README`](../README.md): associare ogni nuova esecuzione della matrice allo SHA effettivamente importato. In assenza di quel verbale, i gate automatici verdi non attestano da soli fluidità, isolamento degli input o assenza di leak nel client.
+
 ## 1. Gate statici
 
 Eseguire dalla radice del repository:
@@ -223,9 +225,9 @@ Verifica specifica HEART: ferire il proprietario, un alleato e un avversario, la
 
 - Ripetere Team 1 → Team 2 → Team 1 almeno 20 volte con un solo umano, controllando che non compaia `excessive Workshop script load` e che il roster conservi una sola voce.
 - Ripetere con 2, 6 e 12 umani cambiando squadra quasi simultaneamente: ciascun player già registrato deve attraversare il reset completo (`TenangkanPemain` + `BersihkanPemain`) e rientrare dal classifier/setup senza duplicazioni.
-- Durante la transizione verificare che `01a` esegua il cleanup con l'`Event Player` del player che cambia squadra: la vecchia voce roster viene rimossa prima del retry a 0,25 s e ricreata una sola volta dopo la nuova registrazione. Nessun handle precedente deve restare vivo: gli array canonici devono conservare il riferimento fino alla distruzione e al rilascio dello slot; lo scheduler globale non deve eseguire cleanup locali fuori contesto.
-- Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: il cleanup deve restare atomico e il setup deve ricostruire correttamente HUD/stato appena l'entità torna valida.
-- Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: il reset completo deve liberare subito lock e riferimenti, senza percorsi `Abort` o dipendenze da `Server Load`.
+- Durante la transizione verificare che `01a` apra soltanto la quarantena e armi la stabilizzazione a 0,5 s, senza cleanup pesante. Con team e spawn stabili, `01b` deve usare il contesto già prenotato per lo stesso player ed eseguire `TenangkanPemain`, `BersihkanPemain` se l'identità è ancora nel roster e `SiapkanPemain` con l'`Event Player` corretto. La vecchia voce viene rimossa prima della nuova registrazione e ricreata una sola volta. Gli array canonici devono conservare gli handle fino alla distruzione e al rilascio dello slot; lo scheduler globale non deve eseguire cleanup locali fuori contesto.
+- Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: la quarantena deve impedire l'uso dello stato precedente; dopo spawn e team stabili, cleanup e setup devono ricostruire correttamente HUD/stato senza trattenere il lock mentre il player non è spawned.
+- Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: dopo la stabilizzazione il reset completo deve liberare lock e riferimenti prima della nuova registrazione, senza percorsi `Abort` o dipendenze da `Server Load` nel teardown.
 - Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: il vecchio In-World Text deve sparire durante il cleanup e tornare solo dopo la nuova registrazione con nome, icona eroe e HP corretti.
 - Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Caladan Brood`.
 - Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il detector individuale non acquisisca il lock globale del join.
@@ -386,6 +388,8 @@ Annotare anche Server Load corrente/medio/picco se disponibile. L'assenza di lea
 Usare questo schema:
 
 ```text
+Commit SHA del sorgente importato:
+Tag/release di provenienza (se presente):
 Build client:
 Codice import:
 Piattaforma/regione:

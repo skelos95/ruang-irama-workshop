@@ -608,7 +608,9 @@ def is_read_reference(code: str, name: str, *, masked_code: str | None = None) -
         ):
             continue
         if re.search(r"For (?:Global|Player) Variable\([^;\r\n]*$", prefix):
-            continue
+            # The engine reads and increments the counter even if the body
+            # does not reference it (a bounded repetition is a valid use).
+            return True
         return True
     return False
 
@@ -896,11 +898,7 @@ def validate_metadata(checks: Checks, root: Path) -> None:
                 "static-ready / live-pending" not in text,
                 f"documento contiene stato obsoleto static-ready / live-pending: {relative}",
             )
-            _, published = current_release_claims(text)
-            checks.require(
-                not published,
-                f"documento dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente: {relative}",
-            )
+            # Release existence is remote state, not an offline source invariant.
             for label, pattern in OBSOLETE_CURRENT_TEXT_PATTERNS:
                 checks.require(
                     pattern.search(text) is None,
@@ -931,11 +929,6 @@ def validate_metadata(checks: Checks, root: Path) -> None:
             checks.require(
                 "live-pending" not in current_section.lower(),
                 f"CHANGELOG.md: la sezione {CURRENT_VERSION} contiene stato live-pending obsoleto",
-            )
-            _, published = current_release_claims(current_section)
-            checks.require(
-                not published,
-                f"CHANGELOG.md dichiara pubblicato un tag/release v{CURRENT_VERSION} inesistente",
             )
             for label, pattern in OBSOLETE_CURRENT_TEXT_PATTERNS:
                 checks.require(
@@ -3617,9 +3610,8 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
                            f"scheduler non chiama {name}")
         scheduler_packed = re.sub(r"\s+", "", mask_strings(scheduler.body))
         checks.require(
-            "If(Or(Global.PemainSiklusGlobal==Null,Global.PemainAktif==Global.PemainSiklusGlobal));"
             "CallSubroutine(ProsesCepatPemain);CallSubroutine(ProsesNasibPemain);"
-            "CallSubroutine(ProsesTerbangPemain);End;" in scheduler_packed,
+            "CallSubroutine(ProsesTerbangPemain);" in scheduler_packed,
             "Fly: scheduler deve chiamare il motore 20 Hz subito dopo Try Your Luck nello stesso ramo per-player",
         )
         motor_calls = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
@@ -4752,22 +4744,34 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             cleanup.body.find(vote_reset) < cleanup.body.find("Remove From Array By Index"),
             "cleanup leave azzera i voti dopo aver rimosso il giocatore dal roster",
         )
-        outgoing_vote_tokens = (
-            "If(And(Global.PemainPembersihan.PemainDipilih != Null, "
-            "And(Global.PemainPembersihan.PemainDipilih != Global.PemainPembersihan, "
-            "Array Contains(Global.PemainManusia, Global.PemainPembersihan.PemainDipilih))));",
-            "Modify Player Variable(Global.PemainPembersihan.PemainDipilih, "
-            "JumlahPilihan, Subtract, 1);",
-            "If(Global.PemainPembersihan.PemainDipilih.JumlahPilihan < 0);",
-            "Set Player Variable(Global.PemainPembersihan.PemainDipilih, JumlahPilihan, 0);",
+        recount = rule_by_subroutine(rules, "HitungPilihan")
+        recount_token = (
+            "Set Player Variable(Global.PemainManusia[Global.IndeksPemilih], JumlahPilihan, "
+            "Count Of(Filtered Array(Global.PemainManusia, Player Variable(Current Array Element, "
+            "PemainDipilih) == Global.PemainManusia[Global.IndeksPemilih])));"
         )
-        outgoing_positions = [cleanup_masked.find(token) for token in outgoing_vote_tokens]
         checks.require(
-            all(position >= 0 for position in outgoing_positions)
-            and outgoing_positions == sorted(outgoing_positions)
-            and outgoing_positions[-1] < cleanup_masked.find(vote_reset),
-            "cleanup leave non sottrae e limita a zero il voto espresso dal leaver prima dei riferimenti inbound",
+            recount is not None and recount_token in mask_strings(recount.body),
+            "conteggio voti deve derivare dai riferimenti dei voter rimasti nel roster",
         )
+        checks.require("Global.PemainPembersihan.PemainDipilih" not in cleanup_masked,
+                       "cleanup leave non deve leggere il voto dall'entità uscita")
+
+        for rule in rules:
+            if rule == cleanup:
+                continue
+            for assignment in re.finditer(
+                r"(Event Player|Global\.PemainAktif)\.(IkonKebal|IkonKartuNasib) = (Last Created Entity|Null);",
+                mask_strings(rule.body),
+            ):
+                owner, handle, value = assignment.groups()
+                mirror = (f"If(Array Contains(Global.PemainManusia, {owner}));"
+                          f"Global.{handle}Pemain[Global.SlotHUDPemain["
+                          f"Index Of Array Value(Global.PemainManusia, {owner})]] = "
+                          + ("0;" if value == "Null" else f"{owner}.{handle};"))
+                following = re.sub(r"\s+", "", rule.body[assignment.end():])
+                checks.require(following.startswith(re.sub(r"\s+", "", mirror)),
+                               f"{rule.name}: mirror icona canonico mancante dopo {handle} = {value}")
 
         for handle, destroy_action in (
             ("IkonKartuNasib", "Destroy Icon"),
@@ -4776,9 +4780,15 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             ("TeksVisiNasib", "Destroy In-World Text"),
             ("TeksTeleportasi", "Destroy In-World Text"),
         ):
-            guard = f"If(Global.PemainPembersihan.{handle} != Null);"
-            destroy = f"{destroy_action}(Global.PemainPembersihan.{handle});"
-            clear = f"Global.PemainPembersihan.{handle} = Null;"
+            if destroy_action == "Destroy Icon":
+                owner = f"Global.{handle}Pemain[Global.IndeksUtangKeluar]"
+                guard = f"If({owner} != 0);"
+                destroy = f"Destroy Icon({owner});"
+                clear = f"{owner} = 0;"
+            else:
+                guard = f"If(Global.PemainPembersihan.{handle} != Null);"
+                destroy = f"{destroy_action}(Global.PemainPembersihan.{handle});"
+                clear = f"Global.PemainPembersihan.{handle} = Null;"
             positions = tuple(cleanup_masked.find(token) for token in (guard, destroy, clear))
             checks.require(
                 all(position >= 0 for position in positions)
@@ -5085,7 +5095,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Entity Exists(Global.PemainSiklusGlobal) == False",
             "Call Subroutine(ProsesCepatPemain);",
             "Call Subroutine(ProsesNasibPemain);",
-            "And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null)",
+            "If(Global.LangkahPenjadwal % 20 == 0);",
             "Global.DaftarPemainSnapshot = All Players(All Teams);",
             "Count Of(Global.DaftarPemainSnapshot)",
             "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];",
@@ -5093,6 +5103,11 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             checks.require(token in scheduler.body, f"scheduler lifecycle iniziale incompleto: {token}")
         checks.require("Or(Entity Exists(Global.PemainSiklusGlobal) == False, Has Spawned(Global.PemainSiklusGlobal) == False)" in mask_strings(scheduler.body),
                        "scheduler lifecycle deve rilasciare la prenotazione di un player non spawned")
+        for call in iter_calls(scheduler.body, "Call Subroutine"):
+            if call.args and call.args[0].strip() in SCHEDULER_SUBROUTINES:
+                branches = conditional_branches_containing(scheduler.body, call.start)
+                checks.require(all("PemainSiklusGlobal" not in branch.splitlines()[0] for branch in branches),
+                               "scheduler non deve sospendere gli altri player durante una registrazione")
 
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
     checks.require(cycle is not None, "ProsesSiklusPemain assente")

@@ -61,6 +61,8 @@ variabili
 		57: DaftarPemainSnapshot
 		58: NamaPemimpinPilihan
 		59: WarnaPemimpinPilihan
+		60: IkonKebalPemain
+		61: IkonKartuNasibPemain
 	giocatore:
 		0: WaktuMasuk
 		1: SudahDiperiksa
@@ -179,6 +181,9 @@ variabili
 		114: PersenTerbang
 		115: ArahTerbang
 		116: DeltaTerbang
+		117: RantaiLampiran
+		118: IndeksRantaiLampiran
+		119: SiklusLampiran
 }
 
 subroutine
@@ -833,6 +838,8 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("X")
 		);
 		Globale.SlotHUDTersedia = Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+		Globale.IkonKebalPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Globale.IkonKartuNasibPemain = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Globale.JarakKamera = 2.000;
 		Globale.GeserKamera = 0.550;
 		Globale.BantalanDinding = 0.200;
@@ -1171,6 +1178,14 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 			Stop Forcing Dummy Bot Name(Event Player);
 		End;
 		If(Event Player.BotOtomatis == True);
+			"Bot mati tetap melepas antrean; aturan 03c mengunci bot saat hidup kembali."
+			Event Player.PindahTimDiproses = False;
+			Event Player.SiklusPemainAktif = False;
+			Event Player.WaktuSiklusTim = 0;
+			If(Globale.PemainSiklusGlobal == Event Player);
+				Globale.PemainSiklusGlobal = Null;
+				Globale.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
 			Cancel Primary Action(Event Player);
 			Call Subroutine(KunciBot);
 			Abort;
@@ -1616,15 +1631,14 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 		Globale.DaftarPemainSnapshot = All Players(All Teams);
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(Globale.DaftarPemainSnapshot), 1);
 			Globale.PemainAktif = Globale.DaftarPemainSnapshot[Globale.IndeksPemainGlobal];
-			If(Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal));
-				Call Subroutine(ProsesCepatPemain);
-				Call Subroutine(ProsesNasibPemain);
-				Call Subroutine(ProsesTerbangPemain);
-			End;
-			If(And(Globale.LangkahPenjadwal % 2 == 0, Or(Globale.PemainSiklusGlobal == Null, Globale.PemainAktif == Globale.PemainSiklusGlobal)));
+			"Reservasi hanya menserialkan setup; pemain lain tetap menerima tick selama ada pendatang."
+			Call Subroutine(ProsesCepatPemain);
+			Call Subroutine(ProsesNasibPemain);
+			Call Subroutine(ProsesTerbangPemain);
+			If(Globale.LangkahPenjadwal % 2 == 0);
 				Call Subroutine(ProsesSiklusPemain);
 			End;
-			If(And(Globale.LangkahPenjadwal % 20 == 0, Globale.PemainSiklusGlobal == Null));
+			If(Globale.LangkahPenjadwal % 20 == 0);
 				Call Subroutine(ProsesCachePemain);
 			End;
 			If(And(Globale.LangkahPenjadwal == 0, And(Globale.PemainAktif.Manusia == True, Entity Exists(Globale.PemainAktif))));
@@ -1669,7 +1683,6 @@ regola("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 			Event Player.MenuTerbuka = True;
 			Event Player.HalamanMenu = -1;
 			Call Subroutine(GambarMenu);
-			Call Subroutine(TransisiWarnaMenu);
 		End;
 	}
 }
@@ -1947,7 +1960,6 @@ regola("10 - Menu: Terapkan halaman aktif")
 				Event Player.KursorHantuTerbang %= 2;
 			End;
 			Call Subroutine(GambarMenu);
-			Call Subroutine(TransisiWarnaMenu);
 		Else If(Event Player.HalamanMenu == 0);
 			Call Subroutine(TerapkanHalamanWarna);
 		Else If(Event Player.HalamanMenu == 1);
@@ -2162,6 +2174,9 @@ regola("99f - Subrutin: Terapkan halaman kebal")
 					If(Event Player.IkonKebal != Null);
 						Destroy Icon(Event Player.IkonKebal);
 						Event Player.IkonKebal = Null;
+						If(Array Contains(Globale.PemainManusia, Event Player));
+							Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+						End;
 					End;
 				Else;
 					Call Subroutine(EfekTerapkan);
@@ -2185,6 +2200,9 @@ regola("99f - Subrutin: Terapkan halaman kebal")
 					If(Event Player.IkonKebal != Null);
 						Destroy Icon(Event Player.IkonKebal);
 						Event Player.IkonKebal = Null;
+						If(Array Contains(Globale.PemainManusia, Event Player));
+							Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+						End;
 					End;
 					If(Event Player.ModeKebal == 1);
 						Create Icon(All Players(All Teams), Event Player, Warning, Visible To and Position, Custom Color(255, 80, 80, 255), True);
@@ -2192,6 +2210,9 @@ regola("99f - Subrutin: Terapkan halaman kebal")
 						Create Icon(All Players(All Teams), Event Player, Halo, Visible To and Position, Globale.RGB, True);
 					End;
 					Event Player.IkonKebal = Last Created Entity;
+					If(Array Contains(Globale.PemainManusia, Event Player));
+						Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = Event Player.IkonKebal;
+					End;
 				End;
 			End;
 		End;
@@ -2318,6 +2339,9 @@ regola("99k - Subrutin: Terapkan halaman coba nasib")
 				Destroy Icon(Event Player.IkonKartuNasib);
 			End;
 			Event Player.IkonKartuNasib = Null;
+			If(Array Contains(Globale.PemainManusia, Event Player));
+				Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+			End;
 			"Coba Nasib mempertahankan pilihan Kebal; hanya kematian final Skull yang menangguhkan perlindungan sampai Resurrect."
 		End;
 	}
@@ -2461,7 +2485,6 @@ regola("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 	{
 		Event Player.HalamanMenu = -1;
 		Call Subroutine(GambarMenu);
-		Call Subroutine(TransisiWarnaMenu);
 	}
 }
 
@@ -2779,6 +2802,9 @@ regola("18c - Kebal: Nonaktifkan hanya mode 1 HP di Ruang Muncul")
 		If(Event Player.IkonKebal != Null);
 			Destroy Icon(Event Player.IkonKebal);
 			Event Player.IkonKebal = Null;
+			If(Array Contains(Globale.PemainManusia, Event Player));
+				Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+			End;
 		End;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Unkillable: 1 HP (HEALABLE) disabled in Spawn Room.") : Event Player.IndeksBahasa == 1 ? Custom String("Kebal: 1 HP (BISA SEMBUH) dimatikan di ruang muncul.") : Custom String("ปิดโหมดฆ่าไม่ตาย: 1 HP (รักษาได้) ในห้องเกิดแล้ว"));
 	}
@@ -3120,9 +3146,27 @@ regola("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")
 		Else If(Event Player.JenisTeleportasiTerkunci == 2);
 			Call Subroutine(TeleportKeTarget);
 		Else If(Event Player.JenisTeleportasiTerkunci == 3);
+			"Telusuri rantai terbatas sebelum mengubah lampiran agar tiga pemain atau lebih tidak membentuk siklus."
+			Event Player.RantaiLampiran = Event Player.TargetTeleportasiTerkunci;
+			Event Player.SiklusLampiran = False;
+			For Player Variable(Event Player, IndeksRantaiLampiran, 0, Count Of(All Players(All Teams)) + 1, 1);
+				If(Event Player.RantaiLampiran != Null);
+					If(Event Player.RantaiLampiran == Event Player);
+						Event Player.SiklusLampiran = True;
+						Event Player.RantaiLampiran = Null;
+					Else If(Player Variable(Event Player.RantaiLampiran, LampiranTeleportasiAktif) == True);
+						Event Player.RantaiLampiran = Player Variable(Event Player.RantaiLampiran, TargetLampiranTeleportasi);
+					Else;
+						Event Player.RantaiLampiran = Null;
+					End;
+				End;
+			End;
+			If(Event Player.RantaiLampiran != Null);
+				Event Player.SiklusLampiran = True;
+			End;
 			If(Or(Or(Event Player.TargetTeleportasiTerkunci == Null, Entity Exists(Event Player.TargetTeleportasiTerkunci) == False), Or(Has Spawned(Event Player.TargetTeleportasiTerkunci) == False, Is Alive(Event Player.TargetTeleportasiTerkunci) == False)));
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attach target unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Target tempel tidak tersedia.") : Custom String("เป้าหมายสำหรับเกาะไม่พร้อมใช้งาน"));
-			Else If(And(Player Variable(Event Player.TargetTeleportasiTerkunci, LampiranTeleportasiAktif) == True, Player Variable(Event Player.TargetTeleportasiTerkunci, TargetLampiranTeleportasi) == Event Player));
+			Else If(Event Player.SiklusLampiran == True);
 				Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Attach refused: that would create a loop.") : Event Player.IndeksBahasa == 1 ? Custom String("Tempel ditolak: itu akan membuat lingkaran.") : Custom String("ไม่สามารถเกาะได้ เพราะจะเกิดวงวน"));
 			Else;
 				If(Event Player.LampiranTeleportasiAktif == True);
@@ -3198,7 +3242,7 @@ regola("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")
 				Or(Has Spawned(Event Player.TargetLampiranTeleportasi) == False, Is Alive(Event Player.TargetLampiranTeleportasi) == False),
 				Or(
 					Or(Hero Of(Event Player) != Event Player.PahlawanLampiranSendiri, Hero Of(Event Player.TargetLampiranTeleportasi) != Event Player.PahlawanLampiranTarget),
-					And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True)
+					Or(Player Variable(Event Player.TargetLampiranTeleportasi, SiklusPemainAktif) == True, And(Player Variable(Event Player.TargetLampiranTeleportasi, Manusia) == True, Player Variable(Event Player.TargetLampiranTeleportasi, PrivasiInspeksiAktif) == True))
 				)
 			)
 		) == True;
@@ -3374,6 +3418,9 @@ regola("89a - Subrutin: Proses status cepat pemain")
 					Create Icon(All Players(All Teams), Evaluate Once(Globale.PemainAktif), Halo, Visible To and Position, Globale.RGB, True);
 				End;
 				Globale.PemainAktif.IkonKebal = Last Created Entity;
+				If(Array Contains(Globale.PemainManusia, Globale.PemainAktif));
+					Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]] = Globale.PemainAktif.IkonKebal;
+				End;
 			End;
 		End;
 	}
@@ -3617,6 +3664,9 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 					Create Icon(Globale.PemainManusia, Update Every Frame(Eye Position(Evaluate Once(Globale.PemainAktif)) + Facing Direction Of(Evaluate Once(Globale.PemainAktif)) * 4), Poison 2, Visible To and Position, Custom Color(170, 80, 255, 255), True);
 				End;
 				Globale.PemainAktif.IkonKartuNasib = Last Created Entity;
+				If(Array Contains(Globale.PemainManusia, Globale.PemainAktif));
+					Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]] = Globale.PemainAktif.IkonKartuNasib;
+				End;
 				Modify Player Variable(Globale.PemainAktif, PutaranKartuNasib, Subtract, 1);
 				Globale.PemainAktif.WaktuPutaranNasibBerikut = Total Time Elapsed + Globale.PemainAktif.JedaKartuNasib;
 				Modify Player Variable(Globale.PemainAktif, JedaKartuNasib, Add, 0.045);
@@ -3730,6 +3780,9 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 					Destroy Icon(Globale.PemainAktif.IkonKartuNasib);
 				End;
 				Globale.PemainAktif.IkonKartuNasib = Null;
+				If(Array Contains(Globale.PemainManusia, Globale.PemainAktif));
+					Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]] = 0;
+				End;
 				Globale.PemainAktif.WaktuIkonNasibBerakhir = 0;
 				If(Globale.PemainAktif.KartuNasibAktif == False);
 					If(Globale.PemainAktif.MenuTerbuka == False);
@@ -4239,7 +4292,10 @@ regola("91q - Subrutin: Hitung ulang pilihan dan pemimpin tunggal")
 
 	azioni
 	{
-		"JumlahPilihan tidak dihitung ulang di sini; nilainya diperbarui secara transaksional tepat saat pilihan diterapkan."
+		"Hitung dari pemilih yang masih terdaftar; jangan membaca variabel milik entitas yang sudah keluar."
+		For Global Variable(IndeksPemilih, 0, Count Of(Globale.PemainManusia), 1);
+			Set Player Variable(Globale.PemainManusia[Globale.IndeksPemilih], JumlahPilihan, Count Of(Filtered Array(Globale.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Globale.PemainManusia[Globale.IndeksPemilih])));
+		End;
 		Globale.PemimpinPilihan = Null;
 		Globale.PilihanTerbanyak = 0;
 		Globale.PilihanSeri = False;
@@ -4372,6 +4428,9 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.PersenTerbang = 100;
 		Event Player.ArahTerbang = Vector(0, 0, 0);
 		Event Player.DeltaTerbang = Vector(0, 0, 0);
+		Event Player.RantaiLampiran = Null;
+		Event Player.IndeksRantaiLampiran = 0;
+		Event Player.SiklusLampiran = False;
 		Event Player.HudKiri = Null;
 		Event Player.HudKanan = Null;
 		Event Player.HudMenu = Null;
@@ -4403,12 +4462,14 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 			If(Globale.IndeksKeluar >= 0);
 				Globale.IndeksPembersihan = Globale.IndeksKeluar;
 				Globale.IndeksUtangKeluar = Globale.SlotHUDPemain[Globale.IndeksPembersihan];
-				If(Globale.PemainPembersihan.IkonKartuNasib != Null);
-					Destroy Icon(Globale.PemainPembersihan.IkonKartuNasib);
+				If(Globale.IkonKartuNasibPemain[Globale.IndeksUtangKeluar] != 0);
+					Destroy Icon(Globale.IkonKartuNasibPemain[Globale.IndeksUtangKeluar]);
 				End;
-				If(Globale.PemainPembersihan.IkonKebal != Null);
-					Destroy Icon(Globale.PemainPembersihan.IkonKebal);
+				Globale.IkonKartuNasibPemain[Globale.IndeksUtangKeluar] = 0;
+				If(Globale.IkonKebalPemain[Globale.IndeksUtangKeluar] != 0);
+					Destroy Icon(Globale.IkonKebalPemain[Globale.IndeksUtangKeluar]);
 				End;
+				Globale.IkonKebalPemain[Globale.IndeksUtangKeluar] = 0;
 				If(Globale.PemainPembersihan.HudEfekNasib != Null);
 					Destroy HUD Text(Globale.PemainPembersihan.HudEfekNasib);
 				End;
@@ -4429,13 +4490,6 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 				Globale.PemainPembersihan.TeksDunia = Null;
 				Globale.PemainPembersihan.HudPemainDibuat = False;
 				Globale.PemainPembersihan.SudahDiperiksa = False;
-				"Kurangi pilihan keluar dari target yang masih aktif agar bintang CHILL tidak menyimpan suara hantu."
-				If(And(Globale.PemainPembersihan.PemainDipilih != Null, And(Globale.PemainPembersihan.PemainDipilih != Globale.PemainPembersihan, Array Contains(Globale.PemainManusia, Globale.PemainPembersihan.PemainDipilih))));
-					Modify Player Variable(Globale.PemainPembersihan.PemainDipilih, JumlahPilihan, Subtract, 1);
-					If(Globale.PemainPembersihan.PemainDipilih.JumlahPilihan < 0);
-						Set Player Variable(Globale.PemainPembersihan.PemainDipilih, JumlahPilihan, 0);
-					End;
-				End;
 				"Hapus pilihan yang menunjuk pemain keluar sebelum slot entitas dapat dipakai ulang oleh orang lain."
 				Set Player Variable(Filtered Array(Globale.PemainManusia, Player Variable(Current Array Element, PemainDipilih) == Globale.PemainPembersihan), PemainDipilih, Null);
 				"Bersihkan pasangan utang dan klaim balas dendam sebelum referensi slot dapat dipakai ulang."
@@ -4484,11 +4538,13 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 				Call Subroutine(HitungPilihan);
 			End;
 			If(Globale.IndeksKeluar == -2);
-				If(Event Player.IkonKartuNasib != Null);
-					Destroy Icon(Event Player.IkonKartuNasib);
+				If(Globale.IndeksPembersihan < Count Of(Globale.SlotHUDPemain));
+					Destroy Icon(Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]]);
+					Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]] = 0;
 				End;
-				If(Event Player.IkonKebal != Null);
-					Destroy Icon(Event Player.IkonKebal);
+				If(Globale.IndeksPembersihan < Count Of(Globale.SlotHUDPemain));
+					Destroy Icon(Globale.IkonKebalPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]]);
+					Globale.IkonKebalPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]] = 0;
 				End;
 				If(Event Player.HudEfekNasib != Null);
 					Destroy HUD Text(Event Player.HudEfekNasib);
@@ -4651,8 +4707,14 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.KursorPrivasiInspeksi = 0;
 		Event Player.ModeKebal = 0;
 		Event Player.IkonKebal = Null;
+		If(Array Contains(Globale.PemainManusia, Event Player));
+			Globale.IkonKebalPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+		End;
 		Event Player.KartuNasibAktif = False;
 		Event Player.IkonKartuNasib = Null;
+		If(Array Contains(Globale.PemainManusia, Event Player));
+			Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+		End;
 		Event Player.KursorPilihan = 0;
 		Event Player.PemainDipilih = Null;
 		Event Player.JumlahPilihan = 0;
@@ -4682,6 +4744,9 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.PersenTerbang = 100;
 		Event Player.ArahTerbang = Vector(0, 0, 0);
 		Event Player.DeltaTerbang = Vector(0, 0, 0);
+		Event Player.RantaiLampiran = Null;
+		Event Player.IndeksRantaiLampiran = 0;
+		Event Player.SiklusLampiran = False;
 		Event Player.CalonTargetInspeksi = Null;
 		Event Player.PosisiTeleportTujuan = Vector(0, 0, 0);
 		Event Player.TargetLampiranTeleportasi = Null;
@@ -4805,6 +4870,9 @@ regola("98a - Subrutin: Pulihkan status Nasib untuk Event Player")
 			Destroy In-World Text(Event Player.TeksVisiNasib);
 		End;
 		Event Player.IkonKartuNasib = Null;
+		If(Array Contains(Globale.PemainManusia, Event Player));
+			Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Event Player)]] = 0;
+		End;
 		Event Player.HudEfekNasib = Null;
 		Event Player.TeksVisiNasib = Null;
 		Clear Status(Event Player, Burning);
@@ -4865,6 +4933,9 @@ regola("98b - Subrutin: Pulihkan status Nasib untuk pemain aktif global")
 			Destroy In-World Text(Globale.PemainAktif.TeksVisiNasib);
 		End;
 		Globale.PemainAktif.IkonKartuNasib = Null;
+		If(Array Contains(Globale.PemainManusia, Globale.PemainAktif));
+			Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Index Of Array Value(Globale.PemainManusia, Globale.PemainAktif)]] = 0;
+		End;
 		Globale.PemainAktif.HudEfekNasib = Null;
 		Globale.PemainAktif.TeksVisiNasib = Null;
 		Clear Status(Globale.PemainAktif, Burning);
