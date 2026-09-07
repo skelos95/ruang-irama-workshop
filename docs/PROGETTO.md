@@ -151,7 +151,7 @@ Non esegue reset engine su un'entità ormai uscita. Il nuovo occupante passa dal
 
 ### Cambio squadra
 
-Il cambio Team 1 ↔ Team 2 di un umano già registrato usa ora un lifecycle in due fasi. La regola `01a - Siklus tim: Reset penuh pada konteks pemain` (sempre `Ongoing - Each Player`) rileva il mismatch ma non esegue teardown pesante: attiva una quarantena leggera (`PindahTimDiproses=True`, `SiklusPemainAktif=True`, `SudahSiap=False`, `Manusia=False`), aggiorna `TimSiklusTarget`, conferma `TimTerakhir` e arma `WaktuSiklusTim = Total Time Elapsed + 0.500`. Se quel player possedeva già il lock lifecycle, `01a` rilascia solo la propria prenotazione globale.
+Il cambio Team 1 ↔ Team 2 di un umano già registrato usa ora un lifecycle in due fasi. La regola `01a - Siklus tim: Karantina sebelum penyiapan ulang` (sempre `Ongoing - Each Player`) rileva il mismatch ma non esegue teardown pesante: attiva una quarantena leggera (`PindahTimDiproses=True`, `SiklusPemainAktif=True`, `SudahSiap=False`, `Manusia=False`), aggiorna `TimSiklusTarget`, conferma `TimTerakhir` e arma `WaktuSiklusTim = Total Time Elapsed + 0.500`. Se quel player possedeva già il lock lifecycle, `01a` rilascia solo la propria prenotazione globale.
 
 Nel caso limite senza slot, l'attesa è cooperativa: il classifier ripristina `SudahDiperiksa`, `SudahSiap` e i latch lifecycle, rilascia soltanto il proprio `PemainSiklusGlobal` e programma il tentativo successivo dopo 0,25 secondi, così gli altri player continuano a essere processati. Nel repair di uno stato degradato su player ancora registrato (non nel percorso team-switch), il nome esatto `งูแท้` riasserisce sempre `Caladan Brood`; Silver Mist e Poison 2 vengono riapplicati solo se `PernahDisiapkan=False`.
 
@@ -167,8 +167,8 @@ La fase 2 è serializzata da `01b`: quando il player è spawned, il team resta u
 - Ogni testo operativo, stato, esito, nome icona e località ha rami EN/ID/TH.
 - I 100 generi, `CHILL`, nomi player ed eroi sono nomi propri universali.
 - Identificatori personalizzati, titoli regola, subroutine e commenti Workshop sono in Bahasa Indonesia; keyword native, acronimi tecnici e nomi degli eroi restano invariati.
-- La riga Fly della pagina 13 comunica guida e rampa con testo equivalente nelle tre lingue: `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s`, `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` e `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`.
-- La label localizzata `SERVER LOCATION` / `LOKASI SERVER` / `ตำแหน่งเซิร์ฟเวอร์` usa l'ambra neon `Custom Color(255, 205, 110, 255)`, volutamente distinto dal cyan di `LOBBY & CHILL TIME`.
+- La riga Fly della pagina 13 comunica guida e rampa con testo equivalente nelle tre lingue: `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s`, `ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk` e `มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ`.
+- La label localizzata `LOCATION` / `LOKASI SERVER` / `ที่ตั้งเซิร์ฟเวอร์` usa l'ambra neon `Custom Color(255, 205, 110, 255)`, volutamente distinto dal cyan di `LOBBY & CHILL TIME`.
 
 La griglia HUD usa undici handle globali fissi e slot dinamici separati:
 

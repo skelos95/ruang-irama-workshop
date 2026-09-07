@@ -37,7 +37,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn('Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)', roster)
             self.assertIn('Custom String("{0} - {1}", Evaluate Once(Event Player.NamaTampilan),', roster)
 
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa jeda")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertIn("Player Variable(Event Player.TargetInspeksi, NamaTampilan)", inspect)
             self.assertIn(
                 f"Array Contains({global_name}.PemainManusia, Event Player.TargetInspeksi) == True",
@@ -120,7 +120,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa Wait")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa jeda")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertNotIn("Sorted Array(Filtered Array", inspect)
             self.assertIn("CalonTargetInspeksi", inspect)
             self.assertNotIn("19d0 - Teleportasi Jongkok", source)
@@ -131,9 +131,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_safe_position_validator_is_shared_by_player_teleports(self):
         for source in (self.it, self.en):
-            self.assertIn("57: CariPosisiTeleportAman", source)
-            self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportAman);"), 4)
-            self.assertIn("Ray Cast Hit Position(Event Player.PosisiTeleportTujuan + Vector(0, 1, 0)", source)
+            self.assertIn("57: CariPosisiTeleportasiAman", source)
+            self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportasiAman);"), 4)
+            self.assertIn("Ray Cast Hit Position(Event Player.PosisiTujuanTeleportasi + Vector(0, 1, 0)", source)
 
     def test_burning_suspends_unkillable_and_scales_with_max_health(self):
         for source, global_name in ((self.it, "Globale"), (self.en, "Global")):
@@ -187,7 +187,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             skip_setup = source.split(
                 f'{rule_kw}("00a3 - Umum: Lewati persiapan awal")', 1
             )[1].split(
-                f'{rule_kw}("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")', 1
+                f'{rule_kw}("00a4 - Umum: Kunci pelewatan fase awal setelah mode berjalan")', 1
             )[0]
             self.assertIn(f"Count Of({global_name}.PemainManusia) == 0;", skip_setup)
             self.assertIn(f"{global_name}.PemainSiklusGlobal == Null;", skip_setup)
@@ -195,7 +195,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertEqual(source.count("Set Match Time(0);"), 2)
 
             bootstrap_lock = source.split(
-                f'{rule_kw}("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")', 1
+                f'{rule_kw}("00a4 - Umum: Kunci pelewatan fase awal setelah mode berjalan")', 1
             )[1].split(
                 f'{rule_kw}("00c - Umum: Mulai ulang tepat sekali saat hitung mundur habis")', 1
             )[0]
@@ -278,21 +278,21 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 "1/5 | TELEPORT: SPAWN ROOM",
                 "2/5 | TELEPORT: ACTIVE OBJECTIVE",
                 "3/5 | TELEPORT: PLAYER / BOT",
-                "4/5 | ATTACH: PLAYER / BOT",
+                '4/5 | ATTACH: PLAYER/BOT',
                 "5/5 | SELF ELIMINATION",
                 "1/5 | TELEPORT: RUANG MUNCUL",
                 "2/5 | TELEPORT: OBJEKTIF AKTIF",
                 "3/5 | TELEPORT: PLAYER / BOT",
                 "4/5 | KAITKAN: PLAYER / BOT",
                 "5/5 | ELIMINASI DIRI",
-                "1/5 | เทเลพอร์ต: ห้องเกิด",
-                "2/5 | เทเลพอร์ต: เป้าหมายภารกิจ",
-                "3/5 | เทเลพอร์ต: ผู้เล่น / บอต",
+                '1/5 | วาร์ปกลับห้องเกิด',
+                '2/5 | วาร์ปใกล้ภารกิจ',
+                '3/5 | วาร์ป: ผู้เล่น / บอต',
                 "4/5 | เกาะ: ผู้เล่น / บอต",
                 "5/5 | กำจัดตัวเอง",
-                "NO AVAILABLE PUBLIC TARGET",
-                "TIDAK ADA TARGET PUBLIK TERSEDIA",
-                "ไม่มีเป้าหมายสาธารณะที่พร้อมใช้",
+                'NO PUBLIC TARGET AVAILABLE',
+                'TAK ADA TARGET PUBLIK',
+                'ไม่มีเป้าหมายที่เปิดให้ใช้',
             ):
                 self.assertIn(token, teleport_render)
             self.assertIn("Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250", teleport_render)
@@ -318,11 +318,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Vector(0, 2.750, 0)", source)
             self.assertIn("Vector(1.500, 1.000, 0)", source)
             self.assertIn("Vector(-1.500, 1.000, 0)", source)
-            dummy_spawn = source.split(f'{rule_kw}("03f - Bot/Dummy: Teleport dari ruang spawn ke objektif")', 1)[1].split(f'{rule_kw}("03g - Bot/Dummy', 1)[0]
-            self.assertIn("Call Subroutine(CariPosisiTeleportAman);", dummy_spawn)
+            dummy_spawn = source.split(f'{rule_kw}("03f - Bot: Teleportasi dari ruang muncul ke objektif")', 1)[1].split(f'{rule_kw}("03g - Bot', 1)[0]
+            self.assertIn("Call Subroutine(CariPosisiTeleportasiAman);", dummy_spawn)
             self.assertIn("Teleport(Event Player, Event Player.PosisiBangkitAman);", dummy_spawn)
 
-            interact = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
+            interact = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interaksi menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
             self.assertEqual(interact.count("Kill(Event Player, Null);"), 1)
             self.assertIn("If(Total Time Elapsed >= Event Player.WaktuBunuhDiriBerikut);", interact)
             self.assertIn("Event Player.WaktuBunuhDiriBerikut = Total Time Elapsed + 3;", interact)
@@ -345,7 +345,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             (self.en, "rule", "conditions", "actions"),
         ):
             auto_detach = source.split(
-                f'{rule_kw}("19h - Teleportasi Jongkok: Lepas lampiran saat state berubah")', 1
+                f'{rule_kw}("19h - Teleportasi Jongkok: Lepas lampiran saat status berubah")', 1
             )[1].split(f'{rule_kw}("19g - Teleportasi Jongkok', 1)[0]
             conditions = auto_detach.split(f"\t{conditions_kw}\n\t{{", 1)[1].split(
                 f"\n\t}}\n\n\t{actions_kw}", 1
@@ -384,8 +384,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Attach Players(Event Player, Event Player.TargetLampiranTeleportasi, Vector(0,", source)
             self.assertIn("+ 0.750, 0));", source)
             self.assertIn("Detach Players(Event Player);", source)
-            attach_rule = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interact menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
-            detach_rules = source.split(f'{rule_kw}("19f - Teleportasi Jongkok: Reload melepas lampiran")', 1)[1].split(f'{rule_kw}("19g - Teleportasi Jongkok', 1)[0]
+            attach_rule = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interaksi menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
+            detach_rules = source.split(f'{rule_kw}("19f - Teleportasi Jongkok: Isi ulang melepas lampiran")', 1)[1].split(f'{rule_kw}("19g - Teleportasi Jongkok', 1)[0]
             manual_detach = detach_rules.split(f'{rule_kw}("19h - Teleportasi Jongkok', 1)[0]
             self.assertIn("Event Player.MenuTerbuka == False;", manual_detach)
             self.assertIn("Is Button Held(Event Player, Button(Crouch)) == True;", manual_detach)
@@ -415,7 +415,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Event Player.PosisiBangkitAman", resurrect)
             self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
             self.assertEqual(resurrect.count("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)"), 1)
-            self.assertNotIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
+            self.assertNotIn("Call Subroutine(CariPosisiTeleportasiAman);", resurrect)
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
@@ -473,7 +473,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
             self.assertIn(f"{global_name}.PemainAktif.SiklusPemainAktif == False", fast)
-            switch = source.split(f'{rule_kw}("01a - Siklus tim: Reset penuh pada konteks pemain")', 1)[1].split(f'{rule_kw}("01b - Siklus tim:', 1)[0]
+            switch = source.split(f'{rule_kw}("01a - Siklus tim: Karantina sebelum penyiapan ulang")', 1)[1].split(f'{rule_kw}("01b - Siklus tim:', 1)[0]
             self.assertIn("Ongoing - Each Player;", switch)
             self.assertIn(f"Array Contains({global_name}.PemainManusia, Event Player) == True;", switch)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player);", switch)
@@ -481,10 +481,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Call Subroutine(BersihkanPemain);", switch)
             self.assertNotIn("Wait(", switch)
             self.assertNotIn(f"{global_name}.PemainAktif", switch)
-            self.assertNotIn(f"{global_name}.PemainAktif.SegarkanRosterTertunda = True;", fast)
+            self.assertNotIn(f"{global_name}.PemainAktif.PembaruanDaftarTertunda = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.WaktuSiklusTim = Total Time Elapsed + 0.250;", fast)
             self.assertIn(f"Has Spawned({global_name}.PemainAktif) == True", fast)
-            self.assertIn("Event Player.SegarkanRosterTertunda = False;", switch)
+            self.assertIn("Event Player.PembaruanDaftarTertunda = False;", switch)
             self.assertIn("Event Player.PindahTimDiproses = True;", switch)
             self.assertIn("Event Player.SiklusPemainAktif = True;", switch)
             self.assertIn("Event Player.SudahSiap = False;", switch)
@@ -531,10 +531,10 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertLess(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),
-                roster_hud.index("Welcome to CHILL. Pick a vibe, pick a color, stay weird."),
+                roster_hud.index('Welcome to CHILL! Pick a vibe & color. Stay weird.'),
             )
             self.assertEqual(
-                source.count("Player Variable(Current Array Element, SegarkanRosterTertunda) == False"),
+                source.count("Player Variable(Current Array Element, PembaruanDaftarTertunda) == False"),
                 2,
             )
 
@@ -548,9 +548,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Wait(", setup)
 
             scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
-            self.assertIn(f"{global_name}.DaftarPemainSnapshot = All Players(All Teams);", scheduler)
+            self.assertIn(f"{global_name}.SalinanDaftarPemain = All Players(All Teams);", scheduler)
             self.assertIn(
-                f"{global_name}.PemainAktif = {global_name}.DaftarPemainSnapshot[{global_name}.IndeksPemainGlobal];",
+                f"{global_name}.PemainAktif = {global_name}.SalinanDaftarPemain[{global_name}.IndeksPemainGlobal];",
                 scheduler,
             )
 

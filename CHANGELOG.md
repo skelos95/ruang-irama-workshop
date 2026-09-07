@@ -2,6 +2,13 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Revisione testi su main — 2026-09-07
+
+- Rivisti HUD e tutti gli Small Message in inglese, indonesiano e thailandese: istruzioni più compatte, abbreviazioni coerenti e conferme più leggere. Tempi, binding, destinazioni, effetti e segnaposto dinamici mantengono il significato originale.
+- Uniformati all'indonesiano i nomi personalizzati di variabili, subroutine, regole e commenti; restano le parole chiave del motore, gli acronimi tecnici e i nomi propri. Ad esempio `DaftarPemainSnapshot` diventa `SalinanDaftarPemain`, `ProsesCachePemain` diventa `ProsesSimpananPemain`.
+- Allineati fixture semantica, validatore e aspettative dei test. Nessuna modifica alla logica di menu/Attach, al lifecycle, ai 12 slot riutilizzabili o allo scheduler. Il controllo delle stringhe conserva i segnaposto; il confronto del codice eseguibile ammette soltanto le rinomine dichiarate.
+- La revisione dei testi non aggiunge un nuovo riscontro visivo nel client; i test live precedenti restano riferiti alle rispettive revisioni.
+
 ## 0.8.1 — 2026-08-25
 
 Stato: **live-ready**.
