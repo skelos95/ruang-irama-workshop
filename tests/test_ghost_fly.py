@@ -67,12 +67,12 @@ class GhostFlyRuntimeTests(unittest.TestCase):
     def test_main_menu_has_fourteen_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = (
             "13 - GHOST MODE / FLY",
-            "13 - MODE HANTU / TERBANG",
+            '13 - HANTU / TERBANG',
             "13 - โหมดผี / บิน",
         )
         localized_tails = (
             ("12 - DUMMY FOLLOW", "13 - GHOST MODE / FLY"),
-            ("12 - DUMMY MENGIKUTI", "13 - MODE HANTU / TERBANG"),
+            ('12 - BOT MENGIKUTI', '13 - HANTU / TERBANG'),
             ("12 - ดัมมี่ติดตาม", "13 - โหมดผี / บิน"),
         )
         for source, _ in self.sources:
@@ -104,7 +104,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                     self.assertEqual(main.count(page_thirteen), 1)
             self.assertEqual(main.count("Event Player.ModeHantuAktif"), 3)
             self.assertEqual(main.count("Event Player.ModeTerbangAktif"), 3)
-            dispatcher = rule_with(source, "Event Player.PerintahMenu == 1;", "TerapkanHalamanIkutiDummy")
+            dispatcher = rule_with(source, "Event Player.PerintahMenu == 1;", "TerapkanHalamanIkutiBotBuatan")
             self.assertRegex(
                 compact(dispatcher),
                 r"HalamanMenu==13\);CallSubroutine\(TerapkanHalamanHantuTerbang\);",
@@ -119,7 +119,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
         localized_words = (
             "GHOST MODE",
             "FLY",
-            "MODE HANTU",
+                "HANTU",
             "TERBANG",
             "โหมดผี",
             "บิน",
@@ -135,14 +135,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 self.assertIn(token, renderer)
             for instruction in (
                 "Hold CROUCH + command",
-                "Tahan JONGKOK + perintah",
-                "กด ย่อ + คำสั่ง",
+                'Tahan JONGKOK + tombol',
+                'ย่อค้าง + ปุ่มคำสั่ง',
             ):
                 self.assertIn(instruction, renderer)
             for fly_hint in (
                 "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
-                "ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk",
-                "บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ",
+                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk',
+                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ',
             ):
                 self.assertIn(fly_hint, renderer)
 
@@ -368,7 +368,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertIn(live_teleport, resurrect)
             self.assertNotIn("Event Player.PosisiBangkitAman", resurrect)
             self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
-            self.assertNotIn("Call Subroutine(CariPosisiTeleportAman);", resurrect)
+            self.assertNotIn("Call Subroutine(CariPosisiTeleportasiAman);", resurrect)
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
             self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
@@ -425,10 +425,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             fast = subroutine(source, "ProsesCepatPemain")
             self.assertNotIn("Call Subroutine(TenangkanPemain);", fast)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", fast)
-            team_rule = rule_with(source, '01a - Siklus tim: Reset penuh pada konteks pemain')
+            team_rule = rule_with(source, '01a - Siklus tim: Karantina sebelum penyiapan ulang')
             self.assertIn("Ongoing - Each Player;", team_rule)
             self.assertIn("Event Player.TimTerakhir != Team Of(Event Player)", team_rule)
-            self.assertIn("Event Player.SegarkanRosterTertunda = False;", team_rule)
+            self.assertIn("Event Player.PembaruanDaftarTertunda = False;", team_rule)
             self.assertIn("Event Player.PindahTimDiproses = True;", team_rule)
             self.assertIn("Event Player.SiklusPemainAktif = True;", team_rule)
             self.assertIn("Event Player.SudahSiap = False;", team_rule)
@@ -436,7 +436,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertIn("Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;", team_rule)
             self.assertNotIn("Call Subroutine(TenangkanPemain);", team_rule)
             self.assertNotIn("Call Subroutine(BersihkanPemain);", team_rule)
-            self.assertNotIn("Event Player.SegarkanRosterTertunda = True;", team_rule)
+            self.assertNotIn("Event Player.PembaruanDaftarTertunda = True;", team_rule)
             self.assertNotIn(f"{global_name}.PemainAktif", team_rule)
             self.assertNotIn("Wait(", team_rule)
             setup_worker = rule_with(source, '01b - Siklus tim: Pekerja penyiapan dari penjadwal global')

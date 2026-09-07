@@ -335,15 +335,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         main_mutation = self.replace_in_rule(
             main,
-            'Custom String("2 - MUSIK\\nSAAT INI: {0}", Event Player.MusikKhusus != Null',
-            'Custom String("2 - MUSIK\\nSAAT INI: {0}", Event Player.MusikKhusus == Null',
+            'Custom String("2 - MUSIK\\nKINI: {0}", Event Player.MusikKhusus != Null',
+            'Custom String("2 - MUSIK\\nKINI: {0}", Event Player.MusikKhusus == Null',
         )
         self.assert_rejected(main_mutation, "profilo speciale menu principale: condizione profilo speciale")
 
         music = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarMusik")
         locked_mutation = self.replace_in_rule(
             music,
-            'Custom String("เพลงถูกล็อก\\nปัจจุบัน: {0}", Event Player.MusikKhusus)',
+            'Custom String("เพลงล็อกอยู่\\nใช้: {0}", Event Player.MusikKhusus)',
             'Custom String("เพลงถูกล็อก\\nตอนนี้: {0}", Event Player.MusikKhusus)',
         )
         self.assert_rejected(locked_mutation, "testo locked")
@@ -598,8 +598,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
         mutated = self.replace_once(
-            '"Hold {0}: inspect hero + HP"',
-            '"Hold {0}: inspect hero + HP | in menu: modifier for every command"',
+            '"Hold {0}: hero + HP"',
+            '"Hold {0}: hero + HP | in menu: modifier for every command"',
         )
         self.assert_rejected(mutated, "clausola modifier Crouch duplicata")
 
@@ -612,7 +612,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         mutated = self.replace_in_rule(
             renderer,
-            "กด {1} ค้าง 0.5 วินาที: ปิด",
+            'กด {1} ค้าง 0.5 วิ: ปิด',
             "กด {1} ค้างเพื่อปิด",
         )
         self.assert_rejected(mutated, "help Thai chiusura menu")
@@ -627,7 +627,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutations = (
             ("EFFECT: ELIMINATE CURRENT HERO FORM", "EFFECT: SELF KILL"),
             ("TUJUAN: RUANG MUNCUL TIMMU", "TUJUAN: SPAWN"),
-            ("ปลายทาง: เป้าหมายปัจจุบัน / ธงศัตรู", "ปลายทาง: เป้าหมาย"),
+            ('ปลายทาง: จุดภารกิจปัจจุบัน / ธงศัตรู', "ปลายทาง: เป้าหมาย"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -821,8 +821,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "colore Subheader deve usare la cache leader")
 
     def test_complete_global_control_help_is_required(self) -> None:
-        mutated = self.replace_once("Hold {0}: inspect hero + HP", "Hold {0}:")
-        self.assert_rejected(mutated, "testo localizzato assente: Hold {0}: inspect hero + HP")
+        mutated = self.replace_once('Hold {0}: hero + HP', "Hold {0}:")
+        self.assert_rejected(mutated, "testo localizzato assente: Hold {0}: hero + HP")
 
     def test_left_global_control_help_keeps_its_crouch_binding_in_every_language(self) -> None:
         call = next(
@@ -871,7 +871,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             7,
             "Custom Color(254, 205, 110, 255)",
         )
-        self.assert_rejected(mutated, "SERVER LOCATION: colore subheader pastel gold esatto")
+        self.assert_rejected(mutated, 'LOCATION: colore subheader pastel gold esatto')
         mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
         self.assert_rejected(mutated, "colore distinto da LOBBY & CHILL TIME")
 
@@ -907,11 +907,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 "LOOK TO STEER | HOLD FORWARD TO ACCELERATE",
             ),
             (
-                "ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk",
+                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk',
                 "ARAHKAN PANDANGAN | TAHAN MAJU UNTUK MELAJU",
             ),
             (
-                "บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ",
+                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ',
                 "บังคับด้วยมุมมอง | กดเดินหน้าค้างเพื่อเร่งความเร็ว",
             ),
         )
@@ -1031,21 +1031,21 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         mutated = self.replace_in_rule(
             navigation,
-            "Event Player.KursorIkutiDummy = (Event Player.KursorIkutiDummy + 1) % 2;",
-            "Event Player.KursorIkutiDummy = Event Player.KursorIkutiDummy;",
+            "Event Player.KursorIkutiBotBuatan = (Event Player.KursorIkutiBotBuatan + 1) % 2;",
+            "Event Player.KursorIkutiBotBuatan = Event Player.KursorIkutiBotBuatan;",
         )
-        self.assert_rejected(mutated, "pagina 12 deve alternare KursorIkutiDummy")
+        self.assert_rejected(mutated, "pagina 12 deve alternare KursorIkutiBotBuatan")
 
     def test_opening_page_twelve_syncs_preview_with_applied_preference(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.PerintahMenu == 1;" in rule.body
-            and "TerapkanHalamanIkutiDummy" in rule.body
+            and "TerapkanHalamanIkutiBotBuatan" in rule.body
         )
         mutated = self.replace_in_rule(
             dispatcher,
-            "Event Player.KursorIkutiDummy = Event Player.IzinkanDummyMengikuti ? 1 : 0;",
-            "Event Player.KursorIkutiDummy = 0;",
+            "Event Player.KursorIkutiBotBuatan = Event Player.IzinkanBotBuatanMengikuti ? 1 : 0;",
+            "Event Player.KursorIkutiBotBuatan = 0;",
         )
         self.assert_rejected(mutated, "apertura pagina 12 non sincronizza")
 
@@ -1053,19 +1053,19 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.PerintahMenu == 1;" in rule.body
-            and "TerapkanHalamanIkutiDummy" in rule.body
+            and "TerapkanHalamanIkutiBotBuatan" in rule.body
         )
         mutated = self.replace_in_rule(
             dispatcher,
-            "Call Subroutine(TerapkanHalamanIkutiDummy);",
+            "Call Subroutine(TerapkanHalamanIkutiBotBuatan);",
             "Abort;",
         )
-        self.assert_rejected(mutated, "pagina 12 deve usare TerapkanHalamanIkutiDummy")
+        self.assert_rejected(mutated, "pagina 12 deve usare TerapkanHalamanIkutiBotBuatan")
 
     def test_dummy_follow_renderer_is_localized_and_explicitly_enemy_scoped(self) -> None:
-        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarIkutiDummy")
-        mutated = self.replace_in_rule(renderer, "DUMMY MUSUH", "DUMMY")
-        self.assert_rejected(mutated, "DUMMY MUSUH")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarIkutiBotBuatan")
+        mutated = self.replace_in_rule(renderer, 'BOT MUSUH', "DUMMY")
+        self.assert_rejected(mutated, 'BOT MUSUH')
 
     def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
         transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransisiWarnaMenu")
@@ -1081,19 +1081,19 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.InteraksiKameraDipakai = False;" in rule.body
         )
-        mutated = self.inject_action(camera_release, "Event Player.IzinkanDummyMengikuti = False;")
+        mutated = self.inject_action(camera_release, "Event Player.IzinkanBotBuatanMengikuti = False;")
         self.assert_rejected(mutated, "scritto fuori da setup/apply/quiete")
 
     def test_dummy_follow_defaults_to_off(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         for current, wrong in (
             (
-                "Event Player.IzinkanDummyMengikuti = False;",
-                "Event Player.IzinkanDummyMengikuti = True;",
+                "Event Player.IzinkanBotBuatanMengikuti = False;",
+                "Event Player.IzinkanBotBuatanMengikuti = True;",
             ),
             (
-                "Event Player.KursorIkutiDummy = 0;",
-                "Event Player.KursorIkutiDummy = 1;",
+                "Event Player.KursorIkutiBotBuatan = 0;",
+                "Event Player.KursorIkutiBotBuatan = 1;",
             ),
         ):
             mutated = self.replace_in_rule(setup, current, wrong)
@@ -1159,12 +1159,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "menu morto")
 
     def test_menu_input_allow_disallow_sets_are_symmetric(self) -> None:
-        unlock = self.rule(lambda rule: "Allow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body and "Crouch" in rule.body)
+        unlock = self.rule(lambda rule: "Allow Button(Event Player" in rule.body and "MasukanMenuDikunci" in rule.body and "Crouch" in rule.body)
         mutated = self.replace_in_rule(unlock, "Allow Button(Event Player, Button(Ability 2));", "")
         self.assert_rejected(mutated, "simmetria")
 
     def test_melee_jump_and_crouch_are_never_locked(self) -> None:
-        lock = self.rule(lambda rule: "Disallow Button(Event Player" in rule.body and "InputMenuDikunci" in rule.body)
+        lock = self.rule(lambda rule: "Disallow Button(Event Player" in rule.body and "MasukanMenuDikunci" in rule.body)
         mutated = self.inject_action(lock, "Disallow Button(Event Player, Button(Jump));")
         self.assert_rejected(mutated, "Melee, Jump e Crouch")
 
@@ -1252,7 +1252,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_jump_resurrect_cannot_use_spawn_room_fallback(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        mutated = self.inject_action(resurrect, "Event Player.PosisiTeleportTujuan = Position Of(First Of(Spawn Points(Team Of(Event Player))));")
+        mutated = self.inject_action(resurrect, "Event Player.PosisiTujuanTeleportasi = Position Of(First Of(Spawn Points(Team Of(Event Player))));")
         self.assert_rejected(mutated, "fallback Spawn Room")
 
     def test_jump_resurrect_returns_to_life_before_void_teleport(self) -> None:
@@ -1268,7 +1268,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         for action, message in (
             ("Abort;", "non deve avere percorsi Abort"),
-            ("Call Subroutine(CariPosisiTeleportAman);", "non deve dipendere dal validatore Teleport"),
+            ("Call Subroutine(CariPosisiTeleportasiAman);", "non deve dipendere dal validatore Teleport"),
         ):
             with self.subTest(action=action):
                 mutated = self.inject_action(resurrect, action)
@@ -1769,12 +1769,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_scans_cannot_yield(self) -> None:
         scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
-        token = "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];"
+        token = "Global.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];"
         mutated = self.replace_in_rule(scheduler, token, token + "\n\t\t\tWait(0.001, Ignore Condition);")
         self.assert_rejected(mutated, "yield durante scansione")
 
     def test_scheduler_subroutines_have_no_wait_or_loop(self) -> None:
-        process = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        process = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSimpananPemain")
         mutated = self.inject_action(process, "Wait(0.050, Ignore Condition);")
         self.assert_rejected(mutated, "subroutine scheduler")
 
@@ -2292,7 +2292,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.replace_in_rule(
             death,
-            "Press {0}: resurrect here; after a void death, you'll be moved to walkable ground.",
+            'Press {0}: revive here. Void death? Back to walkable ground.',
             "Press {0}: resurrect here, or move to walkable ground after a void death.",
         )
         self.assert_rejected(mutated, "prompt morte non descrive il recupero automatico dal vuoto: EN")
@@ -2434,13 +2434,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
                               and "Call Subroutine(ProsesCepatPemain);" in rule.body)
         mutated = self.replace_in_rule(
             scheduler,
-            "Global.DaftarPemainSnapshot = All Players(All Teams);",
+            "Global.SalinanDaftarPemain = All Players(All Teams);",
             "",
         )
         self.assert_rejected(mutated, "snapshot roster")
         mutated = self.replace_in_rule(
             scheduler,
-            "Global.PemainAktif = Global.DaftarPemainSnapshot[Global.IndeksPemainGlobal];",
+            "Global.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];",
             "Global.PemainAktif = All Players(All Teams)[Global.IndeksPemainGlobal];",
         )
         self.assert_rejected(mutated, "non deve iterare direttamente")
@@ -2462,8 +2462,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
                            and "Event Player.TimTerakhir != Team Of(Event Player)" in rule.body)
         mutated = self.replace_in_rule(
             worker,
-            "Event Player.SegarkanRosterTertunda = False;",
-            "Event Player.SegarkanRosterTertunda = True;",
+            "Event Player.PembaruanDaftarTertunda = False;",
+            "Event Player.PembaruanDaftarTertunda = True;",
         )
         self.assert_rejected(mutated, "pending roster ringan")
 
@@ -2530,7 +2530,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             with self.subTest(rule=rule.name):
                 mutated = self.replace_in_rule(
                     rule,
-                    "Player Variable(Current Array Element, SegarkanRosterTertunda) == False",
+                    "Player Variable(Current Array Element, PembaruanDaftarTertunda) == False",
                     "True",
                 )
                 self.assert_rejected(mutated, "deve escludere il pending team-switch")
@@ -2585,8 +2585,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
         mutated = self.replace_in_rule(
             setup,
-            "Event Player.SegarkanRosterTertunda = False;",
-            "Event Player.SegarkanRosterTertunda = Null;",
+            "Event Player.PembaruanDaftarTertunda = False;",
+            "Event Player.PembaruanDaftarTertunda = Null;",
         )
         self.assert_rejected(mutated, "reset setup iniziale mancante")
 
@@ -2777,8 +2777,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
         mutated = self.replace_in_rule(
             movement,
-            "Event Player.TargetDummyIkuti != Null;",
-            "Event Player.TargetDummyIkuti == Null;",
+            "Event Player.TargetIkutiBotBuatan != Null;",
+            "Event Player.TargetIkutiBotBuatan == Null;",
         )
         self.assert_rejected(mutated, "movimento automatico dummy incompleto")
     def test_native_dummy_movement_cannot_abort_before_facing(self) -> None:
@@ -2841,7 +2841,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         predicate = (
             "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
-            "And(Player Variable(Current Array Element, IzinkanDummyMengikuti) == True, "
+            "And(Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True, "
             "And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), "
             "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))"
         )
@@ -2861,19 +2861,19 @@ rule("999x - Nasib: Renderer pemain tambahan")
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
         mutated = self.replace_in_rule(
             cycle,
-            "Player Variable(Current Array Element, IzinkanDummyMengikuti) == True",
+            "Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True",
             "True",
         )
         self.assert_rejected(mutated, "cache target dummy deve filtrare gli umani opt-in una sola volta per ciclo")
     def test_no_target_cleanup_rejects_cached_target_opt_out(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
+            lambda rule: "Event Player.TargetIkutiBotBuatan == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(
             cleanup,
-            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == False",
-            "Player Variable(Event Player.TargetDummyIkuti, IzinkanDummyMengikuti) == True",
+            "Player Variable(Event Player.TargetIkutiBotBuatan, IzinkanBotBuatanMengikuti) == False",
+            "Player Variable(Event Player.TargetIkutiBotBuatan, IzinkanBotBuatanMengikuti) == True",
         )
         self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
     def test_native_dummy_stops_at_exactly_four_metres(self) -> None:
@@ -2901,31 +2901,31 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_native_dummy_stops_throttle_when_cached_target_is_invalid(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
+            lambda rule: "Event Player.TargetIkutiBotBuatan == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(cleanup, "Stop Throttle In Direction(Event Player);", "")
         self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
     def test_native_dummy_cleanup_stops_when_cached_target_changes_team(self) -> None:
         cleanup = self.rule(
-            lambda rule: "Event Player.TargetDummyIkuti == Null" in rule.body
+            lambda rule: "Event Player.TargetIkutiBotBuatan == Null" in rule.body
             and "Stop Facing(Event Player);" in rule.body
         )
         mutated = self.replace_in_rule(
             cleanup,
-            "Team Of(Event Player.TargetDummyIkuti) != Opposite Team Of(Team Of(Event Player))",
-            "Team Of(Event Player.TargetDummyIkuti) == Opposite Team Of(Team Of(Event Player))",
+            "Team Of(Event Player.TargetIkutiBotBuatan) != Opposite Team Of(Team Of(Event Player))",
+            "Team Of(Event Player.TargetIkutiBotBuatan) == Opposite Team Of(Team Of(Event Player))",
         )
         self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
     def test_dummy_release_stops_facing_before_destroy(self) -> None:
-        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")
+        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasBotBuatanTim")
         mutated = self.replace_in_rule(release, "Stop Facing(First Of(Filtered Array(", "Start Facing(First Of(Filtered Array(")
-        self.assert_rejected(mutated, "LepasDummyTim incompleta")
+        self.assert_rejected(mutated, "LepasBotBuatanTim incompleta")
 
     def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
         create = self.rule(
             lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
-            and "Call Subroutine(BuatDummyTim);" in rule.body
+            and "Call Subroutine(BuatBotBuatanTim);" in rule.body
         )
         mutated = self.replace_in_rule(
             create,
@@ -2937,7 +2937,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_dummy_creation_cannot_have_an_impossible_condition(self) -> None:
         create = self.rule(
             lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
-            and "Call Subroutine(BuatDummyTim);" in rule.body
+            and "Call Subroutine(BuatBotBuatanTim);" in rule.body
         )
         mutated = self.inject_condition(create, "False == True;")
         self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
@@ -2945,29 +2945,29 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
         release = self.rule(
             lambda rule: "Number Of Players(Team 1) >= Number Of Slots(Team 1);" in rule.body
-            and "Call Subroutine(LepasDummyTim);" in rule.body
+            and "Call Subroutine(LepasBotBuatanTim);" in rule.body
         )
-        mutated = self.replace_in_rule(release, "Call Subroutine(LepasDummyTim);", "Abort;")
+        mutated = self.replace_in_rule(release, "Call Subroutine(LepasBotBuatanTim);", "Abort;")
         self.assert_rejected(mutated, "numero regole rilascio slot dummy Team 1")
 
     def test_dummy_release_cannot_abort_before_cleanup(self) -> None:
-        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasDummyTim")
+        release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasBotBuatanTim")
         mutated = self.replace_in_rule(
             release,
             "\n\t\tIf(Player Variable(",
             "\n\t\tAbort;\n\t\tIf(Player Variable(",
         )
-        self.assert_rejected(mutated, "LepasDummyTim: cleanup atomico esatto senza abort")
+        self.assert_rejected(mutated, "LepasBotBuatanTim: cleanup atomico esatto senza abort")
 
     def test_dummy_spawn_delay_uses_a_rearmed_timestamp(self) -> None:
         arming = self.rule(
-            lambda rule: "If(Event Player.WaktuTeleportasiDummy == 0);" in rule.body
-            and "Event Player.WaktuTeleportasiDummy = Total Time Elapsed + 1;" in rule.body
+            lambda rule: "If(Event Player.WaktuTeleportasiBotBuatan == 0);" in rule.body
+            and "Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;" in rule.body
         )
         mutated = self.replace_in_rule(
             arming,
-            "If(Event Player.WaktuTeleportasiDummy == 0);",
-            "If(Event Player.WaktuTeleportasiDummy > 0);",
+            "If(Event Player.WaktuTeleportasiBotBuatan == 0);",
+            "If(Event Player.WaktuTeleportasiBotBuatan > 0);",
         )
         self.assert_rejected(mutated, "arming timestamp teleport dummy assente")
 
@@ -2975,7 +2975,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         death = self.rule(
             lambda rule: validator.event_type(rule) == "Player Died"
             and "Stop Facing(Event Player);" in rule.body
-            and "WaktuTeleportasiDummy = 0;" in rule.body
+            and "WaktuTeleportasiBotBuatan = 0;" in rule.body
         )
         mutated = self.inject_condition(death, "False == True;")
         self.assert_rejected(mutated, "cleanup morte dummy: condizioni esatte dopo la morte completa")
@@ -2984,7 +2984,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         death = self.rule(
             lambda rule: validator.event_type(rule) == "Player Died"
             and "Stop Facing(Event Player);" in rule.body
-            and "WaktuTeleportasiDummy = 0;" in rule.body
+            and "WaktuTeleportasiBotBuatan = 0;" in rule.body
         )
         mutated = self.replace_in_rule(
             death,
@@ -3236,7 +3236,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_vision_hud_declares_that_all_player_names_are_visible(self) -> None:
         mutated = self.replace_once(
-            "VISION: ALL PLAYER / BOT NAMES",
+            'VISION: ALL PLAYER/BOT NAMES',
             "VISION: PUBLIC PLAYER / BOT NAMES",
         )
         self.assert_rejected(mutated, "testo Vision non dichiara tutti i nomi")
@@ -3553,7 +3553,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "teleport non deve mostrare identity token grezzo ai dummy")
 
     def test_camera_target_cache_excludes_private_humans(self) -> None:
-        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCachePemain")
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSimpananPemain")
         mutated = self.replace_in_rule(
             cache,
             "Call Subroutine(SegarkanTargetPublikAktif);",
@@ -3646,7 +3646,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_safe_position_cannot_lose_the_vertical_floor_check(self) -> None:
         safe = self.rule(
-            lambda rule: validator.subroutine_target(rule) == "CariPosisiTeleportAman"
+            lambda rule: validator.subroutine_target(rule) == "CariPosisiTeleportasiAman"
         )
         branch = (
             "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiBangkitAman + Vector(0, 5, 0), "
@@ -3729,7 +3729,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_bootstrap_lock_rule_never_sets_match_time_zero(self) -> None:
         lock = self.rule(
-            lambda rule: rule.name.startswith("00a4 - Umum: Kunci skip fase awal setelah mode berjalan")
+            lambda rule: rule.name.startswith('00a4 - Umum: Kunci pelewatan fase awal setelah mode berjalan')
         )
         self.assertEqual(lock.body.count("Set Match Time(0);"), 0)
         mutated = self.inject_action(lock, "Set Match Time(0);")
@@ -3740,7 +3740,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         scheduler = self.rule(lambda rule: sync_token in rule.body)
         nested = (
             "\t\t\tIf(And(Is Game In Progress == True, Global.SisaWaktuServer > 0));\n"
-            "\t\t\t\t\"Satu kali per detik, tahan penyelesaian mode bawaan dan sinkronkan timer native di atas nol sampai timer server selesai.\"\n"
+            '\t\t\t\t"Satu kali per detik, tahan penyelesaian mode bawaan dan sinkronkan penghitung waktu bawaan di atas nol sampai waktu server habis."\n'
             "\t\t\t\tDisable Built-In Game Mode Completion;\n"
             f"\t\t\t\t{sync_token}\n"
             "\t\t\tEnd;\n"

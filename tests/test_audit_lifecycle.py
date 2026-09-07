@@ -259,7 +259,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         actions = validator.rule_block(scheduler, "actions")
         keep = lambda token: (
             token.startswith("Call Subroutine(")
-            or re.match(r"Global\.(PemainAktif|DaftarPemainSnapshot|PemainSiklusGlobal|WaktuSiklusGlobal) =", token)
+            or re.match(r"Global\.(PemainAktif|SalinanDaftarPemain|PemainSiklusGlobal|WaktuSiklusGlobal) =", token)
         )
         self.globals["LangkahPenjadwal"] = tick
         self.execute(project(statements(actions), keep))
@@ -385,7 +385,7 @@ class AuditLifecycleTests(unittest.TestCase):
                 for identity in ("alice", "bob"):
                     for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 20),
                                               ("ProsesTerbangPemain", 20), ("ProsesSiklusPemain", 10),
-                                              ("ProsesCachePemain", 1)):
+                                              ("ProsesSimpananPemain", 1)):
                         self.assertEqual(model.calls.count((identity, routine)), expected, (source, identity, routine))
 
     def test_bot_classifier_releases_only_its_own_reservation_before_engine_lock(self):
