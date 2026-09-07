@@ -1105,7 +1105,7 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
         ]
         if visible_literals and not any(literal and literal.strip() for literal in visible_literals):
             continue
-        if "CHILL DEDICATED SERVER" in visible_text and "Global.TeksWaktuServer" in visible_text:
+        if "SERVER KHUSUS CHILL" in visible_text and "Global.TeksWaktuServer" in visible_text:
             continue
         if "Custom String" in visible_text and re.search(r"[A-Za-z\u0e00-\u0e7f]", visible_text):
             found = language_triads(visible_text)
@@ -1218,7 +1218,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             call for call in hud_calls
             if len(call.args) >= 4
-            and "CHILL DEDICATED SERVER" in call.args[3]
+            and "SERVER KHUSUS CHILL" in call.args[3]
             and "Global.TeksWaktuServer" in call.args[3]
         ),
         None,
@@ -1237,7 +1237,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Global"
-            and "CHILL DEDICATED SERVER" in rule.body
+            and "SERVER KHUSUS CHILL" in rule.body
             and "Global.Siap = True;" in rule.body
         ),
         None,
@@ -1301,7 +1301,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Right", "-15"): ("text", 'Custom String("  ")'),
         ("Right", "-14"): ("text", "PLAYER VIBES"),
         ("Right", "-1"): ("text", 'Custom String("  ")'),
-        ("Top", "0"): ("text", "CHILL DEDICATED SERVER"),
+        ("Top", "0"): ("text", "SERVER KHUSUS CHILL"),
         ("Top", "1"): ("subheader", 'LOCATION'),
         ("Top", "2"): ("text", 'Custom String("  ")'),
     }

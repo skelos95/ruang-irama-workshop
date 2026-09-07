@@ -4,6 +4,8 @@ Le versioni seguono lo stato del sorgente Workshop e della relativa validazione.
 
 ## Revisione testi su main — 2026-09-07
 
+- Titolo HUD centrale in indonesiano: `SERVER KHUSUS CHILL`, con countdown e impaginazione invariati.
+
 - Rivisti HUD e tutti gli Small Message in inglese, indonesiano e thailandese: istruzioni più compatte, abbreviazioni coerenti e conferme più leggere. Tempi, binding, destinazioni, effetti e segnaposto dinamici mantengono il significato originale.
 - Uniformati all'indonesiano i nomi personalizzati di variabili, subroutine, regole e commenti; restano le parole chiave del motore, gli acronimi tecnici e i nomi propri. Ad esempio `DaftarPemainSnapshot` diventa `SalinanDaftarPemain`, `ProsesCachePemain` diventa `ProsesSimpananPemain`.
 - Allineati fixture semantica, validatore e aspettative dei test. Nessuna modifica alla logica di menu/Attach, al lifecycle, ai 12 slot riutilizzabili o allo scheduler. Il controllo delle stringhe conserva i segnaposto; il confronto del codice eseguibile ammette soltanto le rinomine dichiarate.
