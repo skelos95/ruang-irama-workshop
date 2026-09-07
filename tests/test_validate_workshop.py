@@ -698,7 +698,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_chill_grid_rejects_an_eleventh_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
-            and "CHILL DEDICATED SERVER" in rule.body
+            and "SERVER KHUSUS CHILL" in rule.body
             and "Global.Siap = True;" in rule.body
         )
         extra = (

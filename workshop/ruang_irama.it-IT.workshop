@@ -845,8 +845,8 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Globale.BantalanDinding = 0.200;
 		Globale.JarakBidik = 25;
 		"Penghitung waktu server berdiri sendiri dari waktu mode bawaan. Pengelola lobi dapat memilih 30 sampai 90 menit."
-		Globale.DurasiServerMenit = Workshop Setting Integer(Custom String("CHILL DEDICATED SERVER"), Custom String("Duration / Durasi / ระยะเวลา (min)"), 30, 30, 90, 0);
-		Globale.IndeksLokasiServer = Workshop Setting Combo(Custom String("CHILL DEDICATED SERVER"), Custom String("Location / Lokasi / ตำแหน่ง (Asia)"), 6, Array(
+		Globale.DurasiServerMenit = Workshop Setting Integer(Custom String("SERVER KHUSUS CHILL"), Custom String("Duration / Durasi / ระยะเวลา (min)"), 30, 30, 90, 0);
+		Globale.IndeksLokasiServer = Workshop Setting Combo(Custom String("SERVER KHUSUS CHILL"), Custom String("Location / Lokasi / ตำแหน่ง (Asia)"), 6, Array(
 			Custom String("Bangladesh"),
 			Custom String("Bhutan"),
 			Custom String("Brunei"),
@@ -874,7 +874,7 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 			Custom String("Uzbekistan"),
 			Custom String("Vietnam")
 		), 1);
-		Globale.DiagnostikPerforma = Workshop Setting Toggle(Custom String("CHILL DEDICATED SERVER"), Custom String("Diagnostics / Diagnostik / การวินิจฉัย"), False, 2);
+		Globale.DiagnostikPerforma = Workshop Setting Toggle(Custom String("SERVER KHUSUS CHILL"), Custom String("Diagnostics / Diagnostik / การวินิจฉัย"), False, 2);
 		Globale.WaktuAkhirServer = Total Time Elapsed + Globale.DurasiServerMenit * 60;
 		Globale.SisaWaktuServer = Max(0, Round To Integer(Globale.WaktuAkhirServer - Total Time Elapsed, Up));
 		Globale.TeksWaktuServer = Globale.SisaWaktuServer % 60 < 10 ? Custom String("{0}:0{1}", Round To Integer(Globale.SisaWaktuServer / 60, Down),
@@ -898,7 +898,7 @@ regola("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		End;
 
 		Create HUD Text(Globale.PemainManusia, Null, Null,
-			Custom String("{0} [{1}]", Custom String("CHILL DEDICATED SERVER"), Globale.TeksWaktuServer), Top, 0,
+			Custom String("{0} [{1}]", Custom String("SERVER KHUSUS CHILL"), Globale.TeksWaktuServer), Top, 0,
 			Custom Color(255, 255, 255, 255), Custom Color(255, 255, 255, 255), Globale.RGB,
 			Visible To String and Color, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null,
