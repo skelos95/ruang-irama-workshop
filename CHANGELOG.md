@@ -2,6 +2,13 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Durata, uscita dummy e profilo su main — 2026-09-08
+
+- Durata configurabile limitata a 60 minuti dopo il riscontro utente di crash nelle sessioni impostate oltre un'ora. Su richiesta, il minimo scende a 10 minuti: l'intervallo diventa 10–60 minuti e il valore predefinito resta 30 minuti.
+
+- Uscita dummy dalla spawn: su Hybrid la fase precedente alla cattura usa il primo obiettivo; il payload viene usato dopo la cattura, con fallback all'obiettivo corrente quando la destinazione non è disponibile. I tentativi esplorano 16 candidati orizzontali con cursore per-dummy, anziché ripetere sempre lo stesso punto; restano il limite di un tentativo al secondo e i controlli di sicurezza. La segnalazione riguarda Paraíso alla creazione: la geometria reale richiede conferma nel client.
+- Il Player Vibes del profilo personalizzato `งูแท้` passa da `Caladan Brood` a `Draconian`, sia nel setup sia nel ripristino.
+
 ## Revisione testi su main — 2026-09-07
 
 - Titolo HUD centrale in indonesiano: `SERVER KHUSUS CHILL`, con countdown e impaginazione invariati.

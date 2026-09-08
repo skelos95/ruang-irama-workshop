@@ -425,7 +425,7 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             )
             self.assertIn('If(Event Player.NamaTampilan == Custom String("งูแท้"));', classifier)
             self.assertNotIn('If(Custom String("{0}", Event Player) == Custom String("งูแท้"));', classifier)
-            self.assertIn('Event Player.MusikKhusus = Custom String("Caladan Brood");', classifier)
+            self.assertIn('Event Player.MusikKhusus = Custom String("Draconian");', classifier)
             self.assertIn("Event Player.IndeksWarna = 1;", classifier)
             self.assertIn("Event Player.KursorWarna = 1;", classifier)
             self.assertIn("Event Player.IndeksIkon = 23;", classifier)

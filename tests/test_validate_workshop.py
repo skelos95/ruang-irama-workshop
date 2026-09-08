@@ -266,7 +266,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")
         mutations = (
             (
-                'Global.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
+                'Global.PemainAktif.MusikKhusus = Custom String("Draconian");',
                 "Global.PemainAktif.MusikKhusus = Null;",
             ),
             (
@@ -290,10 +290,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             (
                 self.source.replace(
                     'Custom String("Lowercase")',
-                    'Custom String("Caladan Brood")',
+                    'Custom String("Draconian")',
                     1,
                 ),
-                "Caladan Brood inserito nei 100 generi ordinari",
+                "Draconian inserito nei 100 generi ordinari",
             ),
             (
                 self.source.replace(

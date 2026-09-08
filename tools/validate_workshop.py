@@ -2628,7 +2628,7 @@ def validate_special_player_profile(
             if enclosing:
                 expected_branch = '''
 If(Event Player.NamaTampilan == Custom String("งูแท้"));
-    Event Player.MusikKhusus = Custom String("Caladan Brood");
+    Event Player.MusikKhusus = Custom String("Draconian");
     Event Player.IndeksWarna = 1;
     Event Player.KursorWarna = 1;
     Event Player.WarnaNama = Global.DaftarWarna[1];
@@ -2718,7 +2718,7 @@ End;
                 repair_branch = fast.body[repair_start:repair_end]
                 expected_repair = '''
 If(Global.PemainAktif.NamaTampilan == Custom String("งูแท้"));
-    Global.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
+    Global.PemainAktif.MusikKhusus = Custom String("Draconian");
     If(Global.PemainAktif.PernahDisiapkan == False);
         Global.PemainAktif.IndeksWarna = 1;
         Global.PemainAktif.KursorWarna = 1;
@@ -2778,12 +2778,12 @@ End;
     ]
     checks.require(not action_writers, f"profilo speciale: writer azione inattesi MusikKhusus: {action_writers}")
 
-    caladan_calls = [
+    draconian_calls = [
         call
         for call in iter_calls(source, "Custom String")
-        if call.args and parse_literal(call.args[0]) == "Caladan Brood"
+        if call.args and parse_literal(call.args[0]) == "Draconian"
     ]
-    checks.equal(len(caladan_calls), 2, "profilo speciale: Caladan Brood deve coprire setup e repair")
+    checks.equal(len(draconian_calls), 2, "profilo speciale: Draconian deve coprire setup e repair")
     genres = array_assignment_items(source, "DaftarGenre")
     checks.require(genres is not None, "profilo speciale: array dei 100 generi assente")
     if genres is not None:
@@ -2794,8 +2794,8 @@ End;
             for call in iter_calls(item, "Custom String")
             if call.args
         }
-        checks.require("Caladan Brood" not in genre_literals,
-                       "profilo speciale: Caladan Brood inserito nei 100 generi ordinari")
+        checks.require("Draconian" not in genre_literals,
+                       "profilo speciale: Draconian inserito nei 100 generi ordinari")
 
     color_names = array_assignment_items(source, "NamaWarnaInggris")
     checks.require(color_names is not None and len(color_names) > 1,
@@ -5939,6 +5939,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                     Enable Movement Collision With Players(Event Player);
                     Disable Movement Collision With Environment(Event Player, False);
                     Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
+                    Event Player.KursorTeleportasiBotBuatan = 0;
                     Set Respawn Max Time(Event Player, 3);
                 End;
             """
@@ -6221,6 +6222,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                     "Stop Facing(Event Player); "
                     "Stop Throttle In Direction(Event Player); "
                     "Event Player.WaktuTeleportasiBotBuatan = 0; "
+                    "Event Player.KursorTeleportasiBotBuatan = 0; "
                     "Event Player.TargetIkutiBotBuatan = Null;"
                 ),
                 "cleanup morte dummy: azioni esatte senza abort",
