@@ -2,6 +2,10 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Durata massima su main — 2026-09-08
+
+- Durata configurabile limitata a 60 minuti dopo il riscontro utente di crash nelle sessioni impostate oltre un'ora. Su richiesta, il minimo scende a 10 minuti: l'intervallo diventa 10–60 minuti e il valore predefinito resta 30 minuti.
+
 ## Revisione testi su main — 2026-09-07
 
 - Titolo HUD centrale in indonesiano: `SERVER KHUSUS CHILL`, con countdown e impaginazione invariati.

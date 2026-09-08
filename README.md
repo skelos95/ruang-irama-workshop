@@ -130,6 +130,8 @@ Le liste canoniche sono in [`docs/GENERI.md`](docs/GENERI.md) e [`docs/SERVER_LO
 
 ## Modalità, timer e Teleport
 
+La durata nelle impostazioni Workshop è configurabile da **10 a 60 minuti**, con valore predefinito di **30 minuti**.
+
 Punteggio e obiettivi restano responsabilità del game mode nativo, ma `Disable Built-In Game Mode Completion` impedisce alla modalità di terminare automaticamente per i propri criteri. Una volta al secondo il timer nativo viene mantenuto sopra zero e sincronizzato al countdown CHILL; checkpoint o overtime non diventano quindi autorità alternative di fine partita. Quando il countdown CHILL raggiunge zero, una guardia one-shot esegue `Restart Match`.
 
 La destinazione Objective/Flag viene valutata al click:

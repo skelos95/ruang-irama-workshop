@@ -844,8 +844,8 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.GeserKamera = 0.550;
 		Global.BantalanDinding = 0.200;
 		Global.JarakBidik = 25;
-		"Penghitung waktu server berdiri sendiri dari waktu mode bawaan. Pengelola lobi dapat memilih 30 sampai 90 menit."
-		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("SERVER KHUSUS CHILL"), Custom String("Duration / Durasi / ระยะเวลา (min)"), 30, 30, 90, 0);
+		"Penghitung waktu server berdiri sendiri dari waktu mode bawaan. Pengelola lobi dapat memilih 10 sampai 60 menit."
+		Global.DurasiServerMenit = Workshop Setting Integer(Custom String("SERVER KHUSUS CHILL"), Custom String("Duration / Durasi / ระยะเวลา (min)"), 30, 10, 60, 0);
 		Global.IndeksLokasiServer = Workshop Setting Combo(Custom String("SERVER KHUSUS CHILL"), Custom String("Location / Lokasi / ตำแหน่ง (Asia)"), 6, Array(
 			Custom String("Bangladesh"),
 			Custom String("Bhutan"),
