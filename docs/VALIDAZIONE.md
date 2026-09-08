@@ -67,7 +67,7 @@ Il gate verifica:
 - riga vuota coerente tra contenuto e comandi.
 - promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
 
-I 100 generi restano nomi internazionali e non richiedono traduzione. Il profilo per nome visibile esatto `งูแท้` usa `Caladan Brood` come Player Vibes dedicato e bloccato senza aggiungerlo al catalogo globale.
+I 100 generi restano nomi internazionali e non richiedono traduzione. Il profilo per nome visibile esatto `งูแท้` usa `Draconian` come Player Vibes dedicato e bloccato senza aggiungerlo al catalogo globale.
 
 ### HUD e rendering
 
@@ -169,14 +169,14 @@ Il gate controlla:
 - filtri pubblici Crouch che richiedono sempre `PembaruanDaftarTertunda == False`, così target non stabili non restano agganciati agli In-World Text;
 - assenza del vecchio worker/consumer pending aggiuntivo: la quarantena leggera di `01a` viene completata dal worker individuale `01b` con cleanup/setup completo;
 - cambio squadra e leave/rejoin passano da setup fresco: preferenze e cursori tornano ai default;
-- repair del profilo `งูแท้`: `Caladan Brood` viene sempre riasserito, mentre Silver Mist/Poison 2 tornano ai default soltanto quando `PernahDisiapkan` segnala un reset reale;
+- repair del profilo `งูแท้`: `Draconian` viene sempre riasserito, mentre Silver Mist/Poison 2 tornano ai default soltanto quando `PernahDisiapkan` segnala un reset reale;
 - cambio squadra non deve conservare Camera, status, effetti o voti attivi: il reset completo deve fermare lo stato engine prima del nuovo setup e liberare ogni riferimento owner-scoped; le subroutine locali di cleanup non possono essere chiamate dal contesto globale dello scheduler;
 - rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection durante il cleanup di un leave vero;
 - azzeramento owner-scoped di ogni `PemainDipilih` che punta al vero leaver prima della rimozione roster, seguito dal ricalcolo dei voti;
 - Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
 - ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo per il setup iniziale e rilascio dei latch; il detector individuale del team switch non acquisisce quel lock;
 - cleanup per identità esatta di HUD, In-World Text, effetti e slot sul leave vero dopo la guardia di 0,5 s, senza reset engine del leaver né fallback verso il nuovo occupante dello slot;
-- profilo del nome visibile esatto `งูแท้`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Caladan Brood` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
+- profilo del nome visibile esatto `งูแท้`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Draconian` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
 - Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON da Camera custom, inspection e Teleport, sgancio degli osservatori già attivi; Vision deve invece includere tutti gli umani, usare il nome roster stabile e non sovrapporre HUD Crouch; le tre IWT inspection/Vision/Teleport conservano testo unico icona/nome/salute, posizione interamente `Update Every Frame`, sola identità catturata con `Evaluate Once` e reevaluation completa;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
@@ -232,7 +232,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning che non sospende Unkillable/Damage Received per tutti i 10 secondi, riapplica la protezione fra i tick, modifica Mode/Kursor o non la ripristina al termine, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
 - Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker, pending non ripulito su timeout/leave oppure pending perso/duplicato durante cambio squadra;
 - guardia Join, filtro nome `Null`/vuoto, cleanup Leave o cleanup team-switch rimossi, chiamata di cleanup `Event Player` dal contesto globale, perdita degli handle canonici prima della distruzione o mancato stop engine prima del nuovo setup, voti verso il leaver non ripuliti, oppure default non riapplicati dopo cambio squadra o vero rejoin;
-- profilo `งูแท้` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Caladan Brood` aggiunto al catalogo globale o conteggio generi diverso da 100;
+- profilo `งูแท้` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Draconian` aggiunto al catalogo globale o conteggio generi diverso da 100;
 - Crouch Travel & Attach con meno di cinque pagine, copia EN/ID/TH mancante o non specifica, binding hard-coded, palette pastello/neon incompleta, cursore condiviso, Self Elimination assente o priva del cooldown per-player di 3 secondi, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
 - una delle otto modalità o un ramo Teleport mancante;
 - divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;

@@ -452,7 +452,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 fast,
             )
             self.assertIn(
-                f'{global_name}.PemainAktif.MusikKhusus = Custom String("Caladan Brood");',
+                f'{global_name}.PemainAktif.MusikKhusus = Custom String("Draconian");',
                 fast,
             )
             classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]

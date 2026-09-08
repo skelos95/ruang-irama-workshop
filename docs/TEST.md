@@ -121,10 +121,10 @@ Focus dati:
 
 ### Profilo `งูแท้`
 
-- Entrare con il nome visibile esatto `งูแท้`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Caladan Brood`.
+- Entrare con il nome visibile esatto `งูแท้`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Draconian`.
 - Modificare colore e icona dal menu, chiudere/riaprire e cambiare squadra: chiusura/riapertura deve conservare le modifiche, mentre il cambio squadra deve rieseguire il setup e riportare i default del profilo.
-- Aprire Soundtrack: la pagina deve risultare read-only e Primary/Secondary, Interact e Ability 1/2 non devono cambiare `Caladan Brood`.
-- Verificare che `Caladan Brood` non aumenti il catalogo globale: gli altri player continuano ad avere esattamente 100 generi e il normale wrap `0..99`.
+- Aprire Soundtrack: la pagina deve risultare read-only e Primary/Secondary, Interact e Ability 1/2 non devono cambiare `Draconian`.
+- Verificare che `Draconian` non aumenti il catalogo globale: gli altri player continuano ad avere esattamente 100 generi e il normale wrap `0..99`.
 - Uscire davvero dalla lobby e rientrare con lo stesso nome: il setup deve riapplicare `Silver Mist`, `Poison 2` e il Vibes bloccato.
 - Entrare con un nome simile ma non identico: il profilo non deve attivarsi. Per verificare una rinomina dell'account, uscire davvero dalla lobby e rientrare con il nuovo nome prima di controllare che il profilo non venga riapplicato; nella stessa sessione resta invece attivo fino al rejoin. Entrare con un secondo player dallo stesso nome visibile esatto deve mostrare la limitazione nota del matching e applicare lo stesso profilo.
 
@@ -229,7 +229,7 @@ Verifica specifica HEART: ferire il proprietario, un alleato e un avversario, la
 - Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: la quarantena deve impedire l'uso dello stato precedente; dopo spawn e team stabili, cleanup e setup devono ricostruire correttamente HUD/stato senza trattenere il lock mentre il player non è spawned.
 - Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: dopo la stabilizzazione il reset completo deve liberare lock e riferimenti prima della nuova registrazione, senza percorsi `Abort` o dipendenze da `Server Load` nel teardown.
 - Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: il vecchio In-World Text deve sparire durante il cleanup e tornare solo dopo la nuova registrazione con nome, icona eroe e HP corretti.
-- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Caladan Brood`.
+- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Draconian`.
 - Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il detector individuale non acquisisca il lock globale del join.
 - Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il reset completo deve chiuderli/pulirli in modo deterministico, senza riferimenti ereditati. Ripetere Team 1 → Team 2 → Team 1 rapidamente con menu, Camera self/watch, Fly e ciascun effetto Luck attivi: nessuna Camera, accelerazione, gravità zero o status deve sopravvivere al reset; con Fly OFF il movimento nativo deve essere normale.
 - Attivare Ghost e Fly separatamente prima del cambio: dopo il reset devono tornare OFF e riattivarsi solo da menu.
@@ -321,7 +321,7 @@ Dopo ogni cambio:
 - Text Count ed Entity Count non crescono rispetto allo stato equivalente precedente al cambio;
 - nessun `excessive Workshop script load`.
 
-Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Caladan Brood` bloccato.
+Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Draconian` bloccato.
 
 ## 8. Matrice modalità
 
@@ -334,7 +334,7 @@ Lo script non deve assegnare punti o vincitori. Scoring e obiettivi restano nati
 | Capture the Flag | bandiera nemica valida | presa, caduta, ritorno, score |
 | Control | Objective Position | cattura/percentuale, countdown CHILL invariato |
 | Clash | Objective Position | avanzamento/ritiro punti |
-| Hybrid | Payload dopo la cattura | cattura → scorta |
+| Hybrid | Dummy: primo obiettivo prima della cattura, poi payload; Teleport manuale: payload | cattura → scorta |
 | Escort | Payload | checkpoint/payload, countdown CHILL invariato |
 | Assault | Objective Position | punto A → punto B |
 
@@ -438,9 +438,16 @@ La 0.8.1 è **live-ready**: test obbligatori, limiti e anomalie riproducibili so
 
 ### Dummy spawn iniziale
 
-Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (target 10 m, minimo accettato 6 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
+Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (candidati a 8 e 12 m su otto direzioni, posizione finale accettata fra 6 e 16 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
 
 ### Small Message e transizione Crouch Travel
 
 - Navigare rapidamente `1→2→3→4→5→1` e in senso inverso: mint, cyan, blu, viola e rosa devono fondersi in circa 0,18 s senza scatti o ricreazioni extra del renderer.
 - Verificare che apertura/chiusura menu, selezioni riuscite, toggle, camera normale e Teleport riusciti non generino conferme Small Message ridondanti. Errori delle altre funzioni, cooldown, Attach con istruzione di detach e risultati Try Your Luck/Revenge devono restare notificati; il percorso Jump Resurrect non deve invece mostrare “Resurrect unavailable” né le equivalenti stringhe ID/TH, anche se il motore non conferma subito il ritorno in vita.
+
+## Regressione dummy Paraíso — 2026-09-08
+
+- Su Paraíso, creare i dummy di entrambe le squadre prima della cattura del primo punto: dopo il ritardo iniziale devono cercare un'uscita nei pressi dell'obiettivo, anche se il primo candidato viene rifiutato.
+- Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato; verificare anche la fase payload dopo la cattura.
+- Confermare che un dummy già uscito dalla spawn smetta di essere teletrasportato e che due dummy ritentino in modo indipendente.
+- I test automatici eseguono le regole reali con risposte geometriche controllate; non sostituiscono questa prova della navmesh e delle spawn room nel client.

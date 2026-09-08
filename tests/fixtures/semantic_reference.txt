@@ -184,6 +184,7 @@ variables
 		117: RantaiLampiran
 		118: IndeksRantaiLampiran
 		119: SiklusLampiran
+		120: KursorTeleportasiBotBuatan
 }
 
 subroutines
@@ -1227,7 +1228,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
 		If(Event Player.NamaTampilan == Custom String("งูแท้"));
-			Event Player.MusikKhusus = Custom String("Caladan Brood");
+			Event Player.MusikKhusus = Custom String("Draconian");
 			Event Player.IndeksWarna = 1;
 			Event Player.KursorWarna = 1;
 			Event Player.WarnaNama = Global.DaftarWarna[1];
@@ -1315,6 +1316,7 @@ rule("03c - Bot: Kunci saat hidup kembali atau pahlawan berganti")
 			Enable Movement Collision With Players(Event Player);
 			Disable Movement Collision With Environment(Event Player, False);
 			Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
+			Event Player.KursorTeleportasiBotBuatan = 0;
 			Set Respawn Max Time(Event Player, 3);
 		End;
 	}
@@ -1438,11 +1440,16 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 	{
 		If(Event Player.WaktuTeleportasiBotBuatan == 0);
 			Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
+			Event Player.KursorTeleportasiBotBuatan = 0;
 			Abort;
 		End;
+		Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
 		Event Player.PosisiMati = Vector(0, 0, 0);
 		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
-		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
+		"Sebelum titik pertama direbut, gunakan objektif awal pada peta hibrida."
+		If(And(Current Game Mode == Game Mode(Hybrid), Is Objective Complete(0) == False));
+			Event Player.PosisiMati = Objective Position(0);
+		Else If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
 			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
 				Event Player.PosisiMati = Payload Position;
 			End;
@@ -1459,9 +1466,16 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
 			Event Player.PosisiMati = Objective Position(Objective Index);
 		End;
+		If(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) <= 0.100);
+			If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
+				Event Player.PosisiMati = Objective Position(Objective Index);
+			End;
+		End;
 		If(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) > 0.100);
-			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player))))) * 10);
+			"Coba arah mendatar berbeda setiap detik, lalu ulangi pada jarak yang lebih jauh."
+			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction From Angles(Horizontal Angle From Direction(Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player)))))) + (Event Player.KursorTeleportasiBotBuatan % 8) * 45, 0) * (Event Player.KursorTeleportasiBotBuatan < 8 ? 8 : 12));
 			Event Player.PosisiTujuanTeleportasi = Event Player.PosisiBangkitAman;
+			Event Player.KursorTeleportasiBotBuatan = (Event Player.KursorTeleportasiBotBuatan + 1) % 16;
 			Call Subroutine(CariPosisiTeleportasiAman);
 			If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6);
 				If(Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) <= 16);
@@ -1473,7 +1487,6 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 				End;
 			End;
 		End;
-		Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
 	}
 }
 
@@ -1551,6 +1564,7 @@ rule("03i - Bot: Hentikan gerak saat bot mati")
 		Stop Facing(Event Player);
 		Stop Throttle In Direction(Event Player);
 		Event Player.WaktuTeleportasiBotBuatan = 0;
+		Event Player.KursorTeleportasiBotBuatan = 0;
 		Event Player.TargetIkutiBotBuatan = Null;
 	}
 }
@@ -3332,7 +3346,7 @@ rule("89a - Subrutin: Proses status cepat pemain")
 		End;
 		If(And(Global.PemainAktif.SiklusPemainAktif == False, And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, Or(Global.PemainAktif.Manusia == False, Global.PemainAktif.PernahDisiapkan == False))))));
 			If(Global.PemainAktif.NamaTampilan == Custom String("งูแท้"));
-				Global.PemainAktif.MusikKhusus = Custom String("Caladan Brood");
+				Global.PemainAktif.MusikKhusus = Custom String("Draconian");
 				If(Global.PemainAktif.PernahDisiapkan == False);
 					Global.PemainAktif.IndeksWarna = 1;
 					Global.PemainAktif.KursorWarna = 1;
@@ -4412,6 +4426,8 @@ rule("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.TargetInspeksi = Null;
 		Event Player.InteraksiKameraDipakai = False;
 		Event Player.IzinkanBotBuatanMengikuti = False;
+		Event Player.WaktuTeleportasiBotBuatan = 0;
+		Event Player.KursorTeleportasiBotBuatan = 0;
 		Event Player.ModeHantuAktif = False;
 		Event Player.ModeTerbangAktif = False;
 		Event Player.KursorHantuTerbang = 0;
@@ -4725,6 +4741,7 @@ rule("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.TimTerakhir = Team Of(Event Player);
 		Event Player.TimSiklusTarget = Team Of(Event Player);
 		Event Player.WaktuTeleportasiBotBuatan = 0;
+		Event Player.KursorTeleportasiBotBuatan = 0;
 		Event Player.IzinkanBotBuatanMengikuti = False;
 		Event Player.KursorIkutiBotBuatan = 0;
 		Event Player.TargetIkutiBotBuatan = Null;

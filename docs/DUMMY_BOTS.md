@@ -11,13 +11,13 @@ Comportamento atteso:
 - `Damage Dealt = 0` e `Knockback Dealt = 0`, quindi il dummy non danneggia né spinge i player;
 - `Damage Received = 100` e `Knockback Received = 100`, quindi riceve normalmente ogni danno e urto;
 - quando entra nella Spawn Room, registra una scadenza a 1 secondo; il controllo periodico attende il timestamp senza usare `Wait`, poi cerca una destinazione mode-specific vicina all'obiettivo o alla bandiera e teletrasporta soltanto verso una posizione percorribile con terreno valido;
-- se la destinazione non è valida, resta in spawn e riprova invece di usare coordinate nulle;
+- se la destinazione non è valida, resta in spawn e prova un candidato diverso al massimo una volta al secondo: otto direzioni orizzontali distanziate di 45°, prima a 8 m e poi a 12 m dall'obiettivo; dopo 16 candidati il cursore individuale riparte da zero;
 - prima del teleport la destinazione dummy passa dalla stessa routine body-safe dei player: dopo le correzioni iniziali viene ricontrollato lo spazio libero finale sui quattro lati e sopra la testa; i punti troppo stretti vengono scartati e il punto valido viene rialzato di 0,5 m dal pavimento;
 - attraversa pareti e soffitti con `Disable Movement Collision With Environment(Event Player, False)`, mantenendo attiva la collisione con i pavimenti; `Enable Movement Collision With Players` conserva esplicitamente la collisione con umani, bot e altri dummy;
 - fuori dalla Spawn Room considera soltanto umani registrati, spawned, vivi, della squadra avversaria e con Dummy Follow ON; `Sorted Array` seleziona sempre il target idoneo più vicino e il dummy avanza automaticamente nella propria direzione `Forward`, senza dipendere da input direzionali;
 - entro 4 m dal nemico porta il throttle a zero; se il nemico si allontana oltre la soglia riparte automaticamente;
 - se tutti gli umani nemici validi hanno Dummy Follow OFF, o non esiste alcun target idoneo, interrompe sia facing sia throttle; quando un player torna ON riparte verso il più vicino;
-- alla morte interrompe facing e throttle, azzera il timestamp e rientra nel normale ciclo di respawn.
+- alla morte interrompe facing e throttle, azzera timestamp e cursore di ricerca e rientra nel normale ciclo di respawn.
 
 Il throttle automatico e la disattivazione delle collisioni ambientali sono riservati ai dummy Workshop; gli iBot conservano collisioni e navigazione AI native, limitate al 20%. Il parametro `Include Floors = False` segue il comportamento documentato nelle [note Blizzard Workshop](https://overwatch.blizzard.com/it-it/news/patch-notes/ptr/2020/08/): muri e soffitti vengono attraversati, i pavimenti restano solidi. Il timestamp viene azzerato alla morte, riarmato al respawn e ripianificato dopo ogni tentativo. Prima di rimuovere un dummy vengono fermati facing e throttle, poi l'entità viene distrutta. La separazione tra guardia di creazione e guardia di rimozione evita il ciclo crea/distruggi quando una squadra oscilla vicino al limite.
 
@@ -27,9 +27,12 @@ La preferenza è per-player e parte **OFF**. ON consente al dummy avversario di 
 
 ## Destinazioni dalla Spawn Room
 
-- Escort / Hybrid: payload;
+- Hybrid prima della cattura: primo obiettivo, anche su Paraíso;
+- Escort / Hybrid dopo la cattura: payload;
 - Capture the Flag: bandiera avversaria;
 - Push: player vivo sull'obiettivo, con fallback sull'obiettivo corrente;
 - altre modalità supportate: obiettivo corrente.
 
-Le regole principali sono `03c`-`03i` e la subroutine `KunciBot`. I test automatici dedicati sono in `tests/test_dummy_bots.py`.
+Se la destinazione della modalità non è disponibile, viene provato l'obiettivo corrente. La posizione finale deve distare fra 6 e 16 m dal target e superare i controlli di spazio libero e terreno. I tentativi proseguono finché il motore rileva il dummy nella Spawn Room.
+
+Le regole principali sono `03c`-`03i` e la subroutine `KunciBot`. I test automatici dedicati sono in `tests/test_dummy_bots.py` e `tests/test_dummy_spawn_retry.py`; questi ultimi eseguono il flusso reale con risposte geometriche controllate. La verifica della navmesh di Paraíso resta una prova nel client.
