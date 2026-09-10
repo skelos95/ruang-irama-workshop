@@ -4774,7 +4774,7 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 	}
 }
 
-regola("93d - Subrutin: Bersihkan teks sementara tanpa bergantung pada entitas")
+regola("93d - Subrutin: Bersihkan teks yatim")
 {
 	evento
 	{

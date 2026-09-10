@@ -2,6 +2,12 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Compatibilità del titolo regola durante l'import — 2026-09-10
+
+- Semplificato il titolo di `93d` in `93d - Subrutin: Bersihkan teks yatim` dopo la segnalazione client «commento non valido dopo regola(». Nessuna modifica ad azioni, variabili, condizioni o gestione delle risorse.
+- Il titolo precedente conteneva una sottostringa inglese potenzialmente intercettata dal filtro dei commenti del client. È un'ipotesi di compatibilità, non una causa riprodotta nel motore: la riga indicata nello screenshot non coincide con l'intestazione nel file corrente e occorre confermare il nuovo import nel client.
+- Aggiunta una regressione per evitare di ripristinare il frammento sospetto nei titoli. Il controllo non emula il filtro testuale nativo e non si applica ai nomi delle variabili.
+
 ## Stabilità con lobby piena e ingressi/uscite — 2026-09-09
 
 - Registrati fuori dalle variabili del player gli identificatori di HUD effetti, testi Teleport e testi Vision, compresi i bot. Il registro ha capacità fissa e libera le risorse dei proprietari usciti anche quando le loro variabili non sono più leggibili; ogni distruzione normale azzera la copia per evitare cancellazioni di ID riutilizzati.
