@@ -56,7 +56,9 @@ rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Pla
                 changed_fast = fast.body.replace("\tactions\n\t{", "\tactions\n\t{\n\t\tCall Subroutine(HitungPilihan);", 1)
                 changed_shared = shared.body.replace("\tactions\n\t{", f"\tactions\n\t{{\n\t\tCall Subroutine({callee});", 1)
                 mutated = source.replace(fast.body, changed_fast, 1).replace(shared.body, changed_shared, 1)
-                self.assertTrue(any(f"ProsesCepatPemain -> HitungPilihan -> {callee}" in error
+                # Recount is also called directly by the scheduler; either global
+                # path must still reject the shared routine's player context.
+                self.assertTrue(any(f"HitungPilihan -> {callee}" in error
                                     for error in self.errors(mutated)))
 
 
@@ -2613,7 +2615,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         left = self.rule(lambda rule: validator.event_type(rule) == "Player Left Match")
         mutated = self.replace_in_rule(
             left,
-            "\n\t\t\t\tDestroy In-World Text(Event Player.TeksVisiNasib);",
+            "Destroy In-World Text(Event Player.TeksVisiNasib);",
             "",
         )
         self.assert_rejected(mutated, "leave iBot deve distruggere TeksVisiNasib")
@@ -3015,8 +3017,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_registration_reservation_cannot_gate_other_players_runtime(self) -> None:
         scheduler = self.rule(lambda rule: rule.name.startswith("04g -"))
-        mutated = self.replace_in_rule(scheduler, "If(Global.LangkahPenjadwal % 20 == 0);",
-                                       "If(And(Global.LangkahPenjadwal % 20 == 0, Global.PemainSiklusGlobal == Null));")
+        cadence = "Global.LangkahPenjadwal % 20 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 20"
+        mutated = self.replace_in_rule(scheduler, f"If({cadence});",
+                                       f"If(And({cadence}, Global.PemainSiklusGlobal == Null));")
         self.assert_rejected(mutated, "non deve sospendere gli altri player")
 
     def test_icon_mirrors_are_required_on_global_creation_and_effect_reset(self) -> None:
