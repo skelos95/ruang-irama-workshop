@@ -2,6 +2,14 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Stabilità con lobby piena e ingressi/uscite — 2026-09-09
+
+- Registrati fuori dalle variabili del player gli identificatori di HUD effetti, testi Teleport e testi Vision, compresi i bot. Il registro ha capacità fissa e libera le risorse dei proprietari usciti anche quando le loro variabili non sono più leggibili; ogni distruzione normale azzera la copia per evitare cancellazioni di ID riutilizzati.
+- Il menu Crouch Travel & Attach riutilizza lo stesso HUD durante la navigazione. Il pubblico di Vision parte da una cache condivisa, con verifica diretta di esistenza, appartenenza umana e Vision attiva per ogni destinatario.
+- Distribuiti fra i player gli aggiornamenti a 10 Hz e 1 Hz, mantenendo le frequenze individuali. Le modifiche ai voti vengono accorpate in un solo conteggio al successivo tick globale, incluse le uscite simultanee.
+- Le proprietà di danni, urti e collisioni di Unkillable vengono mantenute a 1 Hz, con ripristino anticipato quando manca lo status o cambia l'eroe; salute e macchina delle morti conservano il controllo a 20 Hz.
+- Le prove automatiche verificano proprietà delle risorse, riuso degli identificatori, rotazione degli slot e carico logico simultaneo. Non costituiscono una misura del carico nativo di Overwatch né confermano la scomparsa dei crash: serve la regressione live con lobby piena.
+
 ## Durata, uscita dummy e profilo su main — 2026-09-08
 
 - Durata configurabile limitata a 60 minuti dopo il riscontro utente di crash nelle sessioni impostate oltre un'ora. Su richiesta, il minimo scende a 10 minuti: l'intervallo diventa 10–60 minuti e il valore predefinito resta 30 minuti.

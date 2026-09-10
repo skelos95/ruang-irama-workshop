@@ -511,15 +511,16 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             roster_hud = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot', 1)[0]
             self.assertNotIn("Is Alive(Event Player) == True;", roster_hud)
             self.assertNotIn("Server Load < 150", roster_hud)
-            self.assertIn("Call Subroutine(HitungPilihan);", roster_hud)
+            vote_dirty = f"{global_name}.PilihanPerluDihitung = True;"
+            self.assertIn(vote_dirty, roster_hud)
             self.assertIn("Create HUD Text(", roster_hud)
             append_roster = f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);"
             left_create = roster_hud.index("Create HUD Text(")
             right_create = roster_hud.index("Create HUD Text(", left_create + 1)
             self.assertLess(roster_hud.index(append_roster), roster_hud.index("Event Player.Manusia = True;"))
-            self.assertLess(roster_hud.index("Event Player.Manusia = True;"), roster_hud.index("Call Subroutine(HitungPilihan);"))
+            self.assertLess(roster_hud.index("Event Player.Manusia = True;"), roster_hud.index(vote_dirty))
             self.assertLess(
-                roster_hud.index("Call Subroutine(HitungPilihan);"),
+                roster_hud.index(vote_dirty),
                 left_create,
             )
             self.assertLess(left_create, roster_hud.index("Event Player.HudKiri = Last Text ID;"))
@@ -560,7 +561,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Call Subroutine(TenangkanPemain);", left)
             self.assertIn("Call Subroutine(BersihkanPemain);", left)
 
-            cleanup = source.split(f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")', 1)[1].split(f'{rule_kw}("94 - Subrutin: Siapkan pemain', 1)[0]
+            cleanup = source.split(f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")', 1)[1].split(f'{rule_kw}("', 1)[0]
             self.assertIn(f"{global_name}.PemainPembersihan = Event Player;", cleanup)
             self.assertIn(f"{global_name}.IndeksKeluar = Index Of Array Value({global_name}.PemainManusia, {global_name}.PemainPembersihan);", cleanup)
             self.assertNotIn("Index Of Array Value(" + global_name + ".SlotHUDPemain", cleanup)

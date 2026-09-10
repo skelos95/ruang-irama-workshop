@@ -4,7 +4,9 @@ Overlay sociale e Arcade per lobby Overwatch 2 **6v6 fino a 12 player**, progett
 
 Versione: **0.8.1**
 
-Stato: **live-ready**
+Stato: **live-ready** (release storica 0.8.1).
+
+**Revisione main del 9 settembre 2026:** la segnalazione di crash con ricambio della lobby e uso simultaneo delle funzioni richiede una nuova prova nel client. Le correzioni di accumulo e carico sono sottoposte ai test automatici; i riscontri live precedenti non certificano questa revisione.
 
 I gate automatici controllano struttura, localizzazione, invarianti del sorgente e compatibilità testuale del copia/incolla. La regressione live della 0.8.1 è stata completata sul client aggiornato ad agosto 2026, includendo team-switch con cleanup/setup completo, profilo `งูแท้`, pagina 13 Ghost/Fly, Crouch Travel & Attach e diagnostica. I valori numerici non presenti nei report restano non ricostruiti nel repository.
 
@@ -113,6 +115,10 @@ Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice c
 Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 
 Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload o pagine nascoste: apertura, chiusura e cambio pagina sono gli unici eventi che ricreano il menu; la navigazione interna aggiorna variabili rivalutate.
+
+Gli aggiornamenti a 10 Hz e 1 Hz sono distribuiti fra i player: con 12 presenze stabili, un tick elabora al massimo 6 manutenzioni a 10 Hz e una cache a 1 Hz. Fly e le scadenze delle funzioni mantengono il ciclo a 20 Hz. Ingressi, uscite e voti marcano un conteggio pendente, eseguito una sola volta al prossimo tick globale (circa 0,05 s a carico normale).
+
+Gli HUD effetti e i testi Teleport/Vision hanno una proprietà persistente in un registro globale di capacità fissa, inclusi i testi dei bot. La pulizia periodica recupera le risorse dei player usciti anche se il motore ha già perso le loro variabili. La navigazione Crouch Travel & Attach aggiorna l'HUD esistente. La revisione richiede comunque conferma in gioco con 12 player e ricambio prolungato della lobby.
 
 ## HUD e localizzazione
 

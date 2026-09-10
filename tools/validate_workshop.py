@@ -3605,6 +3605,16 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             checks.require(token in scheduler.body, f"scheduler snapshot roster incompleto: {token}")
         checks.require("All Players(All Teams)[Global.IndeksPemainGlobal]" not in scheduler.body,
                        "scheduler non deve iterare direttamente la lista nativa mentre cambia team")
+        vision_cache = (
+            "Global.PenontonVisiNasib = Filtered Array(Global.SalinanDaftarPemain, "
+            "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
+            "Player Variable(Current Array Element, PrivasiNasibAktif) == True)));"
+        )
+        checks.require(vision_cache in scheduler.body,
+                       "Vision: cache pubblico deve filtrare lo snapshot una volta per tick")
+        if vision_cache in scheduler.body:
+            checks.require(scheduler.body.index(vision_cache) < scheduler.body.index("For Global Variable(IndeksPemainGlobal"),
+                           "Vision: cache pubblico deve essere costruita prima del ciclo giocatori")
         for name in sorted(SCHEDULER_SUBROUTINES):
             checks.require(f"Call Subroutine({name});" in scheduler.body,
                            f"scheduler non chiama {name}")
@@ -3623,6 +3633,30 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
                            f"cadenza scheduler %{cadence} assente")
         checks.require("Global.LangkahPenjadwal == 0" in scheduler.body,
                        "cadenza scheduler 10 secondi assente")
+        for routine, period in (("ProsesSiklusPemain", 2), ("ProsesSimpananPemain", 20)):
+            phase = f"If(Global.LangkahPenjadwal % {period} == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % {period});"
+            calls = [call for call in iter_calls(scheduler.body, "Call Subroutine")
+                     if call.args == (routine,)]
+            checks.equal(len(calls), 1, f"carico distribuito: chiamata unica {routine}")
+            for call in calls:
+                checks.require(any(phase in branch.splitlines()[0]
+                                   for branch in conditional_branches_containing(scheduler.body, call.start)),
+                               f"carico distribuito: fase individuale assente per {routine}")
+        recount_calls = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
+                         if call.args == ("HitungPilihan",)]
+        checks.require(len(recount_calls) == 1 and recount_calls[0][0] == scheduler,
+                       "conteggio voti: deve essere accorpato nel solo scheduler")
+        checks.require(
+            "If(Global.PilihanPerluDihitung==True);Global.PilihanPerluDihitung=False;CallSubroutine(HitungPilihan);End;"
+            in scheduler_packed,
+            "conteggio voti: richiesta pendente deve essere consumata una sola volta",
+        )
+        for prefix in ("02 -", "99l -", "93c -"):
+            owner = next((rule for rule in rules if rule.name.startswith(prefix)), None)
+            if prefix == "93c -":
+                owner = rule_by_subroutine(rules, "BersihkanPemain")
+            checks.require(owner is not None and "Global.PilihanPerluDihitung = True;" in mask_strings(owner.body),
+                           f"conteggio voti: richiesta assente in {prefix}")
 
     waits = wait_calls(source)
     checks.require(len(waits) <= 7, f"Wait oltre il massimo consentito: {len(waits)} > 7")
@@ -5095,7 +5129,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Entity Exists(Global.PemainSiklusGlobal) == False",
             "Call Subroutine(ProsesCepatPemain);",
             "Call Subroutine(ProsesNasibPemain);",
-            "If(Global.LangkahPenjadwal % 20 == 0);",
+            "If(Global.LangkahPenjadwal % 20 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 20);",
             "Global.SalinanDaftarPemain = All Players(All Teams);",
             "Count Of(Global.SalinanDaftarPemain)",
             "Global.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];",
@@ -5480,9 +5514,9 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             if len(vision_call.args) >= 6:
                 compact_vision = lambda expression: re.sub(r"\s+", "", expression)
                 expected_recipient = compact_vision(
-                    "Filtered Array(All Players(All Teams), And(Current Array Element != Event Player, "
-                    "And(Player Variable(Current Array Element, Manusia) == True, "
-                    "Player Variable(Current Array Element, PrivasiNasibAktif) == True)))"
+                    "Filtered Array(Global.PenontonVisiNasib, And(Current Array Element != Event Player, "
+                    "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
+                    "Player Variable(Current Array Element, PrivasiNasibAktif) == True))))"
                 )
                 checks.equal(
                     compact_vision(vision_call.args[0]),
@@ -5730,7 +5764,12 @@ def validate_dummy_slot_management(
             expected_release_dummy = f"""
                 Abort If(Count Of(Filtered Array(All Players(Global.TimBotBuatanAktif), Is Dummy Bot(Current Array Element) == True)) == 0);
                 If(Player Variable({dummy}, TeksVisiNasib) != Null);
+                    If(Index Of Array Value(Global.PemilikTeksSementara, {dummy}) >= 0);
+                    If(Global.TeksVisiSementara[Index Of Array Value(Global.PemilikTeksSementara, {dummy})] == Player Variable({dummy}, TeksVisiNasib));
                     Destroy In-World Text(Player Variable({dummy}, TeksVisiNasib));
+                    Global.TeksVisiSementara[Index Of Array Value(Global.PemilikTeksSementara, {dummy})] = 0;
+                    End;
+                    End;
                 End;
                 Stop Facing({dummy});
                 Stop Throttle In Direction({dummy});

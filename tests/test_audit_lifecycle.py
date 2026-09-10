@@ -11,13 +11,12 @@ import unittest
 
 from tools import validate_workshop as validator
 from tools import check_clipboard_import as clipboard
-from tests.test_fly_motion import Expression
+from tests.test_dummy_spawn_retry import SpawnExpression
 from tests.test_roster_rejoin_regressions import LifecycleSourceEvaluator, SOURCES
 
 
-class AuditExpression(Expression):
-    TOKEN = re.compile(Expression.TOKEN.pattern + r"|%")
-    PRECEDENCE = {**Expression.PRECEDENCE, "%": 3}
+class AuditExpression(SpawnExpression):
+    pass
 
 
 def arguments(text):
@@ -91,6 +90,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
             source = "".join(segments)
         super().__init__(source)
         self.current = None
+        self.globals["PilihanPerluDihitung"] = False
         self.calls = []
         self.lock_at_bot_call = []
         self.initializers = "\n".join(validator.mask_strings(rule.body) for rule in self.rules)
@@ -128,6 +128,8 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
             return tuple(args)
         if name == "AllPlayers":
             return [identity for identity, state in self.players.items() if state.get("exists")]
+        if name == "SlotOf":
+            return self.players.get(args[0], {}).get("slot", 0)
         if name == "IsAlive":
             return self.players.get(args[0], {}).get("alive", False)
         if name == "LastOf":
@@ -155,6 +157,8 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
                 return self.resolve(node[1])
             if kind == "negate":
                 return -visit(node[1])
+            if kind == "conditional":
+                return visit(node[2] if visit(node[1]) else node[3])
             if kind != "call":
                 return operations[kind](visit(node[1]), visit(node[2]))
             name, args = node[1:]
@@ -227,12 +231,13 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
             or re.match(r"(?:Global\.PemainPembersihan|Event Player)\.Ikon(?:Kebal|KartuNasib) =", token)
             or (token.startswith("Set Player Variable(Filtered Array(") and ", PemainDipilih, Null)" in token)
             or token == "Call Subroutine(HitungPilihan)"
+            or token == "Global.PilihanPerluDihitung = True"
         )
 
     def join(self, identity):
         admitted = super().join(identity)
         if admitted:
-            self.players[identity].update(PemainDipilih=None, JumlahPilihan=0, NamaTampilan=identity,
+            self.players[identity].update(Manusia=True, PemainDipilih=None, JumlahPilihan=0, NamaTampilan=identity,
                                           WarnaNama=(255, 255, 255, 255), alive=True)
         return admitted
 
@@ -259,7 +264,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         actions = validator.rule_block(scheduler, "actions")
         keep = lambda token: (
             token.startswith("Call Subroutine(")
-            or re.match(r"Global\.(PemainAktif|SalinanDaftarPemain|PemainSiklusGlobal|WaktuSiklusGlobal) =", token)
+            or re.match(r"Global\.(PemainAktif|SalinanDaftarPemain|PemainSiklusGlobal|WaktuSiklusGlobal|PilihanPerluDihitung) =", token)
         )
         self.globals["LangkahPenjadwal"] = tick
         self.execute(project(statements(actions), keep))
@@ -333,10 +338,12 @@ class AuditLifecycleTests(unittest.TestCase):
                 model.players["departed"] = {"exists": False}
                 model.remove("departed")
                 self.assertIsNone(model.players["alice"]["PemainDipilih"])
+                model.scheduler_tick(1)
                 self.assertEqual(model.players["bob"]["JumlahPilihan"], 1)
                 self.assertEqual(model.globals["PemimpinPilihan"], "bob")
                 model.players["carol"] = {"exists": False}
                 model.remove("carol")
+                model.scheduler_tick(2)
                 self.assertEqual(model.players["bob"]["JumlahPilihan"], 0)
                 self.assertIsNone(model.globals["PemimpinPilihan"])
 
