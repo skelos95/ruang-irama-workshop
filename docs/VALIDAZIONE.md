@@ -4,7 +4,9 @@ Data: 2026-09-02
 
 Release tecnica: **CHILL Dedicated Server 0.8.1**
 
-Stato: **live-ready**
+Stato: **live-ready** (release storica 0.8.1).
+
+**Revisione main del 9 settembre 2026:** la segnalazione di crash con ricambio della lobby e uso simultaneo delle funzioni richiede una nuova prova nel client. Le correzioni di accumulo e carico sono sottoposte ai test automatici; i riscontri live precedenti non certificano questa revisione.
 
 Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
@@ -285,3 +287,9 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 La versione 0.8.1 è documentata come **live-ready**: i gate repository e la matrice nel client sono riportati come completati per la regressione storica. Il vecchio Fly basato sul movimento nativo aveva fallito il test utente su più eroi; il motore a impulsi successivo ha invece ricevuto conferma di funzionamento e la revisione strafe + cleanup cambio squadra è stata validata nella regressione 0.8.1. I test numerici devono interpretare la formula effettiva del sorgente, compreso l'ordine del prodotto vettoriale, invece di assumere una formula precedente; non certificano comunque da soli la fisica engine. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice operativa in [`TEST.md`](TEST.md). Lo stato live-ready non equivale alla pubblicazione automatica di un tag/release. La release `v0.8.1` punta a `14ad403babb56c58f9b55f8ebe902f13b18cd02c`; al controllo del 7 settembre 2026 `main` era sette commit avanti, a `687197d67619f89a0f034cafaa67857d00bf78a0`. Per ogni revisione successiva occorre un verbale live associato allo SHA importato prima di estendere le conclusioni su fluidità e assenza di leak. L'inventario branch GitHub rilevato in quel controllo contiene soltanto `main`; il precedente riferimento al branch archivio non è quindi una fonte attualmente disponibile.
 
 - UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.
+
+## Carico simultaneo e proprietà dei testi — revisione 2026-09-09
+
+Le regressioni aggiunte eseguono le espressioni e le azioni dei sorgenti it-IT/en-US, senza sostituire la logica di selezione o pulizia con un algoritmo separato. Coprono registrazione persistente dei testi temporanei, perdita delle variabili locali prima della pulizia, ID riciclati a un altro proprietario e capacità fissa durante centinaia di identità successive. I casi di concorrenza controllano la frequenza individuale e il numero massimo di manutenzioni nello stesso tick, il conteggio accorpato dei voti e il riuso dell'HUD durante la navigazione.
+
+Questi risultati dimostrano le proprietà del flusso testato. La stabilità nativa, il limite di elementi compilati e il comportamento sotto carico di 12 client richiedono le prove live di `docs/TEST.md`.

@@ -1,6 +1,8 @@
 # Progetto tecnico — CHILL Dedicated Server 0.8.1
 
-Stato: **live-ready**
+Stato: **live-ready** (release storica 0.8.1).
+
+**Revisione main del 9 settembre 2026:** la segnalazione di crash con ricambio della lobby e uso simultaneo delle funzioni richiede una nuova prova nel client. Le correzioni di accumulo e carico sono sottoposte ai test automatici; i riscontri live precedenti non certificano questa revisione.
 
 Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; per la 0.8.1 la regressione client è stata completata, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 

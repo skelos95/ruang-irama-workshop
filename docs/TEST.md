@@ -451,3 +451,13 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 - Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato; verificare anche la fase payload dopo la cattura.
 - Confermare che un dummy già uscito dalla spawn smetta di essere teletrasportato e che due dummy ritentino in modo indipendente.
 - I test automatici eseguono le regole reali con risposte geometriche controllate; non sostituiscono questa prova della navmesh e delle spawn room nel client.
+
+## Regressione stabilità e accumulo — 2026-09-09
+
+- Con 12 player, aprire e scorrere contemporaneamente Menu Arcade e tutte le cinque pagine Crouch Travel & Attach. Il cambio pagina deve mantenere un solo HUD per proprietario; chiusura, riapertura e cambio lingua devono restare corretti.
+- Attivare Vision e altri effetti temporanei, poi uscire durante l'effetto. Ripetere anche con dummy e iBot. Dopo la pulizia, i testi del player uscito devono sparire e i contatori HUD/IWT devono tornare al livello previsto per le sole funzioni ancora attive.
+- Eseguire gruppi di uscite simultanee, nuovi ingressi e cambi squadra. Ripetere il ricambio per 30–60 minuti: i 12 slot umani devono restare riutilizzabili e il numero delle risorse non deve crescere da un ciclo al successivo.
+- Provare Unkillable 1 HP e FULL HP, cure, morte/rinascita, cambio eroe, Skull, Burning, Fly e Attach contemporaneamente. Confermare i bypass temporanei di Skull/Burning e il ripristino della protezione al termine.
+- Effettuare voti contemporanei, auto-voto, cambio voto e uscita del candidato: i conteggi e CHILL STAR devono convergere al successivo tick, senza voti del player scomparso e senza un vincitore in caso di pareggio.
+- Vision deve escludere immediatamente chi disattiva l'effetto o lascia la lobby. Nuovi ingressi devono rispettare le targhette nascoste dei viewer in ispezione o Teleport.
+- Annotare l'eventuale messaggio preciso di chiusura e le funzioni attive al momento. I test Python eseguono il flusso del sorgente con primitive native controllate; non simulano collisioni, rete, durata degli oggetti nativi o limiti del server Overwatch.
