@@ -6,7 +6,7 @@ Release tecnica: **CHILL Dedicated Server 0.8.1**
 
 Stato: **live-ready** (release storica 0.8.1).
 
-**Revisione main del 9 settembre 2026:** la segnalazione di crash con ricambio della lobby e uso simultaneo delle funzioni richiede una nuova prova nel client. Le correzioni di accumulo e carico sono sottoposte ai test automatici; i riscontri live precedenti non certificano questa revisione.
+**Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
 
 Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
 
@@ -65,7 +65,6 @@ Il gate verifica:
 - 37 nomi Player Icon in tre array allineati;
 - 26 località server in tre array allineati e label localizzata in ambra neon `Custom Color(255, 205, 110, 255)`, distinta dal cyan di `LOBBY & CHILL TIME`;
 - equivalenza di placeholder e argomenti tra le traduzioni;
-- minuti roster `MIN / MENIT / นาที`;
 - riga vuota coerente tra contenuto e comandi.
 - promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
 
@@ -79,7 +78,7 @@ Ogni azione `Create HUD Text` deve:
 - usare soltanto Subheader/Text;
 - registrare l'handle previsto per il cleanup.
 
-Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente undici HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0/13` e Right `-16/-15/-14/-1`; i roster usano rispettivamente `1 + UrutanHUD` e `-13 + UrutanHUD`, mentre `Left 13` è riservato al renderer dedicato `CHILL STAR` basato su cache nome/colore leader. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
+Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente nove HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0/13` e Right `-16/0`; l’unico roster Player Vibes usa `1 + UrutanHUD` a sinistra, mentre `Left 13` è riservato al renderer dedicato `CHILL STAR` basato su cache nome/colore leader. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
 
 Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
 
@@ -130,7 +129,7 @@ Il gate richiede:
 - subroutine scheduler senza `Wait`;
 - nessun yield durante una scansione del roster;
 - proprietà esclusiva dello scratch player/indice globale allo scheduler;
-- attività 20 Hz, 10 Hz, 1 Hz e minuti ogni 10 secondi, incluso `ProsesTerbangPemain` a 20 Hz senza yield, riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
+- attività 20 Hz, 10 Hz e 1 Hz, senza conteggio dei minuti individuali, incluso `ProsesTerbangPemain` a 20 Hz senza yield, riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
 - `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
 - un solo `Start Camera`, posseduto da `MulaiKamera`, con entrambi i vettori per-frame, `Blend Speed 0` e un solo raycast Camera; camera personale, watch e toggle rapido devono convergere nei tre richiami alla stessa subroutine;
 - nessuna regola HUD contenente `Wait` o `Loop`.
@@ -167,7 +166,7 @@ Il gate controlla:
 - chiusura menu canonica prima del fallback locale: `TutupMenu` distrugge l'handle registrato anche con `HudMenu == Null` e non distrugge due volte un handle condiviso dalle due copie;
 - cleanup completo su leave;
 - cambio squadra di un umano registrato separato in due regole `Ongoing - Each Player`: `01a` apre soltanto la quarantena e arma la stabilizzazione a 0,5 s; con team e spawn stabili e il lock lifecycle assegnato allo stesso player, `01b` richiama `TenangkanPemain`, poi `BersihkanPemain` se l'identità è ancora nel roster e infine `SiapkanPemain`, con il giusto `Event Player`. Il cleanup distrugge gli handle dagli array canonici prima di liberare lo slot; lo scheduler prenota il lavoro senza eseguire cleanup locali dal contesto globale. Il teardown resta privo di `Wait`, `Abort` e dipendenze da `Server Load`;
-- renderer roster privo del gate `Is Alive`, flag ready scritto solo dopo entrambi gli handle, menu distrutto tramite l'array globale canonico e classifier che, quando manca temporaneamente uno slot, riarma il lifecycle, rilascia il proprio lock globale e programma il retry dopo 0,25 secondi; il renderer roster deve restare inline nella stessa regola `02` del classifier (nessuna seconda `Ongoing - Each Player` dedicata alla creazione di `HudKiri`/`HudKanan`);
+- renderer roster privo del gate `Is Alive`, flag ready scritto solo dopo l’unico handle Player Vibes, menu distrutto tramite l'array globale canonico e classifier che, quando manca temporaneamente uno slot, riarma il lifecycle, rilascia il proprio lock globale e programma il retry dopo 0,25 secondi; il renderer roster deve restare inline nella stessa regola `02` del classifier (nessuna seconda `Ongoing - Each Player` dedicata alla creazione di `HudKiri`);
 - filtri pubblici Crouch che richiedono sempre `PembaruanDaftarTertunda == False`, così target non stabili non restano agganciati agli In-World Text;
 - assenza del vecchio worker/consumer pending aggiuntivo: la quarantena leggera di `01a` viene completata dal worker individuale `01b` con cleanup/setup completo;
 - cambio squadra e leave/rejoin passano da setup fresco: preferenze e cursori tornano ai default;
@@ -183,7 +182,7 @@ Il gate controlla:
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
 - massimo un dummy per squadra, creazione soltanto con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, respawn massimo 3 secondi e riarmo alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
-- velocità bot/dummy esattamente al 20%; il dummy nativo mantiene esplicitamente la collisione con player/bot e disabilita soltanto le collisioni ambientali con `Include Floors = False`, mentre gli iBot mantengono tutte le collisioni native;
+- velocità bot/dummy esattamente al 20%; nessuna istruzione modifica o riapplica le collisioni native nel setup dummy o in `KunciBot`;
 - `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
 - filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
 - ownership Dummy Follow limitata al default setup OFF, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
@@ -225,8 +224,8 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch; una delle tre IWT che separa icona/nome/salute, altera l'ancoraggio `Eye Position + Vector(0, 0.450, 0)`, rivaluta soltanto una parte della posizione, cattura più dell'identità o perde `Visible To Position String and Color`;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
 - dummy creato con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
-- velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, collisione player disabilitata, collisione ambientale applicata agli iBot o con `Include Floors = True`, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
-- slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, spaziatore finale Right rimosso, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
+- velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, qualsiasi modifica delle collisioni native nel setup dummy o nel lock, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
+- slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, secondo roster o conteggio minuti reintrodotto, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
 - parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
 - secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;

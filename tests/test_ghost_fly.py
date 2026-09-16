@@ -46,14 +46,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
 
     def test_page_thirteen_state_and_subroutines_are_declared_contiguously(self) -> None:
         declarations = (
-            "108: ModeHantuAktif",
-            "109: ModeTerbangAktif",
-            "110: KursorHantuTerbang",
-            "111: FisikaHantuTerbangDiterapkan",
-            "113: WaktuMulaiTerbangMaju",
-            "114: PersenTerbang",
-            "115: ArahTerbang",
-            "116: DeltaTerbang",
+            "105: ModeHantuAktif",
+            "106: ModeTerbangAktif",
+            "107: KursorHantuTerbang",
+            "108: FisikaHantuTerbangDiterapkan",
+            "110: WaktuMulaiTerbangMaju",
+            "111: PersenTerbang",
+            "112: ArahTerbang",
+            "113: DeltaTerbang",
             "58: GambarHantuTerbang",
             "59: TerapkanHalamanHantuTerbang",
             "60: TerapkanFisikaHantuTerbang",

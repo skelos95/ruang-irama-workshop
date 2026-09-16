@@ -1245,13 +1245,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 11, "numero HUD fissi nella regola iniziale")
+        checks.equal(len(init_hud_calls), 9, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
         if call.args and call.args[0].strip() == "Global.PemainManusia"
     ]
-    checks.equal(len(global_hud_calls), 13, "numero HUD globali: undici fissi e due roster")
+    checks.equal(len(global_hud_calls), 10, "numero HUD globali: nove fissi e un roster")
 
     slot_assignments = re.findall(
         r"Global\.SlotHUDTersedia\s*=\s*Array\(([^;]*)\);",
@@ -1271,9 +1271,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "0"),
         ("Left", "13"),
         ("Right", "-16"),
-        ("Right", "-15"),
-        ("Right", "-14"),
-        ("Right", "-1"),
+        ("Right", "0"),
         ("Top", "0"),
         ("Top", "1"),
         ("Top", "2"),
@@ -1290,17 +1288,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
         if matches:
             fixed_hud[slot] = matches[0]
-    checks.equal(len(fixed_hud), 11, "griglia HUD fissa Top/Left/Right")
+    checks.equal(len(fixed_hud), 9, "griglia HUD fissa Top/Left/Right")
 
     field_contract = {
         ("Left", "-2"): ("subheader", "Button(Crouch)"),
         ("Left", "-1"): ("subheader", 'Custom String(" ")'),
-        ("Left", "0"): ("text", "LOBBY & CHILL TIME"),
+        ("Left", "0"): ("text", "PLAYER VIBES"),
         ("Left", "13"): ("subheader", "Global.NamaPemimpinPilihan"),
         ("Right", "-16"): ("subheader", "Button(Interact)"),
-        ("Right", "-15"): ("text", 'Custom String("  ")'),
-        ("Right", "-14"): ("text", "PLAYER VIBES"),
-        ("Right", "-1"): ("text", 'Custom String("  ")'),
+        ("Right", "0"): ("subheader", "Host:"),
         ("Top", "0"): ("text", "SERVER KHUSUS CHILL"),
         ("Top", "1"): ("subheader", 'LOCATION'),
         ("Top", "2"): ("text", 'Custom String("  ")'),
@@ -1311,7 +1307,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             continue
         field_index = 2 if field == "subheader" else 3
         other_index = 3 if field == "subheader" else 2
-        if slot in {("Left", "-1"), ("Right", "-15"), ("Right", "-1"), ("Top", "2")}:
+        if slot in {("Left", "-1"), ("Top", "2")}:
             checks.equal(call.args[field_index].strip(), token,
                          f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
         else:
@@ -1322,10 +1318,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
 
     for slot, (field, expected_labels) in {
         ("Left", "-2"): ("subheader", ('Hold {0}: hero + HP', "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
-        ("Left", "0"): ("text", ("LOBBY & CHILL TIME", "LOBI & WAKTU SANTAI", "ล็อบบี้ & เวลาชิล")),
+        ("Left", "0"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
         ("Left", "13"): ("subheader", ("CHILL STAR: {0}", "BINTANG CHILL: {0}", "ดาวสายชิล: {0}")),
         ("Right", "-16"): ("subheader", ('Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera', 'Tahan {0} 0,5 dtk: Menu | Tahan {1} 0,5 dtk: Kamera', "กด {0} ค้าง 0.5วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5วิ: กล้อง")),
-        ("Right", "-14"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
     }.items():
         call = fixed_hud.get(slot)
         if not call:
@@ -1336,19 +1331,30 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
 
     server_location = fixed_hud.get(("Top", "1"))
-    lobby_time = fixed_hud.get(("Left", "0"))
+    player_vibes = fixed_hud.get(("Left", "0"))
     if server_location:
         checks.equal(
             re.sub(r"\s+", "", server_location.args[7]),
             "CustomColor(255,205,110,255)",
             'LOCATION: colore subheader pastel gold esatto',
         )
-    if server_location and lobby_time:
+    if server_location and player_vibes:
         checks.require(
             re.sub(r"\s+", "", server_location.args[7])
-            != re.sub(r"\s+", "", lobby_time.args[8]),
-            'LOCATION deve avere un colore distinto da LOBBY & CHILL TIME',
+            != re.sub(r"\s+", "", player_vibes.args[8]),
+            'LOCATION deve avere un colore distinto da PLAYER VIBES',
         )
+
+    host = fixed_hud.get(("Right", "0"))
+    if host:
+        for token in ("Entity Exists(Host Player)", 'Custom String("Host:")',
+                      "Hero Icon String(Hero Of(Host Player))", "Player Variable(Host Player, NamaTampilan)",
+                      'Custom String("{0}", Host Player)'):
+            checks.require(token in host.args[2], f"HUD Host: riferimento dinamico assente: {token}")
+        checks.require("Evaluate Once(" not in host.args[2], "HUD Host: nome e icona devono seguire l'host corrente")
+        checks.require(host.args[2].strip().endswith(': Custom String("")'),
+                       "HUD Host: fallback senza host deve essere stringa vuota")
+        checks.equal(host.args[9].strip(), "Visible To and String", "HUD Host: rivalutazione testo")
 
     chill_star = fixed_hud.get(("Left", "13"))
     checks.require(chill_star is not None, "HUD CHILL STAR dedicato assente")
@@ -1425,8 +1431,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         f"HUD comando Right {language}: binding Melee/Interact ordinati",
                     )
 
-    checks.require("11 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
-                   "diagnostica HUD non include gli undici handle fissi")
+    checks.require("9 + Count Of(Filtered Array(Global.HudKiriPemain" in mask_strings(source),
+                   "diagnostica HUD non include gli nove handle fissi")
 
     roster_rule = next(
         (
@@ -1434,19 +1440,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if event_type(rule) == "Ongoing - Each Player"
             and "Event Player.HudPemainDibuat = True;" in rule.body
             and "Event Player.HudKiri = Last Text ID;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
         ),
         None,
     )
     checks.require(roster_rule is not None, "renderer HUD roster umano assente")
     if roster_rule:
         roster_calls = list(iter_calls(roster_rule.body, "Create HUD Text"))
-        checks.equal(len(roster_calls), 2, "renderer HUD roster: numero handle")
+        checks.equal(len(roster_calls), 1, "renderer HUD roster: numero handle")
         roster_orders = {
             "Left": "1 + Event Player.UrutanHUD",
-            "Right": "-13 + Event Player.UrutanHUD",
         }
-        for side in ("Left", "Right"):
+        for side in ("Left",):
             side_calls = [call for call in roster_calls if len(call.args) >= 6 and call.args[4].strip() == side]
             checks.equal(len(side_calls), 1, f"renderer HUD roster {side}")
             if not side_calls:
@@ -1489,12 +1493,18 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                             ):
                                 checks.require(token in diagnostic_condition,
                                                f"renderer HUD roster Left: guardia diagnostica assente: {token}")
-                            checks.require("11 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
+                            checks.require("9 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
                                            "renderer HUD roster Left: conteggio diagnostica non nel ramo visibile")
                             checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
                                          "renderer HUD roster Left: fallback diagnostica deve essere stringa vuota")
-            else:
-                checks.equal(call.args[3].strip(), "Null", "renderer HUD roster Right: Text")
+
+    for retired in ("WaktuMasuk", "MenitLobi", "HudKanan", "HudKananPemain"):
+        checks.require(re.search(rf"\b{retired}\b", mask_strings(source)) is None,
+                       f"roster unico: stato rimosso ancora presente: {retired}")
+    checks.require("LOBBY & CHILL TIME" not in source,
+                   "roster unico: vecchia lista minuti ancora presente")
+    checks.require("Event Player.MusikKhusus" in roster_rule.body if roster_rule else False,
+                   "roster unico: Player Vibes deve mantenere il soundtrack")
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
     for name in ("IzinkanBotBuatanMengikuti", "KursorIkutiBotBuatan"):
@@ -2145,14 +2155,14 @@ def validate_ghost_fly(
         return re.sub(r"\s+", "", mask_strings(expression))
 
     expected_variables = {
-        "ModeHantuAktif": 108,
-        "ModeTerbangAktif": 109,
-        "KursorHantuTerbang": 110,
-        "FisikaHantuTerbangDiterapkan": 111,
-        "WaktuMulaiTerbangMaju": 113,
-        "PersenTerbang": 114,
-        "ArahTerbang": 115,
-        "DeltaTerbang": 116,
+        "ModeHantuAktif": 105,
+        "ModeTerbangAktif": 106,
+        "KursorHantuTerbang": 107,
+        "FisikaHantuTerbangDiterapkan": 108,
+        "WaktuMulaiTerbangMaju": 110,
+        "PersenTerbang": 111,
+        "ArahTerbang": 112,
+        "DeltaTerbang": 113,
     }
     for name, index in expected_variables.items():
         declarations = [entry for entry in player_entries if entry.name == name]
@@ -2592,7 +2602,7 @@ def validate_special_player_profile(
     declarations = [entry for entry in player_entries if entry.name == "MusikKhusus"]
     checks.equal(len(declarations), 1, "profilo speciale: dichiarazione MusikKhusus")
     if declarations:
-        checks.equal(declarations[0].index, 105, "profilo speciale: indice MusikKhusus")
+        checks.equal(declarations[0].index, 102, "profilo speciale: indice MusikKhusus")
 
     setup = rule_by_subroutine(rules, "SiapkanPemain")
     checks.require(setup is not None, "profilo speciale: SiapkanPemain assente")
@@ -2675,11 +2685,10 @@ End;
                 and positions[-1] < profile_match.start(),
                 "profilo speciale: matcher deve seguire i default generici",
             )
-            minute = classifier.body.find("Event Player.MenitLobi = 0;")
             roster = classifier.body.find("Append To Array(Global.PemainManusia, Event Player)")
             checks.require(
-                profile_end >= 0 and profile_end < minute < roster,
-                "profilo speciale: matcher deve precedere minuti e inserimento roster/HUD",
+                profile_end >= 0 and profile_end < roster,
+                "profilo speciale: matcher deve precedere inserimento roster/HUD",
             )
 
     direct_writers = [
@@ -2835,28 +2844,27 @@ End;
         (
             rule for rule in rules
             if "Event Player.HudPemainDibuat = True;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
         ),
         None,
     )
     checks.require(roster_rule is not None, "profilo speciale: renderer roster assente")
     if roster_rule:
-        right_calls = [
+        vibe_roster_calls = [
             call for call in iter_calls(roster_rule.body, "Create HUD Text")
-            if len(call.args) >= 5 and call.args[4].strip() == "Right"
+            if len(call.args) >= 5 and call.args[4].strip() == "Left"
         ]
-        checks.equal(len(right_calls), 1, "profilo speciale: renderer roster Right")
+        checks.equal(len(vibe_roster_calls), 1, "profilo speciale: renderer roster Left")
         vibe_calls = [
             call
-            for call in iter_calls(right_calls[0].args[2], "Custom String")
-            if right_calls and len(call.args) == 3
+            for call in iter_calls(vibe_roster_calls[0].args[2], "Custom String")
+            if vibe_roster_calls and len(call.args) == 3
             and parse_literal(call.args[0]) == "{0} - {1}"
             and call.args[1].strip() in {
                 "Event Player",
                 "Event Player.NamaTampilan",
                 "Evaluate Once(Event Player.NamaTampilan)",
             }
-        ] if right_calls else []
+        ] if vibe_roster_calls else []
         checks.equal(len(vibe_calls), 1, "profilo speciale: espressione Player Vibes roster")
         if vibe_calls:
             fallback = soundtrack_choice(vibe_calls[0].args[2], "profilo speciale roster")
@@ -3580,6 +3588,25 @@ def team_switch_worker(rules: list[Rule]) -> Rule | None:
                  in (rule_block(rule, "conditions") or "")), None)
 
 
+def validate_inspector_recording(checks: Checks, source: str, rules: list[Rule]) -> None:
+    """Telemetry must not enable the more expensive Inspector recording path."""
+    masked = mask_strings(source)
+    token = "Disable Inspector Recording;"
+    checks.equal(masked.count(token), 1, "registrazione Inspector disabilitata una volta")
+    checks.require("Enable Inspector Recording;" not in masked,
+                   "la diagnostica non deve abilitare la registrazione Inspector")
+    bootstrap = next((rule for rule in rules if rule.name.startswith("00 - ")), None)
+    checks.require(bootstrap is not None, "inizializzazione Inspector assente")
+    if bootstrap is not None:
+        body = mask_strings(bootstrap.body)
+        position = body.find(token)
+        ready = body.find("Global.Siap = True;")
+        checks.require(0 <= position < ready,
+                       "disabilitare Inspector prima di avviare il runtime")
+        checks.require(not conditional_branches_containing(body, position),
+                       "registrazione Inspector indipendente dal toggle diagnostica")
+
+
 def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
     for error in global_player_context_errors(rules):
         checks.require(False, error)
@@ -3631,8 +3658,6 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
         for cadence in (2, 20):
             checks.require(re.search(rf"LangkahPenjadwal\s*%\s*{cadence}\b", scheduler.body) is not None,
                            f"cadenza scheduler %{cadence} assente")
-        checks.require("Global.LangkahPenjadwal == 0" in scheduler.body,
-                       "cadenza scheduler 10 secondi assente")
         for routine, period in (("ProsesSiklusPemain", 2), ("ProsesSimpananPemain", 20)):
             phase = f"If(Global.LangkahPenjadwal % {period} == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % {period});"
             calls = [call for call in iter_calls(scheduler.body, "Call Subroutine")
@@ -3844,6 +3869,18 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
         checks.require(rolling_block is not None, "blocco sostituzione icona roulette non analizzabile")
         if rolling_block:
             rolling_masked = mask_strings(rolling_block)
+            rolling_header = re.sub(r"\s+", "", rolling_masked.split(";", 1)[0])
+            checks.equal(
+                rolling_header,
+                "If(And(Global.LangkahPenjadwal%4==Global.PemainAktif.UrutanHUD%4,"
+                "And(Global.PemainAktif.PutaranKartuNasib>0,"
+                "TotalTimeElapsed>=Global.PemainAktif.WaktuPutaranNasibBerikut)))",
+                "rotazione icona roulette distribuita in quattro fasi slot stabili",
+            )
+            checks.equal(
+                len(re.findall(r"\bGlobal\.LangkahPenjadwal\b", masked_state_machine)), 1,
+                "fase slot roulette limitata alla rotazione icona, senza ritardare esiti o cleanup",
+            )
             rolling_icons = list(iter_calls(rolling_block, "Create Icon"))
             rolling_destroys = list(iter_calls(rolling_block, "Destroy Icon"))
             checks.equal(len(rolling_icons), 6, "icone create nel blocco di sostituzione roulette")
@@ -4527,6 +4564,36 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                        "Try Your Luck può partire durante una Revenge pending")
 
 
+def validate_cleanup_registry_guard(checks: Checks, cleanup: Rule) -> None:
+    """Keep the bounded fallback reachable before any canonical-array lookup."""
+    masked = mask_strings(cleanup.body)
+    marker = "Global.IndeksKeluar = -2;"
+    checks.equal(masked.count(marker), 1, "cleanup leave: selezione fallback registro incompleto")
+    if marker not in masked:
+        return
+    position = masked.index(marker)
+    branches = conditional_branches_containing(cleanup.body, position)
+    expected = (
+        "If(Or(Global.IndeksKeluar >= Count Of(Global.SlotHUDPemain), "
+        "Or(Global.IndeksKeluar >= Count Of(Global.HudKiriPemain), "
+        "Or(Global.IndeksKeluar >= Count Of(Global.HudMenuPemain), "
+        "Global.IndeksKeluar >= Count Of(Global.TeksDuniaPemain)))));"
+    )
+    packed = lambda text: re.sub(r"\s+", "", mask_strings(text))
+    guarded = [branch for branch in branches if packed(branch.splitlines()[0]) == packed(expected)]
+    checks.equal(len(guarded), 1, "cleanup leave: guardia lunghezze per tutti gli array canonici")
+    if guarded:
+        body = packed(guarded[0])
+        checks.require("Global.IndeksPembersihan=Global.IndeksKeluar;Global.IndeksKeluar=-2;" in body,
+                       "cleanup leave: fallback deve conservare indice originale prima del sentinel")
+    normal = masked.find("If(Global.IndeksKeluar >= 0);")
+    slot_read = masked.find("Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];")
+    checks.require(0 <= position < normal < slot_read,
+                   "cleanup leave: guardia registro deve precedere accessi canonici")
+    checks.require(any(packed(branch.splitlines()[0]) == "If(Global.IndeksKeluar>-1);" for branch in branches),
+                   "cleanup leave: fallback limitato a identità ancora registrata")
+
+
 def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str]) -> None:
     checks.require(LIFECYCLE_SUBROUTINES <= subroutines,
                    "subroutine lifecycle Siapkan/Tenangkan/Bersihkan incomplete")
@@ -4711,6 +4778,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     cleanup = rule_by_subroutine(rules, "BersihkanPemain")
     checks.require(cleanup is not None, "BersihkanPemain assente")
     if cleanup:
+        validate_cleanup_registry_guard(checks, cleanup)
         checks.require(not wait_calls(cleanup.body) and action_loop_count(cleanup.body) == 0,
                        "BersihkanPemain deve essere atomica e senza Wait/Loop")
         cleanup_masked = mask_strings(cleanup.body)
@@ -4737,7 +4805,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         removal_positions = []
         for array, destroy_action in (
             ("HudKiriPemain", "Destroy HUD Text"),
-            ("HudKananPemain", "Destroy HUD Text"),
             ("HudMenuPemain", "Destroy HUD Text"),
             ("TeksDuniaPemain", "Destroy In-World Text"),
         ):
@@ -5024,7 +5091,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         if event_type(rule) == "Ongoing - Each Player"
         and "Create HUD Text(" in rule.body
         and "Event Player.HudKiri = Last Text ID;" in rule.body
-        and "Event Player.HudKanan = Last Text ID;" in rule.body
         and "Event Player.HudPemainDibuat = True;" in rule.body
     ]
     checks.require(bool(roster_hud_rules), "renderer roster post-team-switch assente")
@@ -5057,15 +5123,13 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             for token in (
                 "Event Player.HudKiri = Last Text ID;",
                 "Global.HudKiriPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKiri;",
-                "Event Player.HudKanan = Last Text ID;",
-                "Global.HudKananPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudKanan;",
                 "Event Player.HudPemainDibuat = True;",
             )
         )
         checks.require(
             all(position >= 0 for position in ready_order)
             and ready_order == tuple(sorted(ready_order)),
-            "renderer roster deve dichiararsi pronto dopo entrambi gli handle",
+            "renderer roster deve dichiararsi pronto dopo la registrazione del singolo handle",
         )
 
     cleanup_workers = [rule for rule in rules
@@ -5172,6 +5236,77 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
         )
         checks.require(hero_swap_pattern.search(cycle.body) is not None,
                        "hero swap umano non pulisce Try Your Luck nello scheduler globale")
+
+
+def validate_target_label_budget(checks: Checks, rules: list[Rule]) -> None:
+    """Keep target invalidation immediate while bounding shared IWT allocation."""
+    clock = "Event Player.WaktuTeksTargetBerikut"
+
+    def packed(value: str) -> str:
+        return re.sub(r"\s+", "", value)
+
+    def invalid(identity: str) -> str:
+        return (
+            f"Or(Entity Exists({identity}) == False, Or(Has Spawned({identity}) == False, "
+            f"Or(Is Alive({identity}) == False, And(And(Is Dummy Bot({identity}) == False, "
+            f"Player Variable({identity}, BotOtomatis) == False), Or(Player Variable({identity}, Manusia) == False, "
+            f"Or(Player Variable({identity}, PrivasiInspeksiAktif) == True, "
+            f"Player Variable({identity}, PembaruanDaftarTertunda) == True))))))"
+        )
+
+    for prefix, target, candidate, handle, identity in (
+        ("13", "TargetInspeksi", "CalonTargetInspeksi", "TeksDunia", "TargetInspeksi"),
+        ("19d", "TargetTeleportasiTeks", "CalonTargetTeleportasi", "TeksTeleportasi", "CalonTargetTeleportasi"),
+    ):
+        rule = next((rule for rule in rules if rule.name.startswith(prefix + " -")), None)
+        checks.require(rule is not None, f"budget targhette: renderer {prefix} assente")
+        if rule is None:
+            continue
+        actions = rule_block(rule, "actions")
+        condition = (
+            f"Or(Event Player.{target} != Event Player.{candidate}, "
+            f"Or(And(Event Player.{handle} != Null, {invalid('Event Player.' + target)}), "
+            f"And(Event Player.{handle} == Null, And(Event Player.{candidate} != Null, "
+            f"Total Time Elapsed >= {clock})))) == True;"
+        )
+        checks.require(packed(condition) in packed(rule_block(rule, "conditions")),
+                       f"budget targhette {prefix}: invalidazione immediata o risveglio alla scadenza assente")
+        order = (
+            f"Destroy In-World Text(Event Player.{handle});",
+            f"Event Player.{handle} = Null;",
+            f"Abort If(Total Time Elapsed < {clock});",
+            f"{clock} = Total Time Elapsed + 0.250;",
+            "Create In-World Text(",
+        )
+        positions = [actions.find(token) for token in order]
+        checks.require(all(index >= 0 for index in positions) and positions == sorted(positions),
+                       f"budget targhette {prefix}: distruzione prima del limite condiviso di 0.250 s")
+        checks.require(not list(iter_calls(actions, "Wait")) and "Loop" not in mask_strings(actions),
+                       f"budget targhette {prefix}: attese o loop aggiuntivi vietati")
+        validation = rule_by_subroutine(rules, "SegarkanTargetInspeksi") if prefix == "13" else rule
+        checks.require(validation is not None and packed(invalid("Event Player." + candidate)) in packed(validation.body),
+                       f"budget targhette {prefix}: validazione target prima della creazione assente")
+        if validation:
+            for field in (target, candidate):
+                checks.require(f"Event Player.{field} = Null;" in validation.body,
+                               f"budget targhette {prefix}: invalidazione non azzera {field}")
+        creates = list(iter_calls(actions, "Create In-World Text"))
+        if len(creates) == 1 and len(creates[0].args) > 1:
+            text = creates[0].args[1]
+            for function in ("Is Duplicating", "Hero Being Duplicated", "Hero Of", "Health"):
+                checks.require(packed(f"{function}(Evaluate Once(Event Player.{identity}))") in packed(text),
+                               f"budget targhette {prefix}: {function} deve seguire l'identità catturata")
+            captures = list(iter_calls(text, "Evaluate Once"))
+            outer = [call for call in captures if not any(
+                other.start < call.start and other.end >= call.end for other in captures)]
+            for call in reversed(outer):
+                text = text[:call.start] + "captured" + text[call.end:]
+            checks.require(packed("Event Player." + identity) not in packed(text),
+                           f"budget targhette {prefix}: testo live legge ancora il target mutabile")
+
+    writers = [rule for rule in rules if re.search(r"Event Player\.WaktuTeksTargetBerikut\s*=", mask_strings(rule.body))]
+    checks.equal({rule.name.split(" -", 1)[0] for rule in writers}, {"13", "19d", "93b2", "94"},
+                 "budget targhette: soltanto renderer e setup possono scrivere la scadenza condivisa")
 
 
 def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
@@ -5363,7 +5498,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
         ),
         None,
     )
@@ -5447,7 +5582,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     teleport_text = next(
         (
             rule for rule in rules
-            if "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            if "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         ),
         None,
@@ -5479,6 +5614,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
             "teleport non deve mostrare identity token grezzo ai dummy",
         )
     validate_fluid_iwt(teleport_text, "Teleport", "Event Player.CalonTargetTeleportasi")
+    validate_target_label_budget(checks, rules)
 
     vision_names = next(
         (
@@ -5922,11 +6058,11 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.equal(
             compact(event_block(bot_rule)),
             compact("Ongoing - Each Player; All; All;"),
-            "collisione ambiente dummy: evento esatto per entrambe le squadre",
+            "bot/dummy: evento esatto per entrambe le squadre",
         )
         bot_conditions = rule_block(bot_rule, "conditions")
         checks.require(bot_conditions is not None,
-                       "collisione ambiente dummy: blocco conditions assente")
+                       "bot/dummy: blocco conditions assente")
         if bot_conditions is not None:
             expected_bot_conditions = """
                 Global.Siap == True;
@@ -5938,7 +6074,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(
                 compact(bot_conditions),
                 compact(expected_bot_conditions),
-                "collisione ambiente dummy: condizioni esatte e raggiungibili",
+                "bot/dummy: condizioni esatte e raggiungibili",
             )
 
     environment_collision_calls = [
@@ -5946,47 +6082,30 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         for rule in rules
         for call in iter_calls(rule.body, "Disable Movement Collision With Environment")
     ]
-    checks.equal(len(environment_collision_calls), 3,
-                 "numero disattivazioni collisione ambiente: dummy più Ghost locale/globale")
-    bot_collision_calls = [
-        (rule, call)
-        for rule, call in environment_collision_calls
-        if bot_rule is not None and rule.start == bot_rule.start
-    ]
-    checks.equal(len(bot_collision_calls), 1,
-                 "numero disattivazioni collisione ambiente dummy")
-    if bot_collision_calls:
-        collision_rule, collision_call = bot_collision_calls[0]
-        checks.equal(collision_call.args, ("Event Player", "False"),
-                     "collisione ambiente dummy: Event Player con Include Floors False")
-        checks.require(
-            re.search(
-                r"If\(Is Dummy Bot\(Event Player\) == True\);\s*"
-                r"Enable Movement Collision With Players\(Event Player\);\s*"
-                r"Disable Movement Collision With Environment\(Event Player, False\);",
-                collision_rule.body,
-            ) is not None,
-            "collisioni dummy non protette dal ramo nativo o in ordine errato",
-        )
-        collision_actions = rule_block(collision_rule, "actions")
-        checks.require(collision_actions is not None,
-                       "collisione ambiente dummy: blocco actions assente")
-        if collision_actions is not None:
-            expected_collision_actions = """
+    checks.equal(len(environment_collision_calls), 2,
+                 "numero disattivazioni collisione ambiente: solo Ghost locale/globale")
+    collision_actions = (
+        "Enable Movement Collision With Environment(",
+        "Disable Movement Collision With Environment(",
+        "Enable Movement Collision With Players(",
+        "Disable Movement Collision With Players(",
+    )
+    if bot_rule:
+        checks.require(not any(token in bot_rule.body for token in collision_actions),
+                       "bot/dummy: conservare le collisioni native senza riapplicarle")
+        bot_actions = rule_block(bot_rule, "actions")
+        checks.require(bot_actions is not None, "bot/dummy: blocco actions assente")
+        if bot_actions is not None:
+            expected_bot_actions = """
                 Call Subroutine(KunciBot);
                 If(Is Dummy Bot(Event Player) == True);
-                    Enable Movement Collision With Players(Event Player);
-                    Disable Movement Collision With Environment(Event Player, False);
                     Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
                     Event Player.KursorTeleportasiBotBuatan = 0;
                     Set Respawn Max Time(Event Player, 3);
                 End;
             """
-            checks.equal(
-                re.sub(r"\s+", "", collision_actions),
-                re.sub(r"\s+", "", expected_collision_actions),
-                "collisione ambiente dummy: sequenza raggiungibile e isolata",
-            )
+            checks.equal(compact(bot_actions), compact(expected_bot_actions),
+                         "bot/dummy: sequenza raggiungibile e isolata")
 
     ghost_physics = rule_by_subroutine(rules, "TerapkanFisikaHantuTerbang")
     cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
@@ -6035,8 +6154,8 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             if calls:
                 checks.equal(tuple(argument.strip() for argument in calls[0].args), expected,
                              f"KunciBot: {label}")
-        checks.require("Disable Movement Collision With Players(" not in bot_lock.body,
-                       "KunciBot non deve disattivare la collisione dummy con i player")
+        checks.require(not any(token in bot_lock.body for token in collision_actions),
+                       "KunciBot: conservare le collisioni native senza riapplicarle")
         move_speed_calls = list(iter_calls(bot_lock.body, "Set Move Speed"))
         checks.equal(len(move_speed_calls), 1, "KunciBot: numero impostazioni velocità")
         if move_speed_calls:
@@ -6578,6 +6697,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_special_player_profile(checks, source, rules, player_entries)
     validate_input_contract(checks, rules)
     validate_unkillable_full_hp(checks, rules)
+    validate_inspector_recording(checks, source, rules)
     validate_scheduler(checks, source, rules, globals_, subroutines)
     validate_try_your_luck(checks, source, rules, players)
     validate_forced_death(checks, source, rules, players)

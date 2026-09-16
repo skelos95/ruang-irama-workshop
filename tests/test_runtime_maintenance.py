@@ -16,7 +16,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_cached_player_name_drives_roster_and_world_text(self):
         for source, global_name, rule_kw in ((self.it, "Globale", "regola"), (self.en, "Global", "rule")):
-            self.assertIn("107: NamaTampilan", source)
+            self.assertIn("104: NamaTampilan", source)
 
             classifier = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(f'{rule_kw}("03c - Bot/Dummy', 1)[0]
             name_guard = "If(Or(Event Player.PernahDisiapkan == False, Or(Event Player.NamaTampilan == Null, Event Player.NamaTampilan == Custom String(\"\"))));"
@@ -34,10 +34,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 'And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))',
                 roster,
             )
-            self.assertIn('Custom String("{0} - {1} MIN", Evaluate Once(Event Player.NamaTampilan), Event Player.MenitLobi)', roster)
+            self.assertNotIn('MenitLobi', source)
+            self.assertNotIn('WaktuMasuk', source)
             self.assertIn('Custom String("{0} - {1}", Evaluate Once(Event Player.NamaTampilan),', roster)
 
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa jeda")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertIn("Player Variable(Event Player.TargetInspeksi, NamaTampilan)", inspect)
             self.assertIn(
                 f"Array Contains({global_name}.PemainManusia, Event Player.TargetInspeksi) == True",
@@ -120,7 +121,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_aim_scans_are_scheduler_cached(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
-            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan tanpa jeda")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
+            inspect = source.split(f'{rule_kw}("13 - Intip Pahlawan: Nama mengikuti target bidikan")', 1)[1].split(f'{rule_kw}("16a - Anran', 1)[0]
             self.assertNotIn("Sorted Array(Filtered Array", inspect)
             self.assertIn("CalonTargetInspeksi", inspect)
             self.assertNotIn("19d0 - Teleportasi Jongkok", source)
@@ -212,8 +213,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             (self.it, "Globale", "regola"),
             (self.en, "Global", "rule"),
         ):
-            self.assertIn("58: NamaPemimpinPilihan", source)
-            self.assertIn("59: WarnaPemimpinPilihan", source)
+            self.assertIn("57: NamaPemimpinPilihan", source)
+            self.assertIn("58: WarnaPemimpinPilihan", source)
             self.assertIn(f"{global_name}.NamaPemimpinPilihan = Custom String(\"\");", source)
             self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);", source)
 
@@ -237,7 +238,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn('Custom String("{0}{1}{2}"', roster)
             self.assertNotIn("CHILL STAR:", roster)
             self.assertIn(
-                f"11 + Count Of(Filtered Array({global_name}.HudKiriPemain, Current Array Element != 0))",
+                f"9 + Count Of(Filtered Array({global_name}.HudKiriPemain, Current Array Element != 0))",
                 roster,
             )
 
@@ -397,8 +398,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Reload))", source)
             self.assertNotIn("CROUCH + RELOAD: DETACH", source)
-            self.assertIn("99: TargetLampiranTeleportasi", source)
-            self.assertIn("100: LampiranTeleportasiAktif", source)
+            self.assertIn("96: TargetLampiranTeleportasi", source)
+            self.assertIn("97: LampiranTeleportasiAktif", source)
 
     def test_crouch_attach_auto_detaches_on_death_leave_or_hero_change(self):
         for source in (self.it, self.en):
@@ -516,7 +517,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Create HUD Text(", roster_hud)
             append_roster = f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);"
             left_create = roster_hud.index("Create HUD Text(")
-            right_create = roster_hud.index("Create HUD Text(", left_create + 1)
+            self.assertEqual(roster_hud.count("Create HUD Text("), 1)
             self.assertLess(roster_hud.index(append_roster), roster_hud.index("Event Player.Manusia = True;"))
             self.assertLess(roster_hud.index("Event Player.Manusia = True;"), roster_hud.index(vote_dirty))
             self.assertLess(
@@ -524,11 +525,9 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 left_create,
             )
             self.assertLess(left_create, roster_hud.index("Event Player.HudKiri = Last Text ID;"))
-            self.assertLess(roster_hud.index("Event Player.HudKiri = Last Text ID;"), right_create)
-            self.assertLess(right_create, roster_hud.index("Event Player.HudKanan = Last Text ID;"))
             self.assertGreater(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),
-                roster_hud.index(f"{global_name}.HudKananPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKanan;"),
+                roster_hud.index(f"{global_name}.HudKiriPemain[Index Of Array Value({global_name}.PemainManusia, Event Player)] = Event Player.HudKiri;"),
             )
             self.assertLess(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),

@@ -136,7 +136,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         specs = (
             (
                 "inspection",
-                "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;",
+                "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi",
                 "Event Player.TargetInspeksi",
             ),
             (
@@ -146,7 +146,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             ),
             (
                 "Teleport",
-                "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;",
+                "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi",
                 "Event Player.CalonTargetTeleportasi",
             ),
         )
@@ -197,7 +197,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_special_player_declaration_setup_and_exact_unicode_are_guarded(self) -> None:
         mutations = (
             (
-                self.source.replace("\t\t105: MusikKhusus", "\t\t104: MusikKhusus", 1),
+                self.source.replace("\t\t102: MusikKhusus", "\t\t101: MusikKhusus", 1),
                 "indice MusikKhusus",
             ),
             (
@@ -325,7 +325,6 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_special_player_roster_main_and_locked_renderers_are_guarded(self) -> None:
         roster = self.rule(
             lambda rule: "Event Player.HudPemainDibuat = True;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
         )
         roster_mutation = self.replace_in_rule(
             roster,
@@ -439,7 +438,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source.replace(valid_name, overlong_name)
         self.assert_rejected(
             mutated,
-            "nome player oltre 32 byte UTF-8: indice 36, DaftarTargetTeleportasiSekarangXX",
+            "nome player oltre 32 byte UTF-8: indice 33, DaftarTargetTeleportasiSekarangXX",
         )
 
     def test_declaration_name_at_32_utf8_bytes_is_accepted(self) -> None:
@@ -450,7 +449,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assertEqual(self.errors(mutated), [])
 
     def test_write_only_variable_is_rejected(self) -> None:
-        mutated = self.source.replace("Global.PemainAktif.WaktuMasuk", "Total Time Elapsed")
+        mutated = self.add_player_declaration_and_setup_init("JejakTakTerpakai", "0")
         self.assert_rejected(mutated, "soltanto inizializzata")
 
     def test_undeclared_global_property_is_rejected(self) -> None:
@@ -463,14 +462,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_undeclared_player_variable_action_argument_is_rejected(self) -> None:
         mutated = self.replace_once(
-            "Set Player Variable(Global.PemainAktif, MenitLobi,",
-            "Set Player Variable(Global.PemainAktif, MenitTakDideklarasikan,",
+            "Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan,",
+            "Set Player Variable(Global.PemainAktif, TargetTakDideklarasikan,",
         )
         self.assert_rejected(mutated, "player non dichiarato")
 
     def test_every_player_variable_is_initialized_in_setup(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
-        mutated = self.replace_in_rule(setup, "\n\t\tEvent Player.WaktuMasuk = Total Time Elapsed;", "")
+        mutated = self.replace_in_rule(setup, "\n\t\tEvent Player.MenuTerbuka = False;", "")
         self.assert_rejected(mutated, "non inizializzata in SiapkanPemain")
 
     def test_removed_teks_diri_leaves_compact_initialized_declarations(self) -> None:
@@ -697,7 +696,29 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "slot HUD roster devono essere esattamente 0..11")
 
-    def test_chill_grid_rejects_an_eleventh_fixed_hud(self) -> None:
+    def test_retired_minutes_and_duplicate_roster_handles_cannot_return(self) -> None:
+        for name in ("WaktuMasuk", "MenitLobi", "HudKanan"):
+            with self.subTest(name=name):
+                mutated = self.add_player_declaration_and_setup_init(name, "0")
+                self.assert_rejected(mutated, f"roster unico: stato rimosso ancora presente: {name}")
+
+    def test_host_row_follows_the_current_host_without_caching_or_a_loop(self) -> None:
+        host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
+                    if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
+        changed = host.args[2].replace("Hero Of(Host Player)", "Hero Of(Evaluate Once(Host Player))")
+        self.assert_rejected(self.replace_call_argument(host, 2, changed),
+                             "HUD Host: nome e icona devono seguire l'host corrente")
+        self.assert_rejected(self.replace_call_argument(host, 9, "Visible To"),
+                             "HUD Host: rivalutazione testo")
+
+    def test_host_row_handles_host_absence_without_the_client_zero(self) -> None:
+        host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
+                    if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
+        changed = host.args[2].rsplit(': Custom String("")', 1)[0] + ": Null"
+        self.assert_rejected(self.replace_call_argument(host, 2, changed),
+                             "HUD Host: fallback senza host deve essere stringa vuota")
+
+    def test_chill_grid_rejects_a_tenth_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
             and "SERVER KHUSUS CHILL" in rule.body
@@ -710,7 +731,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.inject_action(init, extra)
         self.assert_rejected(mutated, "numero HUD fissi nella regola iniziale")
 
-    def test_chill_grid_rejects_a_thirteenth_global_hud_outside_initialization(self) -> None:
+    def test_chill_grid_rejects_an_eleventh_global_hud_outside_initialization(self) -> None:
         scheduler = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
             and "Global.LangkahPenjadwal" in rule.body
@@ -720,45 +741,45 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
         )
         mutated = self.inject_action(scheduler, extra)
-        self.assert_rejected(mutated, "numero HUD globali: undici fissi e due roster")
+        self.assert_rejected(mutated, "numero HUD globali: nove fissi e un roster")
 
     def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
-        token = "11 + Count Of(Filtered Array(Global.HudKiriPemain"
+        token = "9 + Count Of(Filtered Array(Global.HudKiriPemain"
         mutated = self.replace_once(token, "10 + Count Of(Filtered Array(Global.HudKiriPemain")
         comment_anchor = '"Urutan ini sengaja bergerak dari paling tenang ke paling kacau. Jangan diacak tanpa alasan yang sangat musikal."'
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
-        self.assert_rejected(mutated, "diagnostica HUD non include gli undici handle fissi")
+        self.assert_rejected(mutated, "diagnostica HUD non include gli nove handle fissi")
 
     def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
         mutated = self.replace_in_rule(renderer, "1 + Event Player.UrutanHUD", "2 + Event Player.UrutanHUD")
         self.assert_rejected(mutated, "renderer HUD roster Left: ordinamento")
 
-    def test_right_roster_stays_before_the_native_team_status_indicator(self) -> None:
-        renderer = self.rule(lambda rule: "Event Player.HudKanan = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(renderer, "-13 + Event Player.UrutanHUD", "1 + Event Player.UrutanHUD")
-        self.assert_rejected(mutated, "renderer HUD roster Right: ordinamento")
+    def test_vibes_roster_cannot_move_back_to_the_right(self) -> None:
+        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
+        mutated = self.replace_in_rule(renderer, "Null, Left,", "Null, Right,")
+        self.assert_rejected(mutated, "renderer HUD roster Left")
 
-    def test_right_grid_requires_the_post_roster_spacer(self) -> None:
+    def test_left_grid_requires_the_pre_roster_spacer(self) -> None:
         call = next(
             call for call in validator.iter_calls(self.source, "Create HUD Text")
             if len(call.args) >= 6
-            and call.args[4].strip() == "Right"
+            and call.args[4].strip() == "Left"
             and call.args[5].strip() == "-1"
         )
-        mutated = self.replace_call_argument(call, 3, "Null")
-        self.assert_rejected(mutated, "HUD fisso Right sort -1: contenuto text errato")
+        mutated = self.replace_call_argument(call, 2, "Null")
+        self.assert_rejected(mutated, "HUD fisso Left sort -1: contenuto subheader errato")
 
-    def test_right_post_roster_spacer_must_be_unconditional(self) -> None:
+    def test_left_pre_roster_spacer_must_be_unconditional(self) -> None:
         call = next(
             call for call in validator.iter_calls(self.source, "Create HUD Text")
             if len(call.args) >= 6
-            and call.args[4].strip() == "Right"
+            and call.args[4].strip() == "Left"
             and call.args[5].strip() == "-1"
         )
-        mutated = self.replace_call_argument(call, 3, 'True ? Custom String("  ") : Null')
-        self.assert_rejected(mutated, "HUD fisso Right sort -1: contenuto text errato")
+        mutated = self.replace_call_argument(call, 2, 'True ? Custom String(" ") : Null')
+        self.assert_rejected(mutated, "HUD fisso Left sort -1: contenuto subheader errato")
 
     def test_left_roster_text_cannot_reintroduce_the_client_zero(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
@@ -875,7 +896,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, 'LOCATION: colore subheader pastel gold esatto')
         mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
-        self.assert_rejected(mutated, "colore distinto da LOBBY & CHILL TIME")
+        self.assert_rejected(mutated, "colore distinto da PLAYER VIBES")
 
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
@@ -2413,7 +2434,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(cleanup, "If(Global.IndeksKeluar >= 0);", "If(True);")
         self.assert_rejected(mutated, "riciclo slot deve essere idempotente")
         for array, action in (("HudKiriPemain", "Destroy HUD Text"),
-                              ("HudKananPemain", "Destroy HUD Text"),
                               ("HudMenuPemain", "Destroy HUD Text"),
                               ("TeksDuniaPemain", "Destroy In-World Text")):
             with self.subTest(array=array):
@@ -2469,10 +2489,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "pending roster ringan")
 
-    def test_roster_ready_flag_is_written_after_both_recreated_handles(self) -> None:
+    def test_roster_ready_flag_is_written_after_the_registered_vibes_handle(self) -> None:
         roster = self.rule(
             lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
         )
         ready = "\t\tEvent Player.HudPemainDibuat = True;\n"
         self.assertIn(ready, roster.body)
@@ -2480,7 +2499,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         actions = changed.index("\tactions\n\t{\n") + len("\tactions\n\t{\n")
         changed = changed[:actions] + ready + changed[actions:]
         mutated = self.source[:roster.start] + changed + self.source[roster.end:]
-        self.assert_rejected(mutated, "dopo entrambi gli handle")
+        self.assert_rejected(mutated, "dopo la registrazione del singolo handle")
 
         conditions = validator.rule_block(roster, "conditions") or ""
         self.assertNotIn("Is Alive(Event Player) == True;", conditions)
@@ -2496,7 +2515,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
             and "Create HUD Text(" in rule.body
             and "Event Player.HudKiri = Last Text ID;" in rule.body
-            and "Event Player.HudKanan = Last Text ID;" in rule.body
             and "Event Player.HudPemainDibuat = True;" in rule.body
         )
         duplicate = re.sub(
@@ -2685,60 +2703,34 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(bot_rule, "Call Subroutine(KunciBot);", "")
         self.assert_rejected(mutated, "regola dedicata di lock bot/dummy assente")
 
-    def test_native_dummy_wall_collision_keeps_floors_enabled(self) -> None:
-        mutated = self.replace_once(
+    def test_native_dummy_rejects_all_collision_overrides(self) -> None:
+        bot_rule = self.rule(lambda rule: rule.name.startswith("03c - "))
+        for action in (
+            "Enable Movement Collision With Environment(Event Player);",
             "Disable Movement Collision With Environment(Event Player, False);",
-            "Disable Movement Collision With Environment(Event Player, True);",
-        )
-        self.assert_rejected(mutated, "collisione ambiente dummy: Event Player con Include Floors False")
-
-    def test_native_dummy_wall_collision_does_not_apply_to_ibots(self) -> None:
-        bot_rule = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Call Subroutine(KunciBot);" in rule.body
-            and "Disable Movement Collision With Environment" in rule.body
-        )
-        mutated = self.replace_in_rule(
-            bot_rule,
-            "If(Is Dummy Bot(Event Player) == True);\n\t\t\tEnable Movement Collision With Players",
-            "If(Event Player.BotOtomatis == True);\n\t\t\tEnable Movement Collision With Players",
-        )
-        self.assert_rejected(mutated, "collisioni dummy non protette dal ramo nativo")
-
-    def test_native_dummy_explicitly_keeps_player_collision_enabled(self) -> None:
-        bot_rule = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Call Subroutine(KunciBot);" in rule.body
-            and "Disable Movement Collision With Environment" in rule.body
-        )
-        mutated = self.replace_in_rule(
-            bot_rule,
             "Enable Movement Collision With Players(Event Player);",
-            "",
-        )
-        self.assert_rejected(mutated, "collisioni dummy non protette dal ramo nativo")
+            "Disable Movement Collision With Players(Event Player);",
+        ):
+            with self.subTest(action=action):
+                self.assert_rejected(self.inject_action(bot_rule, action),
+                                     "bot/dummy: conservare le collisioni native senza riapplicarle")
 
-    def test_native_dummy_wall_collision_branch_cannot_be_made_unreachable(self) -> None:
-        bot_rule = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Call Subroutine(KunciBot);" in rule.body
-            and "Disable Movement Collision With Environment" in rule.body
-        )
-        mutated = self.replace_in_rule(
-            bot_rule,
-            "Call Subroutine(KunciBot);\n\t\tIf(Is Dummy Bot(Event Player) == True);",
-            "Call Subroutine(KunciBot);\n\t\tAbort;\n\t\tIf(Is Dummy Bot(Event Player) == True);",
-        )
-        self.assert_rejected(mutated, "collisione ambiente dummy: sequenza raggiungibile e isolata")
+    def test_native_dummy_setup_does_not_apply_to_ibots(self) -> None:
+        bot_rule = self.rule(lambda rule: rule.name.startswith("03c - "))
+        mutated = self.replace_in_rule(bot_rule, "If(Is Dummy Bot(Event Player) == True);",
+                                       "If(Event Player.BotOtomatis == True);")
+        self.assert_rejected(mutated, "bot/dummy: sequenza raggiungibile e isolata")
 
-    def test_native_dummy_wall_collision_rule_cannot_have_an_impossible_condition(self) -> None:
-        bot_rule = self.rule(
-            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Call Subroutine(KunciBot);" in rule.body
-            and "Disable Movement Collision With Environment" in rule.body
-        )
+    def test_native_dummy_setup_branch_cannot_be_made_unreachable(self) -> None:
+        bot_rule = self.rule(lambda rule: rule.name.startswith("03c - "))
+        mutated = self.replace_in_rule(bot_rule, "Call Subroutine(KunciBot);",
+                                       "Call Subroutine(KunciBot); Abort;")
+        self.assert_rejected(mutated, "bot/dummy: sequenza raggiungibile e isolata")
+
+    def test_native_dummy_setup_rule_cannot_have_an_impossible_condition(self) -> None:
+        bot_rule = self.rule(lambda rule: rule.name.startswith("03c - "))
         mutated = self.inject_condition(bot_rule, "False == True;")
-        self.assert_rejected(mutated, "collisione ambiente dummy: condizioni esatte e raggiungibili")
+        self.assert_rejected(mutated, "bot/dummy: condizioni esatte e raggiungibili")
 
     def test_bot_lock_neutralizes_player_interference(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
@@ -2760,10 +2752,17 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 )
                 self.assert_rejected(mutated, expected_message)
 
-    def test_bot_lock_must_not_disable_collision_with_players(self) -> None:
+    def test_bot_lock_must_not_modify_native_collisions(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
-        mutated = self.inject_action(bot_lock, "Disable Movement Collision With Players(Event Player);")
-        self.assert_rejected(mutated, "non deve disattivare la collisione dummy con i player")
+        for action in (
+            "Enable Movement Collision With Environment(Event Player);",
+            "Disable Movement Collision With Environment(Event Player, False);",
+            "Enable Movement Collision With Players(Event Player);",
+            "Disable Movement Collision With Players(Event Player);",
+        ):
+            with self.subTest(action=action):
+                self.assert_rejected(self.inject_action(bot_lock, action),
+                                     "KunciBot: conservare le collisioni native senza riapplicarle")
 
     def test_bot_lock_requires_exactly_twenty_percent_move_speed(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "KunciBot")
@@ -3390,7 +3389,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_inspection_crouch_is_blocked_during_vision(self) -> None:
         inspection = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            and "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
         )
         mutated = self.replace_in_rule(inspection, "\n\t\tEvent Player.PrivasiNasibAktif == False;", "")
         self.assert_rejected(mutated, "inspection Crouch non è bloccata durante Vision")
@@ -3443,10 +3442,10 @@ rule("999x - Nasib: Renderer pemain tambahan")
     def test_inspection_and_teleport_never_enable_native_nameplates(self) -> None:
         protected = (
             self.rule(
-                lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+                lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
             ),
             self.rule(
-                lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+                lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi" in rule.body
                 and "Create In-World Text(Event Player" in rule.body
             ),
         )
@@ -3461,7 +3460,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_inspection_renderer_uses_roster_membership_for_cached_name(self) -> None:
         inspection = self.rule(
-            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -3475,7 +3474,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_teleport_renderer_uses_roster_membership_for_cached_name(self) -> None:
         teleport = self.rule(
-            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -3489,7 +3488,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_inspection_renderer_snapshots_cached_name_with_evaluate_once(self) -> None:
         inspection = self.rule(
-            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -3509,7 +3508,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_teleport_renderer_snapshots_cached_name_with_evaluate_once(self) -> None:
         teleport = self.rule(
-            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -3529,7 +3528,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_inspection_renderer_nonhuman_fallback_uses_hero_name(self) -> None:
         inspection = self.rule(
-            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi;" in rule.body
+            lambda rule: "Event Player.TargetInspeksi != Event Player.CalonTargetInspeksi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -3543,7 +3542,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_teleport_renderer_nonhuman_fallback_uses_hero_name(self) -> None:
         teleport = self.rule(
-            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi;" in rule.body
+            lambda rule: "Event Player.TargetTeleportasiTeks != Event Player.CalonTargetTeleportasi" in rule.body
             and "Create In-World Text(Event Player" in rule.body
         )
         mutated = self.replace_in_rule(
