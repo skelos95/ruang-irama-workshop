@@ -2,7 +2,7 @@
 
 Stato: **live-ready** (release storica 0.8.1).
 
-**Revisione main del 9 settembre 2026:** la segnalazione di crash con ricambio della lobby e uso simultaneo delle funzioni richiede una nuova prova nel client. Le correzioni di accumulo e carico sono sottoposte ai test automatici; i riscontri live precedenti non certificano questa revisione.
+**Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
 
 Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; per la 0.8.1 la regressione client è stata completata, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
 
@@ -61,7 +61,6 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 | 20 Hz | controlli rapidi, retry morte completa Revenge/Skull, avanzamento Try Your Luck e motore Fly 3D `ProsesTerbangPemain` |
 | 10 Hz | lifecycle reattivo, RGB, refresh visivi e riapplicazione Ghost/Fly dopo normalizzazioni engine |
 | 1 Hz | countdown, sincronizzazione timer nativo e cache passive |
-| 0,1 Hz | minuti di permanenza in lobby |
 
 Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
 
@@ -132,13 +131,13 @@ L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelat
 
 ### Join
 
-La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Un nome visibile ancora `Null` o vuoto riapre il classifier prima dell'allocazione, quindi non può consumare uno slot con un'identità temporanea. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea una sola coppia di HUD roster. Su un leave vero ogni `PemainDipilih` che punta al leaver viene azzerato prima della rimozione dal roster e del ricalcolo Vote Player.
+La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Un nome visibile ancora `Null` o vuoto riapre il classifier prima dell'allocazione, quindi non può consumare uno slot con un'identità temporanea. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea un solo HUD Player Vibes. Su un leave vero ogni `PemainDipilih` che punta al leaver viene azzerato prima della rimozione dal roster e del ricalcolo Vote Player.
 
 Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto. Per gli umani, Camera, inspection e Teleport rispettano Privacy; Vision è l'eccezione intenzionale e include tutti gli umani.
 
 Revenge e lo Skull finale condividono l'unico percorso che bypassa temporaneamente Unkillable nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva invariati claimant e contabilità: ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio. Dopo Resurrect il tick globale ripristina la modalità Unkillable selezionata e ricrea la relativa icona se il motore l'ha distrutta.
 
-Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%, mantengono la collisione con player/bot e disabilitano soltanto le collisioni ambientali con `Include Floors = False`.
+Per i dummy nativi il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%; le istruzioni che alteravano le collisioni sono rimosse dal setup dummy; `KunciBot` non le riapplica a respawn o cambio eroe.
 
 ### Leave
 
@@ -172,15 +171,15 @@ La fase 2 è serializzata da `01b`: quando il player è spawned, il team resta u
 - La riga Fly della pagina 13 comunica guida e rampa con testo equivalente nelle tre lingue: `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s`, `ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk` e `มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ`.
 - La label localizzata `LOCATION` / `LOKASI SERVER` / `ที่ตั้งเซิร์ฟเวอร์` usa l'ambra neon `Custom Color(255, 205, 110, 255)`, volutamente distinto dal cyan di `LOBBY & CHILL TIME`.
 
-La griglia HUD usa undici handle globali fissi e slot dinamici separati:
+La griglia HUD usa nove handle globali fissi e slot dinamici separati:
 
 | Area | Slot fissi | Slot dinamici |
 |---|---|---|
 | Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
-| Left | comando completo `-2`, spaziatore `-1`, `LOBBY & CHILL TIME` `0`, `CHILL STAR` `13` | roster/minuti `1..12` |
-| Right | comando completo `-16`, spaziatore superiore `-15`, `PLAYER VIBES` `-14`, spaziatore finale `-1` | roster/musica `-13..-2` |
+| Left | comando completo `-2`, spaziatore `-1`, `PLAYER VIBES` `0`, `CHILL STAR` `13` | roster/musica `1..12` |
+| Right | comando completo Arcade/Camera `-16`, Host con icona eroe e nome `0` | nessun roster |
 
-Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include gli undici handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
+Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include gli nove handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
 
 Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. Il test live con 1, 6 e 12 player deve confermare il confine effettivo con indicatore e kill feed.
 
@@ -255,4 +254,4 @@ La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto
 
 ### Dummy bot: spawn e distanza sicura
 
-I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi esplora 16 candidati orizzontali a 8 e 12 m, al massimo uno al secondo, e accetta soltanto posizioni sicure fra 6 e 16 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Soltanto il dummy Workshop disabilita la collisione con pareti e soffitti mantenendo il pavimento; la collisione con player/bot resta esplicitamente abilitata. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.
+I dummy vengono creati soltanto quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi esplora 16 candidati orizzontali a 8 e 12 m, al massimo uno al secondo, e accetta soltanto posizioni sicure fra 6 e 16 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Dummy Workshop e iBot conservano le collisioni native con ambiente e player/bot, senza istruzioni che le disabilitino o riapplichino. Il follow diretto può fermarsi davanti a una parete; non viene introdotto un pathfinding aggiuntivo. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.

@@ -3,6 +3,7 @@ import re
 import unittest
 
 from tools import validate_workshop as validator
+from tools import check_clipboard_import as clipboard
 from tests.test_fly_motion import Expression
 
 
@@ -24,10 +25,16 @@ class LifecycleSourceEvaluator:
     Engine HUD rendering, event ordering, and entity lifetime still need live QA.
     """
 
-    ARRAYS = ("PemainManusia", "SlotHUDPemain", "HudKiriPemain", "HudKananPemain",
+    ARRAYS = ("PemainManusia", "SlotHUDPemain", "HudKiriPemain",
               "HudMenuPemain", "TeksDuniaPemain")
 
     def __init__(self, source: str) -> None:
+        if re.search(r'(?m)^regola\(', source):
+            segments = re.split(r'("(?:\\.|[^"\\])*")', source)
+            for index in range(0, len(segments), 2):
+                for original, translated in clipboard.ITALIAN_TO_ENGLISH_TOKENS:
+                    segments[index] = clipboard._replace_token(segments[index], original, translated)
+            source = "".join(segments)
         self.rules = validator.extract_rules(source)
         self.globals = {name: [] for name in self.ARRAYS}
         self.globals.update(SlotHUDTersedia=list(range(12)), PemainSiklusGlobal=None,
@@ -36,6 +43,7 @@ class LifecycleSourceEvaluator:
         self.event_player = None
         self.now = 0
         self.destroyed = []
+        self.created = []
         cleanup = validator.rule_by_subroutine(self.rules, "BersihkanPemain")
         self.cleanup = validator.mask_strings(validator.rule_block(cleanup, "actions"))
         classifier = next(rule for rule in self.rules
@@ -45,7 +53,8 @@ class LifecycleSourceEvaluator:
     def resolve(self, name):
         constants = {"True": True, "False": False, "Null": None,
                      "TotalTimeElapsed": self.now, "EventPlayer": self.event_player,
-                     "CurrentArrayElement": "sort-key"}
+                     "CurrentArrayElement": "sort-key",
+                     "LastTextID": self.created[-1] if self.created else 0}
         if name in constants:
             return constants[name]
         if name.startswith("EventPlayer."):
@@ -165,7 +174,7 @@ class LifecycleSourceEvaluator:
             statement = statement.strip()
             if re.match(r"Global\.(IndeksPembersihan|IndeksUtangKeluar|SlotHUDTersedia) =", statement):
                 self.execute_assignment(statement)
-            elif re.match(r"Destroy (?:HUD|In-World) Text\(Global\.(?:HudKiriPemain|HudKananPemain|HudMenuPemain|TeksDuniaPemain)\[", statement):
+            elif re.match(r"Destroy (?:HUD|In-World) Text\(Global\.(?:HudKiriPemain|HudMenuPemain|TeksDuniaPemain)\[", statement):
                 expression = statement[statement.index("(") + 1:-1]
                 handle = self.evaluate(expression)
                 if handle:
@@ -175,10 +184,55 @@ class LifecycleSourceEvaluator:
                 if removal:
                     self.globals[removal.group(1)].pop(int(self.evaluate(removal.group(2))))
 
+    def join_with_roster_hud(self, identity):
+        """Project HUD allocation/registration after the real classifier admission guards."""
+        if not self.join(identity):
+            return False
+        rendering = self.classifier[self.classifier.index("Create HUD Text("):]
+        for statement in rendering.split(";"):
+            statement = statement.strip()
+            if statement.startswith("Create HUD Text("):
+                self.created.append(10000 + len(self.created))
+            elif re.match(r"Event Player\.Hud\w+ = Last Text ID$", statement):
+                self.execute_assignment(statement)
+            elif re.match(r"Global\.Hud\w+Pemain\[.*\] = Event Player\.Hud\w+$", statement):
+                self.execute_assignment(statement)
+        return True
+
 
 class ExecutedRosterLifecycleTests(unittest.TestCase):
     def model(self):
         return LifecycleSourceEvaluator(validator.SOURCE.read_text(encoding="utf-8"))
+
+    def test_single_vibes_handle_survives_full_lobby_churn_and_duplicate_events(self):
+        for path, _, _ in SOURCES:
+            with self.subTest(source=path.name):
+                source = path.read_text(encoding="utf-8")
+                model = LifecycleSourceEvaluator(source)
+                self.assertNotIn("HudKanan", source)
+                self.assertNotIn("MenitLobi", source)
+                self.assertNotIn("WaktuMasuk", source)
+                for index in range(12):
+                    self.assertTrue(model.join_with_roster_hud(f"player-{index}"))
+                self.assertEqual(len(model.created), 12)
+                for turn in range(120):
+                    identity = f"player-{turn % 12}"
+                    old_handle = model.globals["HudKiriPemain"][model.globals["PemainManusia"].index(identity)]
+                    model.remove(identity)
+                    model.remove(identity)
+                    self.assertEqual(model.destroyed.count(old_handle), 1)
+                    self.assertTrue(model.join_with_roster_hud(identity))
+                    self.assertFalse(model.join_with_roster_hud(identity))
+                    live = set(model.created) - set(model.destroyed)
+                    self.assertEqual(len(live), 12)
+                    self.assertEqual(live, set(model.globals["HudKiriPemain"]))
+                    self.assertTrue(all(len(model.globals[name]) == 12 for name in model.ARRAYS))
+                for identity in list(model.globals["PemainManusia"]):
+                    model.remove(identity)
+                self.assertEqual(set(model.created), set(model.destroyed))
+                self.assertEqual(len(model.destroyed), len(model.created))
+                self.assertTrue(all(not model.globals[name] for name in model.ARRAYS))
+                self.assertEqual(model.globals["SlotHUDTersedia"], list(range(12)))
 
     def test_leave_rejoin_reuses_only_the_freed_slot_without_inheriting_handles(self):
         model = self.model()
@@ -187,7 +241,7 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
         for offset, array in enumerate(model.ARRAYS[2:]):
             model.globals[array] = [100 + offset, 200 + offset, 300 + offset]
         model.remove("bob")
-        self.assertEqual(model.destroyed, [200, 201, 202, 203])
+        self.assertEqual(model.destroyed, [200, 201, 202])
         self.assertEqual(model.globals["PemainManusia"], ["alice", "carol"])
         self.assertEqual(model.globals["SlotHUDPemain"], [0, 2])
         model.remove("bob")
@@ -198,7 +252,7 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
         before = {key: list(model.globals[key]) for key in model.ARRAYS + ("SlotHUDTersedia",)}
         model.remove("bob")
         self.assertEqual(before, {key: model.globals[key] for key in before})
-        self.assertEqual(len(model.destroyed), 4)
+        self.assertEqual(len(model.destroyed), 3)
 
     def test_repeated_team_reset_and_duplicate_join_keep_parallel_arrays_consistent(self):
         model = self.model()

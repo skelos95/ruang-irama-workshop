@@ -361,10 +361,18 @@ class TransientOwnershipTests(unittest.TestCase):
                     with self.subTest(source=source, field=field, rule=rule.name):
                         self.assertGreaterEqual(index, 3)
                         self.assertTrue(siblings[index - 1][0].startswith(f"Create {kind}("))
-                        self.assertEqual(siblings[index - 3], (
+                        allocation_index = index - 2
+                        if field == "TeksTeleportasi":
+                            # The creation deadline is armed after ownership is
+                            # secured, so a failed allocation consumes no delay.
+                            self.assertEqual(siblings[allocation_index], (
+                                "Event Player.WaktuTeksTargetBerikut = Total Time Elapsed + 0.250",
+                                None, None))
+                            allocation_index -= 1
+                        self.assertEqual(siblings[allocation_index - 1], (
                             "Global.IndeksTeksPembersihan = Index Of Array Value("
                             "Global.PemilikTeksSementara, Event Player)", None, None))
-                        allocation, body, otherwise = siblings[index - 2]
+                        allocation, body, otherwise = siblings[allocation_index]
                         self.assertEqual(allocation, "If(Global.IndeksTeksPembersihan < 0)")
                         self.assertFalse(otherwise)
                         self.assertEqual(body[0], (
@@ -380,7 +388,7 @@ class TransientOwnershipTests(unittest.TestCase):
                             f"Global.{array}[Index Of Array Value(Global.PemilikTeksSementara, "
                             f"Event Player)] = Event Player.{field}", None, None))
                         allocation_tokens = [items[position][0] for items, position, _
-                                             in self.walk_actions([siblings[index - 2]])]
+                                             in self.walk_actions([siblings[allocation_index]])]
                         self.assertFalse(any(token.startswith(("Wait(", "Loop"))
                                              for token in allocation_tokens))
                     counts[field] += 1

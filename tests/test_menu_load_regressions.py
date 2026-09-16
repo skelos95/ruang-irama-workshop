@@ -41,6 +41,8 @@ class MenuLoadEvaluator:
         self.hud_bodies = {}
         self.literals = {}
         self.expressions = {}
+        self.now = 0.0
+        self.stub_aim = True
 
     def rule(self, prefix):
         return next(rule for rule in self.rules if rule.name.startswith(prefix + " -"))
@@ -51,7 +53,11 @@ class MenuLoadEvaluator:
                      IndeksBahasa=0, HudMenu=None, TeksDunia=None,
                      TeksTeleportasi=None, TeksVisiNasib=None,
                      PelatNamaDinonaktifkan=False, TeleportasiJongkokAktif=True,
-                     CalonTargetTeleportasi=None, InspeksiAktif=False)
+                     CalonTargetTeleportasi=None, InspeksiAktif=False,
+                     TargetTeleportasiTeks=None, TargetInspeksi=None,
+                     CalonTargetInspeksi=None, WaktuTeksTargetBerikut=0,
+                     spawned=True, PrivasiInspeksiAktif=False,
+                     PembaruanDaftarTertunda=False)
         state.update(changes)
         self.players[name] = state
         if state["Manusia"]:
@@ -66,7 +72,9 @@ class MenuLoadEvaluator:
                   "CurrentArrayElement": self.element, "LastTextID": self.last_text,
                   "Manusia": "Manusia", "PrivasiNasibAktif": "PrivasiNasibAktif",
                   "PelatNamaDinonaktifkan": "PelatNamaDinonaktifkan",
-                  "Melee": "Melee"}
+                  "Melee": "Melee", "TotalTimeElapsed": self.now,
+                  "BotOtomatis": "BotOtomatis", "PrivasiInspeksiAktif": "PrivasiInspeksiAktif",
+                  "PembaruanDaftarTertunda": "PembaruanDaftarTertunda"}
         if name in values: return values[name]
         if name in self.literals: return self.literals[name]
         if name.startswith("EventPlayer."):
@@ -105,6 +113,13 @@ class MenuLoadEvaluator:
                     if visit(args[1]): result.append(self.element)
                 self.element = previous
                 return result
+            if name == "SortedArray":
+                previous = self.element
+                ranked = []
+                for index, self.element in enumerate(visit(args[0])):
+                    ranked.append((visit(args[1]), index, self.element))
+                self.element = previous
+                return [element for _, _, element in sorted(ranked)]
             return self.call(name, [visit(arg) for arg in args])
         return visit(self.expressions[expression])
 
@@ -115,8 +130,8 @@ class MenuLoadEvaluator:
         if name == "IndexOfArrayValue": return args[0].index(args[1]) if args[1] in args[0] else -1
         if name == "PlayerVariable": return self.players.get(args[0], {}).get(args[1], False)
         if name == "At": return args[0][int(args[1])]
-        if name in ("IsAlive", "EntityExists", "IsDummyBot"):
-            key = {"IsAlive": "alive", "EntityExists": "exists", "IsDummyBot": "dummy"}[name]
+        if name in ("IsAlive", "EntityExists", "IsDummyBot", "HasSpawned"):
+            key = {"IsAlive": "alive", "EntityExists": "exists", "IsDummyBot": "dummy", "HasSpawned": "spawned"}[name]
             return self.players.get(args[0], {}).get(key, False)
         if name == "CustomString":
             values = [int(value) if isinstance(value, float) and value.is_integer() else value
@@ -166,7 +181,7 @@ class MenuLoadEvaluator:
                 name, args = statement.split("(", 1)[0], call.args
                 if name == "Call Subroutine":
                     if args[0] == "TransisiWarnaMenu": continue  # Color animation is native.
-                    if args[0] == "SegarkanTargetTeleportasi": continue  # Aim selection is tested separately.
+                    if args[0] == "SegarkanTargetTeleportasi" and self.stub_aim: continue
                     rule = validator.rule_by_subroutine(self.rules, args[0])
                     self.execute(validator.rule_block(rule, "actions"))
                 elif name == "Create HUD Text":
@@ -303,9 +318,14 @@ class MenuLoadRegressionTests(unittest.TestCase):
         for name, model in self.models():
             with self.subTest(source=name):
                 model.add("teleport", CalonTargetTeleportasi="target")
+                model.add("target")
                 model.add("inspect", InspeksiAktif=True, PelatNamaDinonaktifkan=True)
                 model.add("normal")
-                for _ in range(20): model.run("19d", "teleport")
+                model.run("19d", "teleport")
+                for _ in range(20):
+                    model.now += 0.05
+                    # A stable selection does not recreate its current label.
+                    self.assertFalse(model.conditions("19d", "teleport"))
                 self.assertEqual(model.nameplate_hides, ["teleport"])
                 self.assertEqual(model.destroyed_world, model.created_world[:-1])
                 self.assertEqual(model.globals["PemilikTeksSementara"].count("teleport"), 1)

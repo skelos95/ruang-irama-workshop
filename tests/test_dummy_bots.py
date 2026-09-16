@@ -18,11 +18,11 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)
-            self.assertIn('"LOBBY & CHILL TIME"', source)
+            self.assertNotIn('"LOBBY & CHILL TIME"', source)
             self.assertIn('"PLAYER VIBES"', source)
-            self.assertIn("11 + Count Of(Filtered Array(", source)
+            self.assertIn("9 + Count Of(Filtered Array(", source)
             self.assertIn("1 + Event Player.UrutanHUD", source)
-            self.assertIn("-13 + Event Player.UrutanHUD", source)
+            self.assertNotIn("-13 + Event Player.UrutanHUD", source)
             self.assertIn(f"{global_name}.SlotHUDTersedia = Sorted Array(Append To Array(", source)
             self.assertIn('Custom String("{0}{1}"', source)
             self.assertNotIn('Custom String("{0}{1}{2}"', source)
@@ -61,21 +61,16 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Set Respawn Max Time(Event Player, 3);", source)
             self.assertNotIn("Set Respawn Max Time(Event Player, 30);", source)
 
-    def test_native_dummy_wall_phasing_remains_isolated_from_player_ghost_mode(self):
-        action = "Disable Movement Collision With Environment(Event Player, False);"
+    def test_native_dummy_collision_overrides_are_removed(self):
         for source, rule_kw in ((self.it, "regola"), (self.en, "rule")):
-            self.assertEqual(source.count(action), 2)
-            self.assertNotIn("Disable Movement Collision With Environment(Event Player, True);", source)
+            # Only the local human Ghost helper uses this Event Player action.
+            self.assertEqual(source.count("Disable Movement Collision With Environment(Event Player, False);"), 1)
             bot_rule = source.split(
                 f'{rule_kw}("03c - Bot: Kunci saat hidup kembali atau pahlawan berganti")', 1
             )[1].split(f'{rule_kw}("', 1)[0]
-            self.assertEqual(bot_rule.count(action), 1)
-            self.assertIn(
-                "If(Is Dummy Bot(Event Player) == True);\n"
-                "\t\t\tEnable Movement Collision With Players(Event Player);\n"
-                f"\t\t\t{action}",
-                bot_rule,
-            )
+            self.assertNotIn("Movement Collision", bot_rule)
+            self.assertIn("Call Subroutine(KunciBot);", bot_rule)
+            self.assertIn("Set Respawn Max Time(Event Player, 3);", bot_rule)
 
     def test_dummy_reserves_the_last_human_slot_and_leaves_at_full_team(self):
         for team in ("Team 1", "Team 2"):

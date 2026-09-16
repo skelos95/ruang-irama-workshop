@@ -2,6 +2,15 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Riduzione dei picchi, Player Vibes e collisioni dummy — 2026-09-15
+
+- Separata la diagnostica dalla registrazione Inspector: i contatori restano disponibili con la registrazione disabilitata in entrambi gli stati del toggle.
+- Limitate le creazioni delle targhette Inspection/Travel tramite una scadenza individuale condivisa di 0,25 s. Il cleanup rimane immediato; un cambio rapido di bersaglio può mostrare una breve pausa prima della nuova targhetta.
+- Distribuite le rotazioni delle icone roulette in quattro fasi dello slot HUD, con al massimo tre aggiornamenti per tick a 12 umani. Le prime rotazioni possono risultare meno rapide; durate degli effetti e gestione della morte restano basate sui propri timestamp.
+- Rimosso tutto il conteggio dei minuti individuali, il vecchio roster e i relativi handle/array. Player Vibes passa a sinistra: una riga per umano e nove HUD fissi (21 handle a 12 player, prima 35); a destra compare Host con icona eroe e nome del player corrente. Countdown server e CHILL STAR restano disponibili.
+- Rimosse le istruzioni che alteravano le collisioni dummy; restano quelle native, senza riapplicazioni nel lock. Il follow diretto può arrestarsi contro una parete.
+- Nessun nuovo Wait o Loop. Le verifiche automatiche coprono limiti di creazione, distribuzione delle rotazioni e collisioni; l'assenza di crash richiede ancora la prova nel client.
+
 ## Compatibilità del titolo regola durante l'import — 2026-09-10
 
 - Semplificato il titolo di `93d` in `93d - Subrutin: Bersihkan teks yatim` dopo la segnalazione client «commento non valido dopo regola(». Nessuna modifica ad azioni, variabili, condizioni o gestione delle risorse.

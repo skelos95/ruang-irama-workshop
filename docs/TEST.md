@@ -34,7 +34,7 @@ Le invarianti controllate automaticamente sono dettagliate in [`VALIDAZIONE.md`]
 1. Aggiornare Overwatch alla build del **19 agosto 2026**.
 2. Impostare la lingua testo del client su Italiano e importare da zero `workshop/ruang_irama.it-IT.workshop` dalla vista Raw; non riutilizzare un replay precedente alla patch.
 3. Annotare codice import, build client, regione, data/ora e piattaforma.
-4. Abilitare la diagnostica host quando si acquisiscono le metriche.
+4. Abilitare la diagnostica host quando si acquisiscono le metriche. Il toggle lascia Inspector Recording disabilitato anche con Diagnostics ON, così il confronto non aggiunge il costo della registrazione.
 5. Preparare 12 slot. I dummy possono occupare soltanto la capacità libera e devono auto-rimuoversi per consentire fino a 12 umani; la prova di input simultanei richiede più utenti reali.
 
 Accettazione smoke:
@@ -99,9 +99,9 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - nel Main Menu percorrere `11→12→13→0` e poi `0→13→12`; chiudere sul 13, riaprire e tornare a 0, verificando che Dummy Follow e Ghost/Fly restino distinti e che il renderer non si blocchi;
 - verificare testo, stato, feedback e comando localizzati;
 - verificare una riga vuota tra contenuto e comandi;
-- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0/13` + roster `1..12`, Right `-16/-15/-14`, roster `-13..-2` e spaziatore finale `-1`;
-- verificare con 1, 6 e 12 player che il Team Status Indicator e il kill feed nativi seguano l'ultimo nome Right dopo una riga vuota, senza inserirsi fra `PLAYER VIBES` e il roster;
-- confermare che sotto il roster Left non compaia uno `0` isolato con diagnostica disattivata, che i promemoria completi/`LOBBY & CHILL TIME` siano corretti in EN/ID/TH e che `CHILL STAR` compaia come HUD dedicato colorato (non incollato all'ultima riga roster);
+- controllare glifi Thai, wrapping e la griglia esatta: Top `0/1/2` + contenuto `3`, Left `-2/-1/0/13` + Player Vibes `1..12`, Right `-16/0`;
+- verificare con 1, 6 e 12 player Player Vibes a sinistra, una sola riga per umano e nessuna lista a destra; controllare che Team Status Indicator e kill feed nativi restino leggibili;
+- confermare che sotto il roster Left non compaia uno `0` isolato con diagnostica disattivata, che i promemoria completi/`PLAYER VIBES` siano corretti in EN/ID/TH e che `CHILL STAR` compaia come HUD dedicato colorato (non incollato all'ultima riga roster);
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
@@ -116,7 +116,7 @@ Focus dati:
 - 37 icone con nome localizzato e indice 0 `Nothing`;
 - 26 località server nello stesso ordine;
 - label della località in ambra neon `Custom Color(255, 205, 110, 255)`, nettamente distinta dal cyan di `LOBBY & CHILL TIME`, in tutte e tre le lingue;
-- roster con `MIN`, `MENIT` e `นาที` corretti;
+- nessun conteggio minuti individuale nel roster in EN/ID/TH; genere musicale e nome del player corretti;
 - CHILL, generi, nomi player ed eroi invariati come nomi propri.
 
 ### Profilo `งูแท้`
@@ -297,7 +297,7 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 - colpire e spingere i dummy con sorgenti diverse: devono ricevere danni e knockback normali (`100%`), pur restando offensivamente passivi;
 - a ogni spawn verificare che il dummy rimanga stabilizzato per circa 1 secondo e poi esca dalla Spawn Room solo verso una destinazione percorribile e valida per la modalità; se la destinazione non è disponibile deve restare in spawn, non finire a coordinate nulle o nel vuoto;
 - fuori dalla Spawn Room, posizionare un alleato e un nemico vivo: il dummy deve ignorare l'alleato e avanzare automaticamente verso l'umano nemico più vicino;
-- verificare che il dummy attraversi pareti e soffitti senza attraversare il pavimento o cadere fuori mappa, ma continui a collidere fisicamente con umani, bot e altri dummy; gli iBot devono conservare tutte le collisioni native;
+- verificare che muri, soffitti e pavimenti fermino il dummy e che le collisioni con umani, bot e altri dummy siano abilitate; ripetere dopo respawn e cambio eroe. Gli iBot devono conservare tutte le collisioni native;
 - avvicinare il dummy entro 4 m dal nemico e verificare throttle zero; allontanare il nemico oltre la soglia e verificare la ripartenza automatica;
 - con due umani nemici opt-in a distanze diverse, verificare che il dummy scelga sempre quello più vicino; invertire le distanze e controllare il riallineamento;
 - sul player più vicino aprire pagina 12 e applicare Dummy Follow OFF: il dummy deve escluderlo subito e passare al successivo umano opt-in, anche se più lontano;
@@ -367,7 +367,7 @@ Accettazione:
 - server fluido e input reattivi;
 - nessun warning persistente di script load;
 - nessuna crescita progressiva di HUD, In-World Text o effetti;
-- countdown, RGB e minuti continuano con frequenze regolari;
+- countdown e RGB continuano con frequenze regolari; non compare alcun conteggio dei minuti individuali;
 - nessun conflitto con Team Status Indicator.
 
 ## 10. Diagnostica
@@ -461,3 +461,13 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 - Effettuare voti contemporanei, auto-voto, cambio voto e uscita del candidato: i conteggi e CHILL STAR devono convergere al successivo tick, senza voti del player scomparso e senza un vincitore in caso di pareggio.
 - Vision deve escludere immediatamente chi disattiva l'effetto o lascia la lobby. Nuovi ingressi devono rispettare le targhette nascoste dei viewer in ispezione o Teleport.
 - Annotare l'eventuale messaggio preciso di chiusura e le funzioni attive al momento. I test Python eseguono il flusso del sorgente con primitive native controllate; non simulano collisioni, rete, durata degli oggetti nativi o limiti del server Overwatch.
+
+## Regressione riduzione picchi, Player Vibes e collisioni — 2026-09-15
+
+- Registrare SHA importato, build client, mappa, numero di player, messaggio esatto di eventuale chiusura e Server Load medio/picco. Confrontare Text Count ed Entity Count nativi a funzioni chiuse prima/dopo il ricambio, oltre agli array del pannello interno.
+- Ripetere una lobby piena con menu e ingressi/uscite, poi aggiungere Camera, targhette Inspection/Travel, roulette e Fly/Attach separatamente prima della prova combinata. Mantenere Inspector Recording disabilitato durante i confronti.
+- Alternare rapidamente bersagli in Inspection e Travel: nessuna targhetta precedente deve rimanere sul nuovo soggetto; ammettere fino a circa 0,25 s prima della nuova creazione. Target stabile: testo e posizione continuano ad aggiornarsi senza ricreare l'handle. Privacy, morte, leave e chiusura devono rimuovere subito i riferimenti rilevati dal runtime; Teleport/Attach devono ancora validare il bersaglio al comando.
+- Verificare nove HUD fissi e una sola riga Player Vibes per umano: 21 handle a lobby piena e funzioni chiuse. Ripetere join/leave e cambio squadra: nessuna duplicazione, minuti individuali o seconda lista. Countdown server e CHILL STAR restano attivi. Verificare a destra `Host:` con icona eroe e nome corretti dopo cambio eroe, passaggio host e uscita dell’host precedente.
+- Avviare 12 roulette insieme e con partenze sfalsate, includendo wrap del contatore, uscite e slot riutilizzati. Nessuna roulette deve restare bloccata; un esito si applica una sola volta e la durata dell'effetto parte dall'esito effettivo, non dall'avvio della rotazione.
+- Provare dummy contro muri, soffitti, pavimenti e altri giocatori con collisione normale, prima/dopo respawn e cambio eroe. L'uscita automatica dalla spawn resta un teleport soltanto verso destinazioni validate; fuori spawn il follow può fermarsi contro gli ostacoli.
+- Proseguire il ricambio per 30–60 minuti. Un run senza errore riduce l'incertezza per quella configurazione, ma non sostituisce la registrazione delle metriche e del commit provato.
