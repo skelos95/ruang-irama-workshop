@@ -2,6 +2,11 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Host come testo con spazio sopra e sotto — 2026-09-21
+
+- Spostata la riga Host dal campo Subheader al campo Text, con una riga vuota sopra e una sotto in tutte le lingue. Nome e icona continuano a seguire l'host corrente.
+- La spaziatura appartiene allo stesso HUD: restano nove handle fissi e 21 handle di base con 12 umani. La distanza visiva dall'indicatore nativo va confermata nel client dopo il nuovo import.
+
 ## Riduzione dei picchi, Player Vibes e collisioni dummy — 2026-09-15
 
 - Separata la diagnostica dalla registrazione Inspector: i contatori restano disponibili con la registrazione disabilitata in entrambi gli stati del toggle.
