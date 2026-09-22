@@ -2541,7 +2541,7 @@ def validate_special_player_profile(
     rules: list[Rule],
     player_entries: list[Declaration],
 ) -> None:
-    """Validate the isolated defaults and soundtrack lock for player งูแท้."""
+    """Validate the isolated defaults and soundtrack lock for player งูแรร์."""
 
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
@@ -2624,22 +2624,22 @@ def validate_special_player_profile(
     if classifier:
         profile_match = re.search(
             r'If\s*\(\s*Event Player\.NamaTampilan\s*'
-            r'==\s*Custom String\s*\(\s*"งูแท้"\s*\)\s*\)\s*;',
+            r'==\s*Custom String\s*\(\s*"งูแรร์"\s*\)\s*\)\s*;',
             classifier.body,
         )
-        checks.require(profile_match is not None, "profilo speciale: matcher งูแท้ deve usare NamaTampilan stabile")
+        checks.require(profile_match is not None, "profilo speciale: matcher งูแรร์ deve usare NamaTampilan stabile")
         checks.require(
-            'If(Custom String("{0}", Event Player) == Custom String("งูแท้"));' not in classifier.body,
+            'If(Custom String("{0}", Event Player) == Custom String("งูแรร์"));' not in classifier.body,
             "profilo speciale: vietato usare il token player live dopo la cache Nome",
         )
-        checks.equal(classifier.body.count('Custom String("งูแท้")'), 1,
-                     "profilo speciale: numero matcher Unicode งูแท้")
+        checks.equal(classifier.body.count('Custom String("งูแรร์")'), 1,
+                     "profilo speciale: numero matcher Unicode งูแรร์")
         if profile_match:
             enclosing = conditional_branches_containing(classifier.body, profile_match.start())
             checks.require(bool(enclosing), "profilo speciale: matcher fuori da un ramo If isolato")
             if enclosing:
                 expected_branch = '''
-If(Event Player.NamaTampilan == Custom String("งูแท้"));
+If(Event Player.NamaTampilan == Custom String("งูแรร์"));
     Event Player.MusikKhusus = Custom String("Draconian");
     Event Player.IndeksWarna = 1;
     Event Player.KursorWarna = 1;
@@ -2706,14 +2706,14 @@ End;
     if fast:
         repair_match = re.search(
             r'If\s*\(\s*Global\.PemainAktif\.NamaTampilan\s*'
-            r'==\s*Custom String\s*\(\s*"งูแท้"\s*\)\s*\)\s*;',
+            r'==\s*Custom String\s*\(\s*"งูแรร์"\s*\)\s*\)\s*;',
             fast.body,
         )
-        checks.require(repair_match is not None, "profilo speciale: repair Unicode งูแท้ assente")
+        checks.require(repair_match is not None, "profilo speciale: repair Unicode งูแรร์ assente")
         checks.equal(
-            fast.body.count('Custom String("งูแท้")'),
+            fast.body.count('Custom String("งูแรร์")'),
             1,
-            "profilo speciale: numero matcher repair Unicode งูแท้",
+            "profilo speciale: numero matcher repair Unicode งูแรร์",
         )
         if repair_match:
             repair_spans = [
@@ -2728,7 +2728,7 @@ End;
                 )
                 repair_branch = fast.body[repair_start:repair_end]
                 expected_repair = '''
-If(Global.PemainAktif.NamaTampilan == Custom String("งูแท้"));
+If(Global.PemainAktif.NamaTampilan == Custom String("งูแรร์"));
     Global.PemainAktif.MusikKhusus = Custom String("Draconian");
     If(Global.PemainAktif.PernahDisiapkan == False);
         Global.PemainAktif.IndeksWarna = 1;

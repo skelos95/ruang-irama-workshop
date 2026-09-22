@@ -119,9 +119,9 @@ Focus dati:
 - nessun conteggio minuti individuale nel roster in EN/ID/TH; genere musicale e nome del player corretti;
 - CHILL, generi, nomi player ed eroi invariati come nomi propri.
 
-### Profilo `งูแท้`
+### Profilo `งูแรร์`
 
-- Entrare con il nome visibile esatto `งูแท้`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Draconian`.
+- Entrare con il nome visibile esatto `งูแรร์`: Name Color deve partire da `Silver Mist`, Player Icon da `Poison 2` e Player Vibes da `Draconian`.
 - Modificare colore e icona dal menu, chiudere/riaprire e cambiare squadra: chiusura/riapertura deve conservare le modifiche, mentre il cambio squadra deve rieseguire il setup e riportare i default del profilo.
 - Aprire Soundtrack: la pagina deve risultare read-only e Primary/Secondary, Interact e Ability 1/2 non devono cambiare `Draconian`.
 - Verificare che `Draconian` non aumenti il catalogo globale: gli altri player continuano ad avere esattamente 100 generi e il normale wrap `0..99`.
@@ -229,7 +229,7 @@ Verifica specifica HEART: ferire il proprietario, un alleato e un avversario, la
 - Cambiare squadra mentre il player è morto e durante hero select/prima di `Has Spawned`: la quarantena deve impedire l'uso dello stato precedente; dopo spawn e team stabili, cleanup e setup devono ricostruire correttamente HUD/stato senza trattenere il lock mentre il player non è spawned.
 - Eseguire anche uno switch diretto mentre il player è ancora spawned/vivo: dopo la stabilizzazione il reset completo deve liberare lock e riferimenti prima della nuova registrazione, senza percorsi `Abort` o dipendenze da `Server Load` nel teardown.
 - Da un secondo player mantenere Crouch e la mira sul player per tutta la transizione: il vecchio In-World Text deve sparire durante il cleanup e tornare solo dopo la nuova registrazione con nome, icona eroe e HP corretti.
-- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแท้`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Draconian`.
+- Ripetere il cambio nel momento in cui il client sostituisce il riferimento dell'entità: lo slot precedente deve tornare libero, il nuovo riferimento deve registrarsi senza lasciare `Manusia=False` o lock lifecycle occupato. Con tutti gli slot roster occupati, il classifier deve rilasciare il lock tra i retry e completare appena il cleanup libera lo slot. Per `งูแรร์`, verificare che il setup riapplichi `Silver Mist`, `Poison 2` e `Draconian`.
 - Confermare che menu e Teleport transitori vengano chiusi/riarmati senza handle orfani e che il detector individuale non acquisisca il lock globale del join.
 - Attivare Camera, status/effetti Try Your Luck e voti prima del cambio: il reset completo deve chiuderli/pulirli in modo deterministico, senza riferimenti ereditati. Ripetere Team 1 → Team 2 → Team 1 rapidamente con menu, Camera self/watch, Fly e ciascun effetto Luck attivi: nessuna Camera, accelerazione, gravità zero o status deve sopravvivere al reset; con Fly OFF il movimento nativo deve essere normale.
 - Attivare Ghost e Fly separatamente prima del cambio: dopo il reset devono tornare OFF e riattivarsi solo da menu.
@@ -317,11 +317,11 @@ Dopo ogni cambio:
 
 - nessun doppione roster o handle;
 - Camera, status, effetti, voti e overlay attivi devono essere puliti senza lasciare riferimenti stale;
-- tutte le preferenze e i cursori devono tornare ai default di setup, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow, Ghost/Fly e profilo `งูแท้`;
+- tutte le preferenze e i cursori devono tornare ai default di setup, inclusi lingua, colore, genere, icona, Teleport, Privacy, Dummy Follow, Ghost/Fly e profilo `งูแรร์`;
 - Text Count ed Entity Count non crescono rispetto allo stato equivalente precedente al cambio;
 - nessun `excessive Workshop script load`.
 
-Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแท้` ciò significa `Silver Mist`, `Poison 2` e `Draconian` bloccato.
+Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแรร์` ciò significa `Silver Mist`, `Poison 2` e `Draconian` bloccato.
 
 ## 8. Matrice modalità
 
@@ -416,7 +416,7 @@ Fly due player indipendenti/lifecycle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
 Jump Resurrect same-point/void-live-nearest-walkable/retry latch: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
-Profilo งูแท้ default/editabilità/lock: PASS/FAIL
+Profilo งูแรร์ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
 Cascata full-lobby: PASS/FAIL
@@ -471,3 +471,9 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 - Avviare 12 roulette insieme e con partenze sfalsate, includendo wrap del contatore, uscite e slot riutilizzati. Nessuna roulette deve restare bloccata; un esito si applica una sola volta e la durata dell'effetto parte dall'esito effettivo, non dall'avvio della rotazione.
 - Provare dummy contro muri, soffitti, pavimenti e altri giocatori con collisione normale, prima/dopo respawn e cambio eroe. L'uscita automatica dalla spawn resta un teleport soltanto verso destinazioni validate; fuori spawn il follow può fermarsi contro gli ostacoli.
 - Proseguire il ricambio per 30–60 minuti. Un run senza errore riduce l'incertezza per quella configurazione, ma non sostituisce la registrazione delle metriche e del commit provato.
+
+## Camera e profilo personalizzato — 2026-09-22
+
+- Osservare un umano con Camera watch e fargli cambiare squadra: il viewer deve tornare alla visuale normale durante la quarantena, anche qualora l'entità resti viva e spawnata. Ripetere con più viewer; la camera personale e chi osserva un target diverso devono restare invariati.
+- Entrare con il nome esatto `งูแรร์`: verificare Silver Mist e Poison 2 iniziali modificabili, Draconian bloccato e riapplicazione dopo cambio squadra o leave/rejoin. Il precedente nome `งูแท้` segue ora il profilo ordinario.
+- Questi casi non ereditano automaticamente i riscontri live della release storica 0.8.1; registrare l'esito e lo SHA realmente importato.
