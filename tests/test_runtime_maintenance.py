@@ -445,11 +445,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.PemainAktif.SudahSiap = True;", fast)
             self.assertIn(f"{global_name}.PemainAktif.PernahDisiapkan = True;", fast)
             self.assertIn(
-                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแท้"));',
+                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแรร์"));',
                 fast,
             )
             self.assertNotIn(
-                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
+                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแรร์"));',
                 fast,
             )
             self.assertIn(

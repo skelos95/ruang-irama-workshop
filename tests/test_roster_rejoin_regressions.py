@@ -477,8 +477,8 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            self.assertIn('If(Event Player.NamaTampilan == Custom String("งูแท้"));', classifier)
-            self.assertNotIn('If(Custom String("{0}", Event Player) == Custom String("งูแท้"));', classifier)
+            self.assertIn('If(Event Player.NamaTampilan == Custom String("งูแรร์"));', classifier)
+            self.assertNotIn('If(Custom String("{0}", Event Player) == Custom String("งูแรร์"));', classifier)
             self.assertIn('Event Player.MusikKhusus = Custom String("Draconian");', classifier)
             self.assertIn("Event Player.IndeksWarna = 1;", classifier)
             self.assertIn("Event Player.KursorWarna = 1;", classifier)
@@ -492,11 +492,11 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 f'{rule_kw}("89b - Subrutin',
             )
             self.assertIn(
-                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแท้"));',
+                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแรร์"));',
                 fast,
             )
             self.assertNotIn(
-                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแท้"));',
+                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแรร์"));',
                 fast,
             )
 

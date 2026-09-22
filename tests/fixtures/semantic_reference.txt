@@ -1235,7 +1235,7 @@ rule("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		Event Player.IndeksGenre = -1;
 		Event Player.IndeksWarna = 0;
 		Event Player.WarnaNama = Global.DaftarWarna[Event Player.IndeksWarna];
-		If(Event Player.NamaTampilan == Custom String("งูแท้"));
+		If(Event Player.NamaTampilan == Custom String("งูแรร์"));
 			Event Player.MusikKhusus = Custom String("Draconian");
 			Event Player.IndeksWarna = 1;
 			Event Player.KursorWarna = 1;
@@ -3437,7 +3437,7 @@ rule("89a - Subrutin: Proses status cepat pemain")
 			Global.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Global.PemainAktif));
 		End;
 		If(And(Global.PemainAktif.SiklusPemainAktif == False, And(Is Dummy Bot(Global.PemainAktif) == False, And(Global.PemainAktif.BotOtomatis == False, And(Array Contains(Global.PemainManusia, Global.PemainAktif) == True, Or(Global.PemainAktif.Manusia == False, Global.PemainAktif.PernahDisiapkan == False))))));
-			If(Global.PemainAktif.NamaTampilan == Custom String("งูแท้"));
+			If(Global.PemainAktif.NamaTampilan == Custom String("งูแรร์"));
 				Global.PemainAktif.MusikKhusus = Custom String("Draconian");
 				If(Global.PemainAktif.PernahDisiapkan == False);
 					Global.PemainAktif.IndeksWarna = 1;
@@ -3673,7 +3673,7 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 			Global.PemainAktif.KunciBotAktif = False;
 		End;
 		If(Global.PemainAktif.ModeKamera == 2);
-			If(Or(Or(Or(Global.PemainAktif.TargetKamera == Null, Entity Exists(Global.PemainAktif.TargetKamera) == False), Or(Has Spawned(Global.PemainAktif.TargetKamera) == False, Is Alive(Global.PemainAktif.TargetKamera) == False)), And(Global.PemainAktif.TargetKamera.Manusia == True, Global.PemainAktif.TargetKamera.PrivasiInspeksiAktif == True)));
+			If(Or(Global.PemainAktif.TargetKamera.SiklusPemainAktif == True, Or(Or(Or(Global.PemainAktif.TargetKamera == Null, Entity Exists(Global.PemainAktif.TargetKamera) == False), Or(Has Spawned(Global.PemainAktif.TargetKamera) == False, Is Alive(Global.PemainAktif.TargetKamera) == False)), And(Global.PemainAktif.TargetKamera.Manusia == True, Global.PemainAktif.TargetKamera.PrivasiInspeksiAktif == True))));
 				Stop Camera(Global.PemainAktif);
 				Set Player Variable(Global.PemainAktif, ModeKamera, 0);
 				Set Player Variable(Global.PemainAktif, TargetKamera, Null);

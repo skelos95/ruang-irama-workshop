@@ -2,6 +2,12 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Camera durante cambio squadra e nuovo nome personalizzato — 2026-09-22
+
+- La Camera che osserva un altro player torna normale quando il target entra in quarantena per cambio squadra, anche se l'entità risulta ancora viva e spawnata. La revoca usa il controllo periodico esistente, senza nuove regole, Wait, Loop o handle.
+- Il nome visibile esatto del profilo dedicato passa da `งูแท้` a `งูแรร์`, sia nella registrazione sia nel ripristino. Restano Silver Mist, Poison 2 e Draconian bloccato.
+- Il controllo generale di lifecycle, registri transitori, menu, Attach, roulette e dummy non ha individuato altri nuovi difetti dimostrati. Le prove della Camera valutano le condizioni del sorgente con 12 osservatori; non simulano la vita delle entità nel motore. La revisione richiede una nuova verifica in gioco.
+
 ## Host come testo con spazio sopra e sotto — 2026-09-21
 
 - Spostata la riga Host dal campo Subheader al campo Text, con una riga vuota sopra e una sotto in tutte le lingue. Nome e icona continuano a seguire l'host corrente.

@@ -209,8 +209,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 "inizializzazione MusikKhusus",
             ),
             (
-                self.source.replace('Custom String("งูแท้")', 'Custom String("งูเท้")', 1),
-                "matcher งูแท้ deve usare NamaTampilan stabile",
+                self.source.replace('Custom String("งูแรร์")', 'Custom String("งูเท้")', 1),
+                "matcher งูแรร์ deve usare NamaTampilan stabile",
             ),
         )
         for mutated, fragment in mutations:
@@ -219,10 +219,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_special_profile_must_use_cached_display_name(self) -> None:
         mutated = self.replace_once(
-            'If(Event Player.NamaTampilan == Custom String("งูแท้"));',
-            'If(Custom String("{0}", Event Player) == Custom String("งูแท้"));',
+            'If(Event Player.NamaTampilan == Custom String("งูแรร์"));',
+            'If(Custom String("{0}", Event Player) == Custom String("งูแรร์"));',
         )
-        self.assert_rejected(mutated, "matcher งูแท้ deve usare NamaTampilan stabile")
+        self.assert_rejected(mutated, "matcher งูแรร์ deve usare NamaTampilan stabile")
 
     def test_special_player_indices_and_cursors_are_guarded(self) -> None:
         classifier = self.rule(
@@ -245,7 +245,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         classifier = self.rule(
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
         )
-        marker = classifier.body.index('Custom String("งูแท้")')
+        marker = classifier.body.index('Custom String("งูแรร์")')
         spans = [
             span for span in validator.conditional_branch_spans(classifier.body)
             if span[0] <= marker < span[1]
