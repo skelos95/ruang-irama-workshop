@@ -1296,7 +1296,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "0"): ("text", "PLAYER VIBES"),
         ("Left", "13"): ("subheader", "Global.NamaPemimpinPilihan"),
         ("Right", "-16"): ("subheader", "Button(Interact)"),
-        ("Right", "0"): ("subheader", "Host:"),
+        ("Right", "0"): ("text", "Host:"),
         ("Top", "0"): ("text", "SERVER KHUSUS CHILL"),
         ("Top", "1"): ("subheader", 'LOCATION'),
         ("Top", "2"): ("text", 'Custom String("  ")'),
@@ -1350,9 +1350,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for token in ("Entity Exists(Host Player)", 'Custom String("Host:")',
                       "Hero Icon String(Hero Of(Host Player))", "Player Variable(Host Player, NamaTampilan)",
                       'Custom String("{0}", Host Player)'):
-            checks.require(token in host.args[2], f"HUD Host: riferimento dinamico assente: {token}")
-        checks.require("Evaluate Once(" not in host.args[2], "HUD Host: nome e icona devono seguire l'host corrente")
-        checks.require(host.args[2].strip().endswith(': Custom String("")'),
+            checks.require(token in host.args[3], f"HUD Host: riferimento dinamico assente: {token}")
+        checks.require('Custom String(" \\n{0} {1} {2}\\n "' in host.args[3],
+                       "HUD Host: Text deve mantenere una riga vuota sopra e sotto")
+        checks.require("Evaluate Once(" not in host.args[3], "HUD Host: nome e icona devono seguire l'host corrente")
+        checks.require(host.args[3].strip().endswith(': Custom String("")'),
                        "HUD Host: fallback senza host deve essere stringa vuota")
         checks.equal(host.args[9].strip(), "Visible To and String", "HUD Host: rivalutazione testo")
 

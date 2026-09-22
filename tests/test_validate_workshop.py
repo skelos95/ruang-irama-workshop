@@ -705,8 +705,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_host_row_follows_the_current_host_without_caching_or_a_loop(self) -> None:
         host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
                     if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
-        changed = host.args[2].replace("Hero Of(Host Player)", "Hero Of(Evaluate Once(Host Player))")
-        self.assert_rejected(self.replace_call_argument(host, 2, changed),
+        changed = host.args[3].replace("Hero Of(Host Player)", "Hero Of(Evaluate Once(Host Player))")
+        self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: nome e icona devono seguire l'host corrente")
         self.assert_rejected(self.replace_call_argument(host, 9, "Visible To"),
                              "HUD Host: rivalutazione testo")
@@ -714,8 +714,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_host_row_handles_host_absence_without_the_client_zero(self) -> None:
         host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
                     if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
-        changed = host.args[2].rsplit(': Custom String("")', 1)[0] + ": Null"
-        self.assert_rejected(self.replace_call_argument(host, 2, changed),
+        changed = host.args[3].rsplit(': Custom String("")', 1)[0] + ": Null"
+        self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: fallback senza host deve essere stringa vuota")
 
     def test_chill_grid_rejects_a_tenth_fixed_hud(self) -> None:

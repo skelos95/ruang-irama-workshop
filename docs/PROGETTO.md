@@ -177,11 +177,11 @@ La griglia HUD usa nove handle globali fissi e slot dinamici separati:
 |---|---|---|
 | Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
 | Left | comando completo `-2`, spaziatore `-1`, `PLAYER VIBES` `0`, `CHILL STAR` `13` | roster/musica `1..12` |
-| Right | comando completo Arcade/Camera `-16`, Host con icona eroe e nome `0` | nessun roster |
+| Right | comando completo Arcade/Camera `-16`, Host nel campo Text con icona eroe e nome `0`, una riga vuota sopra e sotto | nessun roster |
 
-Titolo, label e righe roster non contengono newline usati come compensazione verticale. Il contatore diagnostico include gli nove handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
+Titolo, label e righe roster non contengono newline usati come compensazione verticale. La riga Host usa invece nel campo Text una riga vuota sopra e sotto, ciascuna contenente uno spazio, nello stesso handle; Header e Subheader restano `Null`. Il contatore diagnostico include i nove handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
 
-Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Tutto il blocco Right custom usa sort negativi e termina con uno spaziatore reale `-1`, riservando una riga dopo l'ultimo nome nell'area che precede gli elementi nativi. Il test live con 1, 6 e 12 player deve confermare il confine effettivo con indicatore e kill feed.
+Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Il blocco Right custom contiene il comando Arcade/Camera (sort `-16`) e Host (sort `0`); lo spazio sopra e sotto Host è incluso nel suo testo, senza uno spaziatore HUD separato. Il test live con 1, 6 e 12 player deve confermare le righe vuote e il confine effettivo con indicatore e kill feed.
 
 ## Camera, inspection e Teleport
 
