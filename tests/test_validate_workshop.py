@@ -708,8 +708,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed = host.args[3].replace("Hero Of(Host Player)", "Hero Of(Evaluate Once(Host Player))")
         self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: nome e icona devono seguire l'host corrente")
-        self.assert_rejected(self.replace_call_argument(host, 9, "Visible To"),
-                             "HUD Host: rivalutazione testo")
+        self.assert_rejected(self.replace_call_argument(host, 9, "Visible To and String"),
+                             "HUD Host: rivalutazione testo e colore")
+        self.assert_rejected(self.replace_call_argument(host, 8, "Custom Color(255, 255, 255, 255)"),
+                             "HUD Host: colore RGB globale del titolo")
 
     def test_host_row_handles_host_absence_without_the_client_zero(self) -> None:
         host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
@@ -2942,6 +2944,18 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.inject_condition(create, "False == True;")
         self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
+
+    def test_dummy_creation_is_limited_to_skirmish_and_capture_the_flag(self) -> None:
+        gate = "Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;"
+        for team in ("Team 1", "Team 2"):
+            create = self.rule(
+                lambda rule: f"Number Of Players({team}) < Number Of Slots({team}) - 1;" in rule.body
+                and "Call Subroutine(BuatBotBuatanTim);" in rule.body
+            )
+            for replacement in ("", gate.replace("Skirmish", "Team Deathmatch")):
+                with self.subTest(team=team, replacement=replacement):
+                    mutated = self.replace_in_rule(create, gate, replacement)
+                    self.assert_rejected(mutated, f"creazione dummy {team}: condizioni esatte e raggiungibili")
 
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
         release = self.rule(
