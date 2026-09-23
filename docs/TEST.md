@@ -288,6 +288,8 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 
 ### Bot e dummy
 
+Dal 23 settembre 2026 la creazione automatica è limitata a Schermaglia e Cattura la bandiera. Eseguire qui le prove dei dummy; nelle altre modalità, incluso Deathmatch a squadre, verificare che non vengano creati neppure con slot liberi. Le sezioni datate precedenti conservano il comportamento storico della relativa revisione.
+
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
 - con due o più slot liberi, confermare al massimo un dummy nativo per squadra; con un solo slot libero, confermare che non venga creato;
 - riempire la squadra: il dummy deve essere rimosso per rendere disponibile la capacità di 6 umani; ripetere ingressi e uscite vicino al limite e verificare assenza di cicli crea/distruggi o spam `Create Dummy Bot`;
@@ -338,7 +340,7 @@ Lo script non deve assegnare punti o vincitori. Scoring e obiettivi restano nati
 | Escort | Payload | checkpoint/payload, countdown CHILL invariato |
 | Assault | Objective Position | punto A → punto B |
 
-Per ogni riga verificare sia il Teleport manuale sia l'uscita Spawn dei dummy: il punto finale deve essere percorribile, il fallback deve restare nella stessa famiglia di obiettivo e l'assenza temporanea della posizione non deve causare teleport a `Vector(0, 0, 0)` o nel vuoto.
+Per ogni riga verificare il Teleport manuale; verificare l'uscita Spawn dei dummy in Cattura la bandiera e separatamente in Schermaglia: il punto finale deve essere percorribile, il fallback deve restare nella stessa famiglia di obiettivo e l'assenza temporanea della posizione non deve causare teleport a `Vector(0, 0, 0)` o nel vuoto.
 
 Priorità mappe:
 

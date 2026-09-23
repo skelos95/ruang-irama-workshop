@@ -1,6 +1,6 @@
 # Dummy bot nativi
 
-Il server CHILL crea al massimo **un dummy bot per squadra** soltanto quando esistono uno Spawn Point valido e almeno **due slot liberi**. Il secondo slot resta riservato all'ingresso di un umano: quando la squadra risulta piena con il dummy presente, il bot viene rimosso e non viene ricreato finché non tornano disponibili due slot. In questo modo ogni team conserva capacità per 6 umani e le guardie impediscono spam di `Create Dummy Bot`.
+Il server CHILL crea automaticamente dummy **solo in Schermaglia e Cattura la bandiera**, al massimo **uno per squadra**, quando esistono uno Spawn Point valido e almeno **due slot liberi**. In Deathmatch a squadre e in tutte le altre modalità non crea dummy. Il secondo slot resta riservato all'ingresso di un umano: quando la squadra risulta piena con il dummy presente, il bot viene rimosso e non viene ricreato finché non tornano disponibili due slot. In questo modo ogni team conserva capacità per 6 umani e le guardie impediscono spam di `Create Dummy Bot`.
 
 Comportamento atteso:
 
@@ -26,6 +26,8 @@ Il throttle automatico è riservato ai dummy Workshop; gli iBot conservano colli
 La preferenza è per-player e parte **OFF**. ON consente al dummy avversario di includere quell'umano nella propria selezione; OFF lo esclude senza cambiare la logica nearest-target. Il cambio squadra leggero conserva la preferenza del player; se tutti i target restano OFF, il dummy non insegue nessuno. La stessa condizione di eleggibilità viene usata per avvio, facing, throttle e cleanup, così opt-out, morte o team-switch non lasciano il dummy agganciato a un riferimento obsoleto.
 
 ## Destinazioni dalla Spawn Room
+
+La creazione automatica è limitata alle due modalità sopra indicate. La routine di recupero conserva le destinazioni esistenti per eventuali dummy già presenti; non abilita la loro creazione nelle altre modalità.
 
 - Hybrid prima della cattura: primo obiettivo, anche su Paraíso;
 - Escort / Hybrid dopo la cattura: payload;

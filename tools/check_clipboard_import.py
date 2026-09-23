@@ -69,6 +69,7 @@ FORBIDDEN_OUTSIDE_STRINGS = {
 # translated here: the semantic gate compares them byte-for-byte.
 ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
     ("Cattura la Bandiera", "Capture The Flag"),
+    ("Schermaglia", "Skirmish"),
     ("Annulla quando è False", "Abort When False"),
     ("Tutti gli eroi", "All Heroes"),
     ("Ignora condizione", "Ignore Condition"),
@@ -103,7 +104,7 @@ FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX: tuple[tuple[str, str], ...] = (
         "colore nominale Color(...) en-US",
     ),
     (
-        r"\bGame\s+Mode\s*\(\s*(?:Push|Flashpoint|Capture\s+The\s+Flag|Control|Clash|Hybrid|Escort|Assault)\s*\)",
+        r"\bGame\s+Mode\s*\(\s*(?:Skirmish|Push|Flashpoint|Capture\s+The\s+Flag|Control|Clash|Hybrid|Escort|Assault)\s*\)",
         "modalità Game Mode en-US",
     ),
 )

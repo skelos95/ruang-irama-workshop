@@ -1356,7 +1356,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.require("Evaluate Once(" not in host.args[3], "HUD Host: nome e icona devono seguire l'host corrente")
         checks.require(host.args[3].strip().endswith(': Custom String("")'),
                        "HUD Host: fallback senza host deve essere stringa vuota")
-        checks.equal(host.args[9].strip(), "Visible To and String", "HUD Host: rivalutazione testo")
+        checks.equal(host.args[8].strip(), "Global.RGB", "HUD Host: colore RGB globale del titolo")
+        checks.equal(host.args[9].strip(), "Visible To String and Color", "HUD Host: rivalutazione testo e colore")
 
     chill_star = fixed_hud.get(("Left", "13"))
     checks.require(chill_star is not None, "HUD CHILL STAR dedicato assente")
@@ -5796,6 +5797,7 @@ def validate_dummy_slot_management(
                     Is Game In Progress == True;
                     Global.PemainSiklusGlobal == Null;
                     Number Of Players({team}) < Number Of Slots({team}) - 1;
+                    Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
                     Count Of(Spawn Points({team})) > 0;
                     Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
                 """

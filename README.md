@@ -15,6 +15,7 @@ La release pubblicata [`v0.8.1`](https://github.com/skelos95/ruang-irama-worksho
 ## Funzioni
 
 - HUD centrale con nome server, countdown e località configurabile, allineato su slot Top/Left/Right deterministici; `LOCATION` usa un ambra neon distinto dal cyan di `PLAYER VIBES`.
+- Riga Host a destra nel campo Text, con una riga vuota sopra e sotto e lo stesso RGB animato del titolo.
 - Unico roster `PLAYER VIBES` a sinistra con player e genere musicale, senza conteggio dei minuti individuali.
 - 14 menu Arcade con preferenze individuali.
 - English, Bahasa Indonesia e ไทย selezionabili per viewer.
@@ -22,7 +23,7 @@ La release pubblicata [`v0.8.1`](https://github.com/skelos95/ruang-irama-worksho
 - Resurrect manuale con Jump da morto: rinasce nello stesso punto quando il terreno è presente; dopo una morte nel vuoto usa `Nearest Walkable Position` e sposta lì il player subito dopo `Resurrect`, senza `Respawn`, percorsi Abort o fallback alla Spawn Room.
 - Join/leave/cambio squadra protetti da duplicati e handle orfani.
 - Ghost Mode / Fly con due toggle indipendenti: attraversamento di pareti e soffitti senza perdere il pavimento, oppure volo 3D relativo alla direzione dello sguardo con rampa Forward dal 100% al 500% in 25 secondi.
-- Un dummy nativo per squadra soltanto con almeno due slot liberi e uno Spawn Point valido: nasce direttamente nella propria spawn, ha respawn massimo di 3 secondi, libera il posto quando la squadra è piena, mantiene tutte le collisioni con ambiente e player/bot e riceve normalmente danni e urti. Si muove automaticamente al 20% verso l'umano nemico vivo opt-in più vicino, fermandosi entro 4 m.
+- Dummy automatici solo in Schermaglia e Cattura la bandiera: uno per squadra soltanto con almeno due slot liberi e uno Spawn Point valido. Nasce direttamente nella propria spawn, ha respawn massimo di 3 secondi, libera il posto quando la squadra è piena, mantiene tutte le collisioni con ambiente e player/bot e riceve normalmente danni e urti. Si muove automaticamente al 20% verso l'umano nemico vivo opt-in più vicino, fermandosi entro 4 m.
 - Diagnostica host opzionale per carico, HUD e In-World Text.
 - Completion nativa del game mode disabilitata: la partita viene riavviata solo allo scadere del timer CHILL, senza sostituire scoring o obiettivi nativi.
 

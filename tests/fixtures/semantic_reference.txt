@@ -949,7 +949,7 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Create HUD Text(Global.PemainManusia, Null, Null, Entity Exists(Host Player) ? Custom String(" \n{0} {1} {2}\n ",
 			Player Variable(Local Player, IndeksBahasa) == 0 ? Custom String("Host:") : Player Variable(Local Player, IndeksBahasa) == 1 ? Custom String("Host:") : Custom String("โฮสต์:"), Hero Icon String(Hero Of(Host Player)),
 			And(Player Variable(Host Player, NamaTampilan) != Null, Player Variable(Host Player, NamaTampilan) != Custom String("")) ? Player Variable(Host Player, NamaTampilan) : Custom String("{0}", Host Player)) : Custom String(""),
-			Right, 0, Color(White), Color(White), Color(White), Visible To and String, Visible Never);
+			Right, 0, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Global.Siap = True;
 	}
 }
@@ -1325,6 +1325,7 @@ rule("03d - Bot: Buat satu bot acak untuk Tim 1")
 		Is Game In Progress == True;
 		Global.PemainSiklusGlobal == Null;
 		Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;
+		Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
 		Count Of(Spawn Points(Team 1)) > 0;
 		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
@@ -1372,6 +1373,7 @@ rule("03e - Bot: Buat satu bot acak untuk Tim 2")
 		Is Game In Progress == True;
 		Global.PemainSiklusGlobal == Null;
 		Number Of Players(Team 2) < Number Of Slots(Team 2) - 1;
+		Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
 		Count Of(Spawn Points(Team 2)) > 0;
 		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}

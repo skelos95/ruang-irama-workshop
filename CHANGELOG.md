@@ -2,6 +2,11 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Modalità dummy e colore Host — 2026-09-23
+
+- Creazione automatica dei dummy limitata a Schermaglia e Cattura la bandiera per entrambe le squadre. Le altre modalità, compreso Deathmatch a squadre, non creano dummy; restano le protezioni degli slot umani e il cleanup esistente.
+- L'intera riga Host usa il colore RGB globale del titolo e lo rivaluta durante l'animazione. Rimane nel campo Text, con una riga vuota sopra e sotto e senza nuovi handle, Wait o Loop.
+
 ## Camera durante cambio squadra e nuovo nome personalizzato — 2026-09-22
 
 - La Camera che osserva un altro player torna normale quando il target entra in quarantena per cambio squadra, anche se l'entità risulta ancora viva e spawnata. La revoca usa il controllo periodico esistente, senza nuove regole, Wait, Loop o handle.
