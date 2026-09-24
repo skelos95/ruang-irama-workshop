@@ -64,6 +64,8 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 
 Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
 
+La protezione dal sovraccarico usa due soli globali e il tick esistente: `WaktuBebanTinggi` registra l'inizio di un carico continuo sopra 200; dopo almeno 3 s `PerlindunganBebanAktif` attiva `Set Slow Motion(10)`. Un campione a 200 o inferiore interrompe la finestra prima dell'attivazione. Durante la protezione soltanto un carico strettamente sotto 100 ripristina `Set Slow Motion(100)`, evitando oscillazioni fra le due soglie. L'azione viene eseguita soltanto alle transizioni, oltre al reset esplicito in inizializzazione e prima di `Restart Match`. Il rallentamento interessa l'intera partita; il tempo misurato usa `Total Time Elapsed`, non un cronometro esterno. Il sistema non aggiunge Wait, loop o messaggi periodici e non può garantire il recupero da un blocco che impedisca allo scheduler di proseguire.
+
 Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spawn Room registra una scadenza di 1 secondo e il controllo periodico agisce soltanto dopo quel timestamp. Non esiste un `Wait` dedicato al dummy e il budget complessivo resta massimo 7 `Wait`.
 
 `Ongoing - Each Player` è ammesso soltanto quando l'evento o lo stato è realmente individuale:
@@ -75,16 +77,20 @@ Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spa
 
 ## Menu Arcade
 
-Ogni player possiede al massimo **un handle HUD Arcade**. Non esistono cache di pagine, preload progressivo o HUD nascosti.
+Ogni player possiede al massimo **un handle HUD Arcade**. La cache conserva soltanto il contenuto della pagina corrente, senza preload o HUD nascosti.
 
 Il lifecycle del menu è:
 
-1. apertura: crea l'handle della pagina corrente;
-2. Primary/Secondary o modifica della scelta: aggiorna variabili rivalutate senza ricreare l'HUD;
-3. cambio Main Menu ↔ sottomenu: distrugge l'handle precedente e crea la nuova pagina;
-4. chiusura, leave o cambio squadra: distrugge l'handle e azzera il riferimento.
+1. apertura: calcola i testi della pagina corrente e crea l'handle personale;
+2. Primary/Secondary, salti `±10` e applicazione: aggiorna la cache senza ricreare l'HUD;
+3. cambio Main Menu ↔ sottomenu: sostituisce i testi mantenendo lo stesso handle;
+4. chiusura, leave, cambio squadra o chiusura per un effetto roulette con durata: distrugge l'handle e svuota la cache.
+
+`GambarMenu` è l'unico creatore Arcade; i quindici renderer scrivono `PetunjukMenu`, `TeksMenuIsi`, `WarnaPetunjukMenu` e una fotografia scalare `SalinanMenu`. `PeriksaSidikMenu`, richiamata dal ciclo distribuito a 10 Hz, marca `MenuPerluDigambar` solo se lo stato della pagina differisce: non confronta interi array e non memorizza uno storico. Una regola individuale aggiorna i testi nel contesto del proprietario. Camera, Revenge e Vote includono l'identità selezionata e i dati esterni mostrati; il cambio lingua rigenera subito la pagina. I token dei comandi vengono sostituiti da `Input Binding String` direttamente nel campo HUD, così non vengono congelati durante il calcolo della cache. Colore e binding mantengono la rivalutazione nativa. Il renderer Travel resta separato e condivide il medesimo handle soltanto quando Arcade è chiuso.
 
 Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
+
+`EfekTerapkan` ed `EfekPulihkan` condividono `WaktuEfekMenuBerikut`: al massimo un effetto cosmetico ogni 0,25 s per player, e nessuno durante `PerlindunganBebanAktif`. Il gate avvolge soltanto `Play Effect`, senza abortire il chiamante: input, applicazione delle preferenze e messaggi utili non vengono rinviati. Quiete e setup azzerano la scadenza, senza code di effetti arretrati.
 
 Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Pagina 13 possiede un cursore a due righe, renderer e tinta propri: applicare una riga cambia soltanto Ghost oppure Fly. I soli writer dei toggle sono setup/quiete OFF e il relativo handler; applicazione fisica e motore Fly dedicati possiedono `Gravity = 0` e il blocco del movimento nativo. Non è ammesso `Start Transforming Throttle`; il delta di velocità viene applicato soltanto al player della scansione in corso. Ghost non modifica mai la collisione fra player. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
 

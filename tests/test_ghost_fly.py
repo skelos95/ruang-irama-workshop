@@ -102,8 +102,9 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                         main,
                     )
                     self.assertEqual(main.count(page_thirteen), 1)
-            self.assertEqual(main.count("Event Player.ModeHantuAktif"), 3)
-            self.assertEqual(main.count("Event Player.ModeTerbangAktif"), 3)
+            main_text = main.split("Event Player.TeksMenuIsi =", 1)[1].split("Event Player.WarnaPetunjukMenu =", 1)[0]
+            self.assertEqual(main_text.count("Event Player.ModeHantuAktif"), 3)
+            self.assertEqual(main_text.count("Event Player.ModeTerbangAktif"), 3)
             dispatcher = rule_with(source, "Event Player.PerintahMenu == 1;", "TerapkanHalamanIkutiBotBuatan")
             self.assertRegex(
                 compact(dispatcher),
@@ -126,7 +127,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
         )
         for source, _ in self.sources:
             renderer = subroutine(source, "GambarHantuTerbang")
-            self.assertEqual(renderer.count("Create HUD Text("), 1)
+            self.assertEqual(renderer.count("Create HUD Text("), 0)
+            self.assertEqual(renderer.count("Event Player.TeksMenuIsi ="), 1)
             self.assertIn("Event Player.KursorHantuTerbang", renderer)
             self.assertIn("Event Player.ModeHantuAktif", renderer)
             self.assertIn("Event Player.ModeTerbangAktif", renderer)

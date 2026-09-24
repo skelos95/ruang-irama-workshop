@@ -6,6 +6,8 @@ Release tecnica: **CHILL Dedicated Server 0.8.1**
 
 Stato: **live-ready** (release storica 0.8.1).
 
+**Revisione del 24 settembre 2026:** aggiunti HUD Arcade persistente, cache della sola pagina corrente, cooldown cosmetico individuale e protezione del carico adattata da Friendly. I test dedicati eseguono i percorsi del sorgente per cambi pagina, invalidazione dei testi, proprietà degli handle, pulizia, soglie del carico e ripristino della velocità. La localizzazione resta verificata sulle assegnazioni della cache oltre che sulle azioni HUD. Sono controlli logici: latenza, costo nativo, binding visualizzati e recupero reale dal sovraccarico richiedono la nuova matrice live in [`TEST.md`](TEST.md#revisione-hud-e-protezione-carico-del-24-settembre-2026).
+
 **Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
 
 Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
