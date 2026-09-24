@@ -334,6 +334,37 @@ class PersistentMenuCacheTests(unittest.TestCase):
                 self.assertIn("7", model.text("viewer"))
                 self.assertEqual(len(model.created_huds), 1)
 
+    def test_main_menu_forgets_departed_targets_when_engine_clears_both_references(self):
+        for path, _, _ in SOURCES:
+            for cursor, field, changes in (
+                    (11, "PemainDipilih", {}),
+                    (1, "TargetKamera", {"ModeKamera": 2})):
+                with self.subTest(source=path.name, field=field):
+                    model = PersistentMenuEvaluator(path.read_text(encoding="utf-8"))
+                    viewer = model.add("viewer", KursorUtama=cursor, **{field: "alice"}, **changes)
+                    target = model.add("alice")
+                    model.run("91", "viewer")
+                    handle = viewer["HudMenu"]
+                    self.assertIn("alice", model.text("viewer"))
+                    before = len(model.body_writes)
+                    target["exists"] = False
+                    viewer[field] = None
+                    # Entity-valued slots may be nulled by the engine, even
+                    # inside an earlier snapshot. Its scalar existence flags
+                    # must still preserve enough information to invalidate.
+                    viewer["SalinanMenu"] = [None if value == "alice" else value
+                                             for value in viewer["SalinanMenu"]]
+                    model.refresh("viewer")
+                    self.assertEqual(len(model.body_writes), before + 1)
+                    self.assertNotIn("alice", model.text("viewer"))
+                    if field == "PemainDipilih":
+                        self.assertIn("YOUR VOTE: NONE", model.text("viewer"))
+                    self.assertEqual(viewer["HudMenu"], handle)
+                    self.assertEqual(len(model.created_huds), 1)
+                    self.assertEqual(model.destroyed_huds, [])
+                    model.refresh("viewer")
+                    self.assertEqual(len(model.body_writes), before + 1)
+
     def test_camera_off_self_and_empty_lists_do_not_read_an_absent_target_hero(self):
         for path, _, _ in SOURCES:
             for cursor, targets in ((0, ["alice"]), (1, ["alice"]), (2, [])):
