@@ -2,6 +2,14 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## HUD persistente, cache testi e protezione dal sovraccarico — 2026-09-24
+
+- Il Menu Arcade riutilizza un solo HUD personale anche passando fra Main Menu e sottomenu. Vengono conservati soltanto testo, istruzioni, colore e stato della pagina corrente; chiusura, roulette con durata, leave e cambio squadra li ripuliscono. La creazione ripara anche un eventuale riferimento locale mancante senza abbandonare il precedente handle registrato.
+- Navigazione, applicazione e cambio lingua aggiornano subito i testi. Il ciclo distribuito a 10 Hz rileva le variazioni esterne di bersagli, eroi, voti e preferenze; i binding vengono risolti nel contesto del lettore e il colore continua a sfumare.
+- Conferma e ripristino condividono un cooldown cosmetico individuale di 0,25 s; sotto protezione dal sovraccarico i relativi effetti vengono omessi. Comandi e messaggi utili restano disponibili.
+- Adattata la protezione di Friendly al solo scheduler esistente: carico sopra 200 per almeno 3 s porta tutta la partita al 10%; carico sotto 100 ripristina il 100%. Inizializzazione e riavvio ripristinano esplicitamente la velocità normale. Nessun nuovo Wait o Loop.
+- Test automatici su soglie, picchi brevi, ripristino, isolamento fra player e lifecycle del menu. La riduzione del carico nativo e la stabilità con 12 player richiedono ancora una prova in Overwatch.
+
 ## Modalità dummy e colore Host — 2026-09-23
 
 - Creazione automatica dei dummy limitata a Schermaglia e Cattura la bandiera per entrambe le squadre. Le altre modalità, compreso Deathmatch a squadre, non creano dummy; restano le protezioni degli slot umani e il cleanup esistente.

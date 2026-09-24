@@ -185,6 +185,12 @@ MENU_OWNER_STATE_VARIABLES = {
     "ModeHantuAktif",
     "ModeTerbangAktif",
     "FisikaHantuTerbangDiterapkan",
+    "TeksMenuIsi",
+    "PetunjukMenu",
+    "WarnaPetunjukMenu",
+    "SalinanMenu",
+    "MenuPerluDigambar",
+    "WaktuEfekMenuBerikut",
 }
 LIFECYCLE_SUBROUTINES = {"SiapkanPemain", "TenangkanPemain", "BersihkanPemain"}
 LUCK_TIMESTAMP_VARIABLES = {
@@ -514,6 +520,17 @@ def declaration_entries(text: str) -> tuple[list[Declaration], list[Declaration]
 
 def rule_by_subroutine(rules: Iterable[Rule], name: str) -> Rule | None:
     return next((rule for rule in rules if subroutine_target(rule) == name), None)
+
+
+def player_assignment_expression(rule: Rule, name: str) -> str | None:
+    """Read one cached player field without treating quoted semicolons as actions."""
+    masked = mask_strings(rule.body)
+    matches = list(re.finditer(rf"\bEvent Player\.{re.escape(name)}\s*=\s*(?!=)", masked))
+    if len(matches) != 1:
+        return None
+    start = matches[0].end()
+    end = masked.find(";", start)
+    return rule.body[start:end].strip() if end >= 0 else None
 
 
 def rules_with_event(rules: Iterable[Rule], kind: str) -> list[Rule]:
@@ -1093,11 +1110,22 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
         checks.require(bool(found), "Small Message senza traduzione EN/ID/TH")
         triads.extend(found)
 
+    hud_visible_texts = []
     for call in iter_calls(source, "Create HUD Text"):
         if len(call.args) < 4:
             checks.require(False, "Create HUD Text malformato")
             continue
         visible_text = call.args[2] + "\n" + call.args[3]
+        if call.args[3].strip() == "Event Player.TeksMenuIsi" and "Event Player.PetunjukMenu" in call.args[2]:
+            continue
+        hud_visible_texts.append(visible_text)
+    for rule in extract_rules(source):
+        if (subroutine_target(rule) or "").startswith("Gambar"):
+            for field in ("TeksMenuIsi", "PetunjukMenu"):
+                expression = player_assignment_expression(rule, field)
+                if expression:
+                    hud_visible_texts.append(expression)
+    for visible_text in hud_visible_texts:
         visible_literals = [
             parse_literal(custom.args[0])
             for custom in iter_calls(visible_text, "Custom String")
@@ -1168,6 +1196,97 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
                 and f"Global.{indonesian_name}" not in thai,
                 f"ramo IndeksBahasa 2 usa array {label} errato",
             )
+
+
+def validate_menu_cache(checks: Checks, rules: list[Rule]) -> None:
+    """Keep cached strings fresh without turning navigation into resource churn."""
+    creator = rule_by_subroutine(rules, "GambarMenu")
+    if creator:
+        for token in ("Abort If(Event Player.Manusia == False);",
+                      "Abort If(Event Player.SiklusPemainAktif == True);",
+                      "Abort If(Event Player.MenuTerbuka == False);",
+                      "Abort If(Event Player.TeleportasiJongkokAktif == True);",
+                      "Event Player.MenuPerluDigambar = False;",
+                      "Event Player.HudMenu = Last Text ID;",
+                      "Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)] = Event Player.HudMenu;"):
+            checks.require(token in creator.body, f"cache menu: creazione/registrazione sicura assente: {token}")
+        for call in iter_calls(creator.body, "Destroy HUD Text"):
+            headers = [re.sub(r"\s+", "", branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(creator.body, call.start)]
+            checks.require("If(EventPlayer.HudMenu==Null);" in headers,
+                           "cache menu: handle esistente non deve essere distrutto durante la navigazione")
+            checks.equal(call.args[0].strip(),
+                         "Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]",
+                         "cache menu: recupero handle limitato al proprietario")
+    for prefix in ("06 -", "08 -", "10 -", "11 -"):
+        controller = next((rule for rule in rules if rule.name.startswith(prefix)), None)
+        checks.require(controller is not None and "Call Subroutine(GambarMenu);" in controller.body,
+                       f"cache menu: input {prefix} non aggiorna immediatamente il testo")
+    refresh = next((rule for rule in rules if event_type(rule) == "Ongoing - Each Player"
+                    and "Event Player.MenuPerluDigambar == True;" in rule.body), None)
+    checks.require(refresh is not None, "cache menu: evento aggiornamento locale assente")
+    if refresh:
+        for token in ("Event Player.Manusia == True;", "Event Player.MenuTerbuka == True;",
+                      "Event Player.SiklusPemainAktif == False;", "Event Player.MenuPerluDigambar == True;"):
+            checks.require(token in (rule_block(refresh, "conditions") or ""),
+                           f"cache menu: aggiornamento locale senza guardia {token}")
+        checks.equal(re.sub(r"\s+", "", rule_block(refresh, "actions") or ""),
+                     "CallSubroutine(GambarMenu);", "cache menu: aggiornamento locale deve soltanto ridisegnare")
+    cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
+    checks.require(cycle is not None and cycle.body.count("Call Subroutine(PeriksaSidikMenu);") == 1,
+                   "cache menu: verifica modifiche deve usare il ciclo per-player a 10 Hz")
+    probe = rule_by_subroutine(rules, "PeriksaSidikMenu")
+    checks.require(probe is not None, "cache menu: verifica modifiche assente")
+    if probe:
+        for token in ("Abort If(Global.PemainAktif.Manusia == False);",
+                      "Abort If(Global.PemainAktif.MenuTerbuka == False);",
+                      "Abort If(Global.PemainAktif.SiklusPemainAktif == True);",
+                      "Abort If(Global.PemainAktif.MenuPerluDigambar == True);"):
+            checks.require(token in probe.body, f"cache menu: verifica senza guardia {token}")
+        checks.require(not wait_calls(probe.body) and action_loop_count(probe.body) == 0,
+                       "cache menu: verifica deve restare atomica")
+        checks.require("Custom String(" not in probe.body and "Create HUD Text(" not in probe.body,
+                       "cache menu: verifica periodica non deve comporre testi o creare HUD")
+        pages = ("GambarUtama", "GambarWarna", "GambarKamera", "GambarMusik", "GambarBahasa",
+                 "GambarBalasDendam", "GambarKebal", "GambarSuara", "GambarIkon",
+                 "GambarSakelarTeleportasi", "GambarPrivasiInspeksi", "GambarNasib", "GambarPilihan",
+                 "GambarIkutiBotBuatan", "GambarHantuTerbang")
+        for page, name in enumerate(pages, start=-1):
+            renderer = rule_by_subroutine(rules, name)
+            if renderer is None:
+                checks.require(False, f"cache menu: renderer {name} assente")
+                continue
+            expression = player_assignment_expression(renderer, "SalinanMenu") or ""
+            arrays = list(iter_calls(expression, "Array"))
+            snapshot = arrays[0].args if len(arrays) == 1 and arrays[0].raw == expression else ()
+            checks.require(2 <= len(snapshot) <= 32, f"cache menu: snapshot {name} deve essere piccolo e completo")
+            contents = " ".join(player_assignment_expression(renderer, field) or ""
+                                for field in ("TeksMenuIsi", "PetunjukMenu", "WarnaPetunjukMenu"))
+            dependencies = set(re.findall(r"Event Player\.([A-Za-z][A-Za-z0-9_]*)", mask_strings(contents)))
+            snapshot_dependencies = set(re.findall(r"Event Player\.([A-Za-z][A-Za-z0-9_]*)", mask_strings(expression)))
+            checks.require(dependencies <= snapshot_dependencies,
+                           f"cache menu: snapshot {name} non segue tutte le dipendenze del testo")
+            bodies = [branch for start, end in conditional_branch_spans(probe.body)
+                      if (branch := probe.body[start:end]).splitlines()
+                      and re.fullmatch(rf"(?:Else )?If\(Global\.PemainAktif\.HalamanMenu == {page}\);",
+                                       branch.splitlines()[0].strip())]
+            checks.equal(len(bodies), 1, f"cache menu: ramo di controllo pagina {page}")
+            if not bodies:
+                continue
+            branch = bodies[0]
+            checks.require(f"Count Of(Global.PemainAktif.SalinanMenu) != {len(snapshot)}" in branch,
+                           f"cache menu: dimensione snapshot {name} non verificata")
+            for index, key in enumerate(snapshot):
+                expected = key.replace("Event Player", "Global.PemainAktif") + f" != Global.PemainAktif.SalinanMenu[{index}]"
+                checks.require(expected in branch, f"cache menu: chiave snapshot {name}/{index} non verificata")
+    for name in ("TutupMenu", "TenangkanPemain", "SiapkanPemain"):
+        lifecycle = rule_by_subroutine(rules, name)
+        if lifecycle:
+            for field, value in (("TeksMenuIsi", "Null"), ("PetunjukMenu", "Null"),
+                                 ("WarnaPetunjukMenu", "Null"), ("SalinanMenu", "Empty Array"),
+                                 ("MenuPerluDigambar", "False")):
+                checks.require(f"Event Player.{field} = {value};" in lifecycle.body,
+                               f"cache menu: {name} conserva stato obsoleto {field}")
 
 
 def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], players: set[str], subroutines: set[str]) -> None:
@@ -1516,7 +1635,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                    "router menu GambarMenu/GambarHalamanAktif assente")
     menu_renderers = [
         rule for rule in rules
-        if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
+        if (subroutine_target(rule) or "").startswith("Gambar") and (
+            "Event Player.TeksMenuIsi = " in rule.body
+            or subroutine_target(rule) == "GambarTeleportasi"
+        )
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
     checks.equal(len(arcade_renderers), 15, "renderer menu principale + pagine 0..13")
@@ -1642,7 +1764,72 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                    "stato legacy BunuhDiriDiminta deve essere rimosso")
     checks.require("Kill(Global.PemainAktif, Global.PemainAktif.KematianBalasDendam == True ?" in source,
                    "Skull/Revenge devono conservare la propria macchina di morte completa")
+    menu_creator = rule_by_subroutine(rules, "GambarMenu")
+    checks.require(menu_creator is not None, "creatore HUD menu persistente assente")
+    if menu_creator:
+        creates = list(iter_calls(menu_creator.body, "Create HUD Text"))
+        checks.equal(len(creates), 1, "HUD menu persistente: un solo punto di creazione")
+        if creates:
+            call = creates[0]
+            checks.equal(len(call.args), 11, "HUD menu persistente: firma Create HUD Text")
+            if len(call.args) >= 10:
+                for index, expected, label in (
+                    (0, "Event Player", "destinatario personale"),
+                    (1, "Null", "header"),
+                    (3, "Event Player.TeksMenuIsi", "contenuto preparato"),
+                    (4, "Top", "posizione"),
+                    (5, "3", "ordinamento HUD menu"),
+                    (7, "Event Player.WarnaPetunjukMenu", "colore istruzioni preparato"),
+                    (9, "Visible To String and Color", "rivalutazione campi e colore"),
+                ):
+                    checks.equal(call.args[index].strip(), expected, f"GambarMenu: {label}")
+                checks.require("Event Player.PetunjukMenu" in call.args[2],
+                               "HUD menu persistente: istruzioni devono leggere la cache personale")
+                for button in ("Melee", "Ability 1", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 2"):
+                    checks.require(f"Input Binding String(Button({button}))" in call.args[2],
+                                   f"HUD menu persistente: binding deve restare nel campo HUD: {button}")
+                replacements = {
+                    (parse_literal(replace.args[1][len("Custom String("):-1]), replace.args[2].strip())
+                    for replace in iter_calls(call.args[2], "String Replace")
+                    if len(replace.args) == 3 and replace.args[1].startswith("Custom String(")
+                }
+                expected_replacements = {(f"[{button.upper().replace(' ', '_')}]", f"Input Binding String(Button({button}))")
+                                         for button in ("Melee", "Ability 1", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Ability 2")}
+                checks.equal(replacements, expected_replacements,
+                             "HUD menu persistente: placeholder e binding devono corrispondere")
+            create_position = menu_creator.body.find(call.raw)
+            headers = [re.sub(r"\s+", "", branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(menu_creator.body, create_position)]
+            checks.require("If(EventPlayer.HudMenu==Null);" in headers,
+                           "HUD menu persistente: creazione deve essere protetta da handle assente")
+        checks.require("Call Subroutine(GambarHalamanAktif);" in menu_creator.body,
+                       "HUD menu persistente: preparazione pagina assente")
     for rule in menu_renderers:
+        if rule in arcade_renderers:
+            checks.require(not list(iter_calls(rule.body, "Create HUD Text"))
+                           and not list(iter_calls(rule.body, "Destroy HUD Text")),
+                           f"{subroutine_target(rule)}: cambio pagina non deve ricreare HUD")
+            instructions = player_assignment_expression(rule, "PetunjukMenu")
+            content = player_assignment_expression(rule, "TeksMenuIsi")
+            color = player_assignment_expression(rule, "WarnaPetunjukMenu")
+            for value, field in ((instructions, "PetunjukMenu"), (content, "TeksMenuIsi"),
+                                 (color, "WarnaPetunjukMenu")):
+                checks.require(value is not None and value != "Null",
+                               f"{subroutine_target(rule)}: cache campo menu assente o duplicata: {field}")
+            if instructions is not None:
+                checks.require("\\" in instructions,
+                               f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
+                for instruction in MENU_CROUCH_INSTRUCTIONS:
+                    checks.require(instruction in instructions,
+                                   f"{subroutine_target(rule)}: istruzione Crouch menu assente: {instruction}")
+                instruction_literals = [parse_literal(custom.args[0])
+                                        for custom in iter_calls(instructions, "Custom String") if custom.args]
+                checks.require(not any(literal is not None and literal.startswith("\n")
+                                       for literal in instruction_literals),
+                               f"{subroutine_target(rule)}: sottotitolo menu inizia con una riga vuota artificiale")
+                checks.require("Input Binding String(" not in instructions,
+                               f"{subroutine_target(rule)}: binding nativo non deve essere preparato fuori dal HUD")
+            continue
         calls = list(iter_calls(rule.body, "Create HUD Text"))
         checks.equal(len(calls), 1, f"{subroutine_target(rule)}: un solo Create HUD")
         if calls:
@@ -1707,8 +1894,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     revenge_renderer = rule_by_subroutine(rules, "GambarBalasDendam")
     checks.require(revenge_renderer is not None, "renderer Revenge assente")
     if revenge_renderer:
-        revenge_calls = list(iter_calls(revenge_renderer.body, "Create HUD Text"))
-        no_target_branch = parse_top_level_ternary(revenge_calls[0].args[2]) if revenge_calls else None
+        revenge_instructions = player_assignment_expression(revenge_renderer, "PetunjukMenu")
+        no_target_branch = parse_top_level_ternary(revenge_instructions) if revenge_instructions else None
         checks.require(no_target_branch is not None, "renderer Revenge senza ramo no-target")
         if no_target_branch:
             condition, empty_targets, _ = no_target_branch
@@ -1807,12 +1994,12 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 f"menu principale: anteprima pagina 13 duplicata o assente ({page_thirteen})",
             )
         checks.equal(
-            main_renderer.body.count("Event Player.ModeHantuAktif"),
+            (player_assignment_expression(main_renderer, "TeksMenuIsi") or "").count("Event Player.ModeHantuAktif"),
             3,
             "menu principale: anteprima pagina 13 senza stato Ghost in tutte le lingue",
         )
         checks.equal(
-            main_renderer.body.count("Event Player.ModeTerbangAktif"),
+            (player_assignment_expression(main_renderer, "TeksMenuIsi") or "").count("Event Player.ModeTerbangAktif"),
             3,
             "menu principale: anteprima pagina 13 senza stato Fly in tutte le lingue",
         )
@@ -2888,8 +3075,7 @@ End;
     main_menu = rule_by_subroutine(rules, "GambarUtama")
     checks.require(main_menu is not None, "profilo speciale: GambarUtama assente")
     if main_menu:
-        main_calls = list(iter_calls(main_menu.body, "Create HUD Text"))
-        main_text = main_calls[0].args[3] if main_calls and len(main_calls[0].args) >= 4 else ""
+        main_text = player_assignment_expression(main_menu, "TeksMenuIsi") or ""
         main_specs = (
             ('2 - SOUNDTRACK\nNOW: {0}', "no soundtrack yet"),
             ('2 - MUSIK\nKINI: {0}', "belum pilih musik"),
@@ -2913,10 +3099,12 @@ End;
     music_page = rule_by_subroutine(rules, "GambarMusik")
     checks.require(music_page is not None, "profilo speciale: GambarMusik assente")
     if music_page:
-        page_calls = list(iter_calls(music_page.body, "Create HUD Text"))
-        checks.equal(len(page_calls), 1, "profilo speciale: Create HUD GambarMusik")
-        if page_calls and len(page_calls[0].args) >= 4:
-            locked_subheader = parse_top_level_ternary(page_calls[0].args[2])
+        page_instructions = player_assignment_expression(music_page, "PetunjukMenu")
+        page_content = player_assignment_expression(music_page, "TeksMenuIsi")
+        checks.require(page_instructions is not None and page_content is not None,
+                       "profilo speciale: cache GambarMusik")
+        if page_instructions is not None and page_content is not None:
+            locked_subheader = parse_top_level_ternary(page_instructions)
             checks.require(locked_subheader is not None,
                            "profilo speciale pagina musica: ramo sottotitolo locked assente")
             if locked_subheader:
@@ -2929,20 +3117,20 @@ End;
                 if locked_triads:
                     for branch in locked_triads[0]:
                         bindings = tuple(
-                            call.args[0].strip()
-                            for call in iter_calls(branch, "Input Binding String")
-                            if call.args
+                            parse_literal(call.args[0])
+                            for call in iter_calls(branch, "Custom String")
+                            if call.args and (parse_literal(call.args[0]) or "").startswith("[")
                         )
                         checks.equal(
                             bindings,
-                            ("Button(Reload)", "Button(Melee)"),
+                            ("[RELOAD]", "[MELEE]"),
                             "profilo speciale pagina musica: locked mostra solo back/close",
                         )
                 for instruction in MENU_CROUCH_INSTRUCTIONS:
                     checks.require(instruction in unlocked,
                                    f"profilo speciale pagina musica: ramo ordinario invariato: {instruction}")
 
-            locked_body = parse_top_level_ternary(page_calls[0].args[3])
+            locked_body = parse_top_level_ternary(page_content)
             checks.require(locked_body is not None,
                            "profilo speciale pagina musica: contenuto locked assente")
             if locked_body:
@@ -6697,6 +6885,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     subroutines = {entry.name for entry in sub_entries}
     validate_localization(checks, source, globals_)
     validate_hud_and_menu(checks, source, rules, players, subroutines)
+    validate_menu_cache(checks, rules)
     validate_ghost_fly(checks, source, rules, player_entries, subroutines)
     validate_special_player_profile(checks, source, rules, player_entries)
     validate_input_contract(checks, rules)

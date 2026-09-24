@@ -51,7 +51,7 @@ class LifecycleSourceEvaluator:
         self.classifier = validator.mask_strings(validator.rule_block(classifier, "actions"))
 
     def resolve(self, name):
-        constants = {"True": True, "False": False, "Null": None,
+        constants = {"True": True, "False": False, "Null": None, "EmptyArray": [],
                      "TotalTimeElapsed": self.now, "EventPlayer": self.event_player,
                      "CurrentArrayElement": "sort-key",
                      "LastTextID": self.created[-1] if self.created else 0}
@@ -304,10 +304,16 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
                 model.join("alice")
                 model.globals["HudMenuPemain"][0] = 501
                 model.players["alice"]["HudMenu"] = local_handle
+                model.players["alice"].update(TeksMenuIsi="old body", PetunjukMenu="old hint",
+                    WarnaPetunjukMenu="old color", SalinanMenu=[1, "old target"], MenuPerluDigambar=True)
                 model.close_menu("alice")
                 self.assertEqual(model.destroyed, expected_destroyed)
                 self.assertEqual(model.globals["HudMenuPemain"], [0])
                 self.assertIsNone(model.players["alice"]["HudMenu"])
+                for field in ("TeksMenuIsi", "PetunjukMenu", "WarnaPetunjukMenu"):
+                    self.assertIsNone(model.players["alice"][field])
+                self.assertEqual(model.players["alice"]["SalinanMenu"], [])
+                self.assertFalse(model.players["alice"]["MenuPerluDigambar"])
                 model.close_menu("alice")
                 self.assertEqual(model.destroyed, expected_destroyed)
 
