@@ -62,71 +62,6 @@ rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Pla
                                     for error in self.errors(mutated)))
 
 
-class MenuCacheValidationTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.source = validator.SOURCE.read_text(encoding="utf-8")
-
-    def errors(self, source: str) -> list[str]:
-        checks = validator.Checks()
-        validator.validate_menu_cache(checks, validator.extract_rules(source))
-        return checks.errors
-
-    def mutation(self, target: str, old: str, new: str) -> str:
-        rule = validator.rule_by_subroutine(validator.extract_rules(self.source), target)
-        self.assertIsNotNone(rule)
-        self.assertIn(old, rule.body)
-        return self.source.replace(rule.body, rule.body.replace(old, new, 1), 1)
-
-    def test_current_cache_contract_passes(self) -> None:
-        self.assertEqual(self.errors(self.source), [])
-
-    def test_navigation_cannot_destroy_existing_handle(self) -> None:
-        mutated = self.mutation("GambarMenu", "Call Subroutine(GambarHalamanAktif);",
-                                "Destroy HUD Text(Event Player.HudMenu); Call Subroutine(GambarHalamanAktif);")
-        self.assertTrue(any("non deve essere distrutto" in error for error in self.errors(mutated)))
-
-    def test_missing_mirror_repair_cannot_touch_another_owner(self) -> None:
-        canonical = "Global.HudMenuPemain[Index Of Array Value(Global.PemainManusia, Event Player)]"
-        mutated = self.mutation("GambarMenu", f"Destroy HUD Text({canonical});", "Destroy HUD Text(Global.HudMenuPemain[0]);")
-        self.assertTrue(any("limitato al proprietario" in error for error in self.errors(mutated)))
-
-    def test_rendered_text_dependencies_cannot_be_omitted_from_snapshot(self) -> None:
-        mutated = self.mutation("GambarUtama", "Event Player.SalinanMenu = Array(Event Player.HalamanMenu, Event Player.IndeksBahasa,",
-                                "Event Player.SalinanMenu = Array(Event Player.HalamanMenu, 0,")
-        self.assertTrue(any("non segue tutte le dipendenze" in error for error in self.errors(mutated)))
-
-    def test_periodic_probe_cannot_stop_observing_external_camera_hero(self) -> None:
-        old = "Hero Of(Global.PemainAktif.DaftarTargetKamera[Global.PemainAktif.KursorKamera - 2])"
-        mutated = self.mutation("PeriksaSidikMenu", old, "False")
-        self.assertTrue(any("GambarKamera/7 non verificata" in error for error in self.errors(mutated)))
-
-    def test_periodic_probe_must_not_refresh_closed_or_quarantined_players(self) -> None:
-        for token in ("Abort If(Global.PemainAktif.MenuTerbuka == False);",
-                      "Abort If(Global.PemainAktif.SiklusPemainAktif == True);",
-                      "Abort If(Global.PemainAktif.MenuPerluDigambar == True);"):
-            with self.subTest(token=token):
-                mutated = self.mutation("PeriksaSidikMenu", token, "")
-                self.assertTrue(any("verifica senza guardia" in error for error in self.errors(mutated)))
-
-    def test_periodic_probe_cannot_rebuild_strings(self) -> None:
-        mutated = self.mutation("PeriksaSidikMenu", "Abort If(Global.PemainAktif.MenuPerluDigambar == True);",
-                                'Abort If(Global.PemainAktif.MenuPerluDigambar == True); Global.PemainAktif.TeksMenuIsi = Custom String("spam");')
-        self.assertTrue(any("non deve comporre testi" in error for error in self.errors(mutated)))
-
-    def test_input_changes_and_lifecycle_resets_cannot_leave_stale_text(self) -> None:
-        rules = validator.extract_rules(self.source)
-        for prefix in ("06 -", "08 -", "10 -", "11 -"):
-            with self.subTest(prefix=prefix):
-                rule = next(rule for rule in rules if rule.name.startswith(prefix))
-                changed = self.source.replace(rule.body, rule.body.replace("Call Subroutine(GambarMenu);", ""), 1)
-                self.assertTrue(any("non aggiorna immediatamente" in error for error in self.errors(changed)))
-        for routine in ("TutupMenu", "TenangkanPemain", "SiapkanPemain"):
-            with self.subTest(routine=routine):
-                changed = self.mutation(routine, "Event Player.MenuPerluDigambar = False;", "")
-                self.assertTrue(any("conserva stato obsoleto" in error for error in self.errors(changed)))
-
-
 class SemanticWorkshop081Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -655,12 +590,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source.replace("HudMenu", "HudMenuArcade")
         self.assert_rejected(mutated, "HudMenuArcade")
 
-    def test_menu_hud_keeps_its_personal_audience(self) -> None:
-        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarMenu")
+    def test_hidden_or_preloaded_menu_hud_is_rejected(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
         absolute_call = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         mutated = self.replace_call_argument(absolute_call, 0, "Empty Array")
-        self.assert_rejected(mutated, "destinatario personale")
+        self.assert_rejected(mutated, "nascosto/precaricato")
 
     def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
         mutated = self.replace_once(
@@ -733,15 +668,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_revenge_no_target_branch_keeps_trilingual_crouch_help(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarBalasDendam")
-        expression = validator.player_assignment_expression(renderer, "PetunjukMenu")
-        self.assertIsNotNone(expression)
-        branches = validator.parse_top_level_ternary(expression)
+        call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
+        branches = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(branches)
         _, no_targets, _ = branches  # type: ignore[misc]
         changed_branch = no_targets.replace("Hold CROUCH + command", "Hold DUCK + command", 1)
         self.assertNotEqual(changed_branch, no_targets)
-        changed_argument = expression.replace(no_targets, changed_branch, 1)
-        mutated = self.replace_in_rule(renderer, expression, changed_argument)
+        changed_argument = call.args[2].replace(no_targets, changed_branch, 1)
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, changed_argument)
         self.assert_rejected(mutated, "Revenge no-target senza istruzione Crouch")
 
     def test_chill_grid_requires_a_dedicated_top_spacer(self) -> None:
@@ -966,11 +901,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "colore distinto da PLAYER VIBES")
 
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
-        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarMenu")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         mutated = self.replace_call_argument(absolute, 5, "100")
-        self.assert_rejected(mutated, "GambarMenu: ordinamento HUD menu")
+        self.assert_rejected(mutated, "GambarUtama: ordinamento HUD menu")
 
     def test_luck_effect_uses_the_same_top_three_slot_without_a_leading_gap(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudEfekNasib = Last Text ID;" in rule.body)

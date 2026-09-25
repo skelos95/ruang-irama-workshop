@@ -6,7 +6,7 @@ Versione: **0.8.1**
 
 Stato: **live-ready** (release storica 0.8.1).
 
-**Revisione del 24 settembre 2026:** il Menu Arcade conserva lo stesso HUD durante tutti i cambi pagina e memorizza soltanto i testi della pagina corrente. Input e cambi lingua aggiornano subito la cache; cambi esterni a bersagli e stati vengono rilevati dal ciclo distribuito a 10 Hz. I binding restano dinamici per il player che legge. Gli effetti cosmetici di conferma/ripristino condividono un intervallo minimo di 0,25 s per player, senza ritardare i comandi. La protezione dal sovraccarico, adattata da Friendly, porta temporaneamente **tutta la partita al 10% della velocità** quando Server Load resta sopra 200 per almeno 3 s e ripristina il 100% quando scende sotto 100. È una mitigazione da provare nel client, non una garanzia contro ogni crash. Procedura: [`docs/TEST.md`](docs/TEST.md#revisione-hud-e-protezione-carico-del-24-settembre-2026).
+**Ripristino del 25 settembre 2026:** ritirata la revisione Friendly della PR #76 dopo la segnalazione di crash sistematico al primo cambio squadra, anche senza aprire menu. Il sorgente Workshop, la fixture semantica e i controlli tornano esattamente alla revisione `2529608` precedente alla PR. Rimossi quindi la nuova cache Arcade, il suo aggiornamento periodico, il cooldown cosmetico introdotto insieme e il rallentamento automatico. Restano tutte le modifiche precedenti, inclusi dummy limitati a Schermaglia/CTF, Host RGB e profilo `งูแรร์`. La causa nativa non è stata isolata; il passaggio dei test automatici della PR #76 non aveva rilevato la regressione. Dopo il nuovo import, verificare il cambio squadra in una nuova lobby.
 
 **Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
 
@@ -116,7 +116,7 @@ Le scansioni globali non cedono l'esecuzione mentre usano il player e l'indice c
 
 Il sorgente mantiene un solo `Loop` e al massimo **7 `Wait`** nominativamente autorizzati per ruolo, durata e quantità. Resurrect e cleanup roster sono atomici; il ritardo di uscita dei dummy dalla Spawn Room usa invece una scadenza timestamp di 1 secondo.
 
-Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload o pagine nascoste: l'apertura crea il menu, la navigazione e tutti i cambi pagina aggiornano la cache dello stesso HUD, mentre chiusura, leave e cambio squadra distruggono l'handle e svuotano i testi.
+Ogni player mantiene **un solo handle HUD Arcade attivo**. Non esistono preload o pagine nascoste: apertura, chiusura e cambio pagina sono gli unici eventi che ricreano il menu; la navigazione interna aggiorna variabili rivalutate.
 
 Gli aggiornamenti a 10 Hz e 1 Hz sono distribuiti fra i player: con 12 presenze stabili, un tick elabora al massimo 6 manutenzioni a 10 Hz e una cache a 1 Hz. Fly e le scadenze delle funzioni mantengono il ciclo a 20 Hz. Ingressi, uscite e voti marcano un conteggio pendente, eseguito una sola volta al prossimo tick globale (circa 0,05 s a carico normale).
 
