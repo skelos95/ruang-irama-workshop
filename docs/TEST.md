@@ -6,16 +6,11 @@ I test live della 0.8.1 sono stati completati sul client aggiornato ad agosto 20
 
 Questa attestazione conserva il riscontro storico della 0.8.1. La release `v0.8.1` e il sorgente successivo su `main` sono revisioni distinte, come indicato nel [`README`](../README.md): associare ogni nuova esecuzione della matrice allo SHA effettivamente importato. In assenza di quel verbale, i gate automatici verdi non attestano da soli fluidità, isolamento degli input o assenza di leak nel client.
 
-## Revisione HUD e protezione carico del 24 settembre 2026
+## Regressione cambio squadra del 25 settembre 2026
 
-Questa revisione richiede un nuovo import e una nuova prova live. I test Python valutano le espressioni e i percorsi del sorgente, senza simulare il costo del motore o certificare l'assenza di crash.
+La PR #76 è stata ritirata dopo un crash ripetibile al primo cambio squadra, anche senza aprire menu. I 561 test allora superati non simulavano il crash del motore. Il runtime corrente e i suoi controlli sono ripristinati esattamente da `2529608`; non è stata individuata una singola istruzione responsabile.
 
-- Con 1, 6 e 12 umani, percorrere tutte le pagine Arcade in EN/ID/TH e tornare al Main Menu: nessuna duplicazione, stesso numero di HUD durante la navigazione, testi aggiornati dopo ogni input e cambio lingua. Provare binding personalizzati diversi su due client.
-- A menu fermo verificare gli aggiornamenti esterni: Camera rapida, bersaglio che cambia eroe/duplica con Echo/esce/cambia squadra, debiti Revenge e voti di altri player. Il testo deve seguire lo stato senza richiedere una pressione aggiuntiva.
-- Alternare Arcade, Travel e roulette; chiudere e riaprire, cambiare squadra e sostituire ripetutamente i player fino a superare 12 identità totali. Controllare che cache e riferimenti siano puliti e che i contatori HUD tornino al livello atteso, senza crescere a ogni giro.
-- Applicare scelte rapidamente con più player: i comandi devono funzionare subito; la conferma visiva può essere omessa entro 0,25 s dal precedente effetto dello stesso player, senza influire sugli altri.
-- Durante la normale prova di carico, registrare Server Load e l'eventuale rallentamento globale: un picco breve non deve attivarlo; sopra 200 per almeno 3 s del tempo engine deve passare al 10%, e sotto 100 tornare al 100%. Fra 100 e 200 una protezione già attiva resta tale. Verificare il ritorno alla velocità normale anche dopo `Restart Match`. Non aggiungere loop artificialmente illimitati per provocare sovraccarico.
-- Annotare SHA importato, build client, partecipanti, durata, picchi di carico, numero di attivazioni e contatori prima/dopo il cleanup. La protezione non sostituisce la prova prolungata con lobby piena.
+Dopo l'import, avviare una nuova lobby e verificare: cambio squadra appena entrati senza usare menu; cambio dopo alcuni minuti; cambio con menu aperto; cambio mentre un altro player osserva o tiene aperta la pagina Camera/Vote. Ripetere con ricambio dei player e annotare SHA importato, modalità, mappa, numero di umani e messaggio di chiusura, se presente. La conferma live del ripristino resta distinta dall'identità dei file e dai controlli automatici.
 
 ## 1. Gate statici
 
