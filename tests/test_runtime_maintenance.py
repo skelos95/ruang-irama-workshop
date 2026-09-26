@@ -132,7 +132,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_safe_position_validator_is_shared_by_player_teleports(self):
         for source in (self.it, self.en):
-            self.assertIn("57: CariPosisiTeleportasiAman", source)
+            self.assertIn("56: CariPosisiTeleportasiAman", source)
             self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportasiAman);"), 4)
             self.assertIn("Ray Cast Hit Position(Event Player.PosisiTujuanTeleportasi + Vector(0, 1, 0)", source)
 
