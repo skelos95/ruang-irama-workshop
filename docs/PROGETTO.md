@@ -46,7 +46,7 @@ Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 seco
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Crouch Travel & Attach contiene cinque pagine: Teleport: Spawn Room, Teleport: Active Objective, Teleport: Player / Bot, Attach: Player / Bot e Self Elimination. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Un solo HUD per-player ordina ogni pagina come titolo, destinazione/posizione, target e azione, usa i binding effettivi e passa da mint a cyan, blu, viola e rosa con istruzioni pastello e contenuto neon. Self Elimination arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte. Cambio squadra e leave/rejoin ripartono invece dal setup fresco.
+- Crouch Travel & Attach contiene cinque pagine: Spawn Room, Objective, Teleport to Player/Bot, Attach to Player/Bot e Self Elimination. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Un solo HUD per-player mostra due righe di comandi e due di contenuto: azione/destinazione o target, con il cooldown nella pagina Self Elimination. Usa i binding effettivi e passa da mint a cyan, blu, viola e rosa con istruzioni pastello e contenuto neon. Self Elimination arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte. Cambio squadra e leave/rejoin ripartono invece dal setup fresco.
 - Il renderer Travel usa `WarnaMenu` con chase da 0,18 s per passare fluidamente mint → cyan → blu → viola → rosa; le conferme Small Message ridondanti sono soppresse, mentre errori/cooldown/esiti restano espliciti.
 - Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue il recupero e la regola dipende esclusivamente da identità umana, morte, latch e pressione, non dallo stato Crouch Travel o da altre feature. `Resurrect` è incondizionato; l'unico raycast distingue il vuoto dal terreno e, solo nel primo caso, il Teleport successivo valuta direttamente `Nearest Walkable Position(Last Of(Position Of(Event Player)))` sulla posizione live del player già risorto. Sul terreno non viene eseguito alcun Teleport. Dopo `Is Alive == True` ripristina effetti e Ghost/Fly. Il ramo non usa il validatore Travel, `Respawn`, fallback Spawn Room, offset casuali, forcing, `Abort`, `Wait` o `Loop`; il rilascio di Jump riapre sempre il latch e nessun ramo post-tentativo può mostrare il vecchio `Small Message` “Resurrect unavailable”.
 
@@ -76,6 +76,8 @@ Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spa
 ## Menu Arcade
 
 Ogni player possiede al massimo **un handle HUD Arcade**. Non esistono cache di pagine, preload progressivo o HUD nascosti.
+
+Le istruzioni EN/ID/TH raccolgono modificatore Crouch e navigazione sulla stessa riga, seguita da applicazione/ritorno e chiusura con Melee tenuto per 0,5 secondi. Il menu musica conserva una terza riga per i salti di dieci voci. Ghost/Fly mantiene i dettagli specifici della velocità e della pressione prolungata.
 
 Il lifecycle del menu è:
 

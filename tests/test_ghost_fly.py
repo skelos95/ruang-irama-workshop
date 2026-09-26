@@ -134,9 +134,9 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             for token in localized_words:
                 self.assertIn(token, renderer)
             for instruction in (
-                "Hold CROUCH + command",
-                'Tahan JONGKOK + tombol',
-                'ย่อค้าง + ปุ่มคำสั่ง',
+                "Hold CROUCH",
+                'Tahan JONGKOK',
+                'ย่อค้าง',
             ):
                 self.assertIn(instruction, renderer)
             for fly_hint in (

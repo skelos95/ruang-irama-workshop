@@ -276,15 +276,15 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn('Custom String("{0}n{1}"', teleport_render)
             self.assertIn('Custom String("{0}\n{1}", Custom String("HOLD'.replace("\\n", "\n"), teleport_render)
             for token in (
-                "1/5 | TELEPORT: SPAWN ROOM",
-                "2/5 | TELEPORT: ACTIVE OBJECTIVE",
-                "3/5 | TELEPORT: PLAYER / BOT",
-                '4/5 | ATTACH: PLAYER/BOT',
+                "1/5 | SPAWN ROOM",
+                "2/5 | OBJECTIVE",
+                "3/5 | TELEPORT TO PLAYER/BOT",
+                '4/5 | ATTACH TO PLAYER/BOT',
                 "5/5 | SELF ELIMINATION",
-                "1/5 | TELEPORT: RUANG MUNCUL",
-                "2/5 | TELEPORT: OBJEKTIF AKTIF",
-                "3/5 | TELEPORT: PLAYER / BOT",
-                "4/5 | KAITKAN: PLAYER / BOT",
+                "1/5 | RUANG MUNCUL",
+                "2/5 | OBJEKTIF",
+                "3/5 | TELEPORT: PEMAIN/BOT",
+                "4/5 | TEMPEL: PEMAIN/BOT",
                 "5/5 | ELIMINASI DIRI",
                 '1/5 | วาร์ปกลับห้องเกิด',
                 '2/5 | วาร์ปใกล้ภารกิจ',
@@ -394,7 +394,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Event Player.TeleportasiJongkokAktif == False;", manual_detach)
             self.assertNotIn("Disallow Button(Event Player, Button(Reload));", attach_rule)
             self.assertNotIn("Allow Button(Event Player, Button(Reload));", detach_rules)
-            self.assertIn("{0} + {1}: DETACH (ATTACH PAGE)", source)
+            self.assertIn("{0} + {1}: DETACH", source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Reload))", source)
             self.assertNotIn("CROUCH + RELOAD: DETACH", source)
@@ -429,7 +429,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
     def test_custom_string_uses_at_most_three_substitution_values(self):
         for source in (self.it, self.en):
             self.assertNotIn("{3}", source)
-            self.assertIn('Custom String("{0}\\n{1}", Custom String("Hold CROUCH + command', source)
+            self.assertIn('Custom String("{0}\\n{1}", Custom String("Hold CROUCH |', source)
 
 
 

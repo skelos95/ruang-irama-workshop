@@ -606,7 +606,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_every_menu_keeps_the_trilingual_crouch_instruction(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "Hold DUCK + command")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "Hold DUCK")
         self.assert_rejected(mutated, "istruzione Crouch menu assente")
 
     def test_thai_menu_close_help_keeps_the_half_second_hold(self) -> None:
@@ -620,15 +620,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "\\nHold CROUCH + command")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "\\nHold CROUCH")
         self.assert_rejected(mutated, "riga vuota artificiale")
 
     def test_teleport_menu_requires_specific_trilingual_copy(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
-            ("EFFECT: ELIMINATE CURRENT HERO FORM", "EFFECT: SELF KILL"),
-            ("TUJUAN: RUANG MUNCUL TIMMU", "TUJUAN: SPAWN"),
-            ('ปลายทาง: จุดภารกิจปัจจุบัน / ธงศัตรู', "ปลายทาง: เป้าหมาย"),
+            ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
+            ("TELEPORT KE RUANG TIMMU", "TUJUAN: SPAWN"),
+            ('จุดภารกิจ / ธงศัตรู', "ปลายทาง: เป้าหมาย"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -639,8 +639,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutated = self.replace_in_rule(
             renderer,
-            "{0}: EXECUTE | RELEASE {1}: CLOSE",
-            "INTERACT: EXECUTE | RELEASE CROUCH: CLOSE",
+            "{0}: USE | RELEASE {1}: CLOSE",
+            "INTERACT: USE | RELEASE CROUCH: CLOSE",
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
@@ -672,7 +672,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         branches = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(branches)
         _, no_targets, _ = branches  # type: ignore[misc]
-        changed_branch = no_targets.replace("Hold CROUCH + command", "Hold DUCK + command", 1)
+        changed_branch = no_targets.replace("Hold CROUCH", "Hold DUCK", 1)
         self.assertNotEqual(changed_branch, no_targets)
         changed_argument = call.args[2].replace(no_targets, changed_branch, 1)
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)

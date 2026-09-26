@@ -71,6 +71,7 @@ Il gate verifica:
 - equivalenza di placeholder e argomenti tra le traduzioni;
 - riga vuota coerente tra contenuto e comandi.
 - promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
+- copy compatto EN/ID/TH con binding dinamici, target e tempi di pressione conservati; Travel & Attach mantiene anche il cooldown Self Elimination di 3 s. La verifica statica del testo non misura il ritorno a capo visivo nel client.
 
 I 100 generi restano nomi internazionali e non richiedono traduzione. Il profilo per nome visibile esatto `งูแรร์` usa `Draconian` come Player Vibes dedicato e bloccato senza aggiungerlo al catalogo globale.
 

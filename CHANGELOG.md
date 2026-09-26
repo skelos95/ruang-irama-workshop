@@ -2,12 +2,13 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
-## Pulizia delle regole — 2026-09-26
+## Pulizia delle regole e istruzioni HUD compatte — 2026-09-26
 
 - Unificate le due subroutine con lo stesso effetto visivo in `EfekTerapkan`; rimossi anche sette rami ON/OFF che ora chiamavano la stessa azione. Le chiamate restano negli stessi percorsi di applicazione e ripristino, senza nuovi effetti o frequenze.
 - Rimossi il blocco condizionale vuoto dopo il Teleport e la selezione ridondante per Flashpoint/Control/Clash/Assault, già coperta dal fallback all'obiettivo corrente.
 - Limitata la selezione destinazione dei dummy ai percorsi usati dalla creazione automatica: CTF e fallback per Schermaglia. Restano ritardo iniziale, ricerca dei 16 candidati, validazione geometrica e cleanup. Il Teleport manuale conserva le altre modalità.
-- Il sorgente passa da 116 a 115 regole e da 63 a 62 subroutine, con 5 Wait e un solo Loop. Non sono modificati HUD, scheduler o lifecycle del cambio squadra. La pulizia non identifica né risolve la causa nativa della regressione Friendly ritirata.
+- Il sorgente passa da 116 a 115 regole e da 63 a 62 subroutine, con 5 Wait e un solo Loop. Restano invariati gestione degli HUD, scheduler e lifecycle del cambio squadra. La pulizia non identifica né risolve la causa nativa della regressione Friendly ritirata.
+- Accorciate le istruzioni HUD in English, Bahasa Indonesia e ไทย: i menu Arcade più comuni usano due righe di comandi, il menu musica tre per conservare i salti di dieci voci. Travel & Attach usa due righe di contenuto e due di comandi, mantenendo target, binding dinamici, pressioni prolungate e cooldown. Cambiano soltanto le stringhe, senza nuovi handle o rivalutazioni.
 
 ## Ripristino dopo crash al cambio squadra — 2026-09-25
 

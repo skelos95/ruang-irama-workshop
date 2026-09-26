@@ -111,7 +111,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - confermare che non compaiano titoli HUD o `Big Message`;
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
-- verificare che il promemoria `Crouch + command` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server.
+- verificare che il promemoria `Hold CROUCH` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server. Controllare le istruzioni compatte in EN/ID/TH: due righe nei menu comuni, tre nel menu musica; i tasti rimappati e il tempo di chiusura devono restare leggibili.
 - sulla riga Fly della pagina 13, verificare la guida `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s` / `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` / `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`, senza testo obsoleto sulla sola direzione dello sguardo.
 
 Focus dati:
@@ -220,6 +220,7 @@ Verifica specifica HEART: ferire il proprietario, un alleato e un avversario, la
 - Tenere Crouch e verificare le cinque pagine EN: `1/5 | TELEPORT: SPAWN ROOM`, `2/5 | TELEPORT: ACTIVE OBJECTIVE`, `3/5 | TELEPORT: PLAYER / BOT`, `4/5 | ATTACH: PLAYER / BOT` e `5/5 | SELF ELIMINATION`; ripetere con gli equivalenti specifici ID e TH.
 - Verificare che ogni pagina mostri nell'ordine titolo, destinazione/posizione, target quando applicabile e azione; i comandi devono riflettere i binding reali, compreso dopo una rimappatura degli input.
 - Verificare il singolo HUD per-player e la progressione 1→5 mint, cyan, blu, viola e rosa: istruzioni in tinta pastello e contenuto in tinta neon, senza contaminare cursore, colori o handle di un altro player.
+- In EN/ID/TH, controllare le due righe di comandi e le due di contenuto Travel & Attach: target leggibile anche con un nome lungo, nessun taglio dei tasti rimappati, rilascio Crouch per chiudere, Crouch + Reload per sganciare e cooldown di 3 s nella quinta pagina.
 - Primary avanza, Secondary torna indietro e Interact esegue sempre la pagina attiva; Primary/Secondary non devono eseguire il teleport o la kill.
 - Sulla pagina Self Elimination, testo ed effetto devono specificare la forma eroe corrente. Interact deve eseguire una sola richiesta per pressione e nessun'altra pagina deve essere attivata nello stesso hold. Un secondo tentativo entro 3 secondi non deve uccidere e deve mostrare il tempo residuo localizzato; morte e Resurrect non devono azzerare il cooldown, mentre cambio squadra e vero leave/rejoin devono inizializzarlo di nuovo con il setup fresco.
 - Agganciarsi a un umano e a un dummy: i piedi devono restare separati dalla testa del target tramite l'offset previsto.
