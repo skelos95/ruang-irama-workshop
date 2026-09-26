@@ -342,7 +342,7 @@ Lo script non deve assegnare punti o vincitori. Scoring e obiettivi restano nati
 | Capture the Flag | bandiera nemica valida | presa, caduta, ritorno, score |
 | Control | Objective Position | cattura/percentuale, countdown CHILL invariato |
 | Clash | Objective Position | avanzamento/ritiro punti |
-| Hybrid | Dummy: primo obiettivo prima della cattura, poi payload; Teleport manuale: payload | cattura → scorta |
+| Hybrid | Teleport manuale: payload; nessun dummy automatico | cattura → scorta |
 | Escort | Payload | checkpoint/payload, countdown CHILL invariato |
 | Assault | Objective Position | punto A → punto B |
 
@@ -455,8 +455,8 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 
 ## Regressione dummy Paraíso — 2026-09-08
 
-- Su Paraíso, creare i dummy di entrambe le squadre prima della cattura del primo punto: dopo il ritardo iniziale devono cercare un'uscita nei pressi dell'obiettivo, anche se il primo candidato viene rifiutato.
-- Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato; verificare anche la fase payload dopo la cattura.
+- Su Paraíso in Schermaglia, verificare i dummy di entrambe le squadre: dopo il ritardo iniziale devono cercare un'uscita nei pressi dell'obiettivo disponibile, anche se il primo candidato viene rifiutato.
+- Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato. In modalità Ibrida non devono comparire dummy automatici; verificare separatamente il Teleport manuale verso il payload.
 - Confermare che un dummy già uscito dalla spawn smetta di essere teletrasportato e che due dummy ritentino in modo indipendente.
 - I test automatici eseguono le regole reali con risposte geometriche controllate; non sostituiscono questa prova della navmesh e delle spawn room nel client.
 

@@ -54,10 +54,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             "111: PersenTerbang",
             "112: ArahTerbang",
             "113: DeltaTerbang",
-            "58: GambarHantuTerbang",
-            "59: TerapkanHalamanHantuTerbang",
-            "60: TerapkanFisikaHantuTerbang",
-            "61: ProsesTerbangPemain",
+            "57: GambarHantuTerbang",
+            "58: TerapkanHalamanHantuTerbang",
+            "59: TerapkanFisikaHantuTerbang",
+            "60: ProsesTerbangPemain",
         )
         for source, _ in self.sources:
             for declaration in declarations:
@@ -372,7 +372,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
             self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
-            self.assertLess(resurrect.index("Call Subroutine(EfekPulihkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
+            self.assertLess(resurrect.index("Call Subroutine(EfekTerapkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
             self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
             self.assertNotIn("Small Message(", resurrect)
             self.assertNotIn("Resurrect unavailable", source)

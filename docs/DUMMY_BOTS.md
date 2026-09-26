@@ -27,13 +27,12 @@ La preferenza è per-player e parte **OFF**. ON consente al dummy avversario di 
 
 ## Destinazioni dalla Spawn Room
 
-La creazione automatica è limitata alle due modalità sopra indicate. La routine di recupero conserva le destinazioni esistenti per eventuali dummy già presenti; non abilita la loro creazione nelle altre modalità.
+La routine di uscita dalla spawn segue le due modalità della creazione automatica:
 
-- Hybrid prima della cattura: primo obiettivo, anche su Paraíso;
-- Escort / Hybrid dopo la cattura: payload;
 - Capture the Flag: bandiera avversaria;
-- Push: player vivo sull'obiettivo, con fallback sull'obiettivo corrente;
-- altre modalità supportate: obiettivo corrente.
+- Schermaglia: obiettivo corrente.
+
+I vecchi rami dummy per Hybrid, Escort e Push sono rimossi. Il Teleport manuale dei giocatori conserva il supporto alle altre modalità.
 
 Se la destinazione della modalità non è disponibile, viene provato l'obiettivo corrente. La posizione finale deve distare fra 6 e 16 m dal target e superare i controlli di spazio libero e terreno. I tentativi proseguono finché il motore rileva il dummy nella Spawn Room.
 

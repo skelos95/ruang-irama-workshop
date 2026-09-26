@@ -200,7 +200,7 @@ La destinazione Teleport viene rivalutata al click:
 
 La pagina Player / Bot sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy; `Nearest Walkable Position` limita le destinazioni non praticabili.
 
-La regola di uscita Spawn dei dummy attende una scadenza timestamp di 1 secondo: Hybrid prima della cattura → primo obiettivo, Escort/Hybrid dopo la cattura → payload, CTF → bandiera nemica, Push → proxy/fallback obiettivo, altre modalità → obiettivo corrente. Una destinazione indisponibile ripiega sull'obiettivo corrente. Il cursore individuale esplora otto direzioni orizzontali su due distanze (8 e 12 m), con un tentativo al secondo e riavvio dopo 16 candidati. Se nessun punto supera i controlli, il dummy resta in Spawn Room e riprova, senza un nuovo `Wait`.
+La regola di uscita Spawn dei dummy attende una scadenza timestamp di 1 secondo: CTF → bandiera nemica, Schermaglia → obiettivo corrente. I rami dummy per le modalità escluse dalla creazione automatica sono rimossi; il Teleport manuale mantiene il proprio dispatcher completo. Una destinazione indisponibile ripiega sull'obiettivo corrente. Il cursore individuale esplora otto direzioni orizzontali su due distanze (8 e 12 m), con un tentativo al secondo e riavvio dopo 16 candidati. Se nessun punto supera i controlli, il dummy resta in Spawn Room e riprova, senza un nuovo `Wait`.
 
 ## Modalità native
 

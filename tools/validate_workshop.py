@@ -201,15 +201,11 @@ LOCALIZED_ARRAY_SIZES = {
     "NamaLokasiIndonesia": 26,
     "NamaLokasiThai": 26,
 }
-GAME_MODES = (
+OBJECTIVE_SPECIAL_MODES = (
     "Push",
-    "Flashpoint",
     "Capture The Flag",
-    "Control",
-    "Clash",
     "Hybrid",
     "Escort",
-    "Assault",
 )
 FORBIDDEN_LEGACY_IDENTIFIERS = {
     "HudMenuArcade",
@@ -2181,8 +2177,8 @@ def validate_ghost_fly(
     }
     checks.require(required_subroutines <= subroutines,
                    "Ghost/Fly: subroutine pagina 13 incomplete")
-    checks.require(re.search(r"(?m)^\s*61:\s*ProsesTerbangPemain\s*$", source) is not None,
-                   "Fly: indice subroutine motore 20 Hz deve essere 61")
+    checks.require(re.search(r"(?m)^\s*60:\s*ProsesTerbangPemain\s*$", source) is not None,
+                   "Fly: indice subroutine motore 20 Hz deve essere 60")
 
     apply = rule_by_subroutine(rules, "TerapkanHalamanHantuTerbang")
     physics = rule_by_subroutine(rules, "TerapkanFisikaHantuTerbang")
@@ -3160,7 +3156,7 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Resurrect(Event Player);",
             live_nearest_teleport,
             "If(Is Alive(Event Player) == True);",
-            "Call Subroutine(EfekPulihkan);",
+            "Call Subroutine(EfekTerapkan);",
             "Event Player.FisikaHantuTerbangDiterapkan = False;",
             "Call Subroutine(TerapkanFisikaHantuTerbang);",
         )
@@ -6407,9 +6403,19 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         objective_rule = rule_by_subroutine(rules, "TeleportasiKeObjektif")
     checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
     if objective_rule:
-        for mode in GAME_MODES:
+        for mode in OBJECTIVE_SPECIAL_MODES:
             checks.require(f"Game Mode({mode})" in objective_rule.body,
                            f"destinazione obiettivo non copre {mode}")
+        generic_fallback = (
+            "End;"
+            "Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);"
+            "Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);"
+            "End;"
+            "If(Distance Between(Event Player.PosisiTujuanTeleportasi, Vector(0, 0, 0)) <= 0.100);"
+        )
+        checks.require(re.sub(r"\s+", "", generic_fallback)
+                       in re.sub(r"\s+", "", mask_strings(objective_rule.body)),
+                       "destinazione obiettivo: fallback generico valido obbligatorio per le altre modalità")
         checks.require("Is On Objective(" in objective_rule.body,
                        "Push non usa proxy robot/fallback obiettivo")
         safe_position = rule_by_subroutine(rules, "CariPosisiTeleportasiAman")

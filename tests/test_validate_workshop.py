@@ -428,7 +428,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source.replace(valid_name, overlong_name)
         self.assert_rejected(
             mutated,
-            "nome subroutine oltre 32 byte UTF-8: indice 42, TerapkanHalamanTeleportasiJongkok",
+            "nome subroutine oltre 32 byte UTF-8: indice 41, TerapkanHalamanTeleportasiJongkok",
         )
 
     def test_player_variable_name_over_32_utf8_bytes_is_rejected(self) -> None:
@@ -3591,9 +3591,27 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(call, 1, 'Custom String("Server duration")')
         self.assert_rejected(mutated, "label Workshop Setting Integer")
 
-    def test_all_eight_objective_modes_are_explicit(self) -> None:
-        mutated = self.replace_once("Game Mode(Flashpoint)", "Game Mode(Practice Range)")
-        self.assert_rejected(mutated, "Flashpoint")
+    def test_special_objective_modes_keep_their_destination_handlers(self) -> None:
+        objective = self.rule(lambda rule: validator.subroutine_target(rule) == "TeleportasiKeObjektif")
+        for mode in validator.OBJECTIVE_SPECIAL_MODES:
+            with self.subTest(mode=mode):
+                mutated = self.replace_in_rule(objective, f"Game Mode({mode})", "Game Mode(Practice Range)")
+                self.assert_rejected(mutated, f"destinazione obiettivo non copre {mode}")
+
+    def test_other_objective_modes_require_a_valid_generic_fallback(self) -> None:
+        objective = self.rule(lambda rule: validator.subroutine_target(rule) == "TeleportasiKeObjektif")
+        fallback = (
+            "\t\tElse If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);\n"
+            "\t\t\tEvent Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);\n"
+        )
+        for replacement in (
+            "",  # An explicit mode list must not silently replace the catch-all.
+            fallback.replace("> 0.100", ">= 0"),  # Zero is not a valid destination.
+            fallback.replace("= Objective Position(Objective Index)", "= Vector(0, 0, 0)"),
+        ):
+            with self.subTest(replacement=replacement):
+                mutated = self.replace_in_rule(objective, fallback, replacement)
+                self.assert_rejected(mutated, "fallback generico valido obbligatorio")
 
     def test_native_mode_result_cannot_be_overridden(self) -> None:
         mutated = self.source + "\nSet Team Score(Team 1, 99);\n"

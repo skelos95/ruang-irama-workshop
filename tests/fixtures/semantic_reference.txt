@@ -214,50 +214,49 @@ subroutines
 	16: GambarKebal
 	17: GambarSuara
 	18: EfekTerapkan
-	19: EfekPulihkan
-	20: GambarIkon
-	21: TransisiWarnaMenu
-	22: GambarSakelarTeleportasi
-	23: GambarPrivasiInspeksi
-	24: GambarNasib
-	25: GambarPilihan
-	26: HitungPilihan
-	27: BersihkanPemain
-	28: GambarHalamanAktif
-	29: TenangkanPemain
-	30: ProsesCepatPemain
-	31: ProsesSiklusPemain
-	32: ProsesSimpananPemain
-	33: ProsesNasibPemain
-	34: TerapkanHalamanMusik
-	35: TerapkanHalamanKamera
-	36: TerapkanHalamanWarna
-	37: TerapkanHalamanBahasa
-	38: TerapkanHalamanBalasDendam
-	39: TerapkanHalamanKebal
-	40: TerapkanHalamanSuara
-	41: TerapkanHalamanIkon
-	42: TerapkanTeleportasiJongkok
-	43: TerapkanHalamanPrivasiInspeksi
-	44: TerapkanHalamanNasib
-	45: TerapkanHalamanPilihan
-	46: PulihkanNasibPemain
-	47: PulihkanNasibAktif
-	48: SegarkanTargetPublikPemain
-	49: SegarkanTargetPublikAktif
-	50: BuatBotBuatanTim
-	51: LepasBotBuatanTim
-	52: TeleportasiKeRuangMuncul
-	53: TeleportasiKeObjektif
-	54: TeleportasiKeTarget
-	55: GambarIkutiBotBuatan
-	56: TerapkanHalamanIkutiBotBuatan
-	57: CariPosisiTeleportasiAman
-	58: GambarHantuTerbang
-	59: TerapkanHalamanHantuTerbang
-	60: TerapkanFisikaHantuTerbang
-	61: ProsesTerbangPemain
-	62: BersihkanTeksYatim
+	19: GambarIkon
+	20: TransisiWarnaMenu
+	21: GambarSakelarTeleportasi
+	22: GambarPrivasiInspeksi
+	23: GambarNasib
+	24: GambarPilihan
+	25: HitungPilihan
+	26: BersihkanPemain
+	27: GambarHalamanAktif
+	28: TenangkanPemain
+	29: ProsesCepatPemain
+	30: ProsesSiklusPemain
+	31: ProsesSimpananPemain
+	32: ProsesNasibPemain
+	33: TerapkanHalamanMusik
+	34: TerapkanHalamanKamera
+	35: TerapkanHalamanWarna
+	36: TerapkanHalamanBahasa
+	37: TerapkanHalamanBalasDendam
+	38: TerapkanHalamanKebal
+	39: TerapkanHalamanSuara
+	40: TerapkanHalamanIkon
+	41: TerapkanTeleportasiJongkok
+	42: TerapkanHalamanPrivasiInspeksi
+	43: TerapkanHalamanNasib
+	44: TerapkanHalamanPilihan
+	45: PulihkanNasibPemain
+	46: PulihkanNasibAktif
+	47: SegarkanTargetPublikPemain
+	48: SegarkanTargetPublikAktif
+	49: BuatBotBuatanTim
+	50: LepasBotBuatanTim
+	51: TeleportasiKeRuangMuncul
+	52: TeleportasiKeObjektif
+	53: TeleportasiKeTarget
+	54: GambarIkutiBotBuatan
+	55: TerapkanHalamanIkutiBotBuatan
+	56: CariPosisiTeleportasiAman
+	57: GambarHantuTerbang
+	58: TerapkanHalamanHantuTerbang
+	59: TerapkanFisikaHantuTerbang
+	60: ProsesTerbangPemain
+	61: BersihkanTeksYatim
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -1438,22 +1437,9 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 		Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
 		Event Player.PosisiMati = Vector(0, 0, 0);
 		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
-		"Sebelum titik pertama direbut, gunakan objektif awal pada peta hibrida."
-		If(And(Current Game Mode == Game Mode(Hybrid), Is Objective Complete(0) == False));
-			Event Player.PosisiMati = Objective Position(0);
-		Else If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiMati = Payload Position;
-			End;
-		Else If(Current Game Mode == Game Mode(Capture The Flag));
+		If(Current Game Mode == Game Mode(Capture The Flag));
 			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
 				Event Player.PosisiMati = Flag Position(Opposite Team Of(Team Of(Event Player)));
-			End;
-		Else If(Current Game Mode == Game Mode(Push));
-			If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
-				Event Player.PosisiMati = Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))));
-			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiMati = Objective Position(Objective Index);
 			End;
 		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
 			Event Player.PosisiMati = Objective Position(Objective Index);
@@ -2047,7 +2033,7 @@ rule("99b - Subrutin: Terapkan halaman kamera")
 				Stop Camera(Event Player);
 				Event Player.ModeKamera = 0;
 				Event Player.TargetKamera = Null;
-				Call Subroutine(EfekPulihkan);
+				Call Subroutine(EfekTerapkan);
 			End;
 		Else If(Event Player.KursorKamera == 1);
 			If(Or(Event Player.ModeKamera != 1, Event Player.TargetKamera != Event Player));
@@ -2092,11 +2078,7 @@ rule("99c - Subrutin: Terapkan halaman warna")
 			If(Global.PemimpinPilihan == Event Player);
 				Global.WarnaPemimpinPilihan = Event Player.WarnaNama;
 			End;
-			If(Event Player.IndeksWarna == 0);
-				Call Subroutine(EfekPulihkan);
-			Else;
-				Call Subroutine(EfekTerapkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		End;
 	}
 }
@@ -2183,7 +2165,7 @@ rule("99f - Subrutin: Terapkan halaman kebal")
 				Event Player.ModeKebal = Event Player.KursorKebal;
 				Event Player.KebalAktif = Event Player.ModeKebal != 0;
 				If(Event Player.ModeKebal == 0);
-					Call Subroutine(EfekPulihkan);
+					Call Subroutine(EfekTerapkan);
 					Clear Status(Event Player, Unkillable);
 					Set Damage Received(Event Player, 100);
 					Set Knockback Received(Event Player, 100);
@@ -2251,11 +2233,7 @@ rule("99g - Subrutin: Terapkan halaman suara pahlawan")
 	{
 		If(Event Player.IndeksSuara != Event Player.KursorSuara);
 			Event Player.IndeksSuara = Event Player.KursorSuara;
-			If(Event Player.IndeksSuara == 0);
-				Call Subroutine(EfekPulihkan);
-			Else;
-				Call Subroutine(EfekTerapkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 			If(Event Player.IndeksSuara == 0);
 				Stop Modifying Hero Voice Lines(Event Player);
 			Else If(Event Player.IndeksSuara == 1);
@@ -2300,11 +2278,7 @@ rule("99i - Subrutin: Terapkan halaman teleportasi Jongkok")
 	{
 		If(Event Player.TeleportasiJongkokDiaktifkan != (Event Player.KursorTeleportasiJongkok == 1));
 			Event Player.TeleportasiJongkokDiaktifkan = Event Player.KursorTeleportasiJongkok == 1;
-			If(Event Player.TeleportasiJongkokDiaktifkan == True);
-				Call Subroutine(EfekTerapkan);
-			Else;
-				Call Subroutine(EfekPulihkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		End;
 	}
 }
@@ -2321,11 +2295,7 @@ rule("99j - Subrutin: Terapkan halaman privasi inspeksi")
 	{
 		If(Event Player.PrivasiInspeksiAktif != (Event Player.KursorPrivasiInspeksi == 1));
 			Event Player.PrivasiInspeksiAktif = Event Player.KursorPrivasiInspeksi == 1;
-			If(Event Player.PrivasiInspeksiAktif == True);
-				Call Subroutine(EfekTerapkan);
-			Else;
-				Call Subroutine(EfekPulihkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		End;
 	}
 }
@@ -2400,11 +2370,7 @@ rule("99m - Subrutin: Terapkan izin bot buatan mengikuti")
 	{
 		If(Event Player.IzinkanBotBuatanMengikuti != (Event Player.KursorIkutiBotBuatan == 1));
 			Event Player.IzinkanBotBuatanMengikuti = Event Player.KursorIkutiBotBuatan == 1;
-			If(Event Player.IzinkanBotBuatanMengikuti == True);
-				Call Subroutine(EfekTerapkan);
-			Else;
-				Call Subroutine(EfekPulihkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		End;
 	}
 }
@@ -2421,18 +2387,10 @@ rule("99n - Subrutin: Terapkan halaman Mode Hantu / Terbang")
 	{
 		If(Event Player.KursorHantuTerbang == 0);
 			Event Player.ModeHantuAktif = Event Player.ModeHantuAktif == False;
-			If(Event Player.ModeHantuAktif == True);
-				Call Subroutine(EfekTerapkan);
-			Else;
-				Call Subroutine(EfekPulihkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		Else;
 			Event Player.ModeTerbangAktif = Event Player.ModeTerbangAktif == False;
-			If(Event Player.ModeTerbangAktif == True);
-				Call Subroutine(EfekTerapkan);
-			Else;
-				Call Subroutine(EfekPulihkan);
-			End;
+			Call Subroutine(EfekTerapkan);
 		End;
 		Event Player.FisikaHantuTerbangDiterapkan = False;
 		Call Subroutine(TerapkanFisikaHantuTerbang);
@@ -2535,7 +2493,7 @@ rule("12c - Kamera: Tahan Interaksi setengah detik untuk beralih")
 			Stop Camera(Event Player);
 			Event Player.ModeKamera = 0;
 			Event Player.TargetKamera = Null;
-			Call Subroutine(EfekPulihkan);
+			Call Subroutine(EfekTerapkan);
 		End;
 	}
 }
@@ -2622,7 +2580,7 @@ rule("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 			Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));
 		End;
 		If(Is Alive(Event Player) == True);
-			Call Subroutine(EfekPulihkan);
+			Call Subroutine(EfekTerapkan);
 			Event Player.FisikaHantuTerbangDiterapkan = False;
 			Call Subroutine(TerapkanFisikaHantuTerbang);
 		End;
@@ -2807,7 +2765,7 @@ rule("18c - Kebal: Nonaktifkan hanya mode 1 HP di Ruang Muncul")
 		Event Player.KebalAktif = False;
 		Event Player.ModeKebal = 0;
 		Event Player.KursorKebal = 1;
-		Call Subroutine(EfekPulihkan);
+		Call Subroutine(EfekTerapkan);
 		Clear Status(Event Player, Unkillable);
 		Set Damage Received(Event Player, 100);
 		Set Knockback Received(Event Player, 100);
@@ -4450,26 +4408,12 @@ rule("93 - Subrutin: Mulai kamera dinamis di bahu kiri")
 	}
 }
 
-rule("93a - Subrutin: Efek perubahan diterapkan")
+rule("93a - Subrutin: Efek perubahan pengaturan")
 {
 	event
 	{
 		Subroutine;
 		EfekTerapkan;
-	}
-
-	actions
-	{
-		Play Effect(All Players(All Teams), Ring Explosion, Global.RGB, Position Of(Event Player) + Vector(0, 1, 0), 3);
-	}
-}
-
-rule("93b - Subrutin: Efek pengaturan dipulihkan")
-{
-	event
-	{
-		Subroutine;
-		EfekPulihkan;
 	}
 
 	actions
@@ -5281,10 +5225,6 @@ rule("98h - Subrutin: Teleportasi ke objektif mode aktif")
 			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
 				Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
 			End;
-		Else If(Or(Or(Current Game Mode == Game Mode(Flashpoint), Current Game Mode == Game Mode(Control)), Or(Current Game Mode == Game Mode(Clash), Current Game Mode == Game Mode(Assault))));
-			If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
-			End;
 		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
 			Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
 		End;
@@ -5298,11 +5238,6 @@ rule("98h - Subrutin: Teleportasi ke objektif mode aktif")
 			Abort;
 		End;
 		Teleport(Event Player, Event Player.PosisiBangkitAman);
-		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-		Else If(Current Game Mode == Game Mode(Capture The Flag));
-		Else If(Current Game Mode == Game Mode(Push));
-		Else;
-		End;
 	}
 }
 

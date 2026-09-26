@@ -1,7 +1,7 @@
 """Execute real dummy-spawn rules against controlled engine geometry responses.
 
 The source chooses anchors, candidates, retries and final teleports. Only native
-queries (objective phase, navigation mesh and ray casts) are supplied by this
+queries (objective positions, navigation mesh and ray casts) are supplied by this
 harness; real map collision and Workshop event delivery still need client QA.
 """
 
@@ -47,11 +47,10 @@ class SpawnEvaluator:
         self.players = {}
         self.selected = "one"
         self.now = 100.0
-        self.mode = "Hybrid"
-        self.captured = False
+        self.mode = "Skirmish"
         self.objective_index = 0
         self.objectives = {0: Vector(100, 20, 100), 1: Vector(140, 20, 100)}
-        self.payload = ZERO
+        self.flags = {1: Vector(80, 20, 100), 2: Vector(160, 20, 100)}
         self.ground = 20
         self.spawn = {1: Vector(100, 20, 40), 2: Vector(100, 20, 160)}
         self.candidates = []
@@ -79,11 +78,8 @@ class SpawnEvaluator:
         values = {"EventPlayer": self.selected, "True": True, "False": False, "Global.Siap": True,
                   "Null": None, "TotalTimeElapsed": self.now,
                   "CurrentGameMode": self.mode, "ObjectiveIndex": self.objective_index,
-                  "PayloadPosition": self.payload, "EmptyArray": [],
-                  "AllTeams": "AllTeams", "Hybrid": "Hybrid", "Escort": "Escort",
-                  "CaptureTheFlag": "CaptureTheFlag", "Push": "Push",
-                  "Control": "Control", "Flashpoint": "Flashpoint", "Clash": "Clash",
-                  "Assault": "Assault"}
+                  "EmptyArray": [], "Skirmish": "Skirmish",
+                  "CaptureTheFlag": "CaptureTheFlag"}
         if name not in values:
             raise AssertionError(f"unsupported spawn value: {name}")
         return values[name]
@@ -118,8 +114,9 @@ class SpawnEvaluator:
     def call(self, name, args):
         if name == "Vector": return Vector(*args)
         if name == "GameMode": return args[0]
-        if name == "IsObjectiveComplete": return self.captured if args[0] == 0 else False
         if name == "ObjectivePosition": return self.objectives.get(int(args[0]), ZERO)
+        if name == "FlagPosition": return self.flags.get(args[0], ZERO)
+        if name == "OppositeTeamOf": return 3 - args[0]
         if name == "SpawnPoints": return [self.spawn[args[0]]]
         if name == "PositionOf": return self.position(args[0])
         if name == "FirstOf": return args[0][0]
@@ -215,25 +212,55 @@ class DummySpawnRetryTests(unittest.TestCase):
                      ROOT / "tests/fixtures/semantic_reference.txt"):
             yield path.name, SpawnEvaluator(path.read_text(encoding="utf-8"))
 
-    def test_hybrid_capture_phase_uses_objective_even_when_payload_exists_then_switches(self):
+    def test_skirmish_uses_the_current_objective(self):
         for source, model in self.models():
-            for payload in (ZERO, Vector(250, 20, 250)):
-                with self.subTest(source=source, payload=payload):
-                    model.payload = payload
+            for objective_index in (0, 1):
+                with self.subTest(source=source, objective_index=objective_index):
+                    model.objective_index = objective_index
                     model.add_player("one")
                     model.step(100)
                     model.step(101)
-                    self.assertEqual(model.players["one"]["PosisiMati"], model.objectives[0])
-            model.captured = True
-            model.payload = Vector(250, 20, 250)
-            model.add_player("one")
-            model.step(200)
-            model.step(201)
-            self.assertEqual(model.players["one"]["PosisiMati"], model.payload)
-            model.payload = ZERO
-            model.objective_index = 1
-            model.step(202)
-            self.assertEqual(model.players["one"]["PosisiMati"], model.objectives[1])
+                    self.assertEqual(model.players["one"]["PosisiMati"], model.objectives[objective_index])
+
+    def test_ctf_uses_the_opposing_flag_for_both_teams(self):
+        for source, model in self.models():
+            model.mode = "CaptureTheFlag"
+            for team in (1, 2):
+                with self.subTest(source=source, team=team):
+                    model.add_player("one", team=team)
+                    model.step(100)
+                    model.step(101)
+                    self.assertEqual(model.players["one"]["PosisiMati"], model.flags[3 - team])
+
+    def test_ctf_without_a_flag_position_falls_back_to_the_current_objective(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.mode = "CaptureTheFlag"
+                model.flags = {}
+                model.objective_index = 1
+                model.step(100)
+                model.step(101)
+                self.assertEqual(model.players["one"]["PosisiMati"], model.objectives[1])
+                self.assertEqual(len(model.teleports), 1)
+
+    def test_missing_destination_skips_teleport_until_a_valid_objective_is_available(self):
+        for source, model in self.models():
+            for mode in ("Skirmish", "CaptureTheFlag"):
+                with self.subTest(source=source, mode=mode):
+                    model.mode = mode
+                    model.flags = {}
+                    model.objectives = {}
+                    model.candidates = []
+                    model.teleports = []
+                    model.add_player("one")
+                    model.step(100)
+                    model.step(101)
+                    self.assertEqual(model.candidates, [])
+                    self.assertEqual(model.teleports, [])
+                    self.assertEqual(model.players["one"]["WaktuTeleportasiBotBuatan"], 102)
+                    model.objectives[0] = Vector(100, 20, 100)
+                    model.step(102)
+                    self.assertEqual(len(model.teleports), 1)
 
     def test_failed_first_candidate_retries_a_different_point_and_can_exit(self):
         for source, model in self.models():
