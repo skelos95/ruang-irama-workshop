@@ -295,7 +295,7 @@ Accettazione: una sola riga roster, un solo set HUD, un solo messaggio di join/l
 
 ### Bot e dummy
 
-Dal 23 settembre 2026 la creazione automatica è limitata a Schermaglia e Cattura la bandiera. Eseguire qui le prove dei dummy; nelle altre modalità, incluso Deathmatch a squadre, verificare che non vengano creati neppure con slot liberi. Le sezioni datate precedenti conservano il comportamento storico della relativa revisione.
+Dal 27 settembre 2026 creazione e teletrasporto automatico dei dummy sono limitati alla sola Schermaglia. Eseguire qui le prove dei dummy; nelle altre modalità, incluso Deathmatch a squadre, verificare che non vengano creati neppure con slot liberi. Le sezioni datate precedenti conservano il comportamento storico della relativa revisione.
 
 - verificare che dummy e bot AI non abbiano roster umano, HUD Arcade, menu o feedback/input Arcade;
 - con due o più slot liberi, confermare al massimo un dummy nativo per squadra; con un solo slot libero, confermare che non venga creato;
@@ -332,30 +332,20 @@ Dopo ogni cambio:
 
 Eseguire separatamente un leave vero seguito da rejoin: non devono restare riferimenti stale e tutte le preferenze devono tornare ai default di setup; il cambio squadra deve seguire lo stesso risultato. Per `งูแรร์` ciò significa `Silver Mist`, `Poison 2` e `Draconian` bloccato.
 
-## 8. Matrice modalità
+## 8. Mappe in Schermaglia
 
-Lo script non deve assegnare punti o vincitori. Scoring e obiettivi restano nativi, mentre completion, overtime ed estensioni del timer non devono sostituire il countdown CHILL, sincronizzato una volta al secondo. Eseguire almeno un segmento significativo per riga:
+La lobby usa tutte le mappe standard disponibili in Schermaglia, escludendo Isola del Workshop e le altre mappe Workshop. Le impostazioni della lobby non sono incluse nel blocco di regole del repository.
 
-| Modalità | Objective/Teleport e uscita Spawn dummy | Transizioni da verificare |
-|---|---|---|
-| Push | proxy obiettivo + fallback Objective Position | robot/obiettivo, countdown CHILL invariato |
-| Flashpoint | Objective Position dell'indice attivo | rotazione punti |
-| Capture the Flag | bandiera nemica valida | presa, caduta, ritorno, score |
-| Control | Objective Position | cattura/percentuale, countdown CHILL invariato |
-| Clash | Objective Position | avanzamento/ritiro punti |
-| Hybrid | Teleport manuale: payload; nessun dummy automatico | cattura → scorta |
-| Escort | Payload | checkpoint/payload, countdown CHILL invariato |
-| Assault | Objective Position | punto A → punto B |
+Per ogni mappa della rotazione verificare:
 
-Per ogni riga verificare il Teleport manuale; verificare l'uscita Spawn dei dummy in Cattura la bandiera e separatamente in Schermaglia: il punto finale deve essere percorribile, il fallback deve restare nella stessa famiglia di obiettivo e l'assenza temporanea della posizione non deve causare teleport a `Vector(0, 0, 0)` o nel vuoto.
+- un dummy per squadra quando esistono almeno due slot liberi, sia al primo ingresso sia dopo cambio mappa;
+- uscita dalla spawn dopo la stabilizzazione iniziale, respawn e nuova uscita, con entrambi i team; dare priorità a Paraíso, dove era stato segnalato uno stallo iniziale;
+- pagina Objective e uscita dummy sulle mappe senza obiettivo di gioco visibile: il punto fornito dal motore deve superare i controlli geometrici; un punto assente non deve causare teletrasporto all'origine o nel vuoto;
+- menu, Camera, inspection, Attach e Try Your Luck simultanei, senza duplicare gli HUD o cambiare la frequenza del timer CHILL;
+- slot liberati quando entra il sesto umano del team e assenza di cicli di creazione/rimozione;
+- riavvio al termine del countdown e nessuna crescita di risorse dopo i cambi mappa.
 
-Priorità mappe:
-
-- Busan — modifiche dell'11 agosto;
-- Eichenwalde — modifiche dell'11 agosto;
-- Paraíso — modifiche dell'11 agosto.
-
-In ogni modalità usare contemporaneamente Menu, Camera, inspection, Teleport e Try Your Luck senza alterare scoring o avanzamento degli obiettivi; il timer nativo deve essere riallineato al countdown CHILL a 1 Hz, non a ogni tick dello scheduler.
+Le altre modalità non fanno parte della configurazione supportata: il controllo negativo automatico verifica che non creino dummy e che la routine di uscita spawn non intervenga su eventuali dummy aggiunti manualmente.
 
 ## 9. Soak 12 slot
 
@@ -429,7 +419,7 @@ Profilo งูแรร์ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL
 10 cambi simultanei: PASS/FAIL
 Cascata full-lobby: PASS/FAIL
-8 modalità: PASS/FAIL
+Rotazione mappe standard in Schermaglia: PASS/FAIL
 Soak 30 min: PASS/FAIL
 
 Element Count max:
@@ -447,7 +437,7 @@ La 0.8.1 è **live-ready**: test obbligatori, limiti e anomalie riproducibili so
 
 ### Dummy spawn iniziale
 
-Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo/bandiera (candidati a 8 e 12 m su otto direzioni, posizione finale accettata fra 6 e 16 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
+Con almeno due slot liberi per squadra, verificare live che entrambi i dummy compaiano vivi nella propria Spawn Room al primo avvio, senza morte all'origine della mappa. Il timestamp deve mantenerli stabili per circa 1 s prima dello spostamento a distanza visibile dall'obiettivo (candidati a 8 e 12 m su otto direzioni, posizione finale accettata fra 6 e 16 m). Dopo una morte, il respawn resta 3 s e la stessa uscita sicura deve ripetersi. Portare poi una squadra alla capacità massima: il dummy deve essere rimosso, il sesto umano deve poter entrare e nessuna nuova creazione deve avvenire finché non tornano almeno due slot liberi.
 
 ### Small Message e transizione Crouch Travel
 
@@ -457,7 +447,7 @@ Con almeno due slot liberi per squadra, verificare live che entrambi i dummy com
 ## Regressione dummy Paraíso — 2026-09-08
 
 - Su Paraíso in Schermaglia, verificare i dummy di entrambe le squadre: dopo il ritardo iniziale devono cercare un'uscita nei pressi dell'obiettivo disponibile, anche se il primo candidato viene rifiutato.
-- Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato. In modalità Ibrida non devono comparire dummy automatici; verificare separatamente il Teleport manuale verso il payload.
+- Ripetere dopo morte/respawn, rimozione/ricreazione e cambio lato. Ripetere sulle mappe standard scelte in Schermaglia; i vecchi percorsi payload delle altre modalità sono rimossi.
 - Confermare che un dummy già uscito dalla spawn smetta di essere teletrasportato e che due dummy ritentino in modo indipendente.
 - I test automatici eseguono le regole reali con risposte geometriche controllate; non sostituiscono questa prova della navmesh e delle spawn room nel client.
 

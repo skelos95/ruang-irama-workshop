@@ -201,12 +201,6 @@ LOCALIZED_ARRAY_SIZES = {
     "NamaLokasiIndonesia": 26,
     "NamaLokasiThai": 26,
 }
-OBJECTIVE_SPECIAL_MODES = (
-    "Push",
-    "Capture The Flag",
-    "Hybrid",
-    "Escort",
-)
 FORBIDDEN_LEGACY_IDENTIFIERS = {
     "HudMenuArcade",
     "HalamanHudMenuArcade",
@@ -1548,7 +1542,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "1/5 | SPAWN ROOM",
                     "TELEPORT TO YOUR TEAM'S SPAWN",
                     "2/5 | OBJECTIVE",
-                    'TELEPORT NEAR OBJECTIVE / ENEMY FLAG',
+                    'TELEPORT NEAR OBJECTIVE',
                     "3/5 | TELEPORT TO PLAYER/BOT",
                     'BESIDE: {0}',
                     '4/5 | ATTACH TO PLAYER/BOT',
@@ -1558,7 +1552,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "1/5 | RUANG MUNCUL",
                     "TELEPORT KE RUANG TIMMU",
                     "2/5 | OBJEKTIF",
-                    "DEKAT OBJEKTIF / BENDERA MUSUH",
+                    "DEKAT OBJEKTIF",
                     "3/5 | TELEPORT: PEMAIN/BOT",
                     "DI SAMPING: {0}",
                     "4/5 | TEMPEL: PEMAIN/BOT",
@@ -1568,7 +1562,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     '1/5 | วาร์ปกลับห้องเกิด',
                     'ห้องเกิดทีมคุณ',
                     '2/5 | วาร์ปใกล้ภารกิจ',
-                    'จุดภารกิจ / ธงศัตรู',
+                    'จุดภารกิจ',
                     '3/5 | วาร์ป: ผู้เล่น / บอต',
                     "4/5 | เกาะ: ผู้เล่น / บอต",
                     "5/5 | กำจัดตัวเอง",
@@ -5792,7 +5786,7 @@ def validate_dummy_slot_management(
                     Is Game In Progress == True;
                     Global.PemainSiklusGlobal == Null;
                     Number Of Players({team}) < Number Of Slots({team}) - 1;
-                    Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
+                    Current Game Mode == Game Mode(Skirmish);
                     Count Of(Spawn Points({team})) > 0;
                     Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
                 """
@@ -6328,6 +6322,25 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_teleport is not None, "teleport dummy a timestamp assente")
     if dummy_teleport:
+        expected_conditions = """
+            Global.Siap == True;
+            Is Dummy Bot(Event Player) == True;
+            Current Game Mode == Game Mode(Skirmish);
+            Has Spawned(Event Player) == True;
+            Is Alive(Event Player) == True;
+            Is In Spawn Room(Event Player) == True;
+            Count Of(Spawn Points(Team Of(Event Player))) > 0;
+            Or(Event Player.WaktuTeleportasiBotBuatan == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiBotBuatan) == True;
+        """
+        checks.equal(compact(rule_block(dummy_teleport, "conditions") or ""),
+                     compact(expected_conditions),
+                     "teleport dummy: condizioni esatte solo Schermaglia")
+        checks.equal(dummy_teleport.body.count(
+            "Event Player.PosisiMati = Objective Position(Objective Index);"), 1,
+            "teleport dummy: un solo ancoraggio all'obiettivo corrente")
+        checks.require(not any(token in mask_strings(dummy_teleport.body)
+                               for token in ("Flag Position(", "Payload Position", "Is On Objective(")),
+                       "teleport dummy: rami delle altre modalità non ammessi")
         checks.require(
             "Or(Event Player.WaktuTeleportasiBotBuatan == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiBotBuatan) == True;"
             in dummy_teleport.body,
@@ -6387,36 +6400,26 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
-    objective_rule = next(
-        (
-            rule
-            for rule in rules
-            if "PerintahTeleportasi == 1" in rule.body
-            and "Payload Position" in rule.body
-            and "Flag Position(" in rule.body
-            and "Objective Position(Objective Index)" in rule.body
-        ),
-        None,
-    )
-    if objective_rule is None:
-        objective_rule = rule_by_subroutine(rules, "TeleportasiKeObjektif")
+    objective_rule = rule_by_subroutine(rules, "TeleportasiKeObjektif")
     checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
     if objective_rule:
-        for mode in OBJECTIVE_SPECIAL_MODES:
-            checks.require(f"Game Mode({mode})" in objective_rule.body,
-                           f"destinazione obiettivo non copre {mode}")
-        generic_fallback = (
-            "End;"
-            "Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);"
-            "Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);"
-            "End;"
-            "If(Distance Between(Event Player.PosisiTujuanTeleportasi, Vector(0, 0, 0)) <= 0.100);"
-        )
-        checks.require(re.sub(r"\s+", "", generic_fallback)
-                       in re.sub(r"\s+", "", mask_strings(objective_rule.body)),
-                       "destinazione obiettivo: fallback generico valido obbligatorio per le altre modalità")
-        checks.require("Is On Objective(" in objective_rule.body,
-                       "Push non usa proxy robot/fallback obiettivo")
+        objective_actions = rule_block(objective_rule, "actions") or ""
+        for call in reversed(list(iter_calls(objective_actions, "Small Message"))):
+            objective_actions = objective_actions[:call.start] + objective_actions[call.end + 1:]
+        expected_objective_actions = """
+            Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
+            If(Distance Between(Event Player.PosisiTujuanTeleportasi, Vector(0, 0, 0)) <= 0.100);
+                Abort;
+            End;
+            Call Subroutine(CariPosisiTeleportasiAman);
+            If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+                Abort;
+            End;
+            Teleport(Event Player, Event Player.PosisiBangkitAman);
+        """
+        checks.equal(re.sub(r"\s+", "", mask_strings(objective_actions)),
+                     re.sub(r"\s+", "", expected_objective_actions),
+                     "destinazione obiettivo: obiettivo corrente, controlli anti-origine e sicurezza obbligatori")
         safe_position = rule_by_subroutine(rules, "CariPosisiTeleportasiAman")
         checks.require(safe_position is not None, "subroutine comune posizione teleport sicura assente")
         checks.require("Call Subroutine(CariPosisiTeleportasiAman);" in objective_rule.body,

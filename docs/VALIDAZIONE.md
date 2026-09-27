@@ -6,7 +6,7 @@ Release tecnica: **CHILL Dedicated Server 0.8.1**
 
 Stato: **live-ready** (release storica 0.8.1).
 
-**Pulizia del 26 settembre 2026:** unificate le subroutine di feedback identiche, rimossi sette rami di feedback equivalenti, un blocco vuoto del Teleport, il routing ridondante all'obiettivo corrente e i rami dummy esclusi dalla creazione automatica. Il sorgente corrente ha 115 regole e 62 subroutine; le modifiche funzionali ritirate della PR #76 restano assenti. I controlli delle destinazioni verificano il fallback condiviso, senza richiedere rami duplicati per ogni nome modalità.
+**Pulizia del 26 settembre 2026:** unificate le subroutine di feedback identiche, rimossi sette rami di feedback equivalenti, un blocco vuoto del Teleport, il routing ridondante all'obiettivo corrente e i rami dummy esclusi dalla creazione automatica. Il sorgente corrente ha 115 regole e 62 subroutine; le modifiche funzionali ritirate della PR #76 restano assenti. Dal 27 settembre i controlli delle destinazioni verificano il solo percorso Schermaglia e rifiutano il ripristino dei rami delle altre modalità.
 
 **Ripristino del 25 settembre 2026:** la revisione PR #76 è stata ritirata per crash al primo cambio squadra segnalato nel client, anche senza menu. I suoi 561 test verdi verificavano la logica simulata, non quel comportamento del motore. Il ripristino della PR #77 ha riportato sorgente, fixture e controlli esattamente alla revisione precedente `2529608`; l’utente ha poi confermato che il cambio squadra non crasha. La pulizia successiva è descritta sopra e richiede il proprio controllo nel client. Vedere il caso di regressione in [`TEST.md`](TEST.md#regressione-cambio-squadra-del-25-settembre-2026).
 
@@ -185,7 +185,7 @@ Il gate controlla:
 - profilo del nome visibile esatto `งูแรร์`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Draconian` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
 - Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON da Camera custom, inspection e Teleport, sgancio degli osservatori già attivi; Vision deve invece includere tutti gli umani, usare il nome roster stabile e non sovrapporre HUD Crouch; le tre IWT inspection/Vision/Teleport conservano testo unico icona/nome/salute, posizione interamente `Update Every Frame`, sola identità catturata con `Evaluate Once` e reevaluation completa;
 - dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
-- massimo un dummy per squadra, creazione soltanto in Schermaglia o Cattura la bandiera con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
+- massimo un dummy per squadra, creazione soltanto in Schermaglia con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
 - uscita dummy stabilizzata da un timestamp di 1 secondo, respawn massimo 3 secondi e riarmo alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
 - velocità bot/dummy esattamente al 20%; nessuna istruzione modifica o riapplica le collisioni native nel setup dummy o in `KunciBot`;
 - `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
@@ -194,20 +194,11 @@ Il gate controlla:
 - ownership Ghost/Fly limitata al setup/cleanup reale, all'applicazione della pagina 13 e alla manutenzione fisica dedicata; il cambio squadra deve azzerare i toggle tramite cleanup/setup completo.
 - Crouch Travel & Attach composto da cinque pagine — Teleport: Spawn Room, Teleport: Active Objective, Teleport: Player / Bot, Attach: Player / Bot e Self Elimination — con copia ordinata e localizzata EN/ID/TH, binding dinamici, un solo HUD/cursore per-player e palette mint → cyan → blu → viola → rosa (istruzioni pastello, contenuto neon). Primary/Secondary restano riservati alla navigazione e Interact all'esecuzione; Self Elimination usa un timestamp per-player, arma esattamente `+3` secondi prima di `Kill`, rifiuta lo spam durante la finestra e non viene azzerato dalla morte; cambio squadra e leave/rejoin lo reinizializzano nel setup fresco.
 
-### Otto modalità
+### Sola Schermaglia
 
-Il sorgente e la documentazione devono coprire esplicitamente:
+Il gate richiede la guardia `Current Game Mode == Game Mode(Skirmish)` nelle due regole di creazione dummy e nella routine di uscita spawn. Le destinazioni automatiche e la pagina Objective usano `Objective Position(Objective Index)` con controllo della posizione nulla e della geometria. I vecchi rami payload, bandiera e proxy Push devono essere assenti.
 
-1. Push;
-2. Flashpoint;
-3. Capture the Flag;
-4. Control;
-5. Clash;
-6. Hybrid;
-7. Escort;
-8. Assault.
-
-Il gate controlla il routing Teleport: Payload per Escort/Hybrid, flag nemica per CTF, proxy/fallback per Push e Objective Position per Flashpoint/Control/Clash/Assault. Sono vietate azioni custom che assegnano punti o vincitore al posto della modalità nativa.
+Sono conservati retry a 1 secondo, 16 candidati, cursori indipendenti, reset dopo morte/respawn e protezioni degli slot umani. Sono vietate azioni custom che assegnano punti o vincitori. I test eseguono le regole reali con risposte geometriche controllate; le coordinate native di ciascuna mappa devono essere verificate nel client.
 
 ## Test negativi
 
@@ -228,7 +219,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - Ghost che include i pavimenti o altera la collisione con player; Fly senza motore esplicito a 20 Hz, gravità e movimento nativo zero, formula 3D forward-pitch/back-strafe orizzontale, normalizzazione analogica, delta esatto world o isolamento per-player; `Start Transforming Throttle` reintrodotto, rampa diversa da `5,5 → 27,5 m/s` / `100% → 500%` in 25 secondi, progressione attivata da diagonale/strafe/indietro, reset `100%` o ripristino OFF assenti, `Start Accelerating`/`Stop Accelerating` nel motore Fly, impulsi o blocco del movimento durante Luck Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe oppure non azzerati dal team-switch;
 - Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch; una delle tre IWT che separa icona/nome/salute, altera l'ancoraggio `Eye Position + Vector(0, 0.450, 0)`, rivaluta soltanto una parte della posizione, cattura più dell'identità o perde `Visible To Position String and Color`;
 - guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
-- dummy creato fuori da Schermaglia/Cattura la bandiera o con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
+- dummy creato fuori dalla Schermaglia o con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
 - velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, qualsiasi modifica delle collisioni native nel setup dummy o nel lock, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
 - slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, secondo roster o conteggio minuti reintrodotto, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
 - dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
@@ -240,7 +231,7 @@ La suite crea mutazioni isolate e richiede il fallimento del validatore per alme
 - guardia Join, filtro nome `Null`/vuoto, cleanup Leave o cleanup team-switch rimossi, chiamata di cleanup `Event Player` dal contesto globale, perdita degli handle canonici prima della distruzione o mancato stop engine prima del nuovo setup, voti verso il leaver non ripuliti, oppure default non riapplicati dopo cambio squadra o vero rejoin;
 - profilo `งูแรร์` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Draconian` aggiunto al catalogo globale o conteggio generi diverso da 100;
 - Crouch Travel & Attach con meno di cinque pagine, copia EN/ID/TH mancante o non specifica, binding hard-coded, palette pastello/neon incompleta, cursore condiviso, Self Elimination assente o priva del cooldown per-player di 3 secondi, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
-- una delle otto modalità o un ramo Teleport mancante;
+- guardia Schermaglia mancante, destinazione obiettivo non sicura o rami delle altre modalità reintrodotti;
 - divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;
 - workflow di scrittura, automazione di commit, marker, trigger o patcher one-shot reintrodotto sotto `.github`.
 
@@ -279,7 +270,7 @@ La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
 - respawn dummy entro 3 secondi;
 - 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby, inclusi doppi cambi rapidi con menu, Camera, Luck e Fly attivi;
 - leave/new join a 12 slot con identità diverse, guardia ritardata di 0,5 s, assenza di handle persi e isolamento di menu, timer e fisica di un secondo player;
-- tutte le otto modalità;
+- rotazione delle mappe standard in Schermaglia;
 - soak minimo 30 minuti a 12 slot;
 - Element Count `< 32.768` con obiettivo `≤ 26.000`;
 - Largest Rule `< 98 KB` con obiettivo `≤ 80 KB`;

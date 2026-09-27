@@ -2,6 +2,12 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Sola Schermaglia — 2026-09-27
+
+- Limitate creazione e uscita spawn dei dummy alla Schermaglia; rimossi il ramo CTF e il fallback duplicato. Conservato il percorso di destinazione Schermaglia, inclusi stabilizzazione iniziale, 16 candidati, retry a 1 secondo, verifica geometrica, respawn e rilascio degli slot per gli umani.
+- Rimossi dal Teleport manuale i percorsi payload, bandiera e proxy Push. La pagina Objective usa la posizione del motore e gli stessi controlli di sicurezza; il testo EN/ID/TH non cita più la bandiera nemica.
+- Documentata la rotazione di tutte le mappe standard in Schermaglia, escludendo le mappe Workshop. Avvio, timer, HUD e cleanup del cambio squadra restano invariati; la selezione delle mappe rimane nelle impostazioni della lobby.
+
 ## Pulizia delle regole e istruzioni HUD compatte — 2026-09-26
 
 - Unificate le due subroutine con lo stesso effetto visivo in `EfekTerapkan`; rimossi anche sette rami ON/OFF che ora chiamavano la stessa azione. Le chiamate restano negli stessi percorsi di applicazione e ripristino, senza nuovi effetti o frequenze.

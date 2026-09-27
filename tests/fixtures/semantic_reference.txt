@@ -1324,7 +1324,7 @@ rule("03d - Bot: Buat satu bot acak untuk Tim 1")
 		Is Game In Progress == True;
 		Global.PemainSiklusGlobal == Null;
 		Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;
-		Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
+		Current Game Mode == Game Mode(Skirmish);
 		Count Of(Spawn Points(Team 1)) > 0;
 		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
@@ -1372,7 +1372,7 @@ rule("03e - Bot: Buat satu bot acak untuk Tim 2")
 		Is Game In Progress == True;
 		Global.PemainSiklusGlobal == Null;
 		Number Of Players(Team 2) < Number Of Slots(Team 2) - 1;
-		Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
+		Current Game Mode == Game Mode(Skirmish);
 		Count Of(Spawn Points(Team 2)) > 0;
 		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
 	}
@@ -1420,6 +1420,7 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 	{
 		Global.Siap == True;
 		Is Dummy Bot(Event Player) == True;
+		Current Game Mode == Game Mode(Skirmish);
 		Has Spawned(Event Player) == True;
 		Is Alive(Event Player) == True;
 		Is In Spawn Room(Event Player) == True;
@@ -1435,20 +1436,8 @@ rule("03f - Bot: Teleportasi dari ruang muncul ke objektif")
 			Abort;
 		End;
 		Event Player.WaktuTeleportasiBotBuatan = Total Time Elapsed + 1;
-		Event Player.PosisiMati = Vector(0, 0, 0);
+		Event Player.PosisiMati = Objective Position(Objective Index);
 		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
-		If(Current Game Mode == Game Mode(Capture The Flag));
-			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiMati = Flag Position(Opposite Team Of(Team Of(Event Player)));
-			End;
-		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-			Event Player.PosisiMati = Objective Position(Objective Index);
-		End;
-		If(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) <= 0.100);
-			If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiMati = Objective Position(Objective Index);
-			End;
-		End;
 		If(Distance Between(Event Player.PosisiMati, Vector(0, 0, 0)) > 0.100);
 			"Coba arah mendatar berbeda setiap detik, lalu ulangi pada jarak yang lebih jauh."
 			Event Player.PosisiBangkitAman = Nearest Walkable Position(Event Player.PosisiMati + Direction From Angles(Horizontal Angle From Direction(Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player)))))) + (Event Player.KursorTeleportasiBotBuatan % 8) * 45, 0) * (Event Player.KursorTeleportasiBotBuatan < 8 ? 8 : 12));
@@ -4059,17 +4048,17 @@ rule("91g - Subrutin: Gambar menu teleportasi")
 {1}", Custom String("TAHAN {0} | {1}: MAJU | {2}: MUNDUR", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: PAKAI | LEPAS {1}: TUTUP", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("{0} + {1}: LEPAS", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload))))) : Custom String("{0}
 {1}", Custom String("กด {0} ค้าง | {1}: ถัดไป | {2}: ก่อนหน้า", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: ใช้ | ปล่อย {1}: ปิด", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("{0} + {1}: ปล่อย", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload))))), Event Player.IndeksBahasa == 0 ? Event Player.KursorTeleportasi == 0 ? Custom String("1/5 | SPAWN ROOM
 TELEPORT TO YOUR TEAM'S SPAWN") : Event Player.KursorTeleportasi == 1 ? Custom String("2/5 | OBJECTIVE
-TELEPORT NEAR OBJECTIVE / ENEMY FLAG") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | TELEPORT TO PLAYER/BOT
+TELEPORT NEAR OBJECTIVE") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | TELEPORT TO PLAYER/BOT
 BESIDE: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET AVAILABLE")) : Event Player.KursorTeleportasi == 3 ? Custom String("4/5 | ATTACH TO PLAYER/BOT
 ABOVE: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("NO PUBLIC TARGET AVAILABLE")) : Custom String("5/5 | SELF ELIMINATION
 CURRENT HERO FORM | COOLDOWN: 3s") : Event Player.IndeksBahasa == 1 ? Event Player.KursorTeleportasi == 0 ? Custom String("1/5 | RUANG MUNCUL
 TELEPORT KE RUANG TIMMU") : Event Player.KursorTeleportasi == 1 ? Custom String("2/5 | OBJEKTIF
-DEKAT OBJEKTIF / BENDERA MUSUH") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | TELEPORT: PEMAIN/BOT
+DEKAT OBJEKTIF") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | TELEPORT: PEMAIN/BOT
 DI SAMPING: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TAK ADA TARGET PUBLIK")) : Event Player.KursorTeleportasi == 3 ? Custom String("4/5 | TEMPEL: PEMAIN/BOT
 DI ATAS: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("TAK ADA TARGET PUBLIK")) : Custom String("5/5 | ELIMINASI DIRI
 WUJUD HERO AKTIF | JEDA: 3 DTK") : Event Player.KursorTeleportasi == 0 ? Custom String("1/5 | วาร์ปกลับห้องเกิด
 ห้องเกิดทีมคุณ") : Event Player.KursorTeleportasi == 1 ? Custom String("2/5 | วาร์ปใกล้ภารกิจ
-จุดภารกิจ / ธงศัตรู") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | วาร์ป: ผู้เล่น / บอต
+จุดภารกิจ") : Event Player.KursorTeleportasi == 2 ? Custom String("3/5 | วาร์ป: ผู้เล่น / บอต
 ไปข้างเป้าหมาย: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายที่เปิดให้ใช้")) : Event Player.KursorTeleportasi == 3 ? Custom String("4/5 | เกาะ: ผู้เล่น / บอต
 เกาะเหนือเป้าหมาย: {0}", Event Player.CalonTargetTeleportasi != Null ? Event Player.CalonTargetTeleportasi : Custom String("ไม่มีเป้าหมายที่เปิดให้ใช้")) : Custom String("5/5 | กำจัดตัวเอง
 ร่างฮีโร่ปัจจุบัน | คูลดาวน์: 3 วิ"), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250, 190 + Y Component Of(Event Player.WarnaMenu) * 0.250, 190 + Z Component Of(Event Player.WarnaMenu) * 0.250, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
@@ -5180,7 +5169,7 @@ rule("98g - Subrutin: Teleportasi ke ruang muncul")
 	}
 }
 
-rule("98h - Subrutin: Teleportasi ke objektif mode aktif")
+rule("98h - Subrutin: Teleportasi ke objektif")
 {
 	event
 	{
@@ -5190,24 +5179,7 @@ rule("98h - Subrutin: Teleportasi ke objektif mode aktif")
 
 	actions
 	{
-		Event Player.PosisiTujuanTeleportasi = Vector(0, 0, 0);
-		If(Or(Current Game Mode == Game Mode(Escort), Current Game Mode == Game Mode(Hybrid)));
-			If(Distance Between(Payload Position, Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiTujuanTeleportasi = Payload Position + Vector(2, 0, 0);
-			End;
-		Else If(Current Game Mode == Game Mode(Capture The Flag));
-			If(Distance Between(Flag Position(Opposite Team Of(Team Of(Event Player))), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiTujuanTeleportasi = Flag Position(Opposite Team Of(Team Of(Event Player))) + Vector(2, 0, 0);
-			End;
-		Else If(Current Game Mode == Game Mode(Push));
-			If(Count Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True)))) > 0);
-				Event Player.PosisiTujuanTeleportasi = Position Of(First Of(Filtered Array(All Players(All Teams), And(Has Spawned(Current Array Element) == True, And(Is Alive(Current Array Element) == True, Is On Objective(Current Array Element) == True))))) + Vector(2, 0, 0);
-			Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-				Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
-			End;
-		Else If(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100);
-			Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
-		End;
+		Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
 		If(Distance Between(Event Player.PosisiTujuanTeleportasi, Vector(0, 0, 0)) <= 0.100);
 			Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Objective unavailable.") : Event Player.IndeksBahasa == 1 ? Custom String("Posisi objektif belum tersedia.") : Custom String("จุดภารกิจยังไม่พร้อม"));
 			Abort;
