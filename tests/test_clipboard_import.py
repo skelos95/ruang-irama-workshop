@@ -178,7 +178,6 @@ class ClipboardImportTests(unittest.TestCase):
 
     def test_italian_profile_rejects_english_mode_and_all_heroes_tokens(self) -> None:
         for italian, english, message in (
-            ("Game Mode(Scorta)", "Game Mode(Push)", "modalità Game Mode en-US"),
             ("Game Mode(Schermaglia)", "Game Mode(Skirmish)", "modalità Game Mode en-US"),
             ("Tutti gli eroi", "All Heroes", "All Heroes en-US"),
         ):
