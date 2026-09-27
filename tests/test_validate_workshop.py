@@ -428,7 +428,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.source.replace(valid_name, overlong_name)
         self.assert_rejected(
             mutated,
-            "nome subroutine oltre 32 byte UTF-8: indice 42, TerapkanHalamanTeleportasiJongkok",
+            "nome subroutine oltre 32 byte UTF-8: indice 41, TerapkanHalamanTeleportasiJongkok",
         )
 
     def test_player_variable_name_over_32_utf8_bytes_is_rejected(self) -> None:
@@ -606,7 +606,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_every_menu_keeps_the_trilingual_crouch_instruction(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "Hold DUCK + command")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "Hold DUCK")
         self.assert_rejected(mutated, "istruzione Crouch menu assente")
 
     def test_thai_menu_close_help_keeps_the_half_second_hold(self) -> None:
@@ -620,15 +620,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH + command", "\\nHold CROUCH + command")
+        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "\\nHold CROUCH")
         self.assert_rejected(mutated, "riga vuota artificiale")
 
     def test_teleport_menu_requires_specific_trilingual_copy(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
-            ("EFFECT: ELIMINATE CURRENT HERO FORM", "EFFECT: SELF KILL"),
-            ("TUJUAN: RUANG MUNCUL TIMMU", "TUJUAN: SPAWN"),
-            ('ปลายทาง: จุดภารกิจปัจจุบัน / ธงศัตรู', "ปลายทาง: เป้าหมาย"),
+            ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
+            ("TELEPORT KE RUANG TIMMU", "TUJUAN: SPAWN"),
+            ('จุดภารกิจ', "ปลายทาง: เป้าหมาย"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -639,8 +639,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutated = self.replace_in_rule(
             renderer,
-            "{0}: EXECUTE | RELEASE {1}: CLOSE",
-            "INTERACT: EXECUTE | RELEASE CROUCH: CLOSE",
+            "{0}: USE | RELEASE {1}: CLOSE",
+            "INTERACT: USE | RELEASE CROUCH: CLOSE",
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
@@ -672,7 +672,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         branches = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(branches)
         _, no_targets, _ = branches  # type: ignore[misc]
-        changed_branch = no_targets.replace("Hold CROUCH + command", "Hold DUCK + command", 1)
+        changed_branch = no_targets.replace("Hold CROUCH", "Hold DUCK", 1)
         self.assertNotEqual(changed_branch, no_targets)
         changed_argument = call.args[2].replace(no_targets, changed_branch, 1)
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
@@ -2945,17 +2945,26 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.inject_condition(create, "False == True;")
         self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
 
-    def test_dummy_creation_is_limited_to_skirmish_and_capture_the_flag(self) -> None:
-        gate = "Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;"
+    def test_dummy_creation_is_limited_to_skirmish(self) -> None:
+        gate = "Current Game Mode == Game Mode(Skirmish);"
         for team in ("Team 1", "Team 2"):
             create = self.rule(
                 lambda rule: f"Number Of Players({team}) < Number Of Slots({team}) - 1;" in rule.body
                 and "Call Subroutine(BuatBotBuatanTim);" in rule.body
             )
-            for replacement in ("", gate.replace("Skirmish", "Team Deathmatch")):
+            for replacement in ("", gate.replace("Skirmish", "Team Deathmatch"),
+                                "Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;"):
                 with self.subTest(team=team, replacement=replacement):
                     mutated = self.replace_in_rule(create, gate, replacement)
                     self.assert_rejected(mutated, f"creazione dummy {team}: condizioni esatte e raggiungibili")
+
+    def test_dummy_spawn_teleport_is_limited_to_skirmish(self) -> None:
+        spawn = self.rule(lambda rule: rule.name.startswith("03f -"))
+        gate = "Current Game Mode == Game Mode(Skirmish);"
+        for replacement in ("", gate.replace("Skirmish", "Capture The Flag")):
+            with self.subTest(replacement=replacement):
+                mutated = self.replace_in_rule(spawn, gate, replacement)
+                self.assert_rejected(mutated, "teleport dummy: condizioni esatte solo Schermaglia")
 
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
         release = self.rule(
@@ -3591,9 +3600,20 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_call_argument(call, 1, 'Custom String("Server duration")')
         self.assert_rejected(mutated, "label Workshop Setting Integer")
 
-    def test_all_eight_objective_modes_are_explicit(self) -> None:
-        mutated = self.replace_once("Game Mode(Flashpoint)", "Game Mode(Practice Range)")
-        self.assert_rejected(mutated, "Flashpoint")
+    def test_objective_teleport_requires_the_current_objective(self) -> None:
+        objective = self.rule(lambda rule: validator.subroutine_target(rule) == "TeleportasiKeObjektif")
+        for replacement in ("Vector(0, 0, 0)", "Flag Position(Opposite Team Of(Team Of(Event Player)))"):
+            with self.subTest(replacement=replacement):
+                mutated = self.replace_in_rule(objective, "Objective Position(Objective Index)", replacement)
+                self.assert_rejected(mutated, "obiettivo corrente, controlli anti-origine e sicurezza obbligatori")
+
+    def test_objective_teleport_rejects_missing_or_unsafe_destinations(self) -> None:
+        objective = self.rule(lambda rule: validator.subroutine_target(rule) == "TeleportasiKeObjektif")
+        for target in ("PosisiTujuanTeleportasi", "PosisiBangkitAman"):
+            guard = f"If(Distance Between(Event Player.{target}, Vector(0, 0, 0)) <= 0.100);"
+            with self.subTest(target=target):
+                mutated = self.replace_in_rule(objective, guard, "If(False);")
+                self.assert_rejected(mutated, "obiettivo corrente, controlli anti-origine e sicurezza obbligatori")
 
     def test_native_mode_result_cannot_be_overridden(self) -> None:
         mutated = self.source + "\nSet Team Score(Team 1, 99);\n"

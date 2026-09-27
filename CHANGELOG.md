@@ -2,6 +2,20 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Sola Schermaglia — 2026-09-27
+
+- Limitate creazione e uscita spawn dei dummy alla Schermaglia; rimossi il ramo CTF e il fallback duplicato. Conservato il percorso di destinazione Schermaglia, inclusi stabilizzazione iniziale, 16 candidati, retry a 1 secondo, verifica geometrica, respawn e rilascio degli slot per gli umani.
+- Rimossi dal Teleport manuale i percorsi payload, bandiera e proxy Push. La pagina Objective usa la posizione del motore e gli stessi controlli di sicurezza; il testo EN/ID/TH non cita più la bandiera nemica.
+- Documentata la rotazione di tutte le mappe standard in Schermaglia, escludendo le mappe Workshop. Avvio, timer, HUD e cleanup del cambio squadra restano invariati; la selezione delle mappe rimane nelle impostazioni della lobby.
+
+## Pulizia delle regole e istruzioni HUD compatte — 2026-09-26
+
+- Unificate le due subroutine con lo stesso effetto visivo in `EfekTerapkan`; rimossi anche sette rami ON/OFF che ora chiamavano la stessa azione. Le chiamate restano negli stessi percorsi di applicazione e ripristino, senza nuovi effetti o frequenze.
+- Rimossi il blocco condizionale vuoto dopo il Teleport e la selezione ridondante per Flashpoint/Control/Clash/Assault, già coperta dal fallback all'obiettivo corrente.
+- Limitata la selezione destinazione dei dummy ai percorsi usati dalla creazione automatica: CTF e fallback per Schermaglia. Restano ritardo iniziale, ricerca dei 16 candidati, validazione geometrica e cleanup. Il Teleport manuale conserva le altre modalità.
+- Il sorgente passa da 116 a 115 regole e da 63 a 62 subroutine, con 5 Wait e un solo Loop. Restano invariati gestione degli HUD, scheduler e lifecycle del cambio squadra. La pulizia non identifica né risolve la causa nativa della regressione Friendly ritirata.
+- Accorciate le istruzioni HUD in English, Bahasa Indonesia e ไทย: i menu Arcade più comuni usano due righe di comandi, il menu musica tre per conservare i salti di dieci voci. Travel & Attach usa due righe di contenuto e due di comandi, mantenendo target, binding dinamici, pressioni prolungate e cooldown. Cambiano soltanto le stringhe, senza nuovi handle o rivalutazioni.
+
 ## Ripristino dopo crash al cambio squadra — 2026-09-25
 
 - Ritirata integralmente la PR #76: l'utente ha segnalato un crash sistematico al primo cambio squadra, sia subito dopo l'ingresso sia successivamente, anche senza avere aperto il menu.

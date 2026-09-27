@@ -10,7 +10,7 @@ Questo documento descrive il contratto architetturale del sorgente pubblicato `w
 
 - Lobby 6v6 con massimo 12 player attivi.
 - Overlay sociale e Arcade che non assegna punteggi o vincitori.
-- Supporto a Push, Flashpoint, Capture the Flag, Control, Clash, Hybrid, Escort e Assault.
+- Sola Schermaglia sulle mappe standard selezionate nella lobby; escluse le mappe Workshop.
 - UI completa in English, Bahasa Indonesia e ไทย.
 - Priorità al lavoro globale condiviso rispetto ai loop per-player.
 - Cleanup deterministico di HUD, In-World Text, effetti e riferimenti.
@@ -46,7 +46,7 @@ Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 seco
 - Melee e Jump restano azioni normali dell'eroe.
 - A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
 - A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Crouch Travel & Attach contiene cinque pagine: Teleport: Spawn Room, Teleport: Active Objective, Teleport: Player / Bot, Attach: Player / Bot e Self Elimination. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Un solo HUD per-player ordina ogni pagina come titolo, destinazione/posizione, target e azione, usa i binding effettivi e passa da mint a cyan, blu, viola e rosa con istruzioni pastello e contenuto neon. Self Elimination arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte. Cambio squadra e leave/rejoin ripartono invece dal setup fresco.
+- Crouch Travel & Attach contiene cinque pagine: Spawn Room, Objective, Teleport to Player/Bot, Attach to Player/Bot e Self Elimination. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Un solo HUD per-player mostra due righe di comandi e due di contenuto: azione/destinazione o target, con il cooldown nella pagina Self Elimination. Usa i binding effettivi e passa da mint a cyan, blu, viola e rosa con istruzioni pastello e contenuto neon. Self Elimination arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte. Cambio squadra e leave/rejoin ripartono invece dal setup fresco.
 - Il renderer Travel usa `WarnaMenu` con chase da 0,18 s per passare fluidamente mint → cyan → blu → viola → rosa; le conferme Small Message ridondanti sono soppresse, mentre errori/cooldown/esiti restano espliciti.
 - Da morto, un menu aperto resta visibile ma congelato; soltanto Jump esegue il recupero e la regola dipende esclusivamente da identità umana, morte, latch e pressione, non dallo stato Crouch Travel o da altre feature. `Resurrect` è incondizionato; l'unico raycast distingue il vuoto dal terreno e, solo nel primo caso, il Teleport successivo valuta direttamente `Nearest Walkable Position(Last Of(Position Of(Event Player)))` sulla posizione live del player già risorto. Sul terreno non viene eseguito alcun Teleport. Dopo `Is Alive == True` ripristina effetti e Ghost/Fly. Il ramo non usa il validatore Travel, `Respawn`, fallback Spawn Room, offset casuali, forcing, `Abort`, `Wait` o `Loop`; il rilascio di Jump riapre sempre il latch e nessun ramo post-tentativo può mostrare il vecchio `Small Message` “Resurrect unavailable”.
 
@@ -76,6 +76,8 @@ Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spa
 ## Menu Arcade
 
 Ogni player possiede al massimo **un handle HUD Arcade**. Non esistono cache di pagine, preload progressivo o HUD nascosti.
+
+Le istruzioni EN/ID/TH raccolgono modificatore Crouch e navigazione sulla stessa riga, seguita da applicazione/ritorno e chiusura con Melee tenuto per 0,5 secondi. Il menu musica conserva una terza riga per i salti di dieci voci. Ghost/Fly mantiene i dettagli specifici della velocità e della pressione prolungata.
 
 Il lifecycle del menu è:
 
@@ -137,7 +139,7 @@ Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel
 
 Revenge e lo Skull finale condividono l'unico percorso che bypassa temporaneamente Unkillable nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva invariati claimant e contabilità: ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio. Dopo Resurrect il tick globale ripristina la modalità Unkillable selezionata e ricrea la relativa icona se il motore l'ha distrutta.
 
-La creazione automatica dei dummy è limitata a Schermaglia e Cattura la bandiera. In queste modalità il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, sceglie poi una destinazione coerente con la modalità e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%; le istruzioni che alteravano le collisioni sono rimosse dal setup dummy; `KunciBot` non le riapplica a respawn o cambio eroe.
+La creazione automatica dei dummy è limitata alla Schermaglia. In questa modalità il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, legge poi la posizione obiettivo del motore e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%; le istruzioni che alteravano le collisioni sono rimosse dal setup dummy; `KunciBot` non le riapplica a respawn o cambio eroe.
 
 ### Leave
 
@@ -189,35 +191,17 @@ La Camera usa un solo `Start Camera` e un solo raycast per risolvere la posizion
 
 Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Le targhette di inspection, Vision e Teleport condividono lo stesso contratto: un solo IWT contiene insieme icona eroe, nome e salute; `Update Every Frame` racchiude l'intero ancoraggio `Eye Position(Evaluate Once(identity)) + Vector(0, 0.450, 0)`; `Evaluate Once` cattura esclusivamente l'identità del soggetto; `Visible To Position String and Color` mantiene la rivalutazione completa di pubblico, posizione, testo e colore. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT per ogni bot, dummy e umano; il nome umano proviene dal cache roster stabile. Privacy è OFF per default: quando passa ON, Camera custom, inspection, Teleport e Attach non possono creare o mantenere il riferimento identificativo dell'umano e gli osservatori Camera già attivi vengono sganciati. Vision ignora intenzionalmente questa preferenza e continua a mostrare tutti gli umani per l'intera durata dell'esito.
 
-La destinazione Teleport viene rivalutata al click:
-
-| Modalità | Destinazione |
-|---|---|
-| Escort, Hybrid | Payload |
-| Capture the Flag | bandiera nemica valida |
-| Push | proxy valido dell'obiettivo, poi fallback Objective Position |
-| Flashpoint, Control, Clash, Assault | `Objective Position(Objective Index)` |
+La destinazione Teleport viene rivalutata al click tramite `Objective Position(Objective Index)`. I rami payload, bandiera e proxy Push sono rimossi. Il comando controlla prima che la destinazione sia diversa dal valore nullo, poi applica la ricerca geometrica condivisa; se non esiste un punto sicuro, mostra un messaggio e non teletrasporta.
 
 La pagina Player / Bot sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy; `Nearest Walkable Position` limita le destinazioni non praticabili.
 
-La regola di uscita Spawn dei dummy attende una scadenza timestamp di 1 secondo: Hybrid prima della cattura → primo obiettivo, Escort/Hybrid dopo la cattura → payload, CTF → bandiera nemica, Push → proxy/fallback obiettivo, altre modalità → obiettivo corrente. Una destinazione indisponibile ripiega sull'obiettivo corrente. Il cursore individuale esplora otto direzioni orizzontali su due distanze (8 e 12 m), con un tentativo al secondo e riavvio dopo 16 candidati. Se nessun punto supera i controlli, il dummy resta in Spawn Room e riprova, senza un nuovo `Wait`.
+La regola di uscita Spawn dei dummy è limitata alla Schermaglia e attende una scadenza timestamp di 1 secondo. Usa la posizione obiettivo fornita dal motore, conservando il percorso già in uso in Schermaglia. Il cursore individuale esplora otto direzioni orizzontali su due distanze (8 e 12 m), con un tentativo al secondo e riavvio dopo 16 candidati. Se la posizione non è disponibile o nessun punto supera i controlli, il dummy resta in Spawn Room e riprova, senza un nuovo `Wait`.
 
-## Modalità native
+## Schermaglia
 
-La logica Arcade non assegna punti, non completa round e non dichiara vincitori. Punteggio e avanzamento degli obiettivi restano nativi; l'unica eccezione intenzionale è l'autorità temporale: nel ramo scheduler a 1 Hz `Disable Built-In Game Mode Completion` e `Set Match Time` mantengono la partita aperta fino allo zero del countdown CHILL, quando una guardia one-shot esegue `Restart Match`. Overtime ed estensioni native non devono sostituire quel countdown. La verifica live attraversa tutte le otto modalità:
+La configurazione attuale usa tutte le mappe standard disponibili in Schermaglia, escluse le mappe Workshop come Isola. La selezione delle mappe appartiene alla lobby e non al blocco di regole esportato. Il codice non assegna punti o vincitori.
 
-| Modalità | Focus |
-|---|---|
-| Push | proxy robot, avanzamento obiettivo e timer CHILL invariato |
-| Flashpoint | indice obiettivo attivo |
-| Capture the Flag | bandiera nemica |
-| Control | cattura, percentuale e timer CHILL invariato |
-| Clash | avanzamento tra punti |
-| Hybrid | payload dopo la cattura |
-| Escort | payload, checkpoint e timer CHILL invariato |
-| Assault | transizione A/B |
-
-Busan, Eichenwalde e Paraíso hanno priorità perché modificati nella patch dell'11 agosto 2026.
+Avvio, riavvio e timer rimangono protetti dalle guardie esistenti: il ramo scheduler a 1 Hz mantiene la partita aperta fino allo zero del countdown CHILL, quando una guardia one-shot esegue `Restart Match`. Queste regole sono condivise e restano necessarie anche in Schermaglia. La prova nel client deve verificare creazione e uscita spawn di entrambi i dummy, respawn, posti riservati agli umani e cambio mappa, includendo Paraíso e mappe senza obiettivi visibili.
 
 ## Gate di prestazioni
 
@@ -245,7 +229,7 @@ La release 0.8.1 è **live-ready**: i gate statici risultano verdi e la matrice 
 - matrice input/menu/localizzazione;
 - regressione della formula Fly dopo la conferma del motore precedente: pitch fino a ±90°, orientamenti cardinali, baseline uniforme 5,5 m/s e cap 27,5 m/s, rampa 25 s, hover, due player indipendenti, collisioni, ergonomia e priorità Luck;
 - stress join/leave/team switch;
-- matrice sulle otto modalità per il Teleport manuale; creazione e uscita Spawn dei dummy in Schermaglia e Cattura la bandiera, assenza dei dummy automatici nelle altre modalità;
+- rotazione delle mappe standard in Schermaglia, con Teleport manuale, creazione e uscita Spawn dei dummy; assenza dei dummy automatici nelle altre modalità;
 - soak di almeno 30 minuti con 12 slot;
 - diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
 
@@ -254,4 +238,4 @@ La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto
 
 ### Dummy bot: spawn e distanza sicura
 
-I dummy vengono creati soltanto in Schermaglia o Cattura la bandiera, quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi esplora 16 candidati orizzontali a 8 e 12 m, al massimo uno al secondo, e accetta soltanto posizioni sicure fra 6 e 16 m dall'obiettivo/bandiera. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Dummy Workshop e iBot conservano le collisioni native con ambiente e player/bot, senza istruzioni che le disabilitino o riapplichino. Il follow diretto può fermarsi davanti a una parete; non viene introdotto un pathfinding aggiuntivo. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.
+I dummy vengono creati soltanto in Schermaglia, quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi esplora 16 candidati orizzontali a 8 e 12 m, al massimo uno al secondo, e accetta soltanto posizioni sicure fra 6 e 16 m dall'obiettivo. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Dummy Workshop e iBot conservano le collisioni native con ambiente e player/bot, senza istruzioni che le disabilitino o riapplichino. Il follow diretto può fermarsi davanti a una parete; non viene introdotto un pathfinding aggiuntivo. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.

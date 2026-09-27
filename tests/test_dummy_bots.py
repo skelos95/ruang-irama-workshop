@@ -87,7 +87,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             1,
         )
 
-    def test_spawn_teleport_uses_safe_mode_specific_destinations(self):
+    def test_spawn_teleport_uses_the_safe_skirmish_objective(self):
         self.assertIn("Is In Spawn Room(Event Player) == True;", self.it)
         self.assertNotIn("Wait(1.000, Annulla quando è False);", self.it)
         self.assertIn("If(Event Player.WaktuTeleportasiBotBuatan == 0);", self.it)
@@ -100,13 +100,12 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Direction From Angles(Horizontal Angle From Direction(Direction Towards(Event Player.PosisiMati, Position Of(First Of(Spawn Points(Team Of(Event Player)))))) + (Event Player.KursorTeleportasiBotBuatan % 8) * 45, 0)", self.it)
         self.assertIn("(Event Player.KursorTeleportasiBotBuatan < 8 ? 8 : 12)", self.it)
         self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6", self.it)
-        self.assertIn("Current Game Mode == Game Mode(Trasporto)", self.it)
-        self.assertIn("Current Game Mode == Game Mode(Ibrida)", self.it)
-        self.assertIn("Current Game Mode == Game Mode(Cattura la Bandiera)", self.it)
-        self.assertIn("Current Game Mode == Game Mode(Scorta)", self.it)
-        self.assertIn("Payload Position", self.it)
-        self.assertIn("Flag Position(Opposite Team Of(Team Of(Event Player)))", self.it)
-        self.assertIn("Is On Objective(Current Array Element) == True", self.it)
+        for source, mode in ((self.it, "Schermaglia"), (self.en, "Skirmish")):
+            self.assertEqual(source.count(f"Current Game Mode == Game Mode({mode});"), 3)
+            self.assertIn("Event Player.PosisiMati = Objective Position(Objective Index);", source)
+            self.assertNotIn("Payload Position", source)
+            self.assertNotIn("Flag Position(", source)
+            self.assertNotIn("Is On Objective(", source)
         self.assertIn("Nearest Walkable Position", self.it)
         self.assertNotIn("All Players On Objective(All Teams)", self.it)
         self.assertNotIn("Teleport(Event Player, Objective Position(Objective Index));", self.it)

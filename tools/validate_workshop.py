@@ -122,9 +122,9 @@ GLOBAL_MODIFIER_CLAUSES = (
     "ในเมนู: ใช้ร่วมกับทุกคำสั่ง",
 )
 MENU_CROUCH_INSTRUCTIONS = (
-    "Hold CROUCH + command",
-    'Tahan JONGKOK + tombol',
-    'ย่อค้าง + ปุ่มคำสั่ง',
+    "Hold CROUCH",
+    'Tahan JONGKOK',
+    'ย่อค้าง',
 )
 SCHEDULER_SUBROUTINES = {
     "ProsesCepatPemain",
@@ -201,16 +201,6 @@ LOCALIZED_ARRAY_SIZES = {
     "NamaLokasiIndonesia": 26,
     "NamaLokasiThai": 26,
 }
-GAME_MODES = (
-    "Push",
-    "Flashpoint",
-    "Capture The Flag",
-    "Control",
-    "Clash",
-    "Hybrid",
-    "Escort",
-    "Assault",
-)
 FORBIDDEN_LEGACY_IDENTIFIERS = {
     "HudMenuArcade",
     "HalamanHudMenuArcade",
@@ -1534,14 +1524,14 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if len(teleport_call.args) >= 9:
                 instruction_tokens = (
                     'HOLD {0} | {1}: NEXT | {2}: PREV',
-                    "{0}: EXECUTE | RELEASE {1}: CLOSE",
-                    "{0} + {1}: DETACH (ATTACH PAGE)",
+                    "{0}: USE | RELEASE {1}: CLOSE",
+                    "{0} + {1}: DETACH",
                     'TAHAN {0} | {1}: MAJU | {2}: MUNDUR',
-                    "{0}: JALANKAN | LEPAS {1}: TUTUP",
-                    '{0} + {1}: LEPAS (HALAMAN TEMPEL)',
+                    "{0}: PAKAI | LEPAS {1}: TUTUP",
+                    '{0} + {1}: LEPAS',
                     "กด {0} ค้าง | {1}: ถัดไป | {2}: ก่อนหน้า",
                     '{0}: ใช้ | ปล่อย {1}: ปิด',
-                    '{0} + {1}: ปล่อย (หน้าเกาะ)',
+                    '{0} + {1}: ปล่อย',
                 )
                 for token in instruction_tokens:
                     checks.require(
@@ -1549,35 +1539,34 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         f"GambarTeleportasi: istruzione ordinata EN/ID/TH assente: {token}",
                     )
                 page_tokens = (
-                    "1/5 | TELEPORT: SPAWN ROOM",
-                    "TO: YOUR TEAM'S SPAWN ROOM",
-                    "2/5 | TELEPORT: ACTIVE OBJECTIVE",
-                    'TO: OBJECTIVE / ENEMY FLAG',
-                    "3/5 | TELEPORT: PLAYER/BOT",
-                    'TO: BESIDE SELECTED TARGET',
-                    '4/5 | ATTACH: PLAYER/BOT',
-                    'ABOVE SELECTED TARGET',
+                    "1/5 | SPAWN ROOM",
+                    "TELEPORT TO YOUR TEAM'S SPAWN",
+                    "2/5 | OBJECTIVE",
+                    'TELEPORT NEAR OBJECTIVE',
+                    "3/5 | TELEPORT TO PLAYER/BOT",
+                    'BESIDE: {0}',
+                    '4/5 | ATTACH TO PLAYER/BOT',
+                    'ABOVE: {0}',
                     "5/5 | SELF ELIMINATION",
-                    "EFFECT: ELIMINATE CURRENT HERO FORM",
-                    'COOLDOWN: 3s PER PLAYER',
-                    "1/5 | TELEPORT: RUANG MUNCUL",
-                    "TUJUAN: RUANG MUNCUL TIMMU",
-                    "2/5 | TELEPORT: OBJEKTIF AKTIF",
-                    "TUJUAN: OBJEKTIF / BENDERA MUSUH",
-                    "3/5 | TELEPORT: PLAYER / BOT",
-                    "4/5 | KAITKAN: PLAYER / BOT",
+                    "CURRENT HERO FORM | COOLDOWN: 3s",
+                    "1/5 | RUANG MUNCUL",
+                    "TELEPORT KE RUANG TIMMU",
+                    "2/5 | OBJEKTIF",
+                    "DEKAT OBJEKTIF",
+                    "3/5 | TELEPORT: PEMAIN/BOT",
+                    "DI SAMPING: {0}",
+                    "4/5 | TEMPEL: PEMAIN/BOT",
+                    "DI ATAS: {0}",
                     "5/5 | ELIMINASI DIRI",
-                    "EFEK: ELIMINASI WUJUD HERO AKTIF",
-                    "COOLDOWN: 3 DTK PER PLAYER",
+                    "WUJUD HERO AKTIF | JEDA: 3 DTK",
                     '1/5 | วาร์ปกลับห้องเกิด',
-                    'ปลายทาง: ห้องเกิดทีมคุณ',
+                    'ห้องเกิดทีมคุณ',
                     '2/5 | วาร์ปใกล้ภารกิจ',
-                    'ปลายทาง: จุดภารกิจปัจจุบัน / ธงศัตรู',
+                    'จุดภารกิจ',
                     '3/5 | วาร์ป: ผู้เล่น / บอต',
                     "4/5 | เกาะ: ผู้เล่น / บอต",
                     "5/5 | กำจัดตัวเอง",
-                    'กำจัดร่างฮีโร่ปัจจุบัน',
-                    'คูลดาวน์: 3 วิต่อผู้เล่น',
+                    'ร่างฮีโร่ปัจจุบัน | คูลดาวน์: 3 วิ',
                 )
                 for token in page_tokens:
                     checks.require(
@@ -2181,8 +2170,8 @@ def validate_ghost_fly(
     }
     checks.require(required_subroutines <= subroutines,
                    "Ghost/Fly: subroutine pagina 13 incomplete")
-    checks.require(re.search(r"(?m)^\s*61:\s*ProsesTerbangPemain\s*$", source) is not None,
-                   "Fly: indice subroutine motore 20 Hz deve essere 61")
+    checks.require(re.search(r"(?m)^\s*60:\s*ProsesTerbangPemain\s*$", source) is not None,
+                   "Fly: indice subroutine motore 20 Hz deve essere 60")
 
     apply = rule_by_subroutine(rules, "TerapkanHalamanHantuTerbang")
     physics = rule_by_subroutine(rules, "TerapkanFisikaHantuTerbang")
@@ -3160,7 +3149,7 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Resurrect(Event Player);",
             live_nearest_teleport,
             "If(Is Alive(Event Player) == True);",
-            "Call Subroutine(EfekPulihkan);",
+            "Call Subroutine(EfekTerapkan);",
             "Event Player.FisikaHantuTerbangDiterapkan = False;",
             "Call Subroutine(TerapkanFisikaHantuTerbang);",
         )
@@ -5797,7 +5786,7 @@ def validate_dummy_slot_management(
                     Is Game In Progress == True;
                     Global.PemainSiklusGlobal == Null;
                     Number Of Players({team}) < Number Of Slots({team}) - 1;
-                    Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;
+                    Current Game Mode == Game Mode(Skirmish);
                     Count Of(Spawn Points({team})) > 0;
                     Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
                 """
@@ -6333,6 +6322,25 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(dummy_teleport is not None, "teleport dummy a timestamp assente")
     if dummy_teleport:
+        expected_conditions = """
+            Global.Siap == True;
+            Is Dummy Bot(Event Player) == True;
+            Current Game Mode == Game Mode(Skirmish);
+            Has Spawned(Event Player) == True;
+            Is Alive(Event Player) == True;
+            Is In Spawn Room(Event Player) == True;
+            Count Of(Spawn Points(Team Of(Event Player))) > 0;
+            Or(Event Player.WaktuTeleportasiBotBuatan == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiBotBuatan) == True;
+        """
+        checks.equal(compact(rule_block(dummy_teleport, "conditions") or ""),
+                     compact(expected_conditions),
+                     "teleport dummy: condizioni esatte solo Schermaglia")
+        checks.equal(dummy_teleport.body.count(
+            "Event Player.PosisiMati = Objective Position(Objective Index);"), 1,
+            "teleport dummy: un solo ancoraggio all'obiettivo corrente")
+        checks.require(not any(token in mask_strings(dummy_teleport.body)
+                               for token in ("Flag Position(", "Payload Position", "Is On Objective(")),
+                       "teleport dummy: rami delle altre modalità non ammessi")
         checks.require(
             "Or(Event Player.WaktuTeleportasiBotBuatan == 0, Total Time Elapsed >= Event Player.WaktuTeleportasiBotBuatan) == True;"
             in dummy_teleport.body,
@@ -6392,26 +6400,26 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
 
 
 def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) -> None:
-    objective_rule = next(
-        (
-            rule
-            for rule in rules
-            if "PerintahTeleportasi == 1" in rule.body
-            and "Payload Position" in rule.body
-            and "Flag Position(" in rule.body
-            and "Objective Position(Objective Index)" in rule.body
-        ),
-        None,
-    )
-    if objective_rule is None:
-        objective_rule = rule_by_subroutine(rules, "TeleportasiKeObjektif")
+    objective_rule = rule_by_subroutine(rules, "TeleportasiKeObjektif")
     checks.require(objective_rule is not None, "dispatcher destinazione obiettivo assente")
     if objective_rule:
-        for mode in GAME_MODES:
-            checks.require(f"Game Mode({mode})" in objective_rule.body,
-                           f"destinazione obiettivo non copre {mode}")
-        checks.require("Is On Objective(" in objective_rule.body,
-                       "Push non usa proxy robot/fallback obiettivo")
+        objective_actions = rule_block(objective_rule, "actions") or ""
+        for call in reversed(list(iter_calls(objective_actions, "Small Message"))):
+            objective_actions = objective_actions[:call.start] + objective_actions[call.end + 1:]
+        expected_objective_actions = """
+            Event Player.PosisiTujuanTeleportasi = Objective Position(Objective Index);
+            If(Distance Between(Event Player.PosisiTujuanTeleportasi, Vector(0, 0, 0)) <= 0.100);
+                Abort;
+            End;
+            Call Subroutine(CariPosisiTeleportasiAman);
+            If(Distance Between(Event Player.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100);
+                Abort;
+            End;
+            Teleport(Event Player, Event Player.PosisiBangkitAman);
+        """
+        checks.equal(re.sub(r"\s+", "", mask_strings(objective_actions)),
+                     re.sub(r"\s+", "", expected_objective_actions),
+                     "destinazione obiettivo: obiettivo corrente, controlli anti-origine e sicurezza obbligatori")
         safe_position = rule_by_subroutine(rules, "CariPosisiTeleportasiAman")
         checks.require(safe_position is not None, "subroutine comune posizione teleport sicura assente")
         checks.require("Call Subroutine(CariPosisiTeleportasiAman);" in objective_rule.body,
