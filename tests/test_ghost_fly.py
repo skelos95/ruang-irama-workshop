@@ -140,9 +140,9 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             ):
                 self.assertIn(instruction, renderer)
             for fly_hint in (
-                "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
-                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk',
-                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ',
+                "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
+                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
+                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
             ):
                 self.assertIn(fly_hint, renderer)
 
@@ -236,8 +236,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"{owner}.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;"
             )
             speed_formula = (
-                f"{owner}.PersenTerbang=Min(500,100+Max(0,TotalTimeElapsed-"
-                f"{owner}.WaktuMulaiTerbangMaju)*16);"
+                f"{owner}.PersenTerbang=Min(1000,100+Max(0,TotalTimeElapsed-"
+                f"{owner}.WaktuMulaiTerbangMaju)*36);"
             )
             reset = (
                 "Else;"
@@ -254,7 +254,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn("StopAccelerating(", packed)
             self.assertNotIn(f"{global_name}.WaktuMulaiTerbangMaju", source)
             cycle = subroutine(source, "ProsesSiklusPemain")
-            self.assertNotIn("Min(500, 100 +", cycle)
+            self.assertNotIn("Min(1000, 100 +", cycle)
 
     def test_side_back_diagonal_and_release_all_take_the_reset_branch(self) -> None:
         """The sole ramp branch is pure Forward; every other Fly throttle resets it."""

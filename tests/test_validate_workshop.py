@@ -62,6 +62,68 @@ rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Pla
                                     for error in self.errors(mutated)))
 
 
+class WorkshopSettingMetadataTests(unittest.TestCase):
+    SETTING_TAILS = {
+        "Workshop Setting Integer": "30, 10, 60, 0",
+        "Workshop Setting Combo": '0, Array(Custom String("Option: one")), 1',
+        "Workshop Setting Toggle": "False, 2",
+    }
+
+    def call(self, action: str, category: str, name: str) -> validator.Call:
+        source = f"{action}({category}, {name}, {self.SETTING_TAILS[action]})"
+        return next(validator.iter_calls(source, action))
+
+    def test_current_categories_and_trilingual_names_are_valid(self) -> None:
+        for path in (validator.SOURCE, validator.ROOT / "workshop" / "ruang_irama.it-IT.workshop"):
+            source = path.read_text(encoding="utf-8")
+            for action in self.SETTING_TAILS:
+                with self.subTest(path=path.name, action=action):
+                    calls = list(validator.iter_calls(source, action))
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(validator.workshop_setting_text_errors(calls[0]), [])
+
+    def test_empty_whitespace_and_forbidden_characters_are_rejected_in_both_keys(self) -> None:
+        for action in self.SETTING_TAILS:
+            for index, field in enumerate(("categoria", "nome")):
+                for invalid in ("", "   ", r"\t", r"\n", "bad{", "bad}", "bad:"):
+                    with self.subTest(action=action, field=field, invalid=invalid):
+                        keys = ['Custom String("CHILL")', 'Custom String("Duration / Durasi / ระยะเวลา")']
+                        keys[index] = f'Custom String("{invalid}")'
+                        errors = validator.workshop_setting_text_errors(self.call(action, *keys))
+                        self.assertEqual(len(errors), 1)
+                        self.assertTrue(errors[0].startswith(f"{field} {action}"))
+
+    def test_setting_keys_remain_complete_literal_expressions(self) -> None:
+        invalid_expressions = (
+            "Global.NamaHalaman",
+            'Custom String("{0}", Global.NamaHalaman)',
+            'Custom String("{0}", Custom String("CHILL"))',
+            'Custom String("CHILL") + Global.NamaHalaman',
+            'Custom String("CHILL" + Global.NamaHalaman)',
+            'True ? Custom String("CHILL") : Custom String("")',
+        )
+        for action in self.SETTING_TAILS:
+            for index in (0, 1):
+                for expression in invalid_expressions:
+                    with self.subTest(action=action, index=index, expression=expression):
+                        keys = ['Custom String("CHILL")', 'Custom String("Duration / Durasi / ระยะเวลา")']
+                        keys[index] = expression
+                        self.assertTrue(validator.workshop_setting_text_errors(self.call(action, *keys)))
+
+    def test_unicode_spaces_slashes_parentheses_and_combo_option_colons_are_allowed(self) -> None:
+        for action in self.SETTING_TAILS:
+            with self.subTest(action=action):
+                call = self.call(action, 'Custom String(" SERVER KHUSUS CHILL ")',
+                                 'Custom String("Duration / Durasi / ระยะเวลา (min)")')
+                self.assertEqual(validator.workshop_setting_text_errors(call), [])
+
+    def test_missing_name_is_rejected(self) -> None:
+        for action in self.SETTING_TAILS:
+            with self.subTest(action=action):
+                call = next(validator.iter_calls(f'{action}(Custom String("CHILL"))', action))
+                self.assertEqual(validator.workshop_setting_text_errors(call), [f"nome {action} assente"])
+
+
 class SemanticWorkshop081Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -928,15 +990,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHantuTerbang")
         mutations = (
             (
-                "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
+                "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
                 "LOOK TO STEER | HOLD FORWARD TO ACCELERATE",
             ),
             (
-                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk',
+                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
                 "ARAHKAN PANDANGAN | TAHAN MAJU UNTUK MELAJU",
             ),
             (
-                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ',
+                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
                 "บังคับด้วยมุมมอง | กดเดินหน้าค้างเพื่อเร่งความเร็ว",
             ),
         )
@@ -1437,25 +1499,25 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutations = (
             (
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
-                "Min(450, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
-                "cap 500%",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "cap 1000%",
             ),
             (
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
-                "Min(500, 120 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "Min(1000, 120 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
                 "base 100%",
             ),
             (
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 8)",
-                "pendenza 16 punti/s",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
+                "pendenza 36 punti/s",
             ),
         )
         for old, new, contract in mutations:
             with self.subTest(contract=contract):
                 mutated = self.replace_in_rule(cycle, old, new)
-                self.assert_rejected(mutated, "rampa Fly lineare 100%-500% in 25 secondi")
+                self.assert_rejected(mutated, "rampa Fly lineare 100%-1000% in 25 secondi")
 
     def test_fly_forward_requires_the_local_forward_throttle_component(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
@@ -1542,7 +1604,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         for action, fragment in (
             (
-                "Global.PemainAktif.PersenTerbang = Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16);",
+                "Global.PemainAktif.PersenTerbang = Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36);",
                 "guardia per-player di puro Forward",
             ),
             (
@@ -3599,6 +3661,11 @@ rule("999x - Nasib: Renderer pemain tambahan")
         call = next(iter(validator.iter_calls(self.source, "Workshop Setting Integer")))
         mutated = self.replace_call_argument(call, 1, 'Custom String("Server duration")')
         self.assert_rejected(mutated, "label Workshop Setting Integer")
+
+    def test_workshop_setting_category_validation_is_integrated(self) -> None:
+        call = next(iter(validator.iter_calls(self.source, "Workshop Setting Integer")))
+        mutated = self.replace_call_argument(call, 0, 'Custom String("SERVER: CHILL")')
+        self.assert_rejected(mutated, "categoria Workshop Setting Integer contiene un carattere vietato")
 
     def test_objective_teleport_requires_the_current_objective(self) -> None:
         objective = self.rule(lambda rule: validator.subroutine_target(rule) == "TeleportasiKeObjektif")

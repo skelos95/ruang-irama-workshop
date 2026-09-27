@@ -110,6 +110,14 @@ Controlla nell'ordine:
 5. esegui il preflight `--language it-IT`;
 6. se il checker è verde ma il client segnala una riga, invia lo screenshot con il numero esatto: il token contestuale va confrontato con la forma realmente accettata dal parser italiano.
 
+## Errore nei nomi delle impostazioni
+
+Se il client segnala categorie o nomi delle impostazioni vuoti oppure contenenti `{`, `}` o `:`, confrontare le chiamate `Workshop Setting` del file con l'esportazione completa della lobby tramite **Copia impostazioni**. Il gate semantico verifica esplicitamente questi vincoli, ma non riproduce la validazione interna di Overwatch.
+
+La [raccolta di problemi dell'editor della community](https://workshop.codes/wiki/articles/ow2-workshop-changesbugs) riporta anche questo messaggio con nomi apparentemente validi e suggerisce una nuova lobby. Non è una soluzione garantita: nella segnalazione del 27 settembre 2026 l'utente riferisce lo stesso errore anche in una nuova lobby. L'esportazione ricevuta in questo caso contiene stringhe vuote anche in generi, HUD e messaggi: il problema non è limitato ai nomi delle impostazioni. Conservare il preset prima di provare e, se il problema persiste, confrontare l'esportazione effettiva; non rinominare tutte le impostazioni o cambiare la logica di gioco senza aver isolato la causa.
+
+Nel caso del 27 settembre, anche una prova separata con una sola impostazione ASCII (`CHILL` / `Test`) e un solo HUD (`TEST OK`) produce inizialmente lo stesso problema. Dopo aver chiuso e riaperto completamente il gioco, l'utente conferma che questa prova minima funziona. Il riavvio è quindi un rimedio osservato per questo caso, mentre la causa interna resta sconosciuta e il codice completo deve ancora essere reimportato. Se ricapita, conservare il preset, chiudere e riaprire il gioco e ripetere l'importazione. Non considerare risolta l'importazione sulla sola base dei test statici.
+
 ## Dopo un import riuscito
 
 Inviare o registrare almeno:

@@ -112,7 +112,7 @@ Per ogni pagina e per ciascuna lingua EN/ID/TH:
 - verificare che una scelta invariata non ripeta Small Message, audio o effetto;
 - controllare che esista un solo HUD Arcade: nessuna copia appare durante scroll, cambio pagina, morte o riapertura;
 - verificare che il promemoria `Hold CROUCH` compaia nel menu ma non sia duplicato nell'HUD globale, senza riga vuota prima dei comandi o gap eccessivo sotto il titolo server. Controllare le istruzioni compatte in EN/ID/TH: due righe nei menu comuni, tre nel menu musica; i tasti rimappati e il tempo di chiusura devono restare leggibili.
-- sulla riga Fly della pagina 13, verificare la guida `LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s` / `ARAHKAN PANDANGAN | TAHAN MAJU: 100% > 500% DALAM 25dtk` / `บังคับด้วยมุมมอง | กดเดินหน้าค้าง: 100% > 500% ใน 25วิ`, senza testo obsoleto sulla sola direzione dello sguardo.
+- sulla riga Fly della pagina 13, verificare la guida `LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s` / `ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk` / `มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ`, senza testo obsoleto sulla sola direzione dello sguardo.
 
 Focus dati:
 
@@ -143,13 +143,13 @@ Focus dati:
 | Prova | Risultato da verificare nel client |
 |---|---|
 | Orientamento | Con yaw nei quattro orientamenti cardinali e pitch `0°`, `+45°`, `−45°`, `+90°`, `−90°`, Forward segue sempre il mirino (anche verticale). Back resta opposto solo sul piano orizzontale; Left/Right restano strafe orizzontale relativo all'eroe senza inversioni durante la rotazione. |
-| Rampa Forward pura | Con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`, partire da circa `5,5 m/s` (`100%`); dopo 5 s circa `9,9 m/s` (`180%`), dopo 10 s circa `14,3 m/s` (`260%`), dopo 25 s circa `27,5 m/s` (`500%`). Continuare oltre 25 s senza superare il cap e ripetere guardando in alto/basso. |
+| Rampa Forward pura | Con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`, partire da circa `5,5 m/s` (`100%`); dopo 5 s circa `15,4 m/s` (`280%`), dopo 10 s circa `25,3 m/s` (`460%`), dopo 25 s circa `55 m/s` (`1000%`). Continuare oltre 25 s senza superare il cap e ripetere guardando in alto/basso. |
 | Reset e analogico | Side/Back/diagonali non armano la rampa e restano alla baseline. Durante Forward aggiungere strafe, invertire o rilasciare: il timer si riarma e il nuovo Forward riparte dal `100%`. Con controller, input parziale riduce proporzionalmente la velocità; le diagonali non ricevono un bonus di modulo. |
 | Hover | Rilasciare ogni input dopo volo orizzontale, verticale, rotazione e knockback: arresto al tick del motore e nessuna deriva persistente. Riprendere gli input senza scatto nella vecchia direzione. |
 | Isolamento | Due player, anche con eroi diversi: uno tiene Forward per 25 s, l'altro fa strafe, hover o commuta Fly. Timer, velocità, direzione e toggle del primo non devono cambiare per azioni del secondo; ripetere invertendo i ruoli. |
 | Unkillable | Ripetere salita/discesa, hover e misure a 0/5/25 s con Unkillable OFF, 1 HP e FULL HP. La protezione dagli urti non deve impedire gli impulsi di movimento Fly; questa interazione richiede conferma nel client. |
 | Collisioni | Fly senza Ghost deve fermarsi contro muri/soffitti/pavimenti; con Ghost attraversa muri/soffitti ma non pavimenti. Verificare angoli, porte strette, cambi di pendenza e contatto con umani/dummy: nessun attraversamento non previsto o impulso trasferito a un altro player. |
-| Ergonomia e fluidità | Provare rotazioni lente/rapide, inversioni avanti-indietro, passaggio per il pitch verticale e avvio/arresto sia in prima sia in terza persona. Annotare vibrazione, scatti, ritardo input, nausea e controllo a 500%; i gate statici non certificano questi aspetti. |
+| Ergonomia e fluidità | Provare rotazioni lente/rapide, inversioni avanti-indietro, passaggio per il pitch verticale e avvio/arresto sia in prima sia in terza persona. Annotare vibrazione, scatti, ritardo input, nausea e controllo a 1000%; i gate statici non certificano questi aspetti. |
 
 - Attivare insieme Ghost e Fly, poi disattivarli in ordine inverso: i due toggle devono restare indipendenti; Fly OFF ripristina gravità e movimento nativo normali e arresta la rampa senza interrompere un'eventuale Luck Acceleration ancora attiva; Ghost OFF ripristina la collisione ambientale completa. Con Fly ON, morire e usare Jump: al ritorno in vita il volo deve funzionare subito senza toggle OFF/ON manuale. Ripetere durante rampa e hover dopo cambio eroe, cambio squadra (riattivando Fly dal menu dopo il reset) e transizioni spawned/non-spawned; non deve rimanere `Move Speed = 0` quando Fly è OFF.
 - Provare tutti gli esiti Try Your Luck con Fly attivo: nessun ramo deve impostare o ripristinare gravità, throttle trasformato o toggle Ghost/Fly. In particolare Acceleration deve possedere velocità e propulsione per tutti i 10 secondi: il motore Fly non deve applicare impulsi, freno idle o blocco del movimento nativo. Alla scadenza Fly riparte dal `100%` con una rampa fresca se Forward è tenuto, oppure resta immobile senza input. Ripetere entrando/uscendo da Fly a metà Acceleration e con un secondo player in Fly normale.
@@ -409,7 +409,7 @@ Try Your Luck Unkillable preserve/Skull bypass: PASS/FAIL
 Try Your Luck × Fly physics preserve: PASS/FAIL
 Ghost walls/floors and Fly collisions: PASS/FAIL
 Fly yaw cardinali/pitch 0° ±45° ±90°/strafe: PASS/FAIL
-Fly 5,5→27,5 m/s / rampa 100→500 in 25 s / reset: PASS/FAIL
+Fly 5,5→55 m/s / rampa 100→1000 in 25 s / reset: PASS/FAIL
 Fly analogico/diagonali/hover/ergonomia: PASS/FAIL
 Fly due player indipendenti/lifecycle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
