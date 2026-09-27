@@ -332,12 +332,13 @@ class FlyMotionExpressionTests(unittest.TestCase):
     def test_standard_fly_ramp_uses_the_source_formula_and_caps_after_twenty_five_seconds(self) -> None:
         """100% is the explicit 5.5 m/s Fly baseline, irrespective of hero selection."""
         for name, program in self.programs:
-            player = player_state(throttle=Vector(0, 0, 1))
-            evaluator = FlySourceEvaluator(program, {"one": player})
-            for elapsed, percent, speed in ((0, 100, 5.5), (5, 180, 9.9), (10, 260, 14.3), (25, 500, 27.5), (30, 500, 27.5)):
+            for elapsed, percent, speed in ((0, 100, 5.5), (5, 280, 15.4), (10, 460, 25.3), (24.999, 999.964, 54.99802), (25, 1000, 55), (25.001, 1000, 55), (60, 1000, 55)):
                 with self.subTest(source=name, elapsed=elapsed):
+                    player = player_state(throttle=Vector(0, 0, 1))
+                    evaluator = FlySourceEvaluator(program, {"one": player})
+                    evaluator.step(100)
                     evaluator.step(100 + elapsed)
-                    self.assertEqual(player["PersenTerbang"], percent)
+                    self.assertAlmostEqual(player["PersenTerbang"], percent)
                     self.assertEqual(player["WaktuMulaiTerbangMaju"], 100)
                     self.assertEqual(player["move_speed"], 0)
                     self.assertVectorClose(player["velocity"], Vector(0, 0, speed))
@@ -445,7 +446,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
                     self.assertAlmostEqual(player["velocity"].magnitude(), expected)
                     if throttle == Vector(0, 0, 0.5):
                         evaluator.step(125)
-                        self.assertAlmostEqual(player["velocity"].magnitude(), 13.75)
+                        self.assertAlmostEqual(player["velocity"].magnitude(), 27.5)
 
     def test_side_back_diagonal_and_release_reset_the_actual_source_timer(self) -> None:
         for name, program in self.programs:
@@ -455,6 +456,8 @@ class FlyMotionExpressionTests(unittest.TestCase):
                     evaluator = FlySourceEvaluator(program, {"one": player})
                     evaluator.step(100)
                     evaluator.step(125)
+                    self.assertEqual(player["PersenTerbang"], 1000)
+                    self.assertVectorClose(player["velocity"], Vector(0, 0, 55))
                     player["throttle"] = throttle
                     evaluator.step(126)
                     self.assertEqual(player["PersenTerbang"], 100)
@@ -473,7 +476,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
                 evaluator.step(100, "one")
                 evaluator.step(125, "one")
                 evaluator.step(125, "two")
-                self.assertVectorClose(one["velocity"], Vector(0, 0, 27.5))
+                self.assertVectorClose(one["velocity"], Vector(0, 0, 55))
                 self.assertVectorClose(two["velocity"], Vector(0, 5.5, 0))
                 self.assertEqual((one["WaktuMulaiTerbangMaju"], two["WaktuMulaiTerbangMaju"]), (100, 125))
                 one["throttle"] = ZERO
@@ -481,7 +484,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
                 self.assertEqual(one["PersenTerbang"], 100)
                 self.assertVectorClose(two["velocity"], Vector(0, 5.5, 0))
                 evaluator.step(130, "two")
-                self.assertVectorClose(two["velocity"], Vector(0, 9.9, 0))
+                self.assertVectorClose(two["velocity"], Vector(0, 15.4, 0))
 
     def test_idle_cancels_residual_velocity_without_zero_direction_impulses(self) -> None:
         for name, program in self.programs:
@@ -498,7 +501,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
     def test_luck_acceleration_owns_velocity_until_expiry_then_fly_restarts_at_baseline(self) -> None:
         for name, program in self.programs:
             with self.subTest(source=name):
-                player = player_state(throttle=Vector(0, 0, 1), EfekNasib=2, EfekNasibBerakhir=200, move_speed=1000, velocity=Vector(7, 8, 9), WaktuMulaiTerbangMaju=100, PersenTerbang=500, ArahTerbang=Vector(1, 1, 1), DeltaTerbang=Vector(2, 2, 2))
+                player = player_state(throttle=Vector(0, 0, 1), EfekNasib=2, EfekNasibBerakhir=200, move_speed=1000, velocity=Vector(7, 8, 9), WaktuMulaiTerbangMaju=100, PersenTerbang=1000, ArahTerbang=Vector(1, 1, 1), DeltaTerbang=Vector(2, 2, 2))
                 evaluator = FlySourceEvaluator(program, {"one": player})
                 evaluator.step(150)
                 self.assertEqual(evaluator.actions, [])

@@ -2,6 +2,11 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Fly al 1000% e controllo dei nomi impostazioni — 2026-09-27
+
+- Aumentato il limite Fly dal 500% al 1000%, mantenendo 25 secondi per la rampa Forward pura: 36 punti percentuali al secondo, da 5,5 a 55 m/s richiesti. Aggiornati HUD EN/ID/TH e test; reset degli input, indipendenza dei player, priorità Luck Acceleration e cleanup restano invariati.
+- Aggiunto un controllo esplicito di categorie e nomi delle impostazioni Workshop: devono essere stringhe letterali non vuote e prive di `{`, `}` e `:`. Le tre impostazioni correnti sono già valide e identiche alla revisione precedente: non sono state rinominate. L'esportazione ricevuta conteneva tutti i testi personalizzati vuoti; una prova minima ASCII ha iniziato a funzionare dopo la chiusura e riapertura del gioco. Questa protezione statica non risolve quel problema del client: causa interna sconosciuta, reimportazione del codice completo ancora da verificare.
+
 ## Sola Schermaglia — 2026-09-27
 
 - Limitate creazione e uscita spawn dei dummy alla Schermaglia; rimossi il ramo CTF e il fallback duplicato. Conservato il percorso di destinazione Schermaglia, inclusi stabilizzazione iniziale, 16 candidati, retry a 1 secondo, verifica geometrica, respawn e rilascio degli slot per gli umani.

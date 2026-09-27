@@ -1028,6 +1028,33 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
                            f"variabile player non inizializzata in SiapkanPemain: {entry.name}")
 
 
+def workshop_setting_text_errors(call: Call) -> list[str]:
+    """Check the constant category/name keys used by this project's settings."""
+    errors: list[str] = []
+    for index, field in enumerate(("categoria", "nome")):
+        label = f"{field} {call.name}"
+        if len(call.args) <= index:
+            errors.append(f"{label} assente")
+            continue
+        expression = call.args[index].strip()
+        custom = next(iter(iter_calls(expression, "Custom String")), None)
+        if not (
+            custom is not None
+            and custom.start == 0
+            and custom.end == len(expression)
+            and len(custom.args) == 1
+            and re.fullmatch(r'"(?:\\.|[^"\\])*"', custom.args[0], re.DOTALL)
+        ):
+            errors.append(f"{label} deve essere un Custom String letterale senza sostituzioni")
+            continue
+        literal = parse_literal(custom.args[0])
+        if literal is None or not literal.strip():
+            errors.append(f"{label} vuoto o non valido")
+        elif any(char in literal for char in "{}:"):
+            errors.append(f"{label} contiene un carattere vietato: {{, }} o :")
+    return errors
+
+
 def validate_localization(checks: Checks, source: str, globals_: set[str]) -> None:
     for name, expected_size in LOCALIZED_ARRAY_SIZES.items():
         checks.require(name in globals_, f"array localizzato dichiarato assente: {name}")
@@ -1048,6 +1075,8 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
     for action, english, indonesian in setting_specs:
         calls = list(iter_calls(source, action))
         checks.equal(len(calls), 1, f"numero {action}")
+        for call in calls:
+            checks.errors.extend(workshop_setting_text_errors(call))
         if calls and len(calls[0].args) >= 2:
             label_call = next(iter(iter_calls(calls[0].args[1], "Custom String")), None)
             label = parse_literal(label_call.args[0]) if label_call and label_call.args else None
@@ -1826,15 +1855,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
             "FLY MODE",
-            "LOOK TO STEER | HOLD FORWARD: 100% > 500% IN 25s",
+            "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
             '13 - HANTU / TERBANG',
             "TEMBUS DINDING",
             'TERBANG',
-            'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 500% DALAM 25 dtk',
+            'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
             "13 - โหมดผี / บิน",
             "ทะลุกำแพง",
             "โหมดบิน",
-            'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 500% ใน 25 วิ',
+            'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -2292,8 +2321,8 @@ def validate_ghost_fly(
             "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
         )
         ramp = (
-            "Global.PemainAktif.PersenTerbang=Min(500,100+Max(0,TotalTimeElapsed-"
-            "Global.PemainAktif.WaktuMulaiTerbangMaju)*16);"
+            "Global.PemainAktif.PersenTerbang=Min(1000,100+Max(0,TotalTimeElapsed-"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju)*36);"
         )
         for token, label in (
             (forward_tokens[0], "input avanti Fly ricavato dalla componente locale Z"),
@@ -2302,7 +2331,7 @@ def validate_ghost_fly(
             ("If(Global.PemainAktif.WaktuMulaiTerbangMaju<0);"
              "Global.PemainAktif.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;",
              "timestamp per-player avviato al primo tick Forward"),
-            (ramp, "rampa Fly lineare 100%-500% in 25 secondi"),
+            (ramp, "rampa Fly lineare 100%-1000% in 25 secondi"),
             ("Else;Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
              "Global.PemainAktif.PersenTerbang=100;End;",
              "laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%"),
