@@ -200,9 +200,22 @@ class JumpResurrectTests(unittest.TestCase):
             with self.subTest(source=source):
                 death = Vector(10, -30, 20)
                 # Isolate the raycast branch: native navigation happens to return
-                # a point within 2.5 m, while the cast reaches its lower endpoint.
-                model.navigation_result = death + Vector(1, 1, 0)
+                # a point within 0.5 m, while the cast reaches its lower endpoint.
+                model.navigation_result = death + Vector(0.1, 0.1, 0)
                 model.ray_result = death - Vector(0, 3, 0)
+                player = model.players["one"]
+                player["jump"] = True
+                model.die(position=death)
+                model.step(100, prefix="12f")
+                self.assertEqual(model.count("Teleport"), 2)
+                self.assertEqual(player["position"], model.navigation_result + Vector(0, 0.5, 0))
+
+    def test_nearby_walkable_edge_is_not_mistaken_for_safe_death_ground(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                death = Vector(10, -1, 20)
+                model.navigation_result = death + Vector(0, 1, 0)
+                model.ray_result = death
                 player = model.players["one"]
                 player["jump"] = True
                 model.die(position=death)

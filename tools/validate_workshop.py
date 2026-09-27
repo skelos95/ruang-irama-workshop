@@ -3174,7 +3174,7 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Event Player.PosisiMati + Vector(0, 1, 0), "
             "Event Player.PosisiMati - Vector(0, 3, 0), "
             "Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500, "
-            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 2.500);"
+            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.500);"
         )
         unsafe_guard = "If(Event Player.BangkitPerluTeleportasi == True);"
         safe_teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));"

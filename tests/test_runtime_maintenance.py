@@ -413,7 +413,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             resurrect = source.split(f'{rule_kw}("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")', 1)[1].split(f'{rule_kw}("12g - Bangkit Lompat', 1)[0]
             recovery_teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));"
             self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));", resurrect)
-            self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 2.500", resurrect)
+            self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.500", resurrect)
             self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
             self.assertEqual(resurrect.count("Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0)"), 1)
             self.assertNotIn("Call Subroutine(CariPosisiTeleportasiAman);", resurrect)

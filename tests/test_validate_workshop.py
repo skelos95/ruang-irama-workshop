@@ -1423,7 +1423,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 2.500",
+            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.500",
             "False",
         )
         self.assert_rejected(mutated, "guardia sicurezza include vuoto verticale e distanza")
