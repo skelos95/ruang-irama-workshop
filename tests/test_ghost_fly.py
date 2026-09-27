@@ -350,7 +350,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 packed_luck,
             )
 
-    def test_death_rearms_and_jump_resurrect_reapplies_fly_physics(self) -> None:
+    def test_death_preserves_jump_latch_and_resurrect_reapplies_fly_physics(self) -> None:
         for source, _ in self.sources:
             death = rule_with(source, "Player Died", "Event Player.PosisiMati = Position Of(Event Player);")
             normalization = (
@@ -364,14 +364,17 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             positions = [death.index(token) for token in normalization]
             self.assertEqual(positions, sorted(positions))
             resurrect = rule_with(source, "Resurrect(Event Player);", "Button(Jump)")
-            live_teleport = "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));"
-            self.assertIn(live_teleport, resurrect)
-            self.assertNotIn("Event Player.PosisiBangkitAman", resurrect)
+            recovery_teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));"
+            self.assertEqual(resurrect.count(recovery_teleport), 2)
+            self.assertIn("Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));", resurrect)
+            self.assertNotIn("BangkitLompatDipakai = False", death)
             self.assertNotIn("Nearest Walkable Position(Event Player.PosisiMati)", resurrect)
             self.assertNotIn("Call Subroutine(CariPosisiTeleportasiAman);", resurrect)
             self.assertNotIn("Abort;", resurrect)
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
-            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.index(live_teleport))
+            self.assertLess(resurrect.index(recovery_teleport), resurrect.index("Resurrect(Event Player);"))
+            self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.rindex(recovery_teleport))
+            self.assertLess(resurrect.rindex(recovery_teleport), resurrect.index("Call Subroutine(EfekTerapkan);"))
             self.assertLess(resurrect.index("Call Subroutine(EfekTerapkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
             self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
             self.assertNotIn("Small Message(", resurrect)

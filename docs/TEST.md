@@ -72,9 +72,9 @@ Provare con un eroe che esponga chiaramente Melee, Jump, Primary, Secondary, Rel
 | Menu aperto | Tieni Crouch | inspection/Teleport non partono |
 | Morto | Menu già aperto | resta visibile ma congelato |
 | Morto | Primary, Secondary, Interact, Reload, Crouch, abilità | nessun comando Arcade |
-| Morto | Jump | `Resurrect` sempre; resta sul punto con terreno, oppure usa `Nearest Walkable Position` e Teleport post-resurrezione nel vuoto; menu ancora visibile |
+| Morto | Jump | Un tentativo per pressione: stesso punto su terreno sicuro, recupero camminabile prima e dopo `Resurrect` nel vuoto; menu ancora visibile |
 
-Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo. Su terreno il player deve usare `Resurrect` nello stesso punto senza Teleport; nel vuoto l'unico raycast deve aprire il ramo di recupero, eseguire `Resurrect` senza condizioni e poi un solo `Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))))` del player vivo. La destinazione non deve provenire da `PosisiMati` o da uno scratch calcolato prima della resurrezione. Jump deve funzionare anche con Menu, Crouch Travel, Camera o Try Your Luck in qualunque stato e non deve comparire alcun percorso `Abort` o verso la Spawn Room. Non sono ammessi validatore Travel condiviso, offset casuali, forcing di posizione, `Respawn`, `Wait` o `Loop`. Tenere premuto il pulsante non deve generare spam; rilasciare Jump e premerlo di nuovo deve sempre riarmare un nuovo tentativo. Gli effetti di ripristino devono partire soltanto dopo la conferma del ritorno in vita e non deve mai comparire il vecchio `Small Message` “Resurrect unavailable” o una sua traduzione.
+Sul caso Jump, provare morte su terreno normale, vicino a un bordo, durante Self Kill con overlay Crouch ancora attivo e nel vuoto profondo sulle mappe Schermaglia della rotazione. Il terreno vicino alla navigazione deve mantenere la resurrezione sul posto; il vuoto e le superfici fuori dalla navigazione devono raggiungere la destinazione camminabile, alzata di 0,5 m. Tenere Jump premuto durante una nuova morte immediata: non deve iniziare un altro tentativo. Rilasciare e ripremere dopo un fallimento deve riarmarlo; ripetere il rilascio da vivi, seguito da una nuova morte. Provare due player simultaneamente, con Fly/Ghost ON e OFF, e verificare che effetti e fisica siano riapplicati dopo il recupero. Nessun ramo deve bloccare Jump per Menu, Crouch Travel, Camera o Try Your Luck. Nessun nuovo Wait, Loop, Respawn, forcing o messaggio di fallimento. I test automatici eseguono le regole effettive con risposte native controllate, comprese entrambe le ipotesi di Teleport su un morto accettato o ignorato; collisioni, zone letali e ordine degli eventi reali richiedono il client.
 
 Ripetere rapidamente gli input per cercare doppie attivazioni, latch bloccati e interferenze tra hold e click.
 
@@ -413,7 +413,7 @@ Fly 5,5→55 m/s / rampa 100→1000 in 25 s / reset: PASS/FAIL
 Fly analogico/diagonali/hover/ergonomia: PASS/FAIL
 Fly due player indipendenti/lifecycle: PASS/FAIL
 Self Kill cooldown 3 s: PASS/FAIL
-Jump Resurrect same-point/void-live-nearest-walkable/retry latch: PASS/FAIL
+Jump Resurrect same-point/void/pre-post-teleport/held-Jump-redeath/release-alive: PASS/FAIL
 Privacy Camera/inspection/Teleport + override Vision: PASS/FAIL
 Profilo งูแรร์ default/editabilità/lock: PASS/FAIL
 20 cambi singoli: PASS/FAIL

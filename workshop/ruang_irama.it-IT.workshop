@@ -191,6 +191,7 @@ variabili
 		116: SiklusLampiran
 		117: KursorTeleportasiBotBuatan
 		118: WaktuTeksTargetBerikut
+		119: BangkitPerluTeleportasi
 }
 
 subroutine
@@ -2535,7 +2536,7 @@ regola("12e - Bangkit Lompat: Simpan posisi kematian")
 		Enable Movement Collision With Environment(Event Player);
 		Event Player.FisikaHantuTerbangDiterapkan = False;
 		Event Player.WaktuMulaiTerbangMaju = -1;
-		Event Player.BangkitLompatDipakai = False;
+		"Pertahankan kunci Lompat saat mati lagi; hanya pelepasan tombol yang membuka percobaan baru."
 		Event Player.PerintahMenu = 0;
 		Event Player.PerintahTeleportasi = 0;
 		Small Message(Event Player, Event Player.IndeksBahasa == 0 ? Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))) : Event Player.IndeksBahasa == 1 ? Custom String("Tekan {0}: bangkit di sini. Jatuh ke jurang? Kembali ke tanah aman.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นตรงนี้ | ตกเหว: ฟื้นบนพื้นที่เดินได้", Input Binding String(Button(Jump))));
@@ -2564,10 +2565,18 @@ regola("12f - Bangkit Lompat: Bangkit di posisi aman yang bisa dilalui")
 	azioni
 	{
 		Event Player.BangkitLompatDipakai = True;
-		Resurrect(Event Player);
-		If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500);
-			Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));
+		"Cari tanah yang bisa dilalui sekali; permukaan jurang dapat mengenai raycast meskipun tidak aman."
+		Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));
+		Event Player.BangkitPerluTeleportasi = Or(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500, Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 0.500);
+		"Pindahkan sebelum bangkit, lalu pastikan tujuan yang sama setelah bangkit tanpa menunggu satu bingkai."
+		If(Event Player.BangkitPerluTeleportasi == True);
+			Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));
 		End;
+		Resurrect(Event Player);
+		If(Event Player.BangkitPerluTeleportasi == True);
+			Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));
+		End;
+		Event Player.BangkitPerluTeleportasi = False;
 		If(Is Alive(Event Player) == True);
 			Call Subroutine(EfekTerapkan);
 			Event Player.FisikaHantuTerbangDiterapkan = False;
@@ -2590,7 +2599,6 @@ regola("12g - Bangkit Lompat: Lepaskan Lompat sebelum mencoba lagi")
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
-		Is Alive(Event Player) == False;
 		Event Player.BangkitLompatDipakai == True;
 		Is Button Held(Event Player, Button(Jump)) == False;
 	}
@@ -4443,6 +4451,7 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Event Player.PerintahTeleportasi = 0;
 		Event Player.InspeksiAktif = False;
 		Event Player.WaktuTeksTargetBerikut = 0;
+		Event Player.BangkitPerluTeleportasi = False;
 		Event Player.TargetInspeksi = Null;
 		Event Player.InteraksiKameraDipakai = False;
 		Event Player.IzinkanBotBuatanMengikuti = False;
@@ -4779,6 +4788,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Event Player.InteraksiKameraDipakai = False;
 		Event Player.PosisiMati = Vector(0, 0, 0);
 		Event Player.PosisiBangkitAman = Vector(0, 0, 0);
+		Event Player.BangkitPerluTeleportasi = False;
 		Event Player.BangkitLompatDipakai = False;
 		Event Player.IndeksIkon = 0;
 		Event Player.KursorIkon = 0;
