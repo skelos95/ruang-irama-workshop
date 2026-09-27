@@ -82,27 +82,23 @@ OBSOLETE_CURRENT_TEXT_PATTERNS = (
         re.compile(r"(?i)cambio\s+squadra[^.\r\n]*aggiorna\s+soltanto\s+i\s+campi\s+Team"),
     ),
     (
-        "Jump Resurrect descritto erroneamente come always-nearest-walkable",
+        "Jump Resurrect descritto erroneamente con Teleport anche su terreno sicuro",
         re.compile(
-            r"(?i)(?:(?:usa|calcola|passa\s+da)\s+sempre"
-            r"[^.;\r\n]{0,80}nearest\s+walkable|"
-            r"sempre\s+(?:tramite|su|alla)\s+[^.;\r\n]{0,60}nearest\s+walkable)"
+            r"(?i)(?:teletrasporta|teleport)\s+sempre"
+            r"[^.;\r\n]{0,80}nearest\s+walkable"
         ),
     ),
     (
-        "Jump Resurrect descritto con Teleport del cadavere o fallimento ammesso",
+        "Jump Resurrect descritto con fallimento ammesso prima del ritorno in vita",
         re.compile(
-            r"(?i)(?:teletrasporta|teleport)[^.\r\n]{0,100}(?:cadavere|morto)"
-            r"[^.\r\n]{0,100}(?:prima|before)[^.\r\n]{0,40}resurrect|"
-            r"se\s+non\s+(?:esiste|viene\s+trovato)[^.\r\n]{0,100}"
+            r"(?i)se\s+non\s+(?:esiste|viene\s+trovato)[^.\r\n]{0,100}"
             r"(?:resta|rimane)\s+morto"
         ),
     ),
     (
         "Jump Resurrect descritto con destinazione calcolata dalla snapshot morta",
         re.compile(
-            r"(?i)nearest\s+walkable\s+position\s*\(\s*posisimati\s*\)|"
-            r"calcola[^.\r\n]{0,100}nearest\s+walkable[^.\r\n]{0,100}prima[^.\r\n]{0,60}resurrect"
+            r"(?i)nearest\s+walkable\s+position\s*\(\s*posisimati\s*\)"
         ),
     ),
 )
@@ -3047,6 +3043,9 @@ End;
 
 
 def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
     menu_toggle = next((rule for rule in rules if "Button(Melee)" in rule.body and "Wait(0.500, Abort When False)" in rule.body and "MenuTerbuka" in rule.body), None)
     checks.require(menu_toggle is not None, "hold Melee 0,5 s per apertura/chiusura menu assente")
     if menu_toggle:
@@ -3124,6 +3123,10 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                        f"{rule.name}: la morte non deve chiudere il menu")
         checks.require("Destroy HUD Text(Event Player.HudMenu);" not in rule.body,
                        f"{rule.name}: la morte non deve nascondere il menu")
+        checks.require(
+            "BangkitLompatDipakai" not in mask_strings(rule_block(rule, "actions") or ""),
+            f"{rule.name}: la morte non deve riarmare il latch Resurrect durante Jump premuto",
+        )
     resurrect = next(
         (
             rule for rule in rules
@@ -3163,20 +3166,41 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
 
         actions = rule_block(resurrect, "actions") or ""
         masked = mask_strings(actions)
-        live_nearest_teleport = (
-            "Teleport(Event Player, Nearest Walkable Position("
-            "Last Of(Position Of(Event Player))));"
+        live_nearest_assignment = (
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));"
         )
-        void_guard = (
-            "If(Distance Between(Ray Cast Hit Position("
+        unsafe_assignment = (
+            "Event Player.BangkitPerluTeleportasi = Or(Distance Between(Ray Cast Hit Position("
             "Event Player.PosisiMati + Vector(0, 1, 0), "
             "Event Player.PosisiMati - Vector(0, 3, 0), "
-            "Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500);"
+            "Empty Array, Empty Array, False), Event Player.PosisiMati) > 2.500, "
+            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 2.500);"
+        )
+        unsafe_guard = "If(Event Player.BangkitPerluTeleportasi == True);"
+        safe_teleport = "Teleport(Event Player, Event Player.PosisiBangkitAman + Vector(0, 0.500, 0));"
+        recovery = (
+            "Event Player.BangkitLompatDipakai = True;",
+            live_nearest_assignment,
+            unsafe_assignment,
+            unsafe_guard,
+            safe_teleport,
+            "End;",
+            "Resurrect(Event Player);",
+            unsafe_guard,
+            safe_teleport,
+            "End;",
+            "Event Player.BangkitPerluTeleportasi = False;",
+        )
+        checks.require(
+            code(masked).startswith(code("\n".join(recovery))),
+            "Jump Resurrect: candidato e guardia sicurezza freschi prima di Teleport/Resurrect/Teleport, poi reset flag",
         )
         ordered = (
             "Event Player.BangkitLompatDipakai = True;",
+            live_nearest_assignment,
+            unsafe_assignment,
             "Resurrect(Event Player);",
-            live_nearest_teleport,
+            "Event Player.BangkitPerluTeleportasi = False;",
             "If(Is Alive(Event Player) == True);",
             "Call Subroutine(EfekTerapkan);",
             "Event Player.FisikaHantuTerbangDiterapkan = False;",
@@ -3185,17 +3209,15 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         positions = [masked.find(token) for token in ordered]
         checks.require(
             all(position >= 0 for position in positions) and positions == sorted(positions),
-            "Jump Resurrect deve tornare in vita, calcolare il punto camminabile dalla posizione live, Teleport e riapplicare Fly",
+            "Jump Resurrect deve calcolare il punto dalla posizione live, tornare in vita e riapplicare Fly",
         )
-        checks.equal(masked.count(void_guard), 1, "Jump Resurrect: unica guardia vuoto verticale dopo Resurrect")
-        checks.equal(masked.count("Ray Cast Hit Position("), 1, "Jump Resurrect: unico raycast vuoto post-Resurrect")
+        checks.equal(masked.count(unsafe_assignment), 1, "Jump Resurrect: guardia sicurezza include vuoto verticale e distanza dal punto camminabile")
+        checks.equal(masked.count("Ray Cast Hit Position("), 1, "Jump Resurrect: unico raycast vuoto")
         checks.equal(
-            masked.count(live_nearest_teleport),
+            masked.count(live_nearest_assignment),
             1,
-            "Jump Resurrect: Teleport deve usare direttamente Nearest Walkable sulla posizione live confermata",
+            "Jump Resurrect: candidato fresco dalla posizione live, calcolato una sola volta",
         )
-        checks.require("PosisiBangkitAman" not in masked,
-                       "Jump Resurrect non deve riusare uno scratch calcolato mentre il player è morto")
         checks.require("Nearest Walkable Position(Event Player.PosisiMati)" not in masked,
                        "Jump Resurrect non deve calcolare Nearest Walkable dalla snapshot PosisiMati")
         checks.require("Call Subroutine(CariPosisiTeleportasiAman);" not in masked,
@@ -3209,34 +3231,33 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
         teleport_calls = list(iter_calls(actions, "Teleport"))
         resurrect_calls = list(iter_calls(actions, "Resurrect"))
         nearest_calls = list(iter_calls(actions, "Nearest Walkable Position"))
-        last_calls = list(iter_calls(actions, "Last Of"))
-        checks.equal(len(teleport_calls), 1, "Jump Resurrect: unico Teleport live riservato al vuoto")
+        checks.equal(len(teleport_calls), 2, "Jump Resurrect: Teleport prima e dopo Resurrect riservati al recupero sicuro")
         checks.equal(len(resurrect_calls), 1, "Jump Resurrect: deve esistere un solo Resurrect")
-        checks.equal(len(nearest_calls), 1, "Jump Resurrect: unico Nearest Walkable live nel vuoto")
-        checks.equal(len(last_calls), 1, "Jump Resurrect: deve mantenere Last Of sulla posizione live verificata nel client")
-        if teleport_calls and resurrect_calls:
-            checks.require(resurrect_calls[0].start < teleport_calls[0].start,
-                           "Jump Resurrect deve tornare in vita prima del Teleport dal vuoto")
+        checks.equal(len(nearest_calls), 1, "Jump Resurrect: unico Nearest Walkable dalla posizione corrente")
+        if len(teleport_calls) == 2 and len(resurrect_calls) == 1:
+            checks.require(teleport_calls[0].start < resurrect_calls[0].start < teleport_calls[1].start,
+                           "Jump Resurrect deve avere Teleport prima e dopo il ritorno in vita")
             checks.require(
                 not conditional_branches_containing(actions, resurrect_calls[0].start),
                 "Jump Resurrect deve essere incondizionato e fuori dal solo ramo vuoto",
             )
-            teleport_branches = conditional_branches_containing(actions, teleport_calls[0].start)
+        for teleport in teleport_calls:
+            teleport_branches = conditional_branches_containing(actions, teleport.start)
             checks.require(
-                any(void_guard in mask_strings(branch) for branch in teleport_branches),
-                "Jump Resurrect: Teleport deve essere confinato alla guardia vuoto",
+                len(teleport_branches) == 1
+                and code(teleport_branches[0]).startswith(code(unsafe_guard)),
+                "Jump Resurrect: Teleport deve essere confinato alla guardia sicurezza",
             )
             checks.require(
-                len(teleport_calls[0].args) == 2
-                and teleport_calls[0].args[1].strip()
-                == "Nearest Walkable Position(Last Of(Position Of(Event Player)))",
-                "Jump Resurrect: destinazione Teleport live non conforme al pattern verificato nel client",
+                len(teleport.args) == 2
+                and code(teleport.args[0]) == "EventPlayer"
+                and code(teleport.args[1]) == "EventPlayer.PosisiBangkitAman+Vector(0,0.500,0)",
+                "Jump Resurrect: entrambi i Teleport devono usare lo stesso candidato fresco con margine verticale",
             )
         if nearest_calls:
-            nearest_branches = conditional_branches_containing(actions, nearest_calls[0].start)
             checks.require(
-                any(void_guard in mask_strings(branch) for branch in nearest_branches),
-                "Jump Resurrect: Nearest Walkable deve essere confinata alla guardia vuoto",
+                not conditional_branches_containing(actions, nearest_calls[0].start),
+                "Jump Resurrect: candidato fresco deve essere calcolato senza condizioni",
             )
         checks.require("Start Forcing Player Position(" not in masked,
                        "Jump Resurrect non deve usare forcing di posizione")
@@ -3257,6 +3278,21 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                        "Jump Resurrect deve funzionare senza Wait/Loop")
         checks.require("Event Player.BangkitLompatDipakai = False;" not in masked,
                        "Jump Resurrect non deve riarmarsi durante la stessa pressione")
+        for lifecycle_name in ("SiapkanPemain", "TenangkanPemain"):
+            lifecycle = rule_by_subroutine(rules, lifecycle_name)
+            resets = re.findall(
+                r"\bEvent Player\.BangkitPerluTeleportasi\s*=(?!=)\s*([^;]+);",
+                mask_strings(rule_block(lifecycle, "actions") or "") if lifecycle else "",
+            )
+            checks.equal(resets, ["False"], f"Jump Resurrect: reset flag recupero in {lifecycle_name}")
+        for rule in rules:
+            writes = re.findall(r"\bBangkitPerluTeleportasi\s*=(?!=)", mask_strings(rule.body))
+            if writes:
+                checks.require(
+                    rule.start == resurrect.start
+                    or subroutine_target(rule) in {"SiapkanPemain", "TenangkanPemain"},
+                    f"{rule.name}: writer flag recupero Resurrect fuori dal tentativo o lifecycle",
+                )
         death_rearm = next((rule for rule in rules if event_type(rule) == "Player Died" and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body), None)
         checks.require(death_rearm is not None, "morte umana per Jump Resurrect assente")
         if death_rearm:
@@ -3306,11 +3342,14 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Event Player.Manusia == True;",
             "Event Player.BotOtomatis == False;",
             "Is Dummy Bot(Event Player) == False;",
-            "Is Alive(Event Player) == False;",
             "Event Player.BangkitLompatDipakai == True;",
             "Is Button Held(Event Player, Button(Jump)) == False;",
         ):
             checks.require(token in release_conditions, f"rilascio latch Resurrect senza guardia: {token}")
+        checks.require(
+            "Is Alive(" not in mask_strings(release_conditions),
+            "rilascio latch Resurrect deve funzionare da vivo e da morto",
+        )
         release_actions = rule_block(resurrect_release, "actions") or ""
         checks.equal(
             re.sub(r"\s+", "", release_actions),
@@ -4532,7 +4571,6 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
         (
             rule for rule in rules_with_event(rules, "Player Died")
             if "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
-            and "Event Player.BangkitLompatDipakai = False;" in rule.body
         ),
         None,
     )

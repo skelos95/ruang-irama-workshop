@@ -2,6 +2,12 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Recupero Jump dopo cadute fuori mappa — 2026-09-27
+
+- Corretto il latch di Jump: non viene più azzerato a ogni morte, evitando tentativi automatici continui quando una resurrezione fallisce mentre il tasto resta premuto. Il rilascio lo riabilita sia da vivi sia da morti.
+- Adattato il posizionamento prima di Resurrect usato da Friendly. Un solo calcolo della destinazione camminabile alimenta il Teleport prima e dopo la resurrezione, con offset verticale di 0,5 m. Il recupero copre anche superfici vicine rilevate dal raycast ma lontane dalla navigazione; sul terreno vicino alla navigazione resta la resurrezione sul posto.
+- Nessuna eccezione per singole mappe, attesa, loop o forcing aggiunto. Flag per-player riscritto e azzerato nella stessa azione, oltre che nel setup/quiete. Test delle regole reali per morte ripetuta, rilascio, geometria controllata, Teleport su morto ignorato e due player; verifica nativa sulle mappe Schermaglia ancora necessaria.
+
 ## Fly al 1000% e controllo dei nomi impostazioni — 2026-09-27
 
 - Aumentato il limite Fly dal 500% al 1000%, mantenendo 25 secondi per la rampa Forward pura: 36 punti percentuali al secondo, da 5,5 a 55 m/s richiesti. Aggiornati HUD EN/ID/TH e test; reset degli input, indipendenza dei player, priorità Luck Acceleration e cleanup restano invariati.

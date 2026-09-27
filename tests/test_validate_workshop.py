@@ -1307,21 +1307,21 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "senza azioni Respawn")
 
-    def test_jump_resurrect_void_branch_requires_live_nearest_walkable_teleport(self) -> None:
+    def test_jump_resurrect_uses_current_position_instead_of_death_snapshot(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));",
-            "Teleport(Event Player, Nearest Walkable Position(Event Player.PosisiMati));",
+            "Nearest Walkable Position(Position Of(Event Player))",
+            "Nearest Walkable Position(Event Player.PosisiMati)",
         )
         self.assert_rejected(mutated, "posizione live")
 
-    def test_jump_resurrect_keeps_the_live_confirmed_last_of_wrapper(self) -> None:
+    def test_jump_resurrect_rejects_a_stale_walkable_candidate(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.replace_in_rule(
             resurrect,
-            "Nearest Walkable Position(Last Of(Position Of(Event Player)))",
-            "Nearest Walkable Position(Position Of(Event Player))",
+            "Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));",
+            "",
         )
         self.assert_rejected(mutated, "posizione live")
 
@@ -1342,14 +1342,43 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.inject_action(resurrect, "Event Player.PosisiTujuanTeleportasi = Position Of(First Of(Spawn Points(Team Of(Event Player))));")
         self.assert_rejected(mutated, "fallback Spawn Room")
 
-    def test_jump_resurrect_returns_to_life_before_void_teleport(self) -> None:
+    def test_jump_resurrect_requires_recovery_teleport_before_and_after_revive(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        teleport = "Teleport(Event Player, Nearest Walkable Position(Last Of(Position Of(Event Player))));"
-        revive = "Resurrect(Event Player);"
-        changed = resurrect.body.replace(teleport, "__TELEPORT_PLACEHOLDER__;", 1)
-        changed = changed.replace(revive, teleport, 1).replace("__TELEPORT_PLACEHOLDER__;", revive, 1)
+        teleports = list(validator.iter_calls(resurrect.body, "Teleport"))
+        self.assertEqual(len(teleports), 2)
+        for index, teleport in enumerate(teleports):
+            with self.subTest(index=index):
+                changed = resurrect.body[:teleport.start] + resurrect.body[teleport.end + 1:]
+                mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
+                self.assert_rejected(mutated, "Teleport prima e dopo Resurrect")
+
+    def test_jump_resurrect_uses_one_fresh_candidate_for_both_teleports(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        for index, teleport in enumerate(validator.iter_calls(resurrect.body, "Teleport")):
+            with self.subTest(index=index):
+                absolute = validator.Call(teleport.name, teleport.raw, teleport.args,
+                                          resurrect.start + teleport.start, resurrect.start + teleport.end)
+                mutated = self.replace_call_argument(absolute, 1, "Event Player.PosisiMati")
+                self.assert_rejected(mutated, "stesso candidato fresco con margine verticale")
+
+    def test_jump_resurrect_rejects_candidate_overwrites(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Resurrect(Event Player);",
+            "Event Player.PosisiBangkitAman = Event Player.PosisiMati;\n\t\tResurrect(Event Player);",
+        )
+        self.assert_rejected(mutated, "candidato e guardia sicurezza freschi")
+
+    def test_jump_resurrect_walkable_query_is_done_once_before_recovery(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        candidate = "Event Player.PosisiBangkitAman = Nearest Walkable Position(Position Of(Event Player));"
+        changed = resurrect.body.replace(candidate, "", 1).replace(
+            "Resurrect(Event Player);", "Resurrect(Event Player);\n\t\t" + candidate, 1,
+        )
         mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
-        self.assert_rejected(mutated, "tornare in vita prima del Teleport")
+        self.assert_rejected(mutated, "candidato e guardia sicurezza freschi")
+        self.assert_rejected(self.inject_action(resurrect, candidate), "unico Nearest Walkable")
 
     def test_jump_resurrect_has_no_abort_or_generic_safe_teleport_dependency(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -1378,15 +1407,48 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "deve essere incondizionato")
 
-    def test_jump_resurrect_teleport_remains_confined_to_the_void_branch(self) -> None:
+    def test_jump_resurrect_teleport_remains_confined_to_the_unsafe_branch(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
-        void_guard = (
-            "If(Distance Between(Ray Cast Hit Position(Event Player.PosisiMati + Vector(0, 1, 0), "
-            "Event Player.PosisiMati - Vector(0, 3, 0), Empty Array, Empty Array, False), "
-            "Event Player.PosisiMati) > 2.500);"
+        unsafe_guard = "If(Event Player.BangkitPerluTeleportasi == True);"
+        self.assertEqual(resurrect.body.count(unsafe_guard), 2)
+        for index in range(2):
+            with self.subTest(index=index):
+                parts = resurrect.body.split(unsafe_guard)
+                parts[index] += "If(True);"
+                changed = unsafe_guard.join(parts[:index + 1]) + unsafe_guard.join(parts[index + 1:])
+                mutated = self.source[:resurrect.start] + changed + self.source[resurrect.end:]
+                self.assert_rejected(mutated, "guardia sicurezza")
+
+    def test_jump_resurrect_detects_unwalkable_surfaces_even_when_raycast_hits(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        mutated = self.replace_in_rule(
+            resurrect,
+            "Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) > 2.500",
+            "False",
         )
-        mutated = self.replace_in_rule(resurrect, void_guard, "If(True);")
-        self.assert_rejected(mutated, "guardia vuoto")
+        self.assert_rejected(mutated, "guardia sicurezza include vuoto verticale e distanza")
+
+    def test_jump_resurrect_refreshes_and_clears_its_recovery_flag(self) -> None:
+        resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
+        flag = re.search(r"Event Player\.BangkitPerluTeleportasi = Or\([^;]+;", resurrect.body)
+        self.assertIsNotNone(flag)
+        assert flag is not None
+        for assignment in (flag.group(0), "Event Player.BangkitPerluTeleportasi = False;"):
+            with self.subTest(assignment=assignment):
+                mutated = self.replace_in_rule(resurrect, assignment, "")
+                self.assert_rejected(mutated, "candidato e guardia sicurezza freschi")
+
+    def test_jump_resurrect_recovery_flag_is_cleared_by_setup_and_cleanup(self) -> None:
+        for lifecycle_name in ("SiapkanPemain", "TenangkanPemain"):
+            with self.subTest(lifecycle=lifecycle_name):
+                lifecycle = self.rule(lambda rule: validator.subroutine_target(rule) == lifecycle_name)
+                mutated = self.replace_in_rule(lifecycle, "Event Player.BangkitPerluTeleportasi = False;", "")
+                self.assert_rejected(mutated, f"reset flag recupero in {lifecycle_name}")
+
+    def test_jump_resurrect_recovery_flag_cannot_be_written_by_another_feature(self) -> None:
+        menu = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
+        mutated = self.inject_action(menu, "Event Player.BangkitPerluTeleportasi = True;")
+        self.assert_rejected(mutated, "writer flag recupero Resurrect fuori dal tentativo o lifecycle")
 
     def test_jump_resurrect_reapplies_fly_after_effect_restore(self) -> None:
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
@@ -1417,6 +1479,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         resurrect = self.rule(lambda rule: "Resurrect(Event Player)" in rule.body and "Button(Jump)" in rule.body)
         mutated = self.inject_action(resurrect, "Event Player.BangkitLompatDipakai = False;")
         self.assert_rejected(mutated, "non deve riarmarsi durante la stessa pressione")
+
+    def test_redeath_cannot_rearm_jump_resurrect_while_jump_is_held(self) -> None:
+        death = self.rule(
+            lambda rule: validator.event_type(rule) == "Player Died"
+            and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
+        )
+        mutated = self.inject_action(death, "Event Player.BangkitLompatDipakai = False;")
+        self.assert_rejected(mutated, "morte non deve riarmare il latch Resurrect")
 
     def test_self_kill_requires_an_exact_three_second_timestamp(self) -> None:
         self_kill = self.rule(
@@ -1463,7 +1533,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "rilascio Jump deve riarmare")
 
-    def test_jump_resurrect_release_requires_human_dead_guards(self) -> None:
+    def test_jump_resurrect_release_requires_human_guards(self) -> None:
         release = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Is Button Held(Event Player, Button(Jump)) == False;" in rule.body
@@ -1471,12 +1541,24 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         for guard in (
             "Event Player.Manusia == True;",
+            "Event Player.BotOtomatis == False;",
             "Is Dummy Bot(Event Player) == False;",
-            "Is Alive(Event Player) == False;",
+            "Event Player.BangkitLompatDipakai == True;",
         ):
             with self.subTest(guard=guard):
                 mutated = self.replace_in_rule(release, guard, "")
                 self.assert_rejected(mutated, "rilascio latch Resurrect senza guardia")
+
+    def test_jump_resurrect_release_works_alive_and_dead(self) -> None:
+        release = self.rule(
+            lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+            and "Is Button Held(Event Player, Button(Jump)) == False;" in rule.body
+            and "Event Player.BangkitLompatDipakai = False;" in rule.body
+        )
+        for alive in ("True", "False"):
+            with self.subTest(alive=alive):
+                mutated = self.inject_condition(release, f"Is Alive(Event Player) == {alive};")
+                self.assert_rejected(mutated, "rilascio latch Resurrect deve funzionare da vivo e da morto")
 
     def test_ghost_wall_phasing_must_keep_floors_solid(self) -> None:
         physics = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanFisikaHantuTerbang")
@@ -2058,7 +2140,6 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         death_prompt = self.rule(
             lambda rule: validator.event_type(rule) == "Player Died"
             and "Event Player.PosisiMati = Position Of(Event Player);" in rule.body
-            and "Event Player.BangkitLompatDipakai = False;" in rule.body
         )
         mutated = self.replace_in_rule(death_prompt, "\n\t\tIs Alive(Event Player) == False;", "")
         self.assert_rejected(mutated, "Bangkit Lompat deve attendere la morte completa")
@@ -4020,8 +4101,7 @@ class RepositoryMetadataTests(unittest.TestCase):
 
     def test_obsolete_jump_resurrect_claim_is_rejected(self) -> None:
         claims = (
-            "Jump Resurrect usa sempre Nearest Walkable Position.",
-            "Teleport del cadavere prima di Resurrect.",
+            "Jump Resurrect teletrasporta sempre su Nearest Walkable Position.",
             "Se non esiste un terreno sicuro il player resta morto.",
             "Nel vuoto usa Nearest Walkable Position(PosisiMati).",
         )
@@ -4040,6 +4120,15 @@ class RepositoryMetadataTests(unittest.TestCase):
                         for error in self.metadata_errors(root)
                     )
                 )
+
+    def test_current_jump_resurrect_preparation_is_allowed_in_docs(self) -> None:
+        claims = (
+            "Calcola sempre Nearest Walkable Position dalla posizione corrente prima di Resurrect.",
+            "Solo se il punto è insicuro: Teleport del cadavere prima di Resurrect e di nuovo dopo.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim):
+                self.assertFalse(any(pattern.search(claim) for _, pattern in validator.OBSOLETE_CURRENT_TEXT_PATTERNS))
 
     def test_maintenance_workflow_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
