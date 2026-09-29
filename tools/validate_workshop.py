@@ -128,6 +128,8 @@ SCHEDULER_SUBROUTINES = {
     "ProsesSimpananPemain",
     "ProsesNasibPemain",
     "ProsesTerbangPemain",
+    "ProsesBotPemain",
+    "RawatBotBuatan",
 }
 PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanMusik",
@@ -3706,11 +3708,37 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             checks.require(f"Call Subroutine({name});" in scheduler.body,
                            f"scheduler non chiama {name}")
         scheduler_packed = re.sub(r"\s+", "", mask_strings(scheduler.body))
-        checks.require(
-            "CallSubroutine(ProsesCepatPemain);CallSubroutine(ProsesNasibPemain);"
-            "CallSubroutine(ProsesTerbangPemain);" in scheduler_packed,
-            "Fly: scheduler deve chiamare il motore 20 Hz subito dopo Try Your Luck nello stesso ramo per-player",
-        )
+        for gate, label in (
+            ("If(And(Is Dummy Bot(Global.PemainAktif) == False, Global.PemainAktif.BotOtomatis == False));Call Subroutine(ProsesCepatPemain);", "classificazione e isolamento bot"),
+            ("If(Or(Global.PemainAktif.KartuNasibAktif == True, Or(Global.PemainAktif.PutaranKartuNasib > 0, Or(Global.PemainAktif.EfekNasib != 0, Global.PemainAktif.WaktuIkonNasibBerakhir > 0))));Call Subroutine(ProsesNasibPemain);End;", "Luck attivo o pulizia icona pendente"),
+            ("If(And(Global.PemainAktif.Manusia == True, Global.PemainAktif.ModeTerbangAktif == True));Call Subroutine(ProsesTerbangPemain);End;", "Fly solo umano attivo"),
+            ("If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.HalamanMenu == 1, Global.PemainAktif.HalamanMenu == 4))));Call Subroutine(ProsesSimpananPemain);End;", "cache solo menu Camera/Revenge"),
+            ("Else;If(Global.LangkahPenjadwal % 2 == Slot Of(Global.PemainAktif) % 2);Call Subroutine(ProsesBotPemain);End;End;", "manutenzione bot isolata 10 Hz"),
+            ("If(Global.LangkahPenjadwal % 20 == 0);Call Subroutine(RawatBotBuatan);Global.PemainTeksPembersihan = Null;Call Subroutine(BersihkanTeksYatim);End;", "slot dummy e pulizia 1 Hz"),
+        ):
+            checks.require(re.sub(r"\s+", "", gate) in scheduler_packed,
+                           f"scheduler a stati: {label}")
+        calls_in_order = [scheduler.body.find(f"Call Subroutine({name});") for name in
+                          ("ProsesCepatPemain", "ProsesNasibPemain", "ProsesTerbangPemain")]
+        checks.require(calls_in_order == sorted(calls_in_order),
+                       "Fly: scheduler deve chiamare il motore dopo Try Your Luck")
+        vision_guard = "If(Is True For Any(Global.SalinanDaftarPemain, Player Variable(Current Array Element, PrivasiNasibAktif) == True));"
+        checks.require(re.sub(r"\s+", "", vision_guard + vision_cache) in scheduler_packed,
+                       "Vision: filtro pubblico solo con Vision attiva")
+        checks.require("Else;If(CountOf(Global.PenontonVisiNasib)>0);Global.PenontonVisiNasib=EmptyArray;End;End;" in scheduler_packed,
+                       "Vision: svuotare il pubblico residuo una sola volta")
+        bot_cycle = rule_by_subroutine(rules, "ProsesBotPemain")
+        checks.require(bot_cycle is not None, "manutenzione bot dedicata assente")
+        if bot_cycle:
+            target_call = next(iter(iter_calls(bot_cycle.body, "Filtered Array")), None)
+            phase = "If(Global.LangkahPenjadwal % 4 == Slot Of(Global.PemainAktif) % 4);"
+            checks.require(target_call is not None and any(phase in branch.splitlines()[0]
+                for branch in conditional_branches_containing(bot_cycle.body, target_call.start)),
+                "target dummy: fase 5 Hz assente")
+            checks.require("Global.PemainAktif.KunciBotAktif = False;" in bot_cycle.body
+                           and "Has Spawned(Global.PemainAktif) == False" in bot_cycle.body
+                           and "Is Alive(Global.PemainAktif) == False" in bot_cycle.body,
+                           "manutenzione bot: riarmo morte/rinascita assente")
         motor_calls = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
                        if call.args == ("ProsesTerbangPemain",)]
         checks.require(len(motor_calls) == 1 and motor_calls[0][0].start == scheduler.start,
@@ -3821,7 +3849,7 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
     checks.require("Custom String(\"□\")" not in source,
                    "Try Your Luck non deve creare una carta testuale")
     for rule in rules:
-        if any(token in rule.body for token in ("KartuNasibAktif", "PutaranKartuNasib", "EfekNasib")):
+        if any(token in rule.body for token in ("KartuNasibAktif", "PutaranKartuNasib", "EfekNasib")) and not rule.name.startswith("04g -"):
             checks.require(action_loop_count(rule.body) == 0,
                            f"{rule.name}: Try Your Luck deve essere a stati, senza Loop")
             if subroutine_target(rule) == "ProsesNasibPemain":
@@ -5271,12 +5299,12 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     if cycle:
         checks.require("Global.PemainAktif.HudPemainDibuat == True" in cycle.body,
                        "rilascio stabile lock umano richiede HudPemainDibuat == True")
-        checks.require(
-            "Global.PemainAktif.BotOtomatis == True" in cycle.body
-            and "Global.PemainAktif.SudahDiperiksa == True" in cycle.body
-            and "Global.PemainAktif.KunciBotAktif == True" in cycle.body,
-            "registrazione bot BotOtomatis/SudahDiperiksa/KunciBotAktif incompleta",
-        )
+        bot_cycle = rule_by_subroutine(rules, "ProsesBotPemain")
+        checks.require(bot_cycle is not None and all(token in bot_cycle.body for token in (
+            "Global.PemainAktif.BotOtomatis == True", "Global.PemainAktif.SudahDiperiksa == True",
+            "Global.PemainAktif.KunciBotAktif == True", "Global.PemainAktif.PindahTimDiproses = False;",
+            "Global.PemainAktif.SiklusPemainAktif = False;", "Global.PemainSiklusGlobal = Null;")),
+            "registrazione bot BotOtomatis/SudahDiperiksa/KunciBotAktif incompleta")
         for pattern, label in (
             (r"Global\.PemainAktif\.PindahTimDiproses\s*==\s*True", "PindahTimDiproses == True"),
             (r"Global\.PemainAktif\.PindahTimDiproses\s*=\s*False;", "rilascio PindahTimDiproses"),
@@ -5822,104 +5850,43 @@ def validate_dummy_slot_management(
     rules: list[Rule],
     compact,
 ) -> None:
-    for team in ("Team 1", "Team 2"):
-        create_rules = [
-            rule for rule in rules
-            if f"Number Of Players({team}) < Number Of Slots({team}) - 1;" in rule.body
-            and "Call Subroutine(BuatBotBuatanTim);" in rule.body
-        ]
-        checks.equal(len(create_rules), 1, f"numero regole creazione dummy {team}")
-        if create_rules:
-            create_rule = create_rules[0]
-            checks.equal(
-                compact(event_block(create_rule)),
-                compact("Ongoing - Global;"),
-                f"creazione dummy {team}: evento globale esatto",
-            )
-            for token in (
-                f"Count Of(Spawn Points({team})) > 0;",
-                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;",
-            ):
-                checks.require(token in create_rule.body, f"creazione dummy {team} non sicura: {token}")
-            create_conditions = rule_block(create_rule, "conditions")
-            create_actions = rule_block(create_rule, "actions")
-            checks.require(create_conditions is not None,
-                           f"creazione dummy {team}: blocco conditions assente")
-            checks.require(create_actions is not None,
-                           f"creazione dummy {team}: blocco actions assente")
-            if create_conditions is not None:
-                expected_create_conditions = f"""
-                    Global.Siap == True;
-                    Is Game In Progress == True;
-                    Global.PemainSiklusGlobal == Null;
-                    Number Of Players({team}) < Number Of Slots({team}) - 1;
-                    Current Game Mode == Game Mode(Skirmish);
-                    Count Of(Spawn Points({team})) > 0;
-                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) == 0;
-                """
-                checks.equal(
-                    compact(create_conditions),
-                    compact(expected_create_conditions),
-                    f"creazione dummy {team}: condizioni esatte e raggiungibili",
-                )
-            if create_actions is not None:
-                expected_create_actions = f"""
-                    Global.TimBotBuatanAktif = {team};
-                    Call Subroutine(BuatBotBuatanTim);
-                """
-                checks.equal(
-                    compact(create_actions),
-                    compact(expected_create_actions),
-                    f"creazione dummy {team}: azione esatta tramite subroutine condivisa",
-                )
-
-        release_rules = [
-            rule for rule in rules
-            if f"Number Of Players({team}) >= Number Of Slots({team});" in rule.body
-            and "Call Subroutine(LepasBotBuatanTim);" in rule.body
-        ]
-        checks.equal(len(release_rules), 1, f"numero regole rilascio slot dummy {team}")
-        if release_rules:
-            release_rule = release_rules[0]
-            checks.equal(
-                compact(event_block(release_rule)),
-                compact("Ongoing - Global;"),
-                f"rilascio dummy {team}: evento globale esatto",
-            )
-            checks.require(
-                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;"
-                in release_rule.body,
-                f"rilascio dummy {team} incompleto: filtro presenza dummy",
-            )
-            release_conditions = rule_block(release_rule, "conditions")
-            release_actions = rule_block(release_rule, "actions")
-            checks.require(release_conditions is not None,
-                           f"rilascio dummy {team}: blocco conditions assente")
-            checks.require(release_actions is not None,
-                           f"rilascio dummy {team}: blocco actions assente")
-            if release_conditions is not None:
-                expected_release_conditions = f"""
-                    Global.Siap == True;
-                    Is Game In Progress == True;
-                    Global.PemainSiklusGlobal == Null;
-                    Number Of Players({team}) >= Number Of Slots({team});
-                    Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;
-                """
-                checks.equal(
-                    compact(release_conditions),
-                    compact(expected_release_conditions),
-                    f"rilascio dummy {team}: condizioni esatte e raggiungibili",
-                )
-            if release_actions is not None:
-                expected_release_actions = f"""
-                    Global.TimBotBuatanAktif = {team};
-                    Call Subroutine(LepasBotBuatanTim);
-                """
-                checks.equal(
-                    compact(release_actions),
-                    compact(expected_release_actions),
-                    f"rilascio dummy {team}: azione esatta tramite subroutine condivisa",
-                )
+    managers = [rule for rule in rules if subroutine_target(rule) == "RawatBotBuatan"]
+    checks.equal(len(managers), 1, "numero manutenzioni slot dummy")
+    if managers:
+        manager = managers[0]
+        checks.equal(compact(event_block(manager)), compact("Subroutine; RawatBotBuatan;"),
+                     "slot dummy: evento subroutine esatto")
+        expected = """
+            Abort If(Global.Siap == False);
+            Abort If(Is Game In Progress == False);
+            Abort If(Global.PemainSiklusGlobal != Null);
+        """
+        for team in (1, 2):
+            expected += f"""
+                If(Number Of Players(Team {team}) >= Number Of Slots(Team {team}));
+                    If(Count Of(Filtered Array(All Players(Team {team}), Is Dummy Bot(Current Array Element) == True)) > 0);
+                        Global.TimBotBuatanAktif = Team {team};
+                        Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed + 1;
+                        Call Subroutine(LepasBotBuatanTim);
+                    End;
+                Else;
+                    If(And(Current Game Mode == Game Mode(Skirmish), And(Number Of Players(Team {team}) < Number Of Slots(Team {team}) - 1, And(Count Of(Spawn Points(Team {team})) > 0, And(Count Of(Filtered Array(All Players(Team {team}), Is Dummy Bot(Current Array Element) == True)) == 0, Total Time Elapsed >= Global.WaktuCobaBotBuatanTim{team})))));
+                        Global.TimBotBuatanAktif = Team {team};
+                        Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed + 1;
+                        Call Subroutine(BuatBotBuatanTim);
+                    End;
+                End;
+            """
+            initializer = next((r for r in rules if r.name.startswith("00 -")), None)
+            checks.require(initializer is not None and f"Global.WaktuCobaBotBuatanTim{team} = 0;" in initializer.body,
+                           f"cooldown dummy Team {team}: inizializzazione assente")
+        checks.equal(compact(mask_strings(rule_block(manager, "actions") or "")), compact(expected),
+                     "slot dummy: condizioni, cooldown e azioni esatte")
+        for routine in ("BuatBotBuatanTim", "LepasBotBuatanTim"):
+            owners = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
+                      if call.args == (routine,)]
+            checks.require(len(owners) == 2 and all(rule == manager for rule, _ in owners),
+                           f"slot dummy: {routine} deve essere chiamata solo dalla manutenzione 1 Hz")
 
     create_dummy = rule_by_subroutine(rules, "BuatBotBuatanTim")
     checks.require(create_dummy is not None, "subroutine BuatBotBuatanTim assente")
@@ -6234,8 +6201,8 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         "And(Is Alive(Current Array Element), "
         "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))"
     )
-    dummy_cycle = rule_by_subroutine(rules, "ProsesSiklusPemain")
-    checks.require(dummy_cycle is not None, "cache target dummy 10 Hz assente")
+    dummy_cycle = rule_by_subroutine(rules, "ProsesBotPemain")
+    checks.require(dummy_cycle is not None, "cache target dummy 5 Hz assente")
     if dummy_cycle:
         target_filters = [
             call for call in iter_calls(dummy_cycle.body, "Filtered Array")
@@ -6250,7 +6217,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         checks.require(
             "Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Distance Between(Global.PemainAktif, Current Array Element))));"
             in dummy_cycle.body,
-            "cache target dummy non seleziona il più vicino a 10 Hz",
+            "cache target dummy non seleziona il più vicino a 5 Hz",
         )
 
     dummy_movement = next(

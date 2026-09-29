@@ -2,6 +2,14 @@
 
 Le versioni seguono lo stato del sorgente Workshop e della relativa validazione. Uno stato `live-ready` indica gate statici verdi e regressione client completata; la pubblicazione di un tag/release resta un passaggio separato.
 
+## Scheduler guidato dallo stato e carico inattivo — 2026-09-29
+
+- Separati i percorsi umani/in attesa di classificazione e bot: Fly solo attivo, Luck solo con stato o icona pendente, cache Camera/Revenge solo per le relative pagine aperte. Ingressi, quarantena cambio squadra e pulizia delle icone residue mantengono i propri controlli.
+- Vision evita il filtro del pubblico durante l'inattività e svuota l'ultimo pubblico una sola volta, conservando la reattività a 20 Hz quando in uso.
+- Accorpati quattro controlli globali degli slot dummy in una subroutine a 1 Hz, con cooldown di creazione indipendente per squadra impostato prima del tentativo. Follow target a 5 Hz; manutenzione morte/classificazione bot a 10 Hz.
+- Sorgente da 115 a 113 regole e da 62 a 64 subroutine, sempre 5 Wait e un Loop. Nessun cambiamento a testi, menu, Ghost/Fly, Travel, Revenge, Unkillable, esiti/durate della roulette o blocchi dei bot normali. Slot dummy e acquisizione del target seguono le nuove frequenze richieste.
+- Test del dispatch reale, stati residui Luck, pubblico Vision inattivo e manutenzione dummy con creazioni fallite, squadre indipendenti, rilascio slot e cleanup. La riduzione di chiamate nel modello non certifica la scomparsa dei crash del motore; resta necessaria una sessione reale prolungata.
+
 ## Recupero Jump dopo cadute fuori mappa — 2026-09-27
 
 - Corretto il latch di Jump: non viene più azzerato a ogni morte, evitando tentativi automatici continui quando una resurrezione fallisce mentre il tasto resta premuto. Il rilascio lo riabilita sia da vivi sia da morti.

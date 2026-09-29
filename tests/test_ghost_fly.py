@@ -483,8 +483,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
         for source, _ in self.sources:
             feature_rules = [
                 body
-                for _, body in workshop_rules(source)
-                if any(
+                for name, body in workshop_rules(source)
+                if not name.startswith("04g -") and any(
                     token in body
                     for token in (
                         "GambarHantuTerbang",

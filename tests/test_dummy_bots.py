@@ -74,10 +74,10 @@ class DummyBotFeatureTests(unittest.TestCase):
 
     def test_dummy_reserves_the_last_human_slot_and_leaves_at_full_team(self):
         for team in ("Team 1", "Team 2"):
-            self.assertIn(f"Number Of Players({team}) < Number Of Slots({team}) - 1;", self.it)
-            self.assertIn(f"Number Of Players({team}) >= Number Of Slots({team});", self.it)
+            self.assertIn(f"Number Of Players({team}) < Number Of Slots({team}) - 1,", self.it)
+            self.assertIn(f"If(Number Of Players({team}) >= Number Of Slots({team}));", self.it)
             self.assertIn(
-                f"Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0;",
+                f"If(Count Of(Filtered Array(All Players({team}), Is Dummy Bot(Current Array Element) == True)) > 0);",
                 self.it,
             )
         self.assertEqual(self.it.count("Call Subroutine(LepasBotBuatanTim);"), 2)
@@ -101,7 +101,7 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("(Event Player.KursorTeleportasiBotBuatan < 8 ? 8 : 12)", self.it)
         self.assertIn("Distance Between(Event Player.PosisiBangkitAman, Event Player.PosisiMati) >= 6", self.it)
         for source, mode in ((self.it, "Schermaglia"), (self.en, "Skirmish")):
-            self.assertEqual(source.count(f"Current Game Mode == Game Mode({mode});"), 3)
+            self.assertEqual(source.count(f"Current Game Mode == Game Mode({mode})"), 3)
             self.assertIn("Event Player.PosisiMati = Objective Position(Objective Index);", source)
             self.assertNotIn("Payload Position", source)
             self.assertNotIn("Flag Position(", source)
@@ -144,13 +144,14 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Direction and Turn Rate", movement)
             self.assertIn("Direction and Magnitude", movement)
 
-            scheduler = source.split(f'{rule_kw}("89b - Subrutin: Proses siklus pemain 10 Hz")', 1)[1].split(
+            scheduler = source.split(f'{rule_kw}("89b2 - Subrutin: Rawat bot 10 Hz dan target ikuti 5 Hz")', 1)[1].split(
                 f'{rule_kw}("89c - Subrutin: Proses simpanan pemain 1 Hz")', 1
             )[0]
             self.assertIn("TargetIkutiBotBuatan", scheduler)
             self.assertIn(f"Filtered Array({global_name}.PemainManusia", scheduler)
             self.assertIn("IzinkanBotBuatanMengikuti", scheduler)
             self.assertIn("Sorted Array", scheduler)
+            self.assertIn(f"{global_name}.LangkahPenjadwal % 4 == Slot Of({global_name}.PemainAktif) % 4", scheduler)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
 
     def test_dummy_follow_page_defaults_off_and_is_per_player(self):

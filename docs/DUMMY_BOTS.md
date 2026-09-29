@@ -19,6 +19,10 @@ Comportamento atteso:
 - se tutti gli umani nemici validi hanno Dummy Follow OFF, o non esiste alcun target idoneo, interrompe sia facing sia throttle; quando un player torna ON riparte verso il più vicino;
 - alla morte interrompe facing e throttle, azzera timestamp e cursore di ricerca e rientra nel normale ciclo di respawn.
 
+Dal 29 settembre 2026 la subroutine `RawatBotBuatan`, chiamata dallo scheduler una volta al secondo, sostituisce i quattro controlli globali di creazione/rimozione. Il rilascio ha priorità sulla creazione per ciascuna squadra; la manutenzione attende che non ci sia una registrazione riservata in corso. `WaktuCobaBotBuatanTim1` e `WaktuCobaBotBuatanTim2` vengono impostati a tempo corrente + 1 **prima** del tentativo di creazione, anche se il motore fallisce. Le squadre non condividono il cooldown. Un dummy scomparso viene rivalutato al successivo passaggio; non può causare tentativi più rapidi di uno al secondo. L'aggiunta/rimozione avviene quindi al passaggio 1 Hz idoneo, anziché tramite condizioni continue.
+
+La manutenzione delle singole entità bot resta a 10 Hz per morte/rinascita e rilascio della classificazione AI. Il solo filtro/ordinamento dei target follow passa da 10 a **5 Hz**: una nuova selezione può attendere fino a 0,2 secondi. Facing, throttle, distanza di arresto e revoca dei target non validi conservano le rivalutazioni precedenti. I bot non ricevono chiamate alle routine umane di menu, Fly, Luck o cache.
+
 Il throttle automatico è riservato ai dummy Workshop; gli iBot conservano collisioni e navigazione AI native, limitate al 20%. Il follow diretto può fermarsi contro un ostacolo: non viene aggiunto un sistema di navigazione intorno alle pareti. Il timestamp viene azzerato alla morte, riarmato al respawn e ripianificato dopo ogni tentativo. Prima di rimuovere un dummy vengono fermati facing e throttle, poi l'entità viene distrutta. La separazione tra guardia di creazione e guardia di rimozione evita il ciclo crea/distruggi quando una squadra oscilla vicino al limite.
 
 ## Menu 12 — Dummy Follow
@@ -31,4 +35,4 @@ La routine di uscita dalla spawn usa soltanto `Objective Position(Objective Inde
 
 I rami CTF, Hybrid, Escort e Push sono rimossi anche dal Teleport manuale. Se il motore restituisce una posizione nulla, il dummy resta in spawn e riprova al massimo una volta al secondo. La posizione finale deve distare fra 6 e 16 m dal target e superare i controlli di spazio libero e terreno. I tentativi proseguono finché il motore rileva il dummy nella Spawn Room.
 
-Le regole principali sono `03c`-`03i` e la subroutine `KunciBot`. I test automatici dedicati sono in `tests/test_dummy_bots.py` e `tests/test_dummy_spawn_retry.py`; questi ultimi eseguono il flusso reale con risposte geometriche controllate. La verifica della navmesh di Paraíso resta una prova nel client.
+Le regole principali sono `03c`, `03d` e `03f`-`03i`, con le subroutine `KunciBot` e `ProsesBotPemain`. I test automatici dedicati sono in `tests/test_dummy_bots.py`, `tests/test_dummy_maintenance.py` e `tests/test_dummy_spawn_retry.py`: eseguono i flussi con operazioni native e risposte geometriche controllate. La verifica della navmesh di Paraíso e della stabilità prolungata resta una prova nel client.

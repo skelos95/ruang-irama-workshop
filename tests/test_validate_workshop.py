@@ -1776,7 +1776,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         call = "Call Subroutine(ProsesTerbangPemain);"
         mutated = self.replace_in_rule(scheduler, call, "If(Global.LangkahPenjadwal % 2 == 0);\n"
                                        f"\t\t\t\t\t{call}\n\t\t\t\tEnd;")
-        self.assert_rejected(mutated, "motore 20 Hz subito dopo Try Your Luck")
+        self.assert_rejected(mutated, "scheduler a stati: Fly solo umano attivo")
 
     def test_fly_state_cannot_be_written_from_another_controller(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -2976,7 +2976,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "movimento dummy: facing argomento 4")
 
     def test_native_dummy_cache_targets_only_the_opposing_team(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif))",
@@ -2984,7 +2984,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
     def test_native_dummy_cache_enemy_predicate_cannot_be_negated(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         predicate = (
             "And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, "
             "And(Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True, "
@@ -2996,7 +2996,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.source[:cycle.start] + changed + self.source[cycle.end:]
         self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
     def test_native_dummy_cache_targets_only_currently_registered_humans(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Player Variable(Current Array Element, Manusia) == True",
@@ -3004,7 +3004,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "cache target dummy: filtro deve essere l'umano nemico vivo opt-in")
     def test_native_dummy_cache_respects_per_player_follow_opt_out(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True",
@@ -3069,37 +3069,68 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "LepasBotBuatanTim incompleta")
 
     def test_dummy_creation_reserves_the_last_human_slot(self) -> None:
-        create = self.rule(
-            lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
-            and "Call Subroutine(BuatBotBuatanTim);" in rule.body
-        )
-        mutated = self.replace_in_rule(
-            create,
-            "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;",
-            "Number Of Players(Team 1) < Number Of Slots(Team 1);",
-        )
-        self.assert_rejected(mutated, "numero regole creazione dummy Team 1")
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "RawatBotBuatan")
+        mutated = self.replace_in_rule(manager,
+            "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1",
+            "Number Of Players(Team 1) < Number Of Slots(Team 1)")
+        self.assert_rejected(mutated, "slot dummy: condizioni, cooldown e azioni esatte")
 
     def test_dummy_creation_cannot_have_an_impossible_condition(self) -> None:
-        create = self.rule(
-            lambda rule: "Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;" in rule.body
-            and "Call Subroutine(BuatBotBuatanTim);" in rule.body
-        )
-        mutated = self.inject_condition(create, "False == True;")
-        self.assert_rejected(mutated, "creazione dummy Team 1: condizioni esatte e raggiungibili")
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "RawatBotBuatan")
+        mutated = self.replace_in_rule(manager, "Abort If(Global.Siap == False);",
+                                       "Abort If(Global.Siap == False); Abort If(True);")
+        self.assert_rejected(mutated, "slot dummy: condizioni, cooldown e azioni esatte")
 
     def test_dummy_creation_is_limited_to_skirmish(self) -> None:
-        gate = "Current Game Mode == Game Mode(Skirmish);"
-        for team in ("Team 1", "Team 2"):
-            create = self.rule(
-                lambda rule: f"Number Of Players({team}) < Number Of Slots({team}) - 1;" in rule.body
-                and "Call Subroutine(BuatBotBuatanTim);" in rule.body
-            )
-            for replacement in ("", gate.replace("Skirmish", "Team Deathmatch"),
-                                "Or(Current Game Mode == Game Mode(Skirmish), Current Game Mode == Game Mode(Capture The Flag)) == True;"):
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "RawatBotBuatan")
+        for team in (1, 2):
+            gate = f"Current Game Mode == Game Mode(Skirmish), And(Number Of Players(Team {team})"
+            for replacement in ("True", "Current Game Mode == Game Mode(Team Deathmatch)"):
                 with self.subTest(team=team, replacement=replacement):
-                    mutated = self.replace_in_rule(create, gate, replacement)
-                    self.assert_rejected(mutated, f"creazione dummy {team}: condizioni esatte e raggiungibili")
+                    mutated = self.replace_in_rule(manager, gate,
+                        f"{replacement}, And(Number Of Players(Team {team})")
+                    self.assert_rejected(mutated, "slot dummy: condizioni, cooldown e azioni esatte")
+
+    def test_dummy_creation_cooldown_cannot_be_removed_or_shared_between_teams(self) -> None:
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "RawatBotBuatan")
+        for team in (1, 2):
+            for old, new in (
+                (f"Total Time Elapsed >= Global.WaktuCobaBotBuatanTim{team}", "True"),
+                (f"Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed + 1;", f"Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed;"),
+                (f"Global.WaktuCobaBotBuatanTim{team}", f"Global.WaktuCobaBotBuatanTim{3-team}"),
+            ):
+                with self.subTest(team=team, old=old):
+                    self.assert_rejected(self.replace_in_rule(manager, old, new),
+                                         "slot dummy: condizioni, cooldown e azioni esatte")
+
+    def test_scheduler_requires_state_gates_and_bot_cadences(self) -> None:
+        scheduler = self.rule(lambda rule: rule.name.startswith("04g -"))
+        for old, new in (
+            ("Is Dummy Bot(Global.PemainAktif) == False", "True"),
+            ("Global.PemainAktif.BotOtomatis == False", "True"),
+            ("Global.PemainAktif.WaktuIkonNasibBerakhir > 0", "False"),
+            ("Global.PemainAktif.ModeTerbangAktif == True", "True"),
+            ("Global.PemainAktif.MenuTerbuka == True", "True"),
+            ("Global.PemainAktif.HalamanMenu == 4", "Global.PemainAktif.HalamanMenu == 3"),
+            ("If(Global.LangkahPenjadwal % 2 == Slot Of(Global.PemainAktif) % 2);", "If(True);"),
+        ):
+            with self.subTest(old=old):
+                self.assert_rejected(self.replace_in_rule(scheduler, old, new), "scheduler a stati:")
+
+    def test_vision_cache_requires_active_vision_and_last_viewer_cleanup(self) -> None:
+        scheduler = self.rule(lambda rule: rule.name.startswith("04g -"))
+        for old, new, error in (
+            ("Is True For Any(Global.SalinanDaftarPemain, Player Variable(Current Array Element, PrivasiNasibAktif) == True)", "True", "Vision: filtro pubblico"),
+            ("Global.PenontonVisiNasib = Empty Array;", "", "Vision: svuotare il pubblico"),
+        ):
+            with self.subTest(old=old):
+                self.assert_rejected(self.replace_in_rule(scheduler, old, new), error)
+
+    def test_dummy_follow_requires_five_hz_phase(self) -> None:
+        routine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
+        mutated = self.replace_in_rule(routine,
+            "If(Global.LangkahPenjadwal % 4 == Slot Of(Global.PemainAktif) % 4);", "If(True);")
+        self.assert_rejected(mutated, "target dummy: fase 5 Hz assente")
 
     def test_dummy_spawn_teleport_is_limited_to_skirmish(self) -> None:
         spawn = self.rule(lambda rule: rule.name.startswith("03f -"))
@@ -3110,12 +3141,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 self.assert_rejected(mutated, "teleport dummy: condizioni esatte solo Schermaglia")
 
     def test_dummy_is_removed_when_the_team_needs_the_last_slot(self) -> None:
-        release = self.rule(
-            lambda rule: "Number Of Players(Team 1) >= Number Of Slots(Team 1);" in rule.body
-            and "Call Subroutine(LepasBotBuatanTim);" in rule.body
-        )
-        mutated = self.replace_in_rule(release, "Call Subroutine(LepasBotBuatanTim);", "Abort;")
-        self.assert_rejected(mutated, "numero regole rilascio slot dummy Team 1")
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "RawatBotBuatan")
+        mutated = self.replace_in_rule(manager, "Call Subroutine(LepasBotBuatanTim);", "Abort;")
+        self.assert_rejected(mutated, "slot dummy: condizioni, cooldown e azioni esatte")
 
     def test_dummy_release_cannot_abort_before_cleanup(self) -> None:
         release = self.rule(lambda rule: validator.subroutine_target(rule) == "LepasBotBuatanTim")
@@ -3241,7 +3269,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "rilascio stabile lock")
 
     def test_team_switch_lock_waits_for_stable_automatic_bot(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Global.PemainAktif.SudahDiperiksa == True",
