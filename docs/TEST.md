@@ -6,9 +6,17 @@ I test live della 0.8.1 sono stati completati sul client aggiornato ad agosto 20
 
 Questa attestazione conserva il riscontro storico della 0.8.1. La release `v0.8.1` e il sorgente successivo su `main` sono revisioni distinte, come indicato nel [`README`](../README.md): associare ogni nuova esecuzione della matrice allo SHA effettivamente importato. In assenza di quel verbale, i gate automatici verdi non attestano da soli fluidità, isolamento degli input o assenza di leak nel client.
 
+## Scheduler inattivo del 29 settembre 2026
+
+La revisione usa 113 regole, 64 subroutine, 5 Wait e un solo Loop. I test `test_scheduler_load.py`, `test_menu_load_regressions.py` e `test_dummy_maintenance.py` eseguono le decisioni del sorgente con risposte native controllate. Verificano esclusione dei bot dai percorsi umani, chiamate Luck/Fly/cache solo quando necessarie, scadenza dell'icona HEART anche in quarantena, nessun filtro Vision in idle, cooldown prima di creazioni fallite, indipendenza delle squadre e rilascio dello slot senza oscillazioni. La creazione della UI e il motore di Overwatch non sono eseguiti da questi modelli.
+
+Per la verifica nel client, importare il codice completo in una lobby nuova e impostare durata 60 minuti. Confrontare la stessa mappa/configurazione e diagnostica con la versione precedente: un umano con due dummy; poi anche due bot normali; infine più umani con ingressi, uscite e cambi squadra. Annotare SHA, numero delle entità, LOAD/AVG/MAX, HUD/IWT e tempo dell'eventuale errore. Il riavvio previsto a 60 minuti va distinto da un crash.
+
+Verificare inoltre cambio squadra appena entrati e durante l'icona finale HEART; attivazione/scadenza di Vision e ultimo spettatore che esce; Fly ON/OFF e morte/rinascita; Camera/Revenge aperti mentre cambiano i target; follow opt-in/opt-out e dummy che lascia spazio a una squadra piena. La manutenzione slot è a 1 Hz, il target follow a 5 Hz: sono le sole variazioni di frequenza visibili previste. Nessun esito di questa nuova matrice è ancora attestato come prova nativa.
+
 ## Regressione cambio squadra del 25 settembre 2026
 
-La PR #76 è stata ritirata dopo un crash ripetibile al primo cambio squadra, anche senza aprire menu. I 561 test allora superati non simulavano il crash del motore. Il runtime corrente e i suoi controlli sono ripristinati esattamente da `2529608`; non è stata individuata una singola istruzione responsabile.
+La PR #76 è stata ritirata dopo un crash ripetibile al primo cambio squadra, anche senza aprire menu. I 561 test allora superati non simulavano il crash del motore. Il ripristino ha riportato runtime e controlli esattamente a `2529608`; le revisioni successive sono documentate nel changelog. Non è stata individuata una singola istruzione responsabile.
 
 Dopo l'import, avviare una nuova lobby e verificare: cambio squadra appena entrati senza usare menu; cambio dopo alcuni minuti; cambio con menu aperto; cambio mentre un altro player osserva o tiene aperta la pagina Camera/Vote. Ripetere con ricambio dei player e annotare SHA importato, modalità, mappa, numero di umani e messaggio di chiusura, se presente. La conferma live del ripristino resta distinta dall'identità dei file e dai controlli automatici.
 

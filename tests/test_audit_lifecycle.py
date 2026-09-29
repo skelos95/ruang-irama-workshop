@@ -91,6 +91,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         super().__init__(source)
         self.current = None
         self.globals["PilihanPerluDihitung"] = False
+        self.globals.update(Siap=True)
         self.calls = []
         self.lock_at_bot_call = []
         self.initializers = "\n".join(validator.mask_strings(rule.body) for rule in self.rules)
@@ -238,7 +239,12 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         admitted = super().join(identity)
         if admitted:
             self.players[identity].update(Manusia=True, PemainDipilih=None, JumlahPilihan=0, NamaTampilan=identity,
-                                          WarnaNama=(255, 255, 255, 255), alive=True)
+                                          WarnaNama=(255, 255, 255, 255), alive=True,
+                                          BotOtomatis=False, ModeTerbangAktif=False,
+                                          KartuNasibAktif=False, PutaranKartuNasib=0,
+                                          EfekNasib=0, WaktuIkonNasibBerakhir=0,
+                                          MenuTerbuka=False, HalamanMenu=-1)
+            self.players[identity]["slot"] = int(self.players[identity]["UrutanHUD"]) % 6
         return admitted
 
     def install_icons(self, identity, number):
@@ -390,9 +396,9 @@ class AuditLifecycleTests(unittest.TestCase):
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
                 for identity in ("alice", "bob"):
-                    for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 20),
-                                              ("ProsesTerbangPemain", 20), ("ProsesSiklusPemain", 10),
-                                              ("ProsesSimpananPemain", 1)):
+                    for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 0),
+                                              ("ProsesTerbangPemain", 0), ("ProsesSiklusPemain", 10),
+                                              ("ProsesSimpananPemain", 0)):
                         self.assertEqual(model.calls.count((identity, routine)), expected, (source, identity, routine))
 
     def test_bot_classifier_releases_only_its_own_reservation_before_engine_lock(self):

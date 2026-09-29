@@ -71,6 +71,8 @@ variables
 		67: KursorTeksPembersihan
 		68: PenontonVisiNasib
 		69: PilihanPerluDihitung
+		70: WaktuCobaBotBuatanTim1
+		71: WaktuCobaBotBuatanTim2
 	player:
 		0: SudahDiperiksa
 		1: BotOtomatis
@@ -258,6 +260,8 @@ subroutines
 	59: TerapkanFisikaHantuTerbang
 	60: ProsesTerbangPemain
 	61: BersihkanTeksYatim
+	62: ProsesBotPemain
+	63: RawatBotBuatan
 }
 
 rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
@@ -903,6 +907,8 @@ rule("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")
 		Global.PemainSiklusGlobal = Null;
 		Global.WaktuSiklusGlobal = 0;
 		Global.TimBotBuatanAktif = Team 1;
+		Global.WaktuCobaBotBuatanTim1 = 0;
+		Global.WaktuCobaBotBuatanTim2 = 0;
 		Global.RGBFase = 0;
 		Global.RGB = Custom Color(255, 80, 80, 255);
 		"Skor dan objektif tetap milik mode asli; penyelesaian pertandingan ditahan sampai penghitung waktu CHILL habis."
@@ -1312,99 +1318,46 @@ rule("03c - Bot: Kunci saat hidup kembali atau pahlawan berganti")
 	}
 }
 
-rule("03d - Bot: Buat satu bot acak untuk Tim 1")
+rule("03d - Subrutin: Rawat slot bot buatan kedua tim 1 Hz")
 {
 	event
 	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Game In Progress == True;
-		Global.PemainSiklusGlobal == Null;
-		Number Of Players(Team 1) < Number Of Slots(Team 1) - 1;
-		Current Game Mode == Game Mode(Skirmish);
-		Count Of(Spawn Points(Team 1)) > 0;
-		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0;
+		Subroutine;
+		RawatBotBuatan;
 	}
 
 	actions
 	{
-		Global.TimBotBuatanAktif = Team 1;
-		Call Subroutine(BuatBotBuatanTim);
-	}
-}
-
-rule("03d1 - Bot: Kosongkan slot Tim 1 untuk pemain")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Game In Progress == True;
-		Global.PemainSiklusGlobal == Null;
-		Number Of Players(Team 1) >= Number Of Slots(Team 1);
-		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) > 0;
-	}
-
-	actions
-	{
-		Global.TimBotBuatanAktif = Team 1;
-		Call Subroutine(LepasBotBuatanTim);
-	}
-}
-
-rule("03e - Bot: Buat satu bot acak untuk Tim 2")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Game In Progress == True;
-		Global.PemainSiklusGlobal == Null;
-		Number Of Players(Team 2) < Number Of Slots(Team 2) - 1;
-		Current Game Mode == Game Mode(Skirmish);
-		Count Of(Spawn Points(Team 2)) > 0;
-		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0;
-	}
-
-	actions
-	{
-		Global.TimBotBuatanAktif = Team 2;
-		Call Subroutine(BuatBotBuatanTim);
-	}
-}
-
-rule("03e1 - Bot: Kosongkan slot Tim 2 untuk pemain")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.Siap == True;
-		Is Game In Progress == True;
-		Global.PemainSiklusGlobal == Null;
-		Number Of Players(Team 2) >= Number Of Slots(Team 2);
-		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) > 0;
-	}
-
-	actions
-	{
-		Global.TimBotBuatanAktif = Team 2;
-		Call Subroutine(LepasBotBuatanTim);
+		Abort If(Global.Siap == False);
+		Abort If(Is Game In Progress == False);
+		Abort If(Global.PemainSiklusGlobal != Null);
+		"Utamakan slot pemain; beri jeda percobaan tiap tim sebelum membuat bot, termasuk bila mesin gagal."
+		If(Number Of Players(Team 1) >= Number Of Slots(Team 1));
+			If(Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) > 0);
+				Global.TimBotBuatanAktif = Team 1;
+				Global.WaktuCobaBotBuatanTim1 = Total Time Elapsed + 1;
+				Call Subroutine(LepasBotBuatanTim);
+			End;
+		Else;
+			If(And(Current Game Mode == Game Mode(Skirmish), And(Number Of Players(Team 1) < Number Of Slots(Team 1) - 1, And(Count Of(Spawn Points(Team 1)) > 0, And(Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == True)) == 0, Total Time Elapsed >= Global.WaktuCobaBotBuatanTim1)))));
+				Global.TimBotBuatanAktif = Team 1;
+				Global.WaktuCobaBotBuatanTim1 = Total Time Elapsed + 1;
+				Call Subroutine(BuatBotBuatanTim);
+			End;
+		End;
+		If(Number Of Players(Team 2) >= Number Of Slots(Team 2));
+			If(Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) > 0);
+				Global.TimBotBuatanAktif = Team 2;
+				Global.WaktuCobaBotBuatanTim2 = Total Time Elapsed + 1;
+				Call Subroutine(LepasBotBuatanTim);
+			End;
+		Else;
+			If(And(Current Game Mode == Game Mode(Skirmish), And(Number Of Players(Team 2) < Number Of Slots(Team 2) - 1, And(Count Of(Spawn Points(Team 2)) > 0, And(Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == True)) == 0, Total Time Elapsed >= Global.WaktuCobaBotBuatanTim2)))));
+				Global.TimBotBuatanAktif = Team 2;
+				Global.WaktuCobaBotBuatanTim2 = Total Time Elapsed + 1;
+				Call Subroutine(BuatBotBuatanTim);
+			End;
+		End;
 	}
 }
 
@@ -1618,24 +1571,44 @@ rule("04g - Utama global: Penjadwal pusat 20 Hz")
 		End;
 		"Salinan daftar pemain mencegah koleksi aktif berubah selama putaran penjadwal."
 		Global.SalinanDaftarPemain = All Players(All Teams);
-		Global.PenontonVisiNasib = Filtered Array(Global.SalinanDaftarPemain, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)));
+		If(Is True For Any(Global.SalinanDaftarPemain, Player Variable(Current Array Element, PrivasiNasibAktif) == True));
+			Global.PenontonVisiNasib = Filtered Array(Global.SalinanDaftarPemain, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True)));
+		Else;
+			If(Count Of(Global.PenontonVisiNasib) > 0);
+				Global.PenontonVisiNasib = Empty Array;
+			End;
+		End;
 		For Global Variable(IndeksPemainGlobal, 0, Count Of(Global.SalinanDaftarPemain), 1);
 			Global.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];
-			"Reservasi hanya mengurutkan penyiapan; pemain lain tetap diperbarui selama ada pendatang."
-			Call Subroutine(ProsesCepatPemain);
-			Call Subroutine(ProsesNasibPemain);
-			Call Subroutine(ProsesTerbangPemain);
-			"Gunakan slot pemain yang tetap agar pergantian daftar tidak menunda pekerjaan 10 Hz dan 1 Hz."
-			If(Global.LangkahPenjadwal % 2 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 2);
-				Call Subroutine(ProsesSiklusPemain);
-			End;
-			If(Global.LangkahPenjadwal % 20 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 20);
-				Call Subroutine(ProsesSimpananPemain);
+			"Entitas belum terklasifikasi tetap masuk penyiapan; bot terklasifikasi hanya masuk pemeliharaan bot."
+			If(And(Is Dummy Bot(Global.PemainAktif) == False, Global.PemainAktif.BotOtomatis == False));
+				Call Subroutine(ProsesCepatPemain);
+				"Tenggat ikon tetap diproses saat efek selesai atau pemain sedang berpindah tim."
+				If(Or(Global.PemainAktif.KartuNasibAktif == True, Or(Global.PemainAktif.PutaranKartuNasib > 0, Or(Global.PemainAktif.EfekNasib != 0, Global.PemainAktif.WaktuIkonNasibBerakhir > 0))));
+					Call Subroutine(ProsesNasibPemain);
+				End;
+				If(And(Global.PemainAktif.Manusia == True, Global.PemainAktif.ModeTerbangAktif == True));
+					Call Subroutine(ProsesTerbangPemain);
+				End;
+				"Pemulihan kamera dan inspeksi tetap berjalan selama karantina perpindahan tim."
+				If(Global.LangkahPenjadwal % 2 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 2);
+					Call Subroutine(ProsesSiklusPemain);
+				End;
+				If(Global.LangkahPenjadwal % 20 == (Global.PemainAktif.Manusia == True ? Global.PemainAktif.UrutanHUD : Slot Of(Global.PemainAktif)) % 20);
+					If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.HalamanMenu == 1, Global.PemainAktif.HalamanMenu == 4))));
+						Call Subroutine(ProsesSimpananPemain);
+					End;
+				End;
+			Else;
+				If(Global.LangkahPenjadwal % 2 == Slot Of(Global.PemainAktif) % 2);
+					Call Subroutine(ProsesBotPemain);
+				End;
 			End;
 		End;
 		Global.PemainAktif = Null;
 		Global.SalinanDaftarPemain = Empty Array;
 		If(Global.LangkahPenjadwal % 20 == 0);
+			Call Subroutine(RawatBotBuatan);
 			Global.PemainTeksPembersihan = Null;
 			Call Subroutine(BersihkanTeksYatim);
 		End;
@@ -3550,15 +3523,7 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 
 	actions
 	{
-		"Target bot buatan dan bidikan berat dihitung pada siklus 10 Hz, bukan dievaluasi setiap bingkai."
-		If(And(Is Dummy Bot(Global.PemainAktif) == True, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)));
-			Set Player Variable(Global.PemainAktif, DaftarTargetInspeksi, Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))));
-			If(Count Of(Global.PemainAktif.DaftarTargetInspeksi) > 0);
-				Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Distance Between(Global.PemainAktif, Current Array Element))));
-			Else;
-				Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan, Null);
-			End;
-		End;
+		"Bidikan dan pemulihan pemain tetap diperiksa pada siklus 10 Hz, termasuk transisi tim."
 		If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.BotOtomatis == False, And(Is Dummy Bot(Global.PemainAktif) == False, Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False)))));
 			Global.PemainAktif.WaktuMulaiTerbangMaju = -1;
 			If(Or(Global.PemainAktif.EfekNasib != 2, Global.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed));
@@ -3603,8 +3568,8 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				Set Player Variable(Global.PemainAktif, CalonTargetTeleportasi, Count Of(Global.PemainAktif.DaftarTargetTeleportasi) == 0 ? Null : First Of(Sorted Array(Global.PemainAktif.DaftarTargetTeleportasi, Angle Between Vectors(Facing Direction Of(Global.PemainAktif), Direction Towards(Eye Position(Global.PemainAktif), Eye Position(Current Array Element))))));
 			End;
 		End;
-		If(And(Global.PemainAktif.PindahTimDiproses == True, Or(And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Global.PemainAktif.HudPemainDibuat == True)), And(Global.PemainAktif.BotOtomatis == True, And(Global.PemainAktif.SudahDiperiksa == True, And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, Global.PemainAktif.KunciBotAktif == True)))))));
-			"Pendaftaran manusia dilepas setelah HUD stabil; bot otomatis dilepas hanya setelah klasifikasi dan penguncian selesai."
+		If(And(Global.PemainAktif.PindahTimDiproses == True, And(Global.PemainAktif.Manusia == True, And(Has Spawned(Global.PemainAktif) == True, Global.PemainAktif.HudPemainDibuat == True))));
+			"Pendaftaran manusia dilepas setelah HUD stabil."
 			Global.PemainAktif.PindahTimDiproses = False;
 			Global.PemainAktif.SiklusPemainAktif = False;
 			Global.PemainAktif.WaktuSiklusTim = 0;
@@ -3625,9 +3590,6 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 				Call Subroutine(PulihkanNasibAktif);
 				Global.PemainAktif.MenuNasibHarusDibuka = Global.PemainAktif.MenuTerbuka == False;
 			End;
-		End;
-		If(And(Global.Siap == True, And(Or(Is Dummy Bot(Global.PemainAktif), Global.PemainAktif.BotOtomatis) == True, And(Global.PemainAktif.KunciBotAktif == True, Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False)))));
-			Global.PemainAktif.KunciBotAktif = False;
 		End;
 		If(Global.PemainAktif.ModeKamera == 2);
 			If(Or(Global.PemainAktif.TargetKamera.SiklusPemainAktif == True, Or(Or(Or(Global.PemainAktif.TargetKamera == Null, Entity Exists(Global.PemainAktif.TargetKamera) == False), Or(Has Spawned(Global.PemainAktif.TargetKamera) == False, Is Alive(Global.PemainAktif.TargetKamera) == False)), And(Global.PemainAktif.TargetKamera.Manusia == True, Global.PemainAktif.TargetKamera.PrivasiInspeksiAktif == True))));
@@ -3655,6 +3617,42 @@ rule("89b - Subrutin: Proses siklus pemain 10 Hz")
 			Global.PemainAktif.TargetInspeksi = Null;
 			Global.PemainAktif.DaftarTargetInspeksi = Empty Array;
 			Global.PemainAktif.InspeksiAktif = False;
+		End;
+	}
+}
+
+rule("89b2 - Subrutin: Rawat bot 10 Hz dan target ikuti 5 Hz")
+{
+	event
+	{
+		Subroutine;
+		ProsesBotPemain;
+	}
+
+	actions
+	{
+		If(Global.LangkahPenjadwal % 4 == Slot Of(Global.PemainAktif) % 4);
+			If(And(Is Dummy Bot(Global.PemainAktif) == True, And(Has Spawned(Global.PemainAktif) == True, Is Alive(Global.PemainAktif) == True)));
+				Set Player Variable(Global.PemainAktif, DaftarTargetInspeksi, Filtered Array(Global.PemainManusia, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, IzinkanBotBuatanMengikuti) == True, And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), Team Of(Current Array Element) == Opposite Team Of(Team Of(Global.PemainAktif)))))))));
+				If(Count Of(Global.PemainAktif.DaftarTargetInspeksi) > 0);
+					Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan, First Of(Sorted Array(Global.PemainAktif.DaftarTargetInspeksi, Distance Between(Global.PemainAktif, Current Array Element))));
+				Else;
+					Set Player Variable(Global.PemainAktif, TargetIkutiBotBuatan, Null);
+				End;
+			End;
+		End;
+		If(And(Global.PemainAktif.PindahTimDiproses == True, And(Global.PemainAktif.BotOtomatis == True, And(Global.PemainAktif.SudahDiperiksa == True, And(Has Spawned(Global.PemainAktif) == True, And(Is Alive(Global.PemainAktif) == True, Global.PemainAktif.KunciBotAktif == True))))));
+			"Bot otomatis dilepas setelah klasifikasi dan penguncian selesai."
+			Global.PemainAktif.PindahTimDiproses = False;
+			Global.PemainAktif.SiklusPemainAktif = False;
+			Global.PemainAktif.WaktuSiklusTim = 0;
+			If(Global.PemainSiklusGlobal == Global.PemainAktif);
+				Global.PemainSiklusGlobal = Null;
+				Global.WaktuSiklusGlobal = Total Time Elapsed + 0.250;
+			End;
+		End;
+		If(And(Global.Siap == True, And(Or(Is Dummy Bot(Global.PemainAktif), Global.PemainAktif.BotOtomatis) == True, And(Global.PemainAktif.KunciBotAktif == True, Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False)))));
+			Global.PemainAktif.KunciBotAktif = False;
 		End;
 	}
 }

@@ -6,6 +6,8 @@ Versione: **0.8.1**
 
 Stato: **live-ready** (release storica 0.8.1).
 
+**Carico inattivo — 29 settembre 2026:** lo scheduler separa umani/entità in registrazione e bot. Fly viene chiamato soltanto quando attivo; Try Your Luck soltanto con stato o icona da completare; le cache Camera/Revenge soltanto sulle relative pagine aperte. Vision evita di costruire il pubblico filtrato quando inutilizzato. La manutenzione slot dummy passa a 1 Hz con cooldown indipendente per squadra; il target follow viene aggiornato a 5 Hz. Restano invariati menu, fisica, effetti e cleanup. Nel modello, un umano inattivo con due dummy e due AI passa da 355 a 70 chiamate alle routine per entità al secondo; non è una misura del carico nativo né una conferma della risoluzione dei crash. La revisione richiede prova nel client.
+
 **Recupero Jump dal vuoto — 27 settembre 2026:** corretto il riarmo del tasto a ogni morte e aggiunto il posizionamento prima della resurrezione, seguendo il percorso Jump di Friendly. La destinazione viene confermata anche dopo; nessun caso specifico di mappa. I test con geometria controllata non sostituiscono la prova sulle mappe Schermaglia nel client.
 
 **Fly al 1000% — 27 settembre 2026:** rampa Forward da 100% a 1000% in 25 secondi, pari a una velocità richiesta massima di 55 m/s sulla baseline uniforme del motore Fly. I precedenti riscontri live al 500% restano storici; la nuova velocità richiede una prova nel client.

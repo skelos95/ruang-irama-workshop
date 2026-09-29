@@ -58,9 +58,14 @@ Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun 
 
 | Frequenza | Responsabilità |
 |---:|---|
-| 20 Hz | controlli rapidi, retry morte completa Revenge/Skull, avanzamento Try Your Luck e motore Fly 3D `ProsesTerbangPemain` |
-| 10 Hz | lifecycle reattivo, RGB, refresh visivi e riapplicazione Ghost/Fly dopo normalizzazioni engine |
-| 1 Hz | countdown, sincronizzazione timer nativo e cache passive |
+| 20 Hz | controlli rapidi per umani e ingressi non ancora classificati, retry Revenge/Skull; Try Your Luck solo con stato/icona pendente e Fly solo con toggle attivo |
+| 10 Hz | lifecycle umano e bot, RGB, refresh visivi e riapplicazione Ghost/Fly dopo normalizzazioni engine |
+| 5 Hz | selezione del target follow dei dummy, distribuita per slot |
+| 1 Hz | countdown, sincronizzazione timer nativo, slot dummy, pulizia testi orfani; cache Camera/Revenge solo sulle relative pagine aperte degli umani |
+
+Dal 29 settembre 2026, i bot classificati entrano soltanto in `ProsesBotPemain`: conservano il riarmo dopo morte/rinascita e il rilascio della prenotazione di classificazione a 10 Hz. `ProsesCepatPemain` resta raggiungibile prima che `Manusia` diventi vero, per non bloccare nuovi ingressi o cambi squadra. Anche `ProsesSiklusPemain` e la pulizia delle icone Luck pendenti restano raggiungibili durante la quarantena del cambio squadra. La guardia Luck include `KartuNasibAktif`, `PutaranKartuNasib > 0`, `EfekNasib != 0` e `WaktuIkonNasibBerakhir > 0`: HEART può aver terminato l'effetto ma avere ancora l'icona da eliminare.
+
+La cache `PenontonVisiNasib` mantiene la reattività a 20 Hz: un controllo booleano sullo snapshot evita `Filtered Array` quando nessuno ha Vision. L'ultimo pubblico viene svuotato una sola volta. Non vengono aggiunti HUD, cache di pagine o flag di invalidazione condivisi.
 
 Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
 

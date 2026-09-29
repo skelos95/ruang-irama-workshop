@@ -43,6 +43,7 @@ class MenuLoadEvaluator:
         self.expressions = {}
         self.now = 0.0
         self.stub_aim = True
+        self.filter_builds = 0
 
     def rule(self, prefix):
         return next(rule for rule in self.rules if rule.name.startswith(prefix + " -"))
@@ -106,7 +107,17 @@ class MenuLoadEvaluator:
             name, args = node[1:]
             if name in ("And", "Or"):
                 return (all if name == "And" else any)(bool(visit(arg)) for arg in args)
+            if name == "IsTrueForAny":
+                previous = self.element
+                try:
+                    for self.element in visit(args[0]):
+                        if visit(args[1]):
+                            return True
+                    return False
+                finally:
+                    self.element = previous
             if name == "FilteredArray":
+                self.filter_builds += 1
                 previous = self.element
                 result = []
                 for self.element in visit(args[0]):
@@ -210,10 +221,9 @@ class MenuLoadEvaluator:
 
     def cache_tick(self):
         actions = validator.rule_block(self.rule("04g"), "actions")
-        snapshot = re.search(r"Global\.SalinanDaftarPemain = ([^;]+);", actions).group(1)
-        self.globals["SalinanDaftarPemain"] = self.evaluate(snapshot)
-        expression = re.search(r"Global\.PenontonVisiNasib = ([^;]+);", actions).group(1)
-        self.globals["PenontonVisiNasib"] = self.evaluate(expression)
+        start = actions.index("Global.SalinanDaftarPemain =")
+        end = actions.index("For Global Variable(", start)
+        self.execute(actions[start:end])
 
     def audience(self, owner):
         self.event_player = owner
@@ -282,10 +292,38 @@ class MenuLoadRegressionTests(unittest.TestCase):
                 self.assertEqual(model.audience("dummy"), ["alice", "bob"])
                 self.assertTrue(model.conditions("18i", "dummy"))
                 actions = validator.rule_block(model.rule("04g"), "actions")
-                self.assertEqual(actions.count("Global.PenontonVisiNasib ="), 1)
+                self.assertEqual(actions.count("Global.PenontonVisiNasib = Filtered Array"), 1)
                 self.assertLess(actions.index("Global.PenontonVisiNasib ="), actions.index("For Global Variable("))
                 for prefix in ("18i", "18j"):
                     self.assertNotIn("Filtered Array(All Players", model.rule(prefix).body)
+
+    def test_idle_vision_builds_no_filtered_arrays_and_clears_last_viewer_once(self):
+        for name, model in self.models():
+            with self.subTest(source=name):
+                viewer = model.add("viewer")
+                model.add("dummy", Manusia=False, dummy=True)
+                initial = model.globals["PenontonVisiNasib"]
+                for _ in range(40):
+                    model.cache_tick()
+                self.assertEqual(model.filter_builds, 0)
+                self.assertIs(model.globals["PenontonVisiNasib"], initial)
+                viewer["PrivasiNasibAktif"] = True
+                model.cache_tick()
+                self.assertEqual(model.globals["PenontonVisiNasib"], ["viewer"])
+                self.assertEqual(model.filter_builds, 1)
+                viewer["PrivasiNasibAktif"] = False
+                model.cache_tick()
+                cleared = model.globals["PenontonVisiNasib"]
+                self.assertEqual(cleared, [])
+                for _ in range(40):
+                    model.cache_tick()
+                self.assertIs(model.globals["PenontonVisiNasib"], cleared)
+                self.assertEqual(model.filter_builds, 1)
+                viewer["PrivasiNasibAktif"] = True
+                model.cache_tick()
+                viewer["exists"] = False
+                model.cache_tick()
+                self.assertEqual(model.globals["PenontonVisiNasib"], [])
 
     def test_vision_revocation_and_departure_apply_before_next_cache_tick(self):
         for name, model in self.models():
