@@ -1776,7 +1776,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         call = "Call Subroutine(ProsesTerbangPemain);"
         mutated = self.replace_in_rule(scheduler, call, "If(Global.LangkahPenjadwal % 2 == 0);\n"
                                        f"\t\t\t\t\t{call}\n\t\t\t\tEnd;")
-        self.assert_rejected(mutated, "motore 20 Hz subito dopo Try Your Luck")
+        self.assert_rejected(mutated, "scheduler a stati: Fly solo umano attivo")
 
     def test_fly_state_cannot_be_written_from_another_controller(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
@@ -3269,7 +3269,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "rilascio stabile lock")
 
     def test_team_switch_lock_waits_for_stable_automatic_bot(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSiklusPemain")
+        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesBotPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Global.PemainAktif.SudahDiperiksa == True",
