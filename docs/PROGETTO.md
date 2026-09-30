@@ -1,246 +1,94 @@
-# Progetto tecnico — CHILL Dedicated Server 0.8.1
+# Architettura del Workshop
 
-Stato: **live-ready** (release storica 0.8.1).
+Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](../README.md); storia e revisioni ritirate nel [changelog](../CHANGELOG.md).
 
-**Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
+## Sorgenti e confini
 
-Questo documento descrive il contratto architetturale del sorgente pubblicato `workshop/ruang_irama.it-IT.workshop`. Le prove statiche certificano le invarianti verificabili dal repository; per la 0.8.1 la regressione client è stata completata, compreso il cambio squadra. La fixture `tests/fixtures/semantic_reference.txt` è un supporto interno al gate semantico e non un secondo file Workshop destinato all'utente: una rappresentazione canonica neutralizza le differenze di grammatica e deve risultare semanticamente identica al clipboard `it-IT`.
+- `workshop/ruang_irama.it-IT.workshop`: unico clipboard pubblico, per client italiano.
+- `tests/fixtures/semantic_reference.txt`: rappresentazione interna en-US, mantenuta semanticamente equivalente.
+- Identificatori, nomi regola e commenti personalizzati sono in Bahasa Indonesia; keyword native restano nella grammatica richiesta dal client. HUD e feedback hanno rami EN/ID/TH.
+- Le regole supportano Schermaglia; mappe e slot si configurano nella lobby. Il timer CHILL dura 10–60 minuti, default 30. La località mostrata non seleziona il datacenter.
 
-## Obiettivi
+## Scheduler
 
-- Lobby 6v6 con massimo 12 player attivi.
-- Overlay sociale e Arcade che non assegna punteggi o vincitori.
-- Sola Schermaglia sulle mappe standard selezionate nella lobby; escluse le mappe Workshop.
-- UI completa in English, Bahasa Indonesia e ไทย.
-- Priorità al lavoro globale condiviso rispetto ai loop per-player.
-- Cleanup deterministico di HUD, In-World Text, effetti e riferimenti.
+Il runtime contiene 113 regole, 64 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
 
-## Contratto stabile
-
-### Lingue e pagine
-
-| Indice | Lingua |
+| Frequenza | Lavoro |
 |---:|---|
-| 0 | English |
-| 1 | Bahasa Indonesia |
-| 2 | ไทย |
+| 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly solo con toggle attivo |
+| 10 Hz | Lifecycle umano e bot, RGB, riapplicazione fisica e revoca Camera/inspection |
+| 5 Hz | Selezione del target follow dummy, distribuita per slot |
+| 1 Hz | Countdown, timer nativo, slot dummy, testi orfani; cache Camera/Revenge solo nelle relative pagine aperte |
 
-Main Menu usa pagina `-1`; le 14 pagine mantengono gli indici `0..13`. La pagina 12, Dummy Follow, è una preferenza per-player: ON consente al dummy avversario di scegliere quel player, OFF lo esclude; il dummy ordina sempre i target idonei per distanza. La pagina 13 espone due toggle indipendenti, entrambi OFF per default: Ghost attraversa pareti e soffitti con `Include Floors = False`; Fly usa il motore 3D esplicito descritto sotto. Preferenze e cursori persistono durante chiusura, riapertura, cambio eroe, morte e Resurrect. Cambio squadra e leave/rejoin eseguono invece cleanup/setup completo e riapplicano i default.
+`ProsesCepatPemain` deve restare raggiungibile prima di `Manusia=True`, altrimenti si blocca la registrazione. Anche manutenzione umana e scadenza delle icone Luck residue restano raggiungibili durante la quarantena del cambio squadra. La guardia Luck considera `KartuNasibAktif`, `PutaranKartuNasib > 0`, `EfekNasib != 0` e `WaktuIkonNasibBerakhir > 0`: HEART può aver già concluso l'effetto ma avere un'icona ancora da distruggere.
 
-### Motore Fly 3D
+Per Vision un controllo booleano sullo snapshot evita `Filtered Array` quando nessuno la usa; il vecchio pubblico viene svuotato una sola volta. Quando attiva, l'aggiornamento resta a 20 Hz. I bot classificati ricevono soltanto `ProsesBotPemain`.
 
-Il test utente del vecchio motore basato sul movimento nativo ha rilevato assenza di progressione della velocità e di salita/discesa su diversi eroi; il successivo motore 3D a impulsi ha invece ricevuto conferma di funzionamento. Questa conferma precede la revisione corrente di strafe e cambio squadra. Il solo esito visivo non identifica con certezza un guasto del timer. La precedente combinazione di `Start Transforming Throttle` e `Set Move Speed` viene sostituita: Blizzard descrive la prima azione come trasformazione dell'input direzionale, non come una propulsione verticale garantita. Questa distinzione motiva la scelta del motore esplicito, ma non sostituisce una verifica nel client. Fonte: [note Blizzard di agosto 2019](https://overwatch.blizzard.com/en-gb/news/patch-notes/live/2019/08/).
+Il ramo 1 Hz mantiene disabilitata la completion nativa e sincronizza il timer fino allo zero; una guardia one-shot esegue `Restart Match`. Scoring e obiettivi nativi non vengono riscritti.
 
-`ProsesTerbangPemain` viene richiamata dal solo scheduler globale a 20 Hz per ogni umano idoneo, senza nuovi `Wait` o loop per-player. Il volo normale imposta gravità zero e `Move Speed` nativo zero, evitando che il movimento engine si sommi a quello richiesto. Legge `Throttle Of(player)` non trasformato, dove X positivo è sinistra e Z positivo è avanti. Il vettore richiesto separa le componenti: `Facing Direction Of(player) * Max(0, Z)` per l'avanti con pitch, `Direction From Angles(Horizontal Facing Angle Of(player), 0) * Min(0, Z)` per l'indietro orizzontale e `Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(player), 0)) * X` per lo strafe orizzontale relativo all'eroe. La normalizzazione mantiene la direzione e l'intensità analogica viene limitata a 1, evitando un bonus diagonale. La scelta di mira più strafe e impulsi, con movimento nativo disattivato, ha un precedente nell'[esempio originale di Shattered sul forum Blizzard](https://us.forums.blizzard.com/en/overwatch/t/%E2%9C%85-how-to-make-reaper-exc-changes/600253/2); qui è adattata al scheduler globale e alla rampa per-player, senza copiarne il loop.
+## Registrazione e risorse
 
-La baseline Fly uniforme è `5,5 m/s = 100%`, una convenzione del motore e non la velocità nativa esatta di ogni eroe, buff o abilità. Soltanto Forward puro, con Z locale maggiore di `0.050` e X fra `-0.050` e `0.050`, arma il timestamp. La percentuale è `Min(1000, 100 + Max(0, Total Time Elapsed - start) * 36)` e scala la baseline fino a `55 m/s = 1000%` dopo 25 secondi. Rilascio, laterali, diagonali e indietro azzerano la rampa; il movimento successivo parte dal `100%`, mentre a input zero la velocità richiesta è zero. Timer, percentuale, direzione e delta di velocità sono player-local. A ogni tick il motore calcola `velocità richiesta - Velocity Of(player)` e applica il relativo impulso `To World` con `Incorporate Contrary Motion`, senza forcing o Teleport: lo stesso controllo governa movimento e hover.
+I 12 slot identificano occupanti simultanei, non identità storiche. Nome temporaneamente nullo/vuoto significa ritentare, senza prenotare erroneamente uno slot. Bot normali e dummy non entrano nel roster umano né creano menu personali.
 
-Try Your Luck: Acceleration possiede velocità e propulsione per tutti i 10 secondi: durante quella finestra il motore Fly non applica impulsi né azzera il movimento nativo e riporta la rampa allo stato iniziale. La normale propulsione Fly non avvia né ferma `Start Accelerating`; al termine di Luck parte una rampa fresca. OFF e cleanup di morte, cambio eroe o cambio squadra ripuliscono lo stato transitorio; nel caso cambio squadra il setup successivo riapplica i default. Jump Resurrect riapplica le modalità selezionate. Formula laterale corretta, reset squadra e regressione completa di baseline, fluidità e interazioni con collisioni/abilità sono stati validati nella matrice live di [`TEST.md`](TEST.md).
+| Evento | Contratto |
+|---|---|
+| Ingresso | Classificazione, slot libero, setup e un solo set di HUD; eventi duplicati non duplicano il roster. |
+| Cambio squadra | `01a` mette in quarantena; dopo team/spawn stabili per 0,5 s, `01b` serializza quiete, cleanup e setup. Tutte le preferenze tornano ai default. |
+| Uscita | Dopo 0,5 s distingue la vera uscita dalla transizione di team, distrugge risorse e riferimenti dell'identità esatta e libera lo slot. |
+| Morte/cambio eroe | Normalizza lo stato fisico transitorio; conserva preferenze e riapplica quelle compatibili al ritorno in vita. |
 
-### Input
+La prenotazione lifecycle non sospende gli altri player. Un bot in classificazione o un player non spawned non deve trattenerla indefinitamente; i retry rispettano le scadenze individuali/globali. Un evento leave tardivo non può cancellare il nuovo occupante dello stesso slot.
 
-- Tieni Melee per 0,5 s: apre o chiude il Menu Arcade.
-- A menu aperto e da vivi, Crouch è il modificatore obbligatorio per Primary, Secondary, Interact, Reload e Ability 1/2.
-- Primary/Secondary navigano; Interact entra o applica; Reload torna al Main Menu.
-- Nel Soundtrack, Ability 1/2 eseguono `+10/−10`.
-- Melee e Jump restano azioni normali dell'eroe.
-- A menu aperto o chiuso, Interact tenuto per 0,5 s cambia Camera soltanto con Crouch rilasciato.
-- A menu chiuso, Crouch abilita inspection e l'eventuale overlay Teleport.
-- Crouch Travel & Attach contiene cinque pagine: Spawn Room, Objective, Teleport to Player/Bot, Attach to Player/Bot e Self Elimination. Primary/Secondary navigano avanti/indietro; Interact esegue la pagina attiva. Un solo HUD per-player mostra due righe di comandi e due di contenuto: azione/destinazione o target, con il cooldown nella pagina Self Elimination. Usa i binding effettivi e passa da mint a cyan, blu, viola e rosa con istruzioni pastello e contenuto neon. Self Elimination arma prima della morte un timestamp per-player di 3 secondi; un tentativo anticipato mostra il residuo e non può azzerare il cooldown alla morte. Cambio squadra e leave/rejoin ripartono invece dal setup fresco.
-- Il renderer Travel usa `WarnaMenu` con chase da 0,18 s per passare fluidamente mint → cyan → blu → viola → rosa; le conferme Small Message ridondanti sono soppresse, mentre errori/cooldown/esiti restano espliciti.
-- Da morto, un menu aperto resta visibile ma congelato; Jump dipende soltanto da identità umana, morte, latch e pressione. La destinazione `PosisiBangkitAman` viene riscritta da `Nearest Walkable Position(Position Of(Event Player))` a ogni tentativo. `BangkitPerluTeleportasi` combina il raycast verticale con la distanza fra destinazione camminabile e posizione di morte: oltre 0,5 m dal punto camminabile, anche una superficie colpita dal raycast richiede recupero. Il ramo non sicuro esegue Teleport alla destinazione più 0,5 m, un solo `Resurrect` e una conferma Teleport sullo stesso punto. Il terreno vicino alla navigazione mantiene la resurrezione sul posto. La sequenza non introduce Wait, Loop, forcing, Respawn o fallback alla Spawn Room; il flag si azzera alla fine e nel setup/quiete. Il latch del tasto non si azzera alla morte: il rilascio di Jump lo riapre da vivi e da morti. Effetto e Ghost/Fly si applicano dopo il riposizionamento e soltanto se `Is Alive` è vero.
+Gli handle hanno un proprietario e un registro canonico che sopravvive alla perdita delle variabili del leaver. Distruggere prima di sovrascrivere; svuotare anche i mirror e non distruggere ID già riciclati da altri. Cleanup e voti leggono gli occupanti rimasti, senza dipendere dal voto di un'entità scomparsa. Camera, Revenge, Attach, Teleport, inspection e voti non conservano riferimenti al leaver.
 
-Le condizioni e il modificatore sono parte del contratto: `Crouch + Interact` alimenta il menu, `Interact` senza Crouch alimenta la Camera, mentre inspection e Teleport richiedono Crouch e menu chiuso. Menu e Camera condividono un latch consumabile: dopo che uno dei due usa `Interact`, soltanto il rilascio fisico del pulsante riabilita entrambi.
+## HUD e input
 
-## Scheduler globale
+Ogni umano ha al massimo un HUD Arcade: la navigazione sulla stessa pagina aggiorna valori rivalutati; apertura, chiusura e cambio pagina gestiscono l'handle. Niente preload o cache di pagine nascoste. Header è `Null`; si usano Subheader/Text, feedback `Small Message` necessari e IWT per targhette.
 
-Un'unica regola `Ongoing - Global` mantiene il ritmo base a 20 Hz. Dopo ciascun tick incrementa un contatore e delega a subroutine senza `Wait`:
-
-| Frequenza | Responsabilità |
-|---:|---|
-| 20 Hz | controlli rapidi per umani e ingressi non ancora classificati, retry Revenge/Skull; Try Your Luck solo con stato/icona pendente e Fly solo con toggle attivo |
-| 10 Hz | lifecycle umano e bot, RGB, refresh visivi e riapplicazione Ghost/Fly dopo normalizzazioni engine |
-| 5 Hz | selezione del target follow dei dummy, distribuita per slot |
-| 1 Hz | countdown, sincronizzazione timer nativo, slot dummy, pulizia testi orfani; cache Camera/Revenge solo sulle relative pagine aperte degli umani |
-
-Dal 29 settembre 2026, i bot classificati entrano soltanto in `ProsesBotPemain`: conservano il riarmo dopo morte/rinascita e il rilascio della prenotazione di classificazione a 10 Hz. `ProsesCepatPemain` resta raggiungibile prima che `Manusia` diventi vero, per non bloccare nuovi ingressi o cambi squadra. Anche `ProsesSiklusPemain` e la pulizia delle icone Luck pendenti restano raggiungibili durante la quarantena del cambio squadra. La guardia Luck include `KartuNasibAktif`, `PutaranKartuNasib > 0`, `EfekNasib != 0` e `WaktuIkonNasibBerakhir > 0`: HEART può aver terminato l'effetto ma avere ancora l'icona da eliminare.
-
-La cache `PenontonVisiNasib` mantiene la reattività a 20 Hz: un controllo booleano sullo snapshot evita `Filtered Array` quando nessuno ha Vision. L'ultimo pubblico viene svuotato una sola volta. Non vengono aggiunti HUD, cache di pagine o flag di invalidazione condivisi.
-
-Il player globale corrente e il relativo indice appartengono esclusivamente allo scheduler. Una scansione non contiene `Wait`, `Loop` o altre azioni che cedono l'esecuzione; nessun'altra regola può riusare quei due scratch globali.
-
-Anche la stabilizzazione dell'uscita dummy è event-driven: l'ingresso nella Spawn Room registra una scadenza di 1 secondo e il controllo periodico agisce soltanto dopo quel timestamp. Non esiste un `Wait` dedicato al dummy e il budget complessivo resta massimo 7 `Wait`.
-
-`Ongoing - Each Player` è ammesso soltanto quando l'evento o lo stato è realmente individuale:
-
-- lettura input e latch di pressione/hold;
-- classificazione one-shot umano/bot;
-- creazione o rivalutazione di rendering visibile a un singolo player;
-- Resurrect o cleanup atomico che dipende dall'evento player.
-
-## Menu Arcade
-
-Ogni player possiede al massimo **un handle HUD Arcade**. Non esistono cache di pagine, preload progressivo o HUD nascosti.
-
-Le istruzioni EN/ID/TH raccolgono modificatore Crouch e navigazione sulla stessa riga, seguita da applicazione/ritorno e chiusura con Melee tenuto per 0,5 secondi. Il menu musica conserva una terza riga per i salti di dieci voci. Ghost/Fly mantiene i dettagli specifici della velocità e della pressione prolungata.
-
-Il lifecycle del menu è:
-
-1. apertura: crea l'handle della pagina corrente;
-2. Primary/Secondary o modifica della scelta: aggiorna variabili rivalutate senza ricreare l'HUD;
-3. cambio Main Menu ↔ sottomenu: distrugge l'handle precedente e crea la nuova pagina;
-4. chiusura, leave o cambio squadra: distrugge l'handle e azzera il riferimento.
-
-Il dispatcher Interact delega alle subroutine delle singole pagine. Avanti/indietro e `±10` usano regole simmetriche condivise; ogni applicazione idempotente evita feedback ripetuti.
-
-Il ciclo del Main Menu è esattamente modulo 14. Pagina 12 dispone di cursore OFF/ON separato dallo stato applicato, renderer EN/ID/TH e tinta dedicata. Pagina 13 possiede un cursore a due righe, renderer e tinta propri: applicare una riga cambia soltanto Ghost oppure Fly. I soli writer dei toggle sono setup/quiete OFF e il relativo handler; applicazione fisica e motore Fly dedicati possiedono `Gravity = 0` e il blocco del movimento nativo. Non è ammesso `Start Transforming Throttle`; il delta di velocità viene applicato soltanto al player della scansione in corso. Ghost non modifica mai la collisione fra player. Soltanto setup, applicazione della pagina e quiete lifecycle possono scrivere la preferenza Dummy Follow, impedendo che Camera o altri latch la modifichino accidentalmente.
-
-### Profilo per nome visibile
-
-Il nome visibile esatto `งูแรร์` abilita un profilo dedicato durante il setup. Name Color `Silver Mist` e Player Icon `Poison 2` sono default iniziali e restano modificabili dal player; Player Vibes è invece fissato a `Draconian`, perciò la pagina Soundtrack è visibile ma read-only e nessun input può modificarne il valore. `Draconian` è una voce dedicata al profilo e non entra nel catalogo globale, che resta di 100 generi per i player generici.
-
-Il matching usa esclusivamente il nome visibile, non un identificatore account: due omonimi esatti ricevono lo stesso profilo, mentre una rinomina non viene riconosciuta. Il matcher legge la cache stabile `NamaTampilan` dopo la cattura del nome, quindi durante un team-switch non dipende dal token player live che può risultare temporaneamente vuoto. Cambio squadra e leave/rejoin eseguono nuovamente il setup e riapplicano `Silver Mist`, `Poison 2` e `Draconian`.
-
-Tutti i menu seguono lo stesso layout:
-
-```text
-contenuto e stato
-
-comandi disponibili
-```
-
-I placeholder devono avere stessa cardinalità nei tre rami linguistici.
-
-## Unkillable FULL HP
-
-FULL HP è uno stato composto e indivisibile: `Damage Received = 0`, `Knockback Received = 0` e `Disable Movement Collision With Players`. Sia l'applicazione dal menu sia il tick globale riapplicano la stessa tripletta. OFF, modalità 1 HP, setup fresco e cleanup di leave/team-switch ripristinano rispettivamente `100`, `100` e `Enable Movement Collision With Players`; una protezione parziale è vietata. Try Your Luck non modifica modalità o cursore Unkillable: Vision, Acceleration, Team Heal e Hacked conservano la tripletta, mentre Burning sospende status e riduzione del danno per l'intero effetto e li ripristina al termine. Un cleanup engine può normalizzare temporaneamente lo stato dopo morte o timeout, ma conserva `ModeKebal`/`KursorKebal`, ricava di nuovo `KebalAktif` dalla modalità e lascia al tick globale la riapplicazione e l'eventuale ricreazione dell'icona. Anche in Spawn Room la modalità 2 resta protetta; soltanto la modalità 1 HP usa il ramo di ripristino normale.
-
-## Try Your Luck
-
-Try Your Luck è una macchina a stati guidata da timestamp, non un loop per-player. All'avvio conserva Unkillable senza scrivere modalità, cursore o stato di protezione e mantiene la pagina bloccata finché la sequenza non termina. Nessun handler, tick o cleanup della roulette scrive gravità, trasformazione throttle, toggle Ghost/Fly o latch fisico: Fly non viene mai spento da Try Your Luck.
-
-| Esito | Durata | Comportamento |
-|---|---:|---|
-| Vision | 15 s | mostra icona, nome e salute live di bot/dummy e di tutti gli umani, anche con Privacy ON, e sopprime inspection/Teleport Crouch |
-| Acceleration | 10 s | applica propulsione automatica lungo la direzione 3D della mira, senza input direzionali |
-| Skull | immediato | unico esito che bypassa temporaneamente Unkillable e ritenta la kill fino alla morte completa; deadline 5 s impedisce un latch permanente |
-| Team Heal (Heart) | immediato | porta alla salute completa tutti i player vivi della squadra del proprietario; notifica soltanto il proprietario |
-| Burning | 10 s | infligge il 5% della salute massima ogni 1 s; sospende Unkillable e normalizza Damage Received per l'intera durata, poi ripristina la modalità scelta |
-| Hacked | 5 s | applica e poi rimuove Hacked |
-
-Il tick globale valuta transizioni e scadenze. Vision, Acceleration, Team Heal e Hacked non sospendono Unkillable; Burning è l'eccezione a durata: conserva modalità e cursore ma sospende status e riduzione del danno per tutti i 10 secondi, applica il 5% della Max Health ogni secondo e ripristina la protezione al termine o nel cleanup anticipato. Soltanto lo Skull finale armato e Revenge passano invece dal bypass della macchina di morte completa. Alla morte o al timeout vengono annullati stato temporaneo, accelerazione, status dell'esito, HUD/IWT ed effetti associati, ma la preferenza Unkillable resta intatta e viene riapplicata dopo Resurrect. Un tracker eroe condiviso rileva inoltre a 10 Hz il cambio eroe umano e applica lo stesso cleanup temporaneo senza azzerare la preferenza sul player vivo e senza aggiungere un nuovo `Ongoing - Each Player`; cambio squadra e leave ripuliscono invece l'entità con cleanup completo, poi il player rientra dal setup fresco. Nessun esito può lasciare un timestamp o un riferimento riutilizzabile dal player successivo nello stesso slot.
-
-Le sei icone della roulette usano la reevaluation `Visible To and Position`. `Visible To` rivaluta il roster umano anche dopo join/leave, mentre la posizione `Update Every Frame` resta agganciata a occhio e mirino dell'identità catturata, senza seguire lo scratch `Global.PemainAktif`. L'indicatore off-screen resta abilitato e i bot non entrano mai nel pubblico.
-
-L'accelerazione usa `Facing Direction Of(Evaluate Once(player))`: viene congelata soltanto l'identità del beneficiario, non la sua direzione corrente. `Direction Rate and Max Speed` mantiene quindi la spinta automatica davanti, in alto e in basso senza throttle o input direzionali. Quando Fly è ON, tutto il suo motore a impulsi cede la precedenza all'esito Acceleration, compreso il freno idle; alla scadenza il cleanup ferma la spinta e Fly riparte con una rampa fresca o torna immobile senza input. Il ramo Luck del tick globale conserva soltanto avvio, timestamp e cleanup; Luck non usa impulsi periodici e non aggiunge loop o regole per-player.
-
-## Lifecycle player
-
-### Join
-
-La registrazione verifica prima l'esistenza del player nel roster. Un evento Join duplicato non aggiunge una seconda voce e non crea un secondo messaggio o handle. Un nome visibile ancora `Null` o vuoto riapre il classifier prima dell'allocazione, quindi non può consumare uno slot con un'identità temporanea. Il setup inizializza ogni variabile player dichiarata, assegna lo slot sociale e crea un solo HUD Player Vibes. Su un leave vero ogni `PemainDipilih` che punta al leaver viene azzerato prima della rimozione dal roster e del ricalcolo Vote Player.
-
-Dummy e bot AI seguono classificazione e lock dedicati: non vengono inseriti nel roster umano e non ricevono menu, HUD, input Arcade o funzioni riservate ai player. Possono restare target passivi di inspection, Vision e Camera dove previsto dal contratto. Per gli umani, Camera, inspection e Teleport rispettano Privacy; Vision è l'eccezione intenzionale e include tutti gli umani.
-
-Revenge e lo Skull finale condividono l'unico percorso che bypassa temporaneamente Unkillable nel tick globale. Il comando `Kill` è centralizzato e rivalutato ogni 0,25 s finché il target è ancora vivo; non viene usato `Is In Alternate Form`, perché non identifica in modo univoco una vita intermedia. Revenge conserva invariati claimant e contabilità: ricalcola l'indice del debito al commit e decrementa soltanto su `Player Died` con `Is Alive == False` e attacker coincidente. Doppio claim, attacker diverso, timeout, leave e team switch non generano un falso conteggio. Dopo Resurrect il tick globale ripristina la modalità Unkillable selezionata e ricrea la relativa icona se il motore l'ha distrutta.
-
-La creazione automatica dei dummy è limitata alla Schermaglia. In questa modalità il runtime mantiene al massimo un'istanza per Team 1 e una per Team 2. La creazione richiede almeno due slot liberi e uno Spawn Point valido; se la squadra diventa piena con il dummy presente, il bot viene rimosso per rendere disponibile il sesto posto umano. La soglia di due slot impedisce una ricreazione immediata e quindi lo spam di `Create Dummy Bot`. Il tempo massimo di respawn è 3 secondi. Quando un dummy vivo si trova nella Spawn Room, registra una scadenza di 1 secondo e, senza `Wait`, legge poi la posizione obiettivo del motore e la passa sempre da `Nearest Walkable Position`; se la posizione richiesta non è valida, non viene eseguito alcun teleport e il controllo viene rivalutato al ciclo successivo. I dummy ricevono danni e urti al 100%; le istruzioni che alteravano le collisioni sono rimosse dal setup dummy; `KunciBot` non le riapplica a respawn o cambio eroe.
-
-### Leave
-
-`Player Left Match` attende 0,5 s per distinguere un'uscita reale da una transizione di squadra. Quando l'identità non esiste più, il cleanup:
-
-1. distrugge gli handle HUD, In-World Text ed effetti registrati per il leaver;
-2. rimuove soltanto la sua identità esatta dal roster, senza fallback al nuovo occupante dello stesso slot;
-3. libera riferimenti in Camera, Revenge, Teleport, inspection e voti dei survivor;
-4. rende lo slot riutilizzabile e ricostruisce soltanto le cache condivise necessarie.
-
-Non esegue reset engine su un'entità ormai uscita. Il nuovo occupante passa dal setup fresco e non eredita preferenze, timer o riferimenti del leaver; la riutilizzabilità effettiva va verificata anche a 12 slot.
-
-### Cambio squadra
-
-Il cambio Team 1 ↔ Team 2 di un umano già registrato usa ora un lifecycle in due fasi. La regola `01a - Siklus tim: Karantina sebelum penyiapan ulang` (sempre `Ongoing - Each Player`) rileva il mismatch ma non esegue teardown pesante: attiva una quarantena leggera (`PindahTimDiproses=True`, `SiklusPemainAktif=True`, `SudahSiap=False`, `Manusia=False`), aggiorna `TimSiklusTarget`, conferma `TimTerakhir` e arma `WaktuSiklusTim = Total Time Elapsed + 0.500`. Se quel player possedeva già il lock lifecycle, `01a` rilascia solo la propria prenotazione globale.
-
-Nel caso limite senza slot, l'attesa è cooperativa: il classifier ripristina `SudahDiperiksa`, `SudahSiap` e i latch lifecycle, rilascia soltanto il proprio `PemainSiklusGlobal` e programma il tentativo successivo dopo 0,25 secondi, così gli altri player continuano a essere processati. Nel repair di uno stato degradato su player ancora registrato (non nel percorso team-switch), il nome esatto `งูแรร์` riasserisce sempre `Draconian`; Silver Mist e Poison 2 vengono riapplicati solo se `PernahDisiapkan=False`.
-
-La fase 2 è serializzata da `01b`: quando il player è spawned, il team resta uguale a `TimSiklusTarget` e la finestra `0,500 s` è scaduta, il worker esegue `TenangkanPemain`, poi `BersihkanPemain` soltanto se la vecchia registrazione roster è ancora presente, quindi `SiapkanPemain`. In questo modo il reset completo avviene fuori dalla transizione nativa del motore. Se il player cambia nuovamente squadra in attesa, il detector aggiorna target/scadenza e rilascia la vecchia prenotazione; la nuova acquisizione attende entrambe le scadenze (globale e individuale), e una prenotazione non resta occupata da un player non spawned.
-
-## HUD, testi ed effetti
-
-- `Create HUD Text` deve avere Header `Null`.
-- Sono consentiti Subheader/Text, `Small Message` e gli In-World Text necessari a inspection, Teleport e Vision.
-- `Big Message` e titoli HUD non sono consentiti.
-- Gli handle vengono distrutti prima di essere sovrascritti; le variabili handle tornano a `Null`.
-- `TutupMenu` usa prima l'handle canonico del roster, anche quando `HudMenu` locale è `Null`; elimina poi l'eventuale handle locale solo se diverso da quello canonico, senza distruggere due volte lo stesso HUD.
-- Ogni testo operativo, stato, esito, nome icona e località ha rami EN/ID/TH.
-- I 100 generi, `CHILL`, nomi player ed eroi sono nomi propri universali.
-- Identificatori personalizzati, titoli regola, subroutine e commenti Workshop sono in Bahasa Indonesia; keyword native, acronimi tecnici e nomi degli eroi restano invariati.
-- La riga Fly della pagina 13 comunica guida e rampa con testo equivalente nelle tre lingue: `LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s`, `ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk` e `มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ`.
-- La label localizzata `LOCATION` / `LOKASI SERVER` / `ที่ตั้งเซิร์ฟเวอร์` usa l'ambra neon `Custom Color(255, 205, 110, 255)`, volutamente distinto dal cyan di `LOBBY & CHILL TIME`.
-
-La griglia HUD usa nove handle globali fissi e slot dinamici separati:
-
-| Area | Slot fissi | Slot dinamici |
+| Area | HUD fissi | Contenuti dinamici |
 |---|---|---|
-| Top | titolo/timer `0`, località `1`, spaziatore `2` | menu, Teleport o effetto `3` |
-| Left | comando completo `-2`, spaziatore `-1`, `PLAYER VIBES` `0`, `CHILL STAR` `13` | roster/musica `1..12` |
-| Right | comando completo Arcade/Camera `-16`, Host nel campo Text con icona eroe e nome `0`, una riga vuota sopra e sotto | nessun roster |
+| Top | Titolo/countdown 0, località 1, spazio 2 | Menu, Travel o effetto in 3 |
+| Left | Comando −2, spazio −1, Player Vibes 0, Chill Star 13 | Unico roster in 1–12 |
+| Right | Comandi −16, Host 0 | Host nel campo Text, una riga con spazio sopra e sotto, RGB del titolo |
 
-Titolo, label e righe roster non contengono newline usati come compensazione verticale. La riga Host usa invece nel campo Text una riga vuota sopra e sotto, ciascuna contenente uno spazio, nello stesso handle; Header e Subheader restano `Null`. Il contatore diagnostico include i nove handle fissi. La diagnostica opzionale è il secondo segmento del Subheader dell'ultima riga Left e il campo Text resta direttamente `Null`: così il client non converte un ramo `Null` tipizzato come stringa nel numero `0`. `CHILL STAR` è un HUD Left dedicato (order `13`) che usa cache globali di nome/colore leader per evitare dereference instabili durante team-switch.
+I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore stabili; la diagnostica resta nel Subheader per evitare lo `0` derivato da un `Null` tipizzato come testo. IWT e icone catturano soltanto l'identità con `Evaluate Once`; posizione/testo/pubblico necessari restano rivalutati. Le targhette riuniscono icona, nome e salute, ancorati a `Eye Position + Vector(0, 0.450, 0)`.
 
-Il nuovo Team Status Indicator del client non è riposizionabile dal Workshop. Il blocco Right custom contiene il comando Arcade/Camera (sort `-16`) e Host (sort `0`); lo spazio sopra e sotto Host è incluso nel suo testo, senza uno spaziatore HUD separato. Il test live con 1, 6 e 12 player deve confermare le righe vuote e il confine effettivo con indicatore e kill feed.
+Input, cursori, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
 
-## Camera, inspection e Teleport
+## Movimento e interazioni
 
-La Camera usa un solo `Start Camera` e un solo raycast per risolvere la posizione. Posizione e punto osservato restano rivalutati ogni frame e `Blend Speed 0` applica direttamente la nuova traslazione: un blend non nullo inseguirebbe continuamente il target mobile e introdurrebbe correzioni visibili durante corsa, strafe e salto. La stessa subroutine serve camera personale, watch e toggle rapido. Target morti, non spawnati, inesistenti, in quarantena per cambio squadra o umani con Privacy ON vengono rimossi; una perdita target riporta alla visuale normale senza creare più Camera concorrenti. La revoca della Camera watch controlla anche `SiklusPemainAktif` nel ciclo esistente a 10 Hz, senza attendere la scomparsa o la morte dell'entità. La camera personale e gli osservatori di altri target validi restano indipendenti.
+- **Fly:** impulsi a 20 Hz correggono velocità corrente verso quella richiesta. Avanti usa la mira 3D; indietro/strafe il piano orizzontale. Normalizzazione e intensità analogica evitano un bonus diagonale. Gravità e movimento nativo sono zero durante il volo normale; niente `Start Transforming Throttle`.
+- **Rampa:** `Min(1000, 100 + Max(0, tempo − inizio) * 36)`, solo con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`. Baseline uniforme 5,5 m/s, massimo richiesto 55 m/s dopo 25 s. Rilascio, laterali o indietro riportano al 100%; senza input la velocità richiesta è zero.
+- **Ghost:** `Disable Movement Collision With Environment(player, False)` attraversa pareti/soffitti conservando pavimenti; non modifica la collisione con player.
+- **Camera:** un solo `Start Camera`, posizione/mira per-frame, `Blend Speed 0` e un raycast. Target morto, assente, non spawned, in quarantena o umano privato viene revocato a 10 Hz.
+- **Travel:** obiettivo riletto al click e validazione geometrica condivisa; punto assente/non sicuro annulla il teleport. Attach rifiuta self-attach e cicli di qualsiasi lunghezza con traversal limitato al roster, senza attese. Privacy, morte, uscita e team-switch revocano il collegamento.
+- **Jump Resurrect:** un tentativo per pressione. Calcola una destinazione camminabile dalla posizione corrente; raycast e distanza dalla navigazione distinguono terreno sicuro e vuoto. Solo nel recupero teletrasporta alla stessa destinazione +0,5 m prima e dopo `Resurrect`. Una morte immediata non riarma Jump tenuto; serve rilasciarlo da vivo o morto. Nessun `Wait`, forcing o `Respawn`.
 
-Inspection e Teleport sono disponibili soltanto a menu chiuso e da vivi. Le targhette di inspection, Vision e Teleport condividono lo stesso contratto: un solo IWT contiene insieme icona eroe, nome e salute; `Update Every Frame` racchiude l'intero ancoraggio `Eye Position(Evaluate Once(identity)) + Vector(0, 0.450, 0)`; `Evaluate Once` cattura esclusivamente l'identità del soggetto; `Visible To Position String and Color` mantiene la rivalutazione completa di pubblico, posizione, testo e colore. Durante Vision entrambi gli ingressi Crouch sono disattivati e gli handle eventualmente già aperti vengono rimossi, mentre Vision mantiene un solo IWT per ogni bot, dummy e umano; il nome umano proviene dal cache roster stabile. Privacy è OFF per default: quando passa ON, Camera custom, inspection, Teleport e Attach non possono creare o mantenere il riferimento identificativo dell'umano e gli osservatori Camera già attivi vengono sganciati. Vision ignora intenzionalmente questa preferenza e continua a mostrare tutti gli umani per l'intera durata dell'esito.
+## Unkillable, Revenge e Luck
 
-La destinazione Teleport viene rivalutata al click tramite `Objective Position(Objective Index)`. I rami payload, bandiera e proxy Push sono rimossi. Il comando controlla prima che la destinazione sia diversa dal valore nullo, poi applica la ricerca geometrica condivisa; se non esiste un punto sicuro, mostra un messaggio e non teletrasporta.
+FULL HP combina danni ricevuti zero, urti zero e collisione player disabilitata. OFF/1 HP e cleanup ripristinano insieme danni, urti e collisioni; Ghost è indipendente. Morte, setup e respawn rispettano l'ownership della fisica.
 
-La pagina Player / Bot sceglie un target vivo/spawnato vicino al reticolo e rispetta Privacy; `Nearest Walkable Position` limita le destinazioni non praticabili.
+| Esito Luck | Durata | Interazione |
+|---|---:|---|
+| Vision | 15 s | Un IWT per soggetto, inclusi bot e umani privati; disabilita gli ingressi inspection/Travel |
+| Acceleration | 10 s | Propulsione guidata dalla mira; ha priorità sul motore Fly, che riparte con rampa fresca |
+| Skull | Immediato | Solo l'esito finale sospende Unkillable; retry 0,25 s, deadline 5 s |
+| Team Heal | Immediato | Cura completa della squadra viva; feedback al proprietario |
+| Burning | 10 s | 5% della salute massima ogni secondo; sospende Unkillable per tutto l'effetto e poi lo ripristina |
+| Hacked | 5 s | Stato Hacked |
 
-La regola di uscita Spawn dei dummy è limitata alla Schermaglia e attende una scadenza timestamp di 1 secondo. Usa la posizione obiettivo fornita dal motore, conservando il percorso già in uso in Schermaglia. Il cursore individuale esplora otto direzioni orizzontali su due distanze (8 e 12 m), con un tentativo al secondo e riavvio dopo 16 candidati. Se la posizione non è disponibile o nessun punto supera i controlli, il dummy resta in Spawn Room e riprova, senza un nuovo `Wait`.
+Luck non cambia preferenze Ghost/Fly o Unkillable. Gli effetti temporizzati chiudono il menu al risultato; quelli immediati no. Le icone residue hanno una propria scadenza. Revenge consuma il debito soltanto alla morte completa, con claimant/target esatti; timeout, uscita e cambi squadra non duplicano né consumano anticipatamente il debito.
 
-## Schermaglia
+## Dummy e bot normali
 
-La configurazione attuale usa tutte le mappe standard disponibili in Schermaglia, escluse le mappe Workshop come Isola. La selezione delle mappe appartiene alla lobby e non al blocco di regole esportato. Il codice non assegna punti o vincitori.
+`RawatBotBuatan` controlla entrambe le squadre a 1 Hz. In Schermaglia crea al massimo un dummy per team, solo con uno Spawn Point valido e almeno due slot liberi. A squadra piena dà priorità alla rimozione. Ogni team ha un cooldown impostato a tempo corrente +1 prima del tentativo, anche se la creazione fallisce; una registrazione riservata rinvia la manutenzione.
 
-Avvio, riavvio e timer rimangono protetti dalle guardie esistenti: il ramo scheduler a 1 Hz mantiene la partita aperta fino allo zero del countdown CHILL, quando una guardia one-shot esegue `Restart Match`. Queste regole sono condivise e restano necessarie anche in Schermaglia. La prova nel client deve verificare creazione e uscita spawn di entrambi i dummy, respawn, posti riservati agli umani e cambio mappa, includendo Paraíso e mappe senza obiettivi visibili.
+Dummy e bot normali sono offensivamente passivi, velocità 20%, danni/urti ricevuti 100% e collisioni native. Il dummy nasce nello Spawn Point del proprio team, ha respawn massimo 3 s e aspetta un timestamp di 1 s prima di cercare l'uscita dalla spawn. Usa `Objective Position(Objective Index)` anche senza obiettivo visibile; nessuna coordinata fissa o dipendenza da player fuori spawn.
 
-## Gate di prestazioni
+La ricerca prova otto direzioni a 8 e 12 m: 16 candidati, al massimo uno al secondo. Il punto finale deve avere spazio per il corpo, terreno valido e distanza 6–16 m dall'obiettivo; viene rialzato di 0,5 m. Se manca un punto valido il dummy resta in spawn e riprova; morte/respawn azzerano e riarmano la ricerca.
 
-Target statici:
+Il follow sceglie a 5 Hz il più vicino fra gli umani nemici registrati, vivi, spawned e con Dummy Follow ON. Facing/throttle restano rivalutati: arresto entro 4 m, stop se nessun target idoneo o alla morte/rimozione. Il movimento è diretto e può fermarsi contro un muro; gli AI normali conservano la navigazione nativa. Manutenzione morte/respawn e rilascio classificazione restano a 10 Hz. I bot non ricevono routine di menu, cache, Luck o Fly.
 
-- un solo `Loop` globale;
-- massimo 7 `Wait`, ciascuno associato a un percorso autorizzato;
-- stabilizzazione dummy a timestamp, mai tramite un ottavo `Wait`;
-- un solo `Start Camera`, con posizione/look-at per-frame e `Blend Speed 0`, un solo raycast Camera e tre ingressi condivisi (personale, watch, toggle rapido);
-- nessuna regola, variabile o subroutine inutilizzata/duplicata;
-- nessun loop o Wait dentro le subroutine chiamate durante una scansione scheduler;
-- un solo handle HUD Arcade attivo per player;
-- sorgente sotto 32.768 elementi, obiettivo massimo 26.000;
-- largest rule sotto 98 KB, obiettivo massimo 80 KB.
+## Verifica delle modifiche
 
-Gli ultimi due valori devono essere letti nel client: non sono deducibili con precisione dal solo testo Workshop.
-
-## Repository e release
-
-Il workflow permanente `validate-workshop.yml` usa Python 3.12 e sola standard library per eseguire unit test e validatore. Il vecchio workflow `maintenance-patch.yml`, che applicava e committava patch automatiche, è stato rimosso. L'allowlist dell'intero albero `.github` ammette soltanto il workflow permanente: file marker, trigger, patcher e automazioni one-shot sono errori di validazione. In `workshop/` viene mantenuto un solo file destinato all'importazione, `ruang_irama.it-IT.workshop`; il riferimento `en-US` vive soltanto sotto `tests/fixtures/` e la sua forma canonica deve restare semanticamente equivalente al clipboard pubblico.
-
-La release 0.8.1 è **live-ready**: i gate statici risultano verdi e la matrice nel client è documentata come completata. La regressione è stata chiusa includendo le prove seguenti:
-
-- import pulito nel client del 19 agosto 2026 e smoke test D.Mon;
-- matrice input/menu/localizzazione;
-- regressione della formula Fly dopo la conferma del motore precedente: pitch fino a ±90°, orientamenti cardinali, baseline uniforme 5,5 m/s e cap storico 27,5 m/s (500%), rampa 25 s, hover, due player indipendenti, collisioni, ergonomia e priorità Luck; il nuovo limite del 1000% richiede una nuova prova nel client;
-- stress join/leave/team switch;
-- rotazione delle mappe standard in Schermaglia, con Teleport manuale, creazione e uscita Spawn dei dummy; assenza dei dummy automatici nelle altre modalità;
-- soak di almeno 30 minuti con 12 slot;
-- diagnostica senza crescita progressiva di HUD, In-World Text o effetti.
-
-La procedura completa è in [`TEST.md`](TEST.md); il gate semantico è descritto in [`VALIDAZIONE.md`](VALIDAZIONE.md). Lo stato live-ready non implica automaticamente la pubblicazione di un tag/release.
-
-
-### Dummy bot: spawn e distanza sicura
-
-I dummy vengono creati soltanto in Schermaglia, quando esistono uno Spawn Point della squadra e almeno due slot liberi; la posizione iniziale è quello Spawn Point, non `Null`. Se il team è pieno, il dummy viene rimosso per liberare capacità e la soglia di creazione evita cicli ripetuti. L'uscita automatica dalla spawn registra un timestamp di 1 secondo, senza `Wait`, quindi esplora 16 candidati orizzontali a 8 e 12 m, al massimo uno al secondo, e accetta soltanto posizioni sicure fra 6 e 16 m dall'obiettivo. Bot AI e dummy hanno velocità di movimento al 20% e restano offensivamente passivi, ma ricevono danni e urti normalmente. Dummy Workshop e iBot conservano le collisioni native con ambiente e player/bot, senza istruzioni che le disabilitino o riapplichino. Il follow diretto può fermarsi davanti a una parete; non viene introdotto un pathfinding aggiuntivo. Il filtro considera esclusivamente umani registrati, vivi, spawned, avversari e con Dummy Follow ON; `Sorted Array` sceglie sempre il più vicino e il dummy avanza in `Forward` finché la distanza è maggiore di 4 m. Lo stesso filtro governa il cleanup senza target, così opt-out, morte o team-switch non lasciano facing/throttle verso un array vuoto. La magnitudine rivalutata consente arresto e ripartenza senza nuove regole, `Wait` o `Loop`.
+Il validatore confronta le due grammatiche e controlla questi contratti; i test eseguono anche mutazioni e flussi con risposte native simulate. Il motore reale, le collisioni delle mappe e i crash richiedono la [matrice nel client](TEST.md). I [controlli automatici](VALIDAZIONE.md) restano separati dai risultati live.

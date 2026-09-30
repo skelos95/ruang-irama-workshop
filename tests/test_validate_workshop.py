@@ -3983,9 +3983,9 @@ class RepositoryMetadataTests(unittest.TestCase):
         for relative in validator.CORE_DOCS:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("CHILL 0.8.1\nStato: **live-ready**\n", encoding="utf-8")
+            path.write_text("Guida operativa del progetto.\n", encoding="utf-8")
         (root / "CHANGELOG.md").write_text(
-            "## 0.8.1\n\nStato: **live-ready**.\n",
+            "## 0.8.1\n\nStato: **live-ready** (release storica).\n",
             encoding="utf-8",
         )
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
@@ -3999,11 +3999,18 @@ class RepositoryMetadataTests(unittest.TestCase):
         validator.validate_metadata(checks, root)
         return checks.errors
 
-    def test_valid_repository_metadata_passes(self) -> None:
+    def test_operational_docs_need_no_repeated_version_or_status_marker(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             self.assertEqual(self.metadata_errors(root), [])
+
+    def test_missing_version_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "VERSION").unlink()
+            self.assertIn("VERSION assente", self.metadata_errors(root))
 
     def test_stale_version_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -4012,38 +4019,40 @@ class RepositoryMetadataTests(unittest.TestCase):
             (root / "VERSION").write_text("0.7.2\n", encoding="utf-8")
             self.assertTrue(any("VERSION" in error for error in self.metadata_errors(root)))
 
-    def test_live_pending_document_is_rejected(self) -> None:
+    def test_missing_required_document_is_rejected(self) -> None:
+        for relative in validator.CORE_DOCS:
+            with self.subTest(path=relative), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.make_repo(root)
+                (root / relative).unlink()
+                self.assertIn(
+                    f"documento obbligatorio assente: {relative}",
+                    self.metadata_errors(root),
+                )
+
+    def test_empty_required_document_is_rejected(self) -> None:
+        for relative in validator.CORE_DOCS:
+            for content in ("", " \t\r\n\n"):
+                with self.subTest(path=relative, content=content), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.make_repo(root)
+                    (root / relative).write_text(content, encoding="utf-8")
+                    self.assertIn(
+                        f"documento obbligatorio vuoto: {relative}",
+                        self.metadata_errors(root),
+                    )
+
+    def test_new_revision_can_honestly_await_client_validation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
-            (root / "README.md").write_text(
-                "CHILL 0.8.1\nStato: **static-ready / live-pending**\n",
-                encoding="utf-8",
-            )
-            errors = self.metadata_errors(root)
-            self.assertTrue(
-                any(
-                    "Stato: **live-ready**" in error
-                    or "static-ready / live-pending" in error
-                    for error in errors
-                )
-            )
-
-    def test_current_live_ready_claim_is_allowed_with_valid_state_marker(self) -> None:
-        claims = (
-            "La versione 0.8.1 è live-ready.",
-            "La versione v0.8.1 è live-ready.",
-        )
-        for claim in claims:
-            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                self.make_repo(root)
-                readme = root / "README.md"
-                readme.write_text(
-                    readme.read_text(encoding="utf-8") + f"\n{claim}\n",
+            for relative in validator.CORE_DOCS:
+                (root / relative).write_text(
+                    "Stato: **static-ready / live-pending** (nuova revisione main).\n"
+                    "I test automatici non attestano la stabilità nel client.\n",
                     encoding="utf-8",
                 )
-                self.assertEqual(self.metadata_errors(root), [])
+            self.assertEqual(self.metadata_errors(root), [])
 
     def test_offline_metadata_does_not_claim_a_remote_release_is_missing(self) -> None:
         claims = (
@@ -4063,91 +4072,74 @@ class RepositoryMetadataTests(unittest.TestCase):
                 )
                 self.assertEqual(self.metadata_errors(root), [])
 
-    def test_future_live_ready_explanation_and_planned_tag_are_allowed(self) -> None:
+    def test_missing_changelog_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
-            readme = root / "README.md"
-            readme.write_text(
-                readme.read_text(encoding="utf-8")
-                + "\nLo stato live-ready richiede i test client completi. "
-                "Il tag finale v0.8.1 verrà creato soltanto dopo quei test.\n",
-                encoding="utf-8",
-            )
-            self.assertEqual(self.metadata_errors(root), [])
+            (root / "CHANGELOG.md").unlink()
+            self.assertIn("CHANGELOG.md assente", self.metadata_errors(root))
 
-    def test_historical_changelog_live_ready_is_not_treated_as_current_status(self) -> None:
+    def test_missing_historical_release_section_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
-                "## 0.8.1\nStato: **live-ready**.\n"
-                "## 0.8.0\nStato: **live-pending**\n",
+                "# Changelog\n\nVersione nominale 0.8.1.\n\n## 0.8.0\n",
                 encoding="utf-8",
             )
-            self.assertEqual(self.metadata_errors(root), [])
+            self.assertIn(
+                "CHANGELOG.md senza sezione storica 0.8.1",
+                self.metadata_errors(root),
+            )
 
-    def test_current_changelog_live_pending_is_rejected(self) -> None:
+    def test_historical_release_accepts_tag_heading_without_forced_status(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
-                "## 0.8.1 — 2026-08-25\n\n"
-                "Stato: **live-pending**.\n\n"
-                "## 0.8.0\n\nStato: **live-ready**.\n",
+                "## v0.8.1 — 2026-08-25\n\nRiscontri storici conservati.\n",
                 encoding="utf-8",
             )
-            self.assertTrue(
-                any(
-                    "deve essere live-ready" in error
-                    or "live-pending obsoleto" in error
-                    for error in self.metadata_errors(root)
-                )
-            )
+            self.assertEqual(self.metadata_errors(root), [])
 
-    def test_obsolete_current_team_switch_claim_is_rejected(self) -> None:
+    def test_newer_changelog_revision_does_not_inherit_historical_live_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "CHANGELOG.md").write_text(
+                "## Revisione main — 2026-09-29\n"
+                "Stato: **static-ready / live-pending**.\n"
+                "## 0.8.1\nStato: **live-ready** (release storica).\n"
+                "## 0.8.0\nStato: **live-pending**.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(self.metadata_errors(root), [])
+
+    def test_obsolete_lifecycle_claims_are_rejected_in_docs_and_release_history(self) -> None:
         claims = (
             "Dopo un cambio squadra il refresh leggero attende che il player sia spawned e vivo.",
             "Cambio squadra ripetuto senza cleanup/setup completo, ricostruzione HUD o reset engine.",
             "Un cambio squadra aggiorna soltanto i campi Team.",
-        )
-        for claim in claims:
-            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                self.make_repo(root)
-                changelog = root / "CHANGELOG.md"
-                changelog.write_text(
-                    changelog.read_text(encoding="utf-8") + f"\n{claim}\n",
-                    encoding="utf-8",
-                )
-                self.assertTrue(
-                    any(
-                        "testo lifecycle obsoleto" in error
-                        for error in self.metadata_errors(root)
-                    )
-                )
-
-    def test_obsolete_jump_resurrect_claim_is_rejected(self) -> None:
-        claims = (
             "Jump Resurrect teletrasporta sempre su Nearest Walkable Position.",
             "Se non esiste un terreno sicuro il player resta morto.",
             "Nel vuoto usa Nearest Walkable Position(PosisiMati).",
         )
-        for claim in claims:
-            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                self.make_repo(root)
-                changelog = root / "CHANGELOG.md"
-                changelog.write_text(
-                    changelog.read_text(encoding="utf-8") + f"\n{claim}\n",
-                    encoding="utf-8",
-                )
-                self.assertTrue(
-                    any(
-                        "testo lifecycle obsoleto" in error
-                        for error in self.metadata_errors(root)
+        for relative in (*validator.CORE_DOCS, "CHANGELOG.md"):
+            for claim in claims:
+                with self.subTest(path=relative, claim=claim), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.make_repo(root)
+                    path = root / relative
+                    path.write_text(
+                        path.read_text(encoding="utf-8") + f"\n{claim}\n",
+                        encoding="utf-8",
                     )
-                )
+                    self.assertTrue(
+                        any(
+                            "testo lifecycle obsoleto" in error
+                            for error in self.metadata_errors(root)
+                        )
+                    )
 
     def test_current_jump_resurrect_preparation_is_allowed_in_docs(self) -> None:
         claims = (

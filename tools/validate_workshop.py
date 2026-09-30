@@ -13,6 +13,7 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, Iterator
 
@@ -27,7 +28,6 @@ VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 CURRENT_VERSION = "0.8.1"
-CURRENT_VERSION_RE = rf"v?{re.escape(CURRENT_VERSION)}"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
 MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
@@ -37,31 +37,6 @@ CORE_DOCS = (
     "docs/TEST.md",
 )
 
-ASSERTIVE_LIVE_READY_PATTERNS = (
-    re.compile(r"(?im)^\s*stato\s*:\s*live-ready\b"),
-    re.compile(
-        rf"(?i)\b(?:la\s+)?(?:release|versione|{CURRENT_VERSION_RE})\s+"
-        rf"(?:corrente\s+|attuale\s+)?(?:{CURRENT_VERSION_RE}\s+)?"
-        r"(?:è|risulta|diventa|passa\s+a|viene\s+dichiarata|ha\s+raggiunto)\s+"
-        r"(?:ora\s+)?live-ready\b"
-    ),
-)
-PUBLISHED_CURRENT_RELEASE_PATTERNS = (
-    re.compile(
-        rf"(?i)\b(?:il\s+)?tag(?:\s+finale)?\s+v{re.escape(CURRENT_VERSION)}\s+"
-        r"(?:identifica|punta|esiste|risulta|è\s+(?:stato\s+)?(?:pubblicato|creato|presente))\b"
-    ),
-    re.compile(
-        rf"(?i)\b(?:release|versione)\s+{CURRENT_VERSION_RE}\s+"
-        r"(?:è\s+stata\s+|risulta\s+)?(?:pubblicata|rilasciata|disponibile)\b"
-    ),
-    re.compile(
-        rf"(?i)\bv{re.escape(CURRENT_VERSION)}\b[^.\r\n]{{0,100}}\bcommit\s+pubblicato\b"
-    ),
-    re.compile(
-        rf"(?i)https?://github\.com/[^\s)]+/(?:releases/tag|tree)/v{re.escape(CURRENT_VERSION)}\b"
-    ),
-)
 OBSOLETE_CURRENT_TEXT_PATTERNS = (
     (
         "team-switch attende spawned e vivo prima di ogni refresh",
@@ -319,7 +294,13 @@ def matching_parenthesis(text: str, opening: int) -> int:
     return matching_delimiter(text, opening, "(", ")")
 
 
+@lru_cache(maxsize=512)
 def mask_strings(text: str) -> str:
+    # Validators repeatedly inspect the same immutable rule bodies. Cache by
+    # complete text so mutations always get their own result; bound retained
+    # entries because mutation tests validate many different source strings.
+    if '"' not in text:
+        return text
     chars = list(text)
     in_string = False
     escaped = False
@@ -852,20 +833,6 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
     return None
 
 
-def current_release_claims(text: str) -> tuple[bool, bool]:
-    """Return assertive live-ready and published-release claims for 0.8.1.
-
-    Markdown emphasis is irrelevant to the claim.  The patterns intentionally
-    require an assertive verb or a publication URL so explanatory prose such as
-    "live-ready requires client tests" and planned future tags remain valid.
-    """
-
-    plain = re.sub(r"[`*_]", "", text)
-    live_ready = any(pattern.search(plain) for pattern in ASSERTIVE_LIVE_READY_PATTERNS)
-    published = any(pattern.search(plain) for pattern in PUBLISHED_CURRENT_RELEASE_PATTERNS)
-    return live_ready, published
-
-
 def validate_metadata(checks: Checks, root: Path) -> None:
     version_file = root / "VERSION"
     checks.require(version_file.is_file(), "VERSION assente")
@@ -877,15 +844,9 @@ def validate_metadata(checks: Checks, root: Path) -> None:
         checks.require(path.is_file(), f"documento obbligatorio assente: {relative}")
         if path.is_file():
             text = path.read_text(encoding="utf-8")
-            checks.require(CURRENT_VERSION in text, f"documento non allineato a {CURRENT_VERSION}: {relative}")
-            checks.require(
-                "Stato: **live-ready**" in text,
-                f"documento non dichiara Stato: **live-ready**: {relative}",
-            )
-            checks.require(
-                "static-ready / live-pending" not in text,
-                f"documento contiene stato obsoleto static-ready / live-pending: {relative}",
-            )
+            checks.require(bool(text.strip()), f"documento obbligatorio vuoto: {relative}")
+            # VERSION identifies the nominal release, not the live-test status of
+            # later revisions. Operational docs need not repeat either marker.
             # Release existence is remote state, not an offline source invariant.
             for label, pattern in OBSOLETE_CURRENT_TEXT_PATTERNS:
                 checks.require(
@@ -897,30 +858,19 @@ def validate_metadata(checks: Checks, root: Path) -> None:
     checks.require(changelog.is_file(), "CHANGELOG.md assente")
     if changelog.is_file():
         changelog_text = changelog.read_text(encoding="utf-8")
-        current_section_match = re.search(
+        release_section_match = re.search(
             rf"(?ms)^##\s+v?{re.escape(CURRENT_VERSION)}\b.*?(?=^##\s+|\Z)",
             changelog_text,
         )
         checks.require(
-            current_section_match is not None,
-            f"CHANGELOG.md senza sezione corrente {CURRENT_VERSION}",
+            release_section_match is not None,
+            f"CHANGELOG.md senza sezione storica {CURRENT_VERSION}",
         )
-        if current_section_match is not None:
-            current_section = current_section_match.group(0)
-            checks.require(
-                re.search(
-                    r"(?im)^\s*Stato:\s*\*\*live-ready\*\*\.\s*$",
-                    current_section,
-                ) is not None,
-                f"CHANGELOG.md: la sezione {CURRENT_VERSION} deve essere live-ready",
-            )
-            checks.require(
-                "live-pending" not in current_section.lower(),
-                f"CHANGELOG.md: la sezione {CURRENT_VERSION} contiene stato live-pending obsoleto",
-            )
+        if release_section_match is not None:
+            release_section = release_section_match.group(0)
             for label, pattern in OBSOLETE_CURRENT_TEXT_PATTERNS:
                 checks.require(
-                    pattern.search(current_section) is None,
+                    pattern.search(release_section) is None,
                     f"CHANGELOG.md contiene testo lifecycle obsoleto: {label}",
                 )
 
