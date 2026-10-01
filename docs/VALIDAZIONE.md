@@ -1,292 +1,52 @@
-# Rapporto di validazione — versione 0.8.1
+# Controlli automatici
 
-Data: 2026-09-02
+Richiedono **Python 3.12**, senza pacchetti esterni. Eseguire dalla radice del repository:
 
-Release tecnica: **CHILL Dedicated Server 0.8.1**
-
-Stato: **live-ready** (release storica 0.8.1).
-
-**Scheduler del 29 settembre 2026:** 113 regole e 64 subroutine, sempre 5 Wait e un Loop. Nuovi contratti per dispatch per tipo/stato, pulizia Luck residua, filtro Vision soltanto in uso, manutenzione slot dummy a 1 Hz e cooldown distinti impostati prima del tentativo. Il target follow usa una fase individuale a 5 Hz; riarmo bot e transizioni restano a 10 Hz. Test con operazioni native controllate verificano carico di chiamate e correttezza logica, non la stabilità reale prolungata. La matrice client è in `TEST.md`.
-
-**Pulizia del 26 settembre 2026:** unificate le subroutine di feedback identiche, rimossi sette rami di feedback equivalenti, un blocco vuoto del Teleport, il routing ridondante all'obiettivo corrente e i rami dummy esclusi dalla creazione automatica. Quella revisione aveva 115 regole e 62 subroutine; le modifiche funzionali ritirate della PR #76 restano assenti. Dal 27 settembre i controlli delle destinazioni verificano il solo percorso Schermaglia e rifiutano il ripristino dei rami delle altre modalità.
-
-**Ripristino del 25 settembre 2026:** la revisione PR #76 è stata ritirata per crash al primo cambio squadra segnalato nel client, anche senza menu. I suoi 561 test verdi verificavano la logica simulata, non quel comportamento del motore. Il ripristino della PR #77 ha riportato sorgente, fixture e controlli esattamente alla revisione precedente `2529608`; l’utente ha poi confermato che il cambio squadra non crasha. La pulizia successiva è descritta sopra e richiede il proprio controllo nel client. Vedere il caso di regressione in [`TEST.md`](TEST.md#regressione-cambio-squadra-del-25-settembre-2026).
-
-**Revisione del 15 settembre 2026:** ridotti i picchi di creazione delle targhette e delle icone roulette; la diagnostica lascia disabilitata la registrazione Inspector. Rimossa la registrazione dei minuti individuali e il vecchio roster: Player Vibes è l’unica lista e si trova a sinistra; a destra compare Host con icona eroe e nome del player corrente. Rimosse le istruzioni che modificavano le collisioni dei dummy, lasciando quelle native senza riapplicarle. Queste modifiche richiedono una nuova prova con lobby piena e ricambio dei player: i test automatici e i riscontri live precedenti non certificano la scomparsa dei crash.
-
-Il gate 0.8.1 analizza il significato e la struttura del sorgente Workshop. Non usa un hash dell'intero file: modifiche lecite di spaziatura o documentazione non invalidano il rilascio, mentre una mutazione che viola un'invariante deve fallire con un messaggio mirato.
-
-## Esecuzione
-
-Dalla radice del repository:
-
-```powershell
-python -m unittest discover -s tests -p 'test_*.py'
+```text
 python tools/validate_workshop.py
+python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+python -m unittest discover -s tests -p "test_*.py"
+git diff --check
 ```
 
-Il workflow `.github/workflows/validate-workshop.yml` esegue gli stessi comandi con Python 3.12, sola standard library e permesso GitHub `contents: read`. È l'unico workflow permanente. L'allowlist copre l'intero albero `.github`: `maintenance-patch.yml`, marker, trigger, patcher e automazioni one-shot sono vietati, quindi la validazione non modifica, non committa e non pubblica file.
+## Cosa viene controllato
 
-## Gate semantici
-
-### Struttura e riferimenti
-
-Il validatore controlla:
-
-- delimitatori e blocchi Workshop completi;
-- parentesi tonde e quadre bilanciate fuori da stringhe/commenti, incluse tutte le chiamate annidate nelle azioni;
-- indici compatti e dichiarazioni univoche per global, player e subroutine;
-- nomi global, player e subroutine lunghi al massimo 32 byte in UTF-8, per evitare il rifiuto dell'import da parte del client;
-- ogni riferimento risolto alla relativa dichiarazione;
-- nessuna variabile soltanto dichiarata, inizializzata o pulita;
-- nessuna regola o subroutine inutilizzata o duplicata;
-- ogni player variable inizializzata nel setup e ripulita dove necessario;
-- assenza della vecchia roulette binaria e degli handle di preload.
-
-Non esiste una lista rigida dell'intero blob: le invarianti vengono ricavate dai blocchi e dalle azioni effettive.
-
-### Parità clipboard it-IT / fixture en-US
-
-Il file realmente importabile `workshop/ruang_irama.it-IT.workshop` e la fixture interna `tests/fixtures/semantic_reference.txt` vengono trasformati in una rappresentazione canonica comune. Il gate richiede la stessa sequenza di dichiarazioni, subroutine, regole, condizioni e azioni dopo aver neutralizzato soltanto le differenze native della grammatica clipboard italiana/inglese. Una modifica funzionale presente in una sola copia deve fallire; il semplice conteggio delle regole non è considerato una prova sufficiente di equivalenza.
-
-### Nomenclatura
-
-Identificatori personalizzati, titoli regola, nomi subroutine e commenti Workshop devono essere in Bahasa Indonesia. Restano ammessi:
-
-- keyword e azioni native Workshop;
-- contenuto del ramo HUD English e ไทย;
-- acronimi tecnici;
-- `CHILL`, generi musicali, nomi degli eroi e player.
-
-Il gate rifiuta residui noti italiano/inglese negli elementi personalizzati e i vecchi alias rimossi.
-
-### Localizzazione EN/ID/TH
-
-Il gate verifica:
-
-- rami lingua `0/1/2` per istruzioni, stati, effetti e Small Message;
-- 14 menu e tutte le pagine operative, con ciclo Main Menu esatto `0..13`;
-- pagina 12 Dummy Follow completa di renderer, cursore OFF/ON, dispatcher, tinta dedicata e default OFF;
-- pagina 13 Ghost Mode / Fly completa di renderer EN/ID/TH, due cursori/toggle indipendenti, dispatcher, tinta dedicata e default OFF; il messaggio di apertura deve annunciare quattordici pagine in EN/ID/TH e non può contenere le vecchie forme Thirteen/Tiga belas/สิบสาม; la riga Fly deve insegnare `LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s`, `ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk` e `มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ`;
-- 37 nomi Player Icon in tre array allineati;
-- 26 località server in tre array allineati e label localizzata in ambra neon `Custom Color(255, 205, 110, 255)`, distinta dal cyan di `LOBBY & CHILL TIME`;
-- equivalenza di placeholder e argomenti tra le traduzioni;
-- riga vuota coerente tra contenuto e comandi.
-- promemoria del modificatore presente nei menu ma non duplicato nell'HUD globale, senza newline iniziale superfluo.
-- copy compatto EN/ID/TH con binding dinamici, target e tempi di pressione conservati; Travel & Attach mantiene anche il cooldown Self Elimination di 3 s. La verifica statica del testo non misura il ritorno a capo visivo nel client.
-
-I 100 generi restano nomi internazionali e non richiedono traduzione. Il profilo per nome visibile esatto `งูแรร์` usa `Draconian` come Player Vibes dedicato e bloccato senza aggiungerlo al catalogo globale.
-
-### HUD e rendering
-
-Ogni azione `Create HUD Text` deve:
-
-- avere Header `Null`;
-- usare soltanto Subheader/Text;
-- registrare l'handle previsto per il cleanup.
-
-Sono vietati `Big Message`, titoli HUD, preload, pagine nascoste e più di un handle Menu Arcade attivo per player. `Small Message` e gli In-World Text di inspection, Teleport e Vision restano ammessi, ma il ramo post-tentativo Jump non può contenere “Resurrect unavailable” né le equivalenti stringhe ID/TH. Il gate richiede esattamente nove HUD fissi negli slot Top `0/1/2`, Left `-2/-1/0/13` e Right `-16/0`; l’unico roster Player Vibes usa `1 + UrutanHUD` a sinistra, mentre `Left 13` è riservato al renderer dedicato `CHILL STAR` basato su cache nome/colore leader. Menu, Teleport ed effetto Try Your Luck condividono `Top 3` senza newline iniziali artificiali.
-
-Il gate controlla che il menu venga ricreato soltanto ad apertura, chiusura o cambio pagina; navigazione e applicazioni sulla stessa pagina devono usare valori rivalutati.
-
-### Input
-
-Le regole avanti/indietro e `±10` devono essere simmetriche. Il validatore richiede:
-
-- hold Melee 0,5 s per apertura/chiusura;
-- Crouch come modificatore di Primary, Secondary, Interact, Reload e Ability 1/2 a menu aperto;
-- nessuna disabilitazione custom di Melee o Jump da vivi;
-- Camera con Interact 0,5 s a menu aperto o chiuso, ma soltanto con Crouch rilasciato;
-- latch Interact condiviso tra menu e Camera, consumato da un solo sistema fino al rilascio;
-- inspection e Teleport soltanto a menu chiuso e da vivi;
-- menu congelato da morti e Jump come unico input custom di `Resurrect`; l'azione `Respawn` è vietata e posizione/prompt vengono registrati soltanto con `Is Alive == False`;
-- sequenza Jump senza percorsi bloccanti: condizioni limitate a identità umana, morte, latch e Jump; destinazione camminabile calcolata una sola volta dalla posizione corrente prima di resuscitare. Il flag di recupero viene riscritto a ogni tentativo usando raycast e distanza dalla navigazione; entrambi i Teleport, prima e dopo l’unico Resurrect incondizionato, devono usare la stessa destinazione con offset verticale fisso di 0,5 m e restare confinati al flag. Flag azzerato a fine azione, setup e quiete; nessun riarmo del latch negli eventi di morte e rilascio Jump valido anche da vivi. Conferma Is Alive prima di effetti e Ghost/Fly. Restano vietati validatore Travel, Abort, Spawn Room, offset casuali, forcing, Respawn, Wait, Loop e messaggi di fallimento.
-- latch rilasciati senza doppie attivazioni.
-
-### Unkillable FULL HP
-
-`FULL HP` è validato come stato composto indivisibile. Sia l'applicazione menu sia la riapplicazione globale devono eseguire insieme:
-
-- `Damage Received = 0`;
-- `Knockback Received = 0`;
-- `Disable Movement Collision With Players`.
-
-OFF, 1 HP, setup e cleanup locali/globali devono contenere il ripristino atomico `100/100/Enable Movement Collision With Players`. L'avvio di Try Your Luck, invece, non può scrivere `ModeKebal`, `KursorKebal`, `KebalAktif`, status, salute, tripletta o icona Unkillable. I cleanup possono normalizzare lo stato engine soltanto quando la modalità è OFF o il player è realmente morto; un cleanup live per timeout/hero swap conserva status e tripletta. Nessun cleanup può modificare modalità o cursore e deve poi assegnare logicamente `KebalAktif = ModeKebal != 0`; alla ripresa in vita la riapplicazione globale deve riportare 1 HP/FULL HP e ricreare l'icona quando l'handle è `Null` oppure l'entità non esiste più. In Spawn Room la modalità 2 conserva la tripletta protettiva, mentre soltanto il ramo 1 HP ripristina i valori normali. Le sole due disabilitazioni della collisione con player ammesse appartengono ai rami FULL HP locale e globale; una protezione parziale, una chiamata duplicata o l'applicazione della stessa immunità a dummy/iBot fa fallire il gate.
-
-### Ghost Mode / Fly
-
-Il gate assegna la proprietà esclusiva della fisica della pagina 13 ai relativi setup, applicazione locale, motore `ProsesTerbangPemain` a 20 Hz e manutenzione lifecycle globale a 10 Hz:
-
-- Ghost usa `Disable Movement Collision With Environment(player, False)`, quindi attraversa pareti e soffitti ma conserva i pavimenti; non può modificare la collisione con player/bot;
-- Fly normale usa gravità zero e `Move Speed` nativo zero; `Start Transforming Throttle` è vietato. La direzione esplicita separa le componenti: avanti con pitch (`Facing Direction * Max(0, Z)`), indietro orizzontale (`Direction From Angles(Horizontal Facing Angle, 0) * Min(0, Z)`) e strafe orizzontale (`Cross Product(up, horizontalForward) * X`), con X positivo verso sinistra e Z positivo in avanti; direzione normalizzata e intensità analogica limitata a 1 evitano bonus diagonali;
-- soltanto Forward puro (`Z > 0.050` e X fra `-0.050` e `0.050` nel throttle locale) inizializza il timestamp e la percentuale per-player `Min(1000, 100 + Max(0, Total Time Elapsed - start) * 36)`: la baseline uniforme `5,5 m/s = 100%` raggiunge `55 m/s = 1000%` dopo 25 secondi. La percentuale non viene passata a `Set Move Speed` e non rappresenta una misura della velocità nativa di ogni eroe/buff;
-- rilascio Forward e input diagonale/laterale/indietro riarmano il timer e la percentuale al `100%`; OFF, morte e transizioni lifecycle disarmano la rampa e normalizzano la fisica prevista. Setup e quiete reale inizializzano anche percentuale, direzione e delta per-player; ogni tick Fly normale li ricalcola prima dell'impulso, senza riutilizzare scratch precedenti. Il movimento nativo resta zero durante Fly normale; OFF lo ripristina insieme alla gravità senza interrompere Luck Acceleration ancora attiva;
-- il motore calcola il delta fra velocità richiesta e corrente, quindi applica un impulso `To World` con `Incorporate Contrary Motion`; senza input la velocità richiesta è zero e lo stesso controllo annulla la deriva. Non usa forcing di posizione, Teleport, nuovi `Wait`, loop per-player, `Start Accelerating` o `Stop Accelerating`;
-- toggle e cursori restano distinti, sono OFF al setup/cleanup reale e persistono durante morte, Resurrect e cambio eroe; cambio squadra e leave/rejoin passano da cleanup/setup completo e li riportano OFF; la morte disarma immediatamente il latch fisico e Jump Resurrect riapplica Ghost/Fly nello stesso tick dopo il ripristino effetti;
-- Try Your Luck non può scrivere gravità, throttle trasformato o stato Ghost/Fly; Acceleration conserva il proprio `Start Accelerating` e la proprietà totale della velocità per tutti i 10 secondi: Fly non applica impulsi né blocco del movimento nativo. La rampa resta riarmata e riparte fresca da `100%` soltanto dopo la scadenza;
-- il Main Menu usa sempre `GambarUtama`: la catena localizzata termina esplicitamente con indice 12 Dummy Follow e fallback 13 Ghost/Fly; il router non può scegliere staticamente un renderer diverso in base a `KursorUtama` né ridisegnare l'HUD durante lo scroll.
-
-### Scheduler e prestazioni statiche
-
-Il gate richiede:
-
-- un solo scheduler `Ongoing - Global` a 20 Hz;
-- un solo `Loop` nel sorgente;
-- massimo 7 `Wait`, ciascuno fissato per ruolo, durata e quantità;
-- subroutine scheduler senza `Wait`;
-- nessun yield durante una scansione del roster;
-- proprietà esclusiva dello scratch player/indice globale allo scheduler;
-- attività 20 Hz, 10 Hz e 1 Hz, senza conteggio dei minuti individuali, incluso `ProsesTerbangPemain` a 20 Hz senza yield, riapplicazione Ghost/Fly a 10 Hz dopo normalizzazioni engine e sincronizzazione del timer nativo soltanto nel ramo 1 Hz;
-- `Ongoing - Each Player` limitato a input, latch, classificazione one-shot e rendering individuale;
-- un solo `Start Camera`, posseduto da `MulaiKamera`, con entrambi i vettori per-frame, `Blend Speed 0` e un solo raycast Camera; camera personale, watch e toggle rapido devono convergere nei tre richiami alla stessa subroutine;
-- nessuna regola HUD contenente `Wait` o `Loop`.
-
-Le categorie Wait autorizzabili sono soltanto: tick scheduler, ordinamento join/leave, primo frame della classificazione bot e hold input. Resurrect e cleanup roster sono atomici e senza `Wait`; la stabilizzazione dell'uscita dummy dalla Spawn Room usa una scadenza timestamp di 1 secondo. Qualsiasi Wait fuori allowlist, un ottavo `Wait`, una durata diversa o un secondo Loop fa fallire il gate.
-
-### Try Your Luck
-
-Il validatore riconosce una macchina a stati con timestamp e sei esiti, non il vecchio percorso binario:
-
-| Esito | Invariante |
+| Area | Verifiche |
 |---|---|
-| Vision | durata 15 s, IWT con icona/nome/salute live per bot/dummy e tutti gli umani anche con Privacy ON, più blocco/cleanup di inspection e Teleport Crouch |
-| Acceleration | durata 10 s e propulsione automatica 3D guidata dalla mira, senza dipendenza dal throttle |
-| Skull | unico esito autorizzato a bypassare temporaneamente Unkillable; trigger soltanto sull'esito finale armato, retry globale ogni 0,25 s fino a `Is Alive == False`, con deadline anti-blocco di 5 s |
-| Team Heal (Heart) | cura completa di tutti i player vivi della squadra del proprietario della roulette |
-| Burning | 5% max HP ogni 1 s per 10 s; rimuove Unkillable e normalizza Damage Received per l'intera durata, quindi ripristina la modalità scelta |
-| Hacked | durata 5 s e cleanup status |
+| Importazione | UTF-8, stringhe/delimitatori, grammatica italiana, nomi impostazioni validi, dimensioni testuali |
+| Parità | Stesse dichiarazioni, regole, condizioni e azioni fra clipboard italiano e fixture inglese normalizzati |
+| Struttura | Riferimenti risolti, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
+| Scheduler | Un solo Loop, Wait autorizzati, nessuna attesa nelle routine della scansione, frequenze e condizioni per tipo/stato |
+| Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
+| Funzioni | Input, menu, Camera, Travel/Attach, Resurrect, Ghost/Fly, Revenge, Unkillable, Luck e dummy |
+| Testi | Rami EN/ID/TH, placeholder, cataloghi e nomenclatura indonesiana |
+| Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
-L'avvio della roulette non può sospendere Unkillable e un'icona Skull intermedia non può armare la morte. Vision, Acceleration, Team Heal e Hacked restano protetti. Burning è l'eccezione non-Skull esplicitamente autorizzata a eseguire `Clear Status(Unkillable)` e `Damage Received = 100`: modalità e cursori restano invariati, la sospensione dura per tutto l'effetto da 10 secondi, il danno è 5% Max Health ogni secondo e la protezione selezionata viene ripristinata soltanto alla fine o nel cleanup anticipato, non fra i tick. Il ramo centralizzato Skull finale/Revenge resta l'unico a usare il bypass prima di `Kill`. Nessun ramo o cleanup Try Your Luck può impostare gravità, avviare/fermare il throttle trasformato o scrivere toggle/cursori Ghost/Fly. Morte e timeout annullano timestamp, status dell'esito, modificatori temporanei ed effetti senza cancellare modalità/cursore Unkillable. Il tracker `PahlawanTerakhir` deve rilevare il cambio eroe umano nel scheduler globale a 10 Hz, ripulire Try Your Luck e riaprire il menu quando necessario. Cambio squadra e leave/rejoin eseguono cleanup e setup fresco. Un loop o Wait per-player associato alla roulette è vietato.
+I test di mutazione alterano intenzionalmente il sorgente: ciascuna violazione deve essere rifiutata per la propria causa. I test comportamentali eseguono porzioni delle vere espressioni/azioni it-IT ed en-US con risposte native controllate; non sono un server Overwatch.
 
-Le sei icone devono usare `Visible To and Position`: il pubblico rivaluta l'intero roster umano quando cambia, mentre la posizione `Update Every Frame` segue occhio e mirino dell'identità catturata con `Evaluate Once`. L'indicatore off-screen resta attivo, i bot non diventano viewer e la posizione non può leggere direttamente lo scratch globale dopo la creazione. `Start Accelerating` deve usare `Facing Direction Of(Evaluate Once(player))` con `Direction Rate and Max Speed`, così soltanto l'identità è stabile mentre la direzione completa della visuale resta dinamica per tutti i 10 secondi; throttle, input richiesto e impulsi ripetuti sono vietati.
+Le regressioni di ownership includono 240 identità successive sui 12 slot, variabili del leaver perse, eventi tardivi e ID riciclati. Il caso del roster controlla la distruzione di 480 icone senza doppie distruzioni; il registro dei testi temporanei ha prove separate di cleanup e riuso.
 
-Le tre IWT di inspection, Vision e Teleport devono mantenere icona eroe, nome e salute dentro un unico `Custom String`. Il secondo argomento di posizione deve essere un solo `Update Every Frame` esterno che racchiude esattamente `Eye Position(Evaluate Once(identity)) + Vector(0, 0.450, 0)`; al suo interno deve quindi esistere un solo `Evaluate Once`, applicato esclusivamente all'identità prevista per quella targhetta. La reevaluation deve restare esattamente `Visible To Position String and Color`, così testo, colore, posizione e destinatari continuano ad aggiornarsi senza permettere all'handle di cambiare soggetto.
+Il parser riutilizza la mascheratura delle stringhe tramite una cache limitata a 512 voci, identificata dal contenuto completo. Il risultato è testo immutabile: una modifica al sorgente produce una nuova analisi. Non vengono memorizzati gli esiti della validazione né saltati test o controlli semantici.
 
-### Lifecycle
+## GitHub Actions
 
-Il gate controlla:
+L'unico workflow è [validate-workshop.yml](../.github/workflows/validate-workshop.yml). Parte sulle pull request, sui push a `main` e manualmente. Usa Actions fissate a SHA e permessi `contents: read`; non modifica né pubblica file.
 
-- guardia anti-duplicato prima della registrazione roster;
-- rifiuto di `Null` e nome visibile vuoto prima di allocare uno slot roster, con rilascio del lock e retry timestamp;
-- un solo setup e un solo set di handle per player;
-- secondo cambio squadra durante il setup in coda: riallineamento di `TimSiklusTarget`, nuovo retry individuale a `+0,25 s`, rilascio della sola prenotazione del player e nuova acquisizione solo dopo entrambe le scadenze globale e individuale; nessuna prenotazione trattenuta da un player non spawned;
-- chiusura menu canonica prima del fallback locale: `TutupMenu` distrugge l'handle registrato anche con `HudMenu == Null` e non distrugge due volte un handle condiviso dalle due copie;
-- cleanup completo su leave;
-- cambio squadra di un umano registrato separato in due regole `Ongoing - Each Player`: `01a` apre soltanto la quarantena e arma la stabilizzazione a 0,5 s; con team e spawn stabili e il lock lifecycle assegnato allo stesso player, `01b` richiama `TenangkanPemain`, poi `BersihkanPemain` se l'identità è ancora nel roster e infine `SiapkanPemain`, con il giusto `Event Player`. Il cleanup distrugge gli handle dagli array canonici prima di liberare lo slot; lo scheduler prenota il lavoro senza eseguire cleanup locali dal contesto globale. Il teardown resta privo di `Wait`, `Abort` e dipendenze da `Server Load`;
-- renderer roster privo del gate `Is Alive`, flag ready scritto solo dopo l’unico handle Player Vibes, menu distrutto tramite l'array globale canonico e classifier che, quando manca temporaneamente uno slot, riarma il lifecycle, rilascia il proprio lock globale e programma il retry dopo 0,25 secondi; il renderer roster deve restare inline nella stessa regola `02` del classifier (nessuna seconda `Ongoing - Each Player` dedicata alla creazione di `HudKiri`);
-- filtri pubblici Crouch che richiedono sempre `PembaruanDaftarTertunda == False`, così target non stabili non restano agganciati agli In-World Text;
-- assenza del vecchio worker/consumer pending aggiuntivo: la quarantena leggera di `01a` viene completata dal worker individuale `01b` con cleanup/setup completo;
-- cambio squadra e leave/rejoin passano da setup fresco: preferenze e cursori tornano ai default;
-- repair del profilo `งูแรร์`: `Draconian` viene sempre riasserito, mentre Silver Mist/Poison 2 tornano ai default soltanto quando `PernahDisiapkan` segnala un reset reale;
-- cambio squadra non deve conservare Camera, status, effetti o voti attivi: il reset completo deve fermare lo stato engine prima del nuovo setup e liberare ogni riferimento owner-scoped; le subroutine locali di cleanup non possono essere chiamate dal contesto globale dello scheduler;
-- rimozione di riferimenti stale in Camera, Revenge, Vote, Teleport e inspection durante il cleanup di un leave vero;
-- azzeramento owner-scoped di ogni `PemainDipilih` che punta al vero leaver prima della rimozione roster, seguito dal ricalcolo dei voti;
-- Revenge armata senza decremento al click, claimant univoco, retry globale e consumo del debito soltanto alla morte completa con attacker coincidente;
-- ordine atomico delle operazioni sensibili, lock lifecycle globale esclusivo per il setup iniziale e rilascio dei latch; il detector individuale del team switch non acquisisce quel lock;
-- cleanup per identità esatta di HUD, In-World Text, effetti e slot sul leave vero dopo la guardia di 0,5 s, senza reset engine del leaver né fallback verso il nuovo occupante dello slot;
-- profilo del nome visibile esatto `งูแรร์`: default `Silver Mist` e `Poison 2` modificabili, Player Vibes `Draconian` fisso, Soundtrack read-only, catalogo globale ancora di 100 generi, nessun match per nomi diversi e limitazione degli omonimi esatti esplicitamente coperta;
-- Privacy iniziale OFF con cursore coerente, esclusione degli umani che attivano Privacy ON da Camera custom, inspection e Teleport, sgancio degli osservatori già attivi; Vision deve invece includere tutti gli umani, usare il nome roster stabile e non sovrapporre HUD Crouch; le tre IWT inspection/Vision/Teleport conservano testo unico icona/nome/salute, posizione interamente `Update Every Frame`, sola identità catturata con `Evaluate Once` e reevaluation completa;
-- dummy e bot AI confinati al percorso di classificazione/lock dedicato, senza roster, HUD, menu, input o funzioni player; il leave di un iBot può soltanto distruggere e azzerare il proprio IWT Vision prima di abortire il lifecycle umano;
-- massimo un dummy per squadra, creazione soltanto in Schermaglia con almeno due slot liberi e Spawn Point valido, rimozione quando la squadra è piena e nessun ciclo di creazione ripetuta vicino al limite;
-- uscita dummy stabilizzata da un timestamp di 1 secondo, respawn massimo 3 secondi e riarmo alla morte/respawn e ripianificato dopo ogni tentativo non riuscito.
-- velocità bot/dummy esattamente al 20%; nessuna istruzione modifica o riapplica le collisioni native nel setup dummy o in `KunciBot`;
-- `KunciBot` mantiene `Damage Received = 100` e `Knockback Received = 100`, senza disabilitare la collisione con player; i modificatori offensivi restano a zero;
-- filtro di movimento identico in condition, facing, throttle e cleanup: soltanto umani registrati (`Manusia`), spawned, vivi, della squadra opposta e con Dummy Follow ON; il target viene ordinato per distanza, il throttle `Forward` rivalutato vale `0` entro 4 m e `1` oltre la soglia, con stop obbligatorio su opt-out/assenza target, morte completa e rimozione;
-- ownership Dummy Follow limitata al default setup OFF, all'applicazione della pagina 12 e all'eventuale quiete lifecycle OFF; Camera e altri latch non possono scrivere la preferenza.
-- ownership Ghost/Fly limitata al setup/cleanup reale, all'applicazione della pagina 13 e alla manutenzione fisica dedicata; il cambio squadra deve azzerare i toggle tramite cleanup/setup completo.
-- Crouch Travel & Attach composto da cinque pagine — Teleport: Spawn Room, Teleport: Active Objective, Teleport: Player / Bot, Attach: Player / Bot e Self Elimination — con copia ordinata e localizzata EN/ID/TH, binding dinamici, un solo HUD/cursore per-player e palette mint → cyan → blu → viola → rosa (istruzioni pastello, contenuto neon). Primary/Secondary restano riservati alla navigazione e Interact all'esecuzione; Self Elimination usa un timestamp per-player, arma esattamente `+3` secondi prima di `Kill`, rifiuta lo spam durante la finestra e non viene azzerato dalla morte; cambio squadra e leave/rejoin lo reinizializzano nel setup fresco.
+Sei gruppi eseguono tutti i test, distribuendoli deterministicamente per nome. `Whitespace` e `Semantic gates` lavorano in parallelo. `Required checks` passa soltanto quando tutti i gruppi richiesti hanno successo: nove controlli complessivi. Timeout: 20 minuti per gruppo test, 10 per i due gate, 5 per l'aggregatore.
 
-### Sola Schermaglia
+Un nuovo aggiornamento della stessa PR annulla l'esecuzione precedente. Quel vecchio commit può mostrare test annullati e un aggregatore rosso: controllare sempre il commit finale della PR o di `main`. Un'esecuzione annullata non certifica né successo né fallimento del sorgente completo.
 
-Il gate richiede la guardia `Current Game Mode == Game Mode(Skirmish)` nelle due regole di creazione dummy e nella routine di uscita spawn. Le destinazioni automatiche e la pagina Objective usano `Objective Position(Objective Index)` con controllo della posizione nulla e della geometria. I vecchi rami payload, bandiera e proxy Push devono essere assenti.
+## Modificare e verificare
 
-Sono conservati retry a 1 secondo, 16 candidati, cursori indipendenti, reset dopo morte/respawn e protezioni degli slot umani. Sono vietate azioni custom che assegnano punti o vincitori. I test eseguono le regole reali con risposte geometriche controllate; le coordinate native di ciascuna mappa devono essere verificate nel client.
+1. Modificare il sorgente italiano e la fixture inglese in modo equivalente, se la modifica riguarda il Workshop.
+2. Eseguire i test pertinenti e i due gate; eseguire la suite completa prima dell'unione.
+3. Per documentazione e strumenti mantenere collegamenti validi e distinguere stato corrente da risultati storici.
+4. Per cambi funzionali importare il commit esatto nel client e registrare il risultato in base a [TEST.md](TEST.md).
 
-## Test negativi
+Il validatore richiede i documenti essenziali e la storia della versione nominale; non obbliga a dichiarare una revisione “live-ready”. Una versione invariata in `VERSION` non significa che due commit contengano lo stesso Workshop.
 
-La suite crea mutazioni isolate e richiede il fallimento del validatore per almeno queste famiglie:
+## Limiti
 
-- traduzione o ramo lingua mancante;
-- placeholder EN/ID/TH non allineati;
-- Header diverso da `Null`, `Big Message` o secondo handle menu;
-- preload/HUD nascosto reintrodotto;
-- input menu senza Crouch, Camera bloccata a menu aperto o Camera attivabile con Crouch premuto;
-- ciclo Main Menu diverso da `0..13`, tail dinamica `12 ? Dummy Follow : Ghost/Fly` assente o duplicata, router principale scelto staticamente dal cursore, pagina 12 priva di renderer/cursore/apply/tinta, pagina 13 priva di una lingua/toggle/applicazione/tinta, writer Dummy Follow o Ghost/Fly estraneo oppure messaggio di apertura rimasto a tredici pagine in una lingua;
-- latch Interact non impostato dal menu o non consultato prima di un nuovo comando menu/Camera;
-- Jump tornato a Respawn, guardie di Menu/Crouch/Camera/Luck aggiunte, calcolo della destinazione spostato dopo il primo Teleport o Resurrect, query di navigazione duplicata, controllo raycast o distanza rimosso, flag non riscritto o non azzerato, destinazioni pre/post differenti o offset alterato, recupero eseguito anche su terreno sicuro, uno dei due Teleport assente, forcing/Wait/Loop introdotti, effetti prima del recupero, latch azzerato a una nuova morte o rilascio limitato ai soli morti. I test comportamentali eseguono i sorgenti italiano e inglese con geometria controllata e controllano anche isolamento fra player e input tenuto.
-- FULL HP privo di una voce della tripletta danni/urti/collisione, protezione zero posseduta da un ramo estraneo, ripristino `100/100/collisione ON` mancante in una delle uscite, oppure Try Your Luck che cancella modalità/cursore/status/icona;
-- promemoria Crouch globale reintrodotto, istruzione menu rimossa o newline/gap iniziale reintrodotto;
-- icona roulette senza `Visible To and Position`, senza posizione `Update Every Frame`, con identità catturata nel punto sbagliato, legata allo scratch globale nudo, invisibile ai nuovi umani del roster o resa visibile ai bot;
-- Acceleration di Luck senza `Facing Direction Of(Evaluate Once(player))` o `Direction Rate and Max Speed`, legata al player scratch corrente, con direzione congelata, throttle/input richiesto o `Apply Impulse` reintrodotto nel ramo Luck; Try Your Luck che imposta gravità o trasforma il throttle di Fly;
-- Ghost che include i pavimenti o altera la collisione con player; Fly senza motore esplicito a 20 Hz, gravità e movimento nativo zero, formula 3D forward-pitch/back-strafe orizzontale, normalizzazione analogica, delta esatto world o isolamento per-player; `Start Transforming Throttle` reintrodotto, rampa diversa da `5,5 → 55 m/s` / `100% → 1000%` in 25 secondi, progressione attivata da diagonale/strafe/indietro, reset `100%` o ripristino OFF assenti, `Start Accelerating`/`Stop Accelerating` nel motore Fly, impulsi o blocco del movimento durante Luck Acceleration, toggle Ghost/Fly azzerati da morte/cambio eroe oppure non azzerati dal team-switch;
-- Privacy default diverso da OFF, target con Privacy ON selezionabile o visibile in Camera/inspection/Teleport, osservatore non sganciato, Vision che filtra un umano privato, usa il token nome instabile, è priva di icona/nome/salute o sovrappone HUD Crouch; una delle tre IWT che separa icona/nome/salute, altera l'ancoraggio `Eye Position + Vector(0, 0.450, 0)`, rivaluta soltanto una parte della posizione, cattura più dell'identità o perde `Visible To Position String and Color`;
-- guardia bot/dummy rimossa da lifecycle, UI, Anran o Try Your Luck;
-- dummy creato fuori dalla Schermaglia o con meno di due slot liberi, non rimosso a team pieno, ricreato in loop o stabilizzato con un nuovo `Wait` invece del timestamp;
-- velocità bot/dummy diversa dal 20%, danni/urti ricevuti diversi da 100, qualsiasi modifica delle collisioni native nel setup dummy o nel lock, target non umano/non opt-in/alleato accettato, uno dei quattro filtri divergente, soglia dei 4 m alterata, throttle automatico assente/non rivalutato o cleanup facing/throttle incompleto;
-- slot HUD fisso, roster, menu o effetto fuori dalla griglia di riferimento, secondo roster o conteggio minuti reintrodotto, oppure diagnostica riportata nel campo Text con il fallback `Null` che genera `0` nel client;
-- dichiarazione, riferimento, regola o subroutine inutilizzata/duplicata;
-- parentesi mancante o in eccesso in una chiamata annidata, inclusi i quattro filtri Privacy target-aware;
-- secondo Loop, Wait fuori allowlist o yield nella scansione scheduler;
-- secondo `Start Camera`, chiamata fuori da `MulaiKamera`, vettore non per-frame, `Blend Speed` diverso da 0, ingresso personale/watch/toggle non condiviso o secondo raycast Camera;
-- esito/durata Try Your Luck mancante, vecchio percorso binario, Skull intermedio capace di armare la morte, Skull finale senza retry/deadline, Burning che non sospende Unkillable/Damage Received per tutti i 10 secondi, riapplica la protezione fra i tick, modifica Mode/Kursor o non la ripristina al termine, icona non ricreata dopo Resurrect, cleanup eseguito prima della morte completa oppure cambio eroe non gestito dal lifecycle globale;
-- Revenge con `Kill`/decremento al click, indice debito cached, claimant non coincidente con l'attacker, pending non ripulito su timeout/leave oppure pending perso/duplicato durante cambio squadra;
-- guardia Join, filtro nome `Null`/vuoto, cleanup Leave o cleanup team-switch rimossi, chiamata di cleanup `Event Player` dal contesto globale, perdita degli handle canonici prima della distruzione o mancato stop engine prima del nuovo setup, voti verso il leaver non ripuliti, oppure default non riapplicati dopo cambio squadra o vero rejoin;
-- profilo `งูแรร์` assente o applicato a un nome diverso, default colore/icona non modificabili, Vibes modificabile dalla pagina Soundtrack, `Draconian` aggiunto al catalogo globale o conteggio generi diverso da 100;
-- Crouch Travel & Attach con meno di cinque pagine, copia EN/ID/TH mancante o non specifica, binding hard-coded, palette pastello/neon incompleta, cursore condiviso, Self Elimination assente o priva del cooldown per-player di 3 secondi, Primary/Secondary capaci di eseguire un'azione oppure Interact incapace di eseguire la pagina attiva;
-- guardia Schermaglia mancante, destinazione obiettivo non sicura o rami delle altre modalità reintrodotti;
-- divergenza canonica tra clipboard `it-IT` e fixture `en-US` anche quando il numero totale di regole resta uguale;
-- workflow di scrittura, automazione di commit, marker, trigger o patcher one-shot reintrodotto sotto `.github`.
+I controlli offline non misurano il carico nativo, non compilano il clipboard nel client e non provano assenza di crash/leak. Element Count e Largest Rule compilati, layout Thai, collisioni/mappe, fisica e concorrenza di 12 client richiedono prove nel gioco. Dimensione del testo e numero di chiamate sono indicatori distinti da CPU e memoria del server.
 
-Ogni mutazione deve fallire per la propria causa, così il test evita un falso positivo dovuto a un'altra invariante già rotta.
-
-## Limiti della validazione statica
-
-Il parser testuale non può certificare:
-
-- importazione reale nel client;
-- Element Count compilato e dimensione Largest Rule;
-- fluidità a 12 slot e input simultanei;
-- layout effettivo EN/ID/TH e glifi Thai;
-- comportamento su D.Mon o sulle mappe modificate;
-- leak osservabili soltanto tramite Text Count ed Entity Count;
-- interferenze con Team Status Indicator.
-
-Il gate statico non sostituisce queste verifiche client. Per la 0.8.1 la matrice live è stata completata e documentata; i valori numerici non forniti non vengono ricostruiti nel rapporto.
-
-## Contesto patch
-
-La [patch del 19 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-19) non elenca modifiche Workshop, ma richiede un nuovo import e invalida i replay precedenti. La [patch dell'11 agosto 2026](https://overwatch.blizzard.com/en-us/news/patch-notes/live/2026/08/#patch-2026-08-11) introduce D.Mon, il nuovo Team Status Indicator e modifiche a Busan, Eichenwalde e Paraíso; questi casi hanno priorità nel test live.
-
-## Gate live completato
-
-La matrice completa è in [`TEST.md`](TEST.md). I criteri obbligatori includono:
-
-- import e D.Mon smoke test;
-- 14 menu e input in EN/ID/TH, incluse pagina 12 Dummy Follow e pagina 13 Ghost Mode / Fly;
-- profilo `งูแท้`, inclusi default modificabili, Vibes bloccato e Soundtrack read-only;
-- cinque pagine Crouch Travel & Attach con copia ordinata EN/ID/TH, binding reali, palette pastello/neon per pagina, Primary/Secondary per navigare e Interact per eseguire;
-- Ghost/Fly indipendenti: collisioni, volo 3D con yaw cardinali e pitch fino a ±90°, baseline uniforme `5,5 m/s` e rampa Forward pura fino a `55 m/s` / `1000%` in 25 secondi, reset diagonal/side/back/release, analogico, hover/ripristino, due player indipendenti, fluidità/ergonomia e priorità totale Try Your Luck;
-- Self Kill con cooldown per-player di 3 secondi;
-- morte/Resurrect con Jump nello stesso punto su terreno sicuro e Teleport prima e dopo la resurrezione verso la destinazione camminabile nel vuoto; includere tasto tenuto durante una nuova morte, rilascio da vivo/morto, Self Kill con Crouch aperto, hero swap, spectator, join/leave e team switch;
-- Burning 5% Max Health ogni secondo per 10 secondi, con sospensione e ripristino Unkillable corretti;
-- respawn dummy entro 3 secondi;
-- 20 cambi squadra singoli, 10 transizioni simultanee e cascata full-lobby, inclusi doppi cambi rapidi con menu, Camera, Luck e Fly attivi;
-- leave/new join a 12 slot con identità diverse, guardia ritardata di 0,5 s, assenza di handle persi e isolamento di menu, timer e fisica di un secondo player;
-- rotazione delle mappe standard in Schermaglia;
-- soak minimo 30 minuti a 12 slot;
-- Element Count `< 32.768` con obiettivo `≤ 26.000`;
-- Largest Rule `< 98 KB` con obiettivo `≤ 80 KB`;
-- Text Count ed Entity Count di ritorno al baseline;
-- nessuna crescita di HUD/IWT/effects e nessun conflitto con Team Status Indicator.
-
-## Decisione
-
-La versione 0.8.1 è documentata come **live-ready**: i gate repository e la matrice nel client sono riportati come completati per la regressione storica. Il vecchio Fly basato sul movimento nativo aveva fallito il test utente su più eroi; il motore a impulsi successivo ha invece ricevuto conferma di funzionamento e la revisione strafe + cleanup cambio squadra è stata validata nella regressione 0.8.1. I test numerici devono interpretare la formula effettiva del sorgente, compreso l'ordine del prodotto vettoriale, invece di assumere una formula precedente; non certificano comunque da soli la fisica engine. La motivazione tecnica e le fonti primarie sono in [`PROGETTO.md`](PROGETTO.md), la matrice operativa in [`TEST.md`](TEST.md). Lo stato live-ready non equivale alla pubblicazione automatica di un tag/release. La release `v0.8.1` punta a `14ad403babb56c58f9b55f8ebe902f13b18cd02c`; al controllo del 7 settembre 2026 `main` era sette commit avanti, a `687197d67619f89a0f034cafaa67857d00bf78a0`. Per ogni revisione successiva occorre un verbale live associato allo SHA importato prima di estendere le conclusioni su fluidità e assenza di leak. L'inventario branch GitHub rilevato in quel controllo contiene soltanto `main`; il precedente riferimento al branch archivio non è quindi una fonte attualmente disponibile.
-
-- UX messaggi/Travel: il gate vieta le conferme Small Message ridondanti selezionate e richiede per Crouch Travel la chase `WarnaMenu` da 0,18 s, i cinque target cromatici e `Visible To String and Color`.
-
-## Carico simultaneo e proprietà dei testi — revisione 2026-09-09
-
-Le regressioni aggiunte eseguono le espressioni e le azioni dei sorgenti it-IT/en-US, senza sostituire la logica di selezione o pulizia con un algoritmo separato. Coprono registrazione persistente dei testi temporanei, perdita delle variabili locali prima della pulizia, ID riciclati a un altro proprietario e capacità fissa durante centinaia di identità successive. I casi di concorrenza controllano la frequenza individuale e il numero massimo di manutenzioni nello stesso tick, il conteggio accorpato dei voti e il riuso dell'HUD durante la navigazione.
-
-Questi risultati dimostrano le proprietà del flusso testato. La stabilità nativa, il limite di elementi compilati e il comportamento sotto carico di 12 client richiedono le prove live di `docs/TEST.md`.
+I risultati sono legati alla revisione verificata: consulta i controlli della PR o del commit, senza estendere automaticamente l'esito a modifiche successive. [Stato corrente](../README.md#stato-attuale) · [Architettura](PROGETTO.md)
