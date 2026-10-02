@@ -57,6 +57,7 @@ class MenuVisualFeedbackTests(unittest.TestCase):
                 ('Custom String("Plum")', '', "40 voci"),
                 ('% Count Of(Global.DaftarGenre)', '% 100', "lunghezza corrente"),
                 ('Count Of(Global.DaftarGenre) - 10', '90', "passo indietro dinamico"),
+                ('Hold CROUCH | {0}: back', '{0}: back', "Soundtrack bloccato: Reload"),
             ):
                 with self.subTest(mutation=old):
                     self.assertIn(old, source)

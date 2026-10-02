@@ -1293,7 +1293,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "-2"): ("subheader", ('Hold {0}: hero + HP', "Tahan {0}: cek pahlawan + HP", "กด {0} ค้าง: ดูฮีโร่ + HP")),
         ("Left", "0"): ("text", ("PLAYER VIBES", "MUSIK PEMAIN", "เพลงของผู้เล่น")),
         ("Left", "13"): ("subheader", ("CHILL STAR: {0}", "BINTANG CHILL: {0}", "ดาวสายชิล: {0}")),
-        ("Right", "-16"): ("subheader", ('Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera', 'Tahan {0} 0,5 dtk: Menu | Tahan {1} 0,5 dtk: Kamera', "กด {0} ค้าง 0.5วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5วิ: กล้อง")),
+        ("Right", "-16"): ("subheader", ('Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera', 'Tahan {0} 0,5 dtk: Menu | Tahan {1} 0,5 dtk: Kamera', "กด {0} ค้าง 0.5 วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5 วิ: กล้อง")),
     }.items():
         call = fixed_hud.get(slot)
         if not call:
@@ -1541,7 +1541,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "4/5 | TEMPEL: PEMAIN/BOT",
                     "DI ATAS: {0}",
                     "5/5 | ELIMINASI DIRI",
-                    "WUJUD HERO AKTIF | JEDA: 3 DTK",
+                    "WUJUD PAHLAWAN AKTIF | JEDA: 3 DTK",
                     '1/5 | วาร์ปกลับห้องเกิด',
                     'ห้องเกิดทีมคุณ',
                     '2/5 | วาร์ปใกล้ภารกิจ',
@@ -2227,7 +2227,7 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
     if renderer:
         calls = list(iter_calls(renderer.body, "Create HUD Text"))
         checks.equal(len(calls), 1, "Multijump: unico HUD menu")
-        for token in ("14 - MULTIJUMP", "14 - LOMPAT GANDA", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกระโดดกลางอากาศ"):
+        for token in ("14 - MULTIJUMP", "14 - LOMPAT BERULANG", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกลางอากาศ"):
             checks.require(token in renderer.body, f"Multijump: menu localizzato {token}")
         checks.equal(renderer.body.count("100 + (Event Player.KursorLompatGanda - 1) * 50"), 3,
                      "Multijump: preview 100..1000% in passi50 per tutte le lingue")
@@ -3150,6 +3150,12 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
     if transition:
         checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 3,
                      "feedback visuale: assegnazioni immediate colore menu")
+    music = rule_by_subroutine(rules, "GambarMusik")
+    if music:
+        back_labels = [parse_literal(call.args[0]) for call in iter_calls(music.body, "Custom String")
+                       if len(call.args) == 2 and re.sub(r"\s+", "", call.args[1]) == "InputBindingString(Button(Reload))"]
+        checks.equal(set(back_labels), {"Hold CROUCH | {0}: back", "Tahan JONGKOK | {0}: kembali", "ย่อค้าง | {0}: กลับ"},
+                     "Soundtrack bloccato: Reload deve ricordare Crouch in EN/ID/TH")
 
 
 def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
@@ -4498,7 +4504,7 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                 )
         for text, label in (
             ('Self Elimination: ready in {0}s.', "EN"),
-            ('Bunuh Diri siap {0} dtk lagi.', "ID"),
+            ('Eliminasi diri siap {0} dtk lagi.', "ID"),
             ('กำจัดตัวเองได้ใน {0} วิ', "TH"),
         ):
             checks.require(text in self_kill.body,
