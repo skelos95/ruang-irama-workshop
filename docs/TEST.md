@@ -11,6 +11,7 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | 27 settembre, PR #80 | L'utente conferma il recupero dal punto nel vuoto prima problematico e la resurrezione sul terreno. | Altre mappe e combinazioni richiedono prove dedicate. |
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
+| 2 ottobre, PR #85–86 | L'utente conferma il funzionamento di Multijump, Fly e tinte menu; 671 test e nove controlli GitHub superati. | Conferma funzionale, senza nuove misure di carico o durata. |
 
 ## Preparazione
 

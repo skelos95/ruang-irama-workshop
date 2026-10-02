@@ -1652,8 +1652,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     thai_close_help = 'กด {1} ค้าง 0.5 วิ: ปิด'
     checks.equal(
         source.count(thai_close_help),
-        3,
-        "help Thai chiusura menu: tre renderer devono dichiarare il hold di 0,5 secondi",
+        2,
+        "help Thai chiusura menu: due renderer raggiungibili devono dichiarare il hold di 0,5 secondi",
     )
     checks.require(
         "กด {1} ค้างเพื่อปิด" not in source,
@@ -1807,6 +1807,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     ghost_fly_renderer = rule_by_subroutine(rules, "GambarHantuTerbang")
     checks.require(ghost_fly_renderer is not None, "renderer pagina 13 Ghost Mode / Fly assente")
     if ghost_fly_renderer:
+        checks.require("Event Player.HalamanMenu == -1" not in mask_strings(ghost_fly_renderer.body),
+                       "renderer pagina 13: rami del menu principale irraggiungibili")
         for token in (
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
@@ -3177,13 +3179,19 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
     transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
     if transition:
         checks.require(
+            "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 13 ? "
+            "Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + Vector(110, 170, 255) * 0.320 :"
+            in transition.body,
+            "feedback visuale: Ghost/Fly deve usare la tinta condivisa senza override",
+        )
+        checks.require(
             "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 14 ? "
             "Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + Vector(245, 180, 85) * 0.320 :"
             in transition.body,
             "feedback visuale: Multijump deve avere una tinta dedicata nel menu e nella preview",
         )
-        checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 3,
-                     "feedback visuale: tre transizioni fluide colore menu")
+        checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 2,
+                     "feedback visuale: due transizioni fluide senza override duplicato")
         checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 0,
                      "feedback visuale: nessuna assegnazione immediata nella transizione colore")
     quiet = rule_by_subroutine(rules, "TenangkanPemain")
