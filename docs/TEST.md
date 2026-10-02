@@ -43,16 +43,16 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
 - Il profilo `งูแรร์` parte Silver Mist / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
-- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, Black nero sul nome e menu leggibile. Nessuna pulsazione o animazione dei menu all'apertura, applicazione o revoca Camera/Revenge.
+- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, Black nero sul nome e menu leggibile. Tinte menu fluide in 0,180 s anche scorrendo Name Color, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
 
-- Multijump OFF: salto nativo. ON: scegliere 100%, 150%, 200% fino a 1000%; dopo il primo salto rilasciare/ripremere Jump più volte in aria. Ogni salto usa la stessa forza scelta; non cresce a ogni pressione né ripete tenendo Jump. Provare discesa rapida, salita e soffitti. Ring RGB breve sotto i piedi al primo salto e ai successivi, mai persistente.
-- Attivare Multijump mentre Jump è già tenuto, aprire un menu, usare Attach, Fly/Luck Acceleration, morire e resuscitare tenendo Jump: niente salto aggiuntivo involontario. Rilasciare e ripremere dopo lo sblocco; provare due player con forze diverse, morte/cambio eroe e reset cambio squadra/leave. Verificare anche il primo distacco da terra e atterraggi rapidi fra pressioni.
+- Multijump OFF: salto nativo. ON: scegliere 100%, 200% fino a 1000%; dopo il primo salto premere Jump in aria oppure tenerlo premuto per ripetere ogni 0,3 s. La forza scelta resta fissa. Provare menu aperto e chiuso, discesa rapida, salita e soffitti. Ring RGB breve sotto i piedi ai salti validi, mai persistente e senza ripetizioni da fermo a terra.
+- Attivare Multijump con Jump già tenuto: prima ripetizione dopo 0,3 s. Provare Attach, Fly/Luck Acceleration e morte: nessuna spinta finché bloccato, ripresa con la cadenza prevista dopo lo sblocco. Resurrect conserva il rilascio necessario prima di un nuovo salto. Provare due player con forze diverse e 12 simultanei, navigazione menu, morte/cambio eroe e reset cambio squadra/leave. Verificare primo distacco da terra e atterraggi rapidi.
 - Morire su terreno normale, vicino a bordi e nel vuoto profondo: conservare il punto sicuro, recuperare sul punto camminabile nei casi insicuri. Includere Self Elimination con Travel aperto.
 - Tenere Jump durante una nuova morte immediata: nessun ciclo di tentativi. Rilasciare da vivo o morto e ripremere deve riarmarlo. Provare due player insieme, Ghost/Fly ON/OFF e cambio eroe.
 - Ghost deve attraversare pareti/soffitti mantenendo pavimenti e collisioni player. Fly: avanti segue la mira fino a pitch ±90°; indietro/laterali rimangono orizzontali, anche con yaw cardinali e analogico.
-- Rampa avanti puro: 100% iniziale, 280% a 5 s, 460% a 10 s, 1000% a 25 s; massimo richiesto 55 m/s sulla baseline 5,5 m/s. Laterali, diagonale, indietro e rilascio azzerano la rampa; nessun input produce hover senza deriva.
+- Rampa in ogni direzione: 100% iniziale, 325% a 5 s, 550% a 10 s, 1000% a 20 s; massimo richiesto 55 m/s sulla baseline 5,5 m/s. Passare avanti→laterale→indietro→diagonale senza perdere velocità o progressione. Solo rilascio completo entro la deadzone azzera la rampa; nessun input produce hover senza deriva. Includere diagonali analogiche vicine alla soglia e due player indipendenti.
 - Verificare morte/rinascita, cambio eroe, OFF e due player indipendenti. Preferenze conservate a morte/cambio eroe, azzerate a cambio squadra/leave-rejoin.
 - Con Luck Acceleration, nessun impulso o freno Fly deve interferire per i 10 s; alla scadenza la rampa Fly riparte dal 100%.
 

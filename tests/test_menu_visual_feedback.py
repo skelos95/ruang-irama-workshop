@@ -45,11 +45,20 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             mutated = source.replace("Play Effect(All Players(All Teams), Ring Explosion", "Create Effect(All Players(All Teams), Ring", 1)
             self.assertTrue(any("nessun effetto persistente" in error for error in self.feedback_checks(mutated).errors))
 
-    def test_validator_rejects_color_animation(self):
+    def test_validator_guards_smooth_color_duration_and_cleanup(self):
         for source in self.sources:
-            mutated = re.sub(r"Event Player.WarnaMenu = (Event Player.KursorTeleportasi[^;]*);",
-                             r"Chase Player Variable Over Time(Event Player, WarnaMenu, \1, 0.180, Destination and Duration);", source, count=1)
-            self.assertTrue(any("senza animazione" in error for error in self.feedback_checks(mutated).errors))
+            rules = validator.extract_rules(source)
+            transition = validator.rule_by_subroutine(rules, "TransisiWarnaMenu")
+            quiet = validator.rule_by_subroutine(rules, "TenangkanPemain")
+            for rule, old, new, error in (
+                (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
+                (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
+                (quiet, "Stop Chasing Player Variable(Event Player, WarnaMenu);", "", "cleanup transizione colore"),
+            ):
+                with self.subTest(mutation=old):
+                    self.assertIn(old, rule.body)
+                    mutated = source[:rule.start] + rule.body.replace(old, new, 1) + source[rule.end:]
+                    self.assertTrue(any(error in issue for issue in self.feedback_checks(mutated).errors))
 
     def test_catalog_alignment_and_dynamic_wrap_are_guarded(self):
         for source in self.sources:

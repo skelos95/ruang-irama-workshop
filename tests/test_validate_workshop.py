@@ -708,7 +708,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
-    def test_teleport_menu_uses_static_readable_tint(self) -> None:
+    def test_teleport_menu_uses_smooth_readable_tint(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         for token in (
             "Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250",
@@ -724,7 +724,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Vector(95, 150, 255)",
             "Vector(195, 100, 255)",
             "Vector(255, 85, 135)",
-            "Event Player.WarnaMenu = Event Player.KursorTeleportasi",
+            "Chase Player Variable Over Time(Event Player, WarnaMenu, Event Player.KursorTeleportasi",
+            "0.180, Destination and Duration",
         ):
             self.assertIn(token, transition.body)
         mutated = self.replace_in_rule(renderer, "Visible To String and Color", "Visible To and String")
@@ -992,15 +993,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHantuTerbang")
         mutations = (
             (
-                "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
+                "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
                 "LOOK TO STEER | HOLD FORWARD TO ACCELERATE",
             ),
             (
-                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
+                'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
                 "ARAHKAN PANDANGAN | TAHAN MAJU UNTUK MELAJU",
             ),
             (
-                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
+                'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
                 "บังคับด้วยมุมมอง | กดเดินหน้าค้างเพื่อเร่งความเร็ว",
             ),
         )
@@ -1579,59 +1580,65 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "input devono restare locali")
 
-    def test_fly_forward_requires_the_exact_progressive_percentage_formula(self) -> None:
+    def test_fly_ramp_requires_the_exact_progressive_percentage_formula(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutations = (
             (
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45)",
+                "Min(500, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45)",
                 "cap 1000%",
             ),
             (
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
-                "Min(1000, 120 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45)",
+                "Min(1000, 120 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45)",
                 "base 100%",
             ),
             (
+                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45)",
                 "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36)",
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 16)",
-                "pendenza 36 punti/s",
+                "pendenza 45 punti/s",
             ),
         )
         for old, new, contract in mutations:
             with self.subTest(contract=contract):
                 mutated = self.replace_in_rule(cycle, old, new)
-                self.assert_rejected(mutated, "rampa Fly lineare 100%-1000% in 25 secondi")
+                self.assert_rejected(mutated, "rampa Fly lineare 100%-1000% in 20 secondi")
 
-    def test_fly_forward_requires_the_local_forward_throttle_component(self) -> None:
+    def test_fly_ramp_requires_local_directional_input(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
             "Z Component Of(Throttle Of(Global.PemainAktif))",
             "Dot Product(Throttle Of(Global.PemainAktif), Facing Direction Of(Global.PemainAktif))",
         )
-        self.assert_rejected(mutated, "componente locale Z")
+        self.assert_rejected(mutated, "qualsiasi input direzionale locale")
 
-    def test_fly_forward_requires_pure_forward_without_lateral_input(self) -> None:
+    def test_fly_ramp_rejects_direction_filters_or_changed_deadzone(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
+        guard = (
+            "Magnitude Of(Vector(X Component Of(Throttle Of(Global.PemainAktif)), 0, "
+            "Z Component Of(Throttle Of(Global.PemainAktif)))) > 0.050"
+        )
         mutations = (
             (
-                "X Component Of(Throttle Of(Global.PemainAktif)) >= -0.050",
-                "X Component Of(Throttle Of(Global.PemainAktif)) >= -1",
-                "laterale sinistro escluso dalla rampa",
+                guard,
+                "Z Component Of(Throttle Of(Global.PemainAktif)) > 0.050",
             ),
             (
-                "X Component Of(Throttle Of(Global.PemainAktif)) <= 0.050",
-                "X Component Of(Throttle Of(Global.PemainAktif)) <= 1",
-                "laterale destro escluso dalla rampa",
+                guard,
+                "Magnitude Of(Vector(X Component Of(Throttle Of(Global.PemainAktif)), 0, 0)) > 0.050",
+            ),
+            (
+                guard,
+                guard.replace("> 0.050", "> 0.100"),
             ),
         )
-        for old, new, fragment in mutations:
-            with self.subTest(gate=fragment):
+        for old, new in mutations:
+            with self.subTest(gate=new):
                 mutated = self.replace_in_rule(cycle, old, new)
-                self.assert_rejected(mutated, fragment)
+                self.assert_rejected(mutated, "qualsiasi input direzionale locale")
 
-    def test_fly_non_forward_input_rearms_speed_and_timestamp(self) -> None:
+    def test_fly_idle_input_rearms_speed_and_timestamp(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
@@ -1640,9 +1647,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Global.PemainAktif.WaktuMulaiTerbangMaju = -1;\n"
             "\t\t\t\t\tGlobal.PemainAktif.PersenTerbang = 150;",
         )
-        self.assert_rejected(mutated, "laterale, indietro o rilascio Forward")
+        self.assert_rejected(mutated, "solo assenza di input direzionale")
 
-    def test_fly_luck_acceleration_has_priority_over_forward_ramp(self) -> None:
+    def test_fly_luck_acceleration_has_priority_over_directional_ramp(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         mutated = self.replace_in_rule(
             cycle,
@@ -1688,8 +1695,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTerbangPemain")
         for action, fragment in (
             (
-                "Global.PemainAktif.PersenTerbang = Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 36);",
-                "guardia per-player di puro Forward",
+                "Global.PemainAktif.PersenTerbang = Min(1000, 100 + Max(0, Total Time Elapsed - Global.PemainAktif.WaktuMulaiTerbangMaju) * 45);",
+                "guardia di qualsiasi input direzionale",
             ),
             (
                 "Apply Impulse(Global.PemainAktif, Global.PemainAktif.DeltaTerbang, Magnitude Of(Global.PemainAktif.DeltaTerbang), To World, Incorporate Contrary Motion);",
@@ -2565,6 +2572,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         quiet = self.rule(lambda rule: validator.subroutine_target(rule) == "TenangkanPemain")
         for token in ("Stop Camera(Event Player);",
                       "Stop Modifying Hero Voice Lines(Event Player);",
+                      "Stop Chasing Player Variable(Event Player, WarnaMenu);",
                       "Detach Players(Event Player);",
                       "Enable Nameplates(All Players(All Teams), Event Player);",
                       "Allow Button(Event Player, Button(Melee));",

@@ -37,9 +37,9 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Travel & Attach | Crouch + Primary / Secondary, poi Interact | Cambia pagina, poi esegue |
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
 | Morto | Jump | Resuscita sul posto sicuro o recupera dal vuoto |
-| Vivo, Multijump ON | Rilascia e ripremi Jump in aria | Salto aggiuntivo con la forza scelta |
+| Vivo, Multijump ON | Premi o tieni Jump in aria, anche con menu aperto | Salti aggiuntivi con la forza scelta |
 
-Ogni pressione viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
+Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
 ## Menu personali
 
@@ -59,11 +59,11 @@ Ogni pressione viene consumata una volta; Interact va rilasciato prima di passar
 | 11 | Vote Player | Umani, incluso sé stesso |
 | 12 | Dummy Follow | OFF / ON, partecipazione volontaria |
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
-| 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 50% |
+| 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 
-Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Tenendo solo avanti accelera dal **100% al 1000% in 25 secondi**; cambiare input azzera la rampa.
+Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 
-Multijump aggiunge salti in aria a ogni nuova pressione di Jump: il valore scelto resta fisso, senza aumentare a ogni salto. Si sospende con menu aperto, Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi. Black rende nero il nome, mantenendo leggibile il menu.
+Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi. Le tinte dei menu conservano la transizione fluida; Black rende nero il nome, mantenendo leggibile il menu.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 
