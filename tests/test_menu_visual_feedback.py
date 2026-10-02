@@ -53,6 +53,7 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             for rule, old, new, error in (
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
+                (transition, "HalamanMenu) == 14 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "Multijump deve avere una tinta dedicata"),
                 (quiet, "Stop Chasing Player Variable(Event Player, WarnaMenu);", "", "cleanup transizione colore"),
             ):
                 with self.subTest(mutation=old):
