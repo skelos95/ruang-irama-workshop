@@ -2,6 +2,12 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Palette e progressione menu — 2026-10-02
+
+- Riordinati insieme tutti i 40 colori e le etichette EN/ID/TH: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White e Silver Mist conservano gli indici dei default; nessun colore eliminato.
+- Black mostra nero puro anche nella preview Name Color, correggendo il precedente grigio del menu.
+- Accenti delle pagine 1–14 nella stessa progressione, mescolati al Name Color attivo con rapporto costante 68/32. Funzioni e colori Travel conservati; transizioni native di 0,180 s, senza nuove routine, timer o risorse.
+
 ## Controllo generale e ridondanze — 2026-10-02
 
 - Rimossi i rami del menu principale irraggiungibili nel renderer Ghost/Fly, chiamato soltanto per il sottomenu 13; testi e layout del sottomenu conservati.

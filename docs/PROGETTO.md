@@ -57,7 +57,9 @@ I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore 
 
 Input, cursori, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
 
-Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli del gruppo usano divisione per venti. Le cinque palette allineate contengono 40 colori: i primi 32 indici restano invariati. Black usa nero puro per il nome e grigio per la tinta leggibile del menu.
+Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli del gruppo usano divisione per venti. Le cinque palette allineate contengono 40 colori ordinati per famiglie e sfumature: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White resta all'indice 0 e Silver Mist all'indice 1, conservando i default; Black è all'indice 3 e usa RGB (0, 0, 0) sia per il nome sia per la preview. Etichette EN/ID/TH e valori RGB vengono riordinati insieme.
+
+La pagina 0 mostra il colore selezionato. Le pagine 1–14 usano il 68% del Name Color attivo e il 32% di un accento ordinato dalla scala di grigi ai colori caldi, rosa, viola, blu e verde. Preview del menu principale e sottomenu condividono la stessa tinta. Restano un solo Chase per ramo, la transizione di 0,180 s e i cinque colori Travel indipendenti.
 
 Rimosso `EfekTerapkan`, comprese le pulsazioni di Revenge e revoca Camera. Le tinte dei menu conservano la transizione nativa `Chase` di 0,180 s, interrotta dal cleanup del proprietario; non aggiungono cicli o attese. L'unico `Play Effect` è il Ring Explosion dei salti multipli: effetto nativo temporaneo, senza handle persistenti o distruzioni periodiche.
 

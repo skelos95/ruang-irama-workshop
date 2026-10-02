@@ -16,16 +16,23 @@ from tests.test_menu_load_regressions import MenuLoadEvaluator
 from tests.test_roster_rejoin_regressions import ROOT, SOURCES
 
 
-# Canonical prefix hashes captured from main 956f07f02d5adb68a269b282195a504768f16c61.
-# Keeping these here makes index compatibility independent of Git availability
-# in the shallow checkout used by the unit-test workflow.
-OLD_PALETTE_PREFIXES = {
-    "DaftarWarna": "fa03a0bf36b0a4746332f9a462f8b4743bd1b7b3021e3587e6a790c1d57f851e",
-    "DaftarWarnaRGB": "183e05b068d5742484274f6c2cd23e829f3da5a35996dac07d82b77ddf22f70c",
-    "NamaWarna": "3809294061f9559e0b72440e0c126dd419d36d403682bc57b83ff6b8703d54f2",
-    "NamaWarnaInggris": "a88bb0b679e0923530258121816af9526c7c88eb55f1eff6bf208e36286cbb5e",
-    "NamaWarnaThai": "b3d0e66c16bf8a0e65166a6bcd296e84c41ef2d0bcb79c14cbe1c8d897bc030b",
-}
+PALETTE_ARRAY_NAMES = (
+    "NamaWarnaInggris", "DaftarWarna", "DaftarWarnaRGB", "NamaWarna", "NamaWarnaThai",
+)
+EXPECTED_PALETTE_ORDER = (
+    "Snow White", "Silver Mist", "Charcoal", "Black", "Ivory", "Lemon Pop", "Sunny Gold",
+    "Peach Glow", "Apricot Neon", "Warm Orange", "Bronze", "Coral Glow", "Crimson Red",
+    "Wine Red", "Cherry Blossom", "Neon Pink", "Rose Pink", "Hot Magenta", "Soft Lavender",
+    "Fuchsia Dream", "Electric Purple", "Neon Violet", "Plum", "Ice Blue", "Sky Blue",
+    "Soft Periwinkle", "Ocean Blue", "Royal Blue", "Electric Indigo", "Midnight Blue",
+    "Cyan Neon", "Cool Aqua", "Seafoam", "Fresh Mint", "Jade Glow", "Chill Turquoise",
+    "Neon Chartreuse", "Lime Green", "Emerald Green", "Forest Green",
+)
+# Hash all forty records, sorted by English label, preserving each label's actual
+# color, preview RGB, Indonesian label, and Thai label. Captured from main
+# 23f892b70027c90cb0fc217e4f4e7da0d31c4d62 with Black's preview corrected to (0, 0, 0).
+# The expected hash is available without Git in the workflow's shallow checkout.
+PALETTE_RECORDS_DIGEST = "f3e22b795d8ab9e12c6dbc49d45902a504dec43c0462bf7e63cf39f2f2a25ed6"
 OLD_GENRE_GROUPS = (
     "375e0d302f43aa81daf5343b19ed175097d024ea554ecb228754c0327e39fe1a",
     "4d19059cb1cf07e58a4eed4666c8efa8bb685c884052bc821f7602616c1d0251",
@@ -49,7 +56,7 @@ class CatalogMenuEvaluator(MenuLoadEvaluator):
     def __init__(self, source):
         super().__init__(source)
         normalized = "\n".join(rule.body for rule in self.rules)
-        names = (*OLD_PALETTE_PREFIXES, "DaftarGenre", "NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai")
+        names = (*PALETTE_ARRAY_NAMES, "DaftarGenre", "NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai")
         self.items = {name: validator.array_assignment_items(normalized, name) for name in names}
         if any(items is None for items in self.items.values()):
             raise AssertionError("catalog initializer array missing")
@@ -230,24 +237,29 @@ class CatalogNavigationTests(unittest.TestCase):
                         expression = Expression(re.sub(r"\s+", "", selector.raw))
                         self.assertEqual(expression.evaluate(model), group)
 
-    def test_palette_additions_keep_all_thirty_two_original_indices(self):
+    def test_palette_reordering_preserves_all_forty_color_records(self):
         for source, model in self.models():
-            for name, digest in OLD_PALETTE_PREFIXES.items():
+            for name in PALETTE_ARRAY_NAMES:
                 with self.subTest(source=source, array=name):
                     self.assertEqual(len(model.items[name]), 40)
-                    self.assertEqual(prefix_digest(model.items[name][:32]), digest)
+            with self.subTest(source=source):
+                self.assertEqual(tuple(model.globals["NamaWarnaInggris"]), EXPECTED_PALETTE_ORDER)
+                records = sorted(zip(*(model.items[name] for name in PALETTE_ARRAY_NAMES)),
+                                 key=lambda record: record[0])
+                self.assertEqual(prefix_digest(["Array(" + ",".join(record) + ")" for record in records]),
+                                 PALETTE_RECORDS_DIGEST)
 
-    def test_black_name_color_keeps_a_separate_readable_menu_tint(self):
+    def test_black_name_color_uses_pure_black_for_actual_color_and_menu_preview(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                self.assertEqual(model.globals["DaftarWarna"][32], (0, 0, 0, 255))
-                self.assertEqual(model.globals["DaftarWarnaRGB"][32], (180, 180, 180))
-                self.assertEqual(model.globals["NamaWarnaInggris"][32], "Black")
-                self.assertEqual(model.globals["NamaWarna"][32], "Hitam")
-                self.assertEqual(model.globals["NamaWarnaThai"][32], "ดำ")
+                self.assertEqual(model.globals["DaftarWarna"][3], (0, 0, 0, 255))
+                self.assertEqual(model.globals["DaftarWarnaRGB"][3], (0, 0, 0))
+                self.assertEqual(model.globals["NamaWarnaInggris"][3], "Black")
+                self.assertEqual(model.globals["NamaWarna"][3], "Hitam")
+                self.assertEqual(model.globals["NamaWarnaThai"][3], "ดำ")
 
-    def test_color_navigation_crosses_new_entries_and_wraps_all_forty_colors(self):
-        cases = {0: (1, 39), 31: (32, 30), 32: (33, 31), 39: (0, 38)}
+    def test_color_navigation_crosses_black_and_wraps_all_forty_colors(self):
+        cases = {0: (1, 39), 2: (3, 1), 3: (4, 2), 4: (5, 3), 39: (0, 38)}
         for source, model in self.models():
             viewer = model.add_viewer(HalamanMenu=0)
             for start, expected in cases.items():

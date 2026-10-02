@@ -113,7 +113,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             transition = subroutine(source, "TransisiWarnaMenu")
             self.assertIn("EventPlayer.HalamanMenu)==13?", compact(transition))
-            self.assertIn("Vector(110,170,255)*0.320", compact(transition))
+            self.assertIn("Vector(0,234,234)*0.320", compact(transition))
             for token in localized_titles:
                 self.assertIn(token, source)
 

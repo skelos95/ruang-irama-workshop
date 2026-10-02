@@ -3141,11 +3141,52 @@ End;
 
 def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) -> None:
     """Keep catalog indexing aligned and reserve ephemeral rings for jump feedback."""
+    palettes = {}
     for name in ("DaftarWarna", "DaftarWarnaRGB", "NamaWarna", "NamaWarnaInggris", "NamaWarnaThai"):
         items = array_assignment_items(source, name)
+        palettes[name] = items
         checks.equal(len(items) if items is not None else None, 40, f"palette: 40 voci allineate in {name}")
         checks.require(items is not None and all(item.strip() for item in items),
                        f"palette: 40 voci non vuote in {name}")
+    for name in ("NamaWarna", "NamaWarnaInggris", "NamaWarnaThai"):
+        items = palettes[name]
+        if items is None:
+            continue
+        labels = []
+        for item in items:
+            calls = list(iter_calls(item, "Custom String"))
+            labels.append(parse_literal(calls[0].args[0])
+                          if len(calls) == 1 and len(calls[0].args) == 1 else None)
+        checks.require(all(isinstance(label, str) and label.strip() for label in labels),
+                       f"palette: nomi colore non vuoti in {name}")
+        checks.equal(len(set(labels)), len(items), f"palette: nomi colore unici in {name}")
+
+    def palette_components(item: str, function: str, count: int) -> tuple[int, ...] | None:
+        if function == "Custom Color":
+            named = list(iter_calls(item, "Color"))
+            if len(named) == 1 and len(named[0].args) == 1 and named[0].raw == item.strip():
+                color_name = re.sub(r"\s+", "", named[0].args[0])
+                return next((components for components, name in clipboard_import.EQUIVALENT_NAMED_COLORS
+                             if re.sub(r"\s+", "", name) == color_name), None)
+        calls = list(iter_calls(item, function))
+        if len(calls) != 1 or len(calls[0].args) != count or calls[0].raw != item.strip():
+            return None
+        if not all(re.fullmatch(r"\d+", argument.strip()) for argument in calls[0].args):
+            return None
+        return tuple(int(argument.strip()) for argument in calls[0].args)
+
+    colors, vectors = palettes["DaftarWarna"], palettes["DaftarWarnaRGB"]
+    if colors is not None and vectors is not None:
+        for index, (color, vector) in enumerate(zip(colors, vectors)):
+            rgba = palette_components(color, "Custom Color", 4)
+            rgb = palette_components(vector, "Vector", 3)
+            checks.require(rgba is not None and rgba[3] == 255
+                           and all(0 <= component <= 255 for component in rgba[:3]),
+                           f"palette: colore RGB valido indice {index}")
+            checks.require(rgb is not None and all(0 <= component <= 255 for component in rgb),
+                           f"palette: vettore RGB valido indice {index}")
+            if rgba is not None and rgb is not None:
+                checks.equal(rgb, rgba[:3], f"palette: RGB nome e menu allineati indice {index}")
     for name in ("NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai"):
         items = array_assignment_items(source, name)
         checks.equal(len(items) if items is not None else None, 10, f"catalogo musicale: dieci gruppi in {name}")
@@ -3178,18 +3219,30 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                         checks.equal(call.args[4].strip(), "Destination and Duration", "feedback visuale: destinazione colore rivalutata")
     transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
     if transition:
+        transition_code = re.sub(r"\s+", "", mask_strings(transition.body))
+        selector = "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu)"
         checks.require(
-            "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 13 ? "
-            "Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + Vector(110, 170, 255) * 0.320 :"
-            in transition.body,
-            "feedback visuale: Ghost/Fly deve usare la tinta condivisa senza override",
+            re.sub(r"\s+", "", f"{selector} == 0 ? Global.DaftarWarnaRGB[Event Player.KursorWarna] :")
+            in transition_code,
+            "feedback visuale: Name Color deve mostrare il colore esatto della preview",
         )
-        checks.require(
-            "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 14 ? "
-            "Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + Vector(245, 180, 85) * 0.320 :"
-            in transition.body,
-            "feedback visuale: Multijump deve avere una tinta dedicata nel menu e nella preview",
+        anchors = (
+            (190, 210, 230), (100, 110, 120), (0, 0, 0), (255, 245, 215),
+            (255, 200, 70), (236, 153, 0), (255, 120, 105), (255, 75, 75),
+            (255, 50, 145), (205, 160, 255), (100, 50, 255), (70, 145, 255),
+            (0, 234, 234), (70, 220, 110),
         )
+        for page, anchor in enumerate(anchors, 1):
+            expected = (
+                f"{selector} == {page} ? Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + "
+                f"Vector({', '.join(str(component) for component in anchor)}) * 0.320 :"
+            )
+            label = {13: "Ghost/Fly", 14: "Multijump"}.get(page, f"pagina {page}")
+            checks.require(re.sub(r"\s+", "", expected) in transition_code,
+                           f"feedback visuale: progressione sfumata {label}")
+        selector_pattern = re.escape(re.sub(r"\s+", "", selector)) + r"==(\d+)\?"
+        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(15)),
+                     "feedback visuale: quindici tinte menu in ordine senza duplicati")
         checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 2,
                      "feedback visuale: due transizioni fluide senza override duplicato")
         checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 0,

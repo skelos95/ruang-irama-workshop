@@ -53,8 +53,12 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             for rule, old, new, error in (
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
-                (transition, "HalamanMenu) == 14 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "Multijump deve avere una tinta dedicata"),
-                (transition, "HalamanMenu) == 13 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "Ghost/Fly deve usare la tinta condivisa"),
+                (transition, "HalamanMenu) == 14 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "progressione sfumata Multijump"),
+                (transition, "HalamanMenu) == 13 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "progressione sfumata Ghost/Fly"),
+                (transition, "* 0.680 + Vector(190, 210, 230) * 0.320", "* 0.700 + Vector(190, 210, 230) * 0.300", "progressione sfumata pagina 1"),
+                (transition, "Vector(236, 153, 0)", "Vector(0, 153, 236)", "progressione sfumata pagina 6"),
+                (transition, "HalamanMenu) == 8 ?", "HalamanMenu) == 7 ?", "quindici tinte menu in ordine"),
+                (transition, "Global.DaftarWarnaRGB[Event Player.KursorWarna]", "Global.DaftarWarnaRGB[Event Player.IndeksWarna]", "colore esatto della preview"),
                 (transition, "If(Event Player.TeleportasiJongkokAktif == True);", "Chase Player Variable Over Time(Event Player, WarnaMenu, Vector(1, 2, 3), 0.180, Destination and Duration);\n\t\tIf(Event Player.TeleportasiJongkokAktif == True);", "due transizioni fluide senza override"),
                 (quiet, "Stop Chasing Player Variable(Event Player, WarnaMenu);", "", "cleanup transizione colore"),
             ):
@@ -67,6 +71,10 @@ class MenuVisualFeedbackTests(unittest.TestCase):
         for source in self.sources:
             for old, new, error in (
                 ('Custom String("Plum")', '', "40 voci"),
+                ('Custom String("Charcoal")', 'Custom String("Black")', "nomi colore unici"),
+                ('Custom String("Arang")', 'Custom String("Hitam")', "nomi colore unici"),
+                ('Custom String("ถ่าน")', 'Custom String("ดำ")', "nomi colore unici"),
+                ('Vector(190, 210, 230)', 'Vector(191, 210, 230)', "RGB nome e menu allineati"),
                 ('% Count Of(Global.DaftarGenre)', '% 100', "lunghezza corrente"),
                 ('Count Of(Global.DaftarGenre) - 10', '90', "passo indietro dinamico"),
                 ('Hold CROUCH | {0}: back', '{0}: back', "Soundtrack bloccato: Reload"),
