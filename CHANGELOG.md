@@ -2,6 +2,12 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Scelta iniziale automatica — 2026-10-02
+
+- Dopo 60 s senza primo spawn, il giocatore riceve Shion al controllo individuale 1 Hz. La scelta resta libera subito dopo; morte, cambio eroe e cambio squadra non riarmano il timer.
+- Scadenza e latch individuali, nessun nuovo HUD, `Wait`, `Loop` o registro globale. Bot classificati e dummy esclusi dal ramo; assegnazione e cambio successivo da verificare nel client.
+- Dummy Follow può essere attivato solo con un dummy nella squadra avversaria presente. Menu e comando verificano la disponibilità; disattivazione sempre libera e consenso già ON conservato durante un'assenza temporanea del dummy.
+
 ## Documentazione e controlli — 2026-09-30
 
 - Guide accorciate e divise per uso: avvio, architettura, controlli automatici e test nel client. Accorpate le note dummy e rimosso l'audit ormai superato dalla documentazione corrente.

@@ -76,6 +76,8 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 ### Lifecycle e accumulo
 
+- Restare alla scelta iniziale senza eroe per 60 s: Shion al successivo controllo 1 Hz, poi scelta libera di un altro eroe. Scegliere prima della scadenza deve annullare l'assegnazione; provare due ingressi distanziati, uscita/rientro, cambio squadra prima della scelta e presenza di dummy/AI.
+- Dopo il primo spawn, morire o cambiare squadra/eroe e restare nella selezione oltre 60 s: nessuna nuova assegnazione automatica. Spettatori esclusi; verificare nel client l'assegnazione iniziale e il rilascio immediato della selezione forzata.
 - Cambiare squadra subito dopo l'ingresso senza menu, dopo alcuni minuti, con menu aperto e mentre altri osservano o hanno Camera/Vote aperti. Includere doppi cambi rapidi durante quarantena.
 - Lasciare con menu, Camera, Fly, Vision, Luck, voto e debiti attivi; far entrare un'identità diversa nello stesso slot. Il leave ritardato non deve distruggere risorse del nuovo occupante.
 - Nomi temporaneamente vuoti e join duplicati non prenotano slot errati. Uccidere un AI durante classificazione non deve bloccare scheduler o altri ingressi.
@@ -90,6 +92,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Senza destinazione valida restare in spawn, senza teleport all'origine o nel vuoto. Verificare anche mappe senza obiettivo visibile.
 - Velocità 20%, danni/urti ricevuti normali, collisioni native e assenza di input offensivi/menu. Gli AI normali conservano la loro navigazione.
 - Follow inizialmente OFF; ON seleziona solo il nemico umano vivo più vicino fra gli opt-in. Invertire distanze, opt-out, morte e squadra; stop entro 4 m e ripartenza oltre. Se nessun target resta idoneo, stop facing/throttle. La selezione è a 5 Hz.
+- Con il solo dummy della squadra 1, solo la squadra 2 può attivare Follow; ripetere invertendo i team. Senza dummy ON è bloccato, OFF resta disponibile. Rimuovere il dummy dopo aver aperto il menu e verificare disponibilità e feedback EN/ID/TH senza un'errata conferma di attivazione.
 - Nelle modalità escluse non devono essere creati dummy; i bot restano target validi per Camera/inspection/Vision senza attivare funzioni umane.
 
 ## Metriche e rapporto
