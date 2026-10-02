@@ -1788,10 +1788,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if dummy_follow_renderer:
         for token in (
             "12 - DUMMY FOLLOW",
-            "ENEMY DUMMY",
+            "ENEMY DUMMY MAY FOLLOW YOU: {1}",
             '12 - BOT MENGIKUTI',
-            'BOT MUSUH',
+            'IZINKAN BOT MUSUH MENGIKUTIMU: {1}',
             "12 - ดัมมี่ติดตาม",
+            "ให้ดัมมี่ศัตรูตามคุณ: {1}",
         ):
             checks.require(token in dummy_follow_renderer.body,
                            f"pagina 12 Dummy Follow non chiarisce il consenso localizzato: {token}")
