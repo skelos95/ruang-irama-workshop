@@ -309,8 +309,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             ):
                 self.assertIn(color, transition)
             self.assertIn("Event Player.TeleportasiJongkokAktif == True", transition)
-            self.assertIn("Event Player.WarnaMenu = Event Player.KursorTeleportasi", transition)
-            self.assertNotIn("Chase Player Variable", transition)
+            self.assertIn("Chase Player Variable Over Time(Event Player, WarnaMenu, Event Player.KursorTeleportasi", transition)
+            self.assertIn("0.180, Destination and Duration", transition)
             self.assertNotIn("Global.KursorTeleportasi", teleport_render)
             self.assertIn("Vector(1.500, 1, 0)", source)
             self.assertIn("Vector(-1.500, 1, 0)", source)

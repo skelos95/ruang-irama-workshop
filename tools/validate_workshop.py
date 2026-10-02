@@ -1591,7 +1591,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "Vector(95, 150, 255)",
             "Vector(195, 100, 255)",
             "Vector(255, 85, 135)",
-            "Event Player.WarnaMenu = Event Player.KursorTeleportasi",
+            "Chase Player Variable Over Time(Event Player, WarnaMenu, Event Player.KursorTeleportasi",
+            "0.180, Destination and Duration",
         ):
             checks.require(token in travel_transition.body,
                            f"colore Travel incompleto: {token}")
@@ -1810,15 +1811,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
             "FLY MODE",
-            "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
+            "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
             '13 - HANTU / TERBANG',
             "TEMBUS DINDING",
             'TERBANG',
-            'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
+            'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
             "13 - โหมดผี / บิน",
             "ทะลุกำแพง",
             "โหมดบิน",
-            'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
+            'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -2128,11 +2129,12 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
 
 
 def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:
-    """Guard the per-player air-jump edge, bounded vertical motion and ephemeral ring."""
+    """Guard bounded per-player air jumps, timed hold input and ephemeral rings."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", expression)
     fields = {"ModeLompatGanda": 122, "KursorLompatGanda": 123,
-              "TingkatLompatGanda": 124, "LompatGandaDipakai": 125, "LompatDiTanah": 126}
+              "TingkatLompatGanda": 124, "LompatGandaDipakai": 125, "LompatDiTanah": 126,
+              "WaktuLompatGandaBerikut": 127}
     declared = {entry.name: entry.index for entry in player_entries}
     for name, index in fields.items():
         checks.equal(declared.get(name), index, f"Multijump: campo player {name}")
@@ -2151,25 +2153,36 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
                        "Multijump: unico owner del motore deve essere lo scheduler")
     if runtime:
         packed = code(mask_strings(runtime.body))
+        held = "If(IsButtonHeld(Global.PemainAktif,Button(Jump))==True);"
+        due = "If(Or(Global.PemainAktif.LompatGandaDipakai==False,TotalTimeElapsed>=Global.PemainAktif.WaktuLompatGandaBerikut));"
+        ground = "And(Global.PemainAktif.LompatDiTanah==False,IsOnGround(Global.PemainAktif)==False)"
+        repeat = "Or(Global.PemainAktif.LompatGandaDipakai==False," + ground + ")"
+        next_jump = "Global.PemainAktif.WaktuLompatGandaBerikut=TotalTimeElapsed+0.300;"
         for token in (
-            "If(IsButtonHeld(Global.PemainAktif,Button(Jump))==True);",
-            "If(Global.PemainAktif.LompatGandaDipakai==False);",
+            held, due, due + next_jump,
             "Global.PemainAktif.LompatGandaDipakai=True;",
             "Global.PemainAktif.LompatGandaDipakai=False;",
             "Global.PemainAktif.Manusia==True", "HasSpawned(Global.PemainAktif)==True",
-            "IsAlive(Global.PemainAktif)==True", "Global.PemainAktif.MenuTerbuka==False",
+            "IsAlive(Global.PemainAktif)==True",
             "Global.PemainAktif.ModeTerbangAktif==False", "Global.PemainAktif.LampiranTeleportasiAktif==False",
             "Global.PemainAktif.BangkitLompatDipakai==False",
             "Or(Global.PemainAktif.EfekNasib!=2,Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
-            "If(And(Global.PemainAktif.LompatDiTanah==False,IsOnGround(Global.PemainAktif)==False));",
+            repeat, "If(" + ground + ");",
+            "Else;Global.PemainAktif.LompatGandaDipakai=False;Global.PemainAktif.WaktuLompatGandaBerikut=0;End;",
             "Global.PemainAktif.LompatDiTanah=IsOnGround(Global.PemainAktif);",
         ):
             checks.require(token in packed, f"Multijump: guardia input o fisica assente {token}")
+        checks.require("MenuTerbuka" not in mask_strings(runtime.body),
+                       "Multijump: Jump deve funzionare anche con menu aperto")
+        checks.equal(packed.count("Global.PemainAktif.LompatGandaDipakai=True;"), 2,
+                     "Multijump: consumare sia input valido sia input bloccato")
+        checks.require("Else;Global.PemainAktif.LompatGandaDipakai=True;End;" in packed,
+                       "Multijump: input bloccato va consumato senza impulso o ring")
         checks.require(not wait_calls(runtime.body) and action_loop_count(runtime.body) == 0,
                        "Multijump: nessun Wait/Loop nel motore")
         impulses = list(iter_calls(runtime.body, "Apply Impulse"))
         checks.equal(len(impulses), 1, "Multijump: unico impulso verticale")
-        delta = "6+3*(Global.PemainAktif.TingkatLompatGanda-1)-YComponentOf(VelocityOf(Global.PemainAktif))"
+        delta = "6*Global.PemainAktif.TingkatLompatGanda-YComponentOf(VelocityOf(Global.PemainAktif))"
         if impulses:
             checks.equal(tuple(code(arg) for arg in impulses[0].args),
                          ("Global.PemainAktif", delta + ">=0?Vector(0,1,0):Vector(0,-1,0)",
@@ -2185,19 +2198,18 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
         for call in (*impulses, *rings):
             headers = [code(branch.splitlines()[0]) for branch in
                        conditional_branches_containing(runtime.body, call.start)]
-            checks.require("If(IsButtonHeld(Global.PemainAktif,Button(Jump))==True);" in headers
-                           and "If(Global.PemainAktif.LompatGandaDipakai==False);" in headers,
-                           "Multijump: azione nativa deve essere sotto la nuova pressione Jump")
+            checks.require(held in headers and due in headers,
+                           "Multijump: azione nativa richiede Jump e pressione nuova o cooldown scaduto")
             guarded = next((header for header in headers if "Global.PemainAktif.Manusia==True" in header), "")
             for token in ("HasSpawned(Global.PemainAktif)==True", "IsAlive(Global.PemainAktif)==True",
-                          "Global.PemainAktif.MenuTerbuka==False", "Global.PemainAktif.ModeTerbangAktif==False",
+                          "Global.PemainAktif.ModeTerbangAktif==False",
                           "Global.PemainAktif.LampiranTeleportasiAktif==False", "Global.PemainAktif.BangkitLompatDipakai==False",
-                          "Or(Global.PemainAktif.EfekNasib!=2,Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)"):
+                          "Or(Global.PemainAktif.EfekNasib!=2,Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)", repeat):
                 checks.require(token in guarded, f"Multijump: guardia effettiva azione nativa {token}")
         if impulses:
             headers = [code(branch.splitlines()[0]) for branch in
                        conditional_branches_containing(runtime.body, impulses[0].start)]
-            checks.require("If(And(Global.PemainAktif.LompatDiTanah==False,IsOnGround(Global.PemainAktif)==False));" in headers,
+            checks.require("If(" + ground + ");" in headers,
                            "Multijump: impulso solo sui salti successivi in aria")
         latch = runtime.body.find("Global.PemainAktif.LompatGandaDipakai = True;")
         checks.require(latch >= 0 and all(latch < call.start for call in (*impulses, *rings)),
@@ -2206,31 +2218,41 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
                        "Multijump: il salto non deve creare entità persistenti")
     if apply:
         packed = code(mask_strings(apply.body))
-        for token in ("EventPlayer.KursorLompatGanda%=20;",
+        for token in ("EventPlayer.KursorLompatGanda%=11;",
                       "EventPlayer.ModeLompatGanda=EventPlayer.KursorLompatGanda!=0;",
                       "If(EventPlayer.ModeLompatGanda==True);EventPlayer.TingkatLompatGanda=EventPlayer.KursorLompatGanda;End;",
                       "EventPlayer.LompatGandaDipakai=IsButtonHeld(EventPlayer,Button(Jump));",
-                      "EventPlayer.LompatDiTanah=IsOnGround(EventPlayer);"):
+                      "EventPlayer.LompatDiTanah=IsOnGround(EventPlayer);",
+                      "EventPlayer.WaktuLompatGandaBerikut=TotalTimeElapsed+0.300;"):
             checks.require(token in packed, f"Multijump: apply deve mantenere livello e sincronizzare Jump {token}")
     for name in ("SiapkanPemain", "TenangkanPemain"):
         cleanup = rule_by_subroutine(rules, name)
         if cleanup:
             for token in ("EventPlayer.ModeLompatGanda=False;", "EventPlayer.KursorLompatGanda=0;",
                           "EventPlayer.TingkatLompatGanda=1;", "EventPlayer.LompatGandaDipakai=False;",
-                          "EventPlayer.LompatDiTanah=True;"):
+                          "EventPlayer.LompatDiTanah=True;", "EventPlayer.WaktuLompatGandaBerikut=0;"):
                 checks.require(token in code(mask_strings(cleanup.body)), f"Multijump: reset {name} {token}")
     for owner in rules:
         writers = re.findall(r"\.(TingkatLompatGanda)\s*=(?!=)", mask_strings(owner.body))
         checks.require(not writers or subroutine_target(owner) in
                        {"SiapkanPemain", "TenangkanPemain", "TerapkanHalamanLompatGanda"},
                        "Multijump: spinta fissa, il salto non deve cambiare il livello scelto")
+        cooldown_writes = re.findall(r"\.WaktuLompatGandaBerikut\s*=(?!=)", mask_strings(owner.body))
+        checks.require(not cooldown_writes or subroutine_target(owner) in
+                       {"SiapkanPemain", "TenangkanPemain", "TerapkanHalamanLompatGanda", "ProsesLompatGanda"},
+                       "Multijump: cooldown per player deve avere owner locali espliciti")
+    checks.require("EventPlayer.KursorLompatGanda=(EventPlayer.KursorLompatGanda+(EventPlayer.PerintahMenu==3?1:10))%11;"
+                   in code(mask_strings(source)), "Multijump: navigazione OFF + dieci valori deve avvolgersi in entrambe le direzioni")
     if renderer:
         calls = list(iter_calls(renderer.body, "Create HUD Text"))
         checks.equal(len(calls), 1, "Multijump: unico HUD menu")
         for token in ("14 - MULTIJUMP", "14 - LOMPAT BERULANG", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกลางอากาศ"):
             checks.require(token in renderer.body, f"Multijump: menu localizzato {token}")
-        checks.equal(renderer.body.count("100 + (Event Player.KursorLompatGanda - 1) * 50"), 3,
-                     "Multijump: preview 100..1000% in passi50 per tutte le lingue")
+        checks.equal(renderer.body.count("Event Player.KursorLompatGanda * 100"), 3,
+                     "Multijump: preview 100..1000% in passi100 per tutte le lingue")
+        checks.equal(renderer.body.count("Event Player.TingkatLompatGanda * 100"), 3,
+                     "Multijump: spinta applicata fissa in tutte le lingue")
+        checks.equal(renderer.body.count("{0}/11"), 3, "Multijump: undici scelte menu in tutte le lingue")
 
 def validate_ghost_fly(
     checks: Checks,
@@ -2384,26 +2406,23 @@ def validate_ghost_fly(
             "Global.PemainAktif.ModeTerbangAktif==True",
             "Global.PemainAktif.FisikaHantuTerbangDiterapkan==True",
         )
-        forward_tokens = (
-            "ZComponentOf(ThrottleOf(Global.PemainAktif))>0.050",
-            "XComponentOf(ThrottleOf(Global.PemainAktif))>=-0.050",
-            "XComponentOf(ThrottleOf(Global.PemainAktif))<=0.050",
+        direction_guard = (
+            "If(MagnitudeOf(Vector(XComponentOf(ThrottleOf(Global.PemainAktif)),0,"
+            "ZComponentOf(ThrottleOf(Global.PemainAktif))))>0.050);"
         )
         ramp = (
             "Global.PemainAktif.PersenTerbang=Min(1000,100+Max(0,TotalTimeElapsed-"
-            "Global.PemainAktif.WaktuMulaiTerbangMaju)*36);"
+            "Global.PemainAktif.WaktuMulaiTerbangMaju)*45);"
         )
         for token, label in (
-            (forward_tokens[0], "input avanti Fly ricavato dalla componente locale Z"),
-            (forward_tokens[1], "input Fly laterale sinistro escluso dalla rampa"),
-            (forward_tokens[2], "input Fly laterale destro escluso dalla rampa"),
+            (direction_guard, "rampa con qualsiasi input direzionale locale oltre la zona morta"),
             ("If(Global.PemainAktif.WaktuMulaiTerbangMaju<0);"
              "Global.PemainAktif.WaktuMulaiTerbangMaju=TotalTimeElapsed;End;",
-             "timestamp per-player avviato al primo tick Forward"),
-            (ramp, "rampa Fly lineare 100%-1000% in 25 secondi"),
+             "timestamp per-player avviato al primo input direzionale"),
+            (ramp, "rampa Fly lineare 100%-1000% in 20 secondi"),
             ("Else;Global.PemainAktif.WaktuMulaiTerbangMaju=-1;"
              "Global.PemainAktif.PersenTerbang=100;End;",
-             "laterale, indietro o rilascio Forward devono riarmare timestamp e velocità 100%"),
+             "solo assenza di input direzionale deve riarmare timestamp e velocità 100%"),
             ("Global.PemainAktif.ArahTerbang=FacingDirectionOf(Global.PemainAktif)*"
              "Max(0,ZComponentOf(ThrottleOf(Global.PemainAktif)))+DirectionFromAngles("
              "HorizontalFacingAngleOf(Global.PemainAktif),0)*Min(0,ZComponentOf(ThrottleOf("
@@ -2453,8 +2472,8 @@ def validate_ghost_fly(
         if ramp_matches:
             headers = [packed(branch.splitlines()[0]) for branch in
                        conditional_branches_containing(motor.body, ramp_matches[0].start())]
-            checks.require(any(all(token in header for token in forward_tokens) for header in headers),
-                           "rampa percentuale deve restare nella guardia per-player di puro Forward")
+            checks.require(direction_guard in headers,
+                           "rampa percentuale deve restare nella guardia di qualsiasi input direzionale")
         for forbidden, label in (
             ("StartAccelerating(", "Start/Stop Accelerating"),
             ("StopAccelerating(", "Start/Stop Accelerating"),
@@ -3144,12 +3163,28 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                        "feedback visuale: vecchio impulso menu ancora presente")
         for action in ("Chase Player Variable Over Time", "Chase Player Variable At Rate", "Stop Chasing Player Variable"):
             for call in iter_calls(rule.body, action):
-                checks.require(len(call.args) < 2 or call.args[1].strip() != "WarnaMenu",
-                               "feedback visuale: colore menu deve cambiare senza animazione")
+                if len(call.args) < 2 or call.args[1].strip() != "WarnaMenu":
+                    continue
+                expected_owner = "TenangkanPemain" if action == "Stop Chasing Player Variable" else "TransisiWarnaMenu"
+                checks.require(action != "Chase Player Variable At Rate" and subroutine_target(rule) == expected_owner,
+                               "feedback visuale: transizione colore fuori dal proprietario consentito")
+                checks.equal(call.args[0].strip(), "Event Player", "feedback visuale: colore deve essere individuale")
+                if action == "Chase Player Variable Over Time":
+                    checks.equal(len(call.args), 5, "feedback visuale: argomenti transizione colore")
+                    if len(call.args) == 5:
+                        checks.equal(call.args[3].strip(), "0.180", "feedback visuale: transizione colore di 0.180 s")
+                        checks.equal(call.args[4].strip(), "Destination and Duration", "feedback visuale: destinazione colore rivalutata")
     transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
     if transition:
-        checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 3,
-                     "feedback visuale: assegnazioni immediate colore menu")
+        checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 3,
+                     "feedback visuale: tre transizioni fluide colore menu")
+        checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 0,
+                     "feedback visuale: nessuna assegnazione immediata nella transizione colore")
+    quiet = rule_by_subroutine(rules, "TenangkanPemain")
+    if quiet:
+        stops = [call for call in iter_calls(quiet.body, "Stop Chasing Player Variable")
+                 if len(call.args) == 2 and call.args[1].strip() == "WarnaMenu"]
+        checks.equal(len(stops), 1, "feedback visuale: cleanup transizione colore individuale")
     music = rule_by_subroutine(rules, "GambarMusik")
     if music:
         back_labels = [parse_literal(call.args[0]) for call in iter_calls(music.body, "Custom String")
@@ -5014,6 +5049,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Allow Button(Event Player, Button(Melee));",
             "Stop Camera(Event Player);",
             "Stop Modifying Hero Voice Lines(Event Player);",
+            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
             "Detach Players(Event Player);",
             "Enable Nameplates(All Players(All Teams), Event Player);",
             "Event Player.PelatNamaDinonaktifkan = False;",

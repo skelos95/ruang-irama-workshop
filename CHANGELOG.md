@@ -2,6 +2,13 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Salto tenuto, tinte e rampa Fly — 2026-10-02
+
+- Multijump funziona anche con menu aperto; forza fissa 100–1000% a passi del 100%. Jump tenuto ripete ogni 0,3 s in aria; nuove pressioni restano immediate. Cooldown individuale, ring temporaneo e protezioni Fly, Attach, Luck e Resurrect conservati.
+- Ripristinata la transizione fluida delle tinte menu e della preview Name Color in 0,180 s, con stop durante cleanup. Gli effetti visivi dei comandi restano rimossi.
+- Fly raggiunge il 1000% in 20 s con qualsiasi direzione di movimento. Cambiare direzione conserva la rampa; rilascio completo entro la deadzone la riporta al 100%. Mira, normalizzazione analogica, limite 55 m/s e priorità Luck conservati; HUD EN/ID/TH aggiornati.
+- 115 regole, 66 subroutine, 128 campi player, 5 Wait e un Loop. Fisica e fluidità da verificare nel client.
+
 ## Cataloghi, salti multipli e feedback — 2026-10-02
 
 - Aggiunti cento generi: venti per ciascuno dei dieci gruppi, con navigazione ±1/±10 e conteggio HUD dinamici. Palette da 32 a 40 colori, incluso Black; indici dei colori precedenti preservati.

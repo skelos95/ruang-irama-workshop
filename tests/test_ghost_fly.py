@@ -142,9 +142,9 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             ):
                 self.assertIn(instruction, renderer)
             for fly_hint in (
-                "LOOK TO STEER | HOLD FORWARD: 100% > 1000% IN 25s",
-                'ARAHKAN BIDIKAN | TAHAN MAJU: 100% > 1000% DALAM 25 dtk',
-                'มองเพื่อเลี้ยว | เดินหน้าค้าง: 100% > 1000% ใน 25 วิ',
+                "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
+                'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
+                'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
             ):
                 self.assertIn(fly_hint, renderer)
 
@@ -221,17 +221,16 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn("Start Transforming Throttle(", source)
             self.assertIn("EventPlayer.WaktuMulaiTerbangMaju=-1;", packed)
 
-    def test_only_pure_forward_builds_the_per_player_speed_ramp(self) -> None:
+    def test_any_horizontal_direction_builds_the_per_player_speed_ramp(self) -> None:
         for source, global_name in self.sources:
             packed = compact(subroutine(source, "ProsesTerbangPemain"))
             owner = f"{global_name}.PemainAktif"
             luck = (
                 f"If(And({owner}.EfekNasib==2,{owner}.EfekNasibBerakhir>TotalTimeElapsed));"
             )
-            pure_forward = (
-                f"If(And(ZComponentOf(ThrottleOf({owner}))>0.050,"
-                f"And(XComponentOf(ThrottleOf({owner}))>=-0.050,"
-                f"XComponentOf(ThrottleOf({owner}))<=0.050)));"
+            direction_guard = (
+                f"If(MagnitudeOf(Vector(XComponentOf(ThrottleOf({owner})),0,"
+                f"ZComponentOf(ThrottleOf({owner}))))>0.050);"
             )
             timestamp_start = (
                 f"If({owner}.WaktuMulaiTerbangMaju<0);"
@@ -239,7 +238,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             speed_formula = (
                 f"{owner}.PersenTerbang=Min(1000,100+Max(0,TotalTimeElapsed-"
-                f"{owner}.WaktuMulaiTerbangMaju)*36);"
+                f"{owner}.WaktuMulaiTerbangMaju)*45);"
             )
             reset = (
                 "Else;"
@@ -247,10 +246,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"{owner}.PersenTerbang=100;End;"
             )
 
-            for token in (luck, pure_forward, timestamp_start, speed_formula, reset):
+            for token in (luck, direction_guard, timestamp_start, speed_formula, reset):
                 self.assertIn(token, packed)
-            self.assertLess(packed.index(luck), packed.index(pure_forward))
-            self.assertLess(packed.index(pure_forward), packed.index(reset))
+            self.assertLess(packed.index(luck), packed.index(direction_guard))
+            self.assertLess(packed.index(direction_guard), packed.index(reset))
             self.assertNotIn("DotProduct(ThrottleOf(", packed)
             self.assertNotIn("StartAccelerating(", packed)
             self.assertNotIn("StopAccelerating(", packed)
@@ -258,29 +257,20 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             cycle = subroutine(source, "ProsesSiklusPemain")
             self.assertNotIn("Min(1000, 100 +", cycle)
 
-    def test_side_back_diagonal_and_release_all_take_the_reset_branch(self) -> None:
-        """The sole ramp branch is pure Forward; every other Fly throttle resets it."""
+    def test_only_directional_deadzone_takes_the_reset_branch(self) -> None:
+        """The reset belongs to the input deadzone, rather than any direction change."""
         for source, global_name in self.sources:
             packed = compact(subroutine(source, "ProsesTerbangPemain"))
             owner = f"{global_name}.PemainAktif"
-            forward = packed.index(
-                f"ZComponentOf(ThrottleOf({owner}))>0.050"
-            )
-            lower_x = packed.index(
-                f"XComponentOf(ThrottleOf({owner}))>=-0.050",
-                forward,
-            )
-            upper_x = packed.index(
-                f"XComponentOf(ThrottleOf({owner}))<=0.050",
-                lower_x,
+            direction = packed.index(
+                f"If(MagnitudeOf(Vector(XComponentOf(ThrottleOf({owner})),0,"
+                f"ZComponentOf(ThrottleOf({owner}))))>0.050);"
             )
             reset = packed.index(
                 f"Else;{owner}.WaktuMulaiTerbangMaju=-1;",
-                upper_x,
+                direction,
             )
-            self.assertLess(forward, lower_x)
-            self.assertLess(lower_x, upper_x)
-            self.assertLess(upper_x, reset)
+            self.assertLess(direction, reset)
             reset_branch = packed[reset : packed.index("End;", reset) + len("End;")]
             self.assertEqual(reset_branch.count(f"{owner}.WaktuMulaiTerbangMaju=-1;"), 1)
             self.assertEqual(reset_branch.count(f"{owner}.PersenTerbang=100;"), 1)
