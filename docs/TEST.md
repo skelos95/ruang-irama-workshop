@@ -37,15 +37,18 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 ### Input, menu e HUD
 
-- In EN/ID/TH aprire tutte le 14 pagine, applicare, tornare e riaprire; percorrere `11→12→13→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
+- In EN/ID/TH aprire tutte le 15 pagine, applicare, tornare e riaprire; percorrere `11→12→13→14→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
 - Il profilo `งูแรร์` parte Silver Mist / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
+- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, Black nero sul nome e menu leggibile. Nessuna pulsazione o animazione dei menu all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
 
+- Multijump OFF: salto nativo. ON: scegliere 100%, 150%, 200% fino a 1000%; dopo il primo salto rilasciare/ripremere Jump più volte in aria. Ogni salto usa la stessa forza scelta; non cresce a ogni pressione né ripete tenendo Jump. Provare discesa rapida, salita e soffitti. Ring RGB breve sotto i piedi al primo salto e ai successivi, mai persistente.
+- Attivare Multijump mentre Jump è già tenuto, aprire un menu, usare Attach, Fly/Luck Acceleration, morire e resuscitare tenendo Jump: niente salto aggiuntivo involontario. Rilasciare e ripremere dopo lo sblocco; provare due player con forze diverse, morte/cambio eroe e reset cambio squadra/leave. Verificare anche il primo distacco da terra e atterraggi rapidi fra pressioni.
 - Morire su terreno normale, vicino a bordi e nel vuoto profondo: conservare il punto sicuro, recuperare sul punto camminabile nei casi insicuri. Includere Self Elimination con Travel aperto.
 - Tenere Jump durante una nuova morte immediata: nessun ciclo di tentativi. Rilasciare da vivo o morto e ripremere deve riarmarlo. Provare due player insieme, Ghost/Fly ON/OFF e cambio eroe.
 - Ghost deve attraversare pareti/soffitti mantenendo pavimenti e collisioni player. Fly: avanti segue la mira fino a pitch ±90°; indietro/laterali rimangono orizzontali, anche con yaw cardinali e analogico.

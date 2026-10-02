@@ -11,11 +11,11 @@ Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](..
 
 ## Scheduler
 
-Il runtime contiene 113 regole, 64 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
+Il runtime contiene 115 regole, 66 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
 
 | Frequenza | Lavoro |
 |---:|---|
-| 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly solo con toggle attivo |
+| 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly e Multijump solo con toggle attivo |
 | 10 Hz | Lifecycle umano e bot, RGB, riapplicazione fisica e revoca Camera/inspection |
 | 5 Hz | Selezione del target follow dummy, distribuita per slot |
 | 1 Hz | Countdown, timer nativo, scelta iniziale eroe, slot dummy, testi orfani; cache Camera/Revenge solo nelle relative pagine aperte |
@@ -57,11 +57,16 @@ I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore 
 
 Input, cursori, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
 
+Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli del gruppo usano divisione per venti. Le cinque palette allineate contengono 40 colori: i primi 32 indici restano invariati. Black usa nero puro per il nome e grigio per la tinta leggibile del menu.
+
+Rimosso `EfekTerapkan`, comprese le pulsazioni di Revenge e revoca Camera. Le tinte dei menu cambiano con assegnazioni immediate anziché `Chase`. L'unico `Play Effect` è il Ring Explosion dei salti multipli: effetto nativo temporaneo, senza handle persistenti o distruzioni periodiche.
+
 ## Movimento e interazioni
 
 - **Fly:** impulsi a 20 Hz correggono velocità corrente verso quella richiesta. Avanti usa la mira 3D; indietro/strafe il piano orizzontale. Normalizzazione e intensità analogica evitano un bonus diagonale. Gravità e movimento nativo sono zero durante il volo normale; niente `Start Transforming Throttle`.
 - **Rampa:** `Min(1000, 100 + Max(0, tempo − inizio) * 36)`, solo con `Z > 0.050` e `−0.050 ≤ X ≤ 0.050`. Baseline uniforme 5,5 m/s, massimo richiesto 55 m/s dopo 25 s. Rilascio, laterali o indietro riportano al 100%; senza input la velocità richiesta è zero.
 - **Ghost:** `Disable Movement Collision With Environment(player, False)` attraversa pareti/soffitti conservando pavimenti; non modifica la collisione con player.
+- **Multijump:** cinque campi individuali, default OFF. Il menu 14 seleziona una forza fissa 100–1000% a passi del 50%; il 100% corrisponde alla velocità verticale richiesta di 6 m/s, il 1000% a 60 m/s. Ogni nuova pressione in aria corregge la sola componente verticale con `Apply Impulse` e `Incorporate Contrary Motion`; ripetere non accumula velocità. Lo stato a terra corrente e precedente protegge il primo distacco nativo. Le pressioni con menu, Attach, Fly, Luck Acceleration o morte vengono consumate senza impulso; il latch Resurrect è separato. Applicare la scelta sincronizza Jump già tenuto e stato a terra. Un breve ring RGB appare sotto i piedi a ogni pressione valida, anche da terra. Preferenza conservata a morte/cambio eroe, azzerata a cambio squadra/uscita; nessun `Wait`, `Loop`, HUD o effetto persistente per salto. Timing del distacco, velocità effettiva e collisioni richiedono prove nel client.
 - **Camera:** un solo `Start Camera`, posizione/mira per-frame, `Blend Speed 0` e un raycast. Target morto, assente, non spawned, in quarantena o umano privato viene revocato a 10 Hz.
 - **Travel:** obiettivo riletto al click e validazione geometrica condivisa; punto assente/non sicuro annulla il teleport. Attach rifiuta self-attach e cicli di qualsiasi lunghezza con traversal limitato al roster, senza attese. Privacy, morte, uscita e team-switch revocano il collegamento.
 - **Jump Resurrect:** un tentativo per pressione. Calcola una destinazione camminabile dalla posizione corrente; raycast e distanza dalla navigazione distinguono terreno sicuro e vuoto. Solo nel recupero teletrasporta alla stessa destinazione +0,5 m prima e dopo `Resurrect`. Una morte immediata non riarma Jump tenuto; serve rilasciarlo da vivo o morto. Nessun `Wait`, forcing o `Respawn`.

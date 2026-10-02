@@ -54,17 +54,19 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             "111: PersenTerbang",
             "112: ArahTerbang",
             "113: DeltaTerbang",
-            "57: GambarHantuTerbang",
-            "58: TerapkanHalamanHantuTerbang",
-            "59: TerapkanFisikaHantuTerbang",
-            "60: ProsesTerbangPemain",
         )
         for source, _ in self.sources:
             for declaration in declarations:
                 with self.subTest(declaration=declaration):
                     self.assertEqual(source.count(declaration), 1)
+            indices = []
+            for name in ("GambarHantuTerbang", "TerapkanHalamanHantuTerbang", "TerapkanFisikaHantuTerbang", "ProsesTerbangPemain"):
+                matches = re.findall(rf"(?m)^\s*(\d+): {name}$", source)
+                self.assertEqual(len(matches), 1)
+                indices.append(int(matches[0]))
+            self.assertEqual(indices, list(range(indices[0], indices[0] + 4)))
 
-    def test_main_menu_has_fourteen_pages_and_routes_page_thirteen(self) -> None:
+    def test_main_menu_has_fifteen_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = (
             "13 - GHOST MODE / FLY",
             '13 - HANTU / TERBANG',
@@ -79,7 +81,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             navigation = rule_with(source, "KursorUtama = (Event Player.KursorUtama", "PerintahMenu == 3")
             self.assertIn(
                 "Event Player.KursorUtama = (Event Player.KursorUtama + "
-                "(Event Player.PerintahMenu == 3 ? 1 : 13)) % 14;",
+                "(Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;",
                 navigation,
             )
             router = subroutine(source, "GambarHalamanAktif")
@@ -374,8 +376,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotIn("Spawn Points(Team Of(Event Player))", resurrect)
             self.assertLess(resurrect.index(recovery_teleport), resurrect.index("Resurrect(Event Player);"))
             self.assertLess(resurrect.index("Resurrect(Event Player);"), resurrect.rindex(recovery_teleport))
-            self.assertLess(resurrect.rindex(recovery_teleport), resurrect.index("Call Subroutine(EfekTerapkan);"))
-            self.assertLess(resurrect.index("Call Subroutine(EfekTerapkan);"), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
+            self.assertLess(resurrect.rindex(recovery_teleport), resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"))
+            self.assertNotIn("Play Effect(", resurrect)
             self.assertLess(resurrect.index("Event Player.FisikaHantuTerbangDiterapkan = False;"), resurrect.index("Call Subroutine(TerapkanFisikaHantuTerbang);"))
             self.assertNotIn("Small Message(", resurrect)
             self.assertNotIn("Resurrect unavailable", source)

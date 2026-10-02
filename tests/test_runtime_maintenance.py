@@ -132,7 +132,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
     def test_safe_position_validator_is_shared_by_player_teleports(self):
         for source in (self.it, self.en):
-            self.assertIn("56: CariPosisiTeleportasiAman", source)
+            self.assertRegex(source, r"(?m)^\s*\d+: CariPosisiTeleportasiAman$")
             self.assertGreaterEqual(source.count("Call Subroutine(CariPosisiTeleportasiAman);"), 4)
             self.assertIn("Ray Cast Hit Position(Event Player.PosisiTujuanTeleportasi + Vector(0, 1, 0)", source)
 
@@ -218,7 +218,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"{global_name}.NamaPemimpinPilihan = Custom String(\"\");", source)
             self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Custom Color(255, 255, 255, 255);", source)
 
-            init = source.split(f'{rule_kw}("00 - Umum: Siapkan 100 genre, dari rebahan sampai kiamat")', 1)[1].split(
+            init = source.split(f'{rule_kw}("00 - Umum: Siapkan 200 genre, dari rebahan sampai kiamat")', 1)[1].split(
                 f'{rule_kw}("00a1 - Umum: Mulai mode segera saat menunggu pemain")', 1
             )[0]
             self.assertIn(
@@ -309,7 +309,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             ):
                 self.assertIn(color, transition)
             self.assertIn("Event Player.TeleportasiJongkokAktif == True", transition)
-            self.assertIn("0.180, Destination and Duration", transition)
+            self.assertIn("Event Player.WarnaMenu = Event Player.KursorTeleportasi", transition)
+            self.assertNotIn("Chase Player Variable", transition)
             self.assertNotIn("Global.KursorTeleportasi", teleport_render)
             self.assertIn("Vector(1.500, 1, 0)", source)
             self.assertIn("Vector(-1.500, 1, 0)", source)
