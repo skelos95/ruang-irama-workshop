@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 30 settembre 2026 l'utente ha riferito una stabilità sensibilmente migliore dopo l'ottimizzazione dello scheduler; ulteriori stress test sono ancora previsti. La revisione funzionale `68cbc832` ha superato 591 test e tutti i controlli GitHub. Questi test verificano il codice e flussi simulati, senza eseguire il server Overwatch.
+Il 2 ottobre 2026 l'utente ha confermato il funzionamento delle modifiche recenti a Multijump, Fly e tinte menu. Il codice corrente ha superato **671 test e tutti i nove controlli GitHub**. Il 30 settembre aveva riferito una stabilità sensibilmente migliore dopo l'ottimizzazione dello scheduler; ulteriori stress test sono ancora previsti. I test automatici verificano il codice e flussi simulati, senza eseguire il server Overwatch.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 

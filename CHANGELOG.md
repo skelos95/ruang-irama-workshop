@@ -2,6 +2,12 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Controllo generale e ridondanze — 2026-10-02
+
+- Rimossi i rami del menu principale irraggiungibili nel renderer Ghost/Fly, chiamato soltanto per il sottomenu 13; testi e layout del sottomenu conservati.
+- La tinta Ghost/Fly entra nel ternario condiviso: eliminato il primo `Chase` subito sostituito dall'override della pagina 13. Due transizioni native nella routine, stessa durata 0,180 s e stessi colori.
+- Aggiornato lo stato corrente del README con 671 test e il riscontro funzionale dell'utente; le prove storiche di stabilità restano distinte dalle misure ancora da fare nel client.
+
 ## Tinta Multijump — 2026-10-02
 
 - Il menu 14 e la sua preview hanno una tinta ambra dedicata, invece del colore Name Color di fallback. La transizione resta fluida in 0,180 s, nello stesso comando esistente; nessuna nuova routine, attesa o risorsa.

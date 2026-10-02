@@ -112,7 +112,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 r"HalamanMenu==13\);CallSubroutine\(TerapkanHalamanHantuTerbang\);",
             )
             transition = subroutine(source, "TransisiWarnaMenu")
-            self.assertIn("EventPlayer.HalamanMenu)==13);", compact(transition))
+            self.assertIn("EventPlayer.HalamanMenu)==13?", compact(transition))
             self.assertIn("Vector(110,170,255)*0.320", compact(transition))
             for token in localized_titles:
                 self.assertIn(token, source)
@@ -129,6 +129,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
         for source, _ in self.sources:
             renderer = subroutine(source, "GambarHantuTerbang")
             self.assertEqual(renderer.count("Create HUD Text("), 1)
+            self.assertNotIn("Event Player.HalamanMenu == -1", renderer)
             self.assertIn("Event Player.KursorHantuTerbang", renderer)
             self.assertIn("Event Player.ModeHantuAktif", renderer)
             self.assertIn("Event Player.ModeTerbangAktif", renderer)

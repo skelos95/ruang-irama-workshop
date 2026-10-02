@@ -54,6 +54,8 @@ class MenuVisualFeedbackTests(unittest.TestCase):
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
                 (transition, "HalamanMenu) == 14 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "Multijump deve avere una tinta dedicata"),
+                (transition, "HalamanMenu) == 13 ? Global.DaftarWarnaRGB", "HalamanMenu) == 15 ? Global.DaftarWarnaRGB", "Ghost/Fly deve usare la tinta condivisa"),
+                (transition, "If(Event Player.TeleportasiJongkokAktif == True);", "Chase Player Variable Over Time(Event Player, WarnaMenu, Vector(1, 2, 3), 0.180, Destination and Duration);\n\t\tIf(Event Player.TeleportasiJongkokAktif == True);", "due transizioni fluide senza override"),
                 (quiet, "Stop Chasing Player Variable(Event Player, WarnaMenu);", "", "cleanup transizione colore"),
             ):
                 with self.subTest(mutation=old):
