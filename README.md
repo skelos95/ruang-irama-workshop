@@ -63,7 +63,9 @@ Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciat
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 
-Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi. Le tinte dei menu conservano la transizione fluida; Black rende nero il nome, mantenendo leggibile il menu.
+Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi.
+
+Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 

@@ -44,7 +44,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
 - Il profilo `งูแรร์` parte Silver Mist / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
-- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, Black nero sul nome e menu leggibile. Tinte menu fluide in 0,180 s anche scorrendo Name Color, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
+- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–14: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
 
