@@ -357,7 +357,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                     'Custom String("Draconian")',
                     1,
                 ),
-                "Draconian inserito nei 100 generi ordinari",
+                "Draconian inserito nei 200 generi ordinari",
             ),
             (
                 self.source.replace(
@@ -706,7 +706,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
-    def test_teleport_menu_uses_smooth_chased_tint(self) -> None:
+    def test_teleport_menu_uses_static_readable_tint(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         for token in (
             "Custom Color(190 + X Component Of(Event Player.WarnaMenu) * 0.250",
@@ -722,7 +722,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Vector(95, 150, 255)",
             "Vector(195, 100, 255)",
             "Vector(255, 85, 135)",
-            "0.180, Destination and Duration",
+            "Event Player.WarnaMenu = Event Player.KursorTeleportasi",
         ):
             self.assertIn(token, transition.body)
         mutated = self.replace_in_rule(renderer, "Visible To String and Color", "Visible To and String")
@@ -1013,7 +1013,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         mutated = self.replace_in_rule(
             navigation,
-            "(Event Player.PerintahMenu == 3 ? 1 : 13)) % 14;",
+            "(Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;",
             "(Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;",
         )
         self.assert_rejected(mutated, "ciclo esatto 0..13")
@@ -1188,7 +1188,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "14 subroutine pagina")
+        self.assert_rejected(mutated, "15 subroutine pagina")
 
     def test_menu_page_engine_actions_cannot_target_all_players(self) -> None:
         apply_color = self.rule(
@@ -2563,7 +2563,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
         quiet = self.rule(lambda rule: validator.subroutine_target(rule) == "TenangkanPemain")
         for token in ("Stop Camera(Event Player);",
                       "Stop Modifying Hero Voice Lines(Event Player);",
-                      "Stop Chasing Player Variable(Event Player, WarnaMenu);",
                       "Detach Players(Event Player);",
                       "Enable Nameplates(All Players(All Teams), Event Player);",
                       "Allow Button(Event Player, Button(Melee));",

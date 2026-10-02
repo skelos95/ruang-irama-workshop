@@ -39,7 +39,7 @@ class JumpEvaluator(SpawnEvaluator):
         return super().add_player(identity, **defaults)
 
     def resolve(self, name):
-        if name in ("Jump", "EfekTerapkan", "TerapkanFisikaHantuTerbang"):
+        if name in ("Jump", "TerapkanFisikaHantuTerbang"):
             return name
         return super().resolve(name)
 
@@ -282,13 +282,13 @@ class JumpResurrectTests(unittest.TestCase):
                     model.die(position=death)
                     model.step(100, prefix="12f")
                     helpers = [event for event in model.events
-                               if event[0] in ("EfekTerapkan", "TerapkanFisikaHantuTerbang")]
+                               if event[0] == "TerapkanFisikaHantuTerbang"]
                     if resurrection_succeeds:
                         self.assertEqual([event[0] for event in helpers],
-                                         ["EfekTerapkan", "TerapkanFisikaHantuTerbang"])
+                                         ["TerapkanFisikaHantuTerbang"])
                         target = model.navigation_result + Vector(0, 0.5, 0)
-                        self.assertEqual([event[2:] for event in helpers], [(target, True), (target, True)])
-                        self.assertEqual(model.events[-2:], helpers)
+                        self.assertEqual([event[2:] for event in helpers], [(target, True)])
+                        self.assertEqual(model.events[-1:], helpers)
                     else:
                         self.assertEqual(helpers, [])
 

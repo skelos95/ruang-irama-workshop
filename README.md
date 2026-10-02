@@ -37,16 +37,17 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Travel & Attach | Crouch + Primary / Secondary, poi Interact | Cambia pagina, poi esegue |
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
 | Morto | Jump | Resuscita sul posto sicuro o recupera dal vuoto |
+| Vivo, Multijump ON | Rilascia e ripremi Jump in aria | Salto aggiuntivo con la forza scelta |
 
-Ogni pressione viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee e Jump restano disponibili come azioni native da vivi.
+Ogni pressione viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
 ## Menu personali
 
 | Pagina | Menu | Opzioni |
 |---:|---|---|
-| 0 | Name Color | 32 colori |
+| 0 | Name Color | 40 colori |
 | 1 | Third-Person Camera | OFF, sé stesso o target valido |
-| 2 | Soundtrack | [100 generi](docs/GENERI.md) |
+| 2 | Soundtrack | [200 generi](docs/GENERI.md) |
 | 3 | HUD Language | EN / ID / TH |
 | 4 | Revenge | Debiti da uccisioni dirette |
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
@@ -58,8 +59,11 @@ Ogni pressione viene consumata una volta; Interact va rilasciato prima di passar
 | 11 | Vote Player | Umani, incluso sé stesso |
 | 12 | Dummy Follow | OFF / ON, partecipazione volontaria |
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
+| 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 50% |
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Tenendo solo avanti accelera dal **100% al 1000% in 25 secondi**; cambiare input azzera la rampa.
+
+Multijump aggiunge salti in aria a ogni nuova pressione di Jump: il valore scelto resta fisso, senza aumentare a ogni salto. Si sospende con menu aperto, Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi. Black rende nero il nome, mantenendo leggibile il menu.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 

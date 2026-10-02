@@ -105,6 +105,7 @@ SCHEDULER_SUBROUTINES = {
     "ProsesTerbangPemain",
     "ProsesBotPemain",
     "RawatBotBuatan",
+    "ProsesLompatGanda",
 }
 PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanMusik",
@@ -121,6 +122,7 @@ PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanPilihan",
     "TerapkanHalamanIkutiBotBuatan",
     "TerapkanHalamanHantuTerbang",
+    "TerapkanHalamanLompatGanda",
 }
 MENU_OWNER_STATE_VARIABLES = {
     "MenuTerbuka",
@@ -129,6 +131,10 @@ MENU_OWNER_STATE_VARIABLES = {
     "KursorUtama",
     "PerintahMenu",
     "MasukanMenuDikunci",
+    "ModeLompatGanda",
+    "KursorLompatGanda",
+    "TingkatLompatGanda",
+    "LompatGandaDipakai",
     "KursorGenre",
     "IndeksGenre",
     "KursorKamera",
@@ -1486,7 +1492,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
-    checks.equal(len(arcade_renderers), 15, "renderer menu principale + pagine 0..13")
+    checks.equal(len(arcade_renderers), 16, "renderer menu principale + pagine 0..14")
     teleport_renderer = rule_by_subroutine(rules, "GambarTeleportasi")
     checks.require(teleport_renderer is not None, "renderer GambarTeleportasi assente")
     if teleport_renderer:
@@ -1573,7 +1579,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 checks.equal(
                     teleport_call.args[9].strip(),
                     "Visible To String and Color",
-                    "GambarTeleportasi: colore deve rivalutarsi durante la chase",
+                    "GambarTeleportasi: colore deve rivalutarsi dopo la selezione",
                 )
     travel_transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
     checks.require(travel_transition is not None, "transizione Travel assente")
@@ -1585,10 +1591,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "Vector(95, 150, 255)",
             "Vector(195, 100, 255)",
             "Vector(255, 85, 135)",
-            "0.180, Destination and Duration",
+            "Event Player.WarnaMenu = Event Player.KursorTeleportasi",
         ):
             checks.require(token in travel_transition.body,
-                           f"transizione Travel fluida incompleta: {token}")
+                           f"colore Travel incompleto: {token}")
     travel_open = next((rule for rule in rules if rule.name.startswith("19 - Teleportasi Jongkok: Buka")), None)
     travel_nav = next((rule for rule in rules if rule.name.startswith("19c - Teleportasi Jongkok:")), None)
     checks.require(travel_open is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_open.body,
@@ -1716,7 +1722,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             1,
             "router menu: GambarHantuTerbang deve essere chiamato soltanto dalla pagina 13 aperta",
         )
-        for page in range(14):
+        for page in range(15):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
         checks.require(
@@ -1830,9 +1836,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
-            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 13)) % 14;"
+            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;"
             in navigation_rule.body,
-            "navigazione menu principale non usa ciclo esatto 0..13",
+            "navigazione menu principale non usa ciclo esatto 0..14",
         )
         checks.require(
             re.search(r"HalamanMenu\s*==\s*0.*?KursorWarna\s*=", navigation_rule.body, re.DOTALL) is not None,
@@ -1958,7 +1964,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
-                   "dispatcher Interact non suddiviso nelle 14 subroutine pagina")
+                   "dispatcher Interact non suddiviso nelle 15 subroutine pagina")
     for name in sorted(PAGE_APPLY_SUBROUTINES):
         rule = rule_by_subroutine(rules, name)
         if rule:
@@ -2120,6 +2126,112 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         )
 
 
+
+def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:
+    """Guard the per-player air-jump edge, bounded vertical motion and ephemeral ring."""
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", expression)
+    fields = {"ModeLompatGanda": 122, "KursorLompatGanda": 123,
+              "TingkatLompatGanda": 124, "LompatGandaDipakai": 125, "LompatDiTanah": 126}
+    declared = {entry.name: entry.index for entry in player_entries}
+    for name, index in fields.items():
+        checks.equal(declared.get(name), index, f"Multijump: campo player {name}")
+    for name in ("GambarLompatGanda", "TerapkanHalamanLompatGanda", "ProsesLompatGanda"):
+        checks.require(name in subroutines, f"Multijump: subroutine {name} assente")
+    runtime = rule_by_subroutine(rules, "ProsesLompatGanda")
+    apply = rule_by_subroutine(rules, "TerapkanHalamanLompatGanda")
+    renderer = rule_by_subroutine(rules, "GambarLompatGanda")
+    scheduler = next((rule for rule in rules if rule.name.startswith("04g -")), None)
+    if scheduler:
+        checks.require("If(Global.PemainAktif.ModeLompatGanda==True);CallSubroutine(ProsesLompatGanda);End;" in code(mask_strings(scheduler.body)),
+                       "Multijump: scheduler deve chiamare il motore solo ON")
+        callers = [(owner, call) for owner in rules for call in iter_calls(owner.body, "Call Subroutine")
+                   if call.args == ("ProsesLompatGanda",)]
+        checks.require(len(callers) == 1 and callers[0][0] == scheduler,
+                       "Multijump: unico owner del motore deve essere lo scheduler")
+    if runtime:
+        packed = code(mask_strings(runtime.body))
+        for token in (
+            "If(IsButtonHeld(Global.PemainAktif,Button(Jump))==True);",
+            "If(Global.PemainAktif.LompatGandaDipakai==False);",
+            "Global.PemainAktif.LompatGandaDipakai=True;",
+            "Global.PemainAktif.LompatGandaDipakai=False;",
+            "Global.PemainAktif.Manusia==True", "HasSpawned(Global.PemainAktif)==True",
+            "IsAlive(Global.PemainAktif)==True", "Global.PemainAktif.MenuTerbuka==False",
+            "Global.PemainAktif.ModeTerbangAktif==False", "Global.PemainAktif.LampiranTeleportasiAktif==False",
+            "Global.PemainAktif.BangkitLompatDipakai==False",
+            "Or(Global.PemainAktif.EfekNasib!=2,Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)",
+            "If(And(Global.PemainAktif.LompatDiTanah==False,IsOnGround(Global.PemainAktif)==False));",
+            "Global.PemainAktif.LompatDiTanah=IsOnGround(Global.PemainAktif);",
+        ):
+            checks.require(token in packed, f"Multijump: guardia input o fisica assente {token}")
+        checks.require(not wait_calls(runtime.body) and action_loop_count(runtime.body) == 0,
+                       "Multijump: nessun Wait/Loop nel motore")
+        impulses = list(iter_calls(runtime.body, "Apply Impulse"))
+        checks.equal(len(impulses), 1, "Multijump: unico impulso verticale")
+        delta = "6+3*(Global.PemainAktif.TingkatLompatGanda-1)-YComponentOf(VelocityOf(Global.PemainAktif))"
+        if impulses:
+            checks.equal(tuple(code(arg) for arg in impulses[0].args),
+                         ("Global.PemainAktif", delta + ">=0?Vector(0,1,0):Vector(0,-1,0)",
+                          "AbsoluteValue(" + delta + ")", "ToWorld", "IncorporateContraryMotion"),
+                         "Multijump: correzione verticale 6..60 m/s senza accumulo")
+        rings = list(iter_calls(runtime.body, "Play Effect"))
+        checks.equal(len(rings), 1, "Multijump: unico ring temporaneo per salto")
+        if rings:
+            checks.equal(tuple(code(arg) for arg in rings[0].args),
+                         ("AllPlayers(AllTeams)", "RingExplosion", "Global.RGB",
+                          "PositionOf(Global.PemainAktif)+Vector(0,0.050,0)", "1.500"),
+                         "Multijump: ring RGB globale sotto i piedi")
+        for call in (*impulses, *rings):
+            headers = [code(branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(runtime.body, call.start)]
+            checks.require("If(IsButtonHeld(Global.PemainAktif,Button(Jump))==True);" in headers
+                           and "If(Global.PemainAktif.LompatGandaDipakai==False);" in headers,
+                           "Multijump: azione nativa deve essere sotto la nuova pressione Jump")
+            guarded = next((header for header in headers if "Global.PemainAktif.Manusia==True" in header), "")
+            for token in ("HasSpawned(Global.PemainAktif)==True", "IsAlive(Global.PemainAktif)==True",
+                          "Global.PemainAktif.MenuTerbuka==False", "Global.PemainAktif.ModeTerbangAktif==False",
+                          "Global.PemainAktif.LampiranTeleportasiAktif==False", "Global.PemainAktif.BangkitLompatDipakai==False",
+                          "Or(Global.PemainAktif.EfekNasib!=2,Global.PemainAktif.EfekNasibBerakhir<=TotalTimeElapsed)"):
+                checks.require(token in guarded, f"Multijump: guardia effettiva azione nativa {token}")
+        if impulses:
+            headers = [code(branch.splitlines()[0]) for branch in
+                       conditional_branches_containing(runtime.body, impulses[0].start)]
+            checks.require("If(And(Global.PemainAktif.LompatDiTanah==False,IsOnGround(Global.PemainAktif)==False));" in headers,
+                           "Multijump: impulso solo sui salti successivi in aria")
+        latch = runtime.body.find("Global.PemainAktif.LompatGandaDipakai = True;")
+        checks.require(latch >= 0 and all(latch < call.start for call in (*impulses, *rings)),
+                       "Multijump: consumare la pressione prima di impulso e ring")
+        checks.require("Create Effect(" not in runtime.body and "Create HUD Text(" not in runtime.body,
+                       "Multijump: il salto non deve creare entità persistenti")
+    if apply:
+        packed = code(mask_strings(apply.body))
+        for token in ("EventPlayer.KursorLompatGanda%=20;",
+                      "EventPlayer.ModeLompatGanda=EventPlayer.KursorLompatGanda!=0;",
+                      "If(EventPlayer.ModeLompatGanda==True);EventPlayer.TingkatLompatGanda=EventPlayer.KursorLompatGanda;End;",
+                      "EventPlayer.LompatGandaDipakai=IsButtonHeld(EventPlayer,Button(Jump));",
+                      "EventPlayer.LompatDiTanah=IsOnGround(EventPlayer);"):
+            checks.require(token in packed, f"Multijump: apply deve mantenere livello e sincronizzare Jump {token}")
+    for name in ("SiapkanPemain", "TenangkanPemain"):
+        cleanup = rule_by_subroutine(rules, name)
+        if cleanup:
+            for token in ("EventPlayer.ModeLompatGanda=False;", "EventPlayer.KursorLompatGanda=0;",
+                          "EventPlayer.TingkatLompatGanda=1;", "EventPlayer.LompatGandaDipakai=False;",
+                          "EventPlayer.LompatDiTanah=True;"):
+                checks.require(token in code(mask_strings(cleanup.body)), f"Multijump: reset {name} {token}")
+    for owner in rules:
+        writers = re.findall(r"\.(TingkatLompatGanda)\s*=(?!=)", mask_strings(owner.body))
+        checks.require(not writers or subroutine_target(owner) in
+                       {"SiapkanPemain", "TenangkanPemain", "TerapkanHalamanLompatGanda"},
+                       "Multijump: spinta fissa, il salto non deve cambiare il livello scelto")
+    if renderer:
+        calls = list(iter_calls(renderer.body, "Create HUD Text"))
+        checks.equal(len(calls), 1, "Multijump: unico HUD menu")
+        for token in ("14 - MULTIJUMP", "14 - LOMPAT GANDA", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกระโดดกลางอากาศ"):
+            checks.require(token in renderer.body, f"Multijump: menu localizzato {token}")
+        checks.equal(renderer.body.count("100 + (Event Player.KursorLompatGanda - 1) * 50"), 3,
+                     "Multijump: preview 100..1000% in passi50 per tutte le lingue")
+
 def validate_ghost_fly(
     checks: Checks,
     source: str,
@@ -2156,8 +2268,8 @@ def validate_ghost_fly(
     }
     checks.require(required_subroutines <= subroutines,
                    "Ghost/Fly: subroutine pagina 13 incomplete")
-    checks.require(re.search(r"(?m)^\s*60:\s*ProsesTerbangPemain\s*$", source) is not None,
-                   "Fly: indice subroutine motore 20 Hz deve essere 60")
+    checks.require("ProsesTerbangPemain" in subroutines,
+                   "Fly: dichiarazione subroutine motore 20 Hz assente")
 
     apply = rule_by_subroutine(rules, "TerapkanHalamanHantuTerbang")
     physics = rule_by_subroutine(rules, "TerapkanFisikaHantuTerbang")
@@ -2772,17 +2884,20 @@ End;
     ]
     checks.equal(len(draconian_calls), 2, "profilo speciale: Draconian deve coprire setup e repair")
     genres = array_assignment_items(source, "DaftarGenre")
-    checks.require(genres is not None, "profilo speciale: array dei 100 generi assente")
+    checks.require(genres is not None, "profilo speciale: array dei 200 generi assente")
     if genres is not None:
-        checks.equal(len(genres), 100, "profilo speciale: numero generi ordinari")
+        checks.equal(len(genres), 200, "profilo speciale: numero generi ordinari")
         genre_literals = {
             parse_literal(call.args[0])
             for item in genres
             for call in iter_calls(item, "Custom String")
             if call.args
         }
+        checks.equal(len(genre_literals), 200, "catalogo musicale: 200 nomi unici")
+        checks.require(all(isinstance(label, str) and label.strip() for label in genre_literals),
+                       "catalogo musicale: nomi non vuoti")
         checks.require("Draconian" not in genre_literals,
-                       "profilo speciale: Draconian inserito nei 100 generi ordinari")
+                       "profilo speciale: Draconian inserito nei 200 generi ordinari")
 
     color_names = array_assignment_items(source, "NamaWarnaInggris")
     checks.require(color_names is not None and len(color_names) > 1,
@@ -2945,7 +3060,7 @@ End;
                             ("Event Player.MusikKhusus",),
                             "profilo speciale pagina musica: valore locked",
                         )
-                for token in ("Event Player.KursorGenre", "Global.DaftarGenre", "/100"):
+                for token in ("Event Player.KursorGenre", "Global.DaftarGenre", "{0}/{1}", "Count Of(Global.DaftarGenre)", "Event Player.KursorGenre / 20"):
                     checks.require(token in unlocked,
                                    f"profilo speciale pagina musica: ramo ordinario invariato: {token}")
 
@@ -3001,6 +3116,40 @@ End;
             ) is not None,
             "profilo speciale: TerapkanHalamanMusik deve iniziare con la guardia locked",
         )
+
+
+def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) -> None:
+    """Keep catalog indexing aligned and reserve ephemeral rings for jump feedback."""
+    for name in ("DaftarWarna", "DaftarWarnaRGB", "NamaWarna", "NamaWarnaInggris", "NamaWarnaThai"):
+        items = array_assignment_items(source, name)
+        checks.equal(len(items) if items is not None else None, 40, f"palette: 40 voci allineate in {name}")
+        checks.require(items is not None and all(item.strip() for item in items),
+                       f"palette: 40 voci non vuote in {name}")
+    for name in ("NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai"):
+        items = array_assignment_items(source, name)
+        checks.equal(len(items) if items is not None else None, 10, f"catalogo musicale: dieci gruppi in {name}")
+    for rule in rules:
+        masked = mask_strings(rule.body)
+        if "Event Player.KursorGenre = (Event Player.KursorGenre" in masked:
+            checks.require("% Count Of(Global.DaftarGenre)" in masked,
+                           "catalogo musicale: navigazione limitata alla lunghezza corrente")
+            checks.require("Count Of(Global.DaftarGenre) -" in masked,
+                           "catalogo musicale: passo indietro dinamico")
+        effects = list(iter_calls(rule.body, "Play Effect"))
+        persistent = list(iter_calls(rule.body, "Create Effect"))
+        checks.require(not persistent, f"feedback visuale: nessun effetto persistente in {rule.name}")
+        checks.require(not effects or subroutine_target(rule) == "ProsesLompatGanda",
+                       f"feedback visuale: effetti consentiti soltanto per Multijump, trovato {rule.name}")
+        checks.require("EfekTerapkan" not in masked,
+                       "feedback visuale: vecchio impulso menu ancora presente")
+        for action in ("Chase Player Variable Over Time", "Chase Player Variable At Rate", "Stop Chasing Player Variable"):
+            for call in iter_calls(rule.body, action):
+                checks.require(len(call.args) < 2 or call.args[1].strip() != "WarnaMenu",
+                               "feedback visuale: colore menu deve cambiare senza animazione")
+    transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
+    if transition:
+        checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 3,
+                     "feedback visuale: assegnazioni immediate colore menu")
 
 
 def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
@@ -3163,7 +3312,6 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             "Resurrect(Event Player);",
             "Event Player.BangkitPerluTeleportasi = False;",
             "If(Is Alive(Event Player) == True);",
-            "Call Subroutine(EfekTerapkan);",
             "Event Player.FisikaHantuTerbangDiterapkan = False;",
             "Call Subroutine(TerapkanFisikaHantuTerbang);",
         )
@@ -4860,7 +5008,6 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "Allow Button(Event Player, Button(Melee));",
             "Stop Camera(Event Player);",
             "Stop Modifying Hero Voice Lines(Event Player);",
-            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
             "Detach Players(Event Player);",
             "Enable Nameplates(All Players(All Teams), Event Player);",
             "Event Player.PelatNamaDinonaktifkan = False;",
@@ -6789,7 +6936,9 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_localization(checks, source, globals_)
     validate_hud_and_menu(checks, source, rules, players, subroutines)
     validate_ghost_fly(checks, source, rules, player_entries, subroutines)
+    validate_multijump(checks, source, rules, player_entries, subroutines)
     validate_special_player_profile(checks, source, rules, player_entries)
+    validate_catalog_feedback(checks, source, rules)
     validate_input_contract(checks, rules)
     validate_unkillable_full_hp(checks, rules)
     validate_inspector_recording(checks, source, rules)

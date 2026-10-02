@@ -2,6 +2,13 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Cataloghi, salti multipli e feedback — 2026-10-02
+
+- Aggiunti cento generi: venti per ciascuno dei dieci gruppi, con navigazione ±1/±10 e conteggio HUD dinamici. Palette da 32 a 40 colori, incluso Black; indici dei colori precedenti preservati.
+- Menu 14 Multijump, inizialmente OFF: forza fissa 100–1000% a passi del 50%, salto aggiuntivo a ogni nuova pressione in aria. Stato individuale e motore chiamato solo ON; separato da Resurrect e sospeso con menu, Attach, Fly e Luck Acceleration.
+- Rimossi gli effetti visivi dei menu e le pulsazioni di Revenge/Camera; tinte applicate immediatamente. Ring RGB temporaneo soltanto a ogni salto valido con Multijump ON, senza entità persistenti.
+- 115 regole, 66 subroutine, 5 Wait e un Loop. Comportamento fisico, resa dei testi e metriche compilate da verificare nel client.
+
 ## Scelta iniziale automatica — 2026-10-02
 
 - Dopo 60 s senza primo spawn, il giocatore riceve Shion al controllo individuale 1 Hz. La scelta resta libera subito dopo; morte, cambio eroe e cambio squadra non riarmano il timer.

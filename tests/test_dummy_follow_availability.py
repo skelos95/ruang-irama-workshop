@@ -118,7 +118,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 model.apply("team-two", True)
                 self.assertFalse(first["IzinkanBotBuatanMengikuti"])
                 self.assertTrue(second["IzinkanBotBuatanMengikuti"])
-                self.assertEqual(model.applied_effects(), ["EfekTerapkan"])
+                self.assertEqual(model.applied_effects(), [])
 
     def test_two_team_dummies_allow_each_player_independent_consent(self):
         for source, model in self.models():
@@ -168,7 +168,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 dummy.update(exists=False, visible=False)
                 model.apply("human", False)
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
-                self.assertEqual(model.applied_effects(), ["EfekTerapkan", "EfekTerapkan"])
+                self.assertEqual(model.applied_effects(), [])
 
     def test_dummy_disappearing_between_menu_open_and_apply_blocks_activation(self):
         for source, model in self.models():
