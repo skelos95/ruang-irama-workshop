@@ -194,6 +194,8 @@ variabili
 		117: KursorTeleportasiBotBuatan
 		118: WaktuTeksTargetBerikut
 		119: BangkitPerluTeleportasi
+		120: WaktuPilihPahlawan
+		121: PilihanPahlawanSelesai
 }
 
 subroutine
@@ -1595,6 +1597,24 @@ regola("04g - Utama global: Penjadwal pusat 20 Hz")
 					Call Subroutine(ProsesSiklusPemain);
 				End;
 				If(Globale.LangkahPenjadwal % 20 == (Globale.PemainAktif.Manusia == True ? Globale.PemainAktif.UrutanHUD : Slot Of(Globale.PemainAktif)) % 20);
+					"Pilihan otomatis sekali saja; pemaksaan langsung dilepas agar pahlawan tetap bebas diganti."
+					If(Globale.PemainAktif.PilihanPahlawanSelesai == False);
+						If(Has Spawned(Globale.PemainAktif) == True);
+							Globale.PemainAktif.PilihanPahlawanSelesai = True;
+							Globale.PemainAktif.WaktuPilihPahlawan = 0;
+						Else;
+							If(Or(Team Of(Globale.PemainAktif) == Team 1, Team Of(Globale.PemainAktif) == Team 2));
+								If(And(Globale.PemainAktif.WaktuPilihPahlawan > 0, Total Time Elapsed >= Globale.PemainAktif.WaktuPilihPahlawan));
+									Globale.PemainAktif.PilihanPahlawanSelesai = True;
+									Globale.PemainAktif.WaktuPilihPahlawan = 0;
+									Start Forcing Player To Be Hero(Globale.PemainAktif, Hero(Shion));
+									Stop Forcing Player To Be Hero(Globale.PemainAktif);
+								End;
+							Else;
+								Globale.PemainAktif.WaktuPilihPahlawan = 0;
+							End;
+						End;
+					End;
 					If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.MenuTerbuka == True, Or(Globale.PemainAktif.HalamanMenu == 1, Globale.PemainAktif.HalamanMenu == 4))));
 						Call Subroutine(ProsesSimpananPemain);
 					End;
@@ -2331,6 +2351,8 @@ regola("99m - Subrutin: Terapkan izin bot buatan mengikuti")
 
 	azioni
 	{
+		"Aktifkan izin hanya jika bot buatan musuh benar-benar ada; mematikan izin selalu boleh."
+		Abort If(And(Event Player.KursorIkutiBotBuatan == 1, Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True)) == False));
 		If(Event Player.IzinkanBotBuatanMengikuti != (Event Player.KursorIkutiBotBuatan == 1));
 			Event Player.IzinkanBotBuatanMengikuti = Event Player.KursorIkutiBotBuatan == 1;
 			Call Subroutine(EfekTerapkan);
@@ -3363,6 +3385,12 @@ regola("89a - Subrutin: Proses status cepat pemain")
 
 	azioni
 	{
+		"Tenggat pilihan pertama disimpan pada pemain, sebelum penyiapan yang memerlukan kemunculan."
+		If(And(Globale.PemainAktif.PilihanPahlawanSelesai == False, Globale.PemainAktif.WaktuPilihPahlawan == 0));
+			If(Or(Team Of(Globale.PemainAktif) == Team 1, Team Of(Globale.PemainAktif) == Team 2));
+				Globale.PemainAktif.WaktuPilihPahlawan = Total Time Elapsed + 60;
+			End;
+		End;
 		If(And(Array Contains(Globale.PemainManusia, Globale.PemainAktif) == True, And(Or(Globale.PemainAktif.NamaTampilan == Null, Globale.PemainAktif.NamaTampilan == Custom String("")), Custom String("{0}", Globale.PemainAktif) != Custom String(""))));
 			Globale.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{0}", Globale.PemainAktif));
 		End;
@@ -4301,7 +4329,7 @@ regola("91r - Subrutin: Gambar izin bot buatan mengikuti")
 
 	azioni
 	{
-		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("Hold CROUCH | {0}: next | {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("Tahan JONGKOK | {0}: maju | {1}: mundur", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("ย่อค้าง | {0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("12 - DUMMY FOLLOW {0}/2\nENEMY DUMMY MAY FOLLOW YOU: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("ON") : Custom String("OFF")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("ON") : Custom String("OFF")) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("12 - BOT MENGIKUTI {0}/2\nIZINKAN BOT MUSUH MENGIKUTIMU: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("AKTIF") : Custom String("MATI")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("AKTIF") : Custom String("MATI")) : Custom String("{0}\n> {1}", Custom String("12 - ดัมมี่ติดตาม {0}/2\nให้ดัมมี่ศัตรูตามคุณ: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("เปิด") : Custom String("ปิด")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("เปิด") : Custom String("ปิด")), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(215, 245, 235, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.IndeksBahasa == 0 ? Custom String("{0}\n{1}", Custom String("Hold CROUCH | {0}: next | {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: apply | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n{1}", Custom String("Tahan JONGKOK | {0}: maju | {1}: mundur", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: pakai | {1}: kembali", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))) : Custom String("{0}\n{1}", Custom String("ย่อค้าง | {0}: ถัดไป | {1}: ก่อนหน้า", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: ใช้ | {1}: กลับ", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True)) ? Event Player.IndeksBahasa == 0 ? Custom String("{0}\n> {1}", Custom String("12 - DUMMY FOLLOW {0}/2\nENEMY DUMMY MAY FOLLOW YOU: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("ON") : Custom String("OFF")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("ON") : Custom String("OFF")) : Event Player.IndeksBahasa == 1 ? Custom String("{0}\n> {1}", Custom String("12 - BOT MENGIKUTI {0}/2\nIZINKAN BOT MUSUH MENGIKUTIMU: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("AKTIF") : Custom String("MATI")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("AKTIF") : Custom String("MATI")) : Custom String("{0}\n> {1}", Custom String("12 - ดัมมี่ติดตาม {0}/2\nให้ดัมมี่ศัตรูตามคุณ: {1}", Event Player.KursorIkutiBotBuatan + 1, Event Player.IzinkanBotBuatanMengikuti ? Custom String("เปิด") : Custom String("ปิด")), Event Player.KursorIkutiBotBuatan == 1 ? Custom String("เปิด") : Custom String("ปิด")) : Event Player.IndeksBahasa == 0 ? Custom String("12 - DUMMY FOLLOW\nNO ENEMY DUMMY\n> {0}", Event Player.KursorIkutiBotBuatan == 1 ? Custom String("UNAVAILABLE") : Custom String("OFF")) : Event Player.IndeksBahasa == 1 ? Custom String("12 - BOT MENGIKUTI\nBOT MUSUH TIDAK ADA\n> {0}", Event Player.KursorIkutiBotBuatan == 1 ? Custom String("TIDAK TERSEDIA") : Custom String("MATI")) : Custom String("12 - ดัมมี่ติดตาม\nไม่มีดัมมี่ศัตรู\n> {0}", Event Player.KursorIkutiBotBuatan == 1 ? Custom String("ใช้ไม่ได้") : Custom String("ปิด")), Top, 3, Custom Color(255, 255, 255, 255), Custom Color(215, 245, 235, 255), Custom Color(X Component Of(Event Player.WarnaMenu), Y Component Of(Event Player.WarnaMenu), Z Component Of(Event Player.WarnaMenu), 255), Visible To String and Color, Visible Never);
 		Event Player.HudMenu = Last Text ID;
 	}
 }
@@ -4721,6 +4749,9 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Set Move Speed(Event Player, 100);
 		Set Gravity(Event Player, 100);
 		Enable Movement Collision With Environment(Event Player);
+		"Pekerja penyiapan hanya menerima pemain yang sudah muncul; jangan mulai ulang tenggat saat pindah tim."
+		Event Player.WaktuPilihPahlawan = 0;
+		Event Player.PilihanPahlawanSelesai = True;
 		Event Player.SudahDiperiksa = False;
 		Event Player.BotOtomatis = False;
 		Event Player.Manusia = False;

@@ -18,7 +18,7 @@ Il runtime contiene 113 regole, 64 subroutine, 5 `Wait` e un solo `Loop`. La reg
 | 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly solo con toggle attivo |
 | 10 Hz | Lifecycle umano e bot, RGB, riapplicazione fisica e revoca Camera/inspection |
 | 5 Hz | Selezione del target follow dummy, distribuita per slot |
-| 1 Hz | Countdown, timer nativo, slot dummy, testi orfani; cache Camera/Revenge solo nelle relative pagine aperte |
+| 1 Hz | Countdown, timer nativo, scelta iniziale eroe, slot dummy, testi orfani; cache Camera/Revenge solo nelle relative pagine aperte |
 
 `ProsesCepatPemain` deve restare raggiungibile prima di `Manusia=True`, altrimenti si blocca la registrazione. Anche manutenzione umana e scadenza delle icone Luck residue restano raggiungibili durante la quarantena del cambio squadra. La guardia Luck considera `KartuNasibAktif`, `PutaranKartuNasib > 0`, `EfekNasib != 0` e `WaktuIkonNasibBerakhir > 0`: HEART può aver già concluso l'effetto ma avere un'icona ancora da distruggere.
 
@@ -38,6 +38,8 @@ I 12 slot identificano occupanti simultanei, non identità storiche. Nome tempor
 | Morte/cambio eroe | Normalizza lo stato fisico transitorio; conserva preferenze e riapplica quelle compatibili al ritorno in vita. |
 
 La prenotazione lifecycle non sospende gli altri player. Un bot in classificazione o un player non spawned non deve trattenerla indefinitamente; i retry rispettano le scadenze individuali/globali. Un evento leave tardivo non può cancellare il nuovo occupante dello stesso slot.
+
+Prima del primo spawn, `ProsesCepatPemain` arma una sola scadenza individuale di 60 s. Al controllo 1 Hz, un player ancora non spawned riceve Shion; latch consumato prima di `Start Forcing Player To Be Hero` e immediato `Stop Forcing Player To Be Hero` evitano ripetizioni e lasciano libera la scelta successiva. Setup dopo spawn chiude il timer, senza riarmarlo a morte o cambio team. Le due variabili appartengono all'entità: nessun registro globale, HUD o `Wait` aggiunto. Dummy e AI classificati non entrano in questo ramo; un AI non ancora spawned resta non classificabile fino allo spawn, come nel lifecycle esistente.
 
 Gli handle hanno un proprietario e un registro canonico che sopravvive alla perdita delle variabili del leaver. Distruggere prima di sovrascrivere; svuotare anche i mirror e non distruggere ID già riciclati da altri. Cleanup e voti leggono gli occupanti rimasti, senza dipendere dal voto di un'entità scomparsa. Camera, Revenge, Attach, Teleport, inspection e voti non conservano riferimenti al leaver.
 
@@ -88,6 +90,8 @@ Dummy e bot normali sono offensivamente passivi, velocità 20%, danni/urti ricev
 La ricerca prova otto direzioni a 8 e 12 m: 16 candidati, al massimo uno al secondo. Il punto finale deve avere spazio per il corpo, terreno valido e distanza 6–16 m dall'obiettivo; viene rialzato di 0,5 m. Se manca un punto valido il dummy resta in spawn e riprova; morte/respawn azzerano e riarmano la ricerca.
 
 Il follow sceglie a 5 Hz il più vicino fra gli umani nemici registrati, vivi, spawned e con Dummy Follow ON. Facing/throttle restano rivalutati: arresto entro 4 m, stop se nessun target idoneo o alla morte/rimozione. Il movimento è diretto e può fermarsi contro un muro; gli AI normali conservano la navigazione nativa. Manutenzione morte/respawn e rilascio classificazione restano a 10 Hz. I bot non ricevono routine di menu, cache, Luck o Fly.
+
+Il menu permette ON soltanto con un dummy della squadra avversaria presente; OFF resta sempre disponibile. La disponibilità viene riletta al comando, anche se il menu era già aperto. Un consenso già ON sopravvive alla rimozione temporanea del dummy.
 
 ## Verifica delle modifiche
 

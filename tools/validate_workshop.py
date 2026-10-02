@@ -2057,6 +2057,14 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
 
     dummy_follow_apply = rule_by_subroutine(rules, "TerapkanHalamanIkutiBotBuatan")
     if dummy_follow_apply:
+        availability_guard = (
+            "Abort If(And(Event Player.KursorIkutiBotBuatan == 1, "
+            "Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), "
+            "And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True)) == False));"
+        )
+        follow_actions = mask_strings(rule_block(dummy_follow_apply, "actions") or "")
+        checks.require(re.sub(r"\s+", "", follow_actions).startswith(re.sub(r"\s+", "", availability_guard)),
+                       "Dummy Follow: ON richiede un dummy nemico presente prima di stato e feedback; OFF libero")
         for token, label in (
             (
                 "If(Event Player.IzinkanBotBuatanMengikuti != (Event Player.KursorIkutiBotBuatan == 1));",
@@ -3617,6 +3625,96 @@ def validate_inspector_recording(checks: Checks, source: str, rules: list[Rule])
                        "disabilitare Inspector prima di avviare il runtime")
         checks.require(not conditional_branches_containing(body, position),
                        "registrazione Inspector indipendente dal toggle diagnostica")
+
+
+def validate_hero_selection_timeout(checks: Checks, rules: list[Rule]) -> None:
+    """Keep the first hero timeout reachable before spawn, bounded and one-shot."""
+    player = "Global.PemainAktif"
+    clock, latch = f"{player}.WaktuPilihPahlawan", f"{player}.PilihanPahlawanSelesai"
+
+    def packed(value: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(value))
+
+    fast = rule_by_subroutine(rules, "ProsesCepatPemain")
+    setup = rule_by_subroutine(rules, "SiapkanPemain")
+    scheduler = next((rule for rule in rules if rule.name.startswith("04g -")), None)
+    checks.require(all(rule is not None for rule in (fast, setup, scheduler)),
+                   "scelta eroe: fast worker, setup o scheduler assente")
+    if not all(rule is not None for rule in (fast, setup, scheduler)):
+        return
+
+    arm = f"{clock} = Total Time Elapsed + 60;"
+    fast_actions = mask_strings(rule_block(fast, "actions") or "")
+    arm_position = fast_actions.find(arm)
+    checks.equal(fast_actions.count(arm), 1, "scelta eroe: unica scadenza ingresso di 60 s")
+    arm_headers = [packed(branch.splitlines()[0]) for branch in
+                   conditional_branches_containing(fast_actions, arm_position)]
+    checks.require(packed(f"If(And({latch} == False, {clock} == 0));") in arm_headers,
+                   "scelta eroe: scadenza armata una sola volta prima del completamento")
+    checks.require(arm_position >= 0 and all(token not in fast_actions[:arm_position]
+                                           for token in ("Manusia", "Has Spawned", "Entity Exists")),
+                   "scelta eroe: ingresso deve precedere classificazione e guardie spawn")
+    checks.require(not wait_calls(fast.body), "scelta eroe: arming senza Wait")
+
+    starts = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Start Forcing Player To Be Hero")]
+    stops = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Stop Forcing Player To Be Hero")]
+    checks.equal(len(starts), 1, "scelta eroe: unico Start Forcing")
+    checks.equal(len(stops), 1, "scelta eroe: unico Stop Forcing")
+    if len(starts) == len(stops) == 1:
+        start_rule, start = starts[0]
+        stop_rule, stop = stops[0]
+        checks.require(start_rule == stop_rule == scheduler,
+                       "scelta eroe: forcing posseduto solo dallo scheduler")
+        checks.equal(tuple(packed(arg) for arg in start.args),
+                     (packed(player), "Hero(Shion)"), "scelta eroe: default Shion per il giocatore corrente")
+        checks.equal(tuple(packed(arg) for arg in stop.args), (packed(player),),
+                     "scelta eroe: rilascio dello stesso giocatore")
+        checks.require(packed(start.raw + ";" + stop.raw + ";") in packed(scheduler.body),
+                       "scelta eroe: Start/Stop adiacenti senza attesa o lock")
+        branches = conditional_branches_containing(start_rule.body, start.start)
+        headers = [packed(branch.splitlines()[0]) for branch in branches]
+        cadence = f"If(Global.LangkahPenjadwal % 20 == ({player}.Manusia == True ? {player}.UrutanHUD : Slot Of({player})) % 20);"
+        for header, label in (
+            (f"If(And(Is Dummy Bot({player}) == False, {player}.BotOtomatis == False));", "esclusione bot"),
+            (cadence, "cadenza 1 Hz"),
+            (f"If({latch} == False);", "completamento one-shot"),
+            (f"If(Or(Team Of({player}) == Team 1, Team Of({player}) == Team 2));", "esclusione spettatori"),
+            (f"If(And({clock} > 0, Total Time Elapsed >= {clock}));", "scadenza individuale"),
+        ):
+            checks.require(packed(header) in headers, f"scelta eroe: {label}")
+        checks.require(all(("Manusia" not in header or header == packed(cadence))
+                           and "HasSpawned" not in header and "EntityExists" not in header
+                           for header in headers),
+                       "scelta eroe: forcing raggiungibile per ingressi non spawned/non classificati")
+        deadline_branch = branches[0] if branches else ""
+        checks.require(packed(f"{latch} = True;") in packed(deadline_branch.split(start.raw)[0]),
+                       "scelta eroe: consumare il latch prima del forcing")
+        cancel = f"If(Has Spawned({player}) == True);{latch} = True;{clock} = 0;Else;"
+        latch_branch = next((branch for branch in branches
+                            if packed(branch.splitlines()[0]) == packed(f"If({latch} == False);")), "")
+        checks.require(packed(latch_branch).startswith(packed(f"If({latch} == False);" + cancel)),
+                       "scelta eroe: annullare prima se il giocatore ha scelto e spawned")
+        checks.require(not any(wait_calls(branch) for branch in branches),
+                       "scelta eroe: timeout senza nuovi Wait")
+    checks.equal(len(wait_calls(scheduler.body)), 1, "scelta eroe: nessuna attesa scheduler aggiunta")
+
+    for field, value in (("WaktuPilihPahlawan", "0"), ("PilihanPahlawanSelesai", "True")):
+        checks.require(packed(f"Event Player.{field} = {value};") in packed(setup.body),
+                       f"scelta eroe: setup completa {field}")
+    for rule in rules:
+        owner = subroutine_target(rule) or rule.name
+        for match in re.finditer(r"\.(WaktuPilihPahlawan|PilihanPahlawanSelesai)\s*=(?!=)\s*([^;]+);",
+                                 mask_strings(rule.body)):
+            field, value = match.group(1), packed(match.group(2))
+            allowed = (owner == "ProsesCepatPemain" and field == "WaktuPilihPahlawan" and value == "TotalTimeElapsed+60"
+                       or rule == scheduler and value == ("True" if field == "PilihanPahlawanSelesai" else "0")
+                       or owner == "SiapkanPemain" and value == ("True" if field == "PilihanPahlawanSelesai" else "0"))
+            checks.require(allowed, f"scelta eroe: writer non autorizzato {field} in {owner}")
+        for action in ("Set Player Variable", "Modify Player Variable"):
+            for call in iter_calls(rule.body, action):
+                checks.require(len(call.args) < 2 or call.args[1].strip() not in
+                               ("WaktuPilihPahlawan", "PilihanPahlawanSelesai"),
+                               "scelta eroe: stato scritto fuori dai writer diretti verificati")
 
 
 def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_: set[str], subroutines: set[str]) -> None:
@@ -6695,6 +6793,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_unkillable_full_hp(checks, rules)
     validate_inspector_recording(checks, source, rules)
     validate_scheduler(checks, source, rules, globals_, subroutines)
+    validate_hero_selection_timeout(checks, rules)
     validate_try_your_luck(checks, source, rules, players)
     validate_forced_death(checks, source, rules, players)
     validate_lifecycle(checks, rules, subroutines)

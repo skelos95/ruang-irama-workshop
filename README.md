@@ -21,6 +21,8 @@ La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il co
 
 Il file contiene le regole, non il preset delle mappe. La località è un'etichetta dell'HUD e non cambia la regione di hosting.
 
+Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
+
 ## Comandi
 
 | Contesto | Comando | Azione |
@@ -63,7 +65,7 @@ Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'ef
 
 Privacy riguarda le funzioni personalizzate del Workshop: non limita la visuale spettatore o gli strumenti amministrativi nativi.
 
-I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie; seguono solo il nemico vivo più vicino con Dummy Follow ON, fermandosi a 4 m. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
+I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie; seguono solo il nemico vivo più vicino con Dummy Follow ON, fermandosi a 4 m. Follow si può attivare solo con un dummy nella squadra avversaria; si può sempre disattivare. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
 
 Il nome visibile esatto `งูแรร์` riceve i default modificabili Silver Mist / Poison 2 e il Vibes fisso `Draconian`. Il riconoscimento avviene per nome, quindi vale anche per un omonimo.
 
