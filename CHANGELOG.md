@@ -2,6 +2,10 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Tinta Multijump — 2026-10-02
+
+- Il menu 14 e la sua preview hanno una tinta ambra dedicata, invece del colore Name Color di fallback. La transizione resta fluida in 0,180 s, nello stesso comando esistente; nessuna nuova routine, attesa o risorsa.
+
 ## Salto tenuto, tinte e rampa Fly — 2026-10-02
 
 - Multijump funziona anche con menu aperto; forza fissa 100–1000% a passi del 100%. Jump tenuto ripete ogni 0,3 s in aria; nuove pressioni restano immediate. Cooldown individuale, ring temporaneo e protezioni Fly, Attach, Luck e Resurrect conservati.

@@ -3176,6 +3176,12 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                         checks.equal(call.args[4].strip(), "Destination and Duration", "feedback visuale: destinazione colore rivalutata")
     transition = rule_by_subroutine(rules, "TransisiWarnaMenu")
     if transition:
+        checks.require(
+            "(Event Player.HalamanMenu == -1 ? Event Player.KursorUtama : Event Player.HalamanMenu) == 14 ? "
+            "Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + Vector(245, 180, 85) * 0.320 :"
+            in transition.body,
+            "feedback visuale: Multijump deve avere una tinta dedicata nel menu e nella preview",
+        )
         checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 3,
                      "feedback visuale: tre transizioni fluide colore menu")
         checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 0,
