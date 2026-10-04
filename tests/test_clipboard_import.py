@@ -62,7 +62,8 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertNotIn("Ongoing - Globale;", self.italian)
         self.assertIn("Button(Secondary Fire)", self.italian)
         without_custom_colors = self.italian.replace("Custom Color(", "")
-        self.assertNotIn("Color(", without_custom_colors)
+        self.assertNotIn("Color(White)", without_custom_colors)
+        self.assertNotIn("Color(Gray)", without_custom_colors)
         self.assertNotIn("Danneggia(", self.italian)
         self.assertIn("Damage(", self.italian)
         self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5", self.italian)
@@ -103,6 +104,32 @@ class ClipboardImportTests(unittest.TestCase):
                     clipboard.canonical_semantic_text(italian, "it-IT"),
                     clipboard.canonical_semantic_text(english, "en-US"),
                 )
+
+    def test_native_italian_named_color_palette_is_importable_and_canonical(self) -> None:
+        names = ("White", "Aqua", "Black", "Blue", "Gray", "Green", "Lime Green", "Orange",
+                 "Purple", "Red", "Rose", "Sky Blue", "Turquoise", "Violet", "Yellow")
+        localized = {"White": "Bianco", "Gray": "Grigio"}
+        english_palette = ", ".join(f"Color({name})" for name in names)
+        italian_palette = ", ".join(f"Color({localized.get(name, name)})" for name in names)
+        english = (
+            "variables\n{\n global:\n 0: PaletUji\n}\nsubroutines\n{}\n"
+            'rule("palette")\n{\n event\n{\n Ongoing - Global;\n}\n conditions\n{\n True == True;\n}\n actions\n{\n'
+            f"Global.PaletUji = Array({english_palette});\n}}\n}}\n"
+        )
+        italian = (
+            "variabili\n{\n globale:\n 0: PaletUji\n}\nsubroutine\n{}\n"
+            'regola("palette")\n{\n evento\n{\n Ongoing - Global;\n}\n condizioni\n{\n True == True;\n}\n azioni\n{\n'
+            f"Globale.PaletUji = Array({italian_palette});\n}}\n}}\n"
+        )
+        self.assertEqual(clipboard.check_text(italian, "it-IT").rule_count, 1)
+        self.assertIsNone(clipboard.semantic_equivalence_error(english, italian))
+        self.assertEqual(clipboard.canonical_semantic_text('Custom String("Bianco Grigio")', "it-IT"),
+                         'CustomString("Bianco Grigio")')
+        for name in ("White", "Gray"):
+            with self.subTest(unlocalized=name):
+                changed = italian.replace(f"Color({localized[name]})", f"Color({name})", 1)
+                with self.assertRaisesRegex(clipboard.ClipboardImportError, "colore nominale"):
+                    clipboard.check_text(changed, "it-IT")
 
     def test_semantic_gate_rejects_italian_only_privacy_default_change(self) -> None:
         needle = "Event Player.PrivasiInspeksiAktif = False;"

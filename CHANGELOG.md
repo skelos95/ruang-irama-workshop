@@ -2,6 +2,14 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Super Punch, Light Shaft e testi menu — 2026-10-04
+
+- Accorciate le descrizioni dei menu EN/ID/TH: restano comandi, stato attivo, selezione e indicazioni necessarie; rimosse spiegazioni ripetute o superflue. Comportamento, opzioni e tinte conservati.
+- Diagnostica nel campo Text bianco dello stesso HUD Player Vibes, indipendente dal Name Color e dal ciclo RGB. Visibilità solo host e ultima riga; stringa vuota quando nascosta, senza nuovi handle, regole, variabili o timer.
+- Menu 15 Super Punch, inizialmente OFF: Interact alterna il toggle. Un melee reale seleziona il più vicino davanti entro 2,5 m e con linea di vista libera; KO su nemici e alleati, rispettando Unkillable. Kill attribuito all'attaccante usa il ledger Revenge esistente, già compatibile con gli alleati. Registro opt-in e 12 timestamp globali, senza superare i 128 campi player.
+- Un Light Shaft sull'obiettivo, raggio 0,5 m per umano fino a 6 m, colore nativo più vicino al Name Color dell'host. Fino a 12 icone fluttuanti senza nomi, nel colore esatto del proprietario; destinazioni casuali ogni 3 s e manutenzione a 1 Hz, cleanup su NONE/uscita/cambio squadra e conteggio IWT diagnostico.
+- 120 regole, 71 subroutine, 5 Wait e un Loop. Le nuove collisioni melee, forme intermedie degli eroi e la resa del fascio richiedono verifica nel client.
+
 ## Palette e progressione menu — 2026-10-02
 
 - Riordinati insieme tutti i 40 colori e le etichette EN/ID/TH: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White e Silver Mist conservano gli indici dei default; nessun colore eliminato.
