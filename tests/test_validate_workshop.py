@@ -297,8 +297,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body
         )
         mutations = (
-            ("Event Player.IndeksWarna = 1;", "Event Player.IndeksWarna = 2;"),
-            ("Event Player.KursorWarna = 1;", "Event Player.KursorWarna = 2;"),
+            ("Event Player.IndeksWarna = 2;", "Event Player.IndeksWarna = 1;"),
+            ("Event Player.KursorWarna = 2;", "Event Player.KursorWarna = 1;"),
             ("Event Player.IndeksIkon = 23;", "Event Player.IndeksIkon = 22;"),
             ("Event Player.KursorIkon = 23;", "Event Player.KursorIkon = 22;"),
         )
@@ -545,7 +545,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_removed_teks_diri_leaves_compact_initialized_declarations(self) -> None:
         _, players, _, _ = validator.declaration_entries(self.source)
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
-        self.assertEqual([entry.index for entry in players], list(range(len(players))))
+        # Removing the three binary menu cursors preserves all other native IDs.
+        self.assertEqual([entry.index for entry in players],
+                         [index for index in range(128) if index not in {58, 60, 92}])
         self.assertFalse(any("non inizializzata in SiapkanPemain" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
@@ -825,7 +827,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "diagnostica HUD non include gli nove handle fissi")
         call = self.left_roster_call()
         for handle in ("HudKiriPemain", "HudMenuPemain", "HudEfekSementara", "TeksDuniaPemain",
-                       "TeksTeleportasiSementara", "TeksVisiSementara", "TeksIkonPilar"):
+                       "TeksTeleportasiSementara", "TeksVisiSementara"):
             with self.subTest(handle=handle):
                 count = f"Count Of(Filtered Array(Global.{handle}, Current Array Element != 0))"
                 changed = call.args[3].replace(count, "0", 1)
@@ -1143,29 +1145,25 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 mutated = self.source + f"\n// {legacy}\n"
                 self.assert_rejected(mutated, "messaggio apertura menu obsoleto")
 
-    def test_page_twelve_navigation_toggles_dummy_follow_cursor(self) -> None:
+    def test_navigation_ignores_all_direct_toggle_pages(self) -> None:
         navigation = self.rule(
             lambda rule: "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
         )
         mutated = self.replace_in_rule(
             navigation,
-            "Event Player.KursorIkutiBotBuatan = (Event Player.KursorIkutiBotBuatan + 1) % 2;",
-            "Event Player.KursorIkutiBotBuatan = Event Player.KursorIkutiBotBuatan;",
+            "And(And(Event Player.HalamanMenu != 8, Event Player.HalamanMenu != 9), Event Player.HalamanMenu != 12) == True;",
+            "True == True;",
         )
-        self.assert_rejected(mutated, "pagina 12 deve alternare KursorIkutiBotBuatan")
+        self.assert_rejected(mutated, "Primary/Secondary devono ignorare pagine 8, 9, 12")
 
-    def test_opening_page_twelve_syncs_preview_with_applied_preference(self) -> None:
+    def test_direct_toggle_cannot_restore_retired_on_off_cursor(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.PerintahMenu == 1;" in rule.body
             and "TerapkanHalamanIkutiBotBuatan" in rule.body
         )
-        mutated = self.replace_in_rule(
-            dispatcher,
-            "Event Player.KursorIkutiBotBuatan = Event Player.IzinkanBotBuatanMengikuti ? 1 : 0;",
-            "Event Player.KursorIkutiBotBuatan = 0;",
-        )
-        self.assert_rejected(mutated, "apertura pagina 12 non sincronizza")
+        mutated = self.inject_action(dispatcher, "Event Player.KursorIkutiBotBuatan = 0;")
+        self.assert_rejected(mutated, "cursore ON/OFF obsoleto")
 
     def test_page_twelve_apply_dispatcher_is_required(self) -> None:
         dispatcher = self.rule(
@@ -1204,18 +1202,20 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_dummy_follow_defaults_to_off(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
+        mutated = self.replace_in_rule(setup, "Event Player.IzinkanBotBuatanMengikuti = False;",
+                                       "Event Player.IzinkanBotBuatanMengikuti = True;")
+        self.assert_rejected(mutated, "reset setup iniziale mancante")
+
+    def test_dummy_follow_automatic_off_requires_live_enemy_dummy_and_on_state(self) -> None:
+        cache = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesSimpananPemain")
         for current, wrong in (
-            (
-                "Event Player.IzinkanBotBuatanMengikuti = False;",
-                "Event Player.IzinkanBotBuatanMengikuti = True;",
-            ),
-            (
-                "Event Player.KursorIkutiBotBuatan = 0;",
-                "Event Player.KursorIkutiBotBuatan = 1;",
-            ),
+            ("If(Global.PemainAktif.IzinkanBotBuatanMengikuti == True);", "If(True);"),
+            ("Opposite Team Of(Team Of(Global.PemainAktif))", "Team Of(Global.PemainAktif)"),
+            ("Set Player Variable(Global.PemainAktif, IzinkanBotBuatanMengikuti, False);", "Abort;"),
         ):
-            mutated = self.replace_in_rule(setup, current, wrong)
-            self.assert_rejected(mutated, "reset setup iniziale mancante")
+            with self.subTest(mutation=current):
+                mutated = self.replace_in_rule(cache, current, wrong)
+                self.assert_rejected(mutated, "OFF automatico 1 Hz")
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
@@ -1224,6 +1224,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanPukulanSuper")
         runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesPukulanSuper")
+        impact = self.rule(lambda rule: rule.name.startswith("89i1 -"))
         mutations = (
             (apply, "Event Player.UrutanHUD >= 12", "Event Player.UrutanHUD >= 13", "toggle registrato locale"),
             (apply, "Global.WaktuPukulanSuper[Event Player.UrutanHUD] = -1;",
@@ -1231,6 +1232,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             (runtime, "Has Status(Global.TargetPukulanSuper, Unkillable) == False", "True", "protezione stato Unkillable"),
             (runtime, "All Players(All Teams)", "All Players(Opposite Team Of(Team Of(Global.PemainAktif)))", "entrambi i team"),
             (runtime, "<= 2.500", "<= 25", "portata melee limitata"),
+            (runtime, "If(Global.TargetPukulanSuper != Null);", "If(True);", "consumo soltanto dopo contatto"),
+            (impact, "Event Ability == Button(Melee);", "Event Ability == Button(Primary Fire);", "guardia impatto"),
+            (impact, "Hero Of(Event Player) != Hero(Junker Queen);", "", "guardia impatto"),
+            (impact, "Has Status(Victim, Unkillable) == False", "True", "contratto impatto"),
+            (impact, "Kill(Victim, Event Player);", "Kill(Victim, Global.PemainAktif);", "contratto impatto"),
         )
         for rule, old, new, error in mutations:
             with self.subTest(mutation=old):
@@ -1244,12 +1250,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(manager, "For Global Variable(IndeksIkonPilar, 0, 12, 1);",
                                        "For Global Variable(IndeksIkonPilar, 0, 13, 1);")
         self.assert_rejected(mutated, "Pilar: manutenzione e cleanup limitati a dodici slot")
-        call = next(validator.iter_calls(manager.body, "Create In-World Text"))
+        call = next(validator.iter_calls(manager.body, "Create Icon"))
         absolute = validator.Call(call.name, call.raw, call.args, manager.start + call.start, manager.start + call.end)
-        mutated = self.replace_call_argument(absolute, 1, 'Custom String("player name")')
-        self.assert_rejected(mutated, "Pilar: IWT deve mostrare soltanto il glifo scelto")
-        mutated = self.replace_call_argument(absolute, 6, "Global.RGB")
-        self.assert_rejected(mutated, "Pilar: colore icona segue owner")
+        mutated = self.replace_call_argument(absolute, 2, 'Custom String("player name")')
+        self.assert_rejected(mutated, "Pilar: ciascuna scelta deve conservare lo stesso tipo icona")
+        mutated = self.replace_call_argument(absolute, 4, "Global.RGB")
+        self.assert_rejected(mutated, "Pilar: RGB icona segue owner")
         init = self.rule(lambda rule: "Global.DaftarWarnaPilar = Array(" in rule.body)
         mutated = self.replace_in_rule(init, "Global.DaftarWarnaPilar = Array(Color(White),",
                                        "Global.DaftarWarnaPilar = Array(Custom Color(255, 255, 255, 255),")
@@ -3386,14 +3392,15 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "Privacy deve essere OFF di default")
 
-    def test_privacy_cursor_defaults_to_off(self) -> None:
-        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "SiapkanPemain")
-        mutated = self.replace_in_rule(
-            setup,
-            "Event Player.KursorPrivasiInspeksi = 0;",
-            "Event Player.KursorPrivasiInspeksi = 1;",
-        )
-        self.assert_rejected(mutated, "cursore Privacy deve iniziare su OFF")
+    def test_direct_toggle_handlers_invert_actual_state_once(self) -> None:
+        for name, field in (("TerapkanTeleportasiJongkok", "TeleportasiJongkokDiaktifkan"),
+                            ("TerapkanHalamanPrivasiInspeksi", "PrivasiInspeksiAktif"),
+                            ("TerapkanHalamanIkutiBotBuatan", "IzinkanBotBuatanMengikuti")):
+            with self.subTest(handler=name):
+                apply = self.rule(lambda rule: validator.subroutine_target(rule) == name)
+                mutated = self.replace_in_rule(apply, f"Event Player.{field} = Event Player.{field} == False;",
+                                               f"Event Player.{field} = Event Player.{field};")
+                self.assert_rejected(mutated, "deve invertire lo stato applicato una sola volta")
 
     def test_real_camera_cache_missing_and_excessive_parenthesis_are_rejected(self) -> None:
         cache = self.rule(lambda rule: validator.subroutine_target(rule) == "SegarkanTargetPublikAktif")

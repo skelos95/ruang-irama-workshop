@@ -207,10 +207,12 @@ class ClipboardImportTests(unittest.TestCase):
         for italian, english, message in (
             ("Game Mode(Schermaglia)", "Game Mode(Skirmish)", "modalità Game Mode en-US"),
             ("Tutti gli eroi", "All Heroes", "All Heroes en-US"),
+            ("Hero(Regina dei Junker)", "Hero(Junker Queen)", "eroe Junker Queen en-US"),
         ):
             with self.subTest(token=english):
                 self.assertIn(italian, self.italian)
                 mutated = self.italian.replace(italian, english, 1)
+                self.assertIsNone(clipboard.semantic_equivalence_error(self.source, mutated))
                 with self.assertRaisesRegex(clipboard.ClipboardImportError, message):
                     clipboard.check_text(mutated, "it-IT")
 

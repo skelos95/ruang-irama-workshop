@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 3 ottobre 2026 l'utente ha riferito che il server sembra stabile dopo vari test; il 2 ottobre aveva confermato Multijump, Fly e tinte menu. La revisione del 4 ottobre aggiunge Super Punch, Light Shaft e testi più brevi. I controlli automatici comprendono **692 test e nove verifiche GitHub**; verificano il codice e flussi simulati, senza eseguire il server Overwatch. La resa del fascio e le collisioni melee richiedono ancora prove nel client.
+Il 3 ottobre 2026 l'utente ha riferito che il server sembra stabile dopo vari test; il 2 ottobre aveva confermato Multijump, Fly e tinte menu. Il 4 ottobre ha rilevato colpi Super Punch mancati e icone bianche nel Light Shaft: il sorgente corrente corregge il rilevamento e usa icone native colorabili. I controlli automatici comprendono **705 test e nove verifiche GitHub**; verificano il codice e flussi simulati, senza eseguire il server Overwatch. Le correzioni richiedono conferma nel client.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
@@ -28,7 +28,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Contesto | Comando | Azione |
 |---|---|---|
 | Vivo | Melee tenuto 0,5 s | Apre/chiude Arcade |
-| Menu aperto | Crouch + Primary / Secondary | Voce successiva / precedente |
+| Menu con elenco | Crouch + Primary / Secondary | Voce successiva / precedente |
 | Menu aperto | Crouch + Interact | Entra o applica |
 | Sottomenu | Crouch + Reload | Torna al menu principale |
 | Soundtrack | Crouch + Ability 1 / 2 | Salta avanti / indietro di 10 generi |
@@ -54,11 +54,11 @@ Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciat
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nessuna + 36 icone |
-| 8 | Crouch Travel & Attach | OFF / ON; 5 pagine, Self Elimination con cooldown 3 s |
-| 9 | Crouch Privacy | OFF / ON |
+| 8 | Crouch Travel & Attach | Interact alterna OFF / ON; Travel conserva 5 pagine |
+| 9 | Crouch Privacy | Interact alterna OFF / ON |
 | 10 | Try Your Luck | Vision, Acceleration, Skull, Team Heal, Burning, Hacked |
 | 11 | Vote Player | Umani, incluso sé stesso |
-| 12 | Dummy Follow | OFF / ON, partecipazione volontaria |
+| 12 | Dummy Follow | Interact alterna OFF / ON, con dummy avversario presente |
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Super Punch | Interact alterna OFF / ON nella schermata della funzione |
@@ -67,21 +67,21 @@ Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo
 
 Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi.
 
-Super Punch è inizialmente OFF. Un attacco melee colpisce un bersaglio vicino davanti al giocatore, anche della propria squadra, senza attraversare muri e rispettando Unkillable. Revenge registra anche queste uccisioni fra umani alleati. La preferenza si conserva dopo morte o cambio eroe e torna OFF al cambio squadra o all'uscita.
+Super Punch è inizialmente OFF. Durante un attacco melee cerca subito un bersaglio vicino davanti, anche della propria squadra, senza attraversare muri. Un impatto melee nativo sui nemici viene riconosciuto anche fra due aggiornamenti dell'animazione. Un solo contatto per attacco, rispettando Unkillable. Revenge registra anche queste uccisioni fra umani alleati. La preferenza si conserva dopo morte o cambio eroe e torna OFF al cambio squadra o all'uscita.
 
 La diagnostica server rimane bianca ed è visibile solo all'host. I testi dei menu EN/ID/TH mantengono comandi e stato con descrizioni più brevi.
 
 Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
-Sull'obiettivo un Light Shaft cresce di **0,5 m di raggio per umano**, fino a **6 m**; dummy e AI non contribuiscono. Usa il colore predefinito più vicino al Name Color dell'host, perché questo effetto non supporta RGB personalizzati. Dentro fluttuano solo le icone scelte dagli umani, senza nomi, ciascuna nel proprio Name Color esatto. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot.
+Sull'obiettivo un Light Shaft cresce di **0,5 m di raggio per umano**, fino a **6 m**; dummy e AI non contribuiscono. Usa il colore predefinito più vicino al Name Color dell'host, perché questo effetto non supporta RGB personalizzati. Dentro fluttuano solo le icone native scelte dagli umani, senza nomi, ciascuna nel proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 
 Privacy riguarda le funzioni personalizzate del Workshop: non limita la visuale spettatore o gli strumenti amministrativi nativi.
 
-I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie; seguono solo il nemico vivo più vicino con Dummy Follow ON, fermandosi a 4 m. Follow si può attivare solo con un dummy nella squadra avversaria; si può sempre disattivare. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
+I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie; seguono solo il nemico vivo più vicino con Dummy Follow ON, fermandosi a 4 m. Follow si può attivare solo con un dummy nella squadra avversaria; si può sempre disattivare. Se il dummy avversario scompare, Follow torna OFF entro il successivo controllo di un secondo e richiede una nuova attivazione. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
 
-Il nome visibile esatto `งูแรร์` riceve i default modificabili Silver Mist / Poison 2 e il Vibes fisso `Draconian`. Il riconoscimento avviene per nome, quindi vale anche per un omonimo.
+Il nome visibile esatto `งูแรร์` riceve i default modificabili Charcoal / Poison 2 e il Vibes fisso `Draconian`. Il riconoscimento avviene per nome, quindi vale anche per un omonimo.
 
 ## Documentazione
 

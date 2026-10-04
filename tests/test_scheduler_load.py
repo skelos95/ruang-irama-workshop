@@ -286,6 +286,24 @@ class SchedulerLoadTests(unittest.TestCase):
                         self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")),
                                          int(opened and page in (1, 4)))
 
+    def test_dummy_follow_on_adds_only_one_human_maintenance_call_per_second(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.join("human")
+                model.players["human"].update(MenuTerbuka=False, HalamanMenu=-1,
+                                               IzinkanBotBuatanMengikuti=True)
+                model.players["bot"] = dict(exists=True, dummy=True, BotOtomatis=False,
+                                              Manusia=False, slot=1, IzinkanBotBuatanMengikuti=True)
+                for tick in range(1, 21):
+                    model.scheduler_tick(tick)
+                self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")), 1)
+                self.assertEqual(model.calls.count(("bot", "ProsesSimpananPemain")), 0)
+                model.calls.clear()
+                model.players["human"]["IzinkanBotBuatanMengikuti"] = False
+                for tick in range(21, 41):
+                    model.scheduler_tick(tick)
+                self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")), 0)
+
     def test_stable_protection_has_36_property_writes_per_second_for_twelve_players(self):
         for source, model in self.models():
             for mode in (1, 2):

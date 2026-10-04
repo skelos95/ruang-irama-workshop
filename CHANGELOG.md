@@ -2,6 +2,14 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Correzioni melee, icone native e interruttori diretti — 2026-10-04
+
+- Super Punch cerca durante l'animazione senza ritardo fisso e consuma il colpo solo al contatto; l'evento melee nativo copre gli impatti fra campioni. Latch condiviso, Unkillable rispettato e Kill attribuito al player per Revenge.
+- Icone testuali bianche sostituite con 12 entità Create Icon native al massimo, colorate con Name Color rivalutato. Cambio tipo e cleanup distruggono l'handle precedente; nuove traiettorie casuali a 0,5–8 m. Il fascio conserva il preset colore host più vicino.
+- Travel/Attach, Privacy e Dummy Follow alternano direttamente lo stato con Interact nella schermata; rimossi tre cursori inutilizzati. Follow ON torna OFF entro 1 s senza dummy avversario e non riparte da solo.
+- Profilo `งูแรร์`: default Charcoal / Poison 2, Draconian invariato.
+- 121 regole, 71 subroutine, 125 campi player, 5 Wait e un Loop. Test automatici aggiornati ai casi segnalati; comportamento nativo e risorse compilate da confermare nel client.
+
 ## Super Punch, Light Shaft e testi menu — 2026-10-04
 
 - Accorciate le descrizioni dei menu EN/ID/TH: restano comandi, stato attivo, selezione e indicazioni necessarie; rimosse spiegazioni ripetute o superflue. Comportamento, opzioni e tinte conservati.

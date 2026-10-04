@@ -153,13 +153,10 @@ MENU_OWNER_STATE_VARIABLES = {
     "IndeksSuara",
     "KursorIkon",
     "IndeksIkon",
-    "KursorTeleportasiJongkok",
     "TeleportasiJongkokDiaktifkan",
-    "KursorPrivasiInspeksi",
     "PrivasiInspeksiAktif",
     "KursorPilihan",
     "PemainDipilih",
-    "KursorIkutiBotBuatan",
     "IzinkanBotBuatanMengikuti",
     "KursorHantuTerbang",
     "ModeHantuAktif",
@@ -925,7 +922,11 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
                           players: list[Declaration], subroutines: list[Declaration], declaration_span: tuple[int, int]) -> None:
     for label, entries in (("global", globals_), ("player", players), ("subroutine", subroutines)):
         indices = [entry.index for entry in entries]
-        checks.equal(indices, list(range(len(entries))), f"indici {label} compatti")
+        # Removed toggle cursors leave their original player IDs free. Preserve
+        # every other ID so importing this revision does not reshuffle variables.
+        expected_indices = ([index for index in range(len(entries) + 3) if index not in {58, 60, 92}]
+                            if label == "player" else list(range(len(entries))))
+        checks.equal(indices, expected_indices, f"indici {label} compatti salvo slot cursori rimossi")
         names = [entry.name for entry in entries]
         checks.equal(len(names), len(set(names)), f"nomi {label} univoci")
         for entry in entries:
@@ -1507,8 +1508,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                             re.sub(r"\s+", "", counts.args[2]),
                             "CountOf(FilteredArray(Global.TeksDuniaPemain,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.TeksTeleportasiSementara,CurrentArrayElement!=0))"
-                            "+CountOf(FilteredArray(Global.TeksVisiSementara,CurrentArrayElement!=0))"
-                            "+CountOf(FilteredArray(Global.TeksIkonPilar,CurrentArrayElement!=0))",
+                            "+CountOf(FilteredArray(Global.TeksVisiSementara,CurrentArrayElement!=0))",
                             "renderer HUD roster Left: conteggio IWT diagnostica deve includere tutti gli handle",
                         )
                     checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
@@ -1523,8 +1523,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                    "roster unico: Player Vibes deve mantenere il soundtrack")
 
     checks.require("HudMenu" in players, "handle menu unico HudMenu assente")
-    for name in ("IzinkanBotBuatanMengikuti", "KursorIkutiBotBuatan"):
+    for name in ("IzinkanBotBuatanMengikuti",):
         checks.require(name in players, f"stato pagina 12 Dummy Follow assente: {name}")
+    for retired in ("KursorTeleportasiJongkok", "KursorPrivasiInspeksi", "KursorIkutiBotBuatan"):
+        checks.require(retired not in mask_strings(source), f"toggle diretto: cursore ON/OFF obsoleto: {retired}")
     checks.require("GambarMenu" in subroutines and "GambarHalamanAktif" in subroutines,
                    "router menu GambarMenu/GambarHalamanAktif assente")
     menu_renderers = [
@@ -1839,14 +1841,29 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if dummy_follow_renderer:
         for token in (
             "12 - DUMMY FOLLOW",
-            "LET ENEMY DUMMY FOLLOW YOU: {1}",
+            "LET ENEMY DUMMY FOLLOW YOU: {0}",
             '12 - BOT MENGIKUTI',
-            'IZINKAN BOT MUSUH IKUTIMU: {1}',
+            'IZINKAN BOT MUSUH IKUTIMU: {0}',
             "12 - ดัมมี่ติดตาม",
-            "ให้ดัมมี่ศัตรูตามคุณ: {1}",
+            "ให้ดัมมี่ศัตรูตามคุณ: {0}",
         ):
             checks.require(token in dummy_follow_renderer.body,
                            f"pagina 12 Dummy Follow non chiarisce il consenso localizzato: {token}")
+
+    for name, state in (("GambarSakelarTeleportasi", "TeleportasiJongkokDiaktifkan"),
+                        ("GambarPrivasiInspeksi", "PrivasiInspeksiAktif"),
+                        ("GambarIkutiBotBuatan", "IzinkanBotBuatanMengikuti")):
+        renderer = rule_by_subroutine(rules, name)
+        checks.require(renderer is not None, f"toggle diretto: renderer assente: {name}")
+        if renderer:
+            checks.require("/2" not in renderer.body and "\\n>" not in renderer.body,
+                           f"toggle diretto: {name} conserva righe ON/OFF selezionabili")
+            checks.equal(renderer.body.count(f"Event Player.{state} ?"), 3,
+                         f"toggle diretto: {name} deve mostrare solo lo stato applicato in tre lingue")
+            for token in ("toggle", "ubah", "สลับ", "Button(Interact)", "Button(Reload)"):
+                checks.require(token in renderer.body, f"toggle diretto: {name} istruzione assente: {token}")
+            checks.require("Button(Primary Fire)" not in renderer.body and "Button(Secondary Fire)" not in renderer.body,
+                           f"toggle diretto: {name} non deve suggerire scorrimento ON/OFF")
 
     ghost_fly_renderer = rule_by_subroutine(rules, "GambarHantuTerbang")
     checks.require(ghost_fly_renderer is not None, "renderer pagina 13 Ghost Mode / Fly assente")
@@ -1896,13 +1913,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "navigazione menu: pagina 2 deve muovere KursorGenre",
         )
         checks.require(
-            re.search(
-                r"HalamanMenu\s*==\s*12.*?KursorIkutiBotBuatan\s*=\s*"
-                r"\(Event Player\.KursorIkutiBotBuatan\s*\+\s*1\)\s*%\s*2;",
-                navigation_rule.body,
-                re.DOTALL,
-            ) is not None,
-            "navigazione menu: pagina 12 deve alternare KursorIkutiBotBuatan",
+            "And(And(Event Player.HalamanMenu != 8, Event Player.HalamanMenu != 9), Event Player.HalamanMenu != 12) == True;"
+            in navigation_rule.body,
+            "toggle diretto: Primary/Secondary devono ignorare pagine 8, 9, 12",
         )
         checks.require(
             re.search(
@@ -1992,15 +2005,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             ) is not None,
             "apply menu: pagina 12 deve usare TerapkanHalamanIkutiBotBuatan",
         )
-        checks.require(
-            re.search(
-                r"HalamanMenu\s*==\s*12.*?KursorIkutiBotBuatan\s*=\s*"
-                r"Event Player\.IzinkanBotBuatanMengikuti\s*\?\s*1\s*:\s*0;",
-                apply_dispatcher.body,
-                re.DOTALL,
-            ) is not None,
-            "apertura pagina 12 non sincronizza il cursore con la preferenza applicata",
-        )
+        for page, name in ((8, "TerapkanTeleportasiJongkok"), (9, "TerapkanHalamanPrivasiInspeksi")):
+            checks.require(re.search(rf"HalamanMenu\s*==\s*{page}.*?Call Subroutine\({name}\);",
+                                     apply_dispatcher.body, re.DOTALL) is not None,
+                           f"toggle diretto: Interact pagina {page} non raggiunge {name}")
         checks.require(
             re.search(
                 r"HalamanMenu\s*==\s*13.*?Call Subroutine\(TerapkanHalamanHantuTerbang\);",
@@ -2117,25 +2125,34 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     dummy_follow_apply = rule_by_subroutine(rules, "TerapkanHalamanIkutiBotBuatan")
     if dummy_follow_apply:
         availability_guard = (
-            "Abort If(And(Event Player.KursorIkutiBotBuatan == 1, "
+            "Abort If(And(Event Player.IzinkanBotBuatanMengikuti == False, "
             "Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), "
             "And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True)) == False));"
         )
         follow_actions = mask_strings(rule_block(dummy_follow_apply, "actions") or "")
         checks.require(re.sub(r"\s+", "", follow_actions).startswith(re.sub(r"\s+", "", availability_guard)),
                        "Dummy Follow: ON richiede un dummy nemico presente prima di stato e feedback; OFF libero")
-        for token, label in (
-            (
-                "If(Event Player.IzinkanBotBuatanMengikuti != (Event Player.KursorIkutiBotBuatan == 1));",
-                "confronto stato/cursore",
-            ),
-            (
-                "Event Player.IzinkanBotBuatanMengikuti = Event Player.KursorIkutiBotBuatan == 1;",
-                "applicazione preferenza per-player",
-            ),
-        ):
-            checks.require(token in dummy_follow_apply.body,
-                           f"pagina 12 Dummy Follow incompleta: {label}")
+    for name, state in (("TerapkanTeleportasiJongkok", "TeleportasiJongkokDiaktifkan"),
+                        ("TerapkanHalamanPrivasiInspeksi", "PrivasiInspeksiAktif"),
+                        ("TerapkanHalamanIkutiBotBuatan", "IzinkanBotBuatanMengikuti")):
+        apply = rule_by_subroutine(rules, name)
+        checks.require(apply is not None, f"toggle diretto: handler assente: {name}")
+        if apply:
+            checks.equal(apply.body.count(f"Event Player.{state} = Event Player.{state} == False;"), 1,
+                         f"toggle diretto: {name} deve invertire lo stato applicato una sola volta")
+
+    follow_cache = rule_by_subroutine(rules, "ProsesSimpananPemain")
+    if follow_cache:
+        cache_program = re.sub(r"\s+", "", mask_strings(rule_block(follow_cache, "actions") or ""))
+        automatic_off = (
+            "If(And(Global.PemainAktif.Manusia==True,EntityExists(Global.PemainAktif)));"
+            "If(Global.PemainAktif.IzinkanBotBuatanMengikuti==True);"
+            "If(IsTrueForAny(AllPlayers(OppositeTeamOf(TeamOf(Global.PemainAktif))),"
+            "And(EntityExists(CurrentArrayElement),IsDummyBot(CurrentArrayElement)==True))==False);"
+            "SetPlayerVariable(Global.PemainAktif,IzinkanBotBuatanMengikuti,False);End;End;"
+        )
+        checks.require(cache_program.startswith(automatic_off),
+                       "Dummy Follow: OFF automatico 1 Hz deve usare umano presente e dummy nemico live solo se ON")
 
     follow_writers: list[tuple[str, str]] = []
     for rule in rules:
@@ -2147,7 +2164,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             follow_writers.append((owner, match.group(1).strip()))
     required_follow_writers = {
         ("SiapkanPemain", "False"),
-        ("TerapkanHalamanIkutiBotBuatan", "Event Player.KursorIkutiBotBuatan == 1"),
+        ("TerapkanHalamanIkutiBotBuatan", "Event Player.IzinkanBotBuatanMengikuti == False"),
     }
     allowed_follow_writers = required_follow_writers | {("TenangkanPemain", "False")}
     checks.require(required_follow_writers <= set(follow_writers),
@@ -2258,8 +2275,8 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
         slot = "Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD]"
         for token, label in (
             (f"If(IsMeleeing(Global.PemainAktif)==False);{slot}=0;Abort;End;", "rilascio native melee riarmo"),
-            (f"If({slot}==0);{slot}=TotalTimeElapsed+0.150;", "una finestra impatto per ayunan"),
-            (f"ElseIf(And({slot}>0,TotalTimeElapsed>={slot}));{slot}=-1;", "consumo prima della scelta target"),
+            (f"If({slot}==0);Global.TargetPukulanSuper=FirstOf(", "ricerca immediata durante ayunan"),
+            (f"If(Global.TargetPukulanSuper!=Null);{slot}=-1;End;", "consumo soltanto dopo contatto"),
             ("FilteredArray(AllPlayers(AllTeams),And(CurrentArrayElement!=Global.PemainAktif", "entrambi i team senza self"),
             ("DistanceBetween(PositionOf(Global.PemainAktif),PositionOf(CurrentArrayElement))<=2.500", "portata melee limitata"),
             ("IsInViewAngle(Global.PemainAktif,EyePosition(CurrentArrayElement),90)", "cone frontale"),
@@ -2278,7 +2295,35 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
         checks.require("TeamOf(" not in packed and "OppositeTeamOf(" not in packed,
                        "Super Punch: alleati e nemici devono seguire lo stesso impatto")
         checks.require(not wait_calls(runtime.body) and action_loop_count(runtime.body) == 0,
-                       "Super Punch: motore senza Wait/Loop")
+                        "Super Punch: motore senza Wait/Loop")
+        checks.require("TotalTimeElapsed" not in packed, "Super Punch: nessun ritardo artificiale sull'impatto")
+    impact = next((rule for rule in rules if rule.name.startswith("89i1 -")), None)
+    checks.require(impact is not None, "Super Punch: evento impatto nativo assente")
+    if impact:
+        checks.equal(event_type(impact), "Player Dealt Damage", "Super Punch: impatto su evento danno")
+        condition_code = code(rule_block(impact, "conditions"))
+        for token in ("ArrayContains(Global.PemainPukulanSuper,EventPlayer)==True;",
+                      "EventAbility==Button(Melee);", "HeroOf(EventPlayer)!=Hero(JunkerQueen);", "EventDamage>0;",
+                      "EventPlayer.Manusia==True;", "EventPlayer.BotOtomatis==False;",
+                      "IsDummyBot(EventPlayer)==False;", "EntityExists(EventPlayer)==True;",
+                      "HasSpawned(EventPlayer)==True;", "IsAlive(EventPlayer)==True;",
+                      "EventPlayer.SiklusPemainAktif==False;", "EventPlayer.PindahTimDiproses==False;",
+                      "EventPlayer.MenuTerbuka==False;", "EventPlayer.TeleportasiJongkokAktif==False;",
+                      "EventPlayer.SeranganDekatDipakai==False;", "Victim!=Null;", "Victim!=EventPlayer;",
+                      "EntityExists(Victim)==True;", "HasSpawned(Victim)==True;", "IsAlive(Victim)==True;"):
+            checks.require(token in condition_code, f"Super Punch: guardia impatto {token}")
+        impact_code = code(impact.body)
+        for token in ("AbortIf(Or(EventPlayer.UrutanHUD<0,EventPlayer.UrutanHUD>=CountOf(Global.WaktuPukulanSuper)));",
+                      "AbortIf(Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]<0);",
+                      "Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]=-1;",
+                      "HasStatus(Victim,PhasedOut)==False", "HasStatus(Victim,Unkillable)==False",
+                      "Or(PlayerVariable(Victim,KebalAktif)==False,PlayerVariable(Victim,ModeKebal)==0)",
+                      "Kill(Victim,EventPlayer);"):
+            checks.require(token in impact_code, f"Super Punch: contratto impatto {token}")
+        checks.require("Global.PemainAktif" not in impact_code and "Global.TargetPukulanSuper" not in impact_code,
+                       "Super Punch: evento indipendente dallo scratch scheduler")
+        checks.require(not wait_calls(impact.body) and action_loop_count(impact.body) == 0,
+                       "Super Punch: impatto atomico senza Wait/Loop")
     callers = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
                if call.args == ("ProsesPukulanSuper",)]
     checks.equal(len(callers), 1, "Super Punch: unico caller scheduler")
@@ -2296,16 +2341,17 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
 
 
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
-    """Guard one native objective beacon and at most twelve owned floating glyphs."""
+    """Guard one objective beacon and at most twelve native RGB icon entities."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
 
     declared = {entry.name: entry.index for entry in global_entries}
-    fields = ("PemilikIkonPilar", "TeksIkonPilar", "AwalIkonPilar", "TujuanIkonPilar",
-              "WaktuIkonPilar", "IndeksIkonPilar", "DaftarWarnaPilar")
+    fields = ("PemilikIkonPilar", "EntitasIkonPilar", "AwalIkonPilar", "TujuanIkonPilar",
+              "WaktuIkonPilar", "IndeksIkonPilar", "DaftarWarnaPilar", "PilihanIkonPilar")
     for index, name in enumerate(fields, 75):
         checks.equal(declared.get(name), index, f"Pilar: campo global {name}")
-    for name, initial in (("PemilikIkonPilar", "Null"), ("TeksIkonPilar", "0"),
+    for name, initial in (("PemilikIkonPilar", "Null"), ("EntitasIkonPilar", "0"),
+                          ("PilihanIkonPilar", "0"),
                           ("WaktuIkonPilar", "0"), ("AwalIkonPilar", "Vector(0,0.500,0)"),
                           ("TujuanIkonPilar", "Vector(0,0.500,0)")):
         values = array_assignment_items(source, name)
@@ -2345,22 +2391,41 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
             checks.require(not wait_calls(rule.body) and action_loop_count(rule.body) == 0,
                            "Pilar: manutenzione atomica senza Wait/Loop")
     if manager:
-        calls = list(iter_calls(manager.body, "Create In-World Text"))
-        checks.equal(len(calls), 1, "Pilar: unico sito creazione IWT")
-        if calls:
-            call = calls[0]
-            checks.equal(len(call.args), 8, "Pilar: firma IWT")
-            if len(call.args) == 8:
+        checks.equal(len(list(iter_calls(manager.body, "Create In-World Text"))), 0,
+                     "Pilar: Icon String nei testi resta bianco; usare entità icona native")
+        choices = array_assignment_items(source, "DaftarIkon") or []
+        icon_types = [next(iter_calls(choice, "Icon String")).args[0]
+                      for choice in choices[1:] if list(iter_calls(choice, "Icon String"))]
+        calls = list(iter_calls(manager.body, "Create Icon"))
+        checks.equal(len(calls), 36, "Pilar: trentasei tipi icona nativi esclusivi")
+        checks.equal([call.args[2] for call in calls if len(call.args) == 6], icon_types,
+                     "Pilar: ciascuna scelta deve conservare lo stesso tipo icona")
+        for index, call in enumerate(calls, 1):
+            checks.equal(len(call.args), 6, "Pilar: firma Create Icon")
+            if len(call.args) == 6:
                 owner = "Global.PemilikIkonPilar[EvaluateOnce(Global.IndeksIkonPilar)]"
-                checks.equal(code(call.args[1]), f"Global.DaftarIkon[PlayerVariable({owner},IndeksIkon)]",
-                             "Pilar: IWT deve mostrare soltanto il glifo scelto")
-                checks.equal(code(call.args[6]), f"PlayerVariable({owner},WarnaNama)", "Pilar: colore icona segue owner")
-                checks.equal(call.args[5].strip(), "Visible To Position String and Color", "Pilar: rivalutazione icona completa")
-                checks.require(code(call.args[2]).startswith("UpdateEveryFrame(ObjectivePosition(ObjectiveIndex)+")
-                               and "Random" not in code(call.args[2]), "Pilar: posizione fluida senza random per frame")
+                selected = "Global.PilihanIkonPilar[EvaluateOnce(Global.IndeksIkonPilar)]"
+                checks.equal(code(call.args[4]), f"PlayerVariable({owner},WarnaNama)", "Pilar: RGB icona segue owner")
+                checks.equal(call.args[3].strip(), "Visible To Position and Color", "Pilar: rivalutazione RGB icona completa")
+                checks.equal(call.args[5].strip(), "False", "Pilar: nessun indicatore icona fuori schermo")
+                checks.require(code(call.args[1]).startswith("UpdateEveryFrame(ObjectivePosition(ObjectiveIndex)+")
+                               and "Random" not in code(call.args[1]), "Pilar: posizione fluida senza random per frame")
+                checks.require(f"PlayerVariable({owner},IndeksIkon)==EvaluateOnce({selected})" in code(call.args[0]),
+                               "Pilar: tipo obsoleto nascosto subito prima della ricreazione")
                 branches = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(manager.body, call.start)]
-                checks.require("If(Global.TeksIkonPilar[Global.IndeksIkonPilar]==0);" in branches,
-                               "Pilar: creazione soltanto per slot senza handle")
+                checks.require("If(Global.EntitasIkonPilar[Global.IndeksIkonPilar]==0);" in branches,
+                                "Pilar: creazione soltanto per slot senza handle")
+                expected = f"{'If' if index == 1 else 'ElseIf'}(Global.PilihanIkonPilar[Global.IndeksIkonPilar]=={index});"
+                checks.require(expected in branches, "Pilar: un solo tipo creato per scelta selezionata")
+        packed = code(manager.body)
+        for token in (
+            "If(Global.PilihanIkonPilar[Global.IndeksIkonPilar]!=PlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],IndeksIkon));",
+            "DestroyIcon(Global.EntitasIkonPilar[Global.IndeksIkonPilar]);",
+            "Global.PilihanIkonPilar[Global.IndeksIkonPilar]=PlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],IndeksIkon);",
+            "Global.EntitasIkonPilar[Global.IndeksIkonPilar]=LastCreatedEntity;",
+            "RandomReal(0.500,8)",
+        ):
+            checks.require(token in packed, f"Pilar: gestione entità e traiettoria mancanti {token}")
     for name in ("TenangkanPemain", "BersihkanPemain"):
         lifecycle = rule_by_subroutine(rules, name)
         checks.require(lifecycle is not None and "Call Subroutine(BersihkanIkonPilar);" in lifecycle.body,
@@ -2368,6 +2433,9 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
     if cleanup:
         checks.require("If(Global.PemilikIkonPilar[Global.IndeksIkonPilar]==EventPlayer);" in code(cleanup.body),
                        "Pilar: cleanup deve toccare soltanto l'owner uscente")
+        checks.require("DestroyIcon(Global.EntitasIkonPilar[Global.IndeksIkonPilar]);" in code(cleanup.body)
+                       and "Global.PilihanIkonPilar[Global.IndeksIkonPilar]=0;" in code(cleanup.body),
+                       "Pilar: cleanup distrugge l'entità nativa e azzera la selezione")
 
 
 def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:
@@ -2991,10 +3059,10 @@ def validate_special_player_profile(
                 expected_branch = '''
 If(Event Player.NamaTampilan == Custom String("งูแรร์"));
     Event Player.MusikKhusus = Custom String("Draconian");
-    Event Player.IndeksWarna = 1;
-    Event Player.KursorWarna = 1;
-    Event Player.WarnaNama = Global.DaftarWarna[1];
-    Event Player.WarnaMenu = Global.DaftarWarnaRGB[1];
+    Event Player.IndeksWarna = 2;
+    Event Player.KursorWarna = 2;
+    Event Player.WarnaNama = Global.DaftarWarna[2];
+    Event Player.WarnaMenu = Global.DaftarWarnaRGB[2];
     Event Player.IndeksIkon = 23;
     Event Player.KursorIkon = 23;
 End;
@@ -3081,10 +3149,10 @@ End;
 If(Global.PemainAktif.NamaTampilan == Custom String("งูแรร์"));
     Global.PemainAktif.MusikKhusus = Custom String("Draconian");
     If(Global.PemainAktif.PernahDisiapkan == False);
-        Global.PemainAktif.IndeksWarna = 1;
-        Global.PemainAktif.KursorWarna = 1;
-        Global.PemainAktif.WarnaNama = Global.DaftarWarna[1];
-        Global.PemainAktif.WarnaMenu = Global.DaftarWarnaRGB[1];
+        Global.PemainAktif.IndeksWarna = 2;
+        Global.PemainAktif.KursorWarna = 2;
+        Global.PemainAktif.WarnaNama = Global.DaftarWarna[2];
+        Global.PemainAktif.WarnaMenu = Global.DaftarWarnaRGB[2];
         Global.PemainAktif.IndeksIkon = 23;
         Global.PemainAktif.KursorIkon = 23;
     End;
@@ -4261,7 +4329,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             ("If(And(Is Dummy Bot(Global.PemainAktif) == False, Global.PemainAktif.BotOtomatis == False));Call Subroutine(ProsesCepatPemain);", "classificazione e isolamento bot"),
             ("If(Or(Global.PemainAktif.KartuNasibAktif == True, Or(Global.PemainAktif.PutaranKartuNasib > 0, Or(Global.PemainAktif.EfekNasib != 0, Global.PemainAktif.WaktuIkonNasibBerakhir > 0))));Call Subroutine(ProsesNasibPemain);End;", "Luck attivo o pulizia icona pendente"),
             ("If(And(Global.PemainAktif.Manusia == True, Global.PemainAktif.ModeTerbangAktif == True));Call Subroutine(ProsesTerbangPemain);End;", "Fly solo umano attivo"),
-            ("If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.HalamanMenu == 1, Global.PemainAktif.HalamanMenu == 4))));Call Subroutine(ProsesSimpananPemain);End;", "cache solo menu Camera/Revenge"),
+            ("If(And(Global.PemainAktif.Manusia == True, Or(Global.PemainAktif.IzinkanBotBuatanMengikuti == True, And(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.HalamanMenu == 1, Global.PemainAktif.HalamanMenu == 4)))));Call Subroutine(ProsesSimpananPemain);End;", "cache solo menu Camera/Revenge o consenso Dummy Follow ON"),
             ("Else;If(Global.LangkahPenjadwal % 2 == Slot Of(Global.PemainAktif) % 2);Call Subroutine(ProsesBotPemain);End;End;", "manutenzione bot isolata 10 Hz"),
             ("If(Global.LangkahPenjadwal % 20 == 0);Call Subroutine(RawatBotBuatan);Call Subroutine(PerbaruiPilarSosial);Global.PemainTeksPembersihan = Null;Call Subroutine(BersihkanTeksYatim);End;", "slot dummy, pulizia e pilar 1 Hz"),
         ):
@@ -5030,7 +5098,7 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(tuple(arg.strip() for arg in punch_kills[0].args),
                      ("Global.TargetPukulanSuper", "Global.PemainAktif"),
                      "Super Punch: Kill target selezionato attribuito al puncher")
-    checks.equal(len(list(iter_calls(source, "Kill"))), 3,
+    checks.equal(len(list(iter_calls(source, "Kill"))), 4,
                  "Kill deve esistere soltanto in Self Kill, Skull/Revenge e Super Punch")
 
     revenge_apply = rule_by_subroutine(rules, "TerapkanHalamanBalasDendam")
@@ -5349,7 +5417,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
             "IndeksGenre = -1;", "ModeKamera = 0;", "IndeksWarna = 0;", "IndeksBahasa = 0;",
             "PemainDipilih = Null;", "ModeKebal = 0;", "IndeksSuara = 0;", "IndeksIkon = 0;",
             "TeleportasiJongkokDiaktifkan = False;", "PrivasiInspeksiAktif = False;",
-            "KursorPrivasiInspeksi = 0;", "IzinkanBotBuatanMengikuti = False;", "KursorIkutiBotBuatan = 0;",
+            "IzinkanBotBuatanMengikuti = False;",
             "KartuNasibAktif = False;", "HudMenu = Null;",
             "PembaruanDaftarTertunda = False;",
         )
@@ -5958,8 +6026,6 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     if setup:
         checks.require("Event Player.PrivasiInspeksiAktif = False;" in setup.body,
                        "Privacy deve essere OFF di default per ogni umano")
-        checks.require("Event Player.KursorPrivasiInspeksi = 0;" in setup.body,
-                       "cursore Privacy deve iniziare su OFF (0)")
 
     privacy_filter_tokens = (
         "Is Dummy Bot(Current Array Element) == True",
