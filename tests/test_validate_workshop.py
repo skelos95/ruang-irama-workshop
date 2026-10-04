@@ -1285,7 +1285,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "Pilar: rinnovo parte dalla posizione corrente")
         mutated = self.replace_in_rule(manager, "Stop Chasing Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar);", "")
         self.assert_rejected(mutated, "Pilar: manutenzione ferma la chase")
-        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 5)", "Random Real(0, 6)"))
+        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 10)", "Random Real(0, 11)"))
         self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
         mutated = self.replace_call_argument(absolute, 0, call.args[0].replace(
             "Array Contains(Global.PemainManusia, Evaluate Once(Global.PemainIkonPilar))", "True"))

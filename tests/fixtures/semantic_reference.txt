@@ -5739,16 +5739,16 @@ rule("89e - Subrutin: Rawat ikon mengambang di tujuan satu kali per detik")
 			If(And(Global.PemilikIkonPilar[Global.IndeksIkonPilar] == Null, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100));
 				Global.PemilikIkonPilar[Global.IndeksIkonPilar] = First Of(Filtered Array(Global.PemainManusia, And(Player Variable(Current Array Element, UrutanHUD) == Global.IndeksIkonPilar, And(Entity Exists(Current Array Element), And(Array Contains(Global.PemainManusia, Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, And(Player Variable(Current Array Element, PembaruanDaftarTertunda) == False, And(Player Variable(Current Array Element, PindahTimDiproses) == False, Player Variable(Current Array Element, IndeksIkon) > 0))))))));
 				If(Global.PemilikIkonPilar[Global.IndeksIkonPilar] != Null);
-					Set Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 5) + Vector(0, Random Real(0.500, 8), 0));
+					Set Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10) + Vector(0, Random Real(0.500, 8), 0));
 					Global.WaktuIkonPilar[Global.IndeksIkonPilar] = Total Time Elapsed;
-					Chase Player Variable Over Time(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 5) + Vector(0, Random Real(0.500, 8), 0), 4.500, None);
+					Chase Player Variable Over Time(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10) + Vector(0, Random Real(0.500, 8), 0), 4.500, None);
 				End;
 			End;
 			If(Global.PemilikIkonPilar[Global.IndeksIkonPilar] != Null);
 				If(Total Time Elapsed >= Global.WaktuIkonPilar[Global.IndeksIkonPilar] + 3);
 					"Tujuan baru dimulai dari posisi saat ini sebelum lintasan selesai; pemeriksaan tetap satu detik."
 					Global.WaktuIkonPilar[Global.IndeksIkonPilar] = Total Time Elapsed;
-					Chase Player Variable Over Time(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 5) + Vector(0, Random Real(0.500, 8), 0), 4.500, None);
+					Chase Player Variable Over Time(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar, Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10) + Vector(0, Random Real(0.500, 8), 0), 4.500, None);
 				End;
 				"Jenis ikon asli diganti hanya saat pilihan berubah; warna terus mengikuti pemilik."
 				If(Global.PilihanIkonPilar[Global.IndeksIkonPilar] != Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], IndeksIkon));

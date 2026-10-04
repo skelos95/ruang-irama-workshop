@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 5 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
+Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
@@ -73,7 +73,7 @@ La diagnostica server rimane bianca ed è visibile solo all'host. I testi dei me
 
 Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
-Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 5 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
+Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 

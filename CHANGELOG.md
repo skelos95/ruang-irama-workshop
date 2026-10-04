@@ -1,5 +1,11 @@
 # Changelog
 
+## Raggio icone 10 m e controllo generale — 2026-10-04
+
+- Raggio orizzontale delle icone sull'obiettivo aumentato da 5 a 10 m; altezza, colore del proprietario, movimento continuo e manutenzione a 1 Hz conservati. Nessuna nuova regola, variabile, attesa o entità.
+- Allineati fixture, validatore, test geometrici e documentazione. La prova geometrica campiona anche il confine di 10 m e verifica il percorso dopo variazioni del roster.
+- Revisione di regole, subroutine, variabili, scheduler, menu, cleanup, dummy, movimento, resurrect, Revenge e Luck: nessun nuovo difetto concreto o regola inutilizzata individuato. Le azioni simili in eventi o contesti diversi restano necessarie.
+
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
 ## Superman Punch e movimento continuo delle icone — 2026-10-04

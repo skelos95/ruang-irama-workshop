@@ -2345,7 +2345,7 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
 
 
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
-    """Guard at most twelve RGB icons floating within five metres of the objective."""
+    """Guard at most twelve RGB icons floating within ten metres of the objective."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
 
@@ -2413,7 +2413,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
             "Global.EntitasIkonPilar[Global.IndeksIkonPilar]=LastCreatedEntity;",
             "Global.PemainIkonPilar=Global.PemilikIkonPilar[Global.IndeksIkonPilar];",
             "Global.PemainIkonPilar=Null;",
-            "RandomReal(0,5)", "RandomReal(0.500,8)",
+            "RandomReal(0,10)", "RandomReal(0.500,8)",
         ):
             checks.require(token in packed, f"Pilar: gestione entità e traiettoria mancanti {token}")
         for field in ("PembaruanDaftarTertunda", "PindahTimDiproses"):
@@ -2425,7 +2425,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
         for chase in chases:
             checks.equal(tuple(code(arg) for arg in chase.args), (
                 "Global.PemilikIkonPilar[Global.IndeksIkonPilar]", "PosisiIkonPilar",
-                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,5)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
+                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,10)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
                 "Pilar: chase Vector nativo congela destinazione e durata 4,5 secondi")
         renewal = "If(TotalTimeElapsed>=Global.WaktuIkonPilar[Global.IndeksIkonPilar]+3);"
         checks.require(renewal in packed, "Pilar: rinnovo anticipato dopo tre secondi mantiene il controllo a un Hz")
