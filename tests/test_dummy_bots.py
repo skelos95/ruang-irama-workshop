@@ -156,11 +156,8 @@ class DummyBotFeatureTests(unittest.TestCase):
 
     def test_dummy_follow_page_defaults_off_and_is_per_player(self):
         for source in (self.it, self.en):
-            self.assertIn(
-                "Event Player.IzinkanBotBuatanMengikuti = False;\n"
-                "\t\tEvent Player.KursorIkutiBotBuatan = 0;",
-                source,
-            )
+            self.assertIn("Event Player.IzinkanBotBuatanMengikuti = False;", source)
+            self.assertNotIn("KursorIkutiBotBuatan", source)
             self.assertIn("Call Subroutine(TerapkanHalamanIkutiBotBuatan);", source)
             self.assertIn("Call Subroutine(GambarIkutiBotBuatan);", source)
             self.assertIn("12 - DUMMY FOLLOW", source)

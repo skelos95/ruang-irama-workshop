@@ -1,8 +1,8 @@
 """Execute the beacon's actual ownership, waypoints and visual expressions.
 
-Native text/effect creation and objective queries are controlled inputs. These
+Native icon/effect creation and objective queries are controlled inputs. These
 tests cover script bookkeeping and geometry, not the client's Light Shaft art,
-glyph dimensions, custom icon rendering or the look of native effect presets.
+icon dimensions, custom icon rendering or the look of native effect presets.
 """
 
 import math
@@ -11,7 +11,7 @@ import re
 import unittest
 
 from tools import validate_workshop as validator
-from tests.test_audit_lifecycle import AuditExpression, AuditLifecycleEvaluator, statements
+from tests.test_audit_lifecycle import AuditExpression, AuditLifecycleEvaluator
 from tests.test_fly_motion import Vector
 from tests.test_roster_rejoin_regressions import SOURCES
 
@@ -26,9 +26,46 @@ NATIVE_RGB = {
 }
 
 
+def beacon_statements(source):
+    """Parse exclusive native enum branches as nested If/Else source nodes."""
+    tokens = [part.strip() for part in validator.mask_strings(source).split(";") if part.strip()]
+
+    def branch(token, index):
+        body, index = parse(index)
+        otherwise = []
+        if index < len(tokens) and tokens[index].startswith("Else If("):
+            nested, index = branch(tokens[index].replace("Else If(", "If(", 1), index + 1)
+            otherwise = [nested]
+        elif index < len(tokens) and tokens[index] == "Else":
+            otherwise, index = parse(index + 1)
+        return (token, body, otherwise), index
+
+    def parse(index):
+        result = []
+        while index < len(tokens):
+            token = tokens[index]
+            if token in ("Else", "End") or token.startswith("Else If("):
+                break
+            index += 1
+            if token.startswith(("If(", "For Global Variable(")):
+                node, index = branch(token, index)
+                if index >= len(tokens) or tokens[index] != "End":
+                    raise AssertionError("unterminated beacon block")
+                index += 1
+                result.append(node)
+            else:
+                result.append((token, None, None))
+        return result, index
+
+    result, consumed = parse(0)
+    if consumed != len(tokens):
+        raise AssertionError("unexpected beacon End/Else")
+    return result
+
+
 class SocialBeaconEvaluator(AuditLifecycleEvaluator):
-    ARRAY_NAMES = ("PemilikIkonPilar", "TeksIkonPilar", "AwalIkonPilar",
-                   "TujuanIkonPilar", "WaktuIkonPilar")
+    ARRAY_NAMES = ("PemilikIkonPilar", "EntitasIkonPilar", "AwalIkonPilar",
+                   "TujuanIkonPilar", "WaktuIkonPilar", "PilihanIkonPilar")
 
     def __init__(self, source):
         super().__init__(source)
@@ -36,8 +73,10 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
         self.host = "host"
         self.sample = 0
         self.random_calls = 0
-        self.texts = {}
-        self.next_text = 1000
+        self.icons = {}
+        self.next_entity = 1000
+        self.icon_choices = re.findall(r'Icon String\(([^)]+)\)',
+                                      source[source.index("DaftarIkon = Array("):source.index("NamaIkonInggris = Array(")])
         self.native_names = {re.sub(r"\s+", "", name): name for name in NATIVE_RGB}
         self.native_names.update(Bianco="White", Grigio="Gray")
         self.globals.update(IndeksIkonPilar=0, DaftarIkon=[""] + [f"glyph-{i}" for i in range(1, 21)])
@@ -64,7 +103,7 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
             return self.native_names[name]
         if name == "HostPlayer": return self.host
         if name == "ObjectiveIndex": return 0
-        if name == "LastTextID": return self.created[-1] if self.created else 0
+        if name == "LastCreatedEntity": return self.created[-1] if self.created else 0
         if name in {"IndeksIkon", "IndeksWarna", "UrutanHUD", "Manusia",
                     "PembaruanDaftarTertunda", "PindahTimDiproses", "WarnaNama"}:
             return name
@@ -135,19 +174,23 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
     def execute(self, nodes):
         for node in nodes:
             token = node[0]
-            if token.startswith("Create In-World Text("):
-                call = next(validator.iter_calls(token, "Create In-World Text"))
+            if token.startswith("Create Icon("):
+                call = next(validator.iter_calls(token, "Create Icon"))
                 # Evaluate Once freezes each native visual's slot at creation.
                 index = int(self.globals["IndeksIkonPilar"])
                 args = tuple(arg.replace("Evaluate Once(Global.IndeksIkonPilar)", str(index)) for arg in call.args)
-                handle = self.next_text
-                self.next_text += 1
+                # Type cannot reevaluate. Its visible condition freezes selection,
+                # so a stale native icon hides before the one-second replacement.
+                selected = str(self.globals["PilihanIkonPilar"][index])
+                args = tuple(arg.replace(f"Evaluate Once(Global.PilihanIkonPilar[{index}])", selected) for arg in args)
+                handle = self.next_entity
+                self.next_entity += 1
                 self.created.append(handle)
-                self.texts[handle] = args
-            elif token.startswith("Destroy In-World Text("):
-                handle = self.evaluate(token[len("Destroy In-World Text("):-1])
+                self.icons[handle] = args
+            elif token.startswith("Destroy Icon("):
+                handle = self.evaluate(token[len("Destroy Icon("):-1])
                 self.destroyed.append(handle)
-                del self.texts[handle]
+                del self.icons[handle]
             elif super().execute([node]):
                 return True
         return False
@@ -155,11 +198,11 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
     def run(self, routine="PerbaruiPilarSosial", now=None):
         if now is not None: self.now = now
         rule = validator.rule_by_subroutine(self.rules, routine)
-        self.execute(statements(validator.rule_block(rule, "actions")))
+        self.execute(beacon_statements(validator.rule_block(rule, "actions")))
 
     def visual(self, owner):
         slot = self.globals["PemilikIkonPilar"].index(owner)
-        return self.texts[self.globals["TeksIkonPilar"][slot]]
+        return self.icons[self.globals["EntitasIkonPilar"][slot]]
 
     def cleanup_beacon(self, identity, routine):
         self.event_player = identity
@@ -212,30 +255,47 @@ class SocialBeaconTests(unittest.TestCase):
                     distance = lambda native: sum((a - b) ** 2 for a, b in zip(channels, native))
                     self.assertEqual(distance(NATIVE_RGB[actual]), min(map(distance, NATIVE_RGB.values())))
 
-    def test_twelve_glyph_handles_bind_distinct_owners_and_update_selection_and_rgb(self):
+    def test_twelve_native_icons_bind_distinct_owners_and_reevaluate_rgb_without_recreation(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 for slot in range(12):
                     model.add(f"human-{slot}", IndeksIkon=slot + 1, WarnaNama=(slot, 90, 180, 255))
                 model.run(now=100)
                 self.assertEqual(len(model.created), 12)
-                self.assertEqual(len(model.texts), 12)
+                self.assertEqual(len(model.icons), 12)
                 self.assertEqual(model.globals["PemilikIkonPilar"], [f"human-{i}" for i in range(12)])
                 for slot in range(12):
                     visual = model.visual(f"human-{slot}")
-                    self.assertNotIn("Custom String", visual[1])
-                    self.assertNotIn("NamaTampilan", visual[1])
-                    self.assertEqual(model.evaluate(visual[1]), f"glyph-{slot + 1}")
-                    self.assertEqual(model.evaluate(visual[6]), (slot, 90, 180, 255))
+                    self.assertEqual(visual[2], model.icon_choices[slot])
+                    self.assertEqual(visual[3], "Visible To Position and Color")
+                    self.assertEqual(visual[5], "False")
+                    self.assertEqual(model.evaluate(visual[4]), (slot, 90, 180, 255))
                     self.assertEqual(len(model.evaluate(visual[0])), 12)
                 model.globals["IndeksIkonPilar"] = 11
                 state = model.players["human-0"]
-                state.update(IndeksIkon=19, WarnaNama=(1, 2, 3, 255))
+                state.update(WarnaNama=(1, 2, 3, 255))
                 visual = model.visual("human-0")
-                self.assertEqual(model.evaluate(visual[1]), "glyph-19")
-                self.assertEqual(model.evaluate(visual[6]), (1, 2, 3, 255))
+                self.assertEqual(model.evaluate(visual[4]), (1, 2, 3, 255))
                 model.run(now=101)
                 self.assertEqual(len(model.created), 12)
+
+    def test_all_36_selected_types_replace_one_entity_and_hide_stale_type_immediately(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.add("human")
+                for selected, expected in enumerate(model.icon_choices, 1):
+                    if selected > 1:
+                        old = model.visual("human")
+                        state["IndeksIkon"] = selected
+                        self.assertEqual(model.evaluate(old[0]), [])
+                    model.run(now=100 + selected)
+                    self.assertEqual(len(model.icons), 1)
+                    self.assertEqual(model.visual("human")[2], expected)
+                    self.assertEqual(model.globals["PilihanIkonPilar"][0], selected)
+                    self.assertEqual(len(model.created), selected)
+                    self.assertEqual(len(model.destroyed), selected - 1)
+                    model.run(now=100 + selected)
+                    self.assertEqual(len(model.created), selected)
 
     def test_nonhuman_no_icon_and_quarantined_humans_never_allocate(self):
         cases = ({"Manusia": False}, {"IndeksIkon": 0},
@@ -266,11 +326,11 @@ class SocialBeaconTests(unittest.TestCase):
                 model.run(now=101)
                 model.run(now=102)
                 self.assertEqual(model.destroyed, [handle])
-                self.assertEqual(model.texts, {})
+                self.assertEqual(model.icons, {})
                 state["IndeksIkon"] = 2
                 model.run(now=103)
                 self.assertEqual(len(model.created), 2)
-                self.assertEqual(model.evaluate(model.visual("human")[1]), "glyph-2")
+                self.assertEqual(model.visual("human")[2], model.icon_choices[1])
 
     def test_leave_and_team_cleanup_do_not_inherit_handles_or_grow_slot_arrays(self):
         for source, model in self.models():
@@ -285,7 +345,7 @@ class SocialBeaconTests(unittest.TestCase):
                     model.cleanup_beacon(identity, "BersihkanPemain")
                     self.assertEqual(model.destroyed.count(handle), 1)
                     model.remove(identity)
-                    self.assertEqual(model.texts, {})
+                    self.assertEqual(model.icons, {})
                     for array in model.ARRAY_NAMES:
                         self.assertEqual(len(model.globals[array]), 12)
                 self.assertEqual(set(model.created), set(model.destroyed))
@@ -302,7 +362,7 @@ class SocialBeaconTests(unittest.TestCase):
                 model.run(now=101)
                 self.assertEqual(model.destroyed, [old_handle])
                 self.assertEqual(model.globals["PemilikIkonPilar"][0], "replacement")
-                self.assertNotEqual(model.globals["TeksIkonPilar"][0], old_handle)
+                self.assertNotEqual(model.globals["EntitasIkonPilar"][0], old_handle)
 
     def test_stored_waypoints_interpolate_smoothly_and_clamp_after_radius_shrinks(self):
         for source, model in self.models():
@@ -314,11 +374,13 @@ class SocialBeaconTests(unittest.TestCase):
                 start, target = model.globals["AwalIkonPilar"][0], model.globals["TujuanIkonPilar"][0]
                 for fraction in (0, 0.2, 0.5, 0.8, 1):
                     model.now = 100 + 3 * fraction
-                    actual = model.evaluate(visual[2]) - model.objective
+                    actual = model.evaluate(visual[1]) - model.objective
                     expected = start + (target - start) * fraction
                     self.assertAlmostEqual((actual - expected).magnitude(), 0, places=8)
                     self.assertLessEqual(math.hypot(actual.x, actual.z), 6 * 0.85 + 1e-8)
-                    self.assertTrue(0.5 <= actual.y <= 3)
+                    self.assertTrue(0.5 <= actual.y <= 8)
+                vertical_moves = [abs(a.y - b.y) for a, b in zip(model.globals["AwalIkonPilar"], model.globals["TujuanIkonPilar"])]
+                self.assertGreater(max(vertical_moves), 6)
                 for now in (100, 101, 102): model.run(now=now)
                 self.assertEqual(model.random_calls, 72)
                 model.run(now=103)
@@ -326,9 +388,9 @@ class SocialBeaconTests(unittest.TestCase):
                 for identity in list(model.globals["PemainManusia"])[1:]: model.remove(identity)
                 for now in (103, 103.5, 104, 104.5, 106):
                     model.now = now
-                    actual = model.evaluate(visual[2]) - model.objective
+                    actual = model.evaluate(visual[1]) - model.objective
                     self.assertLessEqual(math.hypot(actual.x, actual.z), 0.5 * 0.85 + 1e-8)
-                    self.assertTrue(0.5 <= actual.y <= 3)
+                    self.assertTrue(0.5 <= actual.y <= 8)
                 self.assertEqual(model.random_calls, 108)
 
 

@@ -41,7 +41,7 @@ class DiagnosticsHudEvaluator(MenuLoadEvaluator):
                             TeksDuniaPemain=[0, 400, 0, 401] + [0] * 8,
                             TeksTeleportasiSementara=[500] + [0] * 23,
                             TeksVisiSementara=[600, 0, 601] + [0] * 21,
-                            TeksIkonPilar=list(range(700, 712)),
+                            EntitasIkonPilar=list(range(700, 712)),
                             DaftarIkon=["icon"], DaftarGenre=["soundtrack"])
         self.hud = next(validator.iter_calls(self.rule("02").body, "Create HUD Text"))
 
@@ -96,7 +96,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
                                     if show:
                                         visible.append(owner)
                                         self.assertEqual(text.strip(),
-                                                         translated_load[language] + "\nHUD 26 | IWT 17")
+                                                         translated_load[language] + "\nHUD 26 | IWT 5")
                                     else:
                                         self.assertEqual(text, "")
                                         self.assertEqual(model.filter_builds, previous_filters)

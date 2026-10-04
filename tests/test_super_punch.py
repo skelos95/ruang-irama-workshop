@@ -22,6 +22,9 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
                 raise AssertionError(f"missing Super Punch initializer: {name}")
             self.globals[name] = self.evaluate(initializer[1])
         self.attacker = None
+        self.victim = None
+        self.event_ability = "Melee"
+        self.event_damage = 40
         self.probes = 0
         self.punch_calls = []
         self.kills = []
@@ -37,7 +40,7 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
                         KebalAktif=False, ModeKebal=0, statuses=set(), melee=False,
                         position=Vector(0, 0, 0), facing=Vector(0, 0, 1), wall=False,
                         KematianBalasDendam=False, PembunuhBalasDendam=[],
-                        JumlahBalasDendam=[], IndeksBalasDendam=-1)
+                        JumlahBalasDendam=[], IndeksBalasDendam=-1, hero="Ana")
         defaults.update(changes)
         self.players[identity].update(defaults)
         reset = re.search(r"Global\.WaktuPukulanSuper\[[^;]+\] = 0", self.classifier)
@@ -47,13 +50,27 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
     def resolve(self, name):
         if name == "Attacker":
             return self.attacker
+        if name == "Victim":
+            return self.victim
+        if name == "EventAbility":
+            return self.event_ability
+        if name == "EventDamage":
+            return self.event_damage
+        if name == "JunkerQueen":
+            return "Junker Queen"
         if name in {"KebalAktif", "ModeKebal", "Unkillable", "PhasedOut",
                     "BarriersDoNotBlockLOS", "PembunuhBalasDendam",
-                    "JumlahBalasDendam", "IndeksBalasDendam", "Add", "Subtract"}:
+                    "JumlahBalasDendam", "IndeksBalasDendam", "Add", "Subtract", "Melee"}:
             return name
         return super().resolve(name)
 
     def call(self, name, args):
+        if name == "Hero":
+            return args[0]
+        if name == "HeroOf":
+            return self.players[args[0]]["hero"]
+        if name == "Button":
+            return args[0]
         if name == "IsMeleeing":
             return self.players[args[0]]["melee"]
         if name == "HasStatus":
@@ -126,6 +143,18 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         self.tick(identity, start + 0.1)
         self.tick(identity, start + 0.2)
 
+    def native_hit(self, identity, victim, now=100, ability="Melee", damage=40):
+        self.now = now
+        self.event_player = identity
+        self.victim = victim
+        self.event_ability = ability
+        self.event_damage = damage
+        impact = next(rule for rule in self.rules if rule.name.startswith("89i1 -"))
+        self.globals["Siap"] = True
+        conditions = validator.rule_block(impact, "conditions")
+        if all(self.evaluate(token.strip()) for token in conditions.split(";") if token.strip()):
+            self.execute_source(validator.rule_block(impact, "actions"))
+
     def clear_registry(self, identity, routine):
         self.event_player = identity
         rule = validator.rule_by_subroutine(self.rules, routine)
@@ -160,10 +189,7 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertEqual(model.probes, 0)
                 attacker["melee"] = True
                 model.tick("attacker", 100)
-                model.tick("attacker", 100.1)
-                self.assertEqual(model.kills, [])
-                model.tick("attacker", 100.2)
-                self.assertEqual(model.kills, [("target", "attacker", 100.2)])
+                self.assertEqual(model.kills, [("target", "attacker", 100)])
                 target["alive"] = True
                 for tick in range(20):
                     model.tick("attacker", 101 + tick / 20)
@@ -207,7 +233,8 @@ class SuperPunchTests(unittest.TestCase):
                     model.enable("attacker")
                     model.swing("attacker")
                     self.assertEqual(model.kills, [])
-                    self.assertEqual(model.probes, 1)
+                    # No target keeps the swing eligible; protected contact consumes it.
+                    self.assertEqual(model.probes, 1 if changes.get("statuses") else 3)
                     self.assertIsNone(model.globals["TargetPukulanSuper"])
 
     def test_unkillable_status_or_active_mode_blocks_both_teams(self):
@@ -235,13 +262,13 @@ class SuperPunchTests(unittest.TestCase):
                 with self.subTest(source=path.name, actor=changes):
                     model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
                     actor = model.add("attacker")
-                    model.add("target", position=Vector(0, 0, 1))
+                    target = model.add("target", position=Vector(0, 0, 5))
                     model.enable("attacker")
                     actor["melee"] = True
                     model.tick("attacker", 100)
                     actor.update(changes)
                     model.tick("attacker", 100.1)
-                    self.assertEqual((model.probes, model.kills), (0, []))
+                    self.assertEqual((model.probes, model.kills), (1, []))
                     # A scheduler-excluded bot cannot advance the pending swing.
                     if changes.keys() & {"dummy", "BotOtomatis"}:
                         continue
@@ -250,13 +277,14 @@ class SuperPunchTests(unittest.TestCase):
                                  PindahTimDiproses=False, alive=True, spawned=True, exists=True,
                                  Manusia=True, BotOtomatis=False, dummy=False)
                     model.tick("attacker", 101)
-                    self.assertEqual((model.probes, model.kills), (0, []))
+                    self.assertEqual((model.probes, model.kills), (1, []))
                     actor["melee"] = False
                     model.tick("attacker", 102)
+                    target["position"] = Vector(0, 0, 1)
                     model.swing("attacker", 103)
                     self.assertEqual(len(model.kills), 1)
 
-    def test_two_attackers_keep_independent_swing_deadlines(self):
+    def test_two_attackers_keep_independent_swing_latches(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.add("first")
@@ -272,11 +300,86 @@ class SuperPunchTests(unittest.TestCase):
                 model.tick("second", 100.1)
                 model.tick("first", 100.2)
                 model.tick("second", 100.2)
-                self.assertEqual(model.kills, [("first-target", "first", 100.2)])
-                model.tick("second", 100.3)
-                self.assertEqual(model.kills[-1], ("second-target", "second", 100.3))
+                self.assertEqual(model.kills, [("first-target", "first", 100),
+                                              ("second-target", "second", 100.1)])
                 self.assertTrue(model.players["first-far"]["alive"])
                 self.assertEqual(model.probes, 2)
+
+    def test_short_native_swing_and_late_target_entry_do_not_miss_the_hit(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                attacker = model.add("attacker")
+                target = model.add("target", position=Vector(0, 0, 5))
+                model.enable("attacker")
+                attacker["melee"] = True
+                model.tick("attacker", 100)
+                self.assertEqual(model.kills, [])
+                target["position"] = Vector(0, 0, 1)
+                model.tick("attacker", 100.05)
+                self.assertEqual(model.kills, [("target", "attacker", 100.05)])
+                attacker["melee"] = False
+                model.tick("attacker", 100.1)
+                self.assertEqual(target["JumlahBalasDendam"], [1])
+
+    def test_real_enemy_impact_works_outside_sampled_animation_and_without_scheduler_scratch(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.add("attacker", melee=False)
+                target = model.add("target", team=2, position=Vector(0, 0, 5))
+                model.enable("attacker")
+                model.globals["PemainAktif"] = "unrelated"
+                model.native_hit("attacker", "target")
+                self.assertEqual(model.kills, [("target", "attacker", 100)])
+                self.assertEqual(target["JumlahBalasDendam"], [1])
+                self.assertEqual(model.probes, 0)
+                self.assertEqual(model.globals["PemainAktif"], "unrelated")
+
+    def test_native_impact_shares_consumption_and_ignores_non_melee_damage(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                attacker = model.add("attacker")
+                ally = model.add("ally", position=Vector(0, 0, 1))
+                enemy = model.add("enemy", team=2, position=Vector(0, 0, 5))
+                model.enable("attacker")
+                model.native_hit("attacker", "enemy", ability="PrimaryFire")
+                model.native_hit("attacker", "enemy", damage=0)
+                attacker["hero"] = "Junker Queen"
+                model.native_hit("attacker", "enemy", ability="Melee")
+                self.assertEqual(model.kills, [])
+                # Queen uses the real swing scanner; bleed must not look like a new punch.
+                model.swing("attacker")
+                attacker["hero"] = "Ana"
+                model.native_hit("attacker", "enemy", now=100.25)
+                self.assertEqual(len(model.kills), 1)
+                self.assertFalse(ally["alive"])
+                self.assertTrue(enemy["alive"])
+
+    def test_native_impact_obeys_off_state_lifecycle_menu_and_unkillable(self):
+        blocked = ({"MenuTerbuka": True}, {"TeleportasiJongkokAktif": True},
+                   {"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
+                   {"PindahTimDiproses": True}, {"alive": False}, {"Manusia": False},
+                   {"dummy": True}, {"BotOtomatis": True})
+        for path, _, _ in SOURCES:
+            for changes in blocked:
+                with self.subTest(source=path.name, actor=changes):
+                    model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                    attacker = model.add("attacker")
+                    model.add("target", team=2, position=Vector(0, 0, 5))
+                    model.enable("attacker")
+                    attacker.update(changes)
+                    model.native_hit("attacker", "target")
+                    self.assertEqual(model.kills, [])
+            for protection in ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
+                               {"KebalAktif": True, "ModeKebal": 1},
+                               {"KebalAktif": True, "ModeKebal": 2}, {}):
+                with self.subTest(source=path.name, protection=protection):
+                    model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                    model.add("attacker")
+                    model.add("target", team=2, position=Vector(0, 0, 5), **protection)
+                    if protection:
+                        model.enable("attacker")
+                    model.native_hit("attacker", "target")
+                    self.assertEqual(model.kills, [])
 
     def test_team_cleanup_and_leave_remove_preferences_without_slot_inheritance(self):
         for source, model in self.models():

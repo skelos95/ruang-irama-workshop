@@ -338,7 +338,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("BunuhDiriDiminta", fast)
             self.assertEqual(fast.count("Kill("), 1)
             self.assertIn(f"Kill({global_name}.PemainAktif, {global_name}.PemainAktif.KematianBalasDendam == True ?", fast)
-        self.assertEqual(source.count("Kill("), 3)
+        self.assertEqual(source.count("Kill("), 4)
 
     def test_crouch_attach_auto_detach_reacts_to_invalidating_state(self):
         for source, rule_kw, conditions_kw, actions_kw in (

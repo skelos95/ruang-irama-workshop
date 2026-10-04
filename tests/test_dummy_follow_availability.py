@@ -21,8 +21,8 @@ class DummyFollowEvaluator(AuditLifecycleEvaluator):
 
     def add(self, identity, team=1, **changes):
         state = dict(team=team, exists=True, visible=True, dummy=False,
-                     BotOtomatis=False, spawned=True, alive=True,
-                     IzinkanBotBuatanMengikuti=False, KursorIkutiBotBuatan=0)
+                     BotOtomatis=False, spawned=True, alive=True, Manusia=True,
+                     MenuTerbuka=False, HalamanMenu=-1, IzinkanBotBuatanMengikuti=False)
         state.update(changes)
         self.players[identity] = state
         return state
@@ -36,6 +36,11 @@ class DummyFollowEvaluator(AuditLifecycleEvaluator):
         if name == "OppositeTeamOf":
             return {1: 2, 2: 1}.get(args[0])
         return super().call(name, args)
+
+    def resolve(self, name):
+        if name == "IzinkanBotBuatanMengikuti":
+            return name
+        return super().resolve(name)
 
     def evaluate(self, expression):
         tree = AuditExpression(re.sub(r"\s+", "", expression)).tree
@@ -76,10 +81,14 @@ class DummyFollowEvaluator(AuditLifecycleEvaluator):
                 return True
         return False
 
-    def apply(self, identity, on):
+    def apply(self, identity):
         self.event_player = identity
-        self.players[identity]["KursorIkutiBotBuatan"] = int(on)
         self.execute(self.program)
+
+    def cache_tick(self, identity):
+        self.globals["PemainAktif"] = identity
+        cache = validator.rule_by_subroutine(self.rules, "ProsesSimpananPemain")
+        self.execute(statements(validator.rule_block(cache, "actions")))
 
     def applied_effects(self):
         return [name for _, name in self.calls if name == "EfekTerapkan"]
@@ -94,7 +103,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.add("human")
-                model.apply("human", True)
+                model.apply("human")
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
                 self.assertEqual(model.applied_effects(), [])
 
@@ -104,7 +113,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 with self.subTest(source=source, team=team):
                     state = model.add("human", team=team)
                     model.add("dummy", team=team, dummy=True)
-                    model.apply("human", True)
+                    model.apply("human")
                     self.assertFalse(state["IzinkanBotBuatanMengikuti"])
                     self.assertEqual(model.applied_effects(), [])
 
@@ -114,8 +123,8 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 first = model.add("team-one", team=1)
                 second = model.add("team-two", team=2)
                 model.add("dummy-one", team=1, dummy=True)
-                model.apply("team-one", True)
-                model.apply("team-two", True)
+                model.apply("team-one")
+                model.apply("team-two")
                 self.assertFalse(first["IzinkanBotBuatanMengikuti"])
                 self.assertTrue(second["IzinkanBotBuatanMengikuti"])
                 self.assertEqual(model.applied_effects(), [])
@@ -128,8 +137,8 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 observer = model.add("other", team=2)
                 model.add("dummy-one", team=1, dummy=True)
                 model.add("dummy-two", team=2, dummy=True)
-                model.apply("team-one", True)
-                model.apply("team-two", True)
+                model.apply("team-one")
+                model.apply("team-two")
                 self.assertTrue(first["IzinkanBotBuatanMengikuti"])
                 self.assertTrue(second["IzinkanBotBuatanMengikuti"])
                 self.assertFalse(observer["IzinkanBotBuatanMengikuti"])
@@ -140,7 +149,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 state = model.add("human", team=2)
                 model.add("enemy-human", team=1)
                 model.add("normal-ai", team=1, BotOtomatis=True)
-                model.apply("human", True)
+                model.apply("human")
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
 
     def test_stale_enemy_dummy_reference_does_not_enable_follow(self):
@@ -148,7 +157,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("human", team=2)
                 model.add("gone", team=1, dummy=True, exists=False)
-                model.apply("human", True)
+                model.apply("human")
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
 
     def test_respawning_enemy_dummy_still_counts_as_present(self):
@@ -156,7 +165,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("human", team=2)
                 model.add("respawning", team=1, dummy=True, spawned=False, alive=False)
-                model.apply("human", True)
+                model.apply("human")
                 self.assertTrue(state["IzinkanBotBuatanMengikuti"])
 
     def test_disabled_consent_can_always_be_applied_after_dummy_removal(self):
@@ -164,31 +173,64 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("human", team=2)
                 dummy = model.add("dummy", team=1, dummy=True)
-                model.apply("human", True)
+                model.apply("human")
                 dummy.update(exists=False, visible=False)
-                model.apply("human", False)
+                model.apply("human")
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
                 self.assertEqual(model.applied_effects(), [])
 
     def test_dummy_disappearing_between_menu_open_and_apply_blocks_activation(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("human", team=2, KursorIkutiBotBuatan=1)
+                state = model.add("human", team=2)
                 dummy = model.add("dummy", team=1, dummy=True)
                 dummy.update(exists=False, visible=False)
-                model.apply("human", True)
+                model.apply("human")
                 self.assertFalse(state["IzinkanBotBuatanMengikuti"])
                 dummy.update(exists=True, visible=True)
-                model.apply("human", True)
+                model.apply("human")
                 self.assertTrue(state["IzinkanBotBuatanMengikuti"])
 
-    def test_reapplying_on_without_dummy_does_not_erase_existing_opt_in(self):
+    def test_interact_turns_existing_consent_off_even_without_dummy(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.add("human", IzinkanBotBuatanMengikuti=True)
-                model.apply("human", True)
-                self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                model.apply("human")
+                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
                 self.assertEqual(model.applied_effects(), [])
+
+    def test_disappearing_enemy_dummy_turns_follow_off_without_menu_and_return_requires_opt_in(self):
+        for source, model in self.models():
+            for team in (1, 2):
+                with self.subTest(source=source, team=team):
+                    model.players.clear()
+                    state = model.add("human", team=team)
+                    dummy = model.add("enemy", team=3 - team, dummy=True)
+                    model.add("own", team=team, dummy=True)
+                    model.apply("human")
+                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                    model.cache_tick("human")
+                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                    dummy.update(exists=False)
+                    model.cache_tick("human")
+                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                    dummy.update(exists=True)
+                    model.cache_tick("human")
+                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                    model.apply("human")
+                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+
+    def test_automatic_off_leaves_other_players_and_bot_permissions_untouched(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.add("human", IzinkanBotBuatanMengikuti=True)
+                other = model.add("other", IzinkanBotBuatanMengikuti=True)
+                bot = model.add("bot", Manusia=False, dummy=True, IzinkanBotBuatanMengikuti=True)
+                model.cache_tick("human")
+                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(other["IzinkanBotBuatanMengikuti"])
+                model.cache_tick("bot")
+                self.assertTrue(bot["IzinkanBotBuatanMengikuti"])
 
     def test_open_menu_reports_unavailability_in_all_three_languages(self):
         for source, model in self.models():
