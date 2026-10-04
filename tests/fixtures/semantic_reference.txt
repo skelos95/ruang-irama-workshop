@@ -5668,7 +5668,7 @@ rule("89i - Subrutin: Pukulan super sekali per ayunan")
 		If(Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD] == 0);
 			Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD] = Total Time Elapsed + 0.150;
 		Else If(And(Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD] > 0, Total Time Elapsed >= Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD]));
-			"Satu ayunan asli memilih sasaran terdekat di depan; dinding tetap melindungi kedua tim."
+			"Ayunan nyata memilih satu sasaran terdekat di depan setelah 0,15 detik; dinding melindungi kedua tim."
 			Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD] = -1;
 			Global.TargetPukulanSuper = First Of(Sorted Array(Filtered Array(All Players(All Teams), And(Current Array Element != Global.PemainAktif, And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), And(Distance Between(Position Of(Global.PemainAktif), Position Of(Current Array Element)) <= 2.500, And(Is In View Angle(Global.PemainAktif, Eye Position(Current Array Element), 90), Is In Line Of Sight(Eye Position(Global.PemainAktif), Eye Position(Current Array Element), Barriers Do Not Block LOS)))))))), Distance Between(Position Of(Global.PemainAktif), Position Of(Current Array Element))));
 			If(And(Global.TargetPukulanSuper != Null, And(Entity Exists(Global.TargetPukulanSuper), And(Has Spawned(Global.TargetPukulanSuper), And(Is Alive(Global.TargetPukulanSuper), And(Has Status(Global.TargetPukulanSuper, Phased Out) == False, And(Has Status(Global.TargetPukulanSuper, Unkillable) == False, Or(Player Variable(Global.TargetPukulanSuper, KebalAktif) == False, Player Variable(Global.TargetPukulanSuper, ModeKebal) == 0))))))));
