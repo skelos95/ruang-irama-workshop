@@ -1,8 +1,7 @@
-"""Execute the beacon's actual ownership, waypoints and visual expressions.
+"""Execute the objective icons' ownership, captured paths and expressions.
 
-Native icon/effect creation and objective queries are controlled inputs. These
-tests cover script bookkeeping and geometry, not the client's Light Shaft art,
-icon dimensions, custom icon rendering or the look of native effect presets.
+Native icon creation and objective queries are controlled inputs. These tests
+cover script bookkeeping and geometry, not the client's icon dimensions or art.
 """
 
 import math
@@ -14,16 +13,6 @@ from tools import validate_workshop as validator
 from tests.test_audit_lifecycle import AuditExpression, AuditLifecycleEvaluator
 from tests.test_fly_motion import Vector
 from tests.test_roster_rejoin_regressions import SOURCES
-
-
-NATIVE_RGB = {
-    "White": (255, 255, 255), "Aqua": (0, 234, 234), "Black": (0, 0, 0),
-    "Blue": (39, 170, 255), "Gray": (127, 127, 127), "Green": (69, 255, 87),
-    "Lime Green": (160, 232, 27), "Orange": (236, 153, 0),
-    "Purple": (161, 73, 197), "Red": (200, 0, 19), "Rose": (255, 50, 145),
-    "Sky Blue": (108, 190, 244), "Turquoise": (0, 230, 151),
-    "Violet": (100, 50, 255), "Yellow": (255, 255, 0),
-}
 
 
 def beacon_statements(source):
@@ -64,55 +53,53 @@ def beacon_statements(source):
 
 
 class SocialBeaconEvaluator(AuditLifecycleEvaluator):
-    ARRAY_NAMES = ("PemilikIkonPilar", "EntitasIkonPilar", "AwalIkonPilar",
-                   "TujuanIkonPilar", "WaktuIkonPilar", "PilihanIkonPilar")
+    ARRAY_NAMES = ("PemilikIkonPilar", "EntitasIkonPilar",
+                   "WaktuIkonPilar", "PilihanIkonPilar")
 
     def __init__(self, source):
         super().__init__(source)
         self.objective = Vector(10, 0, 20)
-        self.host = "host"
         self.sample = 0
         self.random_calls = 0
         self.icons = {}
         self.next_entity = 1000
+        self.chases = {}
+        self.chase_started = []
+        self.chase_stopped = []
         self.icon_choices = re.findall(r'Icon String\(([^)]+)\)',
                                       source[source.index("DaftarIkon = Array("):source.index("NamaIkonInggris = Array(")])
-        self.native_names = {re.sub(r"\s+", "", name): name for name in NATIVE_RGB}
-        self.native_names.update(Bianco="White", Grigio="Gray")
         self.globals.update(IndeksIkonPilar=0, DaftarIkon=[""] + [f"glyph-{i}" for i in range(1, 21)])
-        for name in self.ARRAY_NAMES + ("DaftarWarnaPilar",):
+        for name in self.ARRAY_NAMES:
             init = re.search(rf"Global\.{name} = ([^;]+);", self.initializers)
             if init is None:
                 raise AssertionError(f"missing beacon initializer: {name}")
             self.globals[name] = self.evaluate(init[1])
-        self.effect = next(call for rule in self.rules
-                           for call in validator.iter_calls(rule.body, "Create Effect")
-                           if call.args[1] == "Light Shaft")
 
     def add(self, identity, **changes):
         self.join(identity)
         defaults = dict(Manusia=True, IndeksIkon=1, IndeksWarna=0,
                         PembaruanDaftarTertunda=False, PindahTimDiproses=False,
-                        WarnaNama=(255, 255, 255, 255), exists=True)
+                        WarnaNama=(255, 255, 255, 255), PosisiIkonPilar=Vector(0, 0.5, 0), exists=True)
         defaults.update(changes)
         self.players[identity].update(defaults)
         return self.players[identity]
 
     def resolve(self, name):
-        if name in self.native_names:
-            return self.native_names[name]
-        if name == "HostPlayer": return self.host
         if name == "ObjectiveIndex": return 0
         if name == "LastCreatedEntity": return self.created[-1] if self.created else 0
         if name in {"IndeksIkon", "IndeksWarna", "UrutanHUD", "Manusia",
                     "PembaruanDaftarTertunda", "PindahTimDiproses", "WarnaNama"}:
             return name
+        if name == "PosisiIkonPilar": return name
         return super().resolve(name)
 
     def call(self, name, args):
+        if name == "PlayerVariable" and args[1] == "PosisiIkonPilar" and args[0] in self.chases:
+            start, target, when, duration = self.chases[args[0]]
+            fraction = min(1, max(0, (self.now - when) / duration))
+            self.players[args[0]][args[1]] = start + (target - start) * fraction
         if name == "Vector": return Vector(*args)
         if name == "FirstOf": return args[0][0] if args[0] else None
-        if name == "Color": return args[0]
         if name == "ObjectivePosition": return self.objective
         if name == "DistanceBetween": return (args[0] - args[1]).magnitude()
         if name == "MagnitudeOf": return args[0].magnitude()
@@ -140,7 +127,12 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                 raise AssertionError(f"unsupported array access: {expression}")
             packed = converted
         tree = AuditExpression(packed).tree
-        operations = {"+": operator.add, "-": operator.sub, "*": operator.mul,
+        def multiply(left, right):
+            if isinstance(left, Vector) and isinstance(right, Vector):
+                return Vector(left.x * right.x, left.y * right.y, left.z * right.z)
+            return left * right
+
+        operations = {"+": operator.add, "-": operator.sub, "*": multiply,
                       "/": operator.truediv, "%": operator.mod, "==": operator.eq,
                       "!=": operator.ne, "<": operator.lt, ">": operator.gt,
                       "<=": operator.le, ">=": operator.ge}
@@ -176,13 +168,12 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
             token = node[0]
             if token.startswith("Create Icon("):
                 call = next(validator.iter_calls(token, "Create Icon"))
-                # Evaluate Once freezes each native visual's slot at creation.
-                index = int(self.globals["IndeksIkonPilar"])
-                args = tuple(arg.replace("Evaluate Once(Global.IndeksIkonPilar)", str(index)) for arg in call.args)
-                # Type cannot reevaluate. Its visible condition freezes selection,
-                # so a stale native icon hides before the one-second replacement.
-                selected = str(self.globals["PilihanIkonPilar"][index])
-                args = tuple(arg.replace(f"Evaluate Once(Global.PilihanIkonPilar[{index}])", selected) for arg in args)
+                # Freeze the owner PLAYER identity, while its animated position
+                # and Name Color remain dynamically read by the native icon.
+                owner = self.globals["PemainIkonPilar"]
+                self.globals[f"CapturedOwner{self.next_entity}"] = owner
+                captured = f"Global.CapturedOwner{self.next_entity}"
+                args = tuple(arg.replace("Evaluate Once(Global.PemainIkonPilar)", captured) for arg in call.args)
                 handle = self.next_entity
                 self.next_entity += 1
                 self.created.append(handle)
@@ -191,14 +182,41 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                 handle = self.evaluate(token[len("Destroy Icon("):-1])
                 self.destroyed.append(handle)
                 del self.icons[handle]
+            elif token.startswith("Chase Player Variable Over Time("):
+                call = next(validator.iter_calls(token, "Chase Player Variable Over Time"))
+                owner, field = self.evaluate(call.args[0]), call.args[1]
+                self.assert_chase_field(field)
+                start = self.call("PlayerVariable", [owner, field])
+                target, duration = self.evaluate(call.args[2]), self.evaluate(call.args[3])
+                if not isinstance(start, Vector) or not isinstance(target, Vector):
+                    raise AssertionError("native chase requires initialized matching Vector types")
+                if call.args[4] != "None":
+                    raise AssertionError("beacon must freeze destination and duration once")
+                self.chases[owner] = (start, target, self.now, duration)
+                self.chase_started.append(owner)
+            elif token.startswith("Stop Chasing Player Variable("):
+                call = next(validator.iter_calls(token, "Stop Chasing Player Variable"))
+                owner, field = self.evaluate(call.args[0]), call.args[1]
+                self.assert_chase_field(field)
+                self.call("PlayerVariable", [owner, field])
+                self.chases.pop(owner, None)
+                self.chase_stopped.append(owner)
             elif super().execute([node]):
                 return True
         return False
 
     def run(self, routine="PerbaruiPilarSosial", now=None):
         if now is not None: self.now = now
+        # The native engine releases player variables when an entity disappears.
+        self.chases = {owner: chase for owner, chase in self.chases.items()
+                       if self.players.get(owner, {}).get("exists")}
         rule = validator.rule_by_subroutine(self.rules, routine)
         self.execute(beacon_statements(validator.rule_block(rule, "actions")))
+
+    @staticmethod
+    def assert_chase_field(field):
+        if field != "PosisiIkonPilar":
+            raise AssertionError(f"unexpected beacon chase field: {field}")
 
     def visual(self, owner):
         slot = self.globals["PemilikIkonPilar"].index(owner)
@@ -218,42 +236,41 @@ class SocialBeaconTests(unittest.TestCase):
         for path, _, _ in SOURCES:
             yield path.name, SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
 
-    def test_one_native_shaft_reevaluates_objective_radius_visibility_and_host_palette(self):
-        for path, _, _ in SOURCES:
-            source = path.read_text(encoding="utf-8")
-            model = SocialBeaconEvaluator(source)
-            with self.subTest(source=path.name):
-                effects = [call for rule in model.rules for call in validator.iter_calls(rule.body, "Create Effect")
-                           if call.args[1] == "Light Shaft"]
-                self.assertEqual(len(effects), 1)
-                self.assertEqual(model.effect.args[5], "Visible To Position Radius and Color")
-                self.assertNotIn("Custom Color", model.effect.args[2])
-                self.assertEqual(model.evaluate(model.effect.args[0]), [])
-                for count in range(1, 13):
-                    identity = "host" if count == 1 else f"human-{count}"
-                    model.add(identity)
-                    self.assertEqual(model.evaluate(model.effect.args[4]), 0.5 * count)
-                    self.assertEqual(len(model.evaluate(model.effect.args[0])), count)
-                for index, preset in enumerate(model.globals["DaftarWarnaPilar"]):
-                    model.players["host"]["IndeksWarna"] = index
-                    self.assertEqual(model.evaluate(model.effect.args[2]), preset)
-                model.host = "absent-host"
-                self.assertEqual(model.evaluate(model.effect.args[2]), "White")
-                model.objective = Vector(0, 0, 0)
-                self.assertEqual(model.evaluate(model.effect.args[0]), [])
-                self.assertEqual(model.evaluate(model.effect.args[3]), model.objective)
-
-    def test_all_forty_native_presets_are_the_nearest_declared_name_rgb(self):
+    def test_only_native_icons_reevaluate_objective_position_and_hide_without_objective(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                rgb_init = re.search(r"Global\.DaftarWarnaRGB = (Array\([^;]+\));", model.initializers)
-                colors = model.evaluate(rgb_init[1])
-                self.assertEqual(len(colors), 40)
-                self.assertEqual(len(model.globals["DaftarWarnaPilar"]), 40)
-                for rgb, actual in zip(colors, model.globals["DaftarWarnaPilar"]):
-                    channels = (rgb.x, rgb.y, rgb.z)
-                    distance = lambda native: sum((a - b) ** 2 for a, b in zip(channels, native))
-                    self.assertEqual(distance(NATIVE_RGB[actual]), min(map(distance, NATIVE_RGB.values())))
+                self.assertFalse([call for rule in model.rules
+                                  for call in validator.iter_calls(rule.body, "Create Effect")])
+                model.add("human")
+                model.run(now=100)
+                self.assertEqual(len(model.icons), 1)
+                visual = model.visual("human")
+                offset = model.evaluate(visual[1]) - model.objective
+                model.objective = Vector(35, 7, 60)
+                self.assertEqual(model.evaluate(visual[1]), model.objective + offset)
+                self.assertEqual(model.evaluate(visual[0]), ["human"])
+                model.objective = Vector(0, 0, 0)
+                self.assertEqual(model.evaluate(visual[0]), [])
+
+    def test_five_metre_radius_does_not_depend_on_roster_size(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.add("human-0")
+                model.run(now=100)
+                visual = model.visual("human-0")
+                captured = model.chases["human-0"]
+                model.now = 101.5
+                position = model.evaluate(visual[1])
+                for slot in range(1, 12):
+                    model.add(f"human-{slot}")
+                    self.assertEqual(model.evaluate(visual[1]), position)
+                    self.assertEqual(model.chases["human-0"], captured)
+                for slot in range(1, 12):
+                    model.remove(f"human-{slot}")
+                    self.assertEqual(model.evaluate(visual[1]), position)
+                    self.assertEqual(model.chases["human-0"], captured)
+                self.assertLessEqual(math.hypot(position.x - model.objective.x,
+                                               position.z - model.objective.z), 5)
 
     def test_twelve_native_icons_bind_distinct_owners_and_reevaluate_rgb_without_recreation(self):
         for source, model in self.models():
@@ -301,6 +318,8 @@ class SocialBeaconTests(unittest.TestCase):
         cases = ({"Manusia": False}, {"IndeksIkon": 0},
                  {"PembaruanDaftarTertunda": True}, {"PindahTimDiproses": True}, {"exists": False})
         for path, _, _ in SOURCES:
+            visible_changes = ({"Manusia": False, "PindahTimDiproses": True},
+                               {"exists": False}, {"IndeksIkon": 0})
             for changes in cases:
                 with self.subTest(source=path.name, player=changes):
                     model = SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
@@ -313,6 +332,17 @@ class SocialBeaconTests(unittest.TestCase):
             model.objective = Vector(0, 0, 0)
             model.run(now=100)
             self.assertEqual(model.created, [])
+            # The roster remains populated briefly during a native team-change
+            # quarantine; its owned icon must hide before serial cleanup runs.
+            for changes in visible_changes:
+                with self.subTest(source=path.name, visible_owner=changes):
+                    model = SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
+                    state = model.add("human")
+                    model.run(now=100)
+                    visual = model.visual("human")
+                    self.assertTrue(model.evaluate(visual[0]))
+                    state.update(changes)
+                    self.assertEqual(model.evaluate(visual[0]), [])
 
     def test_disabled_icon_hides_immediately_then_destroys_once_and_can_return(self):
         for source, model in self.models():
@@ -340,12 +370,14 @@ class SocialBeaconTests(unittest.TestCase):
                     model.add(identity)
                     model.run(now=100 + turn)
                     handle = model.created[-1]
-                    model.players[identity]["exists"] = False
+                    model.players[identity]["exists"] = bool(turn % 2)
                     model.cleanup_beacon(identity, "TenangkanPemain" if turn % 2 else "BersihkanPemain")
                     model.cleanup_beacon(identity, "BersihkanPemain")
                     self.assertEqual(model.destroyed.count(handle), 1)
                     model.remove(identity)
+                    model.players[identity]["exists"] = False
                     self.assertEqual(model.icons, {})
+                    self.assertEqual(model.chases, {})
                     for array in model.ARRAY_NAMES:
                         self.assertEqual(len(model.globals[array]), 12)
                 self.assertEqual(set(model.created), set(model.destroyed))
@@ -364,34 +396,49 @@ class SocialBeaconTests(unittest.TestCase):
                 self.assertEqual(model.globals["PemilikIkonPilar"][0], "replacement")
                 self.assertNotEqual(model.globals["EntitasIkonPilar"][0], old_handle)
 
-    def test_stored_waypoints_interpolate_smoothly_and_clamp_after_radius_shrinks(self):
+    def test_captured_waypoints_interpolate_smoothly_inside_fixed_radius(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 for slot in range(12): model.add(f"human-{slot}")
                 model.run(now=100)
                 self.assertEqual(model.random_calls, 72)
                 visual = model.visual("human-0")
-                start, target = model.globals["AwalIkonPilar"][0], model.globals["TujuanIkonPilar"][0]
+                start, target, _, _ = model.chases["human-0"]
                 for fraction in (0, 0.2, 0.5, 0.8, 1):
                     model.now = 100 + 3 * fraction
                     actual = model.evaluate(visual[1]) - model.objective
                     expected = start + (target - start) * fraction
                     self.assertAlmostEqual((actual - expected).magnitude(), 0, places=8)
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 6 * 0.85 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 5 + 1e-8)
                     self.assertTrue(0.5 <= actual.y <= 8)
-                vertical_moves = [abs(a.y - b.y) for a, b in zip(model.globals["AwalIkonPilar"], model.globals["TujuanIkonPilar"])]
+                vertical_moves = [abs(start.y - target.y) for start, target, _, _ in model.chases.values()]
                 self.assertGreater(max(vertical_moves), 6)
                 for now in (100, 101, 102): model.run(now=now)
                 self.assertEqual(model.random_calls, 72)
+                self.assertEqual(len(model.chase_started), 12)
                 model.run(now=103)
                 self.assertEqual(model.random_calls, 108)
+                self.assertEqual(len(model.chase_started), 24)
                 for identity in list(model.globals["PemainManusia"])[1:]: model.remove(identity)
                 for now in (103, 103.5, 104, 104.5, 106):
                     model.now = now
                     actual = model.evaluate(visual[1]) - model.objective
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 0.5 * 0.85 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 5 + 1e-8)
                     self.assertTrue(0.5 <= actual.y <= 8)
                 self.assertEqual(model.random_calls, 108)
+
+    def test_cleanup_stops_only_the_exact_owner_native_chase(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.add("first")
+                model.add("second")
+                model.run(now=100)
+                second = model.chases["second"]
+                model.cleanup_beacon("first", "TenangkanPemain")
+                self.assertNotIn("first", model.chases)
+                self.assertEqual(model.players["first"]["PosisiIkonPilar"], Vector(0, 0.5, 0))
+                self.assertEqual(model.chases["second"], second)
+                self.assertEqual(model.chase_stopped, ["first"])
 
 
 if __name__ == "__main__":

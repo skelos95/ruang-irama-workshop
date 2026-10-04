@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Semantic static gate for CHILL Dedicated Server Workshop 0.8.1.
+"""Semantic static gate for Cozywatch Workshop 0.8.1.
 
 The validator deliberately checks behaviour and ownership boundaries instead of
 pinning the complete Workshop export or rule-number prefixes. It only uses the
@@ -924,7 +924,7 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
         indices = [entry.index for entry in entries]
         # Removed toggle cursors leave their original player IDs free. Preserve
         # every other ID so importing this revision does not reshuffle variables.
-        expected_indices = ([index for index in range(len(entries) + 3) if index not in {58, 60, 92}]
+        expected_indices = ([index for index in range(len(entries) + 2) if index not in {60, 92}]
                             if label == "player" else list(range(len(entries))))
         checks.equal(indices, expected_indices, f"indici {label} compatti salvo slot cursori rimossi")
         names = [entry.name for entry in entries]
@@ -1080,7 +1080,7 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
         ]
         if visible_literals and not any(literal and literal.strip() for literal in visible_literals):
             continue
-        if "SERVER KHUSUS CHILL" in visible_text and "Global.TeksWaktuServer" in visible_text:
+        if "COZYWATCH" in visible_text and "Global.TeksWaktuServer" in visible_text:
             continue
         if "Custom String" in visible_text and re.search(r"[A-Za-z\u0e00-\u0e7f]", visible_text):
             found = language_triads(visible_text)
@@ -1193,26 +1193,26 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             call for call in hud_calls
             if len(call.args) >= 4
-            and "SERVER KHUSUS CHILL" in call.args[3]
+            and "COZYWATCH" in call.args[3]
             and "Global.TeksWaktuServer" in call.args[3]
         ),
         None,
     )
-    checks.require(server_title is not None, "HUD titolo CHILL e timer server assente")
+    checks.require(server_title is not None, "HUD titolo Cozywatch e timer server assente")
     if server_title:
-        checks.equal(server_title.args[2].strip(), "Null", "HUD titolo CHILL: Subheader")
-        checks.equal(server_title.args[4].strip(), "Top", "HUD titolo CHILL: posizione")
-        checks.equal(server_title.args[5].strip(), "0", "HUD titolo CHILL: ordinamento")
-        checks.require('Custom String("{0} [{1}]"' in server_title.args[3],
-                       "HUD titolo CHILL deve mostrare il timer tra parentesi quadre")
+        checks.equal(server_title.args[2].strip(), "Null", "HUD titolo Cozywatch: Subheader")
+        checks.equal(server_title.args[4].strip(), "Top", "HUD titolo Cozywatch: posizione")
+        checks.equal(server_title.args[5].strip(), "0", "HUD titolo Cozywatch: ordinamento")
+        checks.require('Custom String("COZYWATCH [{0}]"' in server_title.args[3],
+                       "HUD titolo Cozywatch deve mostrare il timer tra parentesi quadre")
         checks.require("\\n" not in server_title.args[3],
-                       "HUD titolo CHILL non deve contenere spaziatura incorporata")
+                       "HUD titolo Cozywatch non deve contenere spaziatura incorporata")
 
     init_rule = next(
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Global"
-            and "SERVER KHUSUS CHILL" in rule.body
+            and "COZYWATCH" in rule.body
             and "Global.Siap = True;" in rule.body
         ),
         None,
@@ -1272,7 +1272,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "13"): ("subheader", "Global.NamaPemimpinPilihan"),
         ("Right", "-16"): ("subheader", "Button(Interact)"),
         ("Right", "0"): ("text", "Host:"),
-        ("Top", "0"): ("text", "SERVER KHUSUS CHILL"),
+        ("Top", "0"): ("text", "COZYWATCH"),
         ("Top", "1"): ("subheader", 'LOCATION'),
         ("Top", "2"): ("text", 'Custom String("  ")'),
     }
@@ -2341,45 +2341,25 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
 
 
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
-    """Guard one objective beacon and at most twelve native RGB icon entities."""
+    """Guard at most twelve RGB icons floating within five metres of the objective."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
 
     declared = {entry.name: entry.index for entry in global_entries}
-    fields = ("PemilikIkonPilar", "EntitasIkonPilar", "AwalIkonPilar", "TujuanIkonPilar",
-              "WaktuIkonPilar", "IndeksIkonPilar", "DaftarWarnaPilar", "PilihanIkonPilar")
+    fields = ("PemilikIkonPilar", "EntitasIkonPilar", "WaktuIkonPilar",
+              "IndeksIkonPilar", "PilihanIkonPilar", "PemainIkonPilar")
     for index, name in enumerate(fields, 75):
         checks.equal(declared.get(name), index, f"Pilar: campo global {name}")
     for name, initial in (("PemilikIkonPilar", "Null"), ("EntitasIkonPilar", "0"),
                           ("PilihanIkonPilar", "0"),
-                          ("WaktuIkonPilar", "0"), ("AwalIkonPilar", "Vector(0,0.500,0)"),
-                          ("TujuanIkonPilar", "Vector(0,0.500,0)")):
+                          ("WaktuIkonPilar", "0")):
         values = array_assignment_items(source, name)
         checks.equal([code(value) for value in values] if values is not None else None, [initial] * 12,
                      f"Pilar: array dodici slot inizializzati {name}")
-    palette = array_assignment_items(source, "DaftarWarnaPilar")
-    checks.equal(len(palette) if palette is not None else None, 40, "Pilar: quaranta preset per i quaranta colori nome")
-    named = {"White", "Aqua", "Black", "Blue", "Gray", "Green", "LimeGreen", "Orange", "Purple",
-             "Red", "Rose", "SkyBlue", "Turquoise", "Violet", "Yellow"}
-    checks.require(palette is not None and all(code(value) in {f"Color({name})" for name in named} for value in palette),
-                   "Pilar: Light Shaft deve usare soltanto colori nominali nativi")
+    for removed in ("DaftarWarnaPilar", "SkalaIkonPilar", "TujuanIkonPilar"):
+        checks.require(removed not in code(source), f"Pilar: stato Light Shaft e destinazioni duplicate rimosso {removed}")
     effects = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Create Effect")]
-    checks.equal(len(effects), 1, "Pilar: unico Create Effect persistente")
-    if effects:
-        initial, effect = effects[0]
-        checks.require(event_type(initial) == "Ongoing - Global"
-                       and "Global.Siap == False;" in (rule_block(initial, "conditions") or ""),
-                       "Pilar: effetto creato soltanto in inizializzazione una volta")
-        checks.equal(len(effect.args), 6, "Pilar: firma effetto nativo")
-        if len(effect.args) == 6:
-            checks.equal(tuple(code(arg) for arg in effect.args[1:]), (
-                "LightShaft",
-                "EntityExists(HostPlayer)?Global.DaftarWarnaPilar[Max(0,Min(39,PlayerVariable(HostPlayer,IndeksWarna)))]:Color(White)",
-                "ObjectivePosition(ObjectiveIndex)", "0.500*Min(12,CountOf(Global.PemainManusia))",
-                "VisibleToPositionRadiusandColor"), "Pilar: tipo, colore host, obiettivo, raggio e rivalutazione")
-            checks.require("CountOf(Global.PemainManusia)>0" in code(effect.args[0])
-                           and code(effect.args[0]).endswith("?AllPlayers(AllTeams):EmptyArray"),
-                           "Pilar: visibilità condizionata al roster umano")
+    checks.equal(len(effects), 0, "Pilar: nessun Light Shaft o Create Effect persistente")
 
     manager = rule_by_subroutine(rules, "PerbaruiPilarSosial")
     cleanup = rule_by_subroutine(rules, "BersihkanIkonPilar")
@@ -2403,15 +2383,19 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
         for index, call in enumerate(calls, 1):
             checks.equal(len(call.args), 6, "Pilar: firma Create Icon")
             if len(call.args) == 6:
-                owner = "Global.PemilikIkonPilar[EvaluateOnce(Global.IndeksIkonPilar)]"
-                selected = "Global.PilihanIkonPilar[EvaluateOnce(Global.IndeksIkonPilar)]"
+                owner = "EvaluateOnce(Global.PemainIkonPilar)"
                 checks.equal(code(call.args[4]), f"PlayerVariable({owner},WarnaNama)", "Pilar: RGB icona segue owner")
                 checks.equal(call.args[3].strip(), "Visible To Position and Color", "Pilar: rivalutazione RGB icona completa")
                 checks.equal(call.args[5].strip(), "False", "Pilar: nessun indicatore icona fuori schermo")
-                checks.require(code(call.args[1]).startswith("UpdateEveryFrame(ObjectivePosition(ObjectiveIndex)+")
-                               and "Random" not in code(call.args[1]), "Pilar: posizione fluida senza random per frame")
-                checks.require(f"PlayerVariable({owner},IndeksIkon)==EvaluateOnce({selected})" in code(call.args[0]),
+                checks.equal(code(call.args[1]), f"ObjectivePosition(ObjectiveIndex)+PlayerVariable({owner},PosisiIkonPilar)",
+                             "Pilar: posizione fluida condivisa senza duplicare interpolazione per tipo")
+                checks.require(f"PlayerVariable({owner},IndeksIkon)=={index}" in code(call.args[0]),
                                "Pilar: tipo obsoleto nascosto subito prima della ricreazione")
+                for required in (f"EntityExists({owner})", f"PlayerVariable({owner},Manusia)==True"):
+                    checks.require(required in code(call.args[0]), "Pilar: owner in uscita o cambio squadra nascosto subito")
+                checks.require(f"ArrayContains(Global.PemainManusia,{owner})" in code(call.args[0])
+                               and "DistanceBetween(ObjectivePosition(ObjectiveIndex),Vector(0,0,0))>0.100" in code(call.args[0]),
+                               "Pilar: visibilita richiede owner nel roster e obiettivo valido")
                 branches = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(manager.body, call.start)]
                 checks.require("If(Global.EntitasIkonPilar[Global.IndeksIkonPilar]==0);" in branches,
                                 "Pilar: creazione soltanto per slot senza handle")
@@ -2423,19 +2407,51 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
             "DestroyIcon(Global.EntitasIkonPilar[Global.IndeksIkonPilar]);",
             "Global.PilihanIkonPilar[Global.IndeksIkonPilar]=PlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],IndeksIkon);",
             "Global.EntitasIkonPilar[Global.IndeksIkonPilar]=LastCreatedEntity;",
-            "RandomReal(0.500,8)",
+            "Global.PemainIkonPilar=Global.PemilikIkonPilar[Global.IndeksIkonPilar];",
+            "Global.PemainIkonPilar=Null;",
+            "RandomReal(0,5)", "RandomReal(0.500,8)",
         ):
             checks.require(token in packed, f"Pilar: gestione entità e traiettoria mancanti {token}")
+        for field in ("PembaruanDaftarTertunda", "PindahTimDiproses"):
+            checks.require(f"PlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],{field})==False" in packed
+                           and f"PlayerVariable(CurrentArrayElement,{field})==False" in packed,
+                           "Pilar: manager blocca owner in quarantena e nuove creazioni durante riclassificazione")
+        chases = list(iter_calls(manager.body, "Chase Player Variable Over Time"))
+        checks.equal(len(chases), 2, "Pilar: avvio e rinnovo percorso condivisi per tutti i tipi")
+        for chase in chases:
+            checks.equal(tuple(code(arg) for arg in chase.args), (
+                "Global.PemilikIkonPilar[Global.IndeksIkonPilar]", "PosisiIkonPilar",
+                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,5)+Vector(0,RandomReal(0.500,8),0)", "3", "None"),
+                "Pilar: chase Vector nativo congela destinazione e durata tre secondi")
+        checks.require("SetPlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],PosisiIkonPilar,DirectionFromAngles(" in packed,
+                       "Pilar: inizializzazione Vector prima della chase")
+        checks.require("StopChasingPlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],PosisiIkonPilar);" in packed,
+                       "Pilar: manutenzione ferma la chase del vecchio owner")
+    _, player_entries, _, _ = declaration_entries(source)
+    checks.equal(next((entry.index for entry in player_entries if entry.name == "PosisiIkonPilar"), None), 58,
+                 "Pilar: unico campo Vector player nello slot libero 58")
+    for routine in ("SiapkanPemain", "TenangkanPemain"):
+        setup = rule_by_subroutine(rules, routine)
+        checks.require(setup is not None and "EventPlayer.PosisiIkonPilar=Vector(0,0.500,0);" in code(setup.body),
+                       f"Pilar: Vector inizializzato nel lifecycle {routine}")
     for name in ("TenangkanPemain", "BersihkanPemain"):
         lifecycle = rule_by_subroutine(rules, name)
         checks.require(lifecycle is not None and "Call Subroutine(BersihkanIkonPilar);" in lifecycle.body,
                        f"Pilar: cleanup nel lifecycle {name}")
+    worker = next((rule for rule in rules if rule.name.startswith("01b -")), None)
+    if worker:
+        ordered = [call.args[0] for call in iter_calls(worker.body, "Call Subroutine")]
+        checks.require("TenangkanPemain" in ordered and "SiapkanPemain" in ordered
+                       and ordered.index("TenangkanPemain") < ordered.index("SiapkanPemain"),
+                       "Pilar: cleanup team precedente deve avvenire prima della nuova classificazione")
     if cleanup:
         checks.require("If(Global.PemilikIkonPilar[Global.IndeksIkonPilar]==EventPlayer);" in code(cleanup.body),
                        "Pilar: cleanup deve toccare soltanto l'owner uscente")
         checks.require("DestroyIcon(Global.EntitasIkonPilar[Global.IndeksIkonPilar]);" in code(cleanup.body)
                        and "Global.PilihanIkonPilar[Global.IndeksIkonPilar]=0;" in code(cleanup.body),
                        "Pilar: cleanup distrugge l'entità nativa e azzera la selezione")
+        checks.require("StopChasingPlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],PosisiIkonPilar);" in code(cleanup.body),
+                       "Pilar: cleanup ferma esclusivamente la chase dell'owner")
 
 
 def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:

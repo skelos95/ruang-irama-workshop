@@ -532,7 +532,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertLess(
                 roster_hud.index("Event Player.HudPemainDibuat = True;"),
-                roster_hud.index('Welcome to CHILL! Pick a vibe & color. Stay weird.'),
+                roster_hud.index('Welcome to Cozywatch! Pick a vibe & color. Stay weird.'),
             )
             self.assertEqual(
                 source.count("Player Variable(Current Array Element, PembaruanDaftarTertunda) == False"),

@@ -2,6 +2,15 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Cozywatch, compattazione delle icone e budget strutturale — 2026-10-04
+
+- La diagnostica del client sulla revisione `2e1c4ff` mostra 36.381 elementi e una regola da 130 KB: entrambi oltre il limite. I byte UTF-8 del sorgente non avevano rilevato questo superamento.
+- Le 36 scelte Create Icon leggono un vettore individuale animato dal Chase nativo; eliminate le formule ripetute di interpolazione e gli array di waypoint ridondanti. Colore personale, altezza 0,5–8 m, limite di 12 icone e cleanup conservati. Nessun nuovo Wait, Loop o frequenza dello scheduler.
+- Il preflight aggiunge un budget strutturale offline distinto dalle metriche compilate del client; controlli aggiornati per proprietari, animazione e regressioni del peso. Con la stessa stima il totale passa da 36.491 a 31.097 unità (−14,8%); la regola maggiore usa 4.500 unità, entro il budget locale di 5.000.
+- Modalità rinominata Cozywatch nell'HUD, nelle impostazioni Workshop e nel benvenuto EN/ID/TH. Le tinte equivalenti già predefinite usano il valore colore nativo, conservando le palette personalizzate.
+- Light Shaft rimosso su richiesta: restano solo icone sociali sull'obiettivo, entro un raggio fisso di 5 m. Eliminati effetto, palette del fascio e scala dinamica del roster.
+- 121 regole, 71 subroutine, 126 campi player e 81 globali. Il conteggio compilato della nuova revisione richiede conferma nel gioco.
+
 ## Correzioni melee, icone native e interruttori diretti — 2026-10-04
 
 - Super Punch cerca durante l'animazione senza ritardo fisso e consuma il colpo solo al contatto; l'evento melee nativo copre gli impatti fra campioni. Latch condiviso, Unkillable rispettato e Kill attribuito al player per Revenge.

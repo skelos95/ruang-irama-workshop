@@ -11,6 +11,7 @@ Largest Rule metrics.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 import argparse
 import re
@@ -22,7 +23,14 @@ ITALIAN_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
 SEMANTIC_REFERENCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 
 CLIENT_LARGEST_RULE_LIMIT_BYTES = 98_000
+CLIENT_ELEMENT_LIMIT = 32_768
 SOURCE_RULE_SAFETY_TARGET_BYTES = 80_000
+# Offline guardrails, not measurements or limits of the client's compiler.
+# The total budget is deliberately below the client element limit; unknown
+# compiler details still require native verification. The per-rule budget is
+# an independent complexity ceiling, not a conversion to bytes.
+SOURCE_TOTAL_STRUCTURAL_TARGET = 32_000
+SOURCE_RULE_STRUCTURAL_TARGET = 5_000
 
 
 @dataclass(frozen=True)
@@ -130,6 +138,7 @@ EQUIVALENT_NAMED_COLORS: tuple[tuple[tuple[int, int, int, int], str], ...] = (
 class RuleSize:
     name: str
     bytes_utf8: int
+    structural_units: int = 0
 
 
 @dataclass(frozen=True)
@@ -138,10 +147,194 @@ class Report:
     source_bytes_utf8: int
     rule_count: int
     largest_rule: RuleSize
+    structural_units: int
+    largest_structural_rule: RuleSize
 
 
 class ClipboardImportError(ValueError):
     pass
+
+
+class _StructuralExpression:
+    """Count syntax nodes without evaluating code or importing test helpers.
+
+    These are weighted source AST nodes, not an exact native Element Count.
+    Node weights follow the public OverPy emitter's treatment of numbers,
+    variable references, comparisons, arrays, Evaluate Once and top-level action
+    discounts. Known String/Custom String placeholders are included even when
+    omitted from the clipboard, as in OverPy's four-argument string nodes.
+    Other implicit defaults, hero/model overhead and compiler transforms are
+    not modeled. This metric detects expression duplication
+    even when shorter identifiers or rule splitting shrink the clipboard text.
+    Primary reference: github.com/Zezombye/overpy/blob/master/src/compiler/astToWorkshop.ts
+    """
+
+    TOKEN = re.compile(
+        r'"(?:\\.|[^"\\])*"|\d+(?:\.\d*)?(?:[eE][+-]?\d+)?'
+        r'|[A-Za-z_][A-Za-z_0-9]*(?:\s+[A-Za-z_0-9]+)*'
+        r'|==|!=|>=|<=|\+=|-=|\*=|/=|%=|&&|\|\||[()\[\],.?:+\-*/%<>=!]'
+    )
+    PRECEDENCE = {"=": 0, "+=": 0, "-=": 0, "*=": 0, "/=": 0, "%=": 0,
+                  "||": 2, "&&": 3, "==": 4, "!=": 4, ">=": 4, "<=": 4,
+                  ">": 4, "<": 4, "+": 5, "-": 5, "*": 6, "/": 6, "%": 6}
+
+    def __init__(self, source: str):
+        self.tokens: list[str] = []
+        previous = 0
+        for match in self.TOKEN.finditer(source):
+            if source[previous:match.start()].strip():
+                raise ClipboardImportError("sintassi non analizzabile dal budget strutturale")
+            self.tokens.append(match.group(0).strip())
+            previous = match.end()
+        if source[previous:].strip():
+            raise ClipboardImportError("sintassi non analizzabile dal budget strutturale")
+        self.index = 0
+        self.tree = self.parse()
+        if self.index != len(self.tokens):
+            raise ClipboardImportError("espressione incompleta nel budget strutturale")
+
+    def take(self, expected: str | None = None) -> str:
+        if self.index >= len(self.tokens):
+            raise ClipboardImportError("espressione troncata nel budget strutturale")
+        token = self.tokens[self.index]
+        self.index += 1
+        if expected is not None and token != expected:
+            raise ClipboardImportError(f"budget strutturale: atteso {expected!r}, trovato {token!r}")
+        return token
+
+    def peek(self) -> str | None:
+        return self.tokens[self.index] if self.index < len(self.tokens) else None
+
+    def parse(self, minimum: int = 0):
+        token = self.take()
+        if token in ("-", "+", "!"):
+            left = ("unary", token, self.parse(7))
+        elif token == "(":
+            left = self.parse()
+            self.take(")")
+        elif token.startswith('"'):
+            left = ("string",)
+        elif token[0].isdigit():
+            left = ("number",)
+        elif self.peek() == "(":
+            self.take("(")
+            args = []
+            if self.peek() != ")":
+                while True:
+                    args.append(self.parse())
+                    if self.peek() != ",":
+                        break
+                    self.take(",")
+            self.take(")")
+            left = ("call", re.sub(r"\s+", "", token), tuple(args))
+        else:
+            # The colon is part of the native Arrow icon enum, not a ternary.
+            if token == "Arrow" and self.peek() == ":":
+                self.take(":")
+                self.take()
+            left = ("name", re.sub(r"\s+", "", token))
+        while True:
+            if self.peek() == ".":
+                self.take(".")
+                left = ("member", left, self.take())
+            elif self.peek() == "[":
+                self.take("[")
+                left = ("index", left, self.parse())
+                self.take("]")
+            elif self.peek() == "?" and minimum <= 1:
+                self.take("?")
+                yes = self.parse()
+                self.take(":")
+                left = ("conditional", left, yes, self.parse(1))
+            elif self.peek() in self.PRECEDENCE and self.PRECEDENCE[self.peek()] >= minimum:
+                operator = self.take()
+                left = ("binary", operator, left, self.parse(self.PRECEDENCE[operator] + 1))
+            else:
+                return left
+
+    @staticmethod
+    def units(node) -> int:
+        kind = node[0]
+        if kind == "number":
+            return 2
+        if kind in ("name", "string"):
+            return 1
+        if kind == "member":
+            owner = node[1]
+            # Global/Globale are namespaces, not value nodes. Player Variable
+            # includes the owner expression and its variable identifier.
+            if owner[0] == "name" and owner[1] in ("Global", "Globale"):
+                return 2
+            return 2 + _StructuralExpression.units(owner)
+        if kind == "call":
+            extra = max(0, 4 - len(node[2])) if node[1] in ("String", "CustomString") else 0
+            # A localized String literal counts twice in the public emitter.
+            if node[1] == "String":
+                extra += 1
+            return extra + (2 if node[1] in ("Array", "EvaluateOnce") else 1) + sum(
+                _StructuralExpression.units(arg) for arg in node[2])
+        if kind == "binary":
+            return (2 if node[1] in ("==", "!=", ">", "<", ">=", "<=") else 1) + sum(
+                _StructuralExpression.units(arg) for arg in node[2:])
+        if kind == "unary":
+            return 1 + _StructuralExpression.units(node[2])
+        return 1 + sum(_StructuralExpression.units(arg) for arg in node[1:])
+
+    @staticmethod
+    def statement_units(node, action: bool) -> int:
+        """Account for the emitter's native statement lowering."""
+        if action and node[0] == "binary" and node[1] in ("=", "+=", "-=", "*=", "/=", "%="):
+            owner, rhs = node[2:]
+            index_units = 0
+            while owner[0] == "index":
+                index_units += _StructuralExpression.units(owner[2]) - 1
+                owner = owner[1]
+            if owner[0] == "member":
+                player = owner[1]
+                owner_units = (0 if player[0] == "name" and player[1] in ("Global", "Globale")
+                               else _StructuralExpression.units(player) - 1)
+                return _StructuralExpression.units(rhs) + owner_units + index_units
+            # Unrecognized assignment shapes retain their full syntax cost.
+        result = _StructuralExpression.units(node)
+        if action and node[0] == "call":
+            result -= len(node[2])
+        elif not action and node[0] == "binary" and node[1] in ("==", "!=", ">", "<", ">=", "<="):
+            result -= 3
+        return result
+
+
+@lru_cache(maxsize=512)
+def structural_rule_units(block: str, profile: LanguageProfile) -> int:
+    """Return a stable offline script-size proxy; comments and titles cost zero."""
+    total = 1  # Rule itself; native event selectors are not expression nodes.
+    for keyword in (profile.conditions, profile.actions):
+        masked = _mask_quoted_text(block)
+        match = re.search(rf"\b{re.escape(keyword)}\s*\{{", masked)
+        if match is None:
+            continue
+        opening = masked.find("{", match.start())
+        body = block[opening + 1:_find_matching_brace(block, opening)]
+        if profile == LANGUAGE_PROFILES["it-IT"]:
+            segments = re.split(r'("(?:\\.|[^"\\])*")', body)
+            for index in range(0, len(segments), 2):
+                for original, translated in ITALIAN_TO_ENGLISH_TOKENS:
+                    segments[index] = _replace_token(segments[index], original, translated)
+            body = "".join(segments)
+        # Workshop action comments are standalone quoted lines. A Custom
+        # String argument ending with ',' or ')' cannot match this pattern.
+        body = re.sub(r'(?m)^[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:\r?\n|$)', "", body)
+        # A quoted semicolon remains inside its string token.
+        statements = re.findall(r'(?:"(?:\\.|[^"\\])*"|[^";])+', body)
+        for statement in statements:
+            if statement.strip():
+                try:
+                    total += _StructuralExpression.statement_units(
+                        _StructuralExpression(statement).tree, keyword == profile.actions)
+                except (RecursionError, ClipboardImportError) as exc:
+                    raise ClipboardImportError(
+                        f"budget strutturale non calcolabile: {statement.strip()[:100]!r}: {exc}"
+                    ) from exc
+    return total
 
 
 def _replace_token(segment: str, source: str, target: str) -> str:
@@ -389,7 +582,8 @@ def _extract_rule_sizes(text: str, profile: LanguageProfile) -> list[RuleSize]:
             )
         closing = _find_matching_brace(text, opening)
         block = text[match.start() : closing + 1]
-        rules.append(RuleSize(match.group(1), len(block.encode("utf-8"))))
+        rules.append(RuleSize(match.group(1), len(block.encode("utf-8")),
+                              structural_rule_units(block, profile)))
 
     if not rules:
         raise ClipboardImportError(
@@ -496,15 +690,24 @@ def check_text(text: str, language: str | None = None) -> Report:
     rules = _extract_rule_sizes(text, profile)
     largest = max(rules, key=lambda item: item.bytes_utf8)
 
-    if largest.bytes_utf8 >= CLIENT_LARGEST_RULE_LIMIT_BYTES:
-        raise ClipboardImportError(
-            f"regola {largest.name!r} usa {largest.bytes_utf8} byte di testo: "
-            "supera il limite client di 98 KB"
-        )
     if largest.bytes_utf8 > SOURCE_RULE_SAFETY_TARGET_BYTES:
         raise ClipboardImportError(
             f"regola {largest.name!r} usa {largest.bytes_utf8} byte di testo: "
             "supera il target statico di sicurezza di 80 KB"
+        )
+
+    structural_units = sum(rule.structural_units for rule in rules)
+    largest_structural = max(rules, key=lambda item: item.structural_units)
+    if structural_units > SOURCE_TOTAL_STRUCTURAL_TARGET:
+        raise ClipboardImportError(
+            f"stima strutturale offline {structural_units}: supera il budget locale "
+            f"di {SOURCE_TOTAL_STRUCTURAL_TARGET} unità (non è l'Element Count del client)"
+        )
+    if largest_structural.structural_units > SOURCE_RULE_STRUCTURAL_TARGET:
+        raise ClipboardImportError(
+            f"regola {largest_structural.name!r}: stima strutturale offline "
+            f"{largest_structural.structural_units}, oltre il budget locale di "
+            f"{SOURCE_RULE_STRUCTURAL_TARGET} unità/regola"
         )
 
     return Report(
@@ -512,6 +715,8 @@ def check_text(text: str, language: str | None = None) -> Report:
         source_bytes_utf8=len(text.encode("utf-8")),
         rule_count=len(rules),
         largest_rule=largest,
+        structural_units=structural_units,
+        largest_structural_rule=largest_structural,
     )
 
 
@@ -562,6 +767,12 @@ def main(argv: list[str] | None = None) -> int:
         f"source {report.source_bytes_utf8} bytes UTF-8, "
         f"largest source rule {report.largest_rule.bytes_utf8} bytes "
         f"({report.largest_rule.name})"
+    )
+    print(
+        f"OK - offline structural proxy: {report.structural_units} units total; "
+        f"largest rule {report.largest_structural_rule.structural_units} units "
+        f"({report.largest_structural_rule.name}); local budgets "
+        f"{SOURCE_TOTAL_STRUCTURAL_TARGET}/{SOURCE_RULE_STRUCTURAL_TARGET}."
     )
     print(
         "NOTE - Element Count e Largest Rule compilato devono essere verificati "
