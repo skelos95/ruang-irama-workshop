@@ -33,15 +33,19 @@ class ClipboardImportTests(unittest.TestCase):
         report = clipboard.check_path(self.source_path, "en-US")
         self.assertEqual(report.language, "en-US")
         self.assertGreater(report.rule_count, 0)
-        self.assertLess(report.largest_rule.bytes_utf8, clipboard.CLIENT_LARGEST_RULE_LIMIT_BYTES)
         self.assertLessEqual(report.largest_rule.bytes_utf8, clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
+        self.assertLessEqual(report.structural_units, clipboard.SOURCE_TOTAL_STRUCTURAL_TARGET)
+        self.assertLessEqual(report.largest_structural_rule.structural_units,
+                             clipboard.SOURCE_RULE_STRUCTURAL_TARGET)
 
     def test_italian_clipboard_source_is_clipboard_safe(self) -> None:
         report = clipboard.check_path(self.italian_path, "it-IT")
         self.assertEqual(report.language, "it-IT")
         self.assertGreater(report.rule_count, 0)
-        self.assertLess(report.largest_rule.bytes_utf8, clipboard.CLIENT_LARGEST_RULE_LIMIT_BYTES)
         self.assertLessEqual(report.largest_rule.bytes_utf8, clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
+        self.assertLessEqual(report.structural_units, clipboard.SOURCE_TOTAL_STRUCTURAL_TARGET)
+        self.assertLessEqual(report.largest_structural_rule.structural_units,
+                             clipboard.SOURCE_RULE_STRUCTURAL_TARGET)
 
     def test_only_italian_workshop_is_user_facing(self) -> None:
         self.assertTrue(self.italian_path.is_file())
@@ -292,6 +296,86 @@ class ClipboardImportTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(clipboard.ClipboardImportError, "80 KB"):
             clipboard.check_text(oversized, "en-US")
+
+
+class StructuralBudgetTests(unittest.TestCase):
+    @staticmethod
+    def source(actions: str, copies: int = 1) -> str:
+        rules = "\n".join(
+            f'rule("budget {index}")\n{{\n event\n{{\n Ongoing - Global;\n}}\n'
+            f' conditions\n{{\n True == True;\n}}\n actions\n{{\n{actions}\n}}\n}}'
+            for index in range(copies)
+        )
+        return "variables\n{\n global:\n 0: Nilai\n}\nsubroutines\n{}\n" + rules
+
+    @staticmethod
+    def units(expression: str) -> int:
+        return clipboard._StructuralExpression.units(
+            clipboard._StructuralExpression(expression).tree)
+
+    def test_weights_include_variable_access_comparisons_and_string_defaults(self) -> None:
+        # Small independent examples from the public emitter's node rules.
+        for expression, expected in (
+            ("42", 2), ("Global.Nilai", 2), ("Event Player.Nilai", 3),
+            ("Global.Pemain.Nilai", 4), ("Global.Nilai[2]", 5),
+            ("1 == 2", 6), ("Array(1, 2)", 6),
+            ("Evaluate Once(Global.Nilai)", 4),
+            ('Custom String("x")', 5),
+            ('Custom String("{0}", Global.Nilai)', 6),
+            ('Custom String("{0}", Global.Nilai, Null, Null)', 6),
+            ('String("Hello")', 6),
+        ):
+            with self.subTest(expression=expression):
+                self.assertEqual(self.units(expression), expected)
+
+    def test_titles_comments_whitespace_and_string_content_do_not_inflate_nodes(self) -> None:
+        base = self.source('Global.Nilai = Custom String("plain");')
+        decorated = base.replace('"budget 0"', '"a much longer rule title"').replace(
+            'Global.Nilai = Custom String("plain");',
+            '"Komentar: + Array(999) ; tidak menjadi ekspresi"\n'
+            ' Global . Nilai  =  Custom String("Thai ไทย ; () + quotes: \\\"ok\\\"") ;'
+        )
+        before = clipboard.check_text(base)
+        after = clipboard.check_text(decorated)
+        self.assertEqual(before.structural_units, after.structural_units)
+        self.assertGreater(after.source_bytes_utf8, before.source_bytes_utf8)
+
+    def test_identifier_length_and_native_icon_enum_are_not_extra_values(self) -> None:
+        short = self.units('Create Icon(All Players(All Teams), Vector(0, 1, 0), '
+                           'Arrow: Down, Visible To Position and Color, Global.Nilai, False)')
+        long = self.units('Create Icon(All Players(All Teams), Vector(0, 1, 0), '
+                          'Arrow: Up, Visible To Position and Color, Global.NamaSangatPanjang, False)')
+        self.assertEqual(short, long)
+
+    def test_semantically_equivalent_color_spellings_keep_their_actual_cost(self) -> None:
+        named = 'Color(White)'
+        rgba = 'Custom Color(255, 255, 255, 255)'
+        self.assertEqual(clipboard.canonical_semantic_text(named, 'en-US'),
+                         clipboard.canonical_semantic_text(rgba, 'en-US'))
+        self.assertEqual(self.units(named), 2)
+        self.assertEqual(self.units(rgba), 9)
+
+    def test_chained_array_access_and_nested_ternaries_are_fully_counted(self) -> None:
+        expression = 'Player Variable(Event Player, Nilai)[2][3]'
+        self.assertEqual(self.units(expression), 9)
+        nested = 'True ? (False ? Global.Nilai : 1) : 2'
+        self.assertEqual(self.units(nested), 10)
+
+    def test_duplicate_nested_expressions_hit_rule_budget_before_text_limit(self) -> None:
+        repeated = ', '.join(['Vector(0, 0, 0)'] * 715)
+        source = self.source(f'Global.Nilai = Array({repeated});')
+        self.assertLess(len(source.encode('utf-8')), clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
+        with self.assertRaisesRegex(clipboard.ClipboardImportError, 'unità/regola'):
+            clipboard.check_text(source)
+
+    def test_splitting_repeated_work_across_rules_cannot_evade_total_budget(self) -> None:
+        repeated = ', '.join(['Vector(0, 0, 0)'] * 650)
+        source = self.source(f'Global.Nilai = Array({repeated});', copies=8)
+        sizes = clipboard._extract_rule_sizes(source, clipboard.LANGUAGE_PROFILES['en-US'])
+        self.assertTrue(all(rule.structural_units < clipboard.SOURCE_RULE_STRUCTURAL_TARGET
+                            for rule in sizes))
+        with self.assertRaisesRegex(clipboard.ClipboardImportError, 'budget locale.*unità'):
+            clipboard.check_text(source)
 
 
 if __name__ == "__main__":

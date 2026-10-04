@@ -13,8 +13,10 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
 | 2 ottobre, PR #85–86 | L'utente conferma il funzionamento di Multijump, Fly e tinte menu; 671 test e nove controlli GitHub superati. | Conferma funzionale, senza nuove misure di carico o durata. |
 | 3 ottobre, riscontro utente su main dopo PR #88 | Dopo vari test, il server sembra stabile. | Durata, numero di player e metriche non specificati; le modifiche del 4 ottobre richiedono verifica nel client. |
-
 | 4 ottobre, riscontro utente su PR #89 | Super Punch non produce sempre KO immediato; icone nel fascio bianche. | Correzioni nel sorgente corrente, ancora da confermare nel client. |
+| 4 ottobre, `2e1c4ff` / PR #90 | Screenshot della diagnostica: 36.381 elementi, regola più grande 130 KB. | Entrambi oltre i limiti nativi; i controlli offline di quella revisione non lo avevano rilevato. |
+
+Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 5 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
 ## Preparazione
 
@@ -49,8 +51,8 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
 - Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
 - Il profilo `งูแรร์` parte Charcoal / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
-- Light Shaft sull'obiettivo: 1/6/12 umani danno raggio 0,5/3/6 m; AI e dummy non lo aumentano. Cambiare Name Color dell'host e trasferire l'host: il fascio segue il preset più vicino; le icone conservano il colore esatto del proprietario. Nessun nome nel fascio e nessun simbolo con icona NONE.
-- Le icone devono muoversi senza scatti, restare nel fascio anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. Create Icon aumenta al massimo di un'entità per umano con icona; IWT non cambia. Provare cambi colore senza ricreazioni, cambi tipo senza doppioni e traiettorie fino a 8 m sopra l'obiettivo.
+- Sull'obiettivo devono apparire solo le icone, senza Light Shaft né nomi: raggio fisso di 5 m con 1/6/12 umani. AI e dummy non ne creano. Le icone conservano il colore esatto del proprietario anche quando cambia l'host; NONE non crea simboli.
+- Le icone devono muoversi senza scatti, restare entro il raggio di 5 m anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. Create Icon aumenta al massimo di un'entità per umano con icona; IWT non cambia. Provare cambi colore senza ricreazioni, cambi tipo senza doppioni e traiettorie fino a 8 m sopra l'obiettivo. Il Chase del vecchio proprietario deve fermarsi al cleanup; il nuovo occupante non deve ereditare movimento o handle.
 - Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–15: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly

@@ -113,7 +113,7 @@ class WorkshopSettingMetadataTests(unittest.TestCase):
     def test_unicode_spaces_slashes_parentheses_and_combo_option_colons_are_allowed(self) -> None:
         for action in self.SETTING_TAILS:
             with self.subTest(action=action):
-                call = self.call(action, 'Custom String(" SERVER KHUSUS CHILL ")',
+                call = self.call(action, 'Custom String(" COZYWATCH ")',
                                  'Custom String("Duration / Durasi / ระยะเวลา (min)")')
                 self.assertEqual(validator.workshop_setting_text_errors(call), [])
 
@@ -547,7 +547,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
         # Removing the three binary menu cursors preserves all other native IDs.
         self.assertEqual([entry.index for entry in players],
-                         [index for index in range(128) if index not in {58, 60, 92}])
+                         [index for index in range(128) if index not in {60, 92}])
         self.assertFalse(any("non inizializzata in SiapkanPemain" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
@@ -796,7 +796,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_chill_grid_rejects_a_tenth_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
-            and "SERVER KHUSUS CHILL" in rule.body
+            and "COZYWATCH" in rule.body
             and "Global.Siap = True;" in rule.body
         )
         extra = (
@@ -1245,7 +1245,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed = self.inject_action(camera, "Modify Global Variable(PemainPukulanSuper, Append To Array, Event Player);")
         self.assert_rejected(changed, "Super Punch: writer registro non autorizzato")
 
-    def test_social_beacon_contract_preserves_one_native_effect_and_bounded_glyphs(self) -> None:
+    def test_social_beacon_contract_preserves_fixed_radius_native_icons_and_bounded_owners(self) -> None:
         manager = self.rule(lambda rule: validator.subroutine_target(rule) == "PerbaruiPilarSosial")
         mutated = self.replace_in_rule(manager, "For Global Variable(IndeksIkonPilar, 0, 12, 1);",
                                        "For Global Variable(IndeksIkonPilar, 0, 13, 1);")
@@ -1256,10 +1256,26 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "Pilar: ciascuna scelta deve conservare lo stesso tipo icona")
         mutated = self.replace_call_argument(absolute, 4, "Global.RGB")
         self.assert_rejected(mutated, "Pilar: RGB icona segue owner")
-        init = self.rule(lambda rule: "Global.DaftarWarnaPilar = Array(" in rule.body)
-        mutated = self.replace_in_rule(init, "Global.DaftarWarnaPilar = Array(Color(White),",
-                                       "Global.DaftarWarnaPilar = Array(Custom Color(255, 255, 255, 255),")
-        self.assert_rejected(mutated, "Pilar: Light Shaft deve usare soltanto colori nominali nativi")
+        mutated = self.replace_call_argument(absolute, 1, "Evaluate Once(" + call.args[1] + ")")
+        self.assert_rejected(mutated, "Pilar: posizione fluida condivisa")
+        mutated = self.replace_call_argument(absolute, 0, call.args[0].replace(
+            "Player Variable(Evaluate Once(Global.PemainIkonPilar), Manusia) == True", "True"))
+        self.assert_rejected(mutated, "Pilar: owner in uscita o cambio squadra nascosto subito")
+        chase = next(validator.iter_calls(manager.body, "Chase Player Variable Over Time"))
+        absolute_chase = validator.Call(chase.name, chase.raw, chase.args,
+                                       manager.start + chase.start, manager.start + chase.end)
+        mutated = self.replace_call_argument(absolute_chase, 4, "Destination and Duration")
+        self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_in_rule(manager, "Stop Chasing Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar);", "")
+        self.assert_rejected(mutated, "Pilar: manutenzione ferma la chase")
+        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 5)", "Random Real(0, 6)"))
+        self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_call_argument(absolute, 0, call.args[0].replace(
+            "Array Contains(Global.PemainManusia, Evaluate Once(Global.PemainIkonPilar))", "True"))
+        self.assert_rejected(mutated, "Pilar: visibilita richiede owner nel roster e obiettivo valido")
+        init = self.rule(lambda rule: "Global.PemilikIkonPilar = Array(" in rule.body)
+        mutated = self.inject_action(init, "Create Effect(All Players(All Teams), Light Shaft, Color(White), Objective Position(Objective Index), 5, Visible To Position Radius and Color);")
+        self.assert_rejected(mutated, "Pilar: nessun Light Shaft o Create Effect persistente")
 
     def test_menu_page_engine_actions_cannot_target_all_players(self) -> None:
         apply_color = self.rule(

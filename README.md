@@ -1,4 +1,4 @@
-# Ruang Irama — Server Khusus Chill
+# Cozywatch
 
 Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori contemporanei**, con menu personali, Player Vibes, Camera, Travel, Ghost/Fly e Try Your Luck. I 12 slot vengono riutilizzati quando qualcuno esce: non c'è un limite di 12 registrazioni nell'intera lobby.
 
@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 3 ottobre 2026 l'utente ha riferito che il server sembra stabile dopo vari test; il 2 ottobre aveva confermato Multijump, Fly e tinte menu. Il 4 ottobre ha rilevato colpi Super Punch mancati e icone bianche nel Light Shaft: il sorgente corrente corregge il rilevamento e usa icone native colorabili. I controlli automatici comprendono **705 test e nove verifiche GitHub**; verificano il codice e flussi simulati, senza eseguire il server Overwatch. Le correzioni richiedono conferma nel client.
+Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 5 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
@@ -73,7 +73,7 @@ La diagnostica server rimane bianca ed è visibile solo all'host. I testi dei me
 
 Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
-Sull'obiettivo un Light Shaft cresce di **0,5 m di raggio per umano**, fino a **6 m**; dummy e AI non contribuiscono. Usa il colore predefinito più vicino al Name Color dell'host, perché questo effetto non supporta RGB personalizzati. Dentro fluttuano solo le icone native scelte dagli umani, senza nomi, ciascuna nel proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot.
+Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 5 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 
