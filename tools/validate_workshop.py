@@ -1794,17 +1794,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "2 - SOUNDTRACK",
             "12 - DUMMY FOLLOW",
             "13 - GHOST MODE / FLY",
-            "15 - SUPER PUNCH",
+            "15 - SUPERMAN PUNCH",
             "0 - WARNA NAMA",
             "2 - MUSIK",
             '12 - BOT MENGIKUTI',
             '13 - HANTU / TERBANG',
-            "15 - PUKULAN SUPER",
+            "15 - PUKULAN SUPERMAN",
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
             "12 - ดัมมี่ติดตาม",
             "13 - โหมดผี / บิน",
-            "15 - หมัดซูเปอร์",
+            "15 - หมัดซูเปอร์แมน",
         ):
             checks.require(token in main_renderer.body, f"menu principale non copre tutte le pagine localizzate: {token}")
         for page_twelve, page_thirteen in (
@@ -2216,7 +2216,7 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
     renderer = rule_by_subroutine(rules, "GambarPukulanSuper")
     apply = rule_by_subroutine(rules, "TerapkanHalamanPukulanSuper")
     if main:
-        for title in ("15 - SUPER PUNCH", "15 - PUKULAN SUPER", "15 - หมัดซูเปอร์"):
+        for title in ("15 - SUPERMAN PUNCH", "15 - PUKULAN SUPERMAN", "15 - หมัดซูเปอร์แมน"):
             checks.require(f'Event Player.KursorUtama == 15 ? Custom String("{title}' in main.body,
                            f"Super Punch: anteprima principale pagina 15 localizzata: {title}")
         checks.equal(main.body.count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
@@ -2233,8 +2233,8 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                     bindings = tuple(call.args[0].strip() for call in iter_calls(branch, "Input Binding String") if call.args)
                     checks.equal(bindings, ("Button(Interact)", "Button(Reload)"),
                                  "Super Punch: binding toggle Interact e back Reload ordinati")
-            for token in ("15 - SUPER PUNCH", "MELEE: INSTANT KO | ALLIES TOO", "15 - PUKULAN SUPER",
-                          "SERANGAN DEKAT: KO LANGSUNG | TERMASUK TEMAN", "15 - หมัดซูเปอร์",
+            for token in ("15 - SUPERMAN PUNCH", "MELEE: INSTANT KO | ALLIES TOO", "15 - PUKULAN SUPERMAN",
+                          "SERANGAN DEKAT: KO LANGSUNG | TERMASUK TEMAN", "15 - หมัดซูเปอร์แมน",
                           "โจมตีประชิด: KO ทันที | รวมเพื่อนร่วมทีม"):
                 checks.require(token in calls[0].args[3], f"Super Punch: effetto e alleati localizzati: {token}")
             checks.equal(calls[0].args[3].count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
@@ -2288,8 +2288,10 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
         ):
             checks.require(token in packed, f"Super Punch: {label}")
         for field in ("Manusia==False", "BotOtomatis==True", "SiklusPemainAktif==True", "PindahTimDiproses==True",
-                      "MenuTerbuka==True", "TeleportasiJongkokAktif==True", "SeranganDekatDipakai==True"):
+                      "TeleportasiJongkokAktif==True", "SeranganDekatDipakai==True"):
             checks.require("Global.PemainAktif." + field in packed, f"Super Punch: guardia owner {field}")
+        checks.require("MenuTerbuka" not in packed,
+                       "Super Punch: menu aperto non deve bloccare l'ayunan")
         checks.equal(len(list(iter_calls(runtime.body, "Sorted Array"))), 1,
                      "Super Punch: unico target più vicino per ayunan")
         checks.require("TeamOf(" not in packed and "OppositeTeamOf(" not in packed,
@@ -2308,10 +2310,12 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                       "IsDummyBot(EventPlayer)==False;", "EntityExists(EventPlayer)==True;",
                       "HasSpawned(EventPlayer)==True;", "IsAlive(EventPlayer)==True;",
                       "EventPlayer.SiklusPemainAktif==False;", "EventPlayer.PindahTimDiproses==False;",
-                      "EventPlayer.MenuTerbuka==False;", "EventPlayer.TeleportasiJongkokAktif==False;",
+                      "EventPlayer.TeleportasiJongkokAktif==False;",
                       "EventPlayer.SeranganDekatDipakai==False;", "Victim!=Null;", "Victim!=EventPlayer;",
                       "EntityExists(Victim)==True;", "HasSpawned(Victim)==True;", "IsAlive(Victim)==True;"):
             checks.require(token in condition_code, f"Super Punch: guardia impatto {token}")
+        checks.require("MenuTerbuka" not in condition_code,
+                       "Super Punch: menu aperto non deve bloccare l'impatto nativo")
         impact_code = code(impact.body)
         for token in ("AbortIf(Or(EventPlayer.UrutanHUD<0,EventPlayer.UrutanHUD>=CountOf(Global.WaktuPukulanSuper)));",
                       "AbortIf(Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]<0);",
@@ -2421,8 +2425,15 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
         for chase in chases:
             checks.equal(tuple(code(arg) for arg in chase.args), (
                 "Global.PemilikIkonPilar[Global.IndeksIkonPilar]", "PosisiIkonPilar",
-                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,5)+Vector(0,RandomReal(0.500,8),0)", "3", "None"),
-                "Pilar: chase Vector nativo congela destinazione e durata tre secondi")
+                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,5)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
+                "Pilar: chase Vector nativo congela destinazione e durata 4,5 secondi")
+        renewal = "If(TotalTimeElapsed>=Global.WaktuIkonPilar[Global.IndeksIkonPilar]+3);"
+        checks.require(renewal in packed, "Pilar: rinnovo anticipato dopo tre secondi mantiene il controllo a un Hz")
+        if chases:
+            branch = next((branch for branch in conditional_branches_containing(manager.body, chases[-1].start)
+                           if code(branch.splitlines()[0]) == renewal), None)
+            checks.require(branch is not None and "SetPlayerVariable(" not in code(branch),
+                           "Pilar: rinnovo parte dalla posizione corrente senza reset o teletrasporto")
         checks.require("SetPlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],PosisiIkonPilar,DirectionFromAngles(" in packed,
                        "Pilar: inizializzazione Vector prima della chase")
         checks.require("StopChasingPlayerVariable(Global.PemilikIkonPilar[Global.IndeksIkonPilar],PosisiIkonPilar);" in packed,

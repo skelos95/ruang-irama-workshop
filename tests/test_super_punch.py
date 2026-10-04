@@ -251,8 +251,8 @@ class SuperPunchTests(unittest.TestCase):
                         model.swing("attacker")
                         self.assertEqual(model.kills, [])
 
-    def test_menu_travel_quarantine_and_invalid_actor_cancel_the_in_progress_swing(self):
-        blocked = ({"MenuTerbuka": True}, {"TeleportasiJongkokAktif": True},
+    def test_travel_quarantine_and_invalid_actor_cancel_the_in_progress_swing(self):
+        blocked = ({"TeleportasiJongkokAktif": True},
                    {"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
                    {"PindahTimDiproses": True}, {"alive": False},
                    {"spawned": False}, {"exists": False}, {"Manusia": False},
@@ -334,6 +334,95 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertEqual(model.probes, 0)
                 self.assertEqual(model.globals["PemainAktif"], "unrelated")
 
+    def test_each_open_menu_keeps_the_first_scanned_hit_instant_and_credits_revenge(self):
+        for path, _, _ in SOURCES:
+            for page in range(-1, 16):
+                with self.subTest(source=path.name, page=page):
+                    model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                    attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=page,
+                                         hero="Junker Queen" if page == 15 else "Ana")
+                    target = model.add("target", team=1 if page % 2 else 2,
+                                       position=Vector(0, 0, 1))
+                    model.enable("attacker")
+                    attacker["melee"] = True
+                    model.tick("attacker", 100)
+                    self.assertEqual(model.kills, [("target", "attacker", 100)])
+                    self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
+                    self.assertEqual(target["JumlahBalasDendam"], [1])
+                    self.assertTrue(attacker["MenuTerbuka"])
+                    self.assertEqual(attacker["HalamanMenu"], page)
+                    target["alive"] = True
+                    model.native_hit("attacker", "target", now=100.01)
+                    self.assertEqual(len(model.kills), 1)
+                    self.assertEqual(model.probes, 1)
+
+    def test_each_open_menu_allows_native_melee_impact_without_scheduler_scratch(self):
+        for path, _, _ in SOURCES:
+            for page in range(-1, 16):
+                with self.subTest(source=path.name, page=page):
+                    model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                    attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=page)
+                    target = model.add("target", team=2, position=Vector(0, 0, 5))
+                    model.enable("attacker")
+                    model.globals["PemainAktif"] = "unrelated"
+                    model.native_hit("attacker", "target")
+                    self.assertEqual(model.kills, [("target", "attacker", 100)])
+                    self.assertEqual(target["JumlahBalasDendam"], [1])
+                    self.assertTrue(attacker["MenuTerbuka"])
+                    self.assertEqual(model.probes, 0)
+                    self.assertEqual(model.globals["PemainAktif"], "unrelated")
+
+    def test_open_menu_still_respects_protection_and_consumes_one_contact(self):
+        protections = ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
+                       {"KebalAktif": True, "ModeKebal": 1},
+                       {"KebalAktif": True, "ModeKebal": 2})
+        for path, _, _ in SOURCES:
+            for native in (False, True):
+                for team in (1, 2):
+                    for protection in protections:
+                        with self.subTest(source=path.name, native=native, team=team,
+                                          protection=protection):
+                            model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                            attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=15)
+                            target = model.add("target", team=team, position=Vector(0, 0, 1),
+                                               **protection)
+                            model.enable("attacker")
+                            if native:
+                                model.native_hit("attacker", "target")
+                            else:
+                                attacker["melee"] = True
+                                model.tick("attacker", 100)
+                            self.assertEqual(model.kills, [])
+                            self.assertEqual(target["JumlahBalasDendam"], [])
+                            self.assertEqual(model.globals["WaktuPukulanSuper"][
+                                int(attacker["UrutanHUD"])], -1)
+                            target.update(KebalAktif=False, ModeKebal=0, statuses=set())
+                            model.native_hit("attacker", "target", now=100.01)
+                            self.assertEqual(model.kills, [])
+
+    def test_open_menu_hold_consumption_still_requires_a_new_melee_swing(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=15)
+                target = model.add("target", team=2, position=Vector(0, 0, 1))
+                model.enable("attacker")
+                # The existing 0.5 s menu toggle owns this latch until release.
+                attacker.update(melee=True, SeranganDekatDipakai=True)
+                model.tick("attacker", 100)
+                model.native_hit("attacker", "target", now=100.01)
+                self.assertEqual((model.probes, model.kills), (0, []))
+                attacker["SeranganDekatDipakai"] = False
+                model.tick("attacker", 100.1)
+                model.native_hit("attacker", "target", now=100.11)
+                self.assertEqual((model.probes, model.kills), (0, []))
+                attacker["melee"] = False
+                model.tick("attacker", 100.2)
+                attacker["melee"] = True
+                model.tick("attacker", 101)
+                self.assertEqual(model.kills, [("target", "attacker", 101)])
+                self.assertEqual(target["JumlahBalasDendam"], [1])
+                self.assertTrue(attacker["MenuTerbuka"])
+
     def test_native_impact_shares_consumption_and_ignores_non_melee_damage(self):
         for source, model in self.models():
             with self.subTest(source=source):
@@ -354,8 +443,8 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertFalse(ally["alive"])
                 self.assertTrue(enemy["alive"])
 
-    def test_native_impact_obeys_off_state_lifecycle_menu_and_unkillable(self):
-        blocked = ({"MenuTerbuka": True}, {"TeleportasiJongkokAktif": True},
+    def test_native_impact_obeys_off_state_lifecycle_input_latch_and_unkillable(self):
+        blocked = ({"TeleportasiJongkokAktif": True},
                    {"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
                    {"PindahTimDiproses": True}, {"alive": False}, {"Manusia": False},
                    {"dummy": True}, {"BotOtomatis": True})
