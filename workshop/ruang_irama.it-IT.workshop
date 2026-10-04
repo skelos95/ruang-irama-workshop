@@ -5682,7 +5682,7 @@ regola("89i1 - Pukulan super: Dampak jarak dekat asli")
 		Globale.Siap == True;
 		Array Contains(Globale.PemainPukulanSuper, Event Player) == True;
 		Event Ability == Button(Melee);
-		Hero Of(Event Player) != Hero(Junker Queen);
+		Hero Of(Event Player) != Hero(Regina dei Junker);
 		Event Damage > 0;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;

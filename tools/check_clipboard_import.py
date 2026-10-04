@@ -68,6 +68,7 @@ FORBIDDEN_OUTSIDE_STRINGS = {
 # strings (including rule titles and Workshop comments) are deliberately not
 # translated here: the semantic gate compares them byte-for-byte.
 ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
+    ("Regina dei Junker", "Junker Queen"),
     ("Cattura la Bandiera", "Capture The Flag"),
     ("Schermaglia", "Skirmish"),
     ("Annulla quando è False", "Abort When False"),
@@ -95,6 +96,7 @@ ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
 )
 
 FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX: tuple[tuple[str, str], ...] = (
+    (r"\bHero\s*\(\s*Junker\s+Queen\s*\)", "eroe Junker Queen en-US"),
     (r"(?m)^\s*(?:global|player)\s*:\s*$", "namespace global/player en-US"),
     (r"(?m)^\s*All\s*;\s*$", "selettore All en-US"),
     (r"\bGlobal\s*\.", "namespace Global en-US"),

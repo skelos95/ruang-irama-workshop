@@ -545,7 +545,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_removed_teks_diri_leaves_compact_initialized_declarations(self) -> None:
         _, players, _, _ = validator.declaration_entries(self.source)
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
-        self.assertEqual([entry.index for entry in players], list(range(len(players))))
+        # Removing the three binary menu cursors preserves all other native IDs.
+        self.assertEqual([entry.index for entry in players],
+                         [index for index in range(128) if index not in {58, 60, 92}])
         self.assertFalse(any("non inizializzata in SiapkanPemain" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
