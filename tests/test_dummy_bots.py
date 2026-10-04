@@ -24,7 +24,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("1 + Event Player.UrutanHUD", source)
             self.assertNotIn("-13 + Event Player.UrutanHUD", source)
             self.assertIn(f"{global_name}.SlotHUDTersedia = Sorted Array(Append To Array(", source)
-            self.assertIn('Custom String("{0}{1}"', source)
+            self.assertIn('Custom String("{0} {1} {2}"', source)
             self.assertNotIn('Custom String("{0}{1}{2}"', source)
             self.assertNotIn(f"-99 + Evaluate Once({global_name}.IndeksPemilih)", source)
             self.assertNotIn("\\nLOBBY & CHILL TIME", source)

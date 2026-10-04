@@ -90,6 +90,8 @@ ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
     ("evento", "event"),
     ("azioni", "actions"),
     ("Tutti", "All"),
+    ("Bianco", "White"),
+    ("Grigio", "Gray"),
 )
 
 FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX: tuple[tuple[str, str], ...] = (
@@ -100,7 +102,7 @@ FORBIDDEN_ENGLISH_IN_ITALIAN_SYNTAX: tuple[tuple[str, str], ...] = (
     (r"\bAbort\s+When\s+False\b", "policy Abort When False en-US"),
     (r"\bIgnore\s+Condition\b", "policy Ignore Condition en-US"),
     (
-        r"\bColor\s*\(\s*(?:White|Yellow|Orange|Rose|Violet|Sky\s+Blue|Aqua|Turquoise|Lime\s+Green)\s*\)",
+        r"\bColor\s*\(\s*(?:White|Gray)\s*\)",
         "colore nominale Color(...) en-US",
     ),
     (
@@ -152,7 +154,7 @@ def _replace_token(segment: str, source: str, target: str) -> str:
 
 
 def _normalize_named_colors(segment: str) -> str:
-    """Canonicalize the nine named colors unavailable in it-IT exports."""
+    """Canonicalize the project's existing RGBA equivalents of named colors."""
 
     for components, color_name in EQUIVALENT_NAMED_COLORS:
         component_pattern = r"\s*,\s*".join(str(value) for value in components)

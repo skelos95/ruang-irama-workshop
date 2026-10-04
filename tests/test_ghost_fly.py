@@ -66,7 +66,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 indices.append(int(matches[0]))
             self.assertEqual(indices, list(range(indices[0], indices[0] + 4)))
 
-    def test_main_menu_has_fifteen_pages_and_routes_page_thirteen(self) -> None:
+    def test_main_menu_has_sixteen_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = (
             "13 - GHOST MODE / FLY",
             '13 - HANTU / TERBANG',
@@ -81,7 +81,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             navigation = rule_with(source, "KursorUtama = (Event Player.KursorUtama", "PerintahMenu == 3")
             self.assertIn(
                 "Event Player.KursorUtama = (Event Player.KursorUtama + "
-                "(Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;",
+                "(Event Player.PerintahMenu == 3 ? 1 : 15)) % 16;",
                 navigation,
             )
             router = subroutine(source, "GambarHalamanAktif")
@@ -143,9 +143,9 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             ):
                 self.assertIn(instruction, renderer)
             for fly_hint in (
-                "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
-                'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
-                'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
+                "KEEP MOVING: 100% > 1000% / 20s",
+                'TERUS BERGERAK: 100% > 1000% / 20 dtk',
+                'ขยับต่อเนื่อง: 100% > 1000% / 20 วิ',
             ):
                 self.assertIn(fly_hint, renderer)
 

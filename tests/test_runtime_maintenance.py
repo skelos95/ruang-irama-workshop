@@ -234,7 +234,6 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             roster = source.split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[1].split(
                 f'{rule_kw}("03c - Bot/Dummy', 1
             )[0]
-            self.assertIn('Custom String("{0}{1}"', roster)
             self.assertNotIn('Custom String("{0}{1}{2}"', roster)
             self.assertNotIn("CHILL STAR:", roster)
             self.assertIn(
@@ -339,7 +338,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("BunuhDiriDiminta", fast)
             self.assertEqual(fast.count("Kill("), 1)
             self.assertIn(f"Kill({global_name}.PemainAktif, {global_name}.PemainAktif.KematianBalasDendam == True ?", fast)
-            self.assertEqual(source.count("Kill("), 2)
+        self.assertEqual(source.count("Kill("), 3)
 
     def test_crouch_attach_auto_detach_reacts_to_invalidating_state(self):
         for source, rule_kw, conditions_kw, actions_kw in (
@@ -537,7 +536,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertEqual(
                 source.count("Player Variable(Current Array Element, PembaruanDaftarTertunda) == False"),
-                2,
+                3,
             )
 
             setup = source.split(f'{rule_kw}("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")', 1)[1].split(f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")', 1)[0]

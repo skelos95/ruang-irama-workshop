@@ -91,7 +91,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         super().__init__(source)
         self.current = None
         self.globals["PilihanPerluDihitung"] = False
-        self.globals.update(Siap=True)
+        self.globals.update(Siap=True, PemainPukulanSuper=[])
         self.calls = []
         self.lock_at_bot_call = []
         self.initializers = "\n".join(validator.mask_strings(rule.body) for rule in self.rules)

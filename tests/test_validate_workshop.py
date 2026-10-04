@@ -179,6 +179,12 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         replacement = f"{call.name}(" + ", ".join(args) + ")"
         return self.source[:call.start] + replacement + self.source[call.end:]
 
+    def left_roster_call(self) -> validator.Call:
+        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
+        call = next(call for call in validator.iter_calls(renderer.body, "Create HUD Text")
+                    if len(call.args) >= 6 and call.args[4].strip() == "Left")
+        return validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+
     def add_player_declaration_and_setup_init(self, name: str, initial_value: str) -> str:
         _, players, _, declaration_span = validator.declaration_entries(self.source)
         self.assertNotIn(name, {entry.name for entry in players})
@@ -691,8 +697,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
             ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
-            ("TELEPORT KE RUANG TIMMU", "TUJUAN: SPAWN"),
-            ('จุดภารกิจ', "ปลายทาง: เป้าหมาย"),
+            ("1/5 | RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
+            ('2/5 | วาร์ปใกล้ภารกิจ', "ปลายทาง: เป้าหมาย"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -817,6 +823,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
         self.assert_rejected(mutated, "diagnostica HUD non include gli nove handle fissi")
+        call = self.left_roster_call()
+        for handle in ("HudKiriPemain", "HudMenuPemain", "HudEfekSementara", "TeksDuniaPemain",
+                       "TeksTeleportasiSementara", "TeksVisiSementara", "TeksIkonPilar"):
+            with self.subTest(handle=handle):
+                count = f"Count Of(Filtered Array(Global.{handle}, Current Array Element != 0))"
+                changed = call.args[3].replace(count, "0", 1)
+                self.assertNotEqual(changed, call.args[3])
+                mutated = self.replace_call_argument(call, 3, changed)
+                self.assert_rejected(mutated, "conteggio HUD diagnostica" if handle.startswith("Hud")
+                                     else "conteggio IWT diagnostica")
 
     def test_left_roster_rows_start_immediately_below_their_label(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
@@ -824,8 +840,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "renderer HUD roster Left: ordinamento")
 
     def test_vibes_roster_cannot_move_back_to_the_right(self) -> None:
-        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
-        mutated = self.replace_in_rule(renderer, "Null, Left,", "Null, Right,")
+        mutated = self.replace_call_argument(self.left_roster_call(), 4, "Right")
         self.assert_rejected(mutated, "renderer HUD roster Left")
 
     def test_left_grid_requires_the_pre_roster_spacer(self) -> None:
@@ -849,40 +864,51 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "HUD fisso Left sort -1: contenuto subheader errato")
 
     def test_left_roster_text_cannot_reintroduce_the_client_zero(self) -> None:
-        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
-        call = next(
-            call for call in validator.iter_calls(renderer.body, "Create HUD Text")
-            if len(call.args) >= 6 and call.args[4].strip() == "Left"
-        )
-        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(
-            absolute,
-            3,
-            'Global.DiagnostikPerforma == True ? Custom String("diagnostics") : Null',
-        )
-        self.assert_rejected(mutated, "Text deve essere Null per evitare lo zero client")
+        call = self.left_roster_call()
+        branches = validator.parse_top_level_ternary(call.args[3])
+        self.assertIsNotNone(branches)
+        condition, visible, fallback = branches  # type: ignore[misc]
+        for replacement in ("Null", "0"):
+            with self.subTest(visible=replacement):
+                changed = f"{condition} ? {replacement} : {fallback}"
+                self.assert_rejected(self.replace_call_argument(call, 3, changed),
+                                     "ramo visibile diagnostica deve essere stringa")
+        changed = visible.replace("Server Load Average", "Null", 1)
+        self.assertNotEqual(changed, visible)
+        mutated = self.replace_call_argument(call, 3, f"{condition} ? {changed} : {fallback}")
+        self.assert_rejected(mutated, "ramo visibile diagnostica non deve usare Null")
 
-    def test_left_diagnostics_remain_inside_the_subheader(self) -> None:
-        mutated = self.replace_once('Custom String("{0}{1}"', 'Custom String("{0}{1}{2}"')
-        self.assert_rejected(mutated, "diagnostica non integrata nel Subheader")
+    def test_left_diagnostics_are_separate_and_always_white(self) -> None:
+        call = self.left_roster_call()
+        mutations = (
+            (2, f'Custom String("{{0}}{{1}}", {call.args[2]}, {call.args[3]})', "Subheader deve contenere soltanto la riga player"),
+            (3, "Null", "ternario diagnostica nel Text assente"),
+            (7, "Color(White)", "colore Subheader deve usare WarnaNama"),
+            (8, "Global.RGB", "diagnostica Text deve essere sempre bianca"),
+            (8, "Event Player.WarnaNama", "diagnostica Text deve essere sempre bianca"),
+            (8, "Event Player.WarnaMenu", "diagnostica Text deve essere sempre bianca"),
+        )
+        for index, replacement, error in mutations:
+            with self.subTest(field=index, replacement=replacement):
+                self.assert_rejected(self.replace_call_argument(call, index, replacement), error)
 
-    def test_left_diagnostic_fallback_is_an_empty_string_not_null(self) -> None:
-        renderer = self.rule(lambda rule: "Event Player.HudKiri = Last Text ID;" in rule.body)
-        call = next(
-            call for call in validator.iter_calls(renderer.body, "Create HUD Text")
-            if len(call.args) >= 6 and call.args[4].strip() == "Left"
-        )
-        outer = next(
-            custom for custom in validator.iter_calls(call.args[2], "Custom String")
-            if len(custom.args) == 3 and validator.parse_literal(custom.args[0]) == "{0}{1}"
-        )
-        diagnostic = outer.args[2]
-        self.assertTrue(diagnostic.rstrip().endswith('Custom String("")'))
-        changed_diagnostic = diagnostic.rsplit('Custom String("")', 1)[0] + "Null"
-        changed_subheader = call.args[2][:outer.start] + outer.raw.replace(diagnostic, changed_diagnostic, 1) + call.args[2][outer.end:]
-        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(absolute, 2, changed_subheader)
-        self.assert_rejected(mutated, "fallback diagnostica deve essere stringa vuota")
+    def test_left_diagnostic_visibility_and_empty_string_fallback_are_preserved(self) -> None:
+        call = self.left_roster_call()
+        branches = validator.parse_top_level_ternary(call.args[3])
+        self.assertIsNotNone(branches)
+        condition, visible, fallback = branches  # type: ignore[misc]
+        self.assertEqual(fallback, 'Custom String("")')
+        for replacement in ("Null", "0"):
+            with self.subTest(fallback=replacement):
+                self.assert_rejected(self.replace_call_argument(call, 3, f"{condition} ? {visible} : {replacement}"),
+                                     "fallback diagnostica deve essere stringa vuota")
+        for token in ("Global.DiagnostikPerforma == True", "Local Player == Host Player",
+                      "Event Player.UrutanHUD == Global.SlotHUDTerakhir", "And("):
+            with self.subTest(guard=token):
+                changed = condition.replace(token, "Or(" if token == "And(" else "True", 1)
+                self.assertNotEqual(changed, condition)
+                self.assert_rejected(self.replace_call_argument(call, 3, f"{changed} ? {visible} : {fallback}"),
+                                     "guardia diagnostica richiede toggle, host e ultimo slot")
 
     def test_chill_star_hud_uses_cached_name_instead_of_leader_dereference(self) -> None:
         call = next(
@@ -984,24 +1010,26 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.inject_action(rule, "Destroy HUD Text(Event Player.HudMenu);")
         self.assert_rejected(mutated, "Primary/Secondary")
 
-    def test_all_fourteen_pages_are_routed(self) -> None:
+    def test_all_sixteen_pages_are_routed(self) -> None:
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHalamanAktif")
-        mutated = self.replace_in_rule(router, "HalamanMenu == 13", "HalamanMenu == 14")
-        self.assert_rejected(mutated, "pagina 13")
+        for page in (13, 15):
+            with self.subTest(page=page):
+                mutated = self.replace_in_rule(router, f"HalamanMenu == {page}", "HalamanMenu == 16")
+                self.assert_rejected(mutated, f"pagina {page}")
 
     def test_page_thirteen_keeps_the_progressive_fly_copy_in_all_languages(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHantuTerbang")
         mutations = (
             (
-                "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
+                "KEEP MOVING: 100% > 1000% / 20s",
                 "LOOK TO STEER | HOLD FORWARD TO ACCELERATE",
             ),
             (
-                'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
+                'TERUS BERGERAK: 100% > 1000% / 20 dtk',
                 "ARAHKAN PANDANGAN | TAHAN MAJU UNTUK MELAJU",
             ),
             (
-                'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
+                'ขยับต่อเนื่อง: 100% > 1000% / 20 วิ',
                 "บังคับด้วยมุมมอง | กดเดินหน้าค้างเพื่อเร่งความเร็ว",
             ),
         )
@@ -1010,16 +1038,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 mutated = self.replace_in_rule(renderer, old, new)
                 self.assert_rejected(mutated, "pagina 13 Ghost/Fly non localizzata")
 
-    def test_main_menu_cycles_exactly_over_pages_zero_through_fourteen(self) -> None:
+    def test_main_menu_cycles_exactly_over_pages_zero_through_fifteen(self) -> None:
         navigation = self.rule(
             lambda rule: "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
         )
         mutated = self.replace_in_rule(
             navigation,
+            "(Event Player.PerintahMenu == 3 ? 1 : 15)) % 16;",
             "(Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;",
-            "(Event Player.PerintahMenu == 3 ? 1 : 12)) % 13;",
         )
-        self.assert_rejected(mutated, "ciclo esatto 0..14")
+        self.assert_rejected(mutated, "ciclo esatto 0..15")
 
     def test_main_menu_preview_keeps_pages_twelve_and_thirteen_distinct(self) -> None:
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
@@ -1191,7 +1219,41 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("TerapkanHalamanIkon", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "15 subroutine pagina")
+        self.assert_rejected(mutated, "16 subroutine pagina")
+
+    def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "TerapkanHalamanPukulanSuper")
+        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesPukulanSuper")
+        mutations = (
+            (apply, "Event Player.UrutanHUD >= 12", "Event Player.UrutanHUD >= 13", "toggle registrato locale"),
+            (apply, "Global.WaktuPukulanSuper[Event Player.UrutanHUD] = -1;",
+             "Global.WaktuPukulanSuper[Event Player.UrutanHUD] = 0;", "toggle registrato locale"),
+            (runtime, "Has Status(Global.TargetPukulanSuper, Unkillable) == False", "True", "protezione stato Unkillable"),
+            (runtime, "All Players(All Teams)", "All Players(Opposite Team Of(Team Of(Global.PemainAktif)))", "entrambi i team"),
+            (runtime, "<= 2.500", "<= 25", "portata melee limitata"),
+        )
+        for rule, old, new, error in mutations:
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(rule, old, new), "Super Punch: " + error)
+        camera = self.rule(lambda rule: validator.subroutine_target(rule) == "MulaiKamera")
+        changed = self.inject_action(camera, "Modify Global Variable(PemainPukulanSuper, Append To Array, Event Player);")
+        self.assert_rejected(changed, "Super Punch: writer registro non autorizzato")
+
+    def test_social_beacon_contract_preserves_one_native_effect_and_bounded_glyphs(self) -> None:
+        manager = self.rule(lambda rule: validator.subroutine_target(rule) == "PerbaruiPilarSosial")
+        mutated = self.replace_in_rule(manager, "For Global Variable(IndeksIkonPilar, 0, 12, 1);",
+                                       "For Global Variable(IndeksIkonPilar, 0, 13, 1);")
+        self.assert_rejected(mutated, "Pilar: manutenzione e cleanup limitati a dodici slot")
+        call = next(validator.iter_calls(manager.body, "Create In-World Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, manager.start + call.start, manager.start + call.end)
+        mutated = self.replace_call_argument(absolute, 1, 'Custom String("player name")')
+        self.assert_rejected(mutated, "Pilar: IWT deve mostrare soltanto il glifo scelto")
+        mutated = self.replace_call_argument(absolute, 6, "Global.RGB")
+        self.assert_rejected(mutated, "Pilar: colore icona segue owner")
+        init = self.rule(lambda rule: "Global.DaftarWarnaPilar = Array(" in rule.body)
+        mutated = self.replace_in_rule(init, "Global.DaftarWarnaPilar = Array(Color(White),",
+                                       "Global.DaftarWarnaPilar = Array(Custom Color(255, 255, 255, 255),")
+        self.assert_rejected(mutated, "Pilar: Light Shaft deve usare soltanto colori nominali nativi")
 
     def test_menu_page_engine_actions_cannot_target_all_players(self) -> None:
         apply_color = self.rule(

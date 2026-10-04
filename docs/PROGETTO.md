@@ -11,14 +11,14 @@ Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](..
 
 ## Scheduler
 
-Il runtime contiene 115 regole, 66 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
+Il runtime contiene 120 regole, 71 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
 
 | Frequenza | Lavoro |
 |---:|---|
-| 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly e Multijump solo con toggle attivo |
+| 20 Hz | Controlli rapidi umani/ingressi non classificati; Luck solo con stato o icona pendente; Fly, Multijump e Super Punch solo con toggle attivo |
 | 10 Hz | Lifecycle umano e bot, RGB, riapplicazione fisica e revoca Camera/inspection |
 | 5 Hz | Selezione del target follow dummy, distribuita per slot |
-| 1 Hz | Countdown, timer nativo, scelta iniziale eroe, slot dummy, testi orfani; cache Camera/Revenge solo nelle relative pagine aperte |
+| 1 Hz | Countdown, timer nativo, scelta iniziale eroe, slot dummy, testi orfani e icone del Light Shaft; cache Camera/Revenge solo nelle relative pagine aperte |
 
 `ProsesCepatPemain` deve restare raggiungibile prima di `Manusia=True`, altrimenti si blocca la registrazione. Anche manutenzione umana e scadenza delle icone Luck residue restano raggiungibili durante la quarantena del cambio squadra. La guardia Luck considera `KartuNasibAktif`, `PutaranKartuNasib > 0`, `EfekNasib != 0` e `WaktuIkonNasibBerakhir > 0`: HEART può aver già concluso l'effetto ma avere un'icona ancora da distruggere.
 
@@ -53,15 +53,19 @@ Ogni umano ha al massimo un HUD Arcade: la navigazione sulla stessa pagina aggio
 | Left | Comando −2, spazio −1, Player Vibes 0, Chill Star 13 | Unico roster in 1–12 |
 | Right | Comandi −16, Host 0 | Host nel campo Text, una riga con spazio sopra e sotto, RGB del titolo |
 
-I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore stabili; la diagnostica resta nel Subheader per evitare lo `0` derivato da un `Null` tipizzato come testo. IWT e icone catturano soltanto l'identità con `Evaluate Once`; posizione/testo/pubblico necessari restano rivalutati. Le targhette riuniscono icona, nome e salute, ancorati a `Eye Position + Vector(0, 0.450, 0)`.
+I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore stabili. Il roster mantiene il Name Color nel Subheader; la diagnostica usa il campo Text bianco dello stesso handle, visibile solo all'host sull'ultima riga. Il ramo nascosto restituisce una stringa vuota, evitando lo `0` derivato da un `Null` tipizzato come testo. IWT e icone catturano soltanto l'identità con `Evaluate Once`; posizione/testo/pubblico necessari restano rivalutati. Le targhette riuniscono icona, nome e salute, ancorati a `Eye Position + Vector(0, 0.450, 0)`.
 
 Input, cursori, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
 
 Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli del gruppo usano divisione per venti. Le cinque palette allineate contengono 40 colori ordinati per famiglie e sfumature: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White resta all'indice 0 e Silver Mist all'indice 1, conservando i default; Black è all'indice 3 e usa RGB (0, 0, 0) sia per il nome sia per la preview. Etichette EN/ID/TH e valori RGB vengono riordinati insieme.
 
-La pagina 0 mostra il colore selezionato. Le pagine 1–14 usano il 68% del Name Color attivo e il 32% di un accento ordinato dalla scala di grigi ai colori caldi, rosa, viola, blu e verde. Preview del menu principale e sottomenu condividono la stessa tinta. Restano un solo Chase per ramo, la transizione di 0,180 s e i cinque colori Travel indipendenti.
+La pagina 0 mostra il colore selezionato. Le pagine 1–15 usano il 68% del Name Color attivo e il 32% di un accento ordinato dalla scala di grigi ai colori caldi, rosa, viola, blu e verde. Preview del menu principale e sottomenu condividono la stessa tinta. Restano un solo Chase per ramo, la transizione di 0,180 s e i cinque colori Travel indipendenti.
 
 Rimosso `EfekTerapkan`, comprese le pulsazioni di Revenge e revoca Camera. Le tinte dei menu conservano la transizione nativa `Chase` di 0,180 s, interrotta dal cleanup del proprietario; non aggiungono cicli o attese. L'unico `Play Effect` è il Ring Explosion dei salti multipli: effetto nativo temporaneo, senza handle persistenti o distruzioni periodiche.
+
+Il Light Shaft è un solo `Create Effect` inizializzato per partita su `Objective Position(Objective Index)`, con raggio `0.500 * Min(12, Count Of(PemainManusia))`. Visibilità, posizione, raggio e colore sono rivalutati; senza obiettivo valido o umani rimane nascosto. La palette nativa viene associata ai 40 colori per distanza RGB una volta nel sorgente, senza ricerca per frame. Il fascio segue il preset più vicino al Name Color dell'host; le icone IWT supportano invece il colore esatto. La limitazione dei colori degli effetti è documentata dal [compilatore OverPy](https://github.com/Zezombye/overpy/blob/master/src/data/actions.ts); la [nota Blizzard sui colori Workshop](https://us.forums.blizzard.com/en/overwatch/t/overwatch-retail-patch-notes-%E2%80%93-november-17-2020/566454) introduce i valori e la rivalutazione dei colori.
+
+Cinque array fissi di 12 slot conservano proprietario, handle IWT, due offset e timestamp. `PerbaruiPilarSosial` lavora a 1 Hz; sceglie nuove destinazioni ogni 3 s e il testo interpola il movimento fra quelle posizioni. Nessuna chiamata Random viene rivalutata per frame. Il centro delle icone resta entro l'85% del raggio corrente, anche quando diminuisce, e a 0,5–3 m sopra l'obiettivo. I glifi contengono soltanto `DaftarIkon[IndeksIkon]`, senza nomi; stringa e Name Color seguono il proprietario. `BersihkanIkonPilar` rimuove l'identità esatta al leave/team reset; la manutenzione recupera anche gli orfani e rimuove i testi quando l'icona diventa NONE. La diagnostica IWT include questi handle. Scala visiva nativa, visibilità dei colori scuri e ingombro dei glifi richiedono verifica nel client.
 
 ## Movimento e interazioni
 
@@ -76,6 +80,8 @@ Rimosso `EfekTerapkan`, comprese le pulsazioni di Revenge e revoca Camera. Le ti
 ## Unkillable, Revenge e Luck
 
 FULL HP combina danni ricevuti zero, urti zero e collisione player disabilitata. OFF/1 HP e cleanup ripristinano insieme danni, urti e collisioni; Ghost è indipendente. Morte, setup e respawn rispettano l'ownership della fisica.
+
+Super Punch (menu 15) usa un registro globale dei soli umani che lo attivano e un array di timing di 12 slot; non aggiunge campi player oltre i 128 già presenti. Il motore viene chiamato solo per gli utenti ON: un attacco melee realmente in corso arma l'impatto, seleziona un bersaglio vicino davanti con linea di vista libera e attribuisce `Kill` all'attaccante. Non abilita il danno amico per gli altri attacchi. Il bersaglio con Unkillable o modalità Kebal attiva è protetto. Cambio squadra e uscita cancellano il consenso; il nuovo occupante resetta il timing del proprio slot. Il ledger, la selezione dei target e il riscatto Revenge già includono tutti gli altri umani, anche alleati: non serve un registro parallelo dei debiti.
 
 | Esito Luck | Durata | Interazione |
 |---|---:|---|

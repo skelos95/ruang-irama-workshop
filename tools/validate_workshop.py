@@ -123,6 +123,7 @@ PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanIkutiBotBuatan",
     "TerapkanHalamanHantuTerbang",
     "TerapkanHalamanLompatGanda",
+    "TerapkanHalamanPukulanSuper",
 }
 MENU_OWNER_STATE_VARIABLES = {
     "MenuTerbuka",
@@ -1432,6 +1433,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if not side_calls:
                 continue
             call = side_calls[0]
+            checks.equal(len(call.args), 11, f"renderer HUD roster {side}: firma Create HUD Text")
+            if len(call.args) != 11:
+                continue
             checks.equal(call.args[5].strip(), roster_orders[side],
                          f"renderer HUD roster {side}: ordinamento")
             row_literals = [
@@ -1442,37 +1446,73 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.require(not any(literal is not None and literal.endswith("\n ") for literal in row_literals),
                            f"renderer HUD roster {side}: riga fantasma incorporata")
             if side == "Left":
-                checks.equal(call.args[3].strip(), "Null",
-                             "renderer HUD roster Left: Text deve essere Null per evitare lo zero client")
                 for legacy_token in ("CHILL STAR:", "BINTANG CHILL:", "ดาวสายชิล:"):
                     checks.require(legacy_token not in call.args[2],
                                    "renderer HUD roster Left non deve incorporare la riga CHILL STAR")
-                outer_rows = [
-                    custom for custom in iter_calls(call.args[2], "Custom String")
-                    if custom.args and parse_literal(custom.args[0]) == "{0}{1}"
-                ]
-                checks.equal(len(outer_rows), 1,
-                             "renderer HUD roster Left: diagnostica non integrata nel Subheader")
-                if outer_rows:
-                    checks.equal(len(outer_rows[0].args), 3,
-                                 "renderer HUD roster Left: segmenti Subheader")
-                    if len(outer_rows[0].args) == 3:
-                        diagnostic_branches = parse_top_level_ternary(outer_rows[0].args[2])
-                        checks.require(diagnostic_branches is not None,
-                                       "renderer HUD roster Left: ternario diagnostica assente")
-                        if diagnostic_branches:
-                            diagnostic_condition, diagnostic_text, diagnostic_fallback = diagnostic_branches
-                            for token in (
-                                "Global.DiagnostikPerforma == True",
-                                "Local Player == Host Player",
-                                "Event Player.UrutanHUD == Global.SlotHUDTerakhir",
-                            ):
-                                checks.require(token in diagnostic_condition,
-                                               f"renderer HUD roster Left: guardia diagnostica assente: {token}")
-                            checks.require("9 + Count Of(Filtered Array(Global.HudKiriPemain" in diagnostic_text,
-                                           "renderer HUD roster Left: conteggio diagnostica non nel ramo visibile")
-                            checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
-                                         "renderer HUD roster Left: fallback diagnostica deve essere stringa vuota")
+                player_row = full_custom_string(call.args[2])
+                checks.require(player_row is not None and len(player_row.args) == 4
+                               and parse_literal(player_row.args[0]) == "{0} {1} {2}",
+                               "renderer HUD roster Left: Subheader deve contenere soltanto la riga player")
+                if player_row and len(player_row.args) == 4:
+                    checks.equal(player_row.args[1].strip(), "Global.DaftarIkon[Event Player.IndeksIkon]",
+                                 "renderer HUD roster Left: icona player invariata")
+                    checks.equal(
+                        re.sub(r"\s+", "", player_row.args[2]),
+                        "HeroIconString(IsDuplicating(EventPlayer)?HeroBeingDuplicated(EventPlayer):HeroOf(EventPlayer))",
+                        "renderer HUD roster Left: icona hero corrente invariata",
+                    )
+                    name_and_vibe = full_custom_string(player_row.args[3])
+                    checks.require(name_and_vibe is not None and len(name_and_vibe.args) == 3
+                                   and parse_literal(name_and_vibe.args[0]) == "{0} - {1}",
+                                   "renderer HUD roster Left: riga nome e soundtrack invariata")
+                    if name_and_vibe and len(name_and_vibe.args) == 3:
+                        checks.equal(name_and_vibe.args[1].strip(), "Evaluate Once(Event Player.NamaTampilan)",
+                                     "renderer HUD roster Left: nome player stabile invariato")
+                checks.require("DiagnostikPerforma" not in mask_strings(call.args[2]),
+                               "renderer HUD roster Left: diagnostica deve essere separata nel Text")
+                checks.equal(call.args[7].strip(), "Event Player.WarnaNama",
+                             "renderer HUD roster Left: colore Subheader deve usare WarnaNama")
+                checks.equal(clipboard_import.canonical_semantic_text(call.args[8], "en-US"), "Color(White)",
+                             "renderer HUD roster Left: diagnostica Text deve essere sempre bianca")
+                diagnostic_branches = parse_top_level_ternary(call.args[3])
+                checks.require(diagnostic_branches is not None,
+                               "renderer HUD roster Left: ternario diagnostica nel Text assente")
+                if diagnostic_branches:
+                    diagnostic_condition, diagnostic_text, diagnostic_fallback = diagnostic_branches
+                    checks.equal(
+                        re.sub(r"\s+", "", diagnostic_condition),
+                        "And(Global.DiagnostikPerforma==True,And(LocalPlayer==HostPlayer,"
+                        "EventPlayer.UrutanHUD==Global.SlotHUDTerakhir))",
+                        "renderer HUD roster Left: guardia diagnostica richiede toggle, host e ultimo slot",
+                    )
+                    diagnostic = full_custom_string(diagnostic_text)
+                    checks.require(diagnostic is not None and len(diagnostic.args) == 3
+                                   and parse_literal(diagnostic.args[0]) == "{0}\n{1}",
+                                   "renderer HUD roster Left: ramo visibile diagnostica deve essere stringa")
+                    checks.require(re.search(r"\bNull\b", mask_strings(diagnostic_text)) is None,
+                                   "renderer HUD roster Left: ramo visibile diagnostica non deve usare Null")
+                    counts = full_custom_string(diagnostic.args[2]) if diagnostic and len(diagnostic.args) == 3 else None
+                    checks.require(counts is not None and len(counts.args) == 3
+                                   and parse_literal(counts.args[0]) == "HUD {0} | IWT {1}",
+                                   "renderer HUD roster Left: conteggi diagnostica non nel ramo visibile")
+                    if counts and len(counts.args) == 3:
+                        checks.equal(
+                            re.sub(r"\s+", "", counts.args[1]),
+                            "9+CountOf(FilteredArray(Global.HudKiriPemain,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.HudMenuPemain,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.HudEfekSementara,CurrentArrayElement!=0))",
+                            "renderer HUD roster Left: conteggio HUD diagnostica deve includere nove fissi e tutti gli handle",
+                        )
+                        checks.equal(
+                            re.sub(r"\s+", "", counts.args[2]),
+                            "CountOf(FilteredArray(Global.TeksDuniaPemain,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.TeksTeleportasiSementara,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.TeksVisiSementara,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.TeksIkonPilar,CurrentArrayElement!=0))",
+                            "renderer HUD roster Left: conteggio IWT diagnostica deve includere tutti gli handle",
+                        )
+                    checks.equal(diagnostic_fallback.strip(), 'Custom String("")',
+                                 "renderer HUD roster Left: fallback diagnostica deve essere stringa vuota")
 
     for retired in ("WaktuMasuk", "MenitLobi", "HudKanan", "HudKananPemain"):
         checks.require(re.search(rf"\b{retired}\b", mask_strings(source)) is None,
@@ -1492,7 +1532,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
-    checks.equal(len(arcade_renderers), 16, "renderer menu principale + pagine 0..14")
+    checks.equal(len(arcade_renderers), 17, "renderer menu principale + pagine 0..15")
     teleport_renderer = rule_by_subroutine(rules, "GambarTeleportasi")
     checks.require(teleport_renderer is not None, "renderer GambarTeleportasi assente")
     if teleport_renderer:
@@ -1523,9 +1563,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     )
                 page_tokens = (
                     "1/5 | SPAWN ROOM",
-                    "TELEPORT TO YOUR TEAM'S SPAWN",
+                    "TEAM SPAWN",
                     "2/5 | OBJECTIVE",
-                    'TELEPORT NEAR OBJECTIVE',
                     "3/5 | TELEPORT TO PLAYER/BOT",
                     'BESIDE: {0}',
                     '4/5 | ATTACH TO PLAYER/BOT',
@@ -1533,9 +1572,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "5/5 | SELF ELIMINATION",
                     "CURRENT HERO FORM | COOLDOWN: 3s",
                     "1/5 | RUANG MUNCUL",
-                    "TELEPORT KE RUANG TIMMU",
+                    "TIMMU",
                     "2/5 | OBJEKTIF",
-                    "DEKAT OBJEKTIF",
                     "3/5 | TELEPORT: PEMAIN/BOT",
                     "DI SAMPING: {0}",
                     "4/5 | TEMPEL: PEMAIN/BOT",
@@ -1543,9 +1581,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     "5/5 | ELIMINASI DIRI",
                     "WUJUD PAHLAWAN AKTIF | JEDA: 3 DTK",
                     '1/5 | วาร์ปกลับห้องเกิด',
-                    'ห้องเกิดทีมคุณ',
+                    'ทีมคุณ',
                     '2/5 | วาร์ปใกล้ภารกิจ',
-                    'จุดภารกิจ',
                     '3/5 | วาร์ป: ผู้เล่น / บอต',
                     "4/5 | เกาะ: ผู้เล่น / บอต",
                     "5/5 | กำจัดตัวเอง",
@@ -1624,7 +1661,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if subroutine_target(rule) == "GambarTeleportasi":
                 checks.require("\\" not in calls[0].args[2],
                                "GambarTeleportasi: sottotitolo senza backslash visibili")
-            else:
+            elif subroutine_target(rule) != "GambarPukulanSuper":
                 checks.require("\\" in calls[0].args[2],
                                f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
             checks.require(calls[0].args[3].strip() != "Null",
@@ -1723,7 +1760,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             1,
             "router menu: GambarHantuTerbang deve essere chiamato soltanto dalla pagina 13 aperta",
         )
-        for page in range(15):
+        for page in range(16):
             checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
                            f"router menu non copre pagina {page}")
         checks.require(
@@ -1742,6 +1779,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             re.search(r"HalamanMenu\s*==\s*13.*?Call Subroutine\(GambarHantuTerbang\);", router.body, re.DOTALL) is not None,
             "router menu: pagina 13 deve aprire Ghost Mode / Fly",
         )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*15.*?Call Subroutine\(GambarPukulanSuper\);", router.body, re.DOTALL) is not None,
+            "router menu: pagina 15 deve aprire Super Punch",
+        )
 
     main_renderer = rule_by_subroutine(rules, "GambarUtama")
     checks.require(main_renderer is not None, "renderer menu principale assente")
@@ -1751,14 +1792,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "2 - SOUNDTRACK",
             "12 - DUMMY FOLLOW",
             "13 - GHOST MODE / FLY",
+            "15 - SUPER PUNCH",
             "0 - WARNA NAMA",
             "2 - MUSIK",
             '12 - BOT MENGIKUTI',
             '13 - HANTU / TERBANG',
+            "15 - PUKULAN SUPER",
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
             "12 - ดัมมี่ติดตาม",
             "13 - โหมดผี / บิน",
+            "15 - หมัดซูเปอร์",
         ):
             checks.require(token in main_renderer.body, f"menu principale non copre tutte le pagine localizzate: {token}")
         for page_twelve, page_thirteen in (
@@ -1795,9 +1839,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if dummy_follow_renderer:
         for token in (
             "12 - DUMMY FOLLOW",
-            "ENEMY DUMMY MAY FOLLOW YOU: {1}",
+            "LET ENEMY DUMMY FOLLOW YOU: {1}",
             '12 - BOT MENGIKUTI',
-            'IZINKAN BOT MUSUH MENGIKUTIMU: {1}',
+            'IZINKAN BOT MUSUH IKUTIMU: {1}',
             "12 - ดัมมี่ติดตาม",
             "ให้ดัมมี่ศัตรูตามคุณ: {1}",
         ):
@@ -1813,15 +1857,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
             "FLY MODE",
-            "LOOK TO STEER | KEEP MOVING: 100% > 1000% IN 20s",
+            "KEEP MOVING: 100% > 1000% / 20s",
             '13 - HANTU / TERBANG',
             "TEMBUS DINDING",
             'TERBANG',
-            'ARAHKAN BIDIKAN | TERUS BERGERAK: 100% > 1000% DALAM 20 dtk',
+            'TERUS BERGERAK: 100% > 1000% / 20 dtk',
             "13 - โหมดผี / บิน",
             "ทะลุกำแพง",
             "โหมดบิน",
-            'มองเพื่อเลี้ยว | ขยับต่อเนื่อง: 100% > 1000% ใน 20 วิ',
+            'ขยับต่อเนื่อง: 100% > 1000% / 20 วิ',
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -1839,9 +1883,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
-            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 14)) % 15;"
+            "Event Player.KursorUtama = (Event Player.KursorUtama + (Event Player.PerintahMenu == 3 ? 1 : 15)) % 16;"
             in navigation_rule.body,
-            "navigazione menu principale non usa ciclo esatto 0..14",
+            "navigazione menu principale non usa ciclo esatto 0..15",
         )
         checks.require(
             re.search(r"HalamanMenu\s*==\s*0.*?KursorWarna\s*=", navigation_rule.body, re.DOTALL) is not None,
@@ -1965,9 +2009,14 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             ) is not None,
             "apply menu: pagina 13 deve usare TerapkanHalamanHantuTerbang",
         )
+        checks.require(
+            re.search(r"HalamanMenu\s*==\s*15.*?Call Subroutine\(TerapkanHalamanPukulanSuper\);",
+                      apply_dispatcher.body, re.DOTALL) is not None,
+            "apply menu: pagina 15 deve usare TerapkanHalamanPukulanSuper",
+        )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
-                   "dispatcher Interact non suddiviso nelle 15 subroutine pagina")
+                   "dispatcher Interact non suddiviso nelle 16 subroutine pagina")
     for name in sorted(PAGE_APPLY_SUBROUTINES):
         rule = rule_by_subroutine(rules, name)
         if rule:
@@ -2130,6 +2179,197 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
 
 
 
+def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration], subroutines: set[str]) -> None:
+    """Keep page 15's toggle local and its enabled registry bounded by human slots."""
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
+    declared = {entry.name: entry.index for entry in global_entries}
+    for name, index in {"PemainPukulanSuper": 72, "WaktuPukulanSuper": 73, "TargetPukulanSuper": 74}.items():
+        checks.equal(declared.get(name), index, f"Super Punch: campo global {name}")
+    for name in ("GambarPukulanSuper", "TerapkanHalamanPukulanSuper", "ProsesPukulanSuper"):
+        checks.require(name in subroutines, f"Super Punch: subroutine {name} assente")
+    checks.require("Global.PemainPukulanSuper=EmptyArray;" in code(source),
+                   "Super Punch: registro deve iniziare vuoto OFF")
+    timers = array_assignment_items(source, "WaktuPukulanSuper")
+    checks.equal([code(item) for item in timers] if timers is not None else None, ["0"] * 12,
+                 "Super Punch: dodici timer slot devono iniziare a zero")
+
+    main = rule_by_subroutine(rules, "GambarUtama")
+    renderer = rule_by_subroutine(rules, "GambarPukulanSuper")
+    apply = rule_by_subroutine(rules, "TerapkanHalamanPukulanSuper")
+    if main:
+        for title in ("15 - SUPER PUNCH", "15 - PUKULAN SUPER", "15 - หมัดซูเปอร์"):
+            checks.require(f'Event Player.KursorUtama == 15 ? Custom String("{title}' in main.body,
+                           f"Super Punch: anteprima principale pagina 15 localizzata: {title}")
+        checks.equal(main.body.count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
+                     "Super Punch: anteprima stato applicato in tutte le lingue")
+    checks.require(renderer is not None, "Super Punch: renderer pagina 15 assente")
+    if renderer:
+        calls = list(iter_calls(renderer.body, "Create HUD Text"))
+        checks.equal(len(calls), 1, "Super Punch: unico HUD menu")
+        if calls:
+            triads = language_triads(calls[0].args[2])
+            checks.equal(len(triads), 1, "Super Punch: comandi EN/ID/TH")
+            if triads:
+                for branch in triads[0]:
+                    bindings = tuple(call.args[0].strip() for call in iter_calls(branch, "Input Binding String") if call.args)
+                    checks.equal(bindings, ("Button(Interact)", "Button(Reload)"),
+                                 "Super Punch: binding toggle Interact e back Reload ordinati")
+            for token in ("15 - SUPER PUNCH", "MELEE: INSTANT KO | ALLIES TOO", "15 - PUKULAN SUPER",
+                          "SERANGAN DEKAT: KO LANGSUNG | TERMASUK TEMAN", "15 - หมัดซูเปอร์",
+                          "โจมตีประชิด: KO ทันที | รวมเพื่อนร่วมทีม"):
+                checks.require(token in calls[0].args[3], f"Super Punch: effetto e alleati localizzati: {token}")
+            checks.equal(calls[0].args[3].count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
+                         "Super Punch: stato OFF/ON applicato in tutte le lingue")
+
+    checks.require(apply is not None, "Super Punch: handler toggle assente")
+    if apply:
+        expected = (
+            "AbortIf(ArrayContains(Global.PemainManusia,EventPlayer)==False);"
+            "AbortIf(Or(EventPlayer.UrutanHUD<0,EventPlayer.UrutanHUD>=12));"
+            "If(ArrayContains(Global.PemainPukulanSuper,EventPlayer));"
+            "ModifyGlobalVariable(PemainPukulanSuper,RemoveFromArrayByValue,EventPlayer);"
+            "Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]=0;Else;"
+            "ModifyGlobalVariable(PemainPukulanSuper,AppendToArray,EventPlayer);"
+            "Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]=-1;End;"
+        )
+        checks.equal(code(rule_block(apply, "actions") or ""), expected,
+                     "Super Punch: toggle registrato locale unico e timer OFF 0 / ON -1")
+    for rule in rules:
+        owner = subroutine_target(rule)
+        for call in iter_calls(rule.body, "Modify Global Variable"):
+            if call.args and call.args[0].strip() == "PemainPukulanSuper":
+                checks.require(owner in {"TerapkanHalamanPukulanSuper", "TenangkanPemain", "BersihkanPemain"},
+                               f"Super Punch: writer registro non autorizzato: {rule.name}")
+                checks.require(len(call.args) == 3 and call.args[2].strip() == "Event Player",
+                               "Super Punch: registro deve mutare solo identità Event Player")
+        for match in re.finditer(r"Global\.PemainPukulanSuper\s*=(?!=)\s*([^;]+);", mask_strings(rule.body)):
+            initial = event_type(rule) == "Ongoing - Global" and match.group(1).strip() == "Empty Array"
+            cleanup = owner in {"TenangkanPemain", "BersihkanPemain"} and code(match.group(1)) == (
+                "RemoveFromArray(Global.PemainPukulanSuper,EventPlayer)")
+            checks.require(initial or cleanup,
+                           "Super Punch: assegnazione registro fuori inizializzazione OFF o cleanup locale")
+
+    runtime = rule_by_subroutine(rules, "ProsesPukulanSuper")
+    checks.require(runtime is not None, "Super Punch: motore ayunan assente")
+    if runtime:
+        packed = code(runtime.body)
+        slot = "Global.WaktuPukulanSuper[Global.PemainAktif.UrutanHUD]"
+        for token, label in (
+            (f"If(IsMeleeing(Global.PemainAktif)==False);{slot}=0;Abort;End;", "rilascio native melee riarmo"),
+            (f"If({slot}==0);{slot}=TotalTimeElapsed+0.150;", "una finestra impatto per ayunan"),
+            (f"ElseIf(And({slot}>0,TotalTimeElapsed>={slot}));{slot}=-1;", "consumo prima della scelta target"),
+            ("FilteredArray(AllPlayers(AllTeams),And(CurrentArrayElement!=Global.PemainAktif", "entrambi i team senza self"),
+            ("DistanceBetween(PositionOf(Global.PemainAktif),PositionOf(CurrentArrayElement))<=2.500", "portata melee limitata"),
+            ("IsInViewAngle(Global.PemainAktif,EyePosition(CurrentArrayElement),90)", "cone frontale"),
+            ("IsInLineOfSight(EyePosition(Global.PemainAktif),EyePosition(CurrentArrayElement),BarriersDoNotBlockLOS)", "muri proteggono entrambi i team"),
+            ("HasStatus(Global.TargetPukulanSuper,PhasedOut)==False", "protezione Phased Out"),
+            ("HasStatus(Global.TargetPukulanSuper,Unkillable)==False", "protezione stato Unkillable"),
+            ("Or(PlayerVariable(Global.TargetPukulanSuper,KebalAktif)==False,PlayerVariable(Global.TargetPukulanSuper,ModeKebal)==0)", "protezione modalità Unkillable"),
+            ("Global.TargetPukulanSuper=Null;", "rilascio scratch target"),
+        ):
+            checks.require(token in packed, f"Super Punch: {label}")
+        for field in ("Manusia==False", "BotOtomatis==True", "SiklusPemainAktif==True", "PindahTimDiproses==True",
+                      "MenuTerbuka==True", "TeleportasiJongkokAktif==True", "SeranganDekatDipakai==True"):
+            checks.require("Global.PemainAktif." + field in packed, f"Super Punch: guardia owner {field}")
+        checks.equal(len(list(iter_calls(runtime.body, "Sorted Array"))), 1,
+                     "Super Punch: unico target più vicino per ayunan")
+        checks.require("TeamOf(" not in packed and "OppositeTeamOf(" not in packed,
+                       "Super Punch: alleati e nemici devono seguire lo stesso impatto")
+        checks.require(not wait_calls(runtime.body) and action_loop_count(runtime.body) == 0,
+                       "Super Punch: motore senza Wait/Loop")
+    callers = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
+               if call.args == ("ProsesPukulanSuper",)]
+    checks.equal(len(callers), 1, "Super Punch: unico caller scheduler")
+    if callers:
+        caller, call = callers[0]
+        headers = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(caller.body, call.start)]
+        checks.require(action_loop_count(caller.body) == 1
+                       and "If(ArrayContains(Global.PemainPukulanSuper,Global.PemainAktif));" in headers,
+                       "Super Punch: scheduler chiama motore solo per identità ON")
+    for name in ("TenangkanPemain", "BersihkanPemain"):
+        lifecycle = rule_by_subroutine(rules, name)
+        checks.require(lifecycle is not None and
+                       "Global.PemainPukulanSuper=RemoveFromArray(Global.PemainPukulanSuper,EventPlayer);" in code(lifecycle.body),
+                       f"Super Punch: cleanup identità in {name}")
+
+
+def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
+    """Guard one native objective beacon and at most twelve owned floating glyphs."""
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
+    declared = {entry.name: entry.index for entry in global_entries}
+    fields = ("PemilikIkonPilar", "TeksIkonPilar", "AwalIkonPilar", "TujuanIkonPilar",
+              "WaktuIkonPilar", "IndeksIkonPilar", "DaftarWarnaPilar")
+    for index, name in enumerate(fields, 75):
+        checks.equal(declared.get(name), index, f"Pilar: campo global {name}")
+    for name, initial in (("PemilikIkonPilar", "Null"), ("TeksIkonPilar", "0"),
+                          ("WaktuIkonPilar", "0"), ("AwalIkonPilar", "Vector(0,0.500,0)"),
+                          ("TujuanIkonPilar", "Vector(0,0.500,0)")):
+        values = array_assignment_items(source, name)
+        checks.equal([code(value) for value in values] if values is not None else None, [initial] * 12,
+                     f"Pilar: array dodici slot inizializzati {name}")
+    palette = array_assignment_items(source, "DaftarWarnaPilar")
+    checks.equal(len(palette) if palette is not None else None, 40, "Pilar: quaranta preset per i quaranta colori nome")
+    named = {"White", "Aqua", "Black", "Blue", "Gray", "Green", "LimeGreen", "Orange", "Purple",
+             "Red", "Rose", "SkyBlue", "Turquoise", "Violet", "Yellow"}
+    checks.require(palette is not None and all(code(value) in {f"Color({name})" for name in named} for value in palette),
+                   "Pilar: Light Shaft deve usare soltanto colori nominali nativi")
+    effects = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Create Effect")]
+    checks.equal(len(effects), 1, "Pilar: unico Create Effect persistente")
+    if effects:
+        initial, effect = effects[0]
+        checks.require(event_type(initial) == "Ongoing - Global"
+                       and "Global.Siap == False;" in (rule_block(initial, "conditions") or ""),
+                       "Pilar: effetto creato soltanto in inizializzazione una volta")
+        checks.equal(len(effect.args), 6, "Pilar: firma effetto nativo")
+        if len(effect.args) == 6:
+            checks.equal(tuple(code(arg) for arg in effect.args[1:]), (
+                "LightShaft",
+                "EntityExists(HostPlayer)?Global.DaftarWarnaPilar[Max(0,Min(39,PlayerVariable(HostPlayer,IndeksWarna)))]:Color(White)",
+                "ObjectivePosition(ObjectiveIndex)", "0.500*Min(12,CountOf(Global.PemainManusia))",
+                "VisibleToPositionRadiusandColor"), "Pilar: tipo, colore host, obiettivo, raggio e rivalutazione")
+            checks.require("CountOf(Global.PemainManusia)>0" in code(effect.args[0])
+                           and code(effect.args[0]).endswith("?AllPlayers(AllTeams):EmptyArray"),
+                           "Pilar: visibilità condizionata al roster umano")
+
+    manager = rule_by_subroutine(rules, "PerbaruiPilarSosial")
+    cleanup = rule_by_subroutine(rules, "BersihkanIkonPilar")
+    checks.require(manager is not None and cleanup is not None, "Pilar: manager e cleanup separati obbligatori")
+    for rule in (manager, cleanup):
+        if rule:
+            checks.require("ForGlobalVariable(IndeksIkonPilar,0,12,1);" in code(rule.body),
+                           "Pilar: manutenzione e cleanup limitati a dodici slot")
+            checks.require(not wait_calls(rule.body) and action_loop_count(rule.body) == 0,
+                           "Pilar: manutenzione atomica senza Wait/Loop")
+    if manager:
+        calls = list(iter_calls(manager.body, "Create In-World Text"))
+        checks.equal(len(calls), 1, "Pilar: unico sito creazione IWT")
+        if calls:
+            call = calls[0]
+            checks.equal(len(call.args), 8, "Pilar: firma IWT")
+            if len(call.args) == 8:
+                owner = "Global.PemilikIkonPilar[EvaluateOnce(Global.IndeksIkonPilar)]"
+                checks.equal(code(call.args[1]), f"Global.DaftarIkon[PlayerVariable({owner},IndeksIkon)]",
+                             "Pilar: IWT deve mostrare soltanto il glifo scelto")
+                checks.equal(code(call.args[6]), f"PlayerVariable({owner},WarnaNama)", "Pilar: colore icona segue owner")
+                checks.equal(call.args[5].strip(), "Visible To Position String and Color", "Pilar: rivalutazione icona completa")
+                checks.require(code(call.args[2]).startswith("UpdateEveryFrame(ObjectivePosition(ObjectiveIndex)+")
+                               and "Random" not in code(call.args[2]), "Pilar: posizione fluida senza random per frame")
+                branches = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(manager.body, call.start)]
+                checks.require("If(Global.TeksIkonPilar[Global.IndeksIkonPilar]==0);" in branches,
+                               "Pilar: creazione soltanto per slot senza handle")
+    for name in ("TenangkanPemain", "BersihkanPemain"):
+        lifecycle = rule_by_subroutine(rules, name)
+        checks.require(lifecycle is not None and "Call Subroutine(BersihkanIkonPilar);" in lifecycle.body,
+                       f"Pilar: cleanup nel lifecycle {name}")
+    if cleanup:
+        checks.require("If(Global.PemilikIkonPilar[Global.IndeksIkonPilar]==EventPlayer);" in code(cleanup.body),
+                       "Pilar: cleanup deve toccare soltanto l'owner uscente")
+
+
 def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:
     """Guard bounded per-player air jumps, timed hold input and ephemeral rings."""
     def code(expression: str) -> str:
@@ -2248,7 +2488,8 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
     if renderer:
         calls = list(iter_calls(renderer.body, "Create HUD Text"))
         checks.equal(len(calls), 1, "Multijump: unico HUD menu")
-        for token in ("14 - MULTIJUMP", "14 - LOMPAT BERULANG", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกลางอากาศ"):
+        for token in ("14 - MULTIJUMP", "14 - LOMPAT BERULANG", "14 - กระโดดหลายครั้ง", "AIR BOOST", "DORONGAN UDARA", "แรงกลางอากาศ",
+                      "IN AIR: TAP / HOLD JUMP", "DI UDARA: TEKAN / TAHAN LOMPAT", "กลางอากาศ: แตะ / กดกระโดดค้าง"):
             checks.require(token in renderer.body, f"Multijump: menu localizzato {token}")
         checks.equal(renderer.body.count("Event Player.KursorLompatGanda * 100"), 3,
                      "Multijump: preview 100..1000% in passi100 per tutte le lingue")
@@ -3199,7 +3440,10 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                            "catalogo musicale: passo indietro dinamico")
         effects = list(iter_calls(rule.body, "Play Effect"))
         persistent = list(iter_calls(rule.body, "Create Effect"))
-        checks.require(not persistent, f"feedback visuale: nessun effetto persistente in {rule.name}")
+        beacon = (len(persistent) == 1 and event_type(rule) == "Ongoing - Global"
+                  and "Global.Siap = True;" in rule.body and len(persistent[0].args) == 6
+                  and persistent[0].args[1].strip() == "Light Shaft")
+        checks.require(not persistent or beacon, f"feedback visuale: nessun effetto persistente fuori dal pilar iniziale in {rule.name}")
         checks.require(not effects or subroutine_target(rule) == "ProsesLompatGanda",
                        f"feedback visuale: effetti consentiti soltanto per Multijump, trovato {rule.name}")
         checks.require("EfekTerapkan" not in masked,
@@ -3230,19 +3474,19 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             (190, 210, 230), (100, 110, 120), (0, 0, 0), (255, 245, 215),
             (255, 200, 70), (236, 153, 0), (255, 120, 105), (255, 75, 75),
             (255, 50, 145), (205, 160, 255), (100, 50, 255), (70, 145, 255),
-            (0, 234, 234), (70, 220, 110),
+            (0, 234, 234), (70, 220, 110), (65, 155, 110),
         )
         for page, anchor in enumerate(anchors, 1):
             expected = (
                 f"{selector} == {page} ? Global.DaftarWarnaRGB[Event Player.IndeksWarna] * 0.680 + "
                 f"Vector({', '.join(str(component) for component in anchor)}) * 0.320 :"
             )
-            label = {13: "Ghost/Fly", 14: "Multijump"}.get(page, f"pagina {page}")
+            label = {13: "Ghost/Fly", 14: "Multijump", 15: "Super Punch"}.get(page, f"pagina {page}")
             checks.require(re.sub(r"\s+", "", expected) in transition_code,
                            f"feedback visuale: progressione sfumata {label}")
         selector_pattern = re.escape(re.sub(r"\s+", "", selector)) + r"==(\d+)\?"
-        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(15)),
-                     "feedback visuale: quindici tinte menu in ordine senza duplicati")
+        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(16)),
+                     "feedback visuale: sedici tinte menu in ordine senza duplicati")
         checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 2,
                      "feedback visuale: due transizioni fluide senza override duplicato")
         checks.equal(mask_strings(transition.body).count("Event Player.WarnaMenu ="), 0,
@@ -4019,7 +4263,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             ("If(And(Global.PemainAktif.Manusia == True, Global.PemainAktif.ModeTerbangAktif == True));Call Subroutine(ProsesTerbangPemain);End;", "Fly solo umano attivo"),
             ("If(And(Global.PemainAktif.Manusia == True, And(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.HalamanMenu == 1, Global.PemainAktif.HalamanMenu == 4))));Call Subroutine(ProsesSimpananPemain);End;", "cache solo menu Camera/Revenge"),
             ("Else;If(Global.LangkahPenjadwal % 2 == Slot Of(Global.PemainAktif) % 2);Call Subroutine(ProsesBotPemain);End;End;", "manutenzione bot isolata 10 Hz"),
-            ("If(Global.LangkahPenjadwal % 20 == 0);Call Subroutine(RawatBotBuatan);Global.PemainTeksPembersihan = Null;Call Subroutine(BersihkanTeksYatim);End;", "slot dummy e pulizia 1 Hz"),
+            ("If(Global.LangkahPenjadwal % 20 == 0);Call Subroutine(RawatBotBuatan);Call Subroutine(PerbaruiPilarSosial);Global.PemainTeksPembersihan = Null;Call Subroutine(BersihkanTeksYatim);End;", "slot dummy, pulizia e pilar 1 Hz"),
         ):
             checks.require(re.sub(r"\s+", "", gate) in scheduler_packed,
                            f"scheduler a stati: {label}")
@@ -4779,8 +5023,15 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
         checks.require("Is In Alternate Form" not in processor_masked and "Hero(D.Va)" not in processor_masked,
                        "morte completa non deve dipendere da eroi o forme specifiche")
 
-    checks.equal(len(list(iter_calls(source, "Kill"))), 2,
-                 "Kill deve esistere soltanto in Self Kill single-shot e nella macchina Skull/Revenge")
+    punch = rule_by_subroutine(rules, "ProsesPukulanSuper")
+    punch_kills = list(iter_calls(punch.body, "Kill")) if punch else []
+    checks.equal(len(punch_kills), 1, "Super Punch: unico Kill per ayunan nativo")
+    if punch_kills:
+        checks.equal(tuple(arg.strip() for arg in punch_kills[0].args),
+                     ("Global.TargetPukulanSuper", "Global.PemainAktif"),
+                     "Super Punch: Kill target selezionato attribuito al puncher")
+    checks.equal(len(list(iter_calls(source, "Kill"))), 3,
+                 "Kill deve esistere soltanto in Self Kill, Skull/Revenge e Super Punch")
 
     revenge_apply = rule_by_subroutine(rules, "TerapkanHalamanBalasDendam")
     checks.require(revenge_apply is not None, "dispatcher Revenge assente")
@@ -7046,6 +7297,8 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_hud_and_menu(checks, source, rules, players, subroutines)
     validate_ghost_fly(checks, source, rules, player_entries, subroutines)
     validate_multijump(checks, source, rules, player_entries, subroutines)
+    validate_super_punch(checks, source, rules, globals_entries, subroutines)
+    validate_social_beacon(checks, source, rules, globals_entries)
     validate_special_player_profile(checks, source, rules, player_entries)
     validate_catalog_feedback(checks, source, rules)
     validate_input_contract(checks, rules)

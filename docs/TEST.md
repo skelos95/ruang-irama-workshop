@@ -12,6 +12,7 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
 | 2 ottobre, PR #85–86 | L'utente conferma il funzionamento di Multijump, Fly e tinte menu; 671 test e nove controlli GitHub superati. | Conferma funzionale, senza nuove misure di carico o durata. |
+| 3 ottobre, riscontro utente su main dopo PR #88 | Dopo vari test, il server sembra stabile. | Durata, numero di player e metriche non specificati; le modifiche del 4 ottobre richiedono verifica nel client. |
 
 ## Preparazione
 
@@ -38,13 +39,16 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 ### Input, menu e HUD
 
-- In EN/ID/TH aprire tutte le 15 pagine, applicare, tornare e riaprire; percorrere `11→12→13→14→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
+- In EN/ID/TH aprire tutte le 16 pagine, applicare, tornare e riaprire; percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
+- Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
 - Il profilo `งูแรร์` parte Silver Mist / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
-- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–14: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
+- Light Shaft sull'obiettivo: 1/6/12 umani danno raggio 0,5/3/6 m; AI e dummy non lo aumentano. Cambiare Name Color dell'host e trasferire l'host: il fascio segue il preset più vicino; le icone conservano il colore esatto del proprietario. Nessun nome nel fascio e nessun simbolo con icona NONE.
+- Le icone devono muoversi senza scatti, restare nel fascio anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. IWT aumenta al massimo di un handle per umano con icona; senza icone ritorna al baseline.
+- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–15: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
 
@@ -77,6 +81,8 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Team Heal cura la squadra viva e informa solo il proprietario; cambiare team durante l'icona HEART non lascia icone orfane.
 - Attivare Vision con più viewer, poi far terminare/uscire l'ultimo: nessun pubblico residuo. Join/leave durante roulette aggiornano la visibilità delle icone.
 - Revenge consuma una volta solo alla morte completa, non al click o al de-mech; testare timeout, rinascita, leave, cambio team e identità esatte di vittima/attaccante.
+- Super Punch OFF: melee nativo. ON: provare nemici e compagni davanti, bersagli laterali vicini, fuori portata e dietro un muro; un solo bersaglio per attacco. Unkillable 1 HP/FULL HP deve proteggerli. Provare anche Junker Queen e gli eroi con melee diverso; non basta tenere Melee se l'attacco non viene realmente eseguito.
+- Con Super Punch, uccidere un umano alleato e verificare un solo debito Revenge, poi riscattarlo. Provare menu aperto, Travel, morte, attivazione con Melee già tenuto, cambio squadra e riuso slot: nessun colpo vecchio o preferenza ereditata. Controllare il de-mech di D.Va separatamente dalla morte completa.
 
 ### Lifecycle e accumulo
 
