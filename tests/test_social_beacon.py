@@ -403,9 +403,9 @@ class SocialBeaconTests(unittest.TestCase):
                 model.run(now=100)
                 self.assertEqual(model.random_calls, 72)
                 visual = model.visual("human-0")
-                start, target, _, _ = model.chases["human-0"]
+                start, target, _, duration = model.chases["human-0"]
                 for fraction in (0, 0.2, 0.5, 0.8, 1):
-                    model.now = 100 + 3 * fraction
+                    model.now = 100 + duration * fraction
                     actual = model.evaluate(visual[1]) - model.objective
                     expected = start + (target - start) * fraction
                     self.assertAlmostEqual((actual - expected).magnitude(), 0, places=8)
@@ -439,6 +439,28 @@ class SocialBeaconTests(unittest.TestCase):
                 self.assertEqual(model.players["first"]["PosisiIkonPilar"], Vector(0, 0.5, 0))
                 self.assertEqual(model.chases["second"], second)
                 self.assertEqual(model.chase_stopped, ["first"])
+
+    def test_shifted_one_second_ticks_renew_before_completion_without_position_jumps(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                for slot in range(12): model.add(f"human-{slot}")
+                model.run(now=100)
+                for elapsed in (0.99, 1.98, 2.97, 3.96, 4.95, 5.94, 6.93, 7.92, 8.91):
+                    model.now = 100 + elapsed
+                    positions = {}
+                    for owner, (_, _, started, duration) in model.chases.items():
+                        self.assertLess(model.now - started, duration,
+                                        "native path must still move before the next one-second manager tick")
+                        positions[owner] = model.evaluate(model.visual(owner)[1])
+                    previous_chases = len(model.chase_started)
+                    model.run()
+                    if len(model.chase_started) > previous_chases:
+                        for owner, position in positions.items():
+                            self.assertAlmostEqual((model.evaluate(model.visual(owner)[1]) - position).magnitude(),
+                                                   0, places=10)
+                self.assertEqual(len(model.chase_started), 36)
+                self.assertEqual(model.random_calls, 144)
+                self.assertEqual(len(model.created), 12)
 
 
 if __name__ == "__main__":

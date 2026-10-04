@@ -2,6 +2,12 @@
 
 Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.8.1: il tag storico non coincide con tutti gli aggiornamenti successivi. Dettagli e diff restano nella [cronologia Git](https://github.com/skelos95/ruang-irama-workshop/commits/main/).
 
+## Superman Punch e movimento continuo delle icone — 2026-10-04
+
+- Menu 15 rinominato Superman Punch: titoli principali e sottomenu EN/ID/TH aggiornati. Il colpo funziona anche con qualsiasi menu aperto; rimangono un solo bersaglio per attacco, Unkillable e il conteggio Revenge anche fra compagni.
+- Il percorso delle icone dura 4,5 s e viene rinnovato dopo 3 s dalla posizione corrente. Il margine copre il controllo a 1 Hz, che poteva arrivare dopo la fine del vecchio percorso e lasciare le icone ferme.
+- Raggio di 5 m, altezza 0,5–8 m, colori individuali e cleanup conservati; nessuna nuova regola, variabile o frequenza e nessun aumento del peso strutturale.
+
 ## Cozywatch, compattazione delle icone e budget strutturale — 2026-10-04
 
 - La diagnostica del client sulla revisione `2e1c4ff` mostra 36.381 elementi e una regola da 130 KB: entrambi oltre il limite. I byte UTF-8 del sorgente non avevano rilevato questo superamento.

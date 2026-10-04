@@ -1233,7 +1233,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             (runtime, "All Players(All Teams)", "All Players(Opposite Team Of(Team Of(Global.PemainAktif)))", "entrambi i team"),
             (runtime, "<= 2.500", "<= 25", "portata melee limitata"),
             (runtime, "If(Global.TargetPukulanSuper != Null);", "If(True);", "consumo soltanto dopo contatto"),
+            (runtime, "If(Is Meleeing(Global.PemainAktif) == False);",
+             "Abort If(Global.PemainAktif.MenuTerbuka == True);\n\t\tIf(Is Meleeing(Global.PemainAktif) == False);",
+             "menu aperto non deve bloccare l'ayunan"),
+            (runtime, "Global.PemainAktif.SeranganDekatDipakai == True", "False", "guardia owner SeranganDekatDipakai"),
             (impact, "Event Ability == Button(Melee);", "Event Ability == Button(Primary Fire);", "guardia impatto"),
+            (impact, "Event Ability == Button(Melee);",
+             "Event Player.MenuTerbuka == False;\n\t\tEvent Ability == Button(Melee);",
+             "menu aperto non deve bloccare l'impatto nativo"),
+            (impact, "Event Player.SeranganDekatDipakai == False;", "", "guardia impatto"),
             (impact, "Hero Of(Event Player) != Hero(Junker Queen);", "", "guardia impatto"),
             (impact, "Has Status(Victim, Unkillable) == False", "True", "contratto impatto"),
             (impact, "Kill(Victim, Event Player);", "Kill(Victim, Global.PemainAktif);", "contratto impatto"),
@@ -1266,6 +1274,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                                        manager.start + chase.start, manager.start + chase.end)
         mutated = self.replace_call_argument(absolute_chase, 4, "Destination and Duration")
         self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_call_argument(absolute_chase, 3, "3")
+        self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_in_rule(manager, "Total Time Elapsed >= Global.WaktuIkonPilar[Global.IndeksIkonPilar] + 3",
+                                       "Total Time Elapsed >= Global.WaktuIkonPilar[Global.IndeksIkonPilar] + 4.500")
+        self.assert_rejected(mutated, "Pilar: rinnovo anticipato dopo tre secondi")
+        renewal_chase = list(validator.iter_calls(manager.body, "Chase Player Variable Over Time"))[-1]
+        renewal_start = manager.start + renewal_chase.start
+        mutated = self.source[:renewal_start] + "Set Player Variable(" + renewal_chase.args[0] + ", PosisiIkonPilar, Vector(0, 0.500, 0));" + self.source[renewal_start:]
+        self.assert_rejected(mutated, "Pilar: rinnovo parte dalla posizione corrente")
         mutated = self.replace_in_rule(manager, "Stop Chasing Player Variable(Global.PemilikIkonPilar[Global.IndeksIkonPilar], PosisiIkonPilar);", "")
         self.assert_rejected(mutated, "Pilar: manutenzione ferma la chase")
         mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 5)", "Random Real(0, 6)"))

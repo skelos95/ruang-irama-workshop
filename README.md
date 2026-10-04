@@ -38,7 +38,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
 | Morto | Jump | Resuscita sul posto sicuro o recupera dal vuoto |
 | Vivo, Multijump ON | Premi o tieni Jump in aria, anche con menu aperto | Salti aggiuntivi con la forza scelta |
-| Vivo, Super Punch ON | Attacco melee, menu chiuso | KO ravvicinato, anche sui compagni; rispetta Unkillable |
+| Vivo, Superman Punch ON | Attacco melee, anche con menu aperto | KO ravvicinato, anche sui compagni; rispetta Unkillable |
 
 Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
@@ -61,19 +61,19 @@ Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciat
 | 12 | Dummy Follow | Interact alterna OFF / ON, con dummy avversario presente |
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
-| 15 | Super Punch | Interact alterna OFF / ON nella schermata della funzione |
+| 15 | Superman Punch | Interact alterna OFF / ON nella schermata della funzione |
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 
 Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi.
 
-Super Punch è inizialmente OFF. Durante un attacco melee cerca subito un bersaglio vicino davanti, anche della propria squadra, senza attraversare muri. Un impatto melee nativo sui nemici viene riconosciuto anche fra due aggiornamenti dell'animazione. Un solo contatto per attacco, rispettando Unkillable. Revenge registra anche queste uccisioni fra umani alleati. La preferenza si conserva dopo morte o cambio eroe e torna OFF al cambio squadra o all'uscita.
+Superman Punch è inizialmente OFF e funziona anche con il menu principale o un sottomenu aperto. Durante un attacco melee cerca subito un bersaglio vicino davanti, anche della propria squadra, senza attraversare muri. Un impatto melee nativo sui nemici viene riconosciuto anche fra due aggiornamenti dell'animazione. Un solo contatto per attacco, rispettando Unkillable. Revenge registra anche queste uccisioni fra umani alleati. La preferenza si conserva dopo morte o cambio eroe e torna OFF al cambio squadra o all'uscita.
 
 La diagnostica server rimane bianca ed è visibile solo all'host. I testi dei menu EN/ID/TH mantengono comandi e stato con descrizioni più brevi.
 
 Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
-Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 5 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone.
+Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 5 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 
