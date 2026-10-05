@@ -252,7 +252,7 @@ class SocialBeaconTests(unittest.TestCase):
                 model.objective = Vector(0, 0, 0)
                 self.assertEqual(model.evaluate(visual[0]), [])
 
-    def test_five_metre_radius_does_not_depend_on_roster_size(self):
+    def test_ten_metre_radius_does_not_depend_on_roster_size(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.add("human-0")
@@ -270,7 +270,7 @@ class SocialBeaconTests(unittest.TestCase):
                     self.assertEqual(model.evaluate(visual[1]), position)
                     self.assertEqual(model.chases["human-0"], captured)
                 self.assertLessEqual(math.hypot(position.x - model.objective.x,
-                                               position.z - model.objective.z), 5)
+                                               position.z - model.objective.z), 10)
 
     def test_twelve_native_icons_bind_distinct_owners_and_reevaluate_rgb_without_recreation(self):
         for source, model in self.models():
@@ -402,6 +402,11 @@ class SocialBeaconTests(unittest.TestCase):
                 for slot in range(12): model.add(f"human-{slot}")
                 model.run(now=100)
                 self.assertEqual(model.random_calls, 72)
+                # Samples must use the expanded area, not merely fit inside it.
+                sampled_radius = max(math.hypot(point.x, point.z)
+                                     for start, target, _, _ in model.chases.values()
+                                     for point in (start, target))
+                self.assertAlmostEqual(sampled_radius, 10, places=8)
                 visual = model.visual("human-0")
                 start, target, _, duration = model.chases["human-0"]
                 for fraction in (0, 0.2, 0.5, 0.8, 1):
@@ -409,7 +414,7 @@ class SocialBeaconTests(unittest.TestCase):
                     actual = model.evaluate(visual[1]) - model.objective
                     expected = start + (target - start) * fraction
                     self.assertAlmostEqual((actual - expected).magnitude(), 0, places=8)
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 5 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 10 + 1e-8)
                     self.assertTrue(0.5 <= actual.y <= 8)
                 vertical_moves = [abs(start.y - target.y) for start, target, _, _ in model.chases.values()]
                 self.assertGreater(max(vertical_moves), 6)
@@ -423,7 +428,7 @@ class SocialBeaconTests(unittest.TestCase):
                 for now in (103, 103.5, 104, 104.5, 106):
                     model.now = now
                     actual = model.evaluate(visual[1]) - model.objective
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 5 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 10 + 1e-8)
                     self.assertTrue(0.5 <= actual.y <= 8)
                 self.assertEqual(model.random_calls, 108)
 

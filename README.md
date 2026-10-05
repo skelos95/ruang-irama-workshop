@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 5 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
+Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
@@ -29,7 +29,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 |---|---|---|
 | Vivo | Melee tenuto 0,5 s | Apre/chiude Arcade |
 | Menu con elenco | Crouch + Primary / Secondary | Voce successiva / precedente |
-| Menu aperto | Crouch + Interact | Entra o applica |
+| Menu aperto | Crouch + Interact | Apre/applica; nel principale alterna ON/OFF per le voci 8, 9, 12 e 15 |
 | Sottomenu | Crouch + Reload | Torna al menu principale |
 | Soundtrack | Crouch + Ability 1 / 2 | Salta avanti / indietro di 10 generi |
 | Crouch rilasciato | Interact tenuto 0,5 s | Alterna Camera, anche con menu aperto |
@@ -54,14 +54,14 @@ Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciat
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nessuna + 36 icone |
-| 8 | Crouch Travel & Attach | Interact alterna OFF / ON; Travel conserva 5 pagine |
-| 9 | Crouch Privacy | Interact alterna OFF / ON |
+| 8 | Crouch Travel & Attach | ON/OFF dal menu principale; Travel conserva 5 pagine |
+| 9 | Crouch Privacy | ON/OFF dal menu principale |
 | 10 | Try Your Luck | Vision, Acceleration, Skull, Team Heal, Burning, Hacked |
 | 11 | Vote Player | Umani, incluso sé stesso |
-| 12 | Dummy Follow | Interact alterna OFF / ON, con dummy avversario presente |
+| 12 | Dummy Follow | ON/OFF dal menu principale, con dummy avversario presente |
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
-| 15 | Superman Punch | Interact alterna OFF / ON nella schermata della funzione |
+| 15 | Superman Punch | ON/OFF dal menu principale |
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 
@@ -73,7 +73,7 @@ La diagnostica server rimane bianca ed è visibile solo all'host. I testi dei me
 
 Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu seguono la stessa progressione di accenti, mescolati al Name Color scelto, con transizioni fluide di 0,180 s; le funzioni mantengono le posizioni attuali.
 
-Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 5 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
+Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze e cursori persistono tra chiusura menu, morte e cambio eroe; **cambio squadra e uscita/rientro ripartono dai default**.
 

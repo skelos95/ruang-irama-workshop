@@ -1534,7 +1534,12 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.HudMenu = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "GambarTeleportasi"]
-    checks.equal(len(arcade_renderers), 17, "renderer menu principale + pagine 0..15")
+    checks.equal(len(arcade_renderers), 13, "renderer menu principale + dodici pagine con opzioni")
+    direct_pages = {8, 9, 12, 15}
+    for retired in ("GambarSakelarTeleportasi", "GambarPrivasiInspeksi",
+                    "GambarIkutiBotBuatan", "GambarPukulanSuper"):
+        checks.require(retired not in subroutines and rule_by_subroutine(rules, retired) is None,
+                       f"toggle principale: renderer ON/OFF obsoleto: {retired}")
     teleport_renderer = rule_by_subroutine(rules, "GambarTeleportasi")
     checks.require(teleport_renderer is not None, "renderer GambarTeleportasi assente")
     if teleport_renderer:
@@ -1663,7 +1668,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if subroutine_target(rule) == "GambarTeleportasi":
                 checks.require("\\" not in calls[0].args[2],
                                "GambarTeleportasi: sottotitolo senza backslash visibili")
-            elif subroutine_target(rule) != "GambarPukulanSuper":
+            else:
                 checks.require("\\" in calls[0].args[2],
                                f"{subroutine_target(rule)}: sottotitolo menu senza spaziatura")
             checks.require(calls[0].args[3].strip() != "Null",
@@ -1763,8 +1768,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "router menu: GambarHantuTerbang deve essere chiamato soltanto dalla pagina 13 aperta",
         )
         for page in range(16):
-            checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body) is not None,
-                           f"router menu non copre pagina {page}")
+            route = re.search(rf"HalamanMenu\s*==\s*{page}\b", router.body)
+            if page in direct_pages:
+                checks.require(route is None, f"toggle principale: pagina {page} non deve avere un sottomenu")
+            else:
+                checks.require(route is not None, f"router menu non copre pagina {page}")
         checks.require(
             re.search(r"HalamanMenu\s*==\s*0.*?Call Subroutine\(GambarWarna\);", router.body, re.DOTALL) is not None,
             "router menu: pagina 0 deve aprire Name Color",
@@ -1774,16 +1782,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "router menu: pagina 2 deve aprire Soundtrack",
         )
         checks.require(
-            re.search(r"HalamanMenu\s*==\s*12.*?Call Subroutine\(GambarIkutiBotBuatan\);", router.body, re.DOTALL) is not None,
-            "router menu: pagina 12 deve aprire Dummy Follow",
-        )
-        checks.require(
             re.search(r"HalamanMenu\s*==\s*13.*?Call Subroutine\(GambarHantuTerbang\);", router.body, re.DOTALL) is not None,
             "router menu: pagina 13 deve aprire Ghost Mode / Fly",
-        )
-        checks.require(
-            re.search(r"HalamanMenu\s*==\s*15.*?Call Subroutine\(GambarPukulanSuper\);", router.body, re.DOTALL) is not None,
-            "router menu: pagina 15 deve aprire Super Punch",
         )
 
     main_renderer = rule_by_subroutine(rules, "GambarUtama")
@@ -1836,34 +1836,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "menu principale: anteprima pagina 13 senza stato Fly in tutte le lingue",
         )
 
-    dummy_follow_renderer = rule_by_subroutine(rules, "GambarIkutiBotBuatan")
-    checks.require(dummy_follow_renderer is not None, "renderer pagina 12 Dummy Follow assente")
-    if dummy_follow_renderer:
-        for token in (
-            "12 - DUMMY FOLLOW",
-            "LET ENEMY DUMMY FOLLOW YOU: {0}",
-            '12 - BOT MENGIKUTI',
-            'IZINKAN BOT MUSUH IKUTIMU: {0}',
-            "12 - ดัมมี่ติดตาม",
-            "ให้ดัมมี่ศัตรูตามคุณ: {0}",
-        ):
-            checks.require(token in dummy_follow_renderer.body,
-                           f"pagina 12 Dummy Follow non chiarisce il consenso localizzato: {token}")
-
-    for name, state in (("GambarSakelarTeleportasi", "TeleportasiJongkokDiaktifkan"),
-                        ("GambarPrivasiInspeksi", "PrivasiInspeksiAktif"),
-                        ("GambarIkutiBotBuatan", "IzinkanBotBuatanMengikuti")):
-        renderer = rule_by_subroutine(rules, name)
-        checks.require(renderer is not None, f"toggle diretto: renderer assente: {name}")
-        if renderer:
-            checks.require("/2" not in renderer.body and "\\n>" not in renderer.body,
-                           f"toggle diretto: {name} conserva righe ON/OFF selezionabili")
-            checks.equal(renderer.body.count(f"Event Player.{state} ?"), 3,
-                         f"toggle diretto: {name} deve mostrare solo lo stato applicato in tre lingue")
-            for token in ("toggle", "ubah", "สลับ", "Button(Interact)", "Button(Reload)"):
-                checks.require(token in renderer.body, f"toggle diretto: {name} istruzione assente: {token}")
-            checks.require("Button(Primary Fire)" not in renderer.body and "Button(Secondary Fire)" not in renderer.body,
-                           f"toggle diretto: {name} non deve suggerire scorrimento ON/OFF")
+    if main_renderer:
+        for state in ("TeleportasiJongkokDiaktifkan", "PrivasiInspeksiAktif", "IzinkanBotBuatanMengikuti"):
+            checks.equal(main_renderer.body.count(f"Event Player.{state} ?"), 3,
+                         f"toggle principale: stato applicato in tre lingue: {state}")
+        for token in ("LET ENEMY DUMMY FOLLOW YOU", "IZINKAN BOT MUSUH IKUTIMU", "ให้ดัมมี่ศัตรูตามคุณ",
+                      "{0}: use", "{0}: pakai", "{0}: ใช้"):
+            checks.require(token in main_renderer.body, f"toggle principale: istruzione localizzata assente: {token}")
 
     ghost_fly_renderer = rule_by_subroutine(rules, "GambarHantuTerbang")
     checks.require(ghost_fly_renderer is not None, "renderer pagina 13 Ghost Mode / Fly assente")
@@ -1912,11 +1891,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             re.search(r"HalamanMenu\s*==\s*2.*?KursorGenre\s*=", navigation_rule.body, re.DOTALL) is not None,
             "navigazione menu: pagina 2 deve muovere KursorGenre",
         )
-        checks.require(
-            "And(And(Event Player.HalamanMenu != 8, Event Player.HalamanMenu != 9), Event Player.HalamanMenu != 12) == True;"
-            in navigation_rule.body,
-            "toggle diretto: Primary/Secondary devono ignorare pagine 8, 9, 12",
-        )
+        checks.require(not any(re.search(rf"HalamanMenu\s*!=\s*{page}\b", navigation_rule.body)
+                               for page in direct_pages),
+                       "toggle principale: guardie navigazione dei sottomenu ON/OFF obsolete")
         checks.require(
             re.search(
                 r"HalamanMenu\s*==\s*13.*?KursorHantuTerbang\s*=\s*"
@@ -1997,18 +1974,25 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             re.search(r"HalamanMenu\s*==\s*2.*?Call Subroutine\(TerapkanHalamanMusik\);", apply_dispatcher.body, re.DOTALL) is not None,
             "apply menu: pagina 2 deve usare TerapkanHalamanMusik",
         )
-        checks.require(
-            re.search(
-                r"HalamanMenu\s*==\s*12.*?Call Subroutine\(TerapkanHalamanIkutiBotBuatan\);",
-                apply_dispatcher.body,
-                re.DOTALL,
-            ) is not None,
-            "apply menu: pagina 12 deve usare TerapkanHalamanIkutiBotBuatan",
-        )
-        for page, name in ((8, "TerapkanTeleportasiJongkok"), (9, "TerapkanHalamanPrivasiInspeksi")):
-            checks.require(re.search(rf"HalamanMenu\s*==\s*{page}.*?Call Subroutine\({name}\);",
-                                     apply_dispatcher.body, re.DOTALL) is not None,
-                           f"toggle diretto: Interact pagina {page} non raggiunge {name}")
+        for page, name in ((8, "TerapkanTeleportasiJongkok"), (9, "TerapkanHalamanPrivasiInspeksi"),
+                           (12, "TerapkanHalamanIkutiBotBuatan"), (15, "TerapkanHalamanPukulanSuper")):
+            calls = [call for call in iter_calls(apply_dispatcher.body, "Call Subroutine")
+                     if call.args == (name,)]
+            checks.equal(len(calls), 1, f"toggle principale: pagina {page} deve usare {name} una sola volta")
+            if calls:
+                branches = conditional_branches_containing(apply_dispatcher.body, calls[0].start)
+                headers = [re.sub(r"\s+", "", branch.splitlines()[0]).removeprefix("Else")
+                           for branch in branches]
+                checks.require("If(EventPlayer.HalamanMenu==-1);" in headers
+                               and f"If(EventPlayer.KursorUtama=={page});" in headers,
+                               f"toggle principale: pagina {page} deve agire dal cursore principale")
+                branch = branches[0] if branches else ""
+                checks.require("Call Subroutine(GambarMenu)" not in mask_strings(branch)
+                               and re.search(r"Event Player\.(?:HalamanMenu|KursorUtama)\s*=(?!=)",
+                                             mask_strings(branch)) is None,
+                               f"toggle principale: pagina {page} deve conservare schermata, cursore e HUD")
+            checks.require(re.search(rf"HalamanMenu\s*==\s*{page}\b", apply_dispatcher.body) is None,
+                           f"toggle principale: apply sottomenu {page} obsoleto")
         checks.require(
             re.search(
                 r"HalamanMenu\s*==\s*13.*?Call Subroutine\(TerapkanHalamanHantuTerbang\);",
@@ -2016,11 +2000,6 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 re.DOTALL,
             ) is not None,
             "apply menu: pagina 13 deve usare TerapkanHalamanHantuTerbang",
-        )
-        checks.require(
-            re.search(r"HalamanMenu\s*==\s*15.*?Call Subroutine\(TerapkanHalamanPukulanSuper\);",
-                      apply_dispatcher.body, re.DOTALL) is not None,
-            "apply menu: pagina 15 deve usare TerapkanHalamanPukulanSuper",
         )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
@@ -2204,7 +2183,7 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
     declared = {entry.name: entry.index for entry in global_entries}
     for name, index in {"PemainPukulanSuper": 72, "WaktuPukulanSuper": 73, "TargetPukulanSuper": 74}.items():
         checks.equal(declared.get(name), index, f"Super Punch: campo global {name}")
-    for name in ("GambarPukulanSuper", "TerapkanHalamanPukulanSuper", "ProsesPukulanSuper"):
+    for name in ("TerapkanHalamanPukulanSuper", "ProsesPukulanSuper"):
         checks.require(name in subroutines, f"Super Punch: subroutine {name} assente")
     checks.require("Global.PemainPukulanSuper=EmptyArray;" in code(source),
                    "Super Punch: registro deve iniziare vuoto OFF")
@@ -2213,7 +2192,6 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                  "Super Punch: dodici timer slot devono iniziare a zero")
 
     main = rule_by_subroutine(rules, "GambarUtama")
-    renderer = rule_by_subroutine(rules, "GambarPukulanSuper")
     apply = rule_by_subroutine(rules, "TerapkanHalamanPukulanSuper")
     if main:
         for title in ("15 - SUPERMAN PUNCH", "15 - PUKULAN SUPERMAN", "15 - หมัดซูเปอร์แมน"):
@@ -2221,25 +2199,6 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                            f"Super Punch: anteprima principale pagina 15 localizzata: {title}")
         checks.equal(main.body.count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
                      "Super Punch: anteprima stato applicato in tutte le lingue")
-    checks.require(renderer is not None, "Super Punch: renderer pagina 15 assente")
-    if renderer:
-        calls = list(iter_calls(renderer.body, "Create HUD Text"))
-        checks.equal(len(calls), 1, "Super Punch: unico HUD menu")
-        if calls:
-            triads = language_triads(calls[0].args[2])
-            checks.equal(len(triads), 1, "Super Punch: comandi EN/ID/TH")
-            if triads:
-                for branch in triads[0]:
-                    bindings = tuple(call.args[0].strip() for call in iter_calls(branch, "Input Binding String") if call.args)
-                    checks.equal(bindings, ("Button(Interact)", "Button(Reload)"),
-                                 "Super Punch: binding toggle Interact e back Reload ordinati")
-            for token in ("15 - SUPERMAN PUNCH", "MELEE: INSTANT KO | ALLIES TOO", "15 - PUKULAN SUPERMAN",
-                          "SERANGAN DEKAT: KO LANGSUNG | TERMASUK TEMAN", "15 - หมัดซูเปอร์แมน",
-                          "โจมตีประชิด: KO ทันที | รวมเพื่อนร่วมทีม"):
-                checks.require(token in calls[0].args[3], f"Super Punch: effetto e alleati localizzati: {token}")
-            checks.equal(calls[0].args[3].count("Array Contains(Global.PemainPukulanSuper, Event Player)"), 3,
-                         "Super Punch: stato OFF/ON applicato in tutte le lingue")
-
     checks.require(apply is not None, "Super Punch: handler toggle assente")
     if apply:
         expected = (
@@ -2345,7 +2304,7 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
 
 
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
-    """Guard at most twelve RGB icons floating within five metres of the objective."""
+    """Guard at most twelve RGB icons floating within ten metres of the objective."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
 
@@ -2413,7 +2372,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
             "Global.EntitasIkonPilar[Global.IndeksIkonPilar]=LastCreatedEntity;",
             "Global.PemainIkonPilar=Global.PemilikIkonPilar[Global.IndeksIkonPilar];",
             "Global.PemainIkonPilar=Null;",
-            "RandomReal(0,5)", "RandomReal(0.500,8)",
+            "RandomReal(0,10)", "RandomReal(0.500,8)",
         ):
             checks.require(token in packed, f"Pilar: gestione entità e traiettoria mancanti {token}")
         for field in ("PembaruanDaftarTertunda", "PindahTimDiproses"):
@@ -2425,7 +2384,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
         for chase in chases:
             checks.equal(tuple(code(arg) for arg in chase.args), (
                 "Global.PemilikIkonPilar[Global.IndeksIkonPilar]", "PosisiIkonPilar",
-                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,5)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
+                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,10)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
                 "Pilar: chase Vector nativo congela destinazione e durata 4,5 secondi")
         renewal = "If(TotalTimeElapsed>=Global.WaktuIkonPilar[Global.IndeksIkonPilar]+3);"
         checks.require(renewal in packed, "Pilar: rinnovo anticipato dopo tre secondi mantiene il controllo a un Hz")

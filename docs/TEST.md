@@ -16,8 +16,9 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | 4 ottobre, riscontro utente su PR #89 | Super Punch non produce sempre KO immediato; icone nel fascio bianche. | Correzioni nel sorgente corrente, ancora da confermare nel client. |
 | 4 ottobre, `2e1c4ff` / PR #90 | Screenshot della diagnostica: 36.381 elementi, regola più grande 130 KB. | Entrambi oltre i limiti nativi; i controlli offline di quella revisione non lo avevano rilevato. |
 | 4 ottobre, riscontro utente dopo PR #91 | L'utente conferma che le funzioni funzionano, ma nota pause nel movimento delle icone. | Rinnovo anticipato nel sorgente corrente; resa visiva da ricontrollare nel client. Nessun nuovo conteggio compilato fornito. |
+| 4 ottobre, `9572d1` / PR #92 | L'utente conferma il funzionamento dopo Superman Punch a menu aperto e rinnovo anticipato delle icone. | Conferma funzionale generale, senza metriche native o nuova prova di durata; il raggio di 10 m è una modifica successiva. |
 
-Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 5 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
+Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 10 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
 ## Preparazione
 
@@ -44,16 +45,16 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 ### Input, menu e HUD
 
-- In EN/ID/TH aprire tutte le 16 pagine, applicare, tornare e riaprire; percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
-- Nei menu 8, 9 e 12 Interact alterna subito lo stato; tenere premuto non ripete il comando e Primary/Secondary non selezionano vecchie voci ON/OFF.
+- In EN/ID/TH percorrere tutte le 16 voci del principale; per quelle con più opzioni aprire il sottomenu, applicare, tornare e riaprire. Percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
+- Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato EN/ID/TH. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
 - Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
 - Il profilo `งูแรร์` parte Charcoal / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
-- Sull'obiettivo devono apparire solo le icone, senza Light Shaft né nomi: raggio fisso di 5 m con 1/6/12 umani. AI e dummy non ne creano. Le icone conservano il colore esatto del proprietario anche quando cambia l'host; NONE non crea simboli.
-- Le icone devono muoversi senza pause fra percorsi, anche con aggiornamenti leggermente sfalsati rispetto al secondo. Il rinnovo anticipato non deve spostarle istantaneamente. Devono restare entro il raggio di 5 m anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. Create Icon aumenta al massimo di un'entità per umano con icona; IWT non cambia. Provare cambi colore senza ricreazioni, cambi tipo senza doppioni e traiettorie fino a 8 m sopra l'obiettivo. Il Chase del vecchio proprietario deve fermarsi al cleanup; il nuovo occupante non deve ereditare movimento o handle.
+- Sull'obiettivo devono apparire solo le icone, senza Light Shaft né nomi: raggio fisso di 10 m con 1/6/12 umani. AI e dummy non ne creano. Le icone conservano il colore esatto del proprietario anche quando cambia l'host; NONE non crea simboli.
+- Le icone devono muoversi senza pause fra percorsi, anche con aggiornamenti leggermente sfalsati rispetto al secondo. Il rinnovo anticipato non deve spostarle istantaneamente. Devono restare entro il raggio di 10 m anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. Create Icon aumenta al massimo di un'entità per umano con icona; IWT non cambia. Provare cambi colore senza ricreazioni, cambi tipo senza doppioni e traiettorie fino a 8 m sopra l'obiettivo. Il Chase del vecchio proprietario deve fermarsi al cleanup; il nuovo occupante non deve ereditare movimento o handle.
 - Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–15: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
