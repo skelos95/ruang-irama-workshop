@@ -1145,16 +1145,28 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 mutated = self.source + f"\n// {legacy}\n"
                 self.assert_rejected(mutated, "messaggio apertura menu obsoleto")
 
-    def test_navigation_ignores_all_direct_toggle_pages(self) -> None:
-        navigation = self.rule(
-            lambda rule: "Event Player.KursorUtama = (Event Player.KursorUtama" in rule.body
-        )
-        mutated = self.replace_in_rule(
-            navigation,
-            "And(And(Event Player.HalamanMenu != 8, Event Player.HalamanMenu != 9), Event Player.HalamanMenu != 12) == True;",
-            "True == True;",
-        )
-        self.assert_rejected(mutated, "Primary/Secondary devono ignorare pagine 8, 9, 12")
+    def test_main_toggle_cannot_reopen_a_dedicated_submenu(self) -> None:
+        dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                               and "Event Player.PerintahMenu == 1;" in rule.body
+                               and "TerapkanHalamanIkutiBotBuatan" in rule.body)
+        for name in ("TerapkanTeleportasiJongkok", "TerapkanHalamanPrivasiInspeksi",
+                     "TerapkanHalamanIkutiBotBuatan", "TerapkanHalamanPukulanSuper"):
+            with self.subTest(handler=name):
+                mutated = self.replace_in_rule(dispatcher, f"Call Subroutine({name});",
+                                               f"Call Subroutine({name});\n"
+                                               "Event Player.HalamanMenu = Event Player.KursorUtama;\n"
+                                               "Call Subroutine(GambarMenu);")
+                self.assert_rejected(mutated, "deve conservare schermata, cursore e HUD")
+
+    def test_main_toggle_must_dispatch_by_main_cursor_not_submenu_page(self) -> None:
+        dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
+                               and "Event Player.PerintahMenu == 1;" in rule.body
+                               and "TerapkanHalamanIkutiBotBuatan" in rule.body)
+        for page in (8, 9, 12, 15):
+            with self.subTest(page=page):
+                mutated = self.replace_in_rule(dispatcher, f"Event Player.KursorUtama == {page}",
+                                               f"Event Player.HalamanMenu == {page}")
+                self.assert_rejected(mutated, "deve agire dal cursore principale")
 
     def test_direct_toggle_cannot_restore_retired_on_off_cursor(self) -> None:
         dispatcher = self.rule(
@@ -1179,7 +1191,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "pagina 12 deve usare TerapkanHalamanIkutiBotBuatan")
 
     def test_dummy_follow_renderer_is_localized_and_explicitly_enemy_scoped(self) -> None:
-        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarIkutiBotBuatan")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarUtama")
         mutated = self.replace_in_rule(renderer, 'BOT MUSUH', "DUMMY")
         self.assert_rejected(mutated, 'BOT MUSUH')
 

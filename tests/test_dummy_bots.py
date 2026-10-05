@@ -159,7 +159,8 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Event Player.IzinkanBotBuatanMengikuti = False;", source)
             self.assertNotIn("KursorIkutiBotBuatan", source)
             self.assertIn("Call Subroutine(TerapkanHalamanIkutiBotBuatan);", source)
-            self.assertIn("Call Subroutine(GambarIkutiBotBuatan);", source)
+            self.assertNotIn("GambarIkutiBotBuatan", source)
+            self.assertIn("Event Player.KursorUtama == 12", source)
             self.assertIn("12 - DUMMY FOLLOW", source)
             self.assertIn('12 - BOT MENGIKUTI', source)
 

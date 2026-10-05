@@ -232,18 +232,18 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 model.cache_tick("bot")
                 self.assertTrue(bot["IzinkanBotBuatanMengikuti"])
 
-    def test_open_menu_reports_unavailability_in_all_three_languages(self):
+    def test_main_menu_reads_consent_without_rebuilding_dummy_availability_queries(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                page = validator.rule_by_subroutine(model.rules, "GambarIkutiBotBuatan")
+                page = validator.rule_by_subroutine(model.rules, "GambarUtama")
                 apply = validator.rule_by_subroutine(model.rules, "TerapkanHalamanIkutiBotBuatan")
                 condition = (
                     "Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), "
                     "And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True))"
                 )
-                self.assertEqual(page.body.count(condition), 1)
+                self.assertEqual(page.body.count(condition), 0)
                 self.assertEqual(apply.body.count(condition), 1)
-                for label in ("NO ENEMY DUMMY", "BOT MUSUH TIDAK ADA", "ไม่มีดัมมี่ศัตรู"):
+                for label in ("LET ENEMY DUMMY FOLLOW YOU", "IZINKAN BOT MUSUH IKUTIMU", "ให้ดัมมี่ศัตรูตามคุณ"):
                     self.assertIn(label, page.body)
                 self.assertEqual(page.body.count("Create HUD Text("), 1)
                 self.assertNotIn("Wait(", apply.body)

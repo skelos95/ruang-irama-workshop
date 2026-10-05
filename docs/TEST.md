@@ -45,8 +45,8 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 ### Input, menu e HUD
 
-- In EN/ID/TH aprire tutte le 16 pagine, applicare, tornare e riaprire; percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
-- Nei menu 8, 9 e 12 Interact alterna subito lo stato; tenere premuto non ripete il comando e Primary/Secondary non selezionano vecchie voci ON/OFF.
+- In EN/ID/TH percorrere tutte le 16 voci del principale; per quelle con più opzioni aprire il sottomenu, applicare, tornare e riaprire. Percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
+- Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato EN/ID/TH. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.

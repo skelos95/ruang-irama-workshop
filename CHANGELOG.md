@@ -1,5 +1,11 @@
 # Changelog
 
+## Interruttori dal menu principale e coerenza lingue — 2026-10-05
+
+- Crouch + Interact alterna direttamente Travel/Attach, Privacy, Dummy Follow e Superman Punch nella voce principale. Pagina, cursore e HUD restano invariati; ogni pressione è consumata una sola volta. Le altre funzioni mantengono i propri sottomenu.
+- Rimossi i quattro renderer e i rami dei sottomenu non più utilizzati; 117 regole e 67 subroutine, senza nuove variabili o frequenze. Le protezioni e il consenso al Dummy Follow restano gli stessi.
+- Istruzione principale coerente in EN/ID/TH, HP completo tradotto in ID/TH e icona del bersaglio Camera aggiunta anche in thailandese. Controllati HUD e Small Message; nomi custom di regole, variabili e subroutine restano indonesiani.
+
 ## Raggio icone 10 m e controllo generale — 2026-10-04
 
 - Raggio orizzontale delle icone sull'obiettivo aumentato da 5 a 10 m; altezza, colore del proprietario, movimento continuo e manutenzione a 1 Hz conservati. Nessuna nuova regola, variabile, attesa o entità.

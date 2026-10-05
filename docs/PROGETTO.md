@@ -11,7 +11,7 @@ Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](..
 
 ## Scheduler
 
-Il runtime contiene 121 regole, 71 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
+Il runtime contiene 117 regole, 67 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
 
 | Frequenza | Lavoro |
 |---:|---|
@@ -55,7 +55,7 @@ Ogni umano ha al massimo un HUD Arcade: la navigazione sulla stessa pagina aggio
 
 I nove handle globali sono inclusi nella diagnostica. Il leader usa nome/colore stabili. Il roster mantiene il Name Color nel Subheader; la diagnostica usa il campo Text bianco dello stesso handle, visibile solo all'host sull'ultima riga. Il ramo nascosto restituisce una stringa vuota, evitando lo `0` derivato da un `Null` tipizzato come testo. IWT e icone catturano soltanto l'identità con `Evaluate Once`; posizione/testo/pubblico necessari restano rivalutati. Le targhette riuniscono icona, nome e salute, ancorati a `Eye Position + Vector(0, 0.450, 0)`.
 
-Travel/Attach, Privacy e Dummy Follow mostrano soltanto lo stato corrente: Interact lo alterna, Primary/Secondary non cambiano queste schermate. I tre cursori precedenti sono rimossi, mantenendo gli altri ID di dichiarazione. Input, cursori ancora necessari, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
+Travel/Attach, Privacy, Dummy Follow e Superman Punch mostrano lo stato corrente nella voce principale: Crouch + Interact lo alterna senza aprire un sottomenu o ricreare l'HUD. La pagina rimane −1 e il cursore resta sulla stessa voce; Primary/Secondary continuano a navigare nel menu principale. I quattro renderer esclusivi e i loro rami non più raggiungibili sono rimossi. I tre cursori ON/OFF precedenti restano rimossi; gli ID player e globali non cambiano. Input, cursori ancora necessari, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. I `Wait` sono limitati ai percorsi autorizzati; non introdurli in scansione, cleanup o Resurrect.
 
 Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli del gruppo usano divisione per venti. Le cinque palette allineate contengono 40 colori ordinati per famiglie e sfumature: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White resta all'indice 0 e Silver Mist all'indice 1; il profilo งูแรร์ parte da Charcoal, indice 2; Black è all'indice 3 e usa RGB (0, 0, 0) sia per il nome sia per la preview. Etichette EN/ID/TH e valori RGB vengono riordinati insieme.
 
