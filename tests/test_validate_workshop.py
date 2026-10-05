@@ -1012,12 +1012,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.inject_action(rule, "Destroy HUD Text(Event Player.HudMenu);")
         self.assert_rejected(mutated, "Primary/Secondary")
 
-    def test_all_sixteen_pages_are_routed(self) -> None:
+    def test_all_twelve_option_submenus_are_routed_and_main_toggles_have_no_submenu(self) -> None:
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHalamanAktif")
-        for page in (13, 15):
+        for page in (0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 13, 14):
             with self.subTest(page=page):
                 mutated = self.replace_in_rule(router, f"HalamanMenu == {page}", "HalamanMenu == 16")
                 self.assert_rejected(mutated, f"pagina {page}")
+        for page in (8, 9, 12, 15):
+            with self.subTest(main_toggle=page):
+                mutated = self.replace_in_rule(router, "HalamanMenu == 0", f"HalamanMenu == {page}")
+                self.assert_rejected(mutated, f"pagina {page} non deve avere un sottomenu")
 
     def test_page_thirteen_keeps_the_progressive_fly_copy_in_all_languages(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarHantuTerbang")
