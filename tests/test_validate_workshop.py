@@ -723,8 +723,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         navigation = self.rule(lambda rule: rule.name.startswith("19c - Teleportasi Jongkok:"))
         interact = self.rule(lambda rule: rule.name.startswith("19e - Teleportasi Jongkok: Interaksi"))
         for rule, old, new, error in (
-            (navigation, "Event Player.PerintahTeleportasi == 1 ? 1 : 5", "Event Player.PerintahTeleportasi == 1 ? 1 : 4", "sei pagine avanti e indietro"),
-            (navigation, ") % 6;", ") % 5;", "sei pagine avanti e indietro"),
+            (navigation, "Event Player.PerintahTeleportasi == 1 ? 1 : 5", "Event Player.PerintahTeleportasi == 1 ? 1 : 4", "navigazione deve includere sei pagine avanti e indietro"),
+            (navigation, ") % 6;", ") % 5;", "navigazione deve includere sei pagine avanti e indietro"),
             (interact, "Event Player.KursorTeleportasi < 5;", "", "Interact singolo deve escludere"),
             (interact, "Else If(Event Player.JenisTeleportasiTerkunci == 4);", "Else;", "Self Kill deve essere limitato"),
         ):
