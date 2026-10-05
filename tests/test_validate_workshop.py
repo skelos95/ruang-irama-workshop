@@ -699,8 +699,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
             ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
-            ("1/6 | RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
-            ('2/6 | วาร์ปใกล้ภารกิจ', "ปลายทาง: เป้าหมาย"),
+            ("1/6 | TELEPORT: RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
+            ('2/6 | วาร์ป: ภารกิจ', "ปลายทาง: เป้าหมาย"),
             ("6/6 | FORWARD", "6/6 | OTHER"),
             ("TAHAN {0}: 3 m / 0,05 dtk", "TAHAN INTERACT"),
             ("กด {0} ค้าง: 3 ม. / 0.05 วิ", "กดค้าง"),

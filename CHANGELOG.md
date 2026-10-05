@@ -4,7 +4,7 @@
 
 - Rimossi i due blocchi che escludevano Superman Punch durante Travel: Crouch + Melee funziona su tutte le pagine, con un solo contatto, Unkillable e Revenge invariati. Il comando Arcade da Melee tenuto mantiene il proprio latch.
 - Aggiunta sesta voce Forward: 3 m nella mira 3D corrente a ogni tick di 0,05 s, senza Wait aggiunto. Interact tenuto ripete soltanto questa azione; rilascio o stato non valido interrompono. Il passo può attraversare muri e soffitti senza controlli geometrici, come richiesto; sgancia solo chi si muove.
-- Voce 8 rinominata Crouch: Teleport / Attach / Self Kill e menu Travel aggiornato EN/ID/TH. Nomi custom indonesiani; 118 regole, 68 subroutine, 126 campi player, 5 Wait e un Loop. Stima strutturale 30.721 unità totali, 4.500 nella regola maggiore.
+- Voce 8 rinominata Crouch: Teleport / Attach / Self Kill e menu Travel aggiornato EN/ID/TH. Spawn Room e Objective esplicitano il teletrasporto nel titolo. Nomi custom indonesiani; 118 regole, 68 subroutine, 126 campi player, 5 Wait e un Loop. Stima strutturale 30.721 unità totali, 4.500 nella regola maggiore.
 
 ## Interruttori dal menu principale e coerenza lingue — 2026-10-05
 
