@@ -8,6 +8,8 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
+Il 5 ottobre è stato segnalato un nuovo crash al cambio squadra dopo la PR #94, anche in una lobby appena creata con un solo umano e senza usare menu. Forward è stato rimosso: Travel torna alle cinque pagine e lo scheduler perde il nuovo percorso. La correzione di Superman Punch durante Travel resta attiva. La quarantena ferma subito l’animazione dell’icona personale e revoca il Punch, prima della pulizia finale nel worker stabilizzato. La causa nativa non è stata isolata; il cambio squadra di questa revisione richiede conferma nel client.
+
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
 La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il contenuto corrente di `main` sono revisioni diverse. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
@@ -35,13 +37,12 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Crouch rilasciato | Interact tenuto 0,5 s | Alterna Camera, anche con menu aperto |
 | Menu chiuso | Crouch tenuto | Inspection e, se abilitato, Travel & Attach |
 | Travel & Attach | Crouch + Primary / Secondary, poi Interact | Cambia pagina, poi esegue |
-| Travel, pagina 6 Forward | Crouch + Interact premuto o tenuto | Avanza di 3 m nella direzione dello sguardo; ripete ogni 0,05 s |
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
 | Morto | Jump | Resuscita sul posto sicuro o recupera dal vuoto |
 | Vivo, Multijump ON | Premi o tieni Jump in aria, anche con menu aperto | Salti aggiuntivi con la forza scelta |
 | Vivo, Superman Punch ON | Attacco melee, anche con menu aperto | KO ravvicinato, anche sui compagni; rispetta Unkillable |
 
-Ogni pressione dei comandi menu viene consumata una volta, eccetto Forward che ripete finché Interact resta premuto; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
+Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
 ## Menu personali
 
@@ -55,7 +56,7 @@ Ogni pressione dei comandi menu viene consumata una volta, eccetto Forward che r
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nessuna + 36 icone |
-| 8 | Crouch: Teleport / Attach / Self Kill | ON/OFF dal menu principale; 6 pagine Travel |
+| 8 | Crouch: Teleport / Attach / Self Kill | ON/OFF dal menu principale; 5 pagine Travel |
 | 9 | Crouch Privacy | ON/OFF dal menu principale |
 | 10 | Try Your Luck | Vision, Acceleration, Skull, Team Heal, Burning, Hacked |
 | 11 | Vote Player | Umani, incluso sé stesso |
@@ -64,7 +65,7 @@ Ogni pressione dei comandi menu viene consumata una volta, eccetto Forward che r
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
 
-Travel contiene Spawn, Objective, Player/Bot, Attach, Self Elimination e Forward. Forward rilegge lo sguardo a ogni passo, anche verso alto e basso, e può attraversare muri e soffitti senza controlli geometrici. Se sei attaccato, il primo passo valido ti sgancia. Rilascia Interact o Crouch per fermarti. Le altre cinque azioni restano singole.
+Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni.
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 

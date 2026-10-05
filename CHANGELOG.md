@@ -1,5 +1,12 @@
 # Changelog
 
+## Rimozione Forward dopo regressione al cambio squadra — 2026-10-05
+
+- Segnalato crash al cambio squadra dopo PR #94, anche in una lobby nuova con un solo umano e senza aprire menu. La causa nativa non è stata identificata: questa rimozione richiede nuova verifica nel gioco.
+- Eliminati Forward, la sua subroutine e il ramo nello scheduler. Travel torna alle cinque pagine, con navigazione modulo 5 e una sola azione per pressione di Interact. Conservati i titoli espliciti Teleport Spawn/Objective e la voce 8 EN/ID/TH.
+- Conservata la correzione di Superman Punch durante Travel. La quarantena ora revoca subito il Punch e ferma la sola animazione dell’icona del player, dopo averlo reso inattivo; prima l’icona si nascondeva ma il Chase poteva continuare fino alla manutenzione a 1 Hz o al worker. Il profilo thailandese può avere un’icona attiva senza usare menu. La distruzione degli handle, il roster e il reset completo restano nel worker stabilizzato; nessun nuovo Wait, HUD, campo o ciclo.
+- 117 regole, 67 subroutine, 126 campi player, 5 Wait e un Loop. Stima strutturale 30.467 unità totali, 4.500 nella regola maggiore.
+
 ## Superman Punch durante Travel e teletrasporto in avanti — 2026-10-05
 
 - Rimossi i due blocchi che escludevano Superman Punch durante Travel: Crouch + Melee funziona su tutte le pagine, con un solo contatto, Unkillable e Revenge invariati. Il comando Arcade da Melee tenuto mantiene il proprio latch.

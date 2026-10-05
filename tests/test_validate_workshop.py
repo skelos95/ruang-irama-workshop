@@ -699,11 +699,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
             ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
-            ("1/6 | TELEPORT: RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
-            ('2/6 | วาร์ป: ภารกิจ', "ปลายทาง: เป้าหมาย"),
-            ("6/6 | FORWARD", "6/6 | OTHER"),
-            ("TAHAN {0}: 3 m / 0,05 dtk", "TAHAN INTERACT"),
-            ("กด {0} ค้าง: 3 ม. / 0.05 วิ", "กดค้าง"),
+            ("1/5 | TELEPORT: RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
+            ('2/5 | วาร์ป: ภารกิจ', "ปลายทาง: เป้าหมาย"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -719,78 +716,28 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
 
-    def test_forward_travel_has_six_pages_without_repeating_self_kill(self) -> None:
+    def test_travel_navigation_and_renderer_keep_five_pages(self) -> None:
         navigation = self.rule(lambda rule: rule.name.startswith("19c - Teleportasi Jongkok:"))
-        interact = self.rule(lambda rule: rule.name.startswith("19e - Teleportasi Jongkok: Interaksi"))
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         for rule, old, new, error in (
-            (navigation, "Event Player.PerintahTeleportasi == 1 ? 1 : 5", "Event Player.PerintahTeleportasi == 1 ? 1 : 4", "navigazione deve includere sei pagine avanti e indietro"),
-            (navigation, ") % 6;", ") % 5;", "navigazione deve includere sei pagine avanti e indietro"),
-            (interact, "Event Player.KursorTeleportasi < 5;", "", "Interact singolo deve escludere"),
-            (interact, "Else If(Event Player.JenisTeleportasiTerkunci == 4);", "Else;", "Self Kill deve essere limitato"),
+            (navigation, "Event Player.PerintahTeleportasi == 1 ? 1 : 4", "Event Player.PerintahTeleportasi == 1 ? 1 : 5", "navigazione deve includere cinque pagine avanti e indietro"),
+            (navigation, ") % 5;", ") % 6;", "navigazione deve includere cinque pagine avanti e indietro"),
+            (renderer, "Event Player.KursorTeleportasi %= 5;", "Event Player.KursorTeleportasi %= 6;", "normalizzare il cursore a cinque pagine"),
         ):
             with self.subTest(mutation=old):
                 self.assert_rejected(self.replace_in_rule(rule, old, new), "Travel: " + error)
 
-    def test_forward_travel_scheduler_runs_only_during_active_hold(self) -> None:
+    def test_travel_forward_declaration_and_runtime_stay_removed(self) -> None:
+        declaration = re.sub(r"(\bsubroutines\s*\{)", r"\1\n\t67: ProsesTeleportasiMaju", self.source, count=1)
+        self.assert_rejected(declaration, "Travel: subroutine Forward deve restare rimossa")
+        runtime = self.source + '\nrule("89j - removed Forward") { event { Subroutine; ProsesTeleportasiMaju; } actions { Abort; } }'
+        self.assert_rejected(runtime, "Travel: subroutine Forward deve restare rimossa")
+
+    def test_travel_forward_has_no_scheduler_caller(self) -> None:
         scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
-        for old, new in (
-            ("Global.PemainAktif.TeleportasiJongkokAktif == True, And(Global.PemainAktif.KursorTeleportasi == 5", "True, And(Global.PemainAktif.KursorTeleportasi == 5"),
-            ("Global.PemainAktif.KursorTeleportasi == 5", "Global.PemainAktif.KursorTeleportasi == 4"),
-            ("Global.PemainAktif.PerintahTeleportasi == 3", "Global.PemainAktif.PerintahTeleportasi == 0"),
-        ):
-            with self.subTest(mutation=old):
-                self.assert_rejected(self.replace_in_rule(scheduler, old, new), "Travel avanti: chiamata solo durante uso attivo")
-        changed = self.inject_action(scheduler, "Call Subroutine(ProsesTeleportasiMaju);")
-        self.assert_rejected(changed, "Travel avanti: unico caller scheduler")
-
-    def test_forward_travel_rechecks_player_input_and_lifecycle_before_moving(self) -> None:
-        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
-        for old, new in (
-            ("Array Contains(Global.PemainManusia, Global.PemainAktif) == False", "False"),
-            ("Global.PemainAktif.Manusia == False", "False"),
-            ("Has Spawned(Global.PemainAktif) == False", "False"),
-            ("Is Alive(Global.PemainAktif) == False", "False"),
-            ("Global.PemainAktif.PindahTimDiproses == True", "False"),
-            ("Global.PemainAktif.TeleportasiJongkokDiaktifkan == False", "False"),
-            ("Global.PemainAktif.KursorTeleportasi != 5", "False"),
-            ("Global.PemainAktif.MenuTerbuka == True", "False"),
-            ("Global.PemainAktif.PrivasiNasibAktif == True", "False"),
-            ("Is Button Held(Global.PemainAktif, Button(Crouch)) == False", "False"),
-            ("Is Button Held(Global.PemainAktif, Button(Interact)) == False", "False"),
-        ):
-            with self.subTest(mutation=old):
-                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: guardia prima del movimento")
-
-    def test_forward_travel_uses_full_look_direction_and_crosses_walls_for_only_the_owner(self) -> None:
-        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
-        for old, new in (
-            ("Facing Direction Of(Global.PemainAktif)", "Vector(0, 0, 1)"),
-            ("Facing Direction Of(Global.PemainAktif) * 3", "Facing Direction Of(Global.PemainAktif) * 30"),
-            ("Teleport(Global.PemainAktif,", "Teleport(Global.TargetPukulanSuper,"),
-            ("Position Of(Global.PemainAktif) +", "Eye Position(Global.PemainAktif) +"),
-        ):
-            with self.subTest(mutation=old):
-                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: passo tre metri nella direzione dello sguardo")
-        for obstacle_check in (
-            "Abort If(Is In Line Of Sight(Position Of(Global.PemainAktif), Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3, Barriers Do Not Block LOS) == False);",
-            "Global.PemainAktif.PosisiTujuanTeleportasi = Ray Cast Hit Position(Position Of(Global.PemainAktif), Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3, Empty Array, Empty Array, False);",
-            "Global.PemainAktif.PosisiTujuanTeleportasi = Nearest Walkable Position(Position Of(Global.PemainAktif));",
-        ):
-            with self.subTest(obstacle_check=obstacle_check):
-                self.assert_rejected(self.inject_action(runtime, obstacle_check), "Travel avanti: attraversamento muri senza controlli ostacoli o terreno")
-
-    def test_forward_travel_detaches_before_moving_without_extra_wait_or_menu_changes(self) -> None:
-        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
-        for old, new, error in (
-            ("Detach Players(Global.PemainAktif);", "Abort;", "distacco locale prima del Teleport"),
-            ("If(Global.PemainAktif.LampiranTeleportasiAktif == True);", "If(True);", "distacco soltanto se attaccato"),
-            ("Global.PemainAktif.TargetLampiranTeleportasi = Null;", "", "reset lampiran prima del movimento"),
-            ("Teleport(Global.PemainAktif, Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3);", "Teleport(Global.PemainAktif, Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3);\n\t\tWait(0.050, Ignore Condition);", "nessun Wait, Loop o timer aggiuntivo"),
-        ):
-            with self.subTest(mutation=old):
-                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: " + error)
-        changed = self.inject_action(runtime, "Global.PemainAktif.KursorTeleportasi = 0;")
-        self.assert_rejected(changed, "Travel avanti: non deve cambiare menu o pagina")
+        for action in ("Call Subroutine(ProsesTeleportasiMaju);", "Start Rule(ProsesTeleportasiMaju, Do Nothing);"):
+            with self.subTest(action=action):
+                self.assert_rejected(self.inject_action(scheduler, action), "Travel: nessun caller della subroutine Forward rimossa")
 
     def test_teleport_menu_uses_smooth_readable_tint(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
@@ -2751,6 +2698,67 @@ rule("999x - Nasib: Renderer pemain tambahan")
             with self.subTest(token=token):
                 mutated = self.inject_action(worker, token)
                 self.assert_rejected(mutated, "transizione nativa")
+
+    def test_team_switch_quiescence_precedes_team_commit_and_deadline(self) -> None:
+        detector = self.rule(lambda rule: rule.name.startswith("01a -"))
+        quiescence = (
+            "Global.PemainPukulanSuper = Remove From Array(Global.PemainPukulanSuper, Event Player);\n"
+            "\t\tIf(Entity Exists(Event Player) == True);\n"
+            "\t\t\tStop Chasing Player Variable(Event Player, PosisiIkonPilar);\n"
+            "\t\tEnd;"
+        )
+        self.assertIn(quiescence, detector.body)
+        deadline = "Event Player.WaktuSiklusTim = Total Time Elapsed + 0.500;"
+        changed = detector.body.replace(quiescence, "", 1).replace(deadline, deadline + "\n\t\t" + quiescence, 1)
+        mutated = self.source[:detector.start] + changed + self.source[detector.end:]
+        self.assert_rejected(mutated, "prima del commit/scadenza")
+
+    def test_team_switch_stops_only_its_local_icon_chase(self) -> None:
+        detector = self.rule(lambda rule: rule.name.startswith("01a -"))
+        stop = "Stop Chasing Player Variable(Event Player, PosisiIkonPilar);"
+        for replacement in (
+            "Stop Chasing Player Variable(All Players(All Teams), PosisiIkonPilar);",
+            "Stop Chasing Player Variable(Event Player, WarnaMenu);",
+            stop + "\n\t\t\t" + stop,
+            "",
+        ):
+            with self.subTest(replacement=replacement):
+                self.assert_rejected(self.replace_in_rule(detector, stop, replacement),
+                                     "unica chase fermata deve essere PosisiIkonPilar del proprio Event Player")
+
+    def test_team_switch_icon_stop_requires_only_local_entity_guard(self) -> None:
+        detector = self.rule(lambda rule: rule.name.startswith("01a -"))
+        guard = "If(Entity Exists(Event Player) == True);"
+        for replacement in ("If(True);", "If(Entity Exists(Event Player) == False);",
+                            "If(Entity Exists(All Players(All Teams)) == True);"):
+            with self.subTest(replacement=replacement):
+                self.assert_rejected(self.replace_in_rule(detector, guard, replacement),
+                                     "Stop chase richiede la guardia Entity Exists locale")
+
+    def test_team_switch_keeps_full_cleanup_and_icon_reset_deferred(self) -> None:
+        detector = self.rule(lambda rule: rule.name.startswith("01a -"))
+        for action in ("Destroy Icon(Global.EntitasIkonPilar[Event Player.UrutanHUD]);",
+                       "Call Subroutine(BersihkanIkonPilar);",
+                       "Set Player Variable(Event Player, PosisiIkonPilar, Vector(0, 0.500, 0));"):
+            with self.subTest(action=action):
+                self.assert_rejected(self.inject_action(detector, action), "unica azione engine consentita")
+        self.assert_rejected(self.inject_action(detector, "Event Player.PosisiIkonPilar = Vector(0, 0.500, 0);"),
+                             "non deve resettare PosisiIkonPilar")
+        self.assert_rejected(self.inject_action(detector, "Global.IndeksIkonPilar = 0;"),
+                             "nessuna nuova assegnazione scratch")
+
+    def test_team_switch_removes_only_its_punch_identity_unconditionally(self) -> None:
+        detector = self.rule(lambda rule: rule.name.startswith("01a -"))
+        removal = "Global.PemainPukulanSuper = Remove From Array(Global.PemainPukulanSuper, Event Player);"
+        self.assert_rejected(self.replace_in_rule(detector, removal, ""),
+                             "rimozione registro Punch deve essere unica e incondizionata")
+        self.assert_rejected(self.replace_in_rule(detector, removal, "If(False); " + removal + " End;"),
+                             "rimozione registro Punch deve essere unica e incondizionata")
+        self.assert_rejected(self.replace_in_rule(detector, removal, removal.replace("Event Player", "All Players(All Teams)")),
+                             "assegnazione registro fuori inizializzazione OFF o cleanup locale")
+        classifier = self.rule(lambda rule: "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+        self.assert_rejected(self.inject_action(classifier, removal),
+                             "assegnazione registro fuori inizializzazione OFF o cleanup locale")
 
     def test_old_global_team_cleanup_is_rejected_by_transitive_context_gate(self) -> None:
         fast = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesCepatPemain")

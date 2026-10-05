@@ -73,7 +73,7 @@ class MenuLoadEvaluator:
                   "CurrentArrayElement": self.element, "LastTextID": self.last_text,
                   "Manusia": "Manusia", "PrivasiNasibAktif": "PrivasiNasibAktif",
                   "PelatNamaDinonaktifkan": "PelatNamaDinonaktifkan",
-                  "Melee": "Melee", "Interact": "Interact", "TotalTimeElapsed": self.now,
+                  "Melee": "Melee", "TotalTimeElapsed": self.now,
                   "BotOtomatis": "BotOtomatis", "PrivasiInspeksiAktif": "PrivasiInspeksiAktif",
                   "PembaruanDaftarTertunda": "PembaruanDaftarTertunda"}
         if name in values: return values[name]
@@ -149,7 +149,6 @@ class MenuLoadEvaluator:
                       for value in args[1:]]
             return args[0].format(*values)
         if name == "Button": return args[0]
-        if name == "InputBindingString": return f"binding:{args[0]}"
         if name == "IsButtonHeld": return False
         raise AssertionError(f"unsupported menu call {name}")
 
@@ -242,7 +241,7 @@ class MenuLoadRegressionTests(unittest.TestCase):
         for path, _, _ in SOURCES:
             yield path.name, MenuLoadEvaluator(path.read_text(encoding="utf-8"))
 
-    def test_twelve_players_keep_one_menu_handle_while_navigating_all_six_pages(self):
+    def test_twelve_players_keep_one_menu_handle_while_navigating_all_five_pages(self):
         for name, model in self.models():
             with self.subTest(source=name):
                 owners = [f"player-{index}" for index in range(12)]
@@ -255,7 +254,7 @@ class MenuLoadRegressionTests(unittest.TestCase):
                         model.players[owner]["PerintahTeleportasi"] = 1 if index % 2 == 0 else 2
                         model.run("19c", owner)
                         self.assertEqual(model.players[owner]["KursorTeleportasi"],
-                                         ((step + 1) * (1 if index % 2 == 0 else -1)) % 6)
+                                         ((step + 1) * (1 if index % 2 == 0 else -1)) % 5)
                         self.assertEqual(model.players[owner]["HudMenu"], handles[owner])
                 self.assertEqual(len(model.created_huds), 12)
                 self.assertEqual(model.destroyed_huds, [])
@@ -271,23 +270,28 @@ class MenuLoadRegressionTests(unittest.TestCase):
                 expression = model.hud_bodies[player["HudMenu"]]
                 player["KursorTeleportasi"] = 2
                 player["CalonTargetTeleportasi"] = "alice"
-                self.assertIn("3/6", model.evaluate(expression))
+                self.assertIn("3/5", model.evaluate(expression))
                 self.assertIn("alice", model.evaluate(expression))
                 player["KursorTeleportasi"] = 3
                 player["CalonTargetTeleportasi"] = "bob"
-                self.assertIn("4/6", model.evaluate(expression))
+                self.assertIn("4/5", model.evaluate(expression))
                 self.assertIn("bob", model.evaluate(expression))
                 self.assertNotIn("alice", model.evaluate(expression))
-                player["KursorTeleportasi"] = 5
-                for language, title in ((0, "FORWARD"), (1, "MAJU"), (2, "วาร์ปไปข้างหน้า")):
-                    player["IndeksBahasa"] = language
-                    body = model.evaluate(expression)
-                    self.assertIn("6/6", body)
-                    self.assertIn(title, body)
-                    self.assertIn("binding:Interact", body)
-                    self.assertNotIn("bob", body)
-                self.assertEqual(len(model.created_huds), 1)
-                self.assertEqual(model.destroyed_huds, [])
+
+    def test_removed_forward_cursor_normalizes_before_the_five_page_hud_is_created(self):
+        for path, _, _ in SOURCES:
+            source = path.read_text(encoding="utf-8")
+            for cursor in (5, 6, 9, 10, 25):
+                for language in range(3):
+                    with self.subTest(source=path.name, cursor=cursor, language=language):
+                        model = MenuLoadEvaluator(source)
+                        player = model.add("viewer", KursorTeleportasi=cursor, IndeksBahasa=language)
+                        model.run("91g", "viewer")
+                        self.assertEqual(player["KursorTeleportasi"], cursor % 5)
+                        body = model.evaluate(model.hud_bodies[player["HudMenu"]])
+                        self.assertIn(f"{cursor % 5 + 1}/5", body)
+                        self.assertNotIn("/6", body)
+                        self.assertEqual(len(model.created_huds), 1)
 
     def test_vision_cache_is_shared_but_audiences_exclude_self_and_inactive_players(self):
         for name, model in self.models():
