@@ -3,6 +3,7 @@
 The evaluator supplies melee animation, view-cone and world-LOS responses. It
 does not certify native melee timing, geometry or ally kill credit in the client.
 """
+import copy
 import math
 import re
 import unittest
@@ -37,6 +38,8 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
                         Manusia=True, BotOtomatis=False, SiklusPemainAktif=False,
                         PindahTimDiproses=False, MenuTerbuka=False,
                         TeleportasiJongkokAktif=False, SeranganDekatDipakai=False,
+                        TeleportasiJongkokDiaktifkan=False, KartuNasibAktif=False,
+                        PrivasiNasibAktif=False, buttons=set(),
                         KebalAktif=False, ModeKebal=0, statuses=set(), melee=False,
                         position=Vector(0, 0, 0), facing=Vector(0, 0, 1), wall=False,
                         KematianBalasDendam=False, PembunuhBalasDendam=[],
@@ -60,7 +63,8 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
             return "Junker Queen"
         if name in {"KebalAktif", "ModeKebal", "Unkillable", "PhasedOut",
                     "BarriersDoNotBlockLOS", "PembunuhBalasDendam",
-                    "JumlahBalasDendam", "IndeksBalasDendam", "Add", "Subtract", "Melee"}:
+                    "JumlahBalasDendam", "IndeksBalasDendam", "Add", "Subtract", "Melee",
+                    "Crouch"}:
             return name
         return super().resolve(name)
 
@@ -71,6 +75,8 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
             return self.players[args[0]]["hero"]
         if name == "Button":
             return args[0]
+        if name == "IsButtonHeld":
+            return args[1] in self.players[args[0]]["buttons"]
         if name == "IsMeleeing":
             return self.players[args[0]]["melee"]
         if name == "HasStatus":
@@ -154,6 +160,24 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         conditions = validator.rule_block(impact, "conditions")
         if all(self.evaluate(token.strip()) for token in conditions.split(";") if token.strip()):
             self.execute_source(validator.rule_block(impact, "actions"))
+
+    def enter_travel(self, identity, page):
+        """Run real Crouch admission and state setup, projecting away HUD rendering."""
+        self.event_player = identity
+        actor = self.players[identity]
+        actor.update(TeleportasiJongkokDiaktifkan=True, KursorTeleportasi=page,
+                     buttons={"Crouch"})
+        entry = next(rule for rule in self.rules if rule.name.startswith("19 -"))
+        conditions = validator.rule_block(entry, "conditions")
+        if not all(self.evaluate(token.strip()) for token in conditions.split(";") if token.strip()):
+            raise AssertionError("Crouch did not enter the real Travel rule")
+        actions = validator.rule_block(entry, "actions")
+        self.execute_atomic(actions.split("Disallow Button(", 1)[0])
+
+    def travel_state(self, identity):
+        actor = self.players[identity]
+        return copy.deepcopy({field: value for field, value in actor.items()
+                              if "Teleportasi" in field or field in {"buttons", "MenuTerbuka"}})
 
     def clear_registry(self, identity, routine):
         self.event_player = identity
@@ -251,9 +275,8 @@ class SuperPunchTests(unittest.TestCase):
                         model.swing("attacker")
                         self.assertEqual(model.kills, [])
 
-    def test_travel_quarantine_and_invalid_actor_cancel_the_in_progress_swing(self):
-        blocked = ({"TeleportasiJongkokAktif": True},
-                   {"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
+    def test_input_consumption_quarantine_and_invalid_actor_cancel_the_in_progress_swing(self):
+        blocked = ({"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
                    {"PindahTimDiproses": True}, {"alive": False},
                    {"spawned": False}, {"exists": False}, {"Manusia": False},
                    {"BotOtomatis": True}, {"dummy": True})
@@ -283,6 +306,67 @@ class SuperPunchTests(unittest.TestCase):
                     target["position"] = Vector(0, 0, 1)
                     model.swing("attacker", 103)
                     self.assertEqual(len(model.kills), 1)
+
+    def test_each_travel_page_allows_crouch_melee_without_changing_travel_or_revenge(self):
+        for path, _, _ in SOURCES:
+            for page in range(6):
+                for native, team in ((False, 1), (False, 2), (True, 2)):
+                    with self.subTest(source=path.name, page=page, native=native, team=team):
+                        model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                        attacker = model.add("attacker")
+                        target = model.add("target", team=team, position=Vector(0, 0, 1))
+                        model.enable("attacker")
+                        model.enter_travel("attacker", page)
+                        self.assertTrue(attacker["TeleportasiJongkokAktif"])
+                        before = model.travel_state("attacker")
+                        if native:
+                            model.globals["PemainAktif"] = "unrelated"
+                            model.native_hit("attacker", "target")
+                            self.assertEqual(model.globals["PemainAktif"], "unrelated")
+                        else:
+                            attacker["melee"] = True
+                            model.tick("attacker", 100)
+                        self.assertEqual(model.kills, [("target", "attacker", 100)])
+                        self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
+                        self.assertEqual(target["JumlahBalasDendam"], [1])
+                        self.assertEqual(model.travel_state("attacker"), before)
+                        # Scanner/native impact share one contact even while Crouch stays held.
+                        target["alive"] = True
+                        attacker["melee"] = True
+                        model.tick("attacker", 100.01)
+                        model.native_hit("attacker", "target", now=100.02)
+                        self.assertEqual(len(model.kills), 1)
+                        self.assertEqual(target["JumlahBalasDendam"], [1])
+                        self.assertEqual(model.travel_state("attacker"), before)
+
+    def test_crouch_travel_melee_preserves_unkillable_and_consumes_protected_contact(self):
+        protections = ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
+                       {"KebalAktif": True, "ModeKebal": 1},
+                       {"KebalAktif": True, "ModeKebal": 2})
+        for path, _, _ in SOURCES:
+            for native, team in ((False, 1), (False, 2), (True, 2)):
+                for protection in protections:
+                    with self.subTest(source=path.name, native=native, team=team,
+                                      protection=protection):
+                        model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
+                        attacker = model.add("attacker")
+                        target = model.add("target", team=team, position=Vector(0, 0, 1),
+                                           **protection)
+                        model.enable("attacker")
+                        model.enter_travel("attacker", 5)
+                        before = model.travel_state("attacker")
+                        if native:
+                            model.native_hit("attacker", "target")
+                        else:
+                            attacker["melee"] = True
+                            model.tick("attacker", 100)
+                        self.assertEqual((model.kills, target["JumlahBalasDendam"]), ([], []))
+                        self.assertEqual(model.globals["WaktuPukulanSuper"][
+                            int(attacker["UrutanHUD"])], -1)
+                        target.update(KebalAktif=False, ModeKebal=0, statuses=set())
+                        model.native_hit("attacker", "target", now=100.01)
+                        self.assertEqual(model.kills, [])
+                        self.assertEqual(model.travel_state("attacker"), before)
 
     def test_two_attackers_keep_independent_swing_latches(self):
         for source, model in self.models():
@@ -444,8 +528,7 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertTrue(enemy["alive"])
 
     def test_native_impact_obeys_off_state_lifecycle_input_latch_and_unkillable(self):
-        blocked = ({"TeleportasiJongkokAktif": True},
-                   {"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
+        blocked = ({"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
                    {"PindahTimDiproses": True}, {"alive": False}, {"Manusia": False},
                    {"dummy": True}, {"BotOtomatis": True})
         for path, _, _ in SOURCES:

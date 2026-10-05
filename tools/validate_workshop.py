@@ -106,6 +106,7 @@ SCHEDULER_SUBROUTINES = {
     "ProsesBotPemain",
     "RawatBotBuatan",
     "ProsesLompatGanda",
+    "ProsesTeleportasiMaju",
 }
 PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanMusik",
@@ -1569,31 +1570,37 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         f"GambarTeleportasi: istruzione ordinata EN/ID/TH assente: {token}",
                     )
                 page_tokens = (
-                    "1/5 | SPAWN ROOM",
+                    "1/6 | SPAWN ROOM",
                     "TEAM SPAWN",
-                    "2/5 | OBJECTIVE",
-                    "3/5 | TELEPORT TO PLAYER/BOT",
+                    "2/6 | OBJECTIVE",
+                    "3/6 | TELEPORT TO PLAYER/BOT",
                     'BESIDE: {0}',
-                    '4/5 | ATTACH TO PLAYER/BOT',
+                    '4/6 | ATTACH TO PLAYER/BOT',
                     'ABOVE: {0}',
-                    "5/5 | SELF ELIMINATION",
+                    "5/6 | SELF ELIMINATION",
                     "CURRENT HERO FORM | COOLDOWN: 3s",
-                    "1/5 | RUANG MUNCUL",
+                    "6/6 | FORWARD",
+                    "HOLD {0}: 3m / 0.05s",
+                    "1/6 | RUANG MUNCUL",
                     "TIMMU",
-                    "2/5 | OBJEKTIF",
-                    "3/5 | TELEPORT: PEMAIN/BOT",
+                    "2/6 | OBJEKTIF",
+                    "3/6 | TELEPORT: PEMAIN/BOT",
                     "DI SAMPING: {0}",
-                    "4/5 | TEMPEL: PEMAIN/BOT",
+                    "4/6 | TEMPEL: PEMAIN/BOT",
                     "DI ATAS: {0}",
-                    "5/5 | ELIMINASI DIRI",
+                    "5/6 | ELIMINASI DIRI",
                     "WUJUD PAHLAWAN AKTIF | JEDA: 3 DTK",
-                    '1/5 | วาร์ปกลับห้องเกิด',
+                    "6/6 | MAJU",
+                    "TAHAN {0}: 3 m / 0,05 dtk",
+                    '1/6 | วาร์ปกลับห้องเกิด',
                     'ทีมคุณ',
-                    '2/5 | วาร์ปใกล้ภารกิจ',
-                    '3/5 | วาร์ป: ผู้เล่น / บอต',
-                    "4/5 | เกาะ: ผู้เล่น / บอต",
-                    "5/5 | กำจัดตัวเอง",
+                    '2/6 | วาร์ปใกล้ภารกิจ',
+                    '3/6 | วาร์ป: ผู้เล่น / บอต',
+                    "4/6 | เกาะ: ผู้เล่น / บอต",
+                    "5/6 | กำจัดตัวเอง",
                     'ร่างฮีโร่ปัจจุบัน | คูลดาวน์: 3 วิ',
+                    "6/6 | วาร์ปไปข้างหน้า",
+                    "กด {0} ค้าง: 3 ม. / 0.05 วิ",
                 )
                 for token in page_tokens:
                     checks.require(
@@ -1645,10 +1652,20 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(travel_open is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_open.body,
                    "apertura Travel non avvia la transizione colore")
     checks.require(travel_nav is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_nav.body,
-                   "navigazione Travel non avvia la transizione colore")
+                    "navigazione Travel non avvia la transizione colore")
+    if travel_nav:
+        checks.require(
+            "Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 5)) % 6;"
+            in travel_nav.body,
+            "Travel: navigazione deve includere sei pagine avanti e indietro",
+        )
     teleport_interact = next((rule for rule in rules if rule.name.startswith('19e - Teleportasi Jongkok: Interaksi')), None)
     checks.require(teleport_interact is not None, "handler Interact Teleport assente")
     if teleport_interact:
+        checks.require("Event Player.KursorTeleportasi < 5;" in (rule_block(teleport_interact, "conditions") or ""),
+                       "Travel: Interact singolo deve escludere la pagina avanti continua")
+        checks.require("Else If(Event Player.JenisTeleportasiTerkunci == 4);" in teleport_interact.body,
+                       "Travel: Self Kill deve essere limitato alla pagina cinque")
         checks.equal(teleport_interact.body.count("Kill(Event Player, Null);"), 1,
                      "Self Kill deve eseguire una sola Kill immediata")
         checks.require("Wait(" not in teleport_interact.body and "Loop;" not in teleport_interact.body,
@@ -1792,16 +1809,19 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for token in (
             "0 - NAME COLOR",
             "2 - SOUNDTRACK",
+            "8 - CROUCH: TELEPORT / ATTACH / SELF KILL",
             "12 - DUMMY FOLLOW",
             "13 - GHOST MODE / FLY",
             "15 - SUPERMAN PUNCH",
             "0 - WARNA NAMA",
             "2 - MUSIK",
+            "8 - JONGKOK: TELEPORT / TEMPEL / BUNUH DIRI",
             '12 - BOT MENGIKUTI',
             '13 - HANTU / TERBANG',
             "15 - PUKULAN SUPERMAN",
             "0 - สีชื่อ",
             "2 - เพลงประกอบ",
+            "8 - ย่อ: วาร์ป / เกาะ / กำจัดตัวเอง",
             "12 - ดัมมี่ติดตาม",
             "13 - โหมดผี / บิน",
             "15 - หมัดซูเปอร์แมน",
@@ -2175,6 +2195,77 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
 
 
 
+def validate_forward_travel(checks: Checks, rules: list[Rule], subroutines: set[str]) -> None:
+    """Keep continuous forward travel exclusive to its active page and input."""
+    def code(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
+    name = "ProsesTeleportasiMaju"
+    checks.require(name in subroutines, "Travel avanti: subroutine assente")
+    runtime = rule_by_subroutine(rules, name)
+    checks.require(runtime is not None, "Travel avanti: motore assente")
+    callers = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Call Subroutine")
+               if call.args == (name,)]
+    checks.equal(len(callers), 1, "Travel avanti: unico caller scheduler")
+    if callers:
+        caller, call = callers[0]
+        checks.require(event_type(caller) == "Ongoing - Global" and action_loop_count(caller.body) == 1
+                       and "Wait(0.050, Ignore Condition);" in caller.body,
+                       "Travel avanti: ripetizione deve usare lo scheduler 20 Hz esistente")
+        headers = "".join(code(branch.splitlines()[0])
+                          for branch in conditional_branches_containing(caller.body, call.start))
+        for token in ("IsDummyBot(Global.PemainAktif)==False", "Global.PemainAktif.BotOtomatis==False",
+                      "Global.PemainAktif.TeleportasiJongkokAktif==True",
+                      "Global.PemainAktif.KursorTeleportasi==5", "Global.PemainAktif.PerintahTeleportasi==3"):
+            checks.require(token in headers, f"Travel avanti: chiamata solo durante uso attivo: {token}")
+    if runtime is None:
+        return
+    packed = code(runtime.body)
+    for guard, label in (
+        ("Abort If(Array Contains(Global.PemainManusia, Global.PemainAktif) == False);", "roster umano"),
+        ("Abort If(Or(Global.PemainAktif.Manusia == False, Or(Global.PemainAktif.BotOtomatis == True, Is Dummy Bot(Global.PemainAktif) == True)));", "tipo entità"),
+        ("Abort If(Or(Entity Exists(Global.PemainAktif) == False, Or(Has Spawned(Global.PemainAktif) == False, Is Alive(Global.PemainAktif) == False)));", "entità viva e disponibile"),
+        ("Abort If(Or(Global.PemainAktif.SiklusPemainAktif == True, Global.PemainAktif.PindahTimDiproses == True));", "cambio squadra"),
+        ("Abort If(Or(Global.PemainAktif.TeleportasiJongkokAktif == False, Or(Global.PemainAktif.TeleportasiJongkokDiaktifkan == False, Or(Global.PemainAktif.KursorTeleportasi != 5, Global.PemainAktif.PerintahTeleportasi != 3))));", "Travel e pagina avanti attivi"),
+        ("Abort If(Or(Global.PemainAktif.MenuTerbuka == True, Or(Global.PemainAktif.KartuNasibAktif == True, Global.PemainAktif.PrivasiNasibAktif == True)));", "menu e Luck"),
+        ("Abort If(Or(Is Button Held(Global.PemainAktif, Button(Crouch)) == False, Is Button Held(Global.PemainAktif, Button(Interact)) == False));", "rilascio Crouch o Interact"),
+    ):
+        checks.require(code(guard) in packed and "Teleport(" in packed
+                       and packed.index(code(guard)) < packed.index("Teleport("),
+                       f"Travel avanti: guardia prima del movimento: {label}")
+    checks.require("EventPlayer" not in packed, "Travel avanti: contesto owner globale esplicito")
+    checks.require(not wait_calls(runtime.body) and action_loop_count(runtime.body) == 0
+                   and "TotalTimeElapsed" not in packed,
+                   "Travel avanti: nessun Wait, Loop o timer aggiuntivo")
+    checks.require(not list(iter_calls(runtime.body, "Kill")), "Travel avanti: non deve eseguire Self Kill")
+    for field in ("KursorTeleportasi", "HalamanMenu", "KursorUtama", "MenuTerbuka"):
+        checks.require(re.search(rf"Global\.PemainAktif\.{field}=(?!=)", packed) is None,
+                       f"Travel avanti: non deve cambiare menu o pagina: {field}")
+    owner = "Global.PemainAktif"
+    checks.require("RayCast" not in packed and "NearestWalkablePosition" not in packed
+                   and "IsInLineOfSight" not in packed,
+                   "Travel avanti: attraversamento muri senza controlli ostacoli o terreno")
+    teleports = list(iter_calls(runtime.body, "Teleport"))
+    checks.equal(len(teleports), 1, "Travel avanti: un solo Teleport per tick")
+    if teleports:
+        teleport = teleports[0]
+        checks.equal(tuple(code(arg) for arg in teleport.args),
+                     (code(owner), code(f"Position Of({owner}) + Facing Direction Of({owner}) * 3")),
+                     "Travel avanti: passo tre metri nella direzione dello sguardo solo per l'owner")
+        detach = list(iter_calls(runtime.body, "Detach Players"))
+        checks.require(len(detach) == 1 and detach[0].args == (owner,) and detach[0].start < teleport.start,
+                       "Travel avanti: distacco locale prima del Teleport")
+        if detach:
+            detach_headers = [code(branch.splitlines()[0])
+                              for branch in conditional_branches_containing(runtime.body, detach[0].start)]
+            checks.require(f"If({owner}.LampiranTeleportasiAktif==True);" in detach_headers,
+                           "Travel avanti: distacco soltanto se attaccato")
+        for reset in (f"{owner}.LampiranTeleportasiAktif = False;", f"{owner}.TargetLampiranTeleportasi = Null;",
+                      f"{owner}.PahlawanLampiranSendiri = Null;", f"{owner}.PahlawanLampiranTarget = Null;"):
+            checks.require(code(reset) in packed and packed.index(code(reset)) < packed.index(code(teleport.raw)),
+                           f"Travel avanti: reset lampiran prima del movimento: {reset}")
+
+
 def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration], subroutines: set[str]) -> None:
     """Keep page 15's toggle local and its enabled registry bounded by human slots."""
     def code(expression: str) -> str:
@@ -2247,10 +2338,12 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
         ):
             checks.require(token in packed, f"Super Punch: {label}")
         for field in ("Manusia==False", "BotOtomatis==True", "SiklusPemainAktif==True", "PindahTimDiproses==True",
-                      "TeleportasiJongkokAktif==True", "SeranganDekatDipakai==True"):
+                      "SeranganDekatDipakai==True"):
             checks.require("Global.PemainAktif." + field in packed, f"Super Punch: guardia owner {field}")
         checks.require("MenuTerbuka" not in packed,
                        "Super Punch: menu aperto non deve bloccare l'ayunan")
+        checks.require("TeleportasiJongkokAktif" not in packed,
+                       "Super Punch: Travel attivo non deve bloccare l'ayunan")
         checks.equal(len(list(iter_calls(runtime.body, "Sorted Array"))), 1,
                      "Super Punch: unico target più vicino per ayunan")
         checks.require("TeamOf(" not in packed and "OppositeTeamOf(" not in packed,
@@ -2269,12 +2362,13 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                       "IsDummyBot(EventPlayer)==False;", "EntityExists(EventPlayer)==True;",
                       "HasSpawned(EventPlayer)==True;", "IsAlive(EventPlayer)==True;",
                       "EventPlayer.SiklusPemainAktif==False;", "EventPlayer.PindahTimDiproses==False;",
-                      "EventPlayer.TeleportasiJongkokAktif==False;",
                       "EventPlayer.SeranganDekatDipakai==False;", "Victim!=Null;", "Victim!=EventPlayer;",
                       "EntityExists(Victim)==True;", "HasSpawned(Victim)==True;", "IsAlive(Victim)==True;"):
             checks.require(token in condition_code, f"Super Punch: guardia impatto {token}")
         checks.require("MenuTerbuka" not in condition_code,
                        "Super Punch: menu aperto non deve bloccare l'impatto nativo")
+        checks.require("TeleportasiJongkokAktif" not in condition_code,
+                       "Super Punch: Travel attivo non deve bloccare l'impatto nativo")
         impact_code = code(impact.body)
         for token in ("AbortIf(Or(EventPlayer.UrutanHUD<0,EventPlayer.UrutanHUD>=CountOf(Global.WaktuPukulanSuper)));",
                       "AbortIf(Global.WaktuPukulanSuper[EventPlayer.UrutanHUD]<0);",
@@ -7349,6 +7443,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_hud_and_menu(checks, source, rules, players, subroutines)
     validate_ghost_fly(checks, source, rules, player_entries, subroutines)
     validate_multijump(checks, source, rules, player_entries, subroutines)
+    validate_forward_travel(checks, rules, subroutines)
     validate_super_punch(checks, source, rules, globals_entries, subroutines)
     validate_social_beacon(checks, source, rules, globals_entries)
     validate_special_player_profile(checks, source, rules, player_entries)
