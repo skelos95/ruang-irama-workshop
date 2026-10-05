@@ -699,8 +699,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
         mutations = (
             ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
-            ("1/5 | RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
-            ('2/5 | วาร์ปใกล้ภารกิจ', "ปลายทาง: เป้าหมาย"),
+            ("1/6 | TELEPORT: RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
+            ('2/6 | วาร์ป: ภารกิจ', "ปลายทาง: เป้าหมาย"),
+            ("6/6 | FORWARD", "6/6 | OTHER"),
+            ("TAHAN {0}: 3 m / 0,05 dtk", "TAHAN INTERACT"),
+            ("กด {0} ค้าง: 3 ม. / 0.05 วิ", "กดค้าง"),
         )
         for old, new in mutations:
             with self.subTest(old=old):
@@ -715,6 +718,79 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "INTERACT: USE | RELEASE CROUCH: CLOSE",
         )
         self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
+
+    def test_forward_travel_has_six_pages_without_repeating_self_kill(self) -> None:
+        navigation = self.rule(lambda rule: rule.name.startswith("19c - Teleportasi Jongkok:"))
+        interact = self.rule(lambda rule: rule.name.startswith("19e - Teleportasi Jongkok: Interaksi"))
+        for rule, old, new, error in (
+            (navigation, "Event Player.PerintahTeleportasi == 1 ? 1 : 5", "Event Player.PerintahTeleportasi == 1 ? 1 : 4", "navigazione deve includere sei pagine avanti e indietro"),
+            (navigation, ") % 6;", ") % 5;", "navigazione deve includere sei pagine avanti e indietro"),
+            (interact, "Event Player.KursorTeleportasi < 5;", "", "Interact singolo deve escludere"),
+            (interact, "Else If(Event Player.JenisTeleportasiTerkunci == 4);", "Else;", "Self Kill deve essere limitato"),
+        ):
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(rule, old, new), "Travel: " + error)
+
+    def test_forward_travel_scheduler_runs_only_during_active_hold(self) -> None:
+        scheduler = self.rule(lambda rule: validator.action_loop_count(rule.body) == 1)
+        for old, new in (
+            ("Global.PemainAktif.TeleportasiJongkokAktif == True, And(Global.PemainAktif.KursorTeleportasi == 5", "True, And(Global.PemainAktif.KursorTeleportasi == 5"),
+            ("Global.PemainAktif.KursorTeleportasi == 5", "Global.PemainAktif.KursorTeleportasi == 4"),
+            ("Global.PemainAktif.PerintahTeleportasi == 3", "Global.PemainAktif.PerintahTeleportasi == 0"),
+        ):
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(scheduler, old, new), "Travel avanti: chiamata solo durante uso attivo")
+        changed = self.inject_action(scheduler, "Call Subroutine(ProsesTeleportasiMaju);")
+        self.assert_rejected(changed, "Travel avanti: unico caller scheduler")
+
+    def test_forward_travel_rechecks_player_input_and_lifecycle_before_moving(self) -> None:
+        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
+        for old, new in (
+            ("Array Contains(Global.PemainManusia, Global.PemainAktif) == False", "False"),
+            ("Global.PemainAktif.Manusia == False", "False"),
+            ("Has Spawned(Global.PemainAktif) == False", "False"),
+            ("Is Alive(Global.PemainAktif) == False", "False"),
+            ("Global.PemainAktif.PindahTimDiproses == True", "False"),
+            ("Global.PemainAktif.TeleportasiJongkokDiaktifkan == False", "False"),
+            ("Global.PemainAktif.KursorTeleportasi != 5", "False"),
+            ("Global.PemainAktif.MenuTerbuka == True", "False"),
+            ("Global.PemainAktif.PrivasiNasibAktif == True", "False"),
+            ("Is Button Held(Global.PemainAktif, Button(Crouch)) == False", "False"),
+            ("Is Button Held(Global.PemainAktif, Button(Interact)) == False", "False"),
+        ):
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: guardia prima del movimento")
+
+    def test_forward_travel_uses_full_look_direction_and_crosses_walls_for_only_the_owner(self) -> None:
+        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
+        for old, new in (
+            ("Facing Direction Of(Global.PemainAktif)", "Vector(0, 0, 1)"),
+            ("Facing Direction Of(Global.PemainAktif) * 3", "Facing Direction Of(Global.PemainAktif) * 30"),
+            ("Teleport(Global.PemainAktif,", "Teleport(Global.TargetPukulanSuper,"),
+            ("Position Of(Global.PemainAktif) +", "Eye Position(Global.PemainAktif) +"),
+        ):
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: passo tre metri nella direzione dello sguardo")
+        for obstacle_check in (
+            "Abort If(Is In Line Of Sight(Position Of(Global.PemainAktif), Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3, Barriers Do Not Block LOS) == False);",
+            "Global.PemainAktif.PosisiTujuanTeleportasi = Ray Cast Hit Position(Position Of(Global.PemainAktif), Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3, Empty Array, Empty Array, False);",
+            "Global.PemainAktif.PosisiTujuanTeleportasi = Nearest Walkable Position(Position Of(Global.PemainAktif));",
+        ):
+            with self.subTest(obstacle_check=obstacle_check):
+                self.assert_rejected(self.inject_action(runtime, obstacle_check), "Travel avanti: attraversamento muri senza controlli ostacoli o terreno")
+
+    def test_forward_travel_detaches_before_moving_without_extra_wait_or_menu_changes(self) -> None:
+        runtime = self.rule(lambda rule: validator.subroutine_target(rule) == "ProsesTeleportasiMaju")
+        for old, new, error in (
+            ("Detach Players(Global.PemainAktif);", "Abort;", "distacco locale prima del Teleport"),
+            ("If(Global.PemainAktif.LampiranTeleportasiAktif == True);", "If(True);", "distacco soltanto se attaccato"),
+            ("Global.PemainAktif.TargetLampiranTeleportasi = Null;", "", "reset lampiran prima del movimento"),
+            ("Teleport(Global.PemainAktif, Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3);", "Teleport(Global.PemainAktif, Position Of(Global.PemainAktif) + Facing Direction Of(Global.PemainAktif) * 3);\n\t\tWait(0.050, Ignore Condition);", "nessun Wait, Loop o timer aggiuntivo"),
+        ):
+            with self.subTest(mutation=old):
+                self.assert_rejected(self.replace_in_rule(runtime, old, new), "Travel avanti: " + error)
+        changed = self.inject_action(runtime, "Global.PemainAktif.KursorTeleportasi = 0;")
+        self.assert_rejected(changed, "Travel avanti: non deve cambiare menu o pagina")
 
     def test_teleport_menu_uses_smooth_readable_tint(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "GambarTeleportasi")
@@ -1253,11 +1329,17 @@ class SemanticWorkshop081Tests(unittest.TestCase):
              "Abort If(Global.PemainAktif.MenuTerbuka == True);\n\t\tIf(Is Meleeing(Global.PemainAktif) == False);",
              "menu aperto non deve bloccare l'ayunan"),
             (runtime, "Global.PemainAktif.SeranganDekatDipakai == True", "False", "guardia owner SeranganDekatDipakai"),
+            (runtime, "If(Is Meleeing(Global.PemainAktif) == False);",
+             "Abort If(Global.PemainAktif.TeleportasiJongkokAktif == True);\n\t\tIf(Is Meleeing(Global.PemainAktif) == False);",
+             "Travel attivo non deve bloccare l'ayunan"),
             (impact, "Event Ability == Button(Melee);", "Event Ability == Button(Primary Fire);", "guardia impatto"),
             (impact, "Event Ability == Button(Melee);",
              "Event Player.MenuTerbuka == False;\n\t\tEvent Ability == Button(Melee);",
              "menu aperto non deve bloccare l'impatto nativo"),
             (impact, "Event Player.SeranganDekatDipakai == False;", "", "guardia impatto"),
+            (impact, "Event Ability == Button(Melee);",
+             "Event Player.TeleportasiJongkokAktif == False;\n\t\tEvent Ability == Button(Melee);",
+             "Travel attivo non deve bloccare l'impatto nativo"),
             (impact, "Hero Of(Event Player) != Hero(Junker Queen);", "", "guardia impatto"),
             (impact, "Has Status(Victim, Unkillable) == False", "True", "contratto impatto"),
             (impact, "Kill(Victim, Event Player);", "Kill(Victim, Global.PemainAktif);", "contratto impatto"),

@@ -262,34 +262,37 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"If({global_name}.PemimpinPilihan == Event Player);", color_page)
             self.assertIn(f"{global_name}.WarnaPemimpinPilihan = Event Player.WarnaNama;", color_page)
 
-    def test_crouch_teleport_has_five_pages_and_single_shot_self_kill(self):
+    def test_crouch_teleport_has_six_pages_and_single_shot_self_kill(self):
         for source, rule_kw, global_name in ((self.it, "regola", "Globale"), (self.en, "rule", "Global")):
-            self.assertIn("KursorTeleportasi %= 5;", source)
+            self.assertIn("KursorTeleportasi %= 6;", source)
             self.assertIn("Event Player.PerintahTeleportasi = 1;", source)
             self.assertIn("Event Player.PerintahTeleportasi = 2;", source)
             self.assertIn("Event Player.PerintahTeleportasi = 3;", source)
             self.assertIn("PerintahTeleportasi == 3;", source)
-            self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 4)) % 5", source)
+            self.assertIn("(Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 5)) % 6", source)
             teleport_render = source.split(f'{rule_kw}("91g - Subrutin: Gambar menu teleportasi")', 1)[1].split(f'{rule_kw}("', 1)[0]
             self.assertNotIn("\\", teleport_render)
             self.assertNotIn('Custom String("{0}n{1}"', teleport_render)
             self.assertIn('Custom String("{0}\n{1}", Custom String("HOLD'.replace("\\n", "\n"), teleport_render)
             for token in (
-                "1/5 | SPAWN ROOM",
-                "2/5 | OBJECTIVE",
-                "3/5 | TELEPORT TO PLAYER/BOT",
-                '4/5 | ATTACH TO PLAYER/BOT',
-                "5/5 | SELF ELIMINATION",
-                "1/5 | RUANG MUNCUL",
-                "2/5 | OBJEKTIF",
-                "3/5 | TELEPORT: PEMAIN/BOT",
-                "4/5 | TEMPEL: PEMAIN/BOT",
-                "5/5 | ELIMINASI DIRI",
-                '1/5 | วาร์ปกลับห้องเกิด',
-                '2/5 | วาร์ปใกล้ภารกิจ',
-                '3/5 | วาร์ป: ผู้เล่น / บอต',
-                "4/5 | เกาะ: ผู้เล่น / บอต",
-                "5/5 | กำจัดตัวเอง",
+                "1/6 | TELEPORT: SPAWN ROOM",
+                "2/6 | TELEPORT: OBJECTIVE",
+                "3/6 | TELEPORT TO PLAYER/BOT",
+                '4/6 | ATTACH TO PLAYER/BOT',
+                "5/6 | SELF ELIMINATION",
+                "6/6 | FORWARD",
+                "1/6 | TELEPORT: RUANG MUNCUL",
+                "2/6 | TELEPORT: OBJEKTIF",
+                "3/6 | TELEPORT: PEMAIN/BOT",
+                "4/6 | TEMPEL: PEMAIN/BOT",
+                "5/6 | ELIMINASI DIRI",
+                "6/6 | MAJU",
+                '1/6 | วาร์ป: ห้องเกิด',
+                '2/6 | วาร์ป: ภารกิจ',
+                '3/6 | วาร์ป: ผู้เล่น / บอต',
+                "4/6 | เกาะ: ผู้เล่น / บอต",
+                "5/6 | กำจัดตัวเอง",
+                "6/6 | วาร์ปไปข้างหน้า",
                 'NO PUBLIC TARGET AVAILABLE',
                 'TAK ADA TARGET PUBLIK',
                 'ไม่มีเป้าหมายที่เปิดให้ใช้',
@@ -305,6 +308,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
                 "Vector(95, 150, 255)",
                 "Vector(195, 100, 255)",
                 "Vector(255, 85, 135)",
+                "Vector(255, 195, 85)",
             ):
                 self.assertIn(color, transition)
             self.assertIn("Event Player.TeleportasiJongkokAktif == True", transition)
@@ -325,6 +329,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
 
             interact = source.split(f'{rule_kw}("19e - Teleportasi Jongkok: Interaksi menjalankan halaman aktif")', 1)[1].split(f'{rule_kw}("19f - Teleportasi Jongkok', 1)[0]
             self.assertEqual(interact.count("Kill(Event Player, Null);"), 1)
+            self.assertIn("Event Player.KursorTeleportasi < 5;", interact)
+            self.assertIn("Else If(Event Player.JenisTeleportasiTerkunci == 4);", interact)
             self.assertIn("If(Total Time Elapsed >= Event Player.WaktuBunuhDiriBerikut);", interact)
             self.assertIn("Event Player.WaktuBunuhDiriBerikut = Total Time Elapsed + 3;", interact)
             self.assertIn("Round To Integer(Event Player.WaktuBunuhDiriBerikut - Total Time Elapsed, Up)", interact)
