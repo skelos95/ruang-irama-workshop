@@ -2935,6 +2935,91 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(setup_worker, "Call Subroutine(BersihkanPemain);", "")
         self.assert_rejected(mutated, "cleanup solo dopo stabilizzazione")
 
+    def test_setup_worker_waits_require_exact_duration_and_abort_policy(self) -> None:
+        worker = self.rule(lambda rule: rule.name.startswith("01b -"))
+        wait = "Wait(0.050, Abort When False);"
+        for replacement in ("Wait(0.100, Abort When False);", "Wait(0.050, Ignore Condition);"):
+            with self.subTest(replacement=replacement):
+                self.assert_rejected(self.replace_in_rule(worker, wait, replacement),
+                                     "soltanto due Wait 0.050 Abort When False")
+        self.assert_rejected(self.inject_action(worker, wait), "soltanto due Wait 0.050 Abort When False")
+        self.assert_rejected(self.replace_in_rule(worker, wait, ""), "soltanto due Wait 0.050 Abort When False")
+
+    def test_setup_worker_waits_must_separate_all_three_atomic_stages(self) -> None:
+        worker = self.rule(lambda rule: rule.name.startswith("01b -"))
+        before_wait = "Call Subroutine(TenangkanPemain);\n\t\tWait(0.050, Abort When False);"
+        self.assert_rejected(self.replace_in_rule(worker, before_wait,
+                             "Wait(0.050, Abort When False);\n\t\tCall Subroutine(TenangkanPemain);"),
+                             "Wait/guardie complete")
+        first = "Call Subroutine(TenangkanPemain);"
+        last = "Call Subroutine(SiapkanPemain);"
+        changed = worker.body.replace(first, "__FIRST_STAGE__", 1).replace(last, first, 1).replace("__FIRST_STAGE__", last, 1)
+        self.assert_rejected(self.source[:worker.start] + changed + self.source[worker.end:], "Wait/guardie complete")
+        branch = "If(Array Contains(Global.PemainManusia, Event Player));"
+        changed = worker.body.replace("Wait(0.050, Abort When False);", "", 1)
+        changed = changed.replace(branch, branch + "\n\t\t\tWait(0.050, Abort When False);", 1)
+        self.assert_rejected(self.source[:worker.start] + changed + self.source[worker.end:],
+                             "i Wait devono separare le fasi anche al join iniziale")
+
+    def test_setup_worker_rechecks_every_guard_after_each_wait(self) -> None:
+        worker = self.rule(lambda rule: rule.name.startswith("01b -"))
+        for guard in (
+            "Abort If(Global.Siap == False);",
+            "Abort If(Entity Exists(Event Player) == False);",
+            "Abort If(Is Dummy Bot(Event Player) == True);",
+            "Abort If(Event Player.BotOtomatis == True);",
+            "Abort If(Event Player.Manusia == True);",
+            "Abort If(Event Player.PindahTimDiproses == False);",
+            "Abort If(Global.PemainSiklusGlobal != Event Player);",
+            "Abort If(Event Player.TimSiklusTarget != Team Of(Event Player));",
+            "Abort If(Has Spawned(Event Player) == False);",
+            "Abort If(Event Player.SudahSiap == True);",
+            "Abort If(Total Time Elapsed < Event Player.WaktuSiklusTim);",
+        ):
+            occurrences = [match.start() for match in re.finditer(re.escape(guard), worker.body)]
+            self.assertEqual(len(occurrences), 2)
+            for stage, position in enumerate(occurrences):
+                with self.subTest(guard=guard, stage=stage):
+                    changed = worker.body[:position] + worker.body[position + len(guard):]
+                    self.assert_rejected(self.source[:worker.start] + changed + self.source[worker.end:],
+                                         "Wait/guardie complete")
+
+    def test_setup_worker_requires_existing_entity_and_quarantined_human_conditions(self) -> None:
+        worker = self.rule(lambda rule: rule.name.startswith("01b -"))
+        for guard in ("Entity Exists(Event Player) == True;", "Global.Siap == True;", "Event Player.Manusia == False;"):
+            with self.subTest(guard=guard):
+                self.assert_rejected(self.replace_in_rule(worker, guard, ""), "worker setup iniziale senza guardia")
+
+    def test_setup_worker_yields_cannot_move_into_shared_cleanup_or_scheduler(self) -> None:
+        rules = [self.rule(lambda rule: validator.subroutine_target(rule) == name)
+                 for name in ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain")]
+        rules.append(self.rule(lambda rule: validator.action_loop_count(rule.body) == 1))
+        for rule in rules:
+            with self.subTest(rule=rule.name):
+                self.assert_rejected(self.inject_action(rule, "Wait(0.050, Abort When False);"),
+                                     "Wait nominativamente consentiti")
+
+    def test_travel_inputs_require_live_human_outside_team_quarantine(self) -> None:
+        for prefix in ("19", "19a", "19c", "19e"):
+            handler = self.rule(lambda rule: rule.name.startswith(prefix + " -"))
+            for guard in ("Event Player.Manusia == True;", "Event Player.PindahTimDiproses == False;",
+                          "Event Player.SiklusPemainAktif == False;"):
+                with self.subTest(handler=prefix, guard=guard):
+                    self.assert_rejected(self.replace_in_rule(handler, guard, ""), "escludere owner in quarantena")
+
+    def test_menu_and_travel_cleanup_controllers_exclude_quarantined_owners(self) -> None:
+        for prefix in ("05f", "19f", "19g", "19h", "18j"):
+            handler = self.rule(lambda rule: rule.name.startswith(prefix + " -"))
+            guards = ("Event Player.PindahTimDiproses == False;", "Event Player.SiklusPemainAktif == False;")
+            if prefix != "18j":
+                guards += ("Event Player.Manusia == True;",)
+            for guard in guards:
+                with self.subTest(handler=prefix, guard=guard):
+                    self.assert_rejected(self.replace_in_rule(handler, guard, ""), "escludere owner in quarantena")
+        vision = self.rule(lambda rule: rule.name.startswith("18j -"))
+        self.assert_rejected(self.inject_condition(vision, "Event Player.Manusia == True;"),
+                             "cleanup Vision 18j deve conservare anche gli owner bot")
+
     def test_setup_worker_keeps_native_hud_toggles_inside_siapkan_only(self) -> None:
         setup_worker = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"

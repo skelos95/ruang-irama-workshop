@@ -1300,6 +1300,9 @@ rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	conditions
 	{
+		Global.Siap == True;
+		Entity Exists(Event Player) == True;
+		Event Player.Manusia == False;
 		Is Dummy Bot(Event Player) == False;
 		Event Player.BotOtomatis == False;
 		Event Player.PindahTimDiproses == True;
@@ -1312,10 +1315,35 @@ rule("01b - Siklus tim: Pekerja penyiapan dari penjadwal global")
 
 	actions
 	{
+		"Pisahkan pemulihan mesin, pelepasan pengenal, dan penyiapan; batalkan bila identitas, tim, atau reservasi berubah."
 		Call Subroutine(TenangkanPemain);
+		Wait(0.050, Abort When False);
+		Abort If(Global.Siap == False);
+		Abort If(Entity Exists(Event Player) == False);
+		Abort If(Is Dummy Bot(Event Player) == True);
+		Abort If(Event Player.BotOtomatis == True);
+		Abort If(Event Player.Manusia == True);
+		Abort If(Event Player.PindahTimDiproses == False);
+		Abort If(Global.PemainSiklusGlobal != Event Player);
+		Abort If(Event Player.TimSiklusTarget != Team Of(Event Player));
+		Abort If(Has Spawned(Event Player) == False);
+		Abort If(Event Player.SudahSiap == True);
+		Abort If(Total Time Elapsed < Event Player.WaktuSiklusTim);
 		If(Array Contains(Global.PemainManusia, Event Player));
 			Call Subroutine(BersihkanPemain);
 		End;
+		Wait(0.050, Abort When False);
+		Abort If(Global.Siap == False);
+		Abort If(Entity Exists(Event Player) == False);
+		Abort If(Is Dummy Bot(Event Player) == True);
+		Abort If(Event Player.BotOtomatis == True);
+		Abort If(Event Player.Manusia == True);
+		Abort If(Event Player.PindahTimDiproses == False);
+		Abort If(Global.PemainSiklusGlobal != Event Player);
+		Abort If(Event Player.TimSiklusTarget != Team Of(Event Player));
+		Abort If(Has Spawned(Event Player) == False);
+		Abort If(Event Player.SudahSiap == True);
+		Abort If(Total Time Elapsed < Event Player.WaktuSiklusTim);
 		Call Subroutine(SiapkanPemain);
 	}
 }
@@ -1983,6 +2011,9 @@ rule("05f - Menu: Lepaskan Jongkok dan segera pulihkan masukan pahlawan")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.MasukanMenuDikunci == True;
 		Or(Event Player.MenuTerbuka == False, Is Button Held(Event Player, Button(Crouch)) == False) == True;
 	}
@@ -3035,6 +3066,8 @@ rule("18j - Nasib: Bersihkan nama visi saat tidak diperlukan")
 
 	conditions
 	{
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		And(Event Player.TeksVisiNasib != Null, Event Player.TeksVisiNasib != 0) == True;
 		Or(Is Alive(Event Player) == False, Count Of(Filtered Array(Global.PenontonVisiNasib, And(Current Array Element != Event Player, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, Manusia) == True, Player Variable(Current Array Element, PrivasiNasibAktif) == True))))) == 0) == True;
 	}
@@ -3108,6 +3141,8 @@ rule("19 - Teleportasi Jongkok: Buka lima halaman selama Jongkok ditahan")
 
 	conditions
 	{
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.Manusia == True;
 		Event Player.BotOtomatis == False;
 		Is Dummy Bot(Event Player) == False;
@@ -3148,6 +3183,9 @@ rule("19a - Teleportasi Jongkok: Tembak utama maju, sekunder mundur, Interaksi j
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.TeleportasiJongkokAktif == True;
 		Event Player.PerintahTeleportasi == 0;
 		Is Button Held(Event Player, Button(Crouch)) == True;
@@ -3201,6 +3239,9 @@ rule("19c - Teleportasi Jongkok: Tembak utama maju dan sekunder mundur lima hala
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.TeleportasiJongkokAktif == True;
 		Or(Event Player.PerintahTeleportasi == 1, Event Player.PerintahTeleportasi == 2) == True;
 	}
@@ -3333,6 +3374,9 @@ rule("19e - Teleportasi Jongkok: Interaksi menjalankan halaman aktif")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.TeleportasiJongkokAktif == True;
 		Event Player.PerintahTeleportasi == 3;
 	}
@@ -3411,6 +3455,9 @@ rule("19f - Teleportasi Jongkok: Isi ulang melepas lampiran")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.LampiranTeleportasiAktif == True;
 		Event Player.MenuTerbuka == False;
 		Is Button Held(Event Player, Button(Crouch)) == True;
@@ -3438,6 +3485,9 @@ rule("19h - Teleportasi Jongkok: Lepas lampiran saat status berubah")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.LampiranTeleportasiAktif == True;
 		Or(
 			Or(
@@ -3475,6 +3525,9 @@ rule("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 
 	conditions
 	{
+		Event Player.Manusia == True;
+		Event Player.PindahTimDiproses == False;
+		Event Player.SiklusPemainAktif == False;
 		Event Player.TeleportasiJongkokAktif == True;
 		Or(Or(Or(Is Button Held(Event Player, Button(Crouch)) == False, Event Player.MenuTerbuka == True), Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False)), Event Player.PrivasiNasibAktif == True) == True;
 	}

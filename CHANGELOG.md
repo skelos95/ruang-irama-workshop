@@ -1,5 +1,12 @@
 # Changelog
 
+## Pulizia del cambio squadra in fasi annullabili — 2026-10-06
+
+- Il crash persiste dopo la PR #95 anche senza menu né icone create. La causa nativa resta sconosciuta; questa modifica verifica una sequenza di pulizia più distanziata, senza dichiarare il problema risolto.
+- `01b` esegue quiete, attesa 0,05 s, pulizia canonica del roster, attesa 0,05 s e setup. Entrambe le attese annullano il worker se le condizioni decadono; controlli espliciti prima di riprendere impediscono di lavorare su team, entità o prenotazione non più validi.
+- Controller menu, Travel/Attach e pulizia del testo Luck alla morte bloccati durante la transizione. Le routine condivise e lo scheduler restano senza nuove attese; nessuno scratch viene mantenuto tra le fasi. Forward resta assente e le cinque pagine Travel, Superman Punch e le altre funzioni conservano il comportamento previsto.
+- 117 regole, 67 subroutine, 126 campi player, 7 Wait e un Loop. Stima strutturale 30.677 unità totali, 4.500 nella regola maggiore. Nuove regressioni simulano annullamento nelle due fasi, cambi rapidi, uscita, prenotazione sostituita e coda di 12 player.
+
 ## Rimozione Forward dopo regressione al cambio squadra — 2026-10-05
 
 - Segnalato crash al cambio squadra dopo PR #94, anche in una lobby nuova con un solo umano e senza aprire menu. La causa nativa non è stata identificata: questa rimozione richiede nuova verifica nel gioco.

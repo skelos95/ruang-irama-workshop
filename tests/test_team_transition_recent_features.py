@@ -23,6 +23,11 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         self.text_destroyed = []
         self.detector = next(rule for rule in self.rules if rule.name.startswith("01a -"))
         self.worker = next(rule for rule in self.rules if rule.name.startswith("01b -"))
+        self.worker_conditions = self.conditions(self.worker)
+        self.worker_nodes = beacon_statements(validator.rule_block(self.worker, "actions"))
+        self.workers = {}
+        self.cancelled_workers = []
+        self.phase_calls = []
         self.programs = {"BersihkanPemain": self.cleanup_program}
         # Project only irrelevant native effects away. Keep resource destruction,
         # source reset assignments, and the real cleanup call order.
@@ -72,6 +77,10 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         state = super().add(identity, **defaults)
         # Allocate the permanent roster HUD through its actual classifier writes;
         # the menu has never been opened in these regression scenarios.
+        self.allocate_roster_hud(identity)
+        return state
+
+    def allocate_roster_hud(self, identity):
         self.event_player = identity
         rendering = self.classifier[self.classifier.index("Create HUD Text("):]
         for token in rendering.split(";"):
@@ -82,7 +91,20 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
                 self.execute_assignment(token)
             elif re.match(r"Global\.Hud\w+Pemain\[.*\] = Event Player\.Hud\w+$", token):
                 self.execute_assignment(token)
-        return state
+            elif token == "Event Player.HudPemainDibuat = True":
+                self.execute_assignment(token)
+
+    def register_ready(self, identity, now):
+        """Run actual classifier gates before its projected admission/HUD writes."""
+        self.event_player, self.now = identity, now
+        classifier = next(rule for rule in self.rules
+                          if "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+        if not all(self.evaluate(condition) for condition in self.conditions(classifier)):
+            return False
+        if not self.join(identity):
+            return False
+        self.allocate_roster_hud(identity)
+        return True
 
     def apply_special_icon_default(self, identity):
         classifier = next(rule for rule in self.rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
@@ -110,29 +132,119 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
             elif token.startswith("Call Subroutine(") and token[len("Call Subroutine("):-1] in self.programs:
                 routine = token[len("Call Subroutine("):-1]
                 self.calls.append((self.event_player, routine))
+                if routine in ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain"):
+                    self.phase_calls.append((self.event_player, routine, self.now))
                 if self.execute(self.programs[routine]):
                     return True
             elif super().execute([node]):
                 return True
         return False
 
+    @staticmethod
+    def conditions(rule):
+        source = validator.mask_strings(validator.rule_block(rule, "conditions"))
+        return [token.strip() for token in source.split(";") if token.strip()]
+
     def trigger(self, rule, identity, now):
         self.event_player, self.now = identity, now
-        conditions = validator.mask_strings(validator.rule_block(rule, "conditions"))
-        if not all(self.evaluate(token.strip()) for token in conditions.split(";") if token.strip()):
+        if not all(self.evaluate(condition) for condition in self.conditions(rule)):
             return False
         self.execute(beacon_statements(validator.rule_block(rule, "actions")))
         return True
 
     def change_team(self, identity, team, now):
         self.players[identity]["team"] = team
-        return self.trigger(self.detector, identity, now)
+        fired = self.trigger(self.detector, identity, now)
+        self.observe_waits(now)
+        return fired
+
+    def native_update(self, identity, now, **changes):
+        """Deliver controlled native changes while Abort When False is waiting."""
+        self.players[identity].update(changes)
+        self.observe_waits(now)
+
+    def fast_tick(self, identity, now):
+        # Execute the real central lease and pending-target branches. No worker
+        # owns global cleanup scratch across either yield boundary.
+        self.tick_pending(identity, now)
+        release = "Global.PemainAktif.PindahTimDiproses = False;"
+        cycle = next(rule for rule in self.rules if release in rule.body)
+        self.execute_atomic(self.source_branch(cycle, release))
+        self.observe_waits(now)
+
+    def observe_waits(self, now):
+        previous = self.event_player
+        self.now = now
+        for identity, worker in list(self.workers.items()):
+            self.event_player = identity
+            waiting = worker.get("waiting")
+            if waiting and waiting[1] == "Abort When False" and not self.worker_eligible():
+                self.cancelled_workers.append((identity, now))
+                del self.workers[identity]
+        self.event_player = previous
+
+    def worker_eligible(self):
+        return all(self.evaluate(condition) for condition in self.worker_conditions)
+
+    def start_worker(self, identity, now, reserve=False):
+        self.event_player, self.now = identity, now
+        if identity in self.workers:
+            return False
+        if reserve:
+            self.globals["PemainSiklusGlobal"] = identity
+        if not self.worker_eligible():
+            return False
+        # Only Event Player's identity and the remaining source nodes survive a
+        # pause. Player/global values are read afresh when execution resumes.
+        self.workers[identity] = {"remaining": list(self.worker_nodes), "waiting": None}
+        self.resume_worker(identity, now)
+        return True
+
+    def resume_worker(self, identity, now, wake_changes=None):
+        self.event_player, self.now = identity, now
+        worker = self.workers.get(identity)
+        if worker is None:
+            return False
+        waiting = worker["waiting"]
+        if waiting:
+            if waiting[1] == "Abort When False" and not self.worker_eligible():
+                self.cancelled_workers.append((identity, now))
+                del self.workers[identity]
+                return False
+            if now + 1e-9 < waiting[0]:
+                return False
+            worker["waiting"] = None
+            # Exercise a native change delivered at wakeup, after the Wait has
+            # completed. Explicit source Abort If checks must catch this race.
+            if wake_changes:
+                self.players[identity].update(wake_changes)
+        while worker["remaining"]:
+            node = worker["remaining"].pop(0)
+            token, body, otherwise = node
+            if token.startswith("If("):
+                branch = body if self.evaluate(token[3:-1]) else otherwise
+                worker["remaining"][:0] = branch
+            elif token.startswith("Wait("):
+                call = next(validator.iter_calls(token, "Wait"))
+                worker["waiting"] = (now + self.evaluate(call.args[0]), call.args[1])
+                return True
+            elif token.startswith("Abort If("):
+                if self.evaluate(token[len("Abort If("):-1]):
+                    self.cancelled_workers.append((identity, now))
+                    del self.workers[identity]
+                    return False
+            elif self.execute([node]):
+                del self.workers[identity]
+                return False
+        del self.workers[identity]
+        return True
 
     def worker_tick(self, identity, now):
         # The central scheduler chooses the identity; the actual worker still
         # enforces its team, spawn, quarantine, and half-second deadline guards.
-        self.globals["PemainSiklusGlobal"] = identity
-        return self.trigger(self.worker, identity, now)
+        if identity in self.workers:
+            return self.resume_worker(identity, now)
+        return self.start_worker(identity, now, reserve=True)
 
 
 class TeamTransitionRecentFeaturesTests(unittest.TestCase):
@@ -194,9 +306,15 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertFalse(model.worker_tick("งูแรร์", 100.599))
                 self.assertEqual(model.destroyed, [])
                 self.assertTrue(model.worker_tick("งูแรร์", 100.6))
+                self.assertEqual(model.destroyed, [beacon])
+                self.assertEqual(model.text_destroyed, [])
+                self.assertTrue(model.resume_worker("งูแรร์", 100.65))
                 self.assertCountEqual(model.destroyed, [beacon, hud])
                 self.assertEqual(model.text_destroyed, [hud])
-                self.assertFalse(model.worker_tick("งูแรร์", 100.7))
+                self.assertFalse(state["SudahSiap"])
+                self.assertTrue(model.resume_worker("งูแรร์", 100.7))
+                self.assertTrue(state["SudahSiap"])
+                self.assertFalse(model.worker_tick("งูแรร์", 100.8))
                 model.run(now=101)
                 self.assertEqual(model.destroyed.count(beacon), 1)
                 self.assertEqual(model.destroyed.count(hud), 1)
@@ -226,6 +344,8 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertFalse(model.worker_tick("changing", 100.599))
                 self.assertEqual(model.destroyed, [])
                 self.assertTrue(model.worker_tick("changing", 100.6))
+                self.assertTrue(model.resume_worker("changing", 100.65))
+                self.assertTrue(model.resume_worker("changing", 100.7))
                 self.assertCountEqual(model.destroyed, [own_beacon, own_hud] + own_static)
                 self.assertEqual(len(model.destroyed), len(set(model.destroyed)))
                 self.assertEqual(model.globals["PemainManusia"], ["observer"])
@@ -265,7 +385,10 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertEqual(model.destroyed, [])
                 self.assertFalse(model.worker_tick("ordinary", 100.599))
                 self.assertTrue(model.worker_tick("ordinary", 100.6))
+                self.assertEqual(model.destroyed, [])
+                self.assertTrue(model.resume_worker("ordinary", 100.65))
                 self.assertEqual(model.destroyed, [own_hud])
+                self.assertTrue(model.resume_worker("ordinary", 100.7))
                 self.assertEqual(model.icons, {})
                 self.assertEqual(model.chase_started, [])
 
@@ -287,8 +410,10 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertEqual(model.destroyed, [])
                 self.assertFalse(model.worker_tick("changing", 100.6))
                 self.assertTrue(model.worker_tick("changing", 100.7))
+                self.assertTrue(model.resume_worker("changing", 100.75))
+                self.assertTrue(model.resume_worker("changing", 100.8))
                 destroyed = list(model.destroyed)
-                self.assertFalse(model.worker_tick("changing", 100.8))
+                self.assertFalse(model.worker_tick("changing", 100.9))
                 model.event_player = "changing"
                 model.execute(model.programs["BersihkanPemain"])
                 self.assertEqual(model.destroyed, destroyed)
@@ -310,6 +435,8 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertTrue(model.change_team("changing", 1, 100.6))
                 self.assertFalse(model.worker_tick("changing", 101.099))
                 self.assertTrue(model.worker_tick("changing", 101.1))
+                self.assertTrue(model.resume_worker("changing", 101.15))
+                self.assertTrue(model.resume_worker("changing", 101.2))
 
 
 if __name__ == "__main__":
