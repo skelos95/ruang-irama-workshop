@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il 5 ottobre è stato segnalato un nuovo crash al cambio squadra dopo la PR #94, anche in una lobby appena creata con un solo umano e senza usare menu. Forward è stato rimosso: Travel torna alle cinque pagine e lo scheduler perde il nuovo percorso. La correzione di Superman Punch durante Travel resta attiva. La quarantena ferma subito l’animazione dell’icona personale e revoca il Punch, prima della pulizia finale nel worker stabilizzato. La causa nativa non è stata isolata; il cambio squadra di questa revisione richiede conferma nel client.
+Il crash al cambio squadra persiste anche dopo la PR #95, senza menu né icone create. Il worker ora separa quiete, pulizia del roster e nuova registrazione con due attese annullabili di 0,05 s. Durante la transizione blocca i comandi che potrebbero interferire; un’uscita o un altro cambio squadra interrompono il lavoro vecchio. Forward resta rimosso e Superman Punch durante Travel resta attivo. È una prova mirata sulla sequenza di pulizia: la causa nativa non è stata isolata e l’esito richiede conferma nel client.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 

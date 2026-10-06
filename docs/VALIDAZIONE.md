@@ -30,7 +30,7 @@ Il parser riutilizza la mascheratura delle stringhe tramite una cache limitata a
 
 Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy](https://github.com/Zezombye/overpy/blob/master/src/compiler/astToWorkshop.ts): numeri, accessi alle variabili, confronti, array e parametri impliciti delle stringhe. Colori nominali e RGBA vengono contati nella forma reale, anche quando hanno lo stesso aspetto. Budget locali: **32.000 unità totali, 5.000 per regola**, più un limite testuale autonomo di 80 KB per regola. Titoli, commenti e spazi non contano; spezzare una regola non riduce il totale delle sue espressioni. La cache di questo conteggio è anch'essa limitata a 512 regole e usa il contenuto completo.
 
-Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il sorgente Cozywatch corrente produce 30.467 unità totali e 4.500 nella regola maggiore. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola.
+Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il sorgente Cozywatch corrente produce 30.677 unità totali e 4.500 nella regola maggiore. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola.
 
 ## GitHub Actions
 

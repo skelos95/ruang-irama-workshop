@@ -8,7 +8,8 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 |---|---|---|
 | Release storica 0.8.1 | La documentazione precedente riporta la regressione client completata nell'agosto 2026. | Non valida automaticamente i successivi commit di `main`; metriche mancanti non vengono ricostruite. |
 | 25 settembre, ripristino PR #77 | L'utente conferma la scomparsa del crash al cambio squadra introdotto dalla PR #76. | Singola istruzione responsabile non isolata. |
-| 5 ottobre, dopo PR #94 | Nuovo crash al cambio squadra segnalato in lobby nuova con un umano, senza menu. | Forward rimosso; correzione Punch durante Travel conservata; icona e Punch fermati all’inizio della quarantena. Causa nativa ed esito da confermare nel client. |
+| 5 ottobre, dopo PR #94 | Nuovo crash al cambio squadra segnalato in lobby nuova con un umano, senza menu. | Forward rimosso nella PR #95; non ha eliminato il crash. |
+| Riscontro successivo alla PR #95 | Il crash persiste senza menu né icone create. | Nel sorgente corrente il worker separa le fasi con due attese annullabili di 0,05 s; esito ancora da verificare nel client. |
 | 27 settembre, PR #80 | L'utente conferma il recupero dal punto nel vuoto prima problematico e la resurrezione sul terreno. | Altre mappe e combinazioni richiedono prove dedicate. |
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
@@ -98,7 +99,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 
 - Restare alla scelta iniziale senza eroe per 60 s: Shion al successivo controllo 1 Hz, poi scelta libera di un altro eroe. Scegliere prima della scadenza deve annullare l'assegnazione; provare due ingressi distanziati, uscita/rientro, cambio squadra prima della scelta e presenza di dummy/AI.
 - Dopo il primo spawn, morire o cambiare squadra/eroe e restare nella selezione oltre 60 s: nessuna nuova assegnazione automatica. Spettatori esclusi; verificare nel client l'assegnazione iniziale e il rilascio immediato della selezione forzata.
-- Cambiare squadra subito dopo l'ingresso senza menu, dopo alcuni minuti, con menu aperto e mentre altri osservano o hanno Camera/Vote aperti. Includere doppi cambi rapidi durante quarantena.
+- Cambiare squadra subito dopo l'ingresso senza menu né icone, dopo alcuni minuti, con menu aperto e mentre altri osservano o hanno Camera/Vote aperti. Includere doppi cambi rapidi e uscite durante la quarantena e le due attese del worker. Il player deve tornare ai default una volta sola; gli HUD degli altri devono restare validi. Ripetere con 12 player in coda, controllando che la registrazione prosegua e gli slot vengano liberati. I test offline verificano annullamento e ordine delle fasi; non riproducono il crash nativo.
 - Lasciare con menu, Camera, Fly, Vision, Luck, voto e debiti attivi; far entrare un'identità diversa nello stesso slot. Il leave ritardato non deve distruggere risorse del nuovo occupante.
 - Nomi temporaneamente vuoti e join duplicati non prenotano slot errati. Uccidere un AI durante classificazione non deve bloccare scheduler o altri ingressi.
 - Dopo cleanup: default ripristinati, Camera/Attach sganciati, voti ricalcolati, nessun target obsoleto o icona orfana. Svuotando la lobby tornano liberi tutti i 12 slot.

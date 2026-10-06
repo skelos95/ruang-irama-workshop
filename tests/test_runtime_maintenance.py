@@ -546,7 +546,15 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn(f"If(Array Contains({global_name}.PemainManusia, Event Player));", setup)
             self.assertIn("Call Subroutine(BersihkanPemain);", setup)
             self.assertIn("Call Subroutine(SiapkanPemain);", setup)
-            self.assertNotIn("Wait(", setup)
+            wait_mode = "Annulla quando è False" if rule_kw == "regola" else "Abort When False"
+            wait = f"Wait(0.050, {wait_mode});"
+            self.assertEqual(setup.count("Wait("), 2)
+            self.assertEqual(setup.count(wait), 2)
+            first_wait, second_wait = setup.index(wait), setup.rindex(wait)
+            self.assertLess(setup.index("Call Subroutine(TenangkanPemain);"), first_wait)
+            self.assertLess(first_wait, setup.index("Call Subroutine(BersihkanPemain);"))
+            self.assertLess(setup.index("Call Subroutine(BersihkanPemain);"), second_wait)
+            self.assertLess(second_wait, setup.index("Call Subroutine(SiapkanPemain);"))
 
             scheduler = source.split(f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")', 1)[1].split(f'{rule_kw}("05 - Menu:', 1)[0]
             self.assertIn(f"{global_name}.SalinanDaftarPemain = All Players(All Teams);", scheduler)

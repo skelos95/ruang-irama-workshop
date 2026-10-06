@@ -107,6 +107,32 @@ SCHEDULER_SUBROUTINES = {
     "RawatBotBuatan",
     "ProsesLompatGanda",
 }
+SETUP_WORKER_CONDITIONS = (
+    "Global.Siap == True;",
+    "Entity Exists(Event Player) == True;",
+    "Is Dummy Bot(Event Player) == False;",
+    "Event Player.BotOtomatis == False;",
+    "Event Player.Manusia == False;",
+    "Event Player.PindahTimDiproses == True;",
+    "Global.PemainSiklusGlobal == Event Player;",
+    "Event Player.TimSiklusTarget == Team Of(Event Player);",
+    "Has Spawned(Event Player) == True;",
+    "Event Player.SudahSiap == False;",
+    "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
+)
+SETUP_WORKER_WAKE_GUARDS = (
+    "Abort If(Global.Siap == False)",
+    "Abort If(Entity Exists(Event Player) == False)",
+    "Abort If(Is Dummy Bot(Event Player) == True)",
+    "Abort If(Event Player.BotOtomatis == True)",
+    "Abort If(Event Player.Manusia == True)",
+    "Abort If(Event Player.PindahTimDiproses == False)",
+    "Abort If(Global.PemainSiklusGlobal != Event Player)",
+    "Abort If(Event Player.TimSiklusTarget != Team Of(Event Player))",
+    "Abort If(Has Spawned(Event Player) == False)",
+    "Abort If(Event Player.SudahSiap == True)",
+    "Abort If(Total Time Elapsed < Event Player.WaktuSiklusTim)",
+)
 PAGE_APPLY_SUBROUTINES = {
     "TerapkanHalamanMusik",
     "TerapkanHalamanKamera",
@@ -828,6 +854,8 @@ def wait_role(rule: Rule, scheduler: Rule | None) -> str | None:
         return "join ordering"
     if event_type(rule) == "Player Left Match":
         return "leave ordering"
+    if rule.name.startswith("01b -") and event_type(rule) == "Ongoing - Each Player":
+        return "lifecycle stages"
     if "Abort When False" in body and "Button(Melee)" in body:
         return "menu hold"
     if "Abort When False" in body and "Button(Interact)" in body:
@@ -1646,6 +1674,19 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                    "apertura Travel non avvia la transizione colore")
     checks.require(travel_nav is not None and "Call Subroutine(TransisiWarnaMenu);" in travel_nav.body,
                    "navigazione Travel non avvia la transizione colore")
+    for prefix in ("05f", "18j", "19", "19a", "19c", "19e", "19f", "19g", "19h"):
+        handler = next((rule for rule in rules if rule.name.startswith(prefix + " -")), None)
+        checks.require(handler is not None, f"controller menu/Travel: handler {prefix} assente")
+        if handler:
+            conditions = rule_block(handler, "conditions") or ""
+            guards = ("Event Player.PindahTimDiproses == False;", "Event Player.SiklusPemainAktif == False;")
+            if prefix != "18j":
+                guards += ("Event Player.Manusia == True;",)
+            else:
+                checks.require("Event Player.Manusia" not in conditions,
+                               "cleanup Vision 18j deve conservare anche gli owner bot")
+            for token in guards:
+                checks.require(token in conditions, f"controller {prefix}: escludere owner in quarantena: {token}")
     if travel_nav:
         checks.require(
             "Event Player.KursorTeleportasi = (Event Player.KursorTeleportasi + (Event Player.PerintahTeleportasi == 1 ? 1 : 4)) % 5;"
@@ -4419,6 +4460,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
         ("bot classification", ("0.016", "Ignore Condition")): 1,
         ("menu hold", ("0.500", "Abort When False")): 1,
         ("camera hold", ("0.500", "Abort When False")): 1,
+        ("lifecycle stages", ("0.050", "Abort When False")): 2,
     })
     checks.equal(
         wait_signatures,
@@ -5914,14 +5956,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     checks.require(setup_worker is not None, "worker setup iniziale accodato dal globale assente")
     if setup_worker:
         conditions = rule_block(setup_worker, "conditions") or ""
-        for token in (
-            "Event Player.PindahTimDiproses == True;",
-            "Global.PemainSiklusGlobal == Event Player;",
-            "Event Player.TimSiklusTarget == Team Of(Event Player);",
-            "Has Spawned(Event Player) == True;",
-            "Event Player.SudahSiap == False;",
-            "Total Time Elapsed >= Event Player.WaktuSiklusTim;",
-        ):
+        for token in SETUP_WORKER_CONDITIONS:
             checks.require(token in conditions, f"worker setup iniziale senza guardia: {token}")
         checks.require("Server Load < 150" not in conditions,
                        "worker setup iniziale non deve dipendere dal carico server")
@@ -5950,7 +5985,26 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
                        "worker setup iniziale deve seguire ordine tenangkan -> cleanup opzionale -> siapkan")
         checks.require(len(cleanup_workers) == 1 and cleanup_workers[0] == setup_worker,
                        "cleanup team-switch deve vivere solo nel worker setup serializzato")
-        checks.require(not wait_calls(setup_worker.body), "worker setup iniziale non deve usare Wait")
+        stage_waits = wait_calls(setup_worker.body)
+        checks.require(len(stage_waits) == 2
+                       and all(call.args == ("0.050", "Abort When False") for call in stage_waits),
+                       "worker setup iniziale: soltanto due Wait 0.050 Abort When False tra le fasi atomiche")
+        for call in stage_waits:
+            checks.require(not conditional_branches_containing(setup_worker.body, call.start),
+                           "worker setup iniziale: i Wait devono separare le fasi anche al join iniziale")
+        stage_tokens = tuple(re.sub(r"\s+", "", token.strip())
+                             for token in mask_strings(rule_block(setup_worker, "actions") or "").split(";")
+                             if token.strip())
+        expected_stage_tokens = (
+            "Call Subroutine(TenangkanPemain)", "Wait(0.050, Abort When False)",
+            *SETUP_WORKER_WAKE_GUARDS,
+            "If(Array Contains(Global.PemainManusia, Event Player))",
+            "Call Subroutine(BersihkanPemain)", "End", "Wait(0.050, Abort When False)",
+            *SETUP_WORKER_WAKE_GUARDS,
+            "Call Subroutine(SiapkanPemain)",
+        )
+        checks.equal(stage_tokens, tuple(re.sub(r"\s+", "", token) for token in expected_stage_tokens),
+                     "worker setup iniziale: Tenangkan -> Wait/guardie complete -> Bersihkan -> Wait/guardie complete -> Siapkan")
 
     scheduler = next((rule for rule in rules if event_type(rule) == "Ongoing - Global" and action_loop_count(rule.body) == 1), None)
     checks.require(scheduler is not None, "scheduler globale lifecycle assente")

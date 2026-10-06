@@ -11,7 +11,7 @@ Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](..
 
 ## Scheduler
 
-Il runtime contiene 117 regole, 67 subroutine, 5 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
+Il runtime contiene 117 regole, 67 subroutine, 7 `Wait` e un solo `Loop`. La regola `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Le subroutine della scansione non cedono l'esecuzione; `PemainAktif` e indice restano scratch esclusivi dello scheduler e vengono liberati a fine scansione.
 
 | Frequenza | Lavoro |
 |---:|---|
@@ -33,11 +33,15 @@ I 12 slot identificano occupanti simultanei, non identità storiche. Nome tempor
 | Evento | Contratto |
 |---|---|
 | Ingresso | Classificazione, slot libero, setup e un solo set di HUD; eventi duplicati non duplicano il roster. |
-| Cambio squadra | `01a` mette in quarantena; dopo team/spawn stabili per 0,5 s, `01b` serializza quiete, cleanup e setup. Tutte le preferenze tornano ai default. |
+| Cambio squadra | `01a` mette in quarantena; dopo team/spawn stabili per 0,5 s, `01b` serializza quiete, attesa 0,05 s, cleanup, attesa 0,05 s e setup. Tutte le preferenze tornano ai default. |
 | Uscita | Dopo 0,5 s distingue la vera uscita dalla transizione di team, distrugge risorse e riferimenti dell'identità esatta e libera lo slot. |
 | Morte/cambio eroe | Normalizza lo stato fisico transitorio; conserva preferenze e riapplica quelle compatibili al ritorno in vita. |
 
 La prenotazione lifecycle non sospende gli altri player. Un bot in classificazione o un player non spawned non deve trattenerla indefinitamente; i retry rispettano le scadenze individuali/globali. Un evento leave tardivo non può cancellare il nuovo occupante dello stesso slot.
+
+Le due nuove attese sono soltanto nel worker `01b`, con `Abort When False`: tutte le condizioni di ingresso devono restare valide. Dopo ciascuna attesa, prima di proseguire, controlli espliciti riconfermano esistenza, tipo di entità, spawn, team, quarantena, prenotazione e scadenza. Un cambio osservato revoca la prenotazione e sposta la scadenza nel futuro, anche se il player torna subito nella squadra precedente. Un worker annullato non libera la prenotazione di un altro. Le routine condivise restano atomiche: nessun indice di cleanup o scratch dello scheduler viene conservato attraverso le attese.
+
+`TenangkanPemain` normalizza lo stato e rimuove anche risorse transitorie di menu, Luck e icone. La prima attesa precede la pulizia canonica del roster; la seconda separa questa pulizia dalla nuova classificazione e creazione degli HUD. Non viene quindi distanziata ogni singola operazione nativa. I controller di rilascio menu, Travel/Attach e pulizia del testo Luck alla morte rispettano la quarantena; i player stabili continuano a poter invalidare i propri target. Il crash resta da verificare nel client.
 
 Prima del primo spawn, `ProsesCepatPemain` arma una sola scadenza individuale di 60 s. Al controllo 1 Hz, un player ancora non spawned riceve Shion; latch consumato prima di `Start Forcing Player To Be Hero` e immediato `Stop Forcing Player To Be Hero` evitano ripetizioni e lasciano libera la scelta successiva. Setup dopo spawn chiude il timer, senza riarmarlo a morte o cambio team. Le due variabili appartengono all'entità: nessun registro globale, HUD o `Wait` aggiunto. Dummy e AI classificati non entrano in questo ramo; un AI non ancora spawned resta non classificabile fino allo spawn, come nel lifecycle esistente.
 
