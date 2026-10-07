@@ -56,8 +56,12 @@ def validate_runtime(text: str) -> list[str]:
     errors: list[str] = []
     try:
         profile = "it-IT" if text.lstrip().startswith("variabili") else "en-US"
+        native_syntax = semantic.mask_strings(text)
+        # Parenthesized unary signs parse in our structural AST but the native
+        # importer rejects them. Check raw syntax independently of that AST.
+        if re.search(r"(?:^|[=,(\[?:<>+*/%\-])\s*[-+]\s*\(", native_syntax, re.M):
+            errors.append("runtime globale: segno unario prima di parentesi non importabile; usare un numero con segno o un valore nativo")
         if profile == "it-IT":
-            native_syntax = semantic.mask_strings(text)
             # EN normalization must not hide partial translations of native
             # names. Only the namespace and standalone event selectors differ.
             invalid_native = (

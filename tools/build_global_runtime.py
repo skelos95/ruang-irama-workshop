@@ -127,7 +127,15 @@ def _emit(node: _Node) -> str:
     if node.kind == 'binary':
         text = _emit(node.children[0]) + ' ' + node.value + ' ' + _emit(node.children[1])
         return text if node.value in ('=', '+=', '-=', '*=', '/=', '%=') else '(' + text + ')'
-    if node.kind == 'unary': return node.value + '(' + _emit(node.children[0]) + ')'
+    if node.kind == 'unary':
+        operand = node.children[0]
+        if node.value == '+': return _emit(operand)
+        if node.value == '!': return 'Not(' + _emit(operand) + ')'
+        # The native importer accepts signed number literals, not -(value).
+        # Preserve the literal bytes; negate expressions with a native value.
+        if operand.kind == 'literal' and operand.value[0].isdigit():
+            return '-' + operand.value
+        return 'Multiply(-1, ' + _emit(operand) + ')'
     return '(' + _emit(node.children[0]) + ' ? ' + _emit(node.children[1]) + ' : ' + _emit(node.children[2]) + ')'
 
 

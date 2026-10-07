@@ -289,6 +289,45 @@ class GlobalCompactionTests(unittest.TestCase):
             clipboard.check_text(oversized, "en-US")
 
 
+class GlobalExpressionEmissionTests(unittest.TestCase):
+    def test_signed_numbers_keep_native_literal_syntax_in_every_value_position(self):
+        source = '''rule("Angka")
+{
+ event { Subroutine; Angka; }
+ actions {
+  Global.IndeksKeluar = -1;
+  Global.PemainPemicu.HalamanMenu = -1;
+  Global.PemainPemicu.ModeKebal = +1;
+  For Global Variable(IndeksKeluar, 0, -1, -1); End;
+  If(Global.PemainPemicu.HalamanMenu == -1); End;
+  Global.PemainPemicu.PosisiMati = Vector(-0.500, -2, 3);
+ }
+}
+'''
+        emitted = compiler.compact_booleans(source)
+        for literal in ('= -1;', '= 1;', '0, -1, -1)', '== -1)', 'Vector(-0.500, -2, 3)'):
+            self.assertIn(literal, emitted)
+        self.assertNotRegex(emitted, r'[-+]\s*\(')
+
+    def test_expression_negation_uses_native_values_and_keeps_grouping(self):
+        for source, expected in (
+            ('-(Global.Number + 1)', 'Multiply(-1, (Global.Number + 1))'),
+            ('-Vector(1, 2, 3)', 'Multiply(-1, Vector(1, 2, 3))'),
+            ('!Global.Flag', 'Not(Global.Flag)'),
+            ('+(Global.Number + 1)', '(Global.Number + 1)'),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(compiler._emit(compiler._Expression(source).tree), expected)
+
+    def test_actual_import_restores_negative_sentinels_and_contains_no_unary_parentheses(self):
+        runtime = (ROOT / 'workshop/ruang_irama.it-IT.workshop').read_text(encoding='utf-8')
+        syntax = semantic.mask_strings(runtime)
+        self.assertIn('Globale.IndeksKeluar = -1;', syntax)
+        self.assertIn('Globale.SlotHUDTerakhir = -1;', syntax)
+        self.assertIn('Globale.PemainPemicu.HalamanMenu = -1;', syntax)
+        self.assertNotRegex(syntax, r'(?:^|[=,(\[?:<>+*/%\-])\s*[-+]\s*\(')
+
+
 class GlobalTranslationTests(unittest.TestCase):
     def test_italian_translation_preserves_native_compound_identifiers(self):
         english = '''variables { global: 0: Daftar player: 0: Nilai }

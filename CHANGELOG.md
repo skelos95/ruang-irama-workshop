@@ -1,5 +1,10 @@
 # Changelog
 
+## Sintassi dei valori nel runtime globale — 2026-10-07
+
+- Corretto l'errore d'importazione alla riga 376 della PR #97: il generatore scriveva `-(1)` invece del valore nativo `-1`. Ripristinati i numeri con segno nelle assegnazioni, negli argomenti e nei confronti; la negazione di espressioni usa un valore nativo, senza modificare le funzioni del Workshop.
+- Aggiunto un gate indipendente sulla sintassi effettiva IT/EN e regressioni sull'output da importare. L'esito dei controlli locali non sostituisce la nuova prova nel client, anche per il cambio squadra.
+
 ## Runtime globale — 2026-10-07
 
 - Il primo cambio diretto di squadra continua a causare crash dopo la PR #96; l'utente riferisce che passando prima dagli spettatori il crash non avviene. La revisione sposta input, HUD, effetti, fisica, reset e pulizia nel contesto globale. Non forza il passaggio agli spettatori e non dichiara dimostrata la causa nativa.
