@@ -172,6 +172,23 @@ class GlobalRuntimeGateTests(unittest.TestCase):
         source = italian_minimal().replace('Custom String("OK")', 'Custom String("Ongoing - Globale; For Globale Variable; Tutti Teams")')
         self.assertEqual(gate.validate_runtime(source), [])
 
+    def test_raw_unary_parentheses_fail_in_italian_and_english_values(self):
+        for source, namespace in ((MINIMAL, 'Global.'), (italian_minimal(), 'Globale.')):
+            for value in ('-(1)', '- (1)', '+(1)', 'Array(-(-1))', 'Vector(0, -(2), 0)'):
+                with self.subTest(namespace=namespace, value=value):
+                    broken = source.replace(namespace + 'PemainPemicu = Null;',
+                                            namespace + 'PemainPemicu = ' + value + ';', 1)
+                    self.reject(broken, 'segno unario')
+
+    def test_native_signed_literals_binary_subtraction_and_quoted_signs_are_allowed(self):
+        for value in ('-1', 'Array(-1, -0.500)', '(1 - (2 + 3))', 'Multiply(-1, (1 + 2))'):
+            with self.subTest(value=value):
+                source = MINIMAL.replace('Global.PemainAktif = Null;',
+                                         'Global.AntreanPeristiwa = ' + value + ';\n  Global.PemainAktif = Null;', 1)
+                self.assertEqual(gate.validate_runtime(source), [])
+        source = MINIMAL.replace('Custom String("OK")', 'Custom String("= -(1); Vector(0, -(2), 0)")')
+        self.assertEqual(gate.validate_runtime(source), [])
+
 
 if __name__ == "__main__":
     unittest.main()

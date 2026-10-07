@@ -373,15 +373,15 @@ regola("00 - Umum: Siapkan 200 genre, dari rebahan sampai kiamat")
 		Globale.HudMenuPemain = Empty Array;
 		Globale.TeksDuniaPemain = Empty Array;
 		Globale.SlotHUDPemain = Empty Array;
-		Globale.IndeksKeluar = -(1);
-		Globale.SlotHUDTerakhir = -(1);
+		Globale.IndeksKeluar = -1;
+		Globale.SlotHUDTerakhir = -1;
 		Globale.PemimpinPilihan = Null;
 		Globale.PilihanTerbanyak = 0;
 		Globale.PilihanSeri = False;
 		Globale.NamaPemimpinPilihan = Custom String("");
 		Globale.WarnaPemimpinPilihan = Color(Bianco);
 		Globale.IndeksPemilih = 0;
-		Globale.IndeksDendamKeluar = -(1);
+		Globale.IndeksDendamKeluar = -1;
 		Globale.PilihPahlawanDilewati = False;
 		Globale.PersiapanDilewati = False;
 		Globale.DaftarWarna = Array(Color(Bianco), Custom Color(190, 210, 230, 255), Custom Color(100, 110, 120, 255), Custom Color(0, 0, 0, 255), Custom Color(255, 245, 215, 255), Color(Yellow), Custom Color(255, 200, 70, 255), Custom Color(255, 180, 145, 255), Custom Color(255, 145, 90, 255), Color(Orange), Custom Color(205, 125, 65, 255), Custom Color(255, 120, 105, 255), Custom Color(255, 75, 75, 255), Custom Color(200, 50, 75, 255), Custom Color(255, 165, 205, 255), Custom Color(255, 90, 190, 255), Color(Rose), Custom Color(255, 70, 220, 255), Custom Color(205, 160, 255, 255), Custom Color(230, 100, 255, 255), Custom Color(175, 95, 255, 255), Color(Violet), Custom Color(160, 80, 160, 255), Custom Color(120, 205, 255, 255), Color(Sky Blue), Custom Color(155, 165, 255, 255), Custom Color(70, 145, 255, 255), Custom Color(80, 110, 255, 255), Custom Color(105, 100, 255, 255), Custom Color(50, 70, 120, 255), Custom Color(70, 255, 255, 255), Color(Aqua), Custom Color(110, 245, 210, 255), Custom Color(120, 255, 200, 255), Custom Color(80, 240, 170, 255), Color(Turquoise), Custom Color(190, 255, 80, 255), Color(Lime Green), Custom Color(70, 220, 110, 255), Custom Color(65, 130, 65, 255));
@@ -406,7 +406,7 @@ regola("00 - Umum: Siapkan 200 genre, dari rebahan sampai kiamat")
 		Globale.HudEfekSementara = Mapped Array(Globale.PemilikTeksSementara, 0);
 		Globale.TeksTeleportasiSementara = Mapped Array(Globale.PemilikTeksSementara, 0);
 		Globale.TeksVisiSementara = Mapped Array(Globale.PemilikTeksSementara, 0);
-		Globale.IndeksTeksPembersihan = -(1);
+		Globale.IndeksTeksPembersihan = -1;
 		Globale.PemainTeksPembersihan = Null;
 		Globale.KursorTeksPembersihan = 0;
 		Globale.JarakKamera = 2.000;
@@ -439,10 +439,10 @@ regola("00 - Umum: Siapkan 200 genre, dari rebahan sampai kiamat")
 		Create HUD Text(Globale.PemainManusia, Null, Null, Custom String("COZYWATCH [{0}]", Globale.TeksWaktuServer), Top, 0, Color(Bianco), Color(Bianco), Globale.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("LOCATION: {0}", Globale.NamaLokasiInggris[Globale.IndeksLokasiServer]) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("LOKASI SERVER: {0}", Globale.NamaLokasiIndonesia[Globale.IndeksLokasiServer]) : Custom String("ที่ตั้งเซิร์ฟเวอร์: {0}", Globale.NamaLokasiThai[Globale.IndeksLokasiServer]))), Null, Top, 1, Color(Bianco), Custom Color(255, 205, 110, 255), Globale.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Null, Custom String("  "), Top, 2, Color(Bianco), Color(Bianco), Globale.RGB, Visible To String and Color, Visible Never);
-		Create HUD Text(Globale.PemainManusia, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("Hold {0}: hero + HP", Input Binding String(Button(Crouch))) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String("กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))))), Null, Left, -(2), Color(Bianco), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255), Visible To and String, Visible Never);
-		Create HUD Text(Globale.PemainManusia, Null, Custom String(" "), Null, Left, -(1), Color(Bianco), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255), Visible To and String, Visible Never);
+		Create HUD Text(Globale.PemainManusia, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("Hold {0}: hero + HP", Input Binding String(Button(Crouch))) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("Tahan {0}: cek pahlawan + HP", Input Binding String(Button(Crouch))) : Custom String("กด {0} ค้าง: ดูฮีโร่ + HP", Input Binding String(Button(Crouch))))), Null, Left, -2, Color(Bianco), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255), Visible To and String, Visible Never);
+		Create HUD Text(Globale.PemainManusia, Null, Custom String(" "), Null, Left, -1, Color(Bianco), Custom Color(185, 225, 255, 255), Custom Color(70, 225, 255, 255), Visible To and String, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, ((Globale.NamaPemimpinPilihan != Custom String("")) ? ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("\nCHILL STAR: {0}", Globale.NamaPemimpinPilihan) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("\nBINTANG CHILL: {0}", Globale.NamaPemimpinPilihan) : Custom String("\nดาวสายชิล: {0}", Globale.NamaPemimpinPilihan))) : Custom String("")), Null, Left, 13, Color(Bianco), Globale.WarnaPemimpinPilihan, Color(Bianco), Visible To String and Color, Visible Never);
-		Create HUD Text(Globale.PemainManusia, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("Tahan {0} 0,5 dtk: Menu | Tahan {1} 0,5 dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String("กด {0} ค้าง 0.5 วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5 วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))))), Null, Right, -(16), Color(Bianco), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255), Visible To and String, Visible Never);
+		Create HUD Text(Globale.PemainManusia, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("Tahan {0} 0,5 dtk: Menu | Tahan {1} 0,5 dtk: Kamera", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))) : Custom String("กด {0} ค้าง 0.5 วิ: เมนูอาร์เคด | กด {1} ค้าง 0.5 วิ: กล้อง", Input Binding String(Button(Melee)), Input Binding String(Button(Interact))))), Null, Right, -16, Color(Bianco), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255), Visible To and String, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Null, ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("PLAYER VIBES") : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("MUSIK PEMAIN") : Custom String("เพลงของผู้เล่น"))), Left, 0, Color(Bianco), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255), Visible To and String, Visible Never);
 		Create HUD Text(Globale.PemainManusia, Null, Null, (Entity Exists(Host Player) ? Custom String(" \n{0} {1} {2}\n ", ((Player Variable(Local Player, IndeksBahasa) == 0) ? Custom String("Host:") : ((Player Variable(Local Player, IndeksBahasa) == 1) ? Custom String("Host:") : Custom String("โฮสต์:"))), Hero Icon String(Hero Of(Host Player)), (And((Player Variable(Host Player, NamaTampilan) != Null), (Player Variable(Host Player, NamaTampilan) != Custom String(""))) ? Player Variable(Host Player, NamaTampilan) : Custom String("{0}", Host Player))) : Custom String("")), Right, 0, Color(Bianco), Color(Bianco), Globale.RGB, Visible To String and Color, Visible Never);
 		Globale.PemilikIkonPilar = Mapped Array(Globale.SlotHUDTersedia, Null);
@@ -757,7 +757,7 @@ regola("02 - Pemain: Pisahkan manusia dari pasukan kaleng")
 		End;
 		Disable Game Mode HUD(Globale.PemainPemicu);
 		Disable Game Mode In-World UI(Globale.PemainPemicu);
-		Globale.PemainPemicu.IndeksGenre = -(1);
+		Globale.PemainPemicu.IndeksGenre = -1;
 		Globale.PemainPemicu.IndeksWarna = 0;
 		Globale.PemainPemicu.WarnaNama = Globale.DaftarWarna[Globale.PemainPemicu.IndeksWarna];
 		If((Globale.PemainPemicu.NamaTampilan == Custom String("งูแรร์")));
@@ -1173,7 +1173,7 @@ regola("05 - Menu: Tahan serangan jarak dekat 0,5 detik untuk buka atau tutup")
 		Call Subroutine(TutupMenu);
 		Else;
 		Globale.PemainPemicu.MenuTerbuka = True;
-		Globale.PemainPemicu.HalamanMenu = -(1);
+		Globale.PemainPemicu.HalamanMenu = -1;
 		Call Subroutine(GambarMenu);
 		End;
 	}
@@ -1207,11 +1207,11 @@ regola("05c - Menu: Pengatur masukan dengan prioritas tetap")
 
 	azioni
 	{
-		Abort If(Not(And(Is Alive(Globale.PemainPemicu), And(Globale.PemainPemicu.MenuTerbuka, And(Is Button Held(Globale.PemainPemicu, Button(Crouch)), And((Globale.PemainPemicu.PerintahMenu == 0), And(Not(Globale.PemainPemicu.InteraksiKameraDipakai), And(Not(Globale.PemainPemicu.KartuNasibAktif), Or(Or(Is Button Held(Globale.PemainPemicu, Button(Interact)), And(Is Button Held(Globale.PemainPemicu, Button(Reload)), (Globale.PemainPemicu.HalamanMenu != -(1)))), Or(Or(Is Button Held(Globale.PemainPemicu, Button(Primary Fire)), Is Button Held(Globale.PemainPemicu, Button(Secondary Fire))), And((Globale.PemainPemicu.HalamanMenu == 2), Or(Is Button Held(Globale.PemainPemicu, Button(Ability 1)), Is Button Held(Globale.PemainPemicu, Button(Ability 2))))))))))))));
+		Abort If(Not(And(Is Alive(Globale.PemainPemicu), And(Globale.PemainPemicu.MenuTerbuka, And(Is Button Held(Globale.PemainPemicu, Button(Crouch)), And((Globale.PemainPemicu.PerintahMenu == 0), And(Not(Globale.PemainPemicu.InteraksiKameraDipakai), And(Not(Globale.PemainPemicu.KartuNasibAktif), Or(Or(Is Button Held(Globale.PemainPemicu, Button(Interact)), And(Is Button Held(Globale.PemainPemicu, Button(Reload)), (Globale.PemainPemicu.HalamanMenu != -1))), Or(Or(Is Button Held(Globale.PemainPemicu, Button(Primary Fire)), Is Button Held(Globale.PemainPemicu, Button(Secondary Fire))), And((Globale.PemainPemicu.HalamanMenu == 2), Or(Is Button Held(Globale.PemainPemicu, Button(Ability 1)), Is Button Held(Globale.PemainPemicu, Button(Ability 2))))))))))))));
 		If(Is Button Held(Globale.PemainPemicu, Button(Interact)));
 		Globale.PemainPemicu.InteraksiKameraDipakai = True;
 		Globale.PemainPemicu.PerintahMenu = 1;
-		Else If(And(Is Button Held(Globale.PemainPemicu, Button(Reload)), (Globale.PemainPemicu.HalamanMenu != -(1))));
+		Else If(And(Is Button Held(Globale.PemainPemicu, Button(Reload)), (Globale.PemainPemicu.HalamanMenu != -1)));
 		Globale.PemainPemicu.PerintahMenu = 2;
 		Else If(Is Button Held(Globale.PemainPemicu, Button(Primary Fire)));
 		Globale.PemainPemicu.PerintahMenu = 3;
@@ -1301,7 +1301,7 @@ regola("06 - Menu: Navigasi berikutnya dan sebelumnya")
 		End;
 		Abort If((Globale.PemainPemicu.StatusPengatur[13] == 1));
 		Globale.PemainPemicu.StatusPengatur[13] = 1;
-		If((Globale.PemainPemicu.HalamanMenu == -(1)));
+		If((Globale.PemainPemicu.HalamanMenu == -1));
 		Globale.PemainPemicu.KursorUtama = ((Globale.PemainPemicu.KursorUtama + ((Globale.PemainPemicu.PerintahMenu == 3) ? 1 : 15)) % 16);
 		Else If((Globale.PemainPemicu.HalamanMenu == 0));
 		Globale.PemainPemicu.KursorWarna = ((Globale.PemainPemicu.KursorWarna + ((Globale.PemainPemicu.PerintahMenu == 3) ? 1 : (Count Of(Globale.DaftarWarna) - 1))) % Count Of(Globale.DaftarWarna));
@@ -1372,7 +1372,7 @@ regola("10 - Menu: Terapkan halaman aktif")
 		End;
 		Abort If((Globale.PemainPemicu.StatusPengatur[15] == 1));
 		Globale.PemainPemicu.StatusPengatur[15] = 1;
-		If((Globale.PemainPemicu.HalamanMenu == -(1)));
+		If((Globale.PemainPemicu.HalamanMenu == -1));
 		If((Globale.PemainPemicu.KursorUtama == 8));
 		Call Subroutine(TerapkanTeleportasiJongkok);
 		Else If((Globale.PemainPemicu.KursorUtama == 9));
@@ -1818,7 +1818,7 @@ regola("99o - Subrutin: Terapkan fisika Mode Hantu / Terbang")
 		Else;
 		Enable Movement Collision With Environment(Globale.PemainPemicu);
 		End;
-		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -1;
 		Stop Transforming Throttle(Globale.PemainPemicu);
 		If(Globale.PemainPemicu.ModeTerbangAktif);
 		If(Or((Globale.PemainPemicu.EfekNasib != 2), (Globale.PemainPemicu.EfekNasibBerakhir <= Total Time Elapsed)));
@@ -1829,7 +1829,7 @@ regola("99o - Subrutin: Terapkan fisika Mode Hantu / Terbang")
 		If(Or((Globale.PemainPemicu.EfekNasib != 2), (Globale.PemainPemicu.EfekNasibBerakhir <= Total Time Elapsed)));
 		Set Move Speed(Globale.PemainPemicu, 100);
 		If((Magnitude Of(Velocity Of(Globale.PemainPemicu)) > 0.010));
-		Apply Impulse(Globale.PemainPemicu, (Velocity Of(Globale.PemainPemicu) * -(1)), Magnitude Of(Velocity Of(Globale.PemainPemicu)), To World, Incorporate Contrary Motion);
+		Apply Impulse(Globale.PemainPemicu, (Velocity Of(Globale.PemainPemicu) * -1), Magnitude Of(Velocity Of(Globale.PemainPemicu)), To World, Incorporate Contrary Motion);
 		End;
 		End;
 		Set Gravity(Globale.PemainPemicu, 100);
@@ -1848,13 +1848,13 @@ regola("11 - Menu: Isi ulang kembali dari submenu ke menu utama")
 
 	azioni
 	{
-		If(Not(And(Is Alive(Globale.PemainPemicu), And(Globale.PemainPemicu.MenuTerbuka, And((Globale.PemainPemicu.HalamanMenu != -(1)), (Globale.PemainPemicu.PerintahMenu == 2))))));
+		If(Not(And(Is Alive(Globale.PemainPemicu), And(Globale.PemainPemicu.MenuTerbuka, And((Globale.PemainPemicu.HalamanMenu != -1), (Globale.PemainPemicu.PerintahMenu == 2))))));
 		Globale.PemainPemicu.StatusPengatur[16] = 0;
 		Abort;
 		End;
 		Abort If((Globale.PemainPemicu.StatusPengatur[16] == 1));
 		Globale.PemainPemicu.StatusPengatur[16] = 1;
-		Globale.PemainPemicu.HalamanMenu = -(1);
+		Globale.PemainPemicu.HalamanMenu = -1;
 		Call Subroutine(GambarMenu);
 	}
 }
@@ -1958,7 +1958,7 @@ regola("12e - Bangkit Lompat: Simpan posisi kematian global")
 		Set Gravity(Globale.PemainPemicu, 100);
 		Enable Movement Collision With Environment(Globale.PemainPemicu);
 		Globale.PemainPemicu.FisikaHantuTerbangDiterapkan = False;
-		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -1;
 		Globale.PemainPemicu.PerintahMenu = 0;
 		Globale.PemainPemicu.PerintahTeleportasi = 0;
 		Small Message(Globale.PemainPemicu, ((Globale.PemainPemicu.IndeksBahasa == 0) ? Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))) : ((Globale.PemainPemicu.IndeksBahasa == 1) ? Custom String("Tekan {0}: bangkit di sini. Jatuh ke jurang? Kembali ke tanah aman.", Input Binding String(Button(Jump))) : Custom String("กด {0}: ฟื้นตรงนี้ | ตกเหว: ฟื้นบนพื้นที่เดินได้", Input Binding String(Button(Jump))))));
@@ -2380,7 +2380,7 @@ regola("19 - Teleportasi Jongkok: Buka lima halaman selama Jongkok ditahan")
 		Globale.PemainPemicu.PerintahTeleportasi = 0;
 		Globale.PemainPemicu.DaftarTargetTeleportasi = Empty Array;
 		Globale.PemainPemicu.CalonTargetTeleportasi = Null;
-		Globale.PemainPemicu.JenisTeleportasiTerkunci = -(1);
+		Globale.PemainPemicu.JenisTeleportasiTerkunci = -1;
 		Globale.PemainPemicu.TargetTeleportasiTerkunci = Null;
 		Disallow Button(Globale.PemainPemicu, Button(Primary Fire));
 		Disallow Button(Globale.PemainPemicu, Button(Secondary Fire));
@@ -2614,7 +2614,7 @@ regola("19e - Teleportasi Jongkok: Interaksi menjalankan halaman aktif")
 		Small Message(Globale.PemainPemicu, ((Globale.PemainPemicu.IndeksBahasa == 0) ? Custom String("Self Elimination: ready in {0}s.", Round To Integer((Globale.PemainPemicu.WaktuBunuhDiriBerikut - Total Time Elapsed), Up)) : ((Globale.PemainPemicu.IndeksBahasa == 1) ? Custom String("Eliminasi diri siap {0} dtk lagi.", Round To Integer((Globale.PemainPemicu.WaktuBunuhDiriBerikut - Total Time Elapsed), Up)) : Custom String("กำจัดตัวเองได้ใน {0} วิ", Round To Integer((Globale.PemainPemicu.WaktuBunuhDiriBerikut - Total Time Elapsed), Up)))));
 		End;
 		End;
-		Globale.PemainPemicu.JenisTeleportasiTerkunci = -(1);
+		Globale.PemainPemicu.JenisTeleportasiTerkunci = -1;
 		Globale.PemainPemicu.TargetTeleportasiTerkunci = Null;
 	}
 }
@@ -2691,7 +2691,7 @@ regola("19g - Teleportasi Jongkok: Tutup saat Jongkok dilepas")
 		End;
 		Globale.PemainPemicu.TeksTeleportasi = Null;
 		Globale.PemainPemicu.TargetTeleportasiTeks = Null;
-		Globale.PemainPemicu.JenisTeleportasiTerkunci = -(1);
+		Globale.PemainPemicu.JenisTeleportasiTerkunci = -1;
 		Globale.PemainPemicu.TargetTeleportasiTerkunci = Null;
 		If(Globale.PemainPemicu.PelatNamaDinonaktifkan);
 		Enable Nameplates(All Players(All Teams), Globale.PemainPemicu);
@@ -2845,7 +2845,7 @@ regola("89a2 - Subrutin: Mesin terbang 3D per pemain 20 Hz")
 	{
 		If(And(Globale.PemainAktif.Manusia, And(Not(Globale.PemainAktif.BotOtomatis), And(Not(Is Dummy Bot(Globale.PemainAktif)), And(Has Spawned(Globale.PemainAktif), And(Is Alive(Globale.PemainAktif), And(Globale.PemainAktif.ModeTerbangAktif, Globale.PemainAktif.FisikaHantuTerbangDiterapkan)))))));
 		If(And((Globale.PemainAktif.EfekNasib == 2), (Globale.PemainAktif.EfekNasibBerakhir > Total Time Elapsed)));
-		Globale.PemainAktif.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 		Globale.PemainAktif.PersenTerbang = 100;
 		Globale.PemainAktif.ArahTerbang = Vector(0, 0, 0);
 		Globale.PemainAktif.DeltaTerbang = Vector(0, 0, 0);
@@ -2857,14 +2857,14 @@ regola("89a2 - Subrutin: Mesin terbang 3D per pemain 20 Hz")
 		End;
 		Globale.PemainAktif.PersenTerbang = Min(1000, (100 + (Max(0, (Total Time Elapsed - Globale.PemainAktif.WaktuMulaiTerbangMaju)) * 45)));
 		Else;
-		Globale.PemainAktif.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 		Globale.PemainAktif.PersenTerbang = 100;
 		End;
 		Globale.PemainAktif.ArahTerbang = (((Facing Direction Of(Globale.PemainAktif) * Max(0, Z Component Of(Throttle Of(Globale.PemainAktif)))) + (Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0) * Min(0, Z Component Of(Throttle Of(Globale.PemainAktif))))) + (Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(Globale.PemainAktif), 0)) * X Component Of(Throttle Of(Globale.PemainAktif))));
 		If((Magnitude Of(Globale.PemainAktif.ArahTerbang) > 0.050));
 		Globale.PemainAktif.DeltaTerbang = (((((Normalize(Globale.PemainAktif.ArahTerbang) * 5.500) * Globale.PemainAktif.PersenTerbang) / 100) * Min(1, Magnitude Of(Throttle Of(Globale.PemainAktif)))) - Velocity Of(Globale.PemainAktif));
 		Else;
-		Globale.PemainAktif.DeltaTerbang = (Velocity Of(Globale.PemainAktif) * -(1));
+		Globale.PemainAktif.DeltaTerbang = (Velocity Of(Globale.PemainAktif) * -1);
 		End;
 		If((Magnitude Of(Globale.PemainAktif.DeltaTerbang) > 0.010));
 		Apply Impulse(Globale.PemainAktif, Globale.PemainAktif.DeltaTerbang, Magnitude Of(Globale.PemainAktif.DeltaTerbang), To World, Incorporate Contrary Motion);
@@ -2885,7 +2885,7 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 	azioni
 	{
 		If(And(Globale.PemainAktif.Manusia, And(Not(Globale.PemainAktif.BotOtomatis), And(Not(Is Dummy Bot(Globale.PemainAktif)), Or(Not(Has Spawned(Globale.PemainAktif)), Not(Is Alive(Globale.PemainAktif)))))));
-		Globale.PemainAktif.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 		If(Or((Globale.PemainAktif.EfekNasib != 2), (Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed)));
 		Set Move Speed(Globale.PemainAktif, 100);
 		End;
@@ -2898,7 +2898,7 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 		End;
 		If(And(Globale.PemainAktif.Manusia, And(Not(Globale.PemainAktif.BotOtomatis), And(Not(Is Dummy Bot(Globale.PemainAktif)), And(Has Spawned(Globale.PemainAktif), Is Alive(Globale.PemainAktif))))));
 		If(Not(Globale.PemainAktif.FisikaHantuTerbangDiterapkan));
-		Globale.PemainAktif.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 		If(Or((Globale.PemainAktif.EfekNasib != 2), (Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed)));
 		Set Move Speed(Globale.PemainAktif, (Globale.PemainAktif.ModeTerbangAktif ? 0 : 100));
 		End;
@@ -2939,7 +2939,7 @@ regola("89b - Subrutin: Proses siklus pemain 10 Hz")
 		If(And(Globale.PemainAktif.Manusia, And(Has Spawned(Globale.PemainAktif), (Hero Of(Globale.PemainAktif) != Globale.PemainAktif.PahlawanTerakhir))));
 		Globale.PemainAktif.PahlawanTerakhir = Hero Of(Globale.PemainAktif);
 		Globale.PemainAktif.FisikaHantuTerbangDiterapkan = False;
-		Globale.PemainAktif.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainAktif.WaktuMulaiTerbangMaju = -1;
 		If(Or((Globale.PemainAktif.EfekNasib != 2), (Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed)));
 		Set Move Speed(Globale.PemainAktif, 100);
 		End;
@@ -3115,7 +3115,7 @@ regola("89d - Subrutin: Proses mesin status Coba Nasib")
 		Globale.PemainAktif.MenuTerbuka = False;
 		Globale.PemainAktif.MasukanMenuDikunci = False;
 		Globale.PemainAktif.PerintahMenu = 0;
-		Globale.PemainAktif.HalamanMenu = -(1);
+		Globale.PemainAktif.HalamanMenu = -1;
 		Allow Button(Globale.PemainAktif, Button(Primary Fire));
 		Allow Button(Globale.PemainAktif, Button(Secondary Fire));
 		Allow Button(Globale.PemainAktif, Button(Interact));
@@ -3252,7 +3252,7 @@ regola("90 - Subrutin: Tutup menu dan pulihkan tombol")
 		Globale.PemainPemicu.HudMenu = Null;
 		Globale.PemainPemicu.MenuTerbuka = False;
 		Globale.PemainPemicu.PerintahMenu = 0;
-		Globale.PemainPemicu.HalamanMenu = -(1);
+		Globale.PemainPemicu.HalamanMenu = -1;
 		If(Is Button Held(Globale.PemainPemicu, Button(Melee)));
 		Globale.PemainPemicu.SeranganDekatDipakai = True;
 		Else;
@@ -3501,7 +3501,7 @@ regola("91p - Subrutin: Gambar halaman aktif")
 
 	azioni
 	{
-		If((Globale.PemainPemicu.HalamanMenu == -(1)));
+		If((Globale.PemainPemicu.HalamanMenu == -1));
 		Call Subroutine(GambarUtama);
 		Else If((Globale.PemainPemicu.HalamanMenu == 0));
 		Call Subroutine(GambarWarna);
@@ -3544,7 +3544,7 @@ regola("91k - Subrutin: Transisi warna menu tanpa lompatan")
 		If(Globale.PemainPemicu.TeleportasiJongkokAktif);
 		Chase Player Variable Over Time(Evaluate Once(Globale.PemainPemicu), WarnaMenu, ((Player Variable(Evaluate Once(Globale.PemainPemicu), KursorTeleportasi) == 0) ? Vector(80, 255, 160) : ((Player Variable(Evaluate Once(Globale.PemainPemicu), KursorTeleportasi) == 1) ? Vector(65, 225, 255) : ((Player Variable(Evaluate Once(Globale.PemainPemicu), KursorTeleportasi) == 2) ? Vector(95, 150, 255) : ((Player Variable(Evaluate Once(Globale.PemainPemicu), KursorTeleportasi) == 3) ? Vector(195, 100, 255) : Vector(255, 85, 135))))), 0.180, Destination and Duration);
 		Else;
-		Chase Player Variable Over Time(Evaluate Once(Globale.PemainPemicu), WarnaMenu, ((((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -(1)) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) == 0) ? Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), KursorWarna)] : (And((((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -(1)) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) >= 1), (((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -(1)) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) <= 15)) ? ((Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), IndeksWarna)] * 0.680) + (Array(Vector(0, 0, 0), Vector(190, 210, 230), Vector(100, 110, 120), Vector(0, 0, 0), Vector(255, 245, 215), Vector(255, 200, 70), Vector(236, 153, 0), Vector(255, 120, 105), Vector(255, 75, 75), Vector(255, 50, 145), Vector(205, 160, 255), Vector(100, 50, 255), Vector(70, 145, 255), Vector(0, 234, 234), Vector(70, 220, 110), Vector(65, 155, 110))[((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -(1)) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu))] * 0.320)) : Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), IndeksWarna)])), 0.180, Destination and Duration);
+		Chase Player Variable Over Time(Evaluate Once(Globale.PemainPemicu), WarnaMenu, ((((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -1) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) == 0) ? Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), KursorWarna)] : (And((((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -1) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) >= 1), (((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -1) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu)) <= 15)) ? ((Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), IndeksWarna)] * 0.680) + (Array(Vector(0, 0, 0), Vector(190, 210, 230), Vector(100, 110, 120), Vector(0, 0, 0), Vector(255, 245, 215), Vector(255, 200, 70), Vector(236, 153, 0), Vector(255, 120, 105), Vector(255, 75, 75), Vector(255, 50, 145), Vector(205, 160, 255), Vector(100, 50, 255), Vector(70, 145, 255), Vector(0, 234, 234), Vector(70, 220, 110), Vector(65, 155, 110))[((Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu) == -1) ? Player Variable(Evaluate Once(Globale.PemainPemicu), KursorUtama) : Player Variable(Evaluate Once(Globale.PemainPemicu), HalamanMenu))] * 0.320)) : Globale.DaftarWarnaRGB[Player Variable(Evaluate Once(Globale.PemainPemicu), IndeksWarna)])), 0.180, Destination and Duration);
 		End;
 	}
 }
@@ -3563,7 +3563,7 @@ regola("92 - Subrutin: Kunci bot, kaki tetap bisa bergerak")
 		Abort If(Not(Is Alive(Globale.PemainPemicu)));
 		Globale.PemainPemicu.MenuTerbuka = False;
 		Globale.PemainPemicu.SeranganDekatDipakai = False;
-		Globale.PemainPemicu.HalamanMenu = -(1);
+		Globale.PemainPemicu.HalamanMenu = -1;
 		Set Primary Fire Enabled(Globale.PemainPemicu, False);
 		Set Secondary Fire Enabled(Globale.PemainPemicu, False);
 		Set Ability 1 Enabled(Globale.PemainPemicu, False);
@@ -3745,7 +3745,7 @@ regola("93b2 - Subrutin: Tenangkan pemicu sebelum pembersihan")
 		Globale.PemainPemicu.PosisiIkonPilar = Vector(0, 0.500, 0);
 		Globale.PemainPemicu.FisikaHantuTerbangDiterapkan = False;
 		Globale.PemainPemicu.WaktuBunuhDiriBerikut = 0;
-		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -1;
 		Globale.PemainPemicu.PersenTerbang = 100;
 		Globale.PemainPemicu.ArahTerbang = Vector(0, 0, 0);
 		Globale.PemainPemicu.DeltaTerbang = Vector(0, 0, 0);
@@ -3774,10 +3774,10 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		Globale.PemainPembersihan = Globale.PemainPemicu;
 		Call Subroutine(BersihkanIkonPilar);
 		Globale.IndeksKeluar = Index Of Array Value(Globale.PemainManusia, Globale.PemainPembersihan);
-		If((Globale.IndeksKeluar > -(1)));
+		If((Globale.IndeksKeluar > -1));
 		If(Or((Globale.IndeksKeluar >= Count Of(Globale.SlotHUDPemain)), Or((Globale.IndeksKeluar >= Count Of(Globale.HudKiriPemain)), Or((Globale.IndeksKeluar >= Count Of(Globale.HudMenuPemain)), (Globale.IndeksKeluar >= Count Of(Globale.TeksDuniaPemain))))));
 		Globale.IndeksPembersihan = Globale.IndeksKeluar;
-		Globale.IndeksKeluar = -(2);
+		Globale.IndeksKeluar = -2;
 		End;
 		If((Globale.IndeksKeluar >= 0));
 		Globale.IndeksPembersihan = Globale.IndeksKeluar;
@@ -3863,10 +3863,10 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		Modify Global Variable(SlotHUDPemain, Remove From Array By Index, Globale.IndeksPembersihan);
 		Modify Global Variable(PemainManusia, Remove From Array By Index, Globale.IndeksPembersihan);
 		Globale.IndeksPemilih = Count Of(Globale.SlotHUDPemain);
-		Globale.SlotHUDTerakhir = ((Globale.IndeksPemilih == 0) ? -(1) : Last Of(Sorted Array(Globale.SlotHUDPemain, Current Array Element)));
+		Globale.SlotHUDTerakhir = ((Globale.IndeksPemilih == 0) ? -1 : Last Of(Sorted Array(Globale.SlotHUDPemain, Current Array Element)));
 		Globale.PilihanPerluDihitung = True;
 		End;
-		If((Globale.IndeksKeluar == -(2)));
+		If((Globale.IndeksKeluar == -2));
 		If((Globale.IndeksPembersihan < Count Of(Globale.SlotHUDPemain)));
 		Destroy Icon(Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]]);
 		Globale.IkonKartuNasibPemain[Globale.SlotHUDPemain[Globale.IndeksPembersihan]] = 0;
@@ -3936,16 +3936,16 @@ regola("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")
 		End;
 		Modify Global Variable(PemainManusia, Remove From Array By Index, Globale.IndeksPembersihan);
 		Globale.IndeksPemilih = Count Of(Globale.SlotHUDPemain);
-		Globale.SlotHUDTerakhir = ((Globale.IndeksPemilih == 0) ? -(1) : Last Of(Sorted Array(Globale.SlotHUDPemain, Current Array Element)));
+		Globale.SlotHUDTerakhir = ((Globale.IndeksPemilih == 0) ? -1 : Last Of(Sorted Array(Globale.SlotHUDPemain, Current Array Element)));
 		Globale.PilihanPerluDihitung = True;
 		End;
 		End;
 		Globale.PemainTeksPembersihan = Globale.PemainPemicu;
 		Call Subroutine(BersihkanTeksYatim);
-		Globale.IndeksKeluar = -(1);
-		Globale.IndeksPembersihan = -(1);
-		Globale.IndeksUtangKeluar = -(1);
-		Globale.IndeksDendamKeluar = -(1);
+		Globale.IndeksKeluar = -1;
+		Globale.IndeksPembersihan = -1;
+		Globale.IndeksUtangKeluar = -1;
+		Globale.IndeksDendamKeluar = -1;
 		Globale.IndeksPemilih = 0;
 		Globale.PemainPembersihan = Null;
 	}
@@ -3981,7 +3981,7 @@ regola("93d - Subrutin: Bersihkan teks yatim")
 		End;
 		End;
 		Globale.PemainTeksPembersihan = Null;
-		Globale.IndeksTeksPembersihan = -(1);
+		Globale.IndeksTeksPembersihan = -1;
 		Globale.KursorTeksPembersihan = 0;
 	}
 }
@@ -4010,13 +4010,13 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Globale.PemainPemicu.SudahDiperiksa = False;
 		Globale.PemainPemicu.BotOtomatis = False;
 		Globale.PemainPemicu.Manusia = False;
-		Globale.PemainPemicu.IndeksGenre = -(1);
+		Globale.PemainPemicu.IndeksGenre = -1;
 		Globale.PemainPemicu.MusikKhusus = Null;
 		Globale.PemainPemicu.PembaruanDaftarTertunda = False;
 		If(Or((Globale.PemainPemicu.NamaTampilan == Null), (Globale.PemainPemicu.NamaTampilan == Custom String(""))));
 		Globale.PemainPemicu.NamaTampilan = Null;
 		End;
-		Globale.PemainPemicu.UrutanHUD = -(1);
+		Globale.PemainPemicu.UrutanHUD = -1;
 		Globale.PemainPemicu.HudKiri = Null;
 		Globale.PemainPemicu.HudPemainDibuat = False;
 		Globale.PemainPemicu.MenuTerbuka = False;
@@ -4029,7 +4029,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Globale.PemainPemicu.ModeKamera = 0;
 		Globale.PemainPemicu.TargetKamera = Null;
 		Globale.PemainPemicu.SeranganDekatDipakai = False;
-		Globale.PemainPemicu.HalamanMenu = -(1);
+		Globale.PemainPemicu.HalamanMenu = -1;
 		Globale.PemainPemicu.KursorUtama = 0;
 		Globale.PemainPemicu.KursorKamera = 0;
 		Globale.PemainPemicu.KursorWarna = 0;
@@ -4043,7 +4043,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Globale.PemainPemicu.DaftarTargetBalasDendam = Empty Array;
 		Globale.PemainPemicu.PembunuhBalasDendam = Empty Array;
 		Globale.PemainPemicu.JumlahBalasDendam = Empty Array;
-		Globale.PemainPemicu.IndeksBalasDendam = -(1);
+		Globale.PemainPemicu.IndeksBalasDendam = -1;
 		Globale.PemainPemicu.KematianBalasDendam = False;
 		Globale.PemainPemicu.PenagihBalasDendam = Null;
 		Globale.PemainPemicu.WaktuPaksaBerikut = 0;
@@ -4061,7 +4061,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Globale.PemainPemicu.PahlawanTerakhir = Null;
 		Globale.PemainPemicu.DaftarTargetInspeksi = Empty Array;
 		Globale.PemainPemicu.PerintahMenu = 0;
-		Globale.PemainPemicu.JenisTeleportasiTerkunci = -(1);
+		Globale.PemainPemicu.JenisTeleportasiTerkunci = -1;
 		Globale.PemainPemicu.TargetTeleportasiTerkunci = Null;
 		Globale.PemainPemicu.KebalAktif = False;
 		Globale.PemainPemicu.KursorKebal = 0;
@@ -4121,7 +4121,7 @@ regola("94 - Subrutin: Siapkan pemain dari ujung rambut sampai variabel")
 		Globale.PemainPemicu.PosisiIkonPilar = Vector(0, 0.500, 0);
 		Globale.PemainPemicu.FisikaHantuTerbangDiterapkan = False;
 		Globale.PemainPemicu.WaktuBunuhDiriBerikut = 0;
-		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -(1);
+		Globale.PemainPemicu.WaktuMulaiTerbangMaju = -1;
 		Globale.PemainPemicu.PersenTerbang = 100;
 		Globale.PemainPemicu.ArahTerbang = Vector(0, 0, 0);
 		Globale.PemainPemicu.DeltaTerbang = Vector(0, 0, 0);
@@ -4418,7 +4418,7 @@ regola("98e - Subrutin: Buat bot buatan sesuai tim aktif")
 
 	azioni
 	{
-		Create Dummy Bot(Tutti gli eroi, Globale.TimBotBuatanAktif, -(1), Position Of(First Of(Spawn Points(Globale.TimBotBuatanAktif))), Vector(0, 0, 1));
+		Create Dummy Bot(Tutti gli eroi, Globale.TimBotBuatanAktif, -1, Position Of(First Of(Spawn Points(Globale.TimBotBuatanAktif))), Vector(0, 0, 1));
 	}
 }
 
@@ -4516,7 +4516,7 @@ regola("98i - Subrutin: Teleportasi ke target pemain")
 		Call Subroutine(CariPosisiTeleportasiAman);
 		End;
 		If((Distance Between(Globale.PemainPemicu.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100));
-		Globale.PemainPemicu.PosisiTujuanTeleportasi = (Position Of(Globale.PemainPemicu.TargetTeleportasiTerkunci) + Vector(-(2.250), 0, 0));
+		Globale.PemainPemicu.PosisiTujuanTeleportasi = (Position Of(Globale.PemainPemicu.TargetTeleportasiTerkunci) + Vector(-2.250, 0, 0));
 		Call Subroutine(CariPosisiTeleportasiAman);
 		End;
 		If((Distance Between(Globale.PemainPemicu.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100));
@@ -4524,7 +4524,7 @@ regola("98i - Subrutin: Teleportasi ke target pemain")
 		Call Subroutine(CariPosisiTeleportasiAman);
 		End;
 		If((Distance Between(Globale.PemainPemicu.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100));
-		Globale.PemainPemicu.PosisiTujuanTeleportasi = (Position Of(Globale.PemainPemicu.TargetTeleportasiTerkunci) + Vector(0, 0, -(2.250)));
+		Globale.PemainPemicu.PosisiTujuanTeleportasi = (Position Of(Globale.PemainPemicu.TargetTeleportasiTerkunci) + Vector(0, 0, -2.250));
 		Call Subroutine(CariPosisiTeleportasiAman);
 		End;
 		If((Distance Between(Globale.PemainPemicu.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100));
@@ -4553,15 +4553,15 @@ regola("98j - Subrutin: Cari posisi teleportasi aman")
 		Abort;
 		End;
 		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(1.500, 1, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
-		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(-(1.500), 0, 0)));
+		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(-1.500, 0, 0)));
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-(1.500), 1, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-1.500, 1, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
 		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(1.500, 0, 0)));
 		End;
 		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 1.500)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
-		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 0, -(1.500))));
+		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 0, -1.500)));
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, -(1.500))), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, -1.500)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 1.250));
 		Globale.PemainPemicu.PosisiBangkitAman = Nearest Walkable Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 0, 1.500)));
 		End;
 		If((Distance Between(Globale.PemainPemicu.PosisiBangkitAman, Vector(0, 0, 0)) <= 0.100));
@@ -4572,7 +4572,7 @@ regola("98j - Subrutin: Cari posisi teleportasi aman")
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-(1.000), 1, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 0.850));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-1.000, 1, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 0.850));
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
@@ -4580,7 +4580,7 @@ regola("98j - Subrutin: Cari posisi teleportasi aman")
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, -(1.000))), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 0.850));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, -1.000)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1, 0))) < 0.850));
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
@@ -4604,7 +4604,7 @@ regola("98j - Subrutin: Cari posisi teleportasi aman")
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-(1.500), 1.000, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0))) < 1.250));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(-1.500, 1.000, 0)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0))) < 1.250));
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
@@ -4612,7 +4612,7 @@ regola("98j - Subrutin: Cari posisi teleportasi aman")
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
-		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, -(1.500))), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0))) < 1.250));
+		If((Distance Between(Ray Cast Hit Position((Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0)), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, -1.500)), Empty Array, Empty Array, False), (Globale.PemainPemicu.PosisiBangkitAman + Vector(0, 1.000, 0))) < 1.250));
 		Globale.PemainPemicu.PosisiBangkitAman = Vector(0, 0, 0);
 		Abort;
 		End;
@@ -4677,7 +4677,7 @@ regola("89h - Subrutin: Lompat udara berulang dengan jeda")
 		If(And(Globale.PemainAktif.Manusia, And(Has Spawned(Globale.PemainAktif), And(Is Alive(Globale.PemainAktif), And(Not(Globale.PemainAktif.ModeTerbangAktif), And(Not(Globale.PemainAktif.LampiranTeleportasiAktif), And(Not(Globale.PemainAktif.BangkitLompatDipakai), And(Or((Globale.PemainAktif.EfekNasib != 2), (Globale.PemainAktif.EfekNasibBerakhir <= Total Time Elapsed)), Or(Not(Globale.PemainAktif.LompatGandaDipakai), And(Not(Globale.PemainAktif.LompatDiTanah), Not(Is On Ground(Globale.PemainAktif))))))))))));
 		Globale.PemainAktif.LompatGandaDipakai = True;
 		If(And(Not(Globale.PemainAktif.LompatDiTanah), Not(Is On Ground(Globale.PemainAktif))));
-		Apply Impulse(Globale.PemainAktif, ((((6 * Globale.PemainAktif.TingkatLompatGanda) - Y Component Of(Velocity Of(Globale.PemainAktif))) >= 0) ? Vector(0, 1, 0) : Vector(0, -(1), 0)), Absolute Value(((6 * Globale.PemainAktif.TingkatLompatGanda) - Y Component Of(Velocity Of(Globale.PemainAktif)))), To World, Incorporate Contrary Motion);
+		Apply Impulse(Globale.PemainAktif, ((((6 * Globale.PemainAktif.TingkatLompatGanda) - Y Component Of(Velocity Of(Globale.PemainAktif))) >= 0) ? Vector(0, 1, 0) : Vector(0, -1, 0)), Absolute Value(((6 * Globale.PemainAktif.TingkatLompatGanda) - Y Component Of(Velocity Of(Globale.PemainAktif)))), To World, Incorporate Contrary Motion);
 		End;
 		Play Effect(All Players(All Teams), Ring Explosion, Globale.RGB, (Position Of(Globale.PemainAktif) + Vector(0, 0.050, 0)), 1.500);
 		Else;
@@ -4709,7 +4709,7 @@ regola("99q - Subrutin: Terapkan sakelar pukulan super")
 		Globale.WaktuPukulanSuper[Globale.PemainPemicu.UrutanHUD] = 0;
 		Else;
 		Modify Global Variable(PemainPukulanSuper, Append To Array, Globale.PemainPemicu);
-		Globale.WaktuPukulanSuper[Globale.PemainPemicu.UrutanHUD] = -(1);
+		Globale.WaktuPukulanSuper[Globale.PemainPemicu.UrutanHUD] = -1;
 		End;
 	}
 }
@@ -4730,13 +4730,13 @@ regola("89i - Subrutin: Pukulan super sekali per ayunan")
 		Abort;
 		End;
 		If(Or(Not(Globale.PemainAktif.Manusia), Or(Globale.PemainAktif.BotOtomatis, Or(Is Dummy Bot(Globale.PemainAktif), Or(Not(Entity Exists(Globale.PemainAktif)), Or(Not(Has Spawned(Globale.PemainAktif)), Or(Not(Is Alive(Globale.PemainAktif)), Or(Globale.PemainAktif.SiklusPemainAktif, Or(Globale.PemainAktif.PindahTimDiproses, Globale.PemainAktif.SeranganDekatDipakai)))))))));
-		Globale.WaktuPukulanSuper[Globale.PemainAktif.UrutanHUD] = -(1);
+		Globale.WaktuPukulanSuper[Globale.PemainAktif.UrutanHUD] = -1;
 		Abort;
 		End;
 		If((Globale.WaktuPukulanSuper[Globale.PemainAktif.UrutanHUD] == 0));
 		Globale.TargetPukulanSuper = First Of(Sorted Array(Filtered Array(All Players(All Teams), And((Current Array Element != Globale.PemainAktif), And(Entity Exists(Current Array Element), And(Has Spawned(Current Array Element), And(Is Alive(Current Array Element), And((Distance Between(Position Of(Globale.PemainAktif), Position Of(Current Array Element)) <= 2.500), And(Is In View Angle(Globale.PemainAktif, Eye Position(Current Array Element), 90), Is In Line Of Sight(Eye Position(Globale.PemainAktif), Eye Position(Current Array Element), Barriers Do Not Block LOS)))))))), Distance Between(Position Of(Globale.PemainAktif), Position Of(Current Array Element))));
 		If((Globale.TargetPukulanSuper != Null));
-		Globale.WaktuPukulanSuper[Globale.PemainAktif.UrutanHUD] = -(1);
+		Globale.WaktuPukulanSuper[Globale.PemainAktif.UrutanHUD] = -1;
 		End;
 		If(And((Globale.TargetPukulanSuper != Null), And(Entity Exists(Globale.TargetPukulanSuper), And(Has Spawned(Globale.TargetPukulanSuper), And(Is Alive(Globale.TargetPukulanSuper), And(Not(Has Status(Globale.TargetPukulanSuper, Phased Out)), And(Not(Has Status(Globale.TargetPukulanSuper, Unkillable)), Or(Not(Player Variable(Globale.TargetPukulanSuper, KebalAktif)), (Player Variable(Globale.TargetPukulanSuper, ModeKebal) == 0)))))))));
 		Kill(Globale.TargetPukulanSuper, Globale.PemainAktif);
@@ -4808,7 +4808,7 @@ regola("89i1 - Pukulan super: Dampak jarak dekat asli global")
 		Abort If(Not(Array Contains(Globale.PemainPukulanSuper, Globale.PemainPemicu)));
 		Abort If(Or((Globale.PeristiwaAktif[16] < 0), (Globale.PeristiwaAktif[16] >= Count Of(Globale.WaktuPukulanSuper))));
 		Abort If((Globale.WaktuPukulanSuper[Globale.PeristiwaAktif[16]] < 0));
-		Globale.WaktuPukulanSuper[Globale.PeristiwaAktif[16]] = -(1);
+		Globale.WaktuPukulanSuper[Globale.PeristiwaAktif[16]] = -1;
 		If(And(Not(Globale.PeristiwaAktif[15]), And(Entity Exists(Globale.PeristiwaAktif[3]), And(Has Spawned(Globale.PeristiwaAktif[3]), And(Is Alive(Globale.PeristiwaAktif[3]), And((Player Variable(Globale.PeristiwaAktif[3], StatusPengatur)[36] == Globale.PeristiwaAktif[22]), And(Not(Has Status(Globale.PeristiwaAktif[3], Phased Out)), And(Not(Has Status(Globale.PeristiwaAktif[3], Unkillable)), Or(Not(Player Variable(Globale.PeristiwaAktif[3], KebalAktif)), (Player Variable(Globale.PeristiwaAktif[3], ModeKebal) == 0))))))))));
 		Kill(Globale.PeristiwaAktif[3], Globale.PemainPemicu);
 		End;
@@ -5113,7 +5113,7 @@ regola("04j - Subrutin: Bersihkan keluar tertunda tanpa konteks pemain")
 		End;
 		End;
 		If(((Globale.LangkahPenjadwal % 20) == 0));
-		For Global Variable(KursorDaftarHilang, (Count Of(Globale.PemainManusia) - 1), -(1), -(1));
+		For Global Variable(KursorDaftarHilang, (Count Of(Globale.PemainManusia) - 1), -1, -1);
 		Globale.PemainPemicu = Globale.PemainManusia[Globale.KursorDaftarHilang];
 		If(And(Entity Exists(Globale.PemainPemicu), Array Contains(Globale.SalinanDaftarPemain, Globale.PemainPemicu)));
 		Globale.WaktuHilangHUD[Globale.SlotHUDPemain[Globale.KursorDaftarHilang]] = 0;
