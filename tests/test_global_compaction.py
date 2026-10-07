@@ -204,7 +204,9 @@ class GlobalCompactionTests(unittest.TestCase):
         compacted = compiler.compact_palette(lowered)
         before = list(semantic.iter_calls(lowered, "Chase Player Variable Over Time"))[-1]
         after = list(semantic.iter_calls(compacted, "Chase Player Variable Over Time"))[-1]
-        self.assertEqual(before.args[:2] + before.args[3:], after.args[:2] + after.args[3:])
+        self.assertEqual(before.args[:2] + before.args[3:4], after.args[:2] + after.args[3:4])
+        self.assertEqual(before.args[4], 'Destination and Duration')
+        self.assertEqual(after.args[4], 'None')
         original_vectors = [call.raw for call in semantic.iter_calls(before.args[2], "Vector")]
         compact_vectors = [call.raw for call in semantic.iter_calls(after.args[2], "Vector")]
         self.assertEqual(original_vectors, compact_vectors[1:])

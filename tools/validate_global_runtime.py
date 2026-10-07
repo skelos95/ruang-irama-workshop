@@ -120,6 +120,13 @@ def validate_runtime(text: str) -> list[str]:
         errors.append("runtime globale: unico Loop nello scheduler richiesto")
     if list(semantic.iter_calls(normalized, "Start Rule")):
         errors.append("runtime globale: avvio asincrono con attore condiviso vietato")
+    palette = next((rule for rule in rules if rule.name.startswith("91k -")), None)
+    if palette:
+        chases = list(semantic.iter_calls(palette.body, "Chase Player Variable Over Time"))
+        if len(chases) != 2 or any(len(call.args) != 5 or
+                call.args[1] != "WarnaMenu" or call.args[3:] != ("0.180", "None")
+                for call in chases):
+            errors.append("runtime globale: colori menu richiedono due destinazioni sincrone con transizione 0.180 e None")
     for rule in rules:
         kind = semantic.event_type(rule)
         actions = semantic.rule_block(rule, "actions") or ""
