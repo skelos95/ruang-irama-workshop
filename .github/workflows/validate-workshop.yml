@@ -99,10 +99,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate Workshop source
+      - name: Validate behavioral input and compiled global output
         run: python tools/validate_workshop.py
 
-      - name: Preflight Italian clipboard source
+      - name: Preflight compiled Italian clipboard output
         run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
 
   required:

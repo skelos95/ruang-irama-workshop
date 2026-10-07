@@ -1,3 +1,5 @@
+"""Maintenance contracts for the logical behavioral input before compilation."""
+
 from pathlib import Path
 import unittest
 
@@ -7,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class RuntimeMaintenanceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        cls.it = (ROOT / "source" / "ruang_irama.it-IT.source").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
     def test_display_name_is_not_used_as_cleanup_identity(self):

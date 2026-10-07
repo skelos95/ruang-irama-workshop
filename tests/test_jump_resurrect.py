@@ -1,4 +1,4 @@
-"""Run the real Jump revive rules with controlled engine death/geometry results.
+"""Run logical input Jump revive rules with controlled death/geometry results.
 
 The source chooses when to revive, teleport and release the input latch. Native
 navigation, resurrection and collision responses are test inputs; these tests do
@@ -106,7 +106,7 @@ class JumpEvaluator(SpawnEvaluator):
 
 class JumpResurrectTests(unittest.TestCase):
     def models(self):
-        for path in (ROOT / "workshop/ruang_irama.it-IT.workshop",
+        for path in (ROOT / "source/ruang_irama.it-IT.source",
                      ROOT / "tests/fixtures/semantic_reference.txt"):
             yield path.name, JumpEvaluator(path.read_text(encoding="utf-8"))
 

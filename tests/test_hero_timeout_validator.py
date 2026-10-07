@@ -1,4 +1,4 @@
-"""Focused mutations for the first-selection deadline's lifecycle and load contract."""
+"""Logical input mutations for the first-selection deadline before compilation."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
 
     def test_current_runtime_passes_in_both_grammars(self):
         self.assertEqual(self.errors(self.source), [])
-        source = clipboard.ITALIAN_SOURCE.read_text(encoding="utf-8")
+        source = clipboard.BEHAVIORAL_SOURCE.read_text(encoding="utf-8")
         parts = re.split(r'("(?:\\.|[^"\\])*")', source)
         for index in range(0, len(parts), 2):
             for original, translated in clipboard.ITALIAN_TO_ENGLISH_TOKENS:

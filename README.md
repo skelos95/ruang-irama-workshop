@@ -8,7 +8,7 @@ Il client deve avere il testo in italiano; gli HUD possono essere scelti in **En
 
 ## Stato attuale
 
-Il crash al cambio squadra persiste anche dopo la PR #95, senza menu né icone create. Il worker ora separa quiete, pulizia del roster e nuova registrazione con due attese annullabili di 0,05 s. Durante la transizione blocca i comandi che potrebbero interferire; un’uscita o un altro cambio squadra interrompono il lavoro vecchio. Forward resta rimosso e Superman Punch durante Travel resta attivo. È una prova mirata sulla sequenza di pulizia: la causa nativa non è stata isolata e l’esito richiede conferma nel client.
+Il crash al cambio diretto di squadra persiste anche dopo la PR #96; passando prima dagli spettatori l'utente non lo osserva. Il file da importare ora esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali. Questa revisione richiede una nuova prova nel client: il passaggio dagli spettatori non viene forzato e la causa interna del crash non è stata dimostrata.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 

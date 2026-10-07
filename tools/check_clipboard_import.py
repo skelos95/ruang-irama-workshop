@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Static preflight for Workshop text copied into Overwatch.
 
-Overwatch's Workshop clipboard grammar is localized. The user-facing project
-source is the it-IT Workshop file; the en-US profile is retained only for the
-internal semantic fixture and regression tests. This checker validates either
-profile without pretending to reproduce the client's compiled Element Count or
-Largest Rule metrics.
+Overwatch's Workshop clipboard grammar is localized. The default check covers
+the generated it-IT clipboard output against its generated en-US reference.
+The logical behavioral input and its reference have separate paths and gates.
+This checker validates either profile without pretending to reproduce the
+client's compiled Element Count or Largest Rule metrics.
 """
 
 from __future__ import annotations
@@ -20,7 +20,9 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
 ITALIAN_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
-SEMANTIC_REFERENCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
+SEMANTIC_REFERENCE = ROOT / "tests" / "fixtures" / "global_runtime_reference.txt"
+BEHAVIORAL_SOURCE = ROOT / "source" / "ruang_irama.it-IT.source"
+BEHAVIORAL_REFERENCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 
 CLIENT_LARGEST_RULE_LIMIT_BYTES = 98_000
 CLIENT_ELEMENT_LIMIT = 32_768
@@ -72,7 +74,7 @@ FORBIDDEN_OUTSIDE_STRINGS = {
 }
 
 # The Workshop clipboard grammar localizes only these tokens between the
-# maintained en-US semantic fixture and the user-facing it-IT source. Runtime
+# corresponding en-US reference and it-IT input/output. Runtime
 # strings (including rule titles and Workshop comments) are deliberately not
 # translated here: the semantic gate compares them byte-for-byte.
 ITALIAN_TO_ENGLISH_TOKENS: tuple[tuple[str, str], ...] = (
@@ -733,12 +735,12 @@ def check_path(path: Path = DEFAULT_SOURCE, language: str | None = None) -> Repo
     if path.resolve() == ITALIAN_SOURCE.resolve():
         reference_raw = SEMANTIC_REFERENCE.read_bytes()
         if reference_raw.startswith(b"\xef\xbb\xbf"):
-            raise ClipboardImportError("BOM UTF-8 nel riferimento semantico EN")
+            raise ClipboardImportError("BOM UTF-8 nel riferimento output compilato EN")
         try:
             reference = reference_raw.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ClipboardImportError(
-                f"riferimento semantico EN non UTF-8: {exc}"
+                f"riferimento output compilato EN non UTF-8: {exc}"
             ) from exc
         check_text(reference, "en-US")
         require_semantic_equivalence(reference, text)
@@ -762,7 +764,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "OK - clipboard import preflight: "
+        "OK - compiled clipboard output preflight: "
         f"{report.language}, {report.rule_count} rules, "
         f"source {report.source_bytes_utf8} bytes UTF-8, "
         f"largest source rule {report.largest_rule.bytes_utf8} bytes "

@@ -1,3 +1,5 @@
+"""Roster lifecycle contracts for the logical input, before compilation."""
+
 from pathlib import Path
 import re
 import unittest
@@ -9,7 +11,7 @@ from tests.test_fly_motion import Expression
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
-    (ROOT / "workshop" / "ruang_irama.it-IT.workshop", "regola", "Globale"),
+    (ROOT / "source" / "ruang_irama.it-IT.source", "regola", "Globale"),
     (ROOT / "tests" / "fixtures" / "semantic_reference.txt", "rule", "Global"),
 )
 

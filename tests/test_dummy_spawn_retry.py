@@ -1,4 +1,4 @@
-"""Execute real dummy-spawn rules against controlled engine geometry responses.
+"""Execute logical input dummy-spawn rules against controlled geometry responses.
 
 The source chooses anchors, candidates, retries and final teleports. Only native
 queries (objective positions, navigation mesh and ray casts) are supplied by this
@@ -204,7 +204,7 @@ class SpawnEvaluator:
 
 class DummySpawnRetryTests(unittest.TestCase):
     def models(self):
-        for path in (ROOT / "workshop/ruang_irama.it-IT.workshop",
+        for path in (ROOT / "source/ruang_irama.it-IT.source",
                      ROOT / "tests/fixtures/semantic_reference.txt"):
             yield path.name, SpawnEvaluator(path.read_text(encoding="utf-8"))
 
