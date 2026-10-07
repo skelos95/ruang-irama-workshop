@@ -1,3 +1,5 @@
+"""Dummy contracts for the logical behavioral input, before compilation."""
+
 from pathlib import Path
 import unittest
 
@@ -7,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class DummyBotFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        cls.it = (ROOT / "source" / "ruang_irama.it-IT.source").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
 
     def test_static_hud_uses_recyclable_roster_slots_without_embedded_label_spacing(self):

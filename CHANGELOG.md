@@ -1,5 +1,12 @@
 # Changelog
 
+## Runtime globale — 2026-10-07
+
+- Il primo cambio diretto di squadra continua a causare crash dopo la PR #96; l'utente riferisce che passando prima dagli spettatori il crash non avviene. La revisione sposta input, HUD, effetti, fisica, reset e pulizia nel contesto globale. Non forza il passaggio agli spettatori e non dichiara dimostrata la causa nativa.
+- Il clipboard generato elimina tutti gli `Ongoing - Each Player`. Gli eventi nativi registrano record limitati; controller atomici e timer individuali vengono elaborati da `04g`. Gli attori temporanei vengono svuotati prima dell'unica attesa dello scheduler; le risorse persistenti catturano il proprio proprietario.
+- La specifica IT/EN conserva i contratti comportamentali precedenti. Un compilatore deterministico genera il runtime IT/EN; gate e test separati leggono l'output effettivo, senza estendere automaticamente l'esito dei test della specifica al runtime.
+- Forward resta rimosso. Menu, lingue, movimento, dummy e preferenze individuali conservano le funzioni previste; nuova verifica nel client richiesta per cambio squadra diretto e concorrenza.
+
 ## Pulizia del cambio squadra in fasi annullabili — 2026-10-06
 
 - Il crash persiste dopo la PR #95 anche senza menu né icone create. La causa nativa resta sconosciuta; questa modifica verifica una sequenza di pulizia più distanziata, senza dichiarare il problema risolto.

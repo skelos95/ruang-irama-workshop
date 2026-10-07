@@ -1,3 +1,5 @@
+"""Menu visual contracts for the logical input, before global compilation."""
+
 from pathlib import Path
 import re
 import unittest
@@ -11,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class MenuVisualFeedbackTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        italian = (ROOT / "workshop/ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        italian = (ROOT / "source/ruang_irama.it-IT.source").read_text(encoding="utf-8")
         segments = re.split(r'("(?:\\.|[^"\\])*")', italian)
         for index in range(0, len(segments), 2):
             for original, translated in clipboard.ITALIAN_TO_ENGLISH_TOKENS:

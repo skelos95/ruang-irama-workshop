@@ -11,7 +11,7 @@
 
 Il clipboard italiano contiene sia keyword localizzate sia token inglesi accettati dal client: non tradurli manualmente. Le lingue EN/ID/TH degli HUD si scelgono nel gioco e non cambiano la grammatica del file.
 
-`tests/fixtures/semantic_reference.txt` è il riferimento inglese interno dei test, non un secondo file da importare.
+I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni dei test. Importa soltanto il file `.workshop` pubblico: contiene il runtime globale generato.
 
 ## Se l'importazione fallisce
 

@@ -1,3 +1,5 @@
+"""Semantic mutations of the logical behavioral input, before compilation."""
+
 from __future__ import annotations
 
 import re
@@ -19,7 +21,7 @@ rule("middle") {{ event {{ Subroutine; Middle; }} actions {{ {middle_actions} }}
 rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Player); }} }}
 '''
 
-    def test_current_runtime_has_no_global_event_player_dependencies(self) -> None:
+    def test_logical_input_has_no_global_event_player_dependencies(self) -> None:
         self.assertEqual(self.errors(validator.SOURCE.read_text(encoding="utf-8")), [])
 
     def test_direct_global_event_player_use_is_rejected(self) -> None:
@@ -74,7 +76,7 @@ class WorkshopSettingMetadataTests(unittest.TestCase):
         return next(validator.iter_calls(source, action))
 
     def test_current_categories_and_trilingual_names_are_valid(self) -> None:
-        for path in (validator.SOURCE, validator.ROOT / "workshop" / "ruang_irama.it-IT.workshop"):
+        for path in (validator.SOURCE, validator.BEHAVIORAL_SOURCE):
             source = path.read_text(encoding="utf-8")
             for action in self.SETTING_TAILS:
                 with self.subTest(path=path.name, action=action):

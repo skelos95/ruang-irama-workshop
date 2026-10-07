@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Semantic static gate for Cozywatch Workshop 0.8.1.
 
-The validator deliberately checks behaviour and ownership boundaries instead of
-pinning the complete Workshop export or rule-number prefixes. It only uses the
-Python standard library so the same gate can run locally and in GitHub Actions.
+The behavioral contracts validate the explicit logical input, while main also
+checks its Italian parity and the real generated global runtime. No compiled
+output is projected back into player-local input for validation. The gate uses
+the Python standard library locally and in GitHub Actions.
 """
 
 from __future__ import annotations
@@ -23,7 +24,10 @@ except ImportError:  # Direct execution: python tools/validate_workshop.py
     import check_clipboard_import as clipboard_import
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
+BEHAVIORAL_SOURCE = clipboard_import.BEHAVIORAL_SOURCE
+BEHAVIORAL_REFERENCE = clipboard_import.BEHAVIORAL_REFERENCE
+# Existing behavioral evaluators use SOURCE; it always denotes the logical EN input.
+SOURCE = BEHAVIORAL_REFERENCE
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
@@ -7493,18 +7497,27 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
 
 
 def main() -> int:
-    source = SOURCE.read_text(encoding="utf-8")
+    source = BEHAVIORAL_REFERENCE.read_text(encoding="utf-8")
     checks = validate(source)
     try:
-        clipboard_import.check_path(clipboard_import.ITALIAN_SOURCE, "it-IT")
+        italian_input = BEHAVIORAL_SOURCE.read_text(encoding="utf-8")
+        clipboard_import.check_text(italian_input, "it-IT")
+        clipboard_import.require_semantic_equivalence(source, italian_input)
     except (OSError, clipboard_import.ClipboardImportError) as error:
-        checks.require(False, f"sorgente importabile italiano non equivalente: {error}")
+        checks.require(False, f"input comportamentale italiano non equivalente: {error}")
+    try:
+        from tools import validate_global_runtime
+    except ImportError:  # Direct execution: python tools/validate_workshop.py
+        import validate_global_runtime
+    for error in validate_global_runtime.validate_generated(ROOT):
+        checks.require(False, f"output globale compilato: {error}")
     checks.finish()
     rules = extract_rules(source)
     print(
-        "OK - gate semantici v0.8.1 superati "
+        "OK - contratti input comportamentale v0.8.1 e parità EN/IT superati "
         f"({len(rules)} regole, {len(wait_calls(source))} Wait, {action_loop_count(source)} Loop)"
     )
+    print("OK - gate dell'output globale compilato e aggiornamento della generazione superati")
     return 0
 
 

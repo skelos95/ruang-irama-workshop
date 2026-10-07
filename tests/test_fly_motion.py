@@ -1,4 +1,4 @@
-"""Evaluate the real Fly expressions and branches, not a second hand-written Fly model.
+"""Evaluate logical input Fly expressions and branches before compilation.
 
 This deliberately small evaluator covers only the mathematical expressions and
 control flow used by ProsesTerbangPemain. It is not an Overwatch engine simulator:
@@ -308,7 +308,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
         cls.programs = tuple(
             (path.name, motion_statements(path.read_text(encoding="utf-8")))
             for path in (
-                ROOT / "workshop" / "ruang_irama.it-IT.workshop",
+                ROOT / "source" / "ruang_irama.it-IT.source",
                 ROOT / "tests" / "fixtures" / "semantic_reference.txt",
             )
         )

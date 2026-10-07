@@ -1,3 +1,5 @@
+"""Ghost/Fly contracts for the logical behavioral input, before compilation."""
+
 from __future__ import annotations
 
 import re
@@ -37,7 +39,7 @@ def subroutine(source: str, name: str) -> str:
 class GhostFlyRuntimeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.it = (ROOT / "workshop" / "ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        cls.it = (ROOT / "source" / "ruang_irama.it-IT.source").read_text(encoding="utf-8")
         cls.en = (ROOT / "tests" / "fixtures" / "semantic_reference.txt").read_text(encoding="utf-8")
         cls.sources = (
             (cls.it, "Globale"),
