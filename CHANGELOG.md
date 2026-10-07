@@ -1,5 +1,10 @@
 # Changelog
 
+## Colori dei menu nel runtime globale — 2026-10-07
+
+- L'utente conferma che la revisione #98 non provoca più il crash, ma i menu restano bianchi e Travel verde. Le due transizioni colore di `91k` ora acquisiscono la destinazione durante il comando globale, con reevaluation `None`: la rivalutazione asincrona poteva leggere il puntatore temporaneo già svuotato e quindi il cursore zero.
+- Conservati transizione nativa di 0,180 s, preview Name Color, sedici tinte e cinque tinte Travel. Entrata e navigazione rilanciano già la transizione; nessun nuovo HUD, ciclo, campo o attesa. Scheduler, pulizia e gli altri Chase restano invariati; il riscontro positivo sul crash riguarda i test riferiti dall'utente, non una certificazione completa del carico.
+
 ## Sintassi dei valori nel runtime globale — 2026-10-07
 
 - Corretto l'errore d'importazione alla riga 376 della PR #97: il generatore scriveva `-(1)` invece del valore nativo `-1`. Ripristinati i numeri con segno nelle assegnazioni, negli argomenti e nei confronti; la negazione di espressioni usa un valore nativo, senza modificare le funzioni del Workshop.

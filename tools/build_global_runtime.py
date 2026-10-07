@@ -199,7 +199,7 @@ def compact_booleans(text: str) -> str:
 
 
 def compact_palette(text: str) -> str:
-    """Factor the identical name-colour blend shared by sixteen menu pages."""
+    """Factor the palette and snapshot each command's colour destination."""
     rule = next(item for item in validator.extract_rules(text) if prefix(item) == '91k')
     call = list(validator.iter_calls(rule.body, 'Chase Player Variable Over Time'))[-1]
     # Palette values come from the logical expression, not a second manual list.
@@ -213,6 +213,18 @@ def compact_palette(text: str) -> str:
     args[2] = f'{index} == 0 ? Global.DaftarWarnaRGB[Player Variable({owner}, KursorWarna)] : And({index} >= 1, {index} <= 15) ? {color} * 0.680 + {palette}[{index}] * 0.320 : {color}'
     changed = 'Chase Player Variable Over Time(' + ', '.join(args) + ')'
     body = rule.body[:call.start] + changed + rule.body[call.end:]
+    # Global dispatch clears its actor before the native Chase's next frame.
+    # Menu entry/navigation already restarts this 0.180 s interpolation, so
+    # evaluate the destination now instead of capturing the cleared pointer
+    # during asynchronous destination reevaluation. Other Chases stay live.
+    chases = list(validator.iter_calls(body, 'Chase Player Variable Over Time'))
+    assert len(chases) == 2
+    for chase in reversed(chases):
+        values = list(chase.args)
+        assert values[1] == 'WarnaMenu' and values[3] == '0.180'
+        values[4] = 'None'
+        replacement = 'Chase Player Variable Over Time(' + ', '.join(values) + ')'
+        body = body[:chase.start] + replacement + body[chase.end:]
     return text[:rule.start] + body + text[rule.end:]
 
 
