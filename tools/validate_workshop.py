@@ -1608,9 +1608,23 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     checks.require(token in calls[0].args[3], f"Info: description missing: {token}")
             else:
                 subtitle = calls[0].args[2]
+                function_text = calls[0].args[3]
+                if subroutine_target(rule) == "DrawMainMenu":
+                    subtitle_branches = parse_top_level_ternary(subtitle)
+                    info_subtitle = (subtitle_branches[1] if subtitle_branches
+                                     and subtitle_branches[0] == "Event Player.MainMenuCursor == 0"
+                                     else None)
+                    checks.equal(info_subtitle, "Null", "Main Info preview: no command subtitle")
+                    subtitle = subtitle_branches[2] if info_subtitle == "Null" else "Null"
+                    text_branches = parse_top_level_ternary(function_text)
+                    checks.require(bool(text_branches)
+                                   and text_branches[0] == "Event Player.MainMenuCursor == 0",
+                                   "DrawMainMenu: function Text must not duplicate input hints")
+                    if text_branches and text_branches[0] == "Event Player.MainMenuCursor == 0":
+                        function_text = text_branches[2]
                 checks.require(subtitle.strip() != "Null" and "Input Binding String(" in subtitle,
                                f"{subroutine_target(rule)}: commands must use Subheader")
-                checks.require("Input Binding String(" not in calls[0].args[3],
+                checks.require("Input Binding String(" not in function_text,
                                f"{subroutine_target(rule)}: function Text must not duplicate input hints")
                 literals = [parse_literal(custom.args[0]) for custom in iter_calls(subtitle, "Custom String")
                             if custom.args]
@@ -1741,10 +1755,31 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                        "Main menu: Dummy Follow description missing")
         checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW' in main_renderer.body,
                        "pagina 12 e pagina 13 non sono distinte")
-        checks.require("HERO + HP INSPECTION" in main_renderer.body
-                       and "ARCADE MENU / CAMERA QUICK TOGGLE" in main_renderer.body
-                       and "Select for all controls" in main_renderer.body,
-                       "Info preview must include the descriptions removed from the fixed HUDs")
+        main_hud = next(iter_calls(main_renderer.body, "Create HUD Text"), None)
+        text_branches = parse_top_level_ternary(main_hud.args[3]) if main_hud else None
+        preview = (text_branches[1] if text_branches
+                   and text_branches[0] == "Event Player.MainMenuCursor == 0" else "")
+        checks.require("0 - INFO / CONTROLS" in preview, "Main Info preview: title missing")
+        preview_controls = (
+            ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
+            ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
+            ("HERO + HP INSPECTION: hold Crouch ({0}); menu closed, Travel OFF", ("Crouch",)),
+            ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
+             ("Crouch", "Primary Fire", "Secondary Fire")),
+            ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
+             ("Crouch", "Interact", "Reload")),
+        )
+        for description, buttons in preview_controls:
+            lines = [custom for custom in iter_calls(preview, "Custom String")
+                     if custom.args and parse_literal(custom.args[0]) == description]
+            checks.equal(len(lines), 1, f"Main Info preview: exactly one instruction for {description}")
+            if lines:
+                bindings = tuple(binding.args[0].strip()
+                                 for argument in lines[0].args[1:]
+                                 for binding in iter_calls(argument, "Input Binding String")
+                                 if binding.args)
+                checks.equal(bindings, tuple(f"Button({button})" for button in buttons),
+                             f"Main Info preview: input binding order for {description}")
 
     ghost_fly_renderer = rule_by_subroutine(rules, "DrawGhostFlyMenu")
     checks.require(ghost_fly_renderer is not None, "renderer pagina 13 Ghost Mode / Fly assente")

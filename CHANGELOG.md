@@ -1,5 +1,12 @@
 # Changelog
 
+## Binding nell'anteprima Info — 2026-10-08
+
+- Con Info / Controls 0 selezionata nel principale, il sottotitolo viene nascosto e il testo della preview mostra i binding reali del giocatore, insieme alle condizioni dei comandi.
+- Esplicitati Camera con Interact tenuto 0,5 s e Crouch rilasciato, Arcade con Melee tenuto 0,5 s e ispezione eroe/HP con Crouch a menu chiuso e Travel OFF. La preview include anche Crouch + Primary/Secondary per navigare, Crouch + Interact per tutti i comandi e Crouch + Reload per il ritorno dal sottomenu.
+- Il sottomenu Info conserva la guida completa senza sottotitolo; le altre voci e pagine mantengono i comandi nel sottotitolo e funzioni/opzioni nel testo. Colore Info, numerazione 0–126 delle regole e comportamento degli input restano invariati.
+- Il clipboard usa 289.414 byte UTF-8 e 26.388 unità strutturali offline, con 127 regole. Rispetto al codice prima della conversione inglese, le riduzioni sono del 17,0% nel testo e del 17,4% nella stima. Le metriche compilate restano da misurare nel client.
+
 ## Sottotitoli e numerazione delle regole — 2026-10-08
 
 - Le 127 regole del codice da importare ricevono numeri consecutivi da 0 a 126 nell'ordine del file, senza duplicati o suffissi alfabetici. I titoli inglesi conservano la descrizione della regola; il comportamento resta invariato.
