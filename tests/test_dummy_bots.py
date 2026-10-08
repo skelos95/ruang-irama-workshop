@@ -15,8 +15,8 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_static_hud_uses_recyclable_roster_slots_without_embedded_label_spacing(self):
         for source, global_name in ((self.it, "Global"), (self.en, "Global")):
             self.assertIn('Custom String("COZYWATCH [{0}]"', source)
-            self.assertIn('"Hold {0}: hero + HP"', source)
-            self.assertIn('"Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera"', source)
+            self.assertIn('"HERO + HP INSPECTION"', source)
+            self.assertIn('"ARCADE MENU / CAMERA QUICK TOGGLE"', source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)

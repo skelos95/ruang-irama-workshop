@@ -11,6 +11,7 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | 5 ottobre, dopo PR #94 | Nuovo crash al cambio squadra segnalato in lobby nuova con un umano, senza menu. | Forward rimosso nella PR #95; non ha eliminato il crash. |
 | Riscontro successivo alle PR #95–96 | Il crash persisteva anche al primo cambio diretto, senza menu né icone; passando prima dagli spettatori l'utente non lo osservava. | Le attese per-player della PR #96 non avevano risolto; vedere il riscontro successivo sul runtime globale. |
 | Riscontro sul runtime globale, precedente alla revisione Camera/Info | L'utente conferma importazione riuscita e cambio diretto di squadra senza il crash precedentemente osservato. | Conferma qualitativa; SHA importato, durata, numero di player e metriche native non registrati. Non valida le successive modifiche Camera e interfaccia. |
+| 8 ottobre, revisione inglese con Info / Controls | L'utente conferma il funzionamento del codice nel gioco. | Conferma funzionale generale; SHA importato, durata e metriche native non registrati. La successiva disposizione dei comandi in `Subheader` non è ancora stata provata. |
 | 27 settembre, PR #80 | L'utente conferma il recupero dal punto nel vuoto prima problematico e la resurrezione sul terreno. | Altre mappe e combinazioni richiedono prove dedicate. |
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
@@ -23,7 +24,7 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 
 Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 10 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
-L’importazione con grammatica inglese, la Camera dopo Travel/cambio eroe e la nuova interfaccia con Info / Controls sono da verificare nel client della nuova revisione. Il riscontro positivo precedente non completa queste nuove prove.
+Il funzionamento della revisione inglese con Info / Controls ha un riscontro positivo dell'utente. La nuova disposizione dei comandi in `Subheader` richiede una prova dedicata nel client; il riscontro precedente non la comprende. Per Camera dopo Travel/cambio eroe, durata e carico restano utili le prove specifiche della matrice seguente: la conferma generale non ne registra separatamente gli esiti.
 
 ## Preparazione
 
@@ -55,7 +56,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 1
 ### Input, menu e HUD
 
 - Percorrere tutte le 16 voci del principale inglese: Info / Controls 0, Name Color 1, Camera 2, Soundtrack 3, poi le funzioni 4–15. Per quelle con opzioni aprire il sottomenu, applicare, tornare e riaprire. Percorrere `15→0→1→2→3→4` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
-- Al primo spawn il principale deve aprirsi una sola volta su Info / Controls, senza entrare automaticamente nel sottomenu. Crouch + Interact apre Info; Crouch + Reload torna al principale. Verificare tutti i comandi e i binding dinamici nel corpo, senza colonna o sottotitolo comandi duplicati. Negli altri menu verificare comandi a sinistra e opzioni a destra, separati da `|`, senza troncamenti o sovrapposizioni. Nessun vecchio promemoria fisso agli angoli.
+- Al primo spawn il principale deve aprirsi una sola volta su Info / Controls, senza entrare automaticamente nel sottomenu. Crouch + Interact apre Info; Crouch + Reload torna al principale. Verificare tutti i comandi e i binding dinamici nel corpo di Info (`Text`), con il sottotitolo (`Subheader`) vuoto. Nel principale e negli altri menu verificare comandi contestuali in `Subheader` e funzioni/opzioni in `Text`, senza troncamenti o sovrapposizioni. Nessun vecchio promemoria fisso agli angoli.
 - Chiudere o cambiare pagina e poi morire/cambiare eroe: non riaprire Info né azzerare pagina/cursore. Cambio squadra e uscita/rientro devono invece ripristinare i default e aprire il principale su Info. Provare registrazioni simultanee e doppie notifiche di ingresso.
 - Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato in inglese. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.

@@ -23,7 +23,7 @@ git diff --check
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
 | Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly, Revenge, Unkillable, Luck e dummy |
-| Testi | Codice e interfaccia inglesi, binding e placeholder, cataloghi e nomenclatura interna; assenza del vecchio sistema lingue/località |
+| Testi | Codice e interfaccia inglesi, binding e placeholder, comandi in Subheader e opzioni in Text con eccezione Info, cataloghi e nomenclatura interna; assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
 I test comportamentali esistenti eseguono porzioni della specifica inglese con risposte native controllate. Il codice importabile usa la stessa grammatica inglese della specifica. Verificano le funzioni d'ingresso al compilatore e non certificano da soli il runtime globale. Test separati leggono l'output effettivamente importabile e verificano controller, timer, eventi accodati e proprietari catturati. I test di compattazione confrontano gli stessi valori prima/dopo: Booleani tipizzati, palette, testi dei menu e inizializzazione dei registri. Rifiutano coercizioni di numeri in Booleani e verificano che cataloghi, colori e stringhe restino identici. I gate ricompilano la specifica e confrontano entrambi gli output, quindi controllano direttamente contesti, dichiarazioni, attese e peso del runtime. I test di mutazione devono rifiutare ciascuna violazione per la propria causa. Nessuno di questi controlli è un server Overwatch.
@@ -36,7 +36,7 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.536 unità strutturali invece di 31.966 (−17,0%)**, con 2.566 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 290.106 byte UTF-8 (−16,8%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.374 unità strutturali invece di 31.966 (−17,5%)**, con 2.566 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 288.890 byte UTF-8 (−17,2%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
@@ -44,7 +44,7 @@ Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.536 unit�
 | Variabili globali | 71 | 89 |
 | Variabili player | 124 | 126 |
 | Subroutine | 66 | 113 |
-| Byte di testo UTF-8 | 271.053 | 290.106 |
+| Byte di testo UTF-8 | 269.925 | 288.890 |
 
 La regola più grande per testo usa 22.537 byte UTF-8; la regola con più unità strutturali ne usa 2.566. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 

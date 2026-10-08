@@ -661,13 +661,36 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         mutated = self.replace_call_argument(absolute, 2, 'Custom String("Hold {0}", Input Binding String(Button(Crouch)))')
-        self.assert_rejected(mutated, "controls must share Text rows instead of a subtitle")
+        self.assert_rejected(mutated, "Info: no redundant command subtitle")
 
-    def test_main_menu_keeps_its_actual_crouch_binding_in_the_left_column(self) -> None:
+    def test_main_menu_requires_commands_in_the_subtitle(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, "Custom String(\"Hold {0}\", Input Binding String(Button(Crouch)))",
-            "Custom String(\"Hold {0}\", Input Binding String(Button(Melee)))")
-        self.assert_rejected(mutated, "left command binding missing: Crouch")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, "Null")
+        self.assert_rejected(mutated, "DrawMainMenu: commands must use Subheader")
+
+    def test_main_menu_function_text_cannot_duplicate_input_hints(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        duplicate = ('Custom String("{0}\\n{1}", ' + call.args[3] + ', '
+                     'Custom String("Hold {0}", Input Binding String(Button(Crouch))))')
+        mutated = self.replace_call_argument(absolute, 3, duplicate)
+        self.assert_rejected(mutated, "DrawMainMenu: function Text must not duplicate input hints")
+
+    def test_main_menu_subtitle_keeps_actual_bindings_and_the_close_hold(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        for old, new, error in (
+            ('Custom String("Hold {0}", Input Binding String(Button(Crouch)))',
+             'Custom String("Hold {0}", Input Binding String(Button(Melee)))',
+             "DrawMainMenu: subtitle binding missing: Crouch"),
+            ('Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))',
+             'Custom String("Hold {0} 0.1s: close", Input Binding String(Button(Melee)))',
+             "DrawMainMenu: subtitle close command must bind Melee with a 0.5s hold"),
+        ):
+            with self.subTest(command=old):
+                self.assert_rejected(self.replace_in_rule(renderer, old, new), error)
 
     def test_info_menu_close_help_keeps_the_half_second_hold(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
@@ -678,7 +701,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         mutated = self.replace_in_rule(renderer, 'Custom String("Hold {0}"', 'Custom String("\\nHold {0}"')
-        self.assert_rejected(mutated, "pair individual rows, not multiline columns")
+        self.assert_rejected(mutated, "subtitle cannot start with an artificial blank line")
 
     def test_travel_menu_requires_specific_english_copy(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawTravelMenu")
@@ -689,8 +712,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_travel_menu_keeps_dynamic_binding_help(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawTravelMenu")
-        mutated = self.replace_in_rule(renderer, "{0}: use / {1}+{2}: detach", "INTERACT: USE / CROUCH+RELOAD: DETACH")
-        self.assert_rejected(mutated, "controls missing")
+        mutated = self.replace_in_rule(renderer, "Input Binding String(Button(Reload))",
+            "Input Binding String(Button(Melee))")
+        self.assert_rejected(mutated, "DrawTravelMenu: subtitle binding missing: Reload")
 
     def test_travel_navigation_and_renderer_keep_five_pages(self) -> None:
         navigation = self.rule(lambda rule: rule.name.startswith("19c - Crouch Travel: Navigate five pages with Primary and Secondary Fire"))
@@ -738,10 +762,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(renderer, "Visible To String and Color", "Visible To and String")
         self.assert_rejected(mutated, "colore deve rivalutarsi")
 
-    def test_revenge_no_target_branch_keeps_crouch_help_in_the_left_column(self) -> None:
+    def test_revenge_no_target_branch_keeps_crouch_help_in_the_subtitle(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawRevengeMenu")
         mutated = self.replace_in_rule(renderer, "Button(Crouch)", "Button(Melee)")
-        self.assert_rejected(mutated, "left command binding missing: Crouch")
+        self.assert_rejected(mutated, "DrawRevengeMenu: subtitle binding missing: Crouch")
 
     def test_chill_grid_requires_a_dedicated_top_spacer(self) -> None:
         call = next(
@@ -923,7 +947,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "colore Subheader deve usare la cache leader")
 
     def test_info_preview_keeps_the_removed_fixed_hud_descriptions(self) -> None:
-        mutated = self.replace_once('Hold {0}: hero + HP', "Hold {0}:")
+        mutated = self.replace_once('HERO + HP INSPECTION', "HERO")
         self.assert_rejected(mutated, "Info preview must include the descriptions removed from the fixed HUDs")
 
     def test_info_controls_keep_the_crouch_binding(self) -> None:

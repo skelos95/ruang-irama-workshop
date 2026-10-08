@@ -8,11 +8,11 @@ Imposta la lingua testo del client su **English** per importare il codice. **Gra
 
 ## Stato attuale
 
-L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Il riscontro è qualitativo: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La nuova importazione inglese, la correzione Camera e l'interfaccia con Info / Controls richiedono una verifica dedicata nel client.
+L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La successiva disposizione dei comandi nel sottotitolo del menu richiede ancora una verifica nel client.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.536 unità (−17,0%)**. Il testo da importare passa da 348.732 a 290.106 byte UTF-8 (−16,8%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.374 unità (−17,5%)**. Il testo da importare passa da 348.732 a 288.890 byte UTF-8 (−17,2%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -48,7 +48,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 
 Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
-Info / Controls contiene tutti i comandi con i binding del giocatore; la sua anteprima nel principale ne mostra un riepilogo. Il principale e gli altri menu mostrano i comandi contestuali a sinistra e le opzioni a destra, separati da `|`. La pagina Info raccoglie soltanto la guida comandi, senza una seconda colonna duplicata. I due promemoria fissi agli angoli dello schermo sono rimossi.
+Info / Controls contiene tutti i comandi con i binding del giocatore; la sua anteprima nel principale ne mostra un riepilogo. Nel principale e negli altri menu i comandi contestuali compaiono nel sottotitolo dell'HUD (`Subheader`), mentre funzioni e opzioni restano nel corpo (`Text`). La pagina Info mostra la guida completa nel corpo, senza ripetere i comandi nel sottotitolo. I due promemoria fissi agli angoli dello schermo sono rimossi.
 
 ## Menu personali
 
