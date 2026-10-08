@@ -177,15 +177,22 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
     def travel_state(self, identity):
         actor = self.players[identity]
         return copy.deepcopy({field: value for field, value in actor.items()
-                              if "Teleportasi" in field or field in {"buttons", "MenuOpen"}})
+                              if "Travel" in field or field in {"buttons", "MenuOpen", "ReviveTeleportNeeded"}})
 
     def clear_registry(self, identity, routine):
         self.event_player = identity
         rule = validator.rule_by_subroutine(self.rules, routine)
         actions = validator.rule_block(rule, "actions")
-        removal = next(token.strip() for token in actions.split(";")
-                       if "Global.SuperPunchPlayers = Remove From Array(" in token)
-        self.execute_source(removal)
+        # Comments may contain semicolons; select the actual assignment using
+        # the masked source rather than splitting commentary into statements.
+        removals = list(re.finditer(
+            r"Global\.SuperPunchPlayers\s*=\s*Remove From Array\([^;]+\);",
+            validator.mask_strings(actions),
+        ))
+        if len(removals) != 1:
+            raise AssertionError(f"expected one Super Punch registry removal in {routine}")
+        removal = removals[0]
+        self.execute_source(actions[removal.start():removal.end()])
 
 
 class SuperPunchTests(unittest.TestCase):

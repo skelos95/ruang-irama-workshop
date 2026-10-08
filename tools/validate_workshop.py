@@ -77,7 +77,7 @@ OBSOLETE_CURRENT_TEXT_PATTERNS = (
     (
         "Jump Resurrect descritto con destinazione calcolata dalla snapshot morta",
         re.compile(
-            r"(?i)nearest\s+walkable\s+position\s*\(\s*posisimati\s*\)"
+            r"(?i)nearest\s+walkable\s+position\s*\(\s*(?:posisimati|deathposition)\s*\)"
         ),
     ),
 )
@@ -1029,7 +1029,7 @@ def workshop_setting_text_errors(call: Call) -> list[str]:
 
 
 def validate_localization(checks: Checks, source: str, globals_: set[str]) -> None:
-    """The interface is English; native clipboard grammar remains localized."""
+    """The interface and native clipboard grammar use English only."""
     retired = ("IndeksBahasa", "KursorBahasa", "NamaBahasa", "NamaWarna", "NamaWarnaThai",
                "NamaHalaman", "NamaHalamanThai", "NamaIkonIndonesia", "NamaIkonThai",
                "NamaLokasiInggris", "NamaLokasiIndonesia", "NamaLokasiThai", "IndeksLokasiServer",
@@ -1045,7 +1045,7 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
         if items is not None:
             checks.equal(len(items), expected_size, f"numero voci {name}")
     checks.require("Global.IconNames[" in source, "nomi icona inglesi mai selezionati")
-    for action, english in (("Workshop Setting Integer", "duration"), ("Workshop Setting Toggle", "diagnostics")):
+    for action, english in (("Workshop Setting Integer", "Duration (min)"), ("Workshop Setting Toggle", "Diagnostics")):
         calls = list(iter_calls(source, action))
         checks.equal(len(calls), 1, f"numero {action}")
         for call in calls:
@@ -1053,7 +1053,7 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
             if len(call.args) >= 2:
                 label_call = next(iter(iter_calls(call.args[1], "Custom String")), None)
                 label = parse_literal(label_call.args[0]) if label_call and label_call.args else None
-                checks.require(english in (label or "").lower(), f"label {action} deve essere inglese")
+                checks.equal(label, english, f"label {action} deve essere inglese")
     checks.equal(len(list(iter_calls(source, "Workshop Setting Combo"))), 0,
                  "impostazione località rimossa")
     for action, positions in (("Small Message", (1,)), ("Create HUD Text", (1, 2, 3)),
@@ -1576,10 +1576,31 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            if custom.args and parse_literal(custom.args[0]) == "{0} | {1}"]
             if subroutine_target(rule) == "DrawInfoMenu":
                 checks.require(not paired_rows, "Info: do not duplicate commands in a side column")
-                for button in ("Primary Fire", "Secondary Fire", "Crouch", "Interact", "Reload",
-                               "Melee", "Ability 1", "Ability 2", "Jump"):
-                    checks.require(f"Input Binding String(Button({button}))" in calls[0].args[3],
-                                   f"Info: actual input binding missing for {button}")
+                info_controls = (
+                    ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
+                    ("Hold {0} + {1}: select / apply | + {2}: back", ("Crouch", "Interact", "Reload")),
+                    ("Hold {0} 0.5s: open / close Arcade", ("Melee",)),
+                    ("Hold {0} 0.5s with {1} released: toggle camera", ("Interact", "Crouch")),
+                    ("Menu closed: hold {0}: inspect hero + HP (Travel OFF)", ("Crouch",)),
+                    ("Soundtrack: hold {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
+                    ("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
+                    ("Travel: {0}: use | release {1}: close", ("Interact", "Crouch")),
+                    ("Attached, menu closed: hold {0} + {1}: detach", ("Crouch", "Reload")),
+                    ("Dead: press {0} to resurrect on safe ground", ("Jump",)),
+                    ("Multijump ON: tap / hold {0} in air to boost", ("Jump",)),
+                    ("Superman Punch ON: use {0} to punch", ("Melee",)),
+                )
+                for description, buttons in info_controls:
+                    lines = [custom for custom in iter_calls(calls[0].args[3], "Custom String")
+                             if custom.args and parse_literal(custom.args[0]) == description]
+                    checks.equal(len(lines), 1, f"Info: exactly one instruction for {description}")
+                    if lines:
+                        bindings = tuple(binding.args[0].strip()
+                                         for argument in lines[0].args[1:]
+                                         for binding in iter_calls(argument, "Input Binding String")
+                                         if binding.args)
+                        checks.equal(bindings, tuple(f"Button({button})" for button in buttons),
+                                     f"Info: input binding order for {description}")
                 for token in ("0 - INFO / CONTROLS", "0.5s", "with {1} released",
                               "inspect hero + HP", "+10 / -10", "detach", "resurrect",
                               "Multijump ON", "Superman Punch ON"):
@@ -1599,6 +1620,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     checks.require("Input Binding String(" in row.args[1] or 'Custom String("")' in row.args[1],
                                    f"{subroutine_target(rule)}: commands must be on the left of the separator")
                 left_column = " ".join(row.args[1] for row in paired_rows if len(row.args) == 3)
+                if subroutine_target(rule) != "DrawTravelMenu":
+                    close_controls = [custom for custom in iter_calls(left_column, "Custom String")
+                                      if len(custom.args) == 2
+                                      and parse_literal(custom.args[0]) == "Hold {0} 0.5s: close"
+                                      and custom.args[1].strip() == "Input Binding String(Button(Melee))"]
+                    checks.require(bool(close_controls),
+                                   f"{subroutine_target(rule)}: left close command must bind Melee with a 0.5s hold")
                 for button in (("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload")
                                if subroutine_target(rule) == "DrawTravelMenu"
                                else ("Crouch", "Interact", "Reload", "Melee")
@@ -1717,6 +1745,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                          f"Main menu: one English preview of applied {state}")
         checks.require("LET ENEMY DUMMY FOLLOW YOU" in main_renderer.body,
                        "Main menu: Dummy Follow description missing")
+        checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW' in main_renderer.body,
+                       "pagina 12 e pagina 13 non sono distinte")
         checks.require("Hold {0}: hero + HP" in main_renderer.body
                        and "Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera" in main_renderer.body
                        and "Select for all controls" in main_renderer.body,
@@ -3642,7 +3672,7 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
             )
             checks.equal(resets, ["False"], f"Jump Resurrect: reset flag recupero in {lifecycle_name}")
         for rule in rules:
-            writes = re.findall(r"\bBangkitPerluTeleportasi\s*=(?!=)", mask_strings(rule.body))
+            writes = re.findall(r"\bReviveTeleportNeeded\s*=(?!=)", mask_strings(rule.body))
             if writes:
                 checks.require(
                     rule.start == resurrect.start
@@ -5228,6 +5258,7 @@ def validate_lifecycle(checks: Checks, rules: list[Rule], subroutines: set[str])
     checks.require(setup is not None, "PreparePlayer assente")
     if setup:
         reset_tokens = (
+            "MainMenuCursor = 0;",
             "GenreIndex = -1;", "CameraMode = 0;", "ColorIndex = 0;",
             "VotedPlayer = Null;", "UnkillableMode = 0;", "VoiceIndex = 0;", "IconIndex = 0;",
             "CrouchTravelEnabled = False;", "InspectionPrivacyActive = False;",
@@ -7267,6 +7298,12 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         callers = [rule for rule in rules if list(iter_calls(rule.body, "Call Subroutine"))
                    and any(call.args == ("StartCamera",) for call in iter_calls(rule.body, "Call Subroutine"))]
         checks.require(bool(callers), "Camera: StartCamera mai chiamata")
+        apply_camera = rule_by_subroutine(rules, "ApplyCameraPage")
+        quick_camera = next((rule for rule in rules if rule.name.startswith("12c - Camera:")), None)
+        checks.require(apply_camera is not None and quick_camera is not None
+                       and apply_camera.body.count("Call Subroutine(StartCamera);") == 2
+                       and quick_camera.body.count("Call Subroutine(StartCamera);") == 1,
+                       "Camera personale, watch e toggle rapido devono condividere StartCamera")
         for rule in callers:
             actions = rule_block(rule, "actions") or ""
             for call in iter_calls(actions, "Call Subroutine"):

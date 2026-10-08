@@ -243,8 +243,10 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 )
                 self.assertEqual(page.body.count(condition), 0)
                 self.assertEqual(apply.body.count(condition), 1)
-                for label in ("LET ENEMY DUMMY FOLLOW YOU", "IZINKAN BOT MUSUH IKUTIMU", "ให้ดัมมี่ศัตรูตามคุณ"):
-                    self.assertIn(label, page.body)
+                self.assertIn("LET ENEMY DUMMY FOLLOW YOU", page.body)
+                self.assertNotIn("IndeksBahasa", page.body)
+                self.assertNotIn("IZINKAN BOT MUSUH IKUTIMU", page.body)
+                self.assertNotIn("ให้ดัมมี่ศัตรูตามคุณ", page.body)
                 self.assertEqual(page.body.count("Create HUD Text("), 1)
                 self.assertNotIn("Wait(", apply.body)
                 self.assertNotIn("Filtered Array(", apply.body)

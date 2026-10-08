@@ -407,18 +407,18 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         main_mutation = self.replace_in_rule(
             main,
-            'Custom String("2 - MUSIK\\nKINI: {0}", Event Player.CustomSoundtrack != Null',
-            'Custom String("2 - MUSIK\\nKINI: {0}", Event Player.CustomSoundtrack == Null',
+            'Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex',
+            'Event Player.CustomSoundtrack == Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex',
         )
-        self.assert_rejected(main_mutation, "profilo speciale menu principale: condizione profilo speciale")
+        self.assert_rejected(main_mutation, "Special profile main menu: condizione profilo speciale")
 
         music = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawSoundtrackMenu")
         locked_mutation = self.replace_in_rule(
             music,
-            'Custom String("เพลงล็อกอยู่\\nใช้: {0}", Event Player.CustomSoundtrack)',
-            'Custom String("เพลงถูกล็อก\\nตอนนี้: {0}", Event Player.CustomSoundtrack)',
+            'Custom String("SOUNDTRACK LOCKED")',
+            'Custom String("SOUNDTRACK UNLOCKED")',
         )
-        self.assert_rejected(locked_mutation, "testo locked")
+        self.assert_rejected(locked_mutation, "Locked Soundtrack: English heading")
 
     def test_special_player_music_navigation_guards_are_required(self) -> None:
         navigation = self.rule(
@@ -548,9 +548,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_removed_teks_diri_leaves_compact_initialized_declarations(self) -> None:
         _, players, _, _ = validator.declaration_entries(self.source)
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
-        # Removing the three binary menu cursors preserves all other native IDs.
-        self.assertEqual([entry.index for entry in players],
-                         [index for index in range(128) if index not in {60, 92}])
+        # Removed language state and binary cursors leave a compact namespace.
+        self.assertEqual([entry.index for entry in players], list(range(124)))
         self.assertFalse(any("non inizializzata in PreparePlayer" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
@@ -657,52 +656,41 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute_call, 0, "Empty Array")
         self.assert_rejected(mutated, "nascosto/precaricato")
 
-    def test_global_hud_must_not_repeat_the_menu_modifier_explanation(self) -> None:
-        mutated = self.replace_once(
-            '"Hold {0}: hero + HP"',
-            '"Hold {0}: hero + HP | in menu: modifier for every command"',
-        )
-        self.assert_rejected(mutated, "clausola modifier Crouch duplicata")
+    def test_info_cannot_duplicate_the_commands_in_a_subtitle(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, 'Custom String("Hold {0}", Input Binding String(Button(Crouch)))')
+        self.assert_rejected(mutated, "controls must share Text rows instead of a subtitle")
 
-    def test_every_menu_keeps_the_trilingual_crouch_instruction(self) -> None:
+    def test_main_menu_keeps_its_actual_crouch_binding_in_the_left_column(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "Hold DUCK")
-        self.assert_rejected(mutated, "istruzione Crouch menu assente")
+        mutated = self.replace_in_rule(renderer, "Custom String(\"Hold {0}\", Input Binding String(Button(Crouch)))",
+            "Custom String(\"Hold {0}\", Input Binding String(Button(Melee)))")
+        self.assert_rejected(mutated, "left command binding missing: Crouch")
 
-    def test_thai_menu_close_help_keeps_the_half_second_hold(self) -> None:
-        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(
-            renderer,
-            'กด {1} ค้าง 0.5 วิ: ปิด',
-            "กด {1} ค้างเพื่อปิด",
-        )
-        self.assert_rejected(mutated, "help Thai chiusura menu")
+    def test_info_menu_close_help_keeps_the_half_second_hold(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
+        changed = renderer.body.replace("0.5s", "0.1s")
+        mutated = self.source[:renderer.start] + changed + self.source[renderer.end:]
+        self.assert_rejected(mutated, "Info: description missing: 0.5s")
 
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, "Hold CROUCH", "\\nHold CROUCH")
-        self.assert_rejected(mutated, "riga vuota artificiale")
+        mutated = self.replace_in_rule(renderer, 'Custom String("Hold {0}"', 'Custom String("\\nHold {0}"')
+        self.assert_rejected(mutated, "pair individual rows, not multiline columns")
 
-    def test_teleport_menu_requires_specific_trilingual_copy(self) -> None:
+    def test_travel_menu_requires_specific_english_copy(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawTravelMenu")
-        mutations = (
-            ("CURRENT HERO FORM | COOLDOWN: 3s", "SELF KILL"),
-            ("1/5 | TELEPORT: RUANG MUNCUL\nTIMMU", "TUJUAN: SPAWN"),
-            ('2/5 | วาร์ป: ภารกิจ', "ปลายทาง: เป้าหมาย"),
-        )
-        for old, new in mutations:
-            with self.subTest(old=old):
-                mutated = self.replace_in_rule(renderer, old, new)
-                self.assert_rejected(mutated, "testo pagina specifico EN/ID/TH assente")
+        for old in ("CURRENT HERO FORM | COOLDOWN: 3s", "TEAM SPAWN", "2/5 | TELEPORT: OBJECTIVE"):
+            with self.subTest(copy=old):
+                mutated = self.replace_in_rule(renderer, old, "MISSING")
+                self.assert_rejected(mutated, "English page content missing")
 
-    def test_teleport_menu_keeps_dynamic_binding_help(self) -> None:
+    def test_travel_menu_keeps_dynamic_binding_help(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawTravelMenu")
-        mutated = self.replace_in_rule(
-            renderer,
-            "{0}: USE | RELEASE {1}: CLOSE",
-            "INTERACT: USE | RELEASE CROUCH: CLOSE",
-        )
-        self.assert_rejected(mutated, "istruzione ordinata EN/ID/TH assente")
+        mutated = self.replace_in_rule(renderer, "{0}: use / {1}+{2}: detach", "INTERACT: USE / CROUCH+RELOAD: DETACH")
+        self.assert_rejected(mutated, "controls missing")
 
     def test_travel_navigation_and_renderer_keep_five_pages(self) -> None:
         navigation = self.rule(lambda rule: rule.name.startswith("19c - Crouch Travel: Navigate five pages with Primary and Secondary Fire"))
@@ -750,18 +738,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(renderer, "Visible To String and Color", "Visible To and String")
         self.assert_rejected(mutated, "colore deve rivalutarsi")
 
-    def test_revenge_no_target_branch_keeps_trilingual_crouch_help(self) -> None:
+    def test_revenge_no_target_branch_keeps_crouch_help_in_the_left_column(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawRevengeMenu")
-        call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
-        branches = validator.parse_top_level_ternary(call.args[2])
-        self.assertIsNotNone(branches)
-        _, no_targets, _ = branches  # type: ignore[misc]
-        changed_branch = no_targets.replace("Hold CROUCH", "Hold DUCK", 1)
-        self.assertNotEqual(changed_branch, no_targets)
-        changed_argument = call.args[2].replace(no_targets, changed_branch, 1)
-        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(absolute, 2, changed_argument)
-        self.assert_rejected(mutated, "Revenge no-target senza istruzione Crouch")
+        mutated = self.replace_in_rule(renderer, "Button(Crouch)", "Button(Melee)")
+        self.assert_rejected(mutated, "left command binding missing: Crouch")
 
     def test_chill_grid_requires_a_dedicated_top_spacer(self) -> None:
         call = next(
@@ -942,9 +922,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(call, 7, "Color(White)")
         self.assert_rejected(mutated, "colore Subheader deve usare la cache leader")
 
-    def test_complete_global_control_help_is_required(self) -> None:
+    def test_info_preview_keeps_the_removed_fixed_hud_descriptions(self) -> None:
         mutated = self.replace_once('Hold {0}: hero + HP', "Hold {0}:")
-        self.assert_rejected(mutated, "testo localizzato assente: Hold {0}: hero + HP")
+        self.assert_rejected(mutated, "Info preview must include the descriptions removed from the fixed HUDs")
 
     def test_info_controls_keep_the_crouch_binding(self) -> None:
         info = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
@@ -955,11 +935,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_info_controls_keep_the_menu_and_camera_bindings(self) -> None:
         info = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
-        old = "Input Binding String(Button(Melee)), Input Binding String(Button(Interact))"
-        new = "Input Binding String(Button(Interact)), Input Binding String(Button(Melee))"
-        changed = info.body.replace(old, new, 1)
-        self.assertNotEqual(changed, info.body)
-        mutated = self.source[:info.start] + changed + self.source[info.end:]
+        old = 'Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Melee)))'
+        new = 'Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Interact)))'
+        mutated = self.replace_in_rule(info, old, new)
         self.assert_rejected(mutated, "Info")
 
     def test_website_hud_keeps_its_distinct_pastel_gold_color(self) -> None:
@@ -981,7 +959,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             7,
             "Custom Color(254, 205, 110, 255)",
         )
-        self.assert_rejected(mutated, 'cozywatch.org: colore subheader pastel gold esatto')
+        self.assert_rejected(mutated, 'WEBSITE: colore subheader pastel gold esatto')
         mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
         self.assert_rejected(mutated, "colore distinto da PLAYER VIBES")
 
@@ -990,7 +968,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         call = next(iter(validator.iter_calls(renderer.body, "Create HUD Text")))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         mutated = self.replace_call_argument(absolute, 5, "100")
-        self.assert_rejected(mutated, "DrawMainMenu: ordinamento HUD menu")
+        self.assert_rejected(mutated, "DrawMainMenu: HUD order")
 
     def test_luck_effect_uses_the_same_top_three_slot_without_a_leading_gap(self) -> None:
         renderer = self.rule(lambda rule: "Event Player.LuckEffectHud = Last Text ID;" in rule.body)
@@ -1055,7 +1033,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "renderer principale non deve essere scelto staticamente")
 
-    def test_soundtrack_ability_latch_arms_only_on_page_two(self) -> None:
+    def test_soundtrack_ability_latch_arms_only_on_page_three(self) -> None:
         router = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.MenuCommand == 0;" in rule.body
@@ -1067,9 +1045,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "And(Event Player.MenuPage == 3, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2))))",
             "And(Event Player.MenuPage == 0, Or(Is Button Held(Event Player, Button(Ability 1)), Is Button Held(Event Player, Button(Ability 2))))",
         )
-        self.assert_rejected(mutated, "Ability 1/2 devono armarsi sulla pagina 2 Soundtrack")
+        self.assert_rejected(mutated, "Ability 1/2 devono armarsi sulla pagina 3 Soundtrack")
 
-    def test_soundtrack_ability_commands_are_emitted_on_page_two(self) -> None:
+    def test_soundtrack_ability_commands_are_emitted_on_page_three(self) -> None:
         router = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
             and "Event Player.MenuCommand = 5;" in rule.body
@@ -1080,9 +1058,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.MenuPage == 3));",
             "Else If(And(Is Button Held(Event Player, Button(Ability 1)), Event Player.MenuPage == 0));",
         )
-        self.assert_rejected(mutated, "Ability 1 non produce il comando 5 sulla pagina 2 Soundtrack")
+        self.assert_rejected(mutated, "Ability 1 non produce il comando 5 sulla pagina 3 Soundtrack")
 
-    def test_soundtrack_jump_consumes_commands_on_page_two(self) -> None:
+    def test_soundtrack_jump_consumes_commands_on_page_three(self) -> None:
         jump = self.rule(
             lambda rule: "Event Player.GenreCursor = (Event Player.GenreCursor" in rule.body
             and "Event Player.MenuCommand == 5" in rule.body
@@ -1093,7 +1071,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             "Event Player.MenuPage == 3;",
             "Event Player.MenuPage == 0;",
         )
-        self.assert_rejected(mutated, "salto Soundtrack ±10 deve consumare i comandi sulla pagina 2")
+        self.assert_rejected(mutated, "salto Soundtrack ±10 deve consumare i comandi sulla pagina 3")
 
     def test_routine_small_messages_stay_suppressed(self) -> None:
         noisy = (
@@ -1172,10 +1150,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "pagina 12 deve usare ApplyDummyBotFollowPage")
 
-    def test_dummy_follow_renderer_is_localized_and_explicitly_enemy_scoped(self) -> None:
+    def test_dummy_follow_renderer_is_english_and_explicitly_enemy_scoped(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, 'BOT MUSUH', "DUMMY")
-        self.assert_rejected(mutated, 'BOT MUSUH')
+        mutated = self.replace_in_rule(renderer, 'LET ENEMY DUMMY FOLLOW YOU', "LET DUMMY FOLLOW YOU")
+        self.assert_rejected(mutated, 'Main menu: Dummy Follow description missing')
 
     def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
         transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransitionMenuColor")
@@ -1213,7 +1191,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("ApplyPlayerIconPage", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "16 subroutine pagina")
+        self.assert_rejected(mutated, "dispatcher Interact must cover the fifteen pages with actions")
 
     def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplySuperPunchPage")
@@ -3351,9 +3329,9 @@ rule("999x - Nasib: Renderer pemain tambahan")
         manager = self.rule(lambda rule: validator.subroutine_target(rule) == "MaintainDummyBots")
         for team in (1, 2):
             for old, new in (
-                (f"Total Time Elapsed >= Global.WaktuCobaBotBuatanTim{team}", "True"),
-                (f"Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed + 1;", f"Global.WaktuCobaBotBuatanTim{team} = Total Time Elapsed;"),
-                (f"Global.WaktuCobaBotBuatanTim{team}", f"Global.WaktuCobaBotBuatanTim{3-team}"),
+                (f"Total Time Elapsed >= Global.Team{team}DummyBotRetryTime", "True"),
+                (f"Global.Team{team}DummyBotRetryTime = Total Time Elapsed + 1;", f"Global.Team{team}DummyBotRetryTime = Total Time Elapsed;"),
+                (f"Global.Team{team}DummyBotRetryTime", f"Global.Team{3-team}DummyBotRetryTime"),
             ):
                 with self.subTest(team=team, old=old):
                     self.assert_rejected(self.replace_in_rule(manager, old, new),
@@ -3454,7 +3432,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_initial_setup_performs_full_preferences_reset(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "PreparePlayer")
-        mutated = self.replace_in_rule(setup, "Event Player.MainMenuCursor = 0;", "Event Player.MainMenuCursor = Event Player.MainMenuCursor;")
+        mutated = self.replace_in_rule(setup, "Event Player.MainMenuCursor = 0;", "Event Player.MainMenuCursor = 1;")
         self.assert_rejected(mutated, "MainMenuCursor = 0")
 
     def test_cleanup_is_fully_atomic_without_wait_or_loop(self) -> None:
@@ -3692,7 +3670,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
             'VISION: ALL PLAYER/BOT NAMES',
             "VISION: PUBLIC PLAYER / BOT NAMES",
         )
-        self.assert_rejected(mutated, "testo Vision non dichiara tutti i nomi")
+        self.assert_rejected(mutated, "testo Vision inglese non dichiara tutti i nomi")
 
     def test_vision_uses_the_cached_roster_name_for_human_subjects(self) -> None:
         vision = self.rule(
@@ -4023,10 +4001,16 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "osservatore attivo non viene fermato")
 
-    def test_workshop_setting_labels_are_trilingual(self) -> None:
-        call = next(iter(validator.iter_calls(self.source, "Workshop Setting Integer")))
-        mutated = self.replace_call_argument(call, 1, 'Custom String("Server duration")')
-        self.assert_rejected(mutated, "label Workshop Setting Integer")
+    def test_workshop_setting_labels_are_english(self) -> None:
+        for action, label, multilingual in (
+            ("Workshop Setting Integer", "Duration (min)", "Duration / Durasi / ระยะเวลา (min)"),
+            ("Workshop Setting Toggle", "Diagnostics", "Diagnostics / Diagnostik / การวินิจฉัย"),
+        ):
+            with self.subTest(action=action):
+                call = next(iter(validator.iter_calls(self.source, action)))
+                self.assertEqual(call.args[1].strip(), f'Custom String("{label}")')
+                mutated = self.replace_call_argument(call, 1, f'Custom String("{multilingual}")')
+                self.assert_rejected(mutated, f"label {action}")
 
     def test_workshop_setting_category_validation_is_integrated(self) -> None:
         call = next(iter(validator.iter_calls(self.source, "Workshop Setting Integer")))
@@ -4097,7 +4081,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
             for rule in rules
             if "Call Subroutine(StartCamera);" in rule.body
         ]
-        self.assertEqual(sum(rule.body.count("Call Subroutine(StartCamera);") for rule in callers), 3)
+        self.assertEqual(sum(rule.body.count("Call Subroutine(StartCamera);") for rule in callers), 7)
+        self.assertEqual(len(self.start_camera_calls()), 1)
         quick_toggle = next(rule for rule in callers if "Wait(0.500, Abort When False);" in rule.body)
         mutated = self.replace_in_rule(quick_toggle, "Call Subroutine(StartCamera);", "Abort;")
         self.assert_rejected(mutated, "Camera personale, watch e toggle rapido devono condividere StartCamera")
@@ -4130,8 +4115,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_foreign_custom_rule_title_is_rejected(self) -> None:
         rule = validator.extract_rules(self.source)[0]
-        mutated = self.source[:rule.start] + rule.body.replace(rule.name, rule.name + " - English comment", 1) + self.source[rule.end:]
-        self.assert_rejected(mutated, "non interamente indonesiano")
+        mutated = self.source[:rule.start] + rule.body.replace(rule.name, rule.name + " - Pemain", 1) + self.source[rule.end:]
+        self.assert_rejected(mutated, "non interamente inglese")
 
     def test_duplicate_rule_body_is_rejected(self) -> None:
         rule = validator.extract_rules(self.source)[0]
@@ -4209,7 +4194,6 @@ rule("999x - Nasib: Renderer pemain tambahan")
         scheduler = self.rule(lambda rule: sync_token in rule.body)
         nested = (
             "\t\t\tIf(And(Is Game In Progress == True, Global.ServerTimeRemaining > 0));\n"
-            '\t\t\t\t"Satu kali per detik, tahan penyelesaian mode bawaan dan sinkronkan penghitung waktu bawaan di atas nol sampai waktu server habis."\n'
             "\t\t\t\tDisable Built-In Game Mode Completion;\n"
             f"\t\t\t\t{sync_token}\n"
             "\t\t\tEnd;\n"

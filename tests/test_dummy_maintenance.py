@@ -71,7 +71,7 @@ class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
             return abs(self.players[args[0]]["position"] - self.players[args[1]]["position"])
         if name == "CreateDummyBot":
             team = args[1]
-            deadline = self.globals[f"WaktuCobaBotBuatanTim{team}"]
+            deadline = self.globals[f"Team{team}DummyBotRetryTime"]
             self.attempts.append((team, self.now, deadline))
             if team not in self.failed_teams:
                 self.add(f"dummy-{team}-{len(self.attempts)}", team=team, dummy=True)
