@@ -83,6 +83,9 @@ def validate_runtime(text: str) -> list[str]:
         return [f"runtime globale non analizzabile: {exc}"]
     if not rules:
         return ["runtime globale senza regole"]
+    if any(re.fullmatch(rf"{index} - .+", rule.name) is None
+           for index, rule in enumerate(rules)):
+        errors.append("runtime globale: numerazione regole consecutiva da 0 richiesta, senza duplicati o suffissi")
     checks = semantic.Checks()
     semantic.validate_rule_grammar(checks, rules)
     errors.extend(checks.errors)
@@ -112,7 +115,9 @@ def validate_runtime(text: str) -> list[str]:
         errors.append("runtime globale: Ongoing - Each Player vietato")
     if any(kind not in NATIVE_EVENTS | {"Ongoing - Global", "Subroutine"} for kind in kinds):
         errors.append("runtime globale: evento non supportato")
-    scheduler = next((rule for rule in rules if rule.name.startswith("04g -")), None)
+    schedulers = [rule for rule in rules if semantic.event_type(rule) == "Ongoing - Global"
+                  and semantic.action_loop_count(rule.body) > 0]
+    scheduler = schedulers[0] if len(schedulers) == 1 else None
     all_waits = [(rule, call) for rule in rules for call in semantic.wait_calls(rule.body)]
     if len(all_waits) != 1 or not scheduler or all_waits[0][0] is not scheduler:
         errors.append("runtime globale: solo lo scheduler può attendere, una volta")
@@ -122,7 +127,7 @@ def validate_runtime(text: str) -> list[str]:
         errors.append("runtime globale: unico Loop nello scheduler richiesto")
     if list(semantic.iter_calls(normalized, "Start Rule")):
         errors.append("runtime globale: avvio asincrono con attore condiviso vietato")
-    palette = next((rule for rule in rules if rule.name.startswith("91k -")), None)
+    palette = semantic.rule_by_subroutine(rules, "TransitionMenuColor")
     if palette:
         chases = list(semantic.iter_calls(palette.body, "Chase Player Variable Over Time"))
         if len(chases) != 2 or any(len(call.args) != 5 or

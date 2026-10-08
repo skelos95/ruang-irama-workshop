@@ -1,10 +1,19 @@
 # Changelog
 
+## Sottotitoli e numerazione delle regole — 2026-10-08
+
+- Le 127 regole del codice da importare ricevono numeri consecutivi da 0 a 126 nell'ordine del file, senza duplicati o suffissi alfabetici. I titoli inglesi conservano la descrizione della regola; il comportamento resta invariato.
+- I comandi contestuali tornano nel campo `Subheader` dell'HUD Arcade; funzioni e opzioni restano nel campo `Text`. Rimossa la disposizione affiancata con separatore `|`, mantenendo un solo handle per pagina.
+- Info / Controls mantiene tutti i comandi nel corpo e lascia vuoto il sottotitolo, senza duplicazioni. Conservati il principale aperto su Info al primo spawn, la numerazione 0/1/2/3, l'importazione inglese, cozywatch.org e i reset Camera.
+- Info / Controls 0 riceve un azzurro fisso RGB (160, 195, 235), distinto dal bianco iniziale di Name Color 1. Name Color conserva il colore selezionato esatto; preview e pagina Info condividono il nuovo azzurro.
+- L'utente conferma il funzionamento nel gioco della precedente revisione inglese con Info / Controls. Il riscontro è qualitativo e non include ancora la nuova disposizione dei sottotitoli né nuove metriche native.
+- Il runtime da importare usa 288.793 byte UTF-8, 1.313 in meno rispetto alla prima revisione inglese, e 26.374 unità strutturali offline. Rispetto al precedente codice prima della conversione inglese, le riduzioni sono del 17,2% nel testo e del 17,5% nella stima strutturale. Restano 127 regole e 2.566 unità nella regola strutturalmente maggiore; i conteggi nativi vanno misurati nel client.
+
 ## Codice inglese, Info e reset Camera — 2026-10-08
 
 - Unico sorgente e clipboard in inglese: grammatica nativa, identificatori, regole, commenti, testi e impostazioni personalizzate. Rimosso il sistema EN/ID/TH, con cataloghi, stato e menu Language; i nomi propri conservano i caratteri originali. Per importare, la lingua testo del client deve essere English.
 - Info / Controls diventa la voce 0; Name Color, Camera e Soundtrack passano a 1, 2 e 3, mentre le funzioni 4–15 conservano il numero. La registrazione iniziale apre il principale su Info; morte e cambio eroe conservano pagina e cursore. Cambio squadra e rientro ripartono dai default.
-- Rimossi i due promemoria fissi negli angoli e il relativo spazio laterale. Descrizioni e tutti i binding sono nella preview e nella pagina Info. Negli altri menu i comandi stanno a sinistra e le opzioni a destra, separati da `|`; Info evita i comandi duplicati.
+- Rimossi i due promemoria fissi negli angoli e il relativo spazio laterale. Descrizioni e tutti i binding sono nella preview e nella pagina Info. La prima disposizione affiancava comandi e opzioni; la revisione successiva ripristina i comandi nei sottotitoli. Info evita i comandi duplicati.
 - Rimossi impostazione e cataloghi Server Location. L'HUD centrale mostra cozywatch.org, il sito della modalità.
 - Una Camera attiva viene fermata prima dei tre teletrasporti Travel riusciti e riavviata subito dopo. Al cambio del proprio eroe viene ricreata una sola volta, preservando modalità e bersaglio valido. Rimane un solo Start Camera centralizzato, senza nuove attese o cicli.
 - Aggiornati documentazione, regressioni e controlli GitHub. La release storica v0.8.1 conserva tag e contenuto precedente: il collegamento finale al changelog ora punta al file della revisione della release. La versione nominale resta 0.8.1.

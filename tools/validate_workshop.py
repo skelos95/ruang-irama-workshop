@@ -1466,7 +1466,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                                    f"DrawTravelMenu: English page content missing: {token}")
                 for token in ("Hold {0} / release: close", "{0}: next / {1}: prev",
                               "{0}: use / {1}+{2}: detach"):
-                    checks.require(token in teleport_call.args[3],
+                    checks.require(token in teleport_call.args[2],
                                    f"DrawTravelMenu: controls missing: {token}")
                 smooth_pastel = (
                     "Custom Color(190 + X Component Of(Event Player.MenuColor) * 0.250, "
@@ -1566,8 +1566,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if calls:
             checks.equal(calls[0].args[0].strip(), "Event Player",
                          f"{subroutine_target(rule)}: HUD menu non deve essere nascosto/precaricato")
-            checks.equal(calls[0].args[2].strip(), "Null",
-                         f"{subroutine_target(rule)}: controls must share Text rows instead of a subtitle")
+            checks.equal(calls[0].args[1].strip(), "Null",
+                         f"{subroutine_target(rule)}: keep the Header empty")
             checks.require(calls[0].args[3].strip() != "Null",
                            f"{subroutine_target(rule)}: menu content missing")
             checks.equal(calls[0].args[4].strip(), "Top", f"{subroutine_target(rule)}: HUD location")
@@ -1575,6 +1575,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             paired_rows = [custom for custom in iter_calls(calls[0].args[3], "Custom String")
                            if custom.args and parse_literal(custom.args[0]) == "{0} | {1}"]
             if subroutine_target(rule) == "DrawInfoMenu":
+                checks.equal(calls[0].args[2].strip(), "Null", "Info: no redundant command subtitle")
                 checks.require(not paired_rows, "Info: do not duplicate commands in a side column")
                 info_controls = (
                     ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
@@ -1606,38 +1607,33 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                               "Multijump ON", "Superman Punch ON"):
                     checks.require(token in calls[0].args[3], f"Info: description missing: {token}")
             else:
-                checks.require(3 <= len(paired_rows) <= 5,
-                               f"{subroutine_target(rule)}: expected three to five compact paired rows")
-                for row in paired_rows:
-                    checks.equal(len(row.args), 3, f"{subroutine_target(rule)}: paired row signature")
-                    if len(row.args) != 3:
-                        continue
-                    for side in row.args[1:]:
-                        literals = [parse_literal(custom.args[0]) for custom in iter_calls(side, "Custom String")
-                                    if custom.args]
-                        checks.require(not any(literal is not None and "\n" in literal for literal in literals),
-                                       f"{subroutine_target(rule)}: pair individual rows, not multiline columns")
-                    checks.require("Input Binding String(" in row.args[1] or 'Custom String("")' in row.args[1],
-                                   f"{subroutine_target(rule)}: commands must be on the left of the separator")
-                left_column = " ".join(row.args[1] for row in paired_rows if len(row.args) == 3)
+                subtitle = calls[0].args[2]
+                checks.require(subtitle.strip() != "Null" and "Input Binding String(" in subtitle,
+                               f"{subroutine_target(rule)}: commands must use Subheader")
+                checks.require("Input Binding String(" not in calls[0].args[3],
+                               f"{subroutine_target(rule)}: function Text must not duplicate input hints")
+                literals = [parse_literal(custom.args[0]) for custom in iter_calls(subtitle, "Custom String")
+                            if custom.args]
+                checks.require(not any(literal is not None and literal.startswith("\n") for literal in literals),
+                               f"{subroutine_target(rule)}: subtitle cannot start with an artificial blank line")
                 if subroutine_target(rule) != "DrawTravelMenu":
-                    close_controls = [custom for custom in iter_calls(left_column, "Custom String")
+                    close_controls = [custom for custom in iter_calls(subtitle, "Custom String")
                                       if len(custom.args) == 2
                                       and parse_literal(custom.args[0]) == "Hold {0} 0.5s: close"
                                       and custom.args[1].strip() == "Input Binding String(Button(Melee))"]
                     checks.require(bool(close_controls),
-                                   f"{subroutine_target(rule)}: left close command must bind Melee with a 0.5s hold")
+                                   f"{subroutine_target(rule)}: subtitle close command must bind Melee with a 0.5s hold")
                 for button in (("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload")
                                if subroutine_target(rule) == "DrawTravelMenu"
                                else ("Crouch", "Interact", "Reload", "Melee")
                                if subroutine_target(rule) != "DrawLuckMenu"
                                else ("Crouch", "Interact", "Reload", "Melee")):
-                    checks.require(f"Input Binding String(Button({button}))" in left_column,
-                                   f"{subroutine_target(rule)}: left command binding missing: {button}")
+                    checks.require(f"Input Binding String(Button({button}))" in subtitle,
+                                   f"{subroutine_target(rule)}: subtitle binding missing: {button}")
                 if subroutine_target(rule) == "DrawSoundtrackMenu":
                     for button in ("Ability 1", "Ability 2"):
-                        checks.require(f"Input Binding String(Button({button}))" in left_column,
-                                       f"Soundtrack: left command binding missing: {button}")
+                        checks.require(f"Input Binding String(Button({button}))" in subtitle,
+                                       f"Soundtrack: subtitle binding missing: {button}")
 
     info_renderer = rule_by_subroutine(rules, "DrawInfoMenu")
     checks.require(info_renderer is not None, "Info / Controls renderer missing")
@@ -1676,10 +1672,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             content = revenge_calls[0].args[3]
             checks.require("Count Of(Event Player.RevengeTargets) == 0" in content,
                            "Revenge must retain the empty target state")
-            for row in iter_calls(content, "Custom String"):
-                if len(row.args) == 3 and parse_literal(row.args[0]) == "{0} | {1}":
-                    checks.require("RevengeTargets" not in mask_strings(row.args[1]),
-                                   "Revenge commands must stay available when there are no targets")
+            checks.require("RevengeTargets" not in mask_strings(revenge_calls[0].args[2]),
+                           "Revenge commands must stay available when there are no targets")
 
     checks.require("Append To Array(Event Player.MenuHud" not in source,
                    "MenuHud non deve diventare un array di handle")
@@ -1747,8 +1741,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                        "Main menu: Dummy Follow description missing")
         checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW' in main_renderer.body,
                        "pagina 12 e pagina 13 non sono distinte")
-        checks.require("Hold {0}: hero + HP" in main_renderer.body
-                       and "Hold {0} 0.5s: Arcade | Hold {1} 0.5s: Camera" in main_renderer.body
+        checks.require("HERO + HP INSPECTION" in main_renderer.body
+                       and "ARCADE MENU / CAMERA QUICK TOGGLE" in main_renderer.body
                        and "Select for all controls" in main_renderer.body,
                        "Info preview must include the descriptions removed from the fixed HUDs")
 
@@ -3212,31 +3206,48 @@ End;
         page_calls = list(iter_calls(music_page.body, "Create HUD Text"))
         checks.equal(len(page_calls), 1, "Special profile: one Soundtrack HUD")
         if page_calls and len(page_calls[0].args) >= 4:
-            checks.equal(page_calls[0].args[2].strip(), "Null", "Locked Soundtrack: no command subtitle")
-            rows = [call for call in iter_calls(page_calls[0].args[3], "Custom String")
-                    if len(call.args) == 3 and parse_literal(call.args[0]) == "{0} | {1}"]
-            checks.equal(len(rows), 5, "Locked Soundtrack: five paired rows")
-            locked_bindings = []
+            def content_parts(expression: str) -> list[str]:
+                custom = full_custom_string(expression)
+                if custom and len(custom.args) == 3 and parse_literal(custom.args[0]) in ("{0} | {1}", "{0}\n{1}"):
+                    return content_parts(custom.args[1]) + content_parts(custom.args[2])
+                return [expression]
+
+            subtitle = page_calls[0].args[2]
+            checks.require(subtitle.strip() != "Null", "Locked Soundtrack: command subtitle missing")
+            functions = content_parts(page_calls[0].args[3])
+            subtitle_choice = parse_top_level_ternary(subtitle)
+            checks.require(subtitle_choice is not None,
+                           "Soundtrack commands must branch on the owner's soundtrack lock")
+            if subtitle_choice:
+                condition, locked_subtitle, ordinary_subtitle = subtitle_choice
+                checks.equal(code(condition), "EventPlayer.CustomSoundtrack!=Null",
+                             "Soundtrack commands must branch on the owner's soundtrack lock")
+            else:
+                locked_subtitle = ordinary_subtitle = subtitle
+            checks.equal(len(content_parts(locked_subtitle)), 3, "Locked Soundtrack: three compact command groups")
+            checks.equal(len(content_parts(ordinary_subtitle)), 5, "Soundtrack: five command groups in Subheader")
+            checks.equal(len(functions), 4, "Soundtrack: four function rows in Text")
+            locked_bindings = [call.args[0].strip() for call in iter_calls(locked_subtitle, "Input Binding String")
+                               if call.args]
             locked_values = []
-            unlocked_values = []
-            for row in rows:
-                for side in row.args[1:]:
-                    choice = parse_top_level_ternary(side)
-                    if choice is None:
-                        continue
-                    condition, locked, unlocked = choice
-                    checks.equal(code(condition), "EventPlayer.CustomSoundtrack!=Null",
-                                 "Soundtrack rows must branch on the owner's soundtrack lock")
-                    locked_bindings += [call.args[0].strip() for call in iter_calls(locked, "Input Binding String")
-                                        if call.args]
-                    locked_values += [parse_literal(call.args[0]) for call in iter_calls(locked, "Custom String")
-                                      if call.args]
-                    unlocked_values.append(unlocked)
+            unlocked_values = [ordinary_subtitle]
+            for part in functions:
+                choice = parse_top_level_ternary(part)
+                if choice is None:
+                    continue
+                condition, locked, unlocked = choice
+                checks.equal(code(condition), "EventPlayer.CustomSoundtrack!=Null",
+                             "Soundtrack rows must branch on the owner's soundtrack lock")
+                locked_bindings += [call.args[0].strip() for call in iter_calls(locked, "Input Binding String")
+                                    if call.args]
+                locked_values += [parse_literal(call.args[0]) for call in iter_calls(locked, "Custom String")
+                                  if call.args]
+                unlocked_values.append(unlocked)
             checks.equal(tuple(locked_bindings), ("Button(Crouch)", "Button(Reload)", "Button(Melee)"),
                          "Locked Soundtrack: only Crouch, back and close commands")
             checks.require("SOUNDTRACK LOCKED" in locked_values and "NOW: {0}" in locked_values,
                            "Locked Soundtrack: English heading and current value")
-            checks.require(any("Event Player.CustomSoundtrack" in side for row in rows for side in row.args[1:]),
+            checks.require(any("Event Player.CustomSoundtrack" in part for part in functions),
                            "Locked Soundtrack: display the custom soundtrack value")
             ordinary = " ".join(unlocked_values)
             for token in ("Event Player.GenreCursor", "Global.GenreNames", "{0}/{1}",
@@ -3391,8 +3402,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             in transition_code,
             "feedback visuale: Name Color deve mostrare il colore esatto della preview",
         )
-        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(255, 255, 255) :")
-                       in transition_code, "Info: white menu accent")
+        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(160, 195, 235) :")
+                       in transition_code, "Info: light blue menu accent")
         anchors = {
             2: (190, 210, 230), 3: (100, 110, 120),
             4: (255, 245, 215), 5: (255, 200, 70), 6: (236, 153, 0),
@@ -3426,7 +3437,7 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                          and re.sub(r"\s+", "", call.args[1]) == "InputBindingString(Button(Reload))"]
         checks.equal(len(back_controls), 1, "Locked Soundtrack: one English Reload back command")
         checks.require('Custom String("Hold {0}", Input Binding String(Button(Crouch)))' in music.body,
-                       "Locked Soundtrack: command column must show the Crouch modifier")
+                       "Locked Soundtrack: command subtitle must show the Crouch modifier")
 
 
 def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:

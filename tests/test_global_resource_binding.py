@@ -13,6 +13,7 @@ from pathlib import Path
 
 from tests.test_dummy_spawn_retry import SpawnExpression
 from tests.test_fly_motion import Vector
+from tests.runtime_selection import rule_for_logical_id
 from tools import validate_global_runtime as runtime
 from tools import validate_workshop as semantic
 
@@ -131,7 +132,7 @@ class ResourceExpressions:
         return expression
 
     def call_in(self, prefix, action):
-        rule = next(item for item in self.rules if item.name.startswith(prefix + " -"))
+        rule = rule_for_logical_id(self.rules, prefix)
         calls = list(semantic.iter_calls(rule.body, action))
         if len(calls) != 1:
             raise AssertionError((prefix, action, len(calls)))
@@ -240,7 +241,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
 
     def test_twelve_world_icons_track_owned_color_and_motion_after_shared_cursor_changes(self):
         model = self.model()
-        rule = next(item for item in model.rules if item.name.startswith("89e -"))
+        rule = semantic.rule_by_subroutine(model.rules, "UpdateSocialObjectiveIcons")
         icon = next(semantic.iter_calls(rule.body, "Create Icon"))
         installed = {}
         for index in range(12):

@@ -13,6 +13,7 @@ import unittest
 
 from tests.test_fly_motion import Vector
 from tests.test_global_controller_execution import ControllerExpression
+from tests.runtime_selection import rule_for_logical_id
 from tools import build_global_runtime as compiler
 from tools import check_clipboard_import as clipboard
 from tools import validate_workshop as semantic
@@ -222,7 +223,7 @@ class GlobalCompactionTests(unittest.TestCase):
     def test_main_menu_text_matches_every_cursor_with_live_states(self):
         original = next(rule for rule in self.rules if compiler.prefix(rule) == "91a")
         before = next(semantic.iter_calls(compiler.persistent(compiler.actor_text(original.body)), "Create HUD Text"))
-        after = next(semantic.iter_calls(next(rule for rule in self.emitted if compiler.prefix(rule) == "91a").body, "Create HUD Text"))
+        after = next(semantic.iter_calls(semantic.rule_by_subroutine(self.emitted, "DrawMainMenu").body, "Create HUD Text"))
         context = self.context()
         for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
             context.globals[name] = [f"{name}:{index}" for index in range(200)]
@@ -243,7 +244,7 @@ class GlobalCompactionTests(unittest.TestCase):
 
     def test_fixed_registry_arrays_keep_lengths_contents_and_initialization_order(self):
         original = next(rule for rule in self.rules if compiler.prefix(rule) == "00")
-        emitted = next(rule for rule in self.emitted if compiler.prefix(rule) == "00")
+        emitted = rule_for_logical_id(self.emitted, "00")
         wanted = {"AvailableHudSlots"}
         for statement in semantic.split_top_level(semantic.rule_block(original, "actions"), ";"):
             match = re.search(r"Global\.(\w+)\s*=\s*(Array\(.*\))\s*$", statement.strip(), re.S)
@@ -268,7 +269,7 @@ class GlobalCompactionTests(unittest.TestCase):
                  "ColorNames", "IconNames", "MenuPageNames"}
         tables = []
         for rules in (self.rules, self.emitted):
-            rule = next(rule for rule in rules if compiler.prefix(rule) == "00")
+            rule = rule_for_logical_id(rules, "00")
             body = re.sub(r'(?m)^[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:\r?\n|$)', "", semantic.rule_block(rule, "actions"))
             catalogue = {}
             for statement in semantic.split_top_level(body, ";"):

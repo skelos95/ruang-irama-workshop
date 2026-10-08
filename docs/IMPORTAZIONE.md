@@ -11,6 +11,10 @@
 
 L'unico codice da importare usa la grammatica nativa inglese. Anche identificatori, nomi delle regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese. Non tradurre manualmente le keyword. Al primo spawn il principale si apre sulla voce 0, Info / Controls; Crouch + Interact mostra la guida completa ai comandi.
 
+Le 127 regole sono numerate da 0 a 126 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
+
+Nel principale e negli altri menu i comandi contestuali sono nel sottotitolo (`Subheader`), mentre funzioni e opzioni sono nel corpo (`Text`). Info contiene tutti i comandi nel corpo e non li duplica nel sottotitolo. La leggibilità di questa nuova disposizione va verificata nel client.
+
 I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni dei test. Importa soltanto il file `.workshop` pubblico: contiene il runtime globale generato.
 
 ## Se l'importazione fallisce

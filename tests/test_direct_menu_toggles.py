@@ -289,10 +289,11 @@ class DirectMenuToggleTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("owner")
                 model.render_main("owner")
-                expression = model.hud_bodies[state["MenuHud"]]
+                expression = model.hud_commands[state["MenuHud"]]
                 rendered = model.evaluate(expression)
                 self.assertIn("Interact: select", rendered)
                 self.assertIn("Melee", rendered)
+                self.assertNotIn("Interact: select", model.evaluate(model.hud_bodies[state["MenuHud"]]))
 
 
 if __name__ == "__main__":

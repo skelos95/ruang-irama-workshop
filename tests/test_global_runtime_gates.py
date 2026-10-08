@@ -1,6 +1,8 @@
 """Mutation checks on the runtime gate, independently of specification tests."""
 import unittest
 from tools import validate_global_runtime as gate
+from tools import build_global_runtime as compiler
+from tools import validate_workshop as semantic
 
 
 MINIMAL = '''variables
@@ -16,7 +18,7 @@ subroutines
 {
  0: Gambar
 }
-rule("04g - Global main loop: Central scheduler at 20 Hz")
+rule("0 - Global main loop: Central scheduler at 20 Hz")
 {
  event
  {
@@ -34,7 +36,7 @@ rule("04g - Global main loop: Central scheduler at 20 Hz")
   Loop;
  }
 }
-rule("Gambar")
+rule("1 - Draw a HUD")
 {
  event
  {
@@ -45,7 +47,7 @@ rule("Gambar")
   Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Null, Custom String("OK"), Left, 1, Color(White), Color(White), Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor), Visible To String and Color, Default Visibility);
  }
 }
-rule("Catat")
+rule("2 - Record a death")
 {
  event
  {
@@ -80,6 +82,33 @@ class GlobalRuntimeGateTests(unittest.TestCase):
 
     def test_minimal_global_program_with_record_only_callback_is_valid(self):
         self.assertEqual(gate.validate_runtime(MINIMAL), [])
+
+    def test_duplicate_and_skipped_rule_numbers_are_rejected(self):
+        for invalid in ("0 - Draw a HUD", "3 - Draw a HUD"):
+            with self.subTest(label=invalid):
+                self.reject(MINIMAL.replace("1 - Draw a HUD", invalid),
+                            "numerazione regole consecutiva da 0")
+
+    def test_rule_number_suffixes_and_leading_zeroes_are_rejected(self):
+        for invalid in ("1a - Draw a HUD", "01 - Draw a HUD"):
+            with self.subTest(label=invalid):
+                self.reject(MINIMAL.replace("1 - Draw a HUD", invalid),
+                            "numerazione regole consecutiva da 0")
+
+    def test_numbering_changes_only_labels_and_preserves_rule_order_and_actions(self):
+        logical_labels = MINIMAL.replace("0 - Global main loop:", "04g - Global main loop:")
+        logical_labels = logical_labels.replace("1 - Draw a HUD", "91a - Draw a HUD")
+        logical_labels = logical_labels.replace("2 - Record a death", "12e - Record a death")
+        self.assertEqual(compiler.number_runtime_rules(logical_labels), MINIMAL)
+        before = semantic.extract_rules(logical_labels)
+        after = semantic.extract_rules(compiler.number_runtime_rules(logical_labels))
+        self.assertEqual([(semantic.event_block(rule), semantic.rule_block(rule, "actions")) for rule in before],
+                         [(semantic.event_block(rule), semantic.rule_block(rule, "actions")) for rule in after])
+
+    def test_scheduler_cadence_is_checked_without_a_legacy_number_or_title(self):
+        source = MINIMAL.replace("Global main loop: Central scheduler at 20 Hz", "Clock")
+        self.reject(source.replace("Wait(0.050, Ignore Condition)", "Wait(0.100, Ignore Condition)"),
+                    "cadenza scheduler")
 
     def test_each_player_controller_cannot_return(self):
         self.reject(MINIMAL.replace("Subroutine; Gambar;", "Ongoing - Each Player; All; All;"),
