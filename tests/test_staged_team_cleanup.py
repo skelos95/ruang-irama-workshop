@@ -33,34 +33,34 @@ class StagedTeamCleanupTests(unittest.TestCase):
             with self.subTest(source=name):
                 model = TeamTransitionEvaluator(source)
                 state = model.add("changing")
-                old_hud = model.globals["HudKiriPemain"][0]
-                self.assertFalse(state["MenuTerbuka"])
-                self.assertEqual(state["IndeksIkon"], 0)
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                old_hud = model.globals["PlayerListHudIds"][0]
+                self.assertFalse(state["MenuOpen"])
+                self.assertEqual(state["IconIndex"], 0)
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
                 model.change_team("changing", 2, 100.1)
                 self.assertTrue(model.start_worker("changing", 100.6, reserve=True))
-                self.assertEqual(model.phase_calls, [("changing", "TenangkanPemain", 100.6)])
+                self.assertEqual(model.phase_calls, [("changing", "QuiescePlayer", 100.6)])
                 self.assertEqual(model.destroyed, [])
-                self.assertEqual(model.globals["PemainManusia"], ["changing"])
+                self.assertEqual(model.globals["HumanPlayers"], ["changing"])
                 self.assertFalse(model.resume_worker("changing", 100.649))
                 self.assertFalse(model.register_ready("changing", 100.649))
                 self.assertTrue(model.resume_worker("changing", 100.65))
                 self.assertEqual(model.destroyed, [old_hud])
-                self.assertEqual(model.globals["PemainManusia"], [])
-                self.assertFalse(state["SudahSiap"])
+                self.assertEqual(model.globals["HumanPlayers"], [])
+                self.assertFalse(state["IsPrepared"])
                 self.assertFalse(model.register_ready("changing", 100.699))
                 self.assertEqual(model.created, [old_hud])
                 self.assertTrue(model.resume_worker("changing", 100.7))
-                self.assertTrue(state["SudahSiap"])
+                self.assertTrue(state["IsPrepared"])
                 self.assertEqual(model.phase_calls,
-                                 [("changing", "TenangkanPemain", 100.6),
-                                  ("changing", "BersihkanPemain", 100.65),
-                                  ("changing", "SiapkanPemain", 100.7)])
+                                 [("changing", "QuiescePlayer", 100.6),
+                                  ("changing", "CleanupPlayer", 100.65),
+                                  ("changing", "PreparePlayer", 100.7)])
                 self.assertTrue(model.register_ready("changing", 100.7))
                 self.assertEqual(len(model.created), 2)
-                self.assertNotEqual(model.globals["HudKiriPemain"][0], old_hud)
+                self.assertNotEqual(model.globals["PlayerListHudIds"][0], old_hud)
                 self.assertEqual(model.icons, {})
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
 
     def test_leave_or_despawn_at_either_wait_cancels_remaining_phases(self):
         for name, source in self.sources():
@@ -74,7 +74,7 @@ class StagedTeamCleanupTests(unittest.TestCase):
                         self.assertFalse(model.resume_worker("changing", wake))
                         self.assertEqual(model.phase_calls, calls)
                         self.assertEqual(model.destroyed, destroyed)
-                        self.assertFalse(model.players["changing"]["SudahSiap"])
+                        self.assertFalse(model.players["changing"]["IsPrepared"])
 
     def test_transient_native_loss_cannot_revive_an_aborted_wait(self):
         for name, source in self.sources():
@@ -98,19 +98,19 @@ class StagedTeamCleanupTests(unittest.TestCase):
                     registered = model.change_team("changing", 1, interruption)
                     self.assertEqual(registered, boundary == 1)
                     model.fast_tick("changing", interruption)
-                    self.assertEqual(model.players["changing"]["TimSiklusTarget"], 1)
-                    self.assertGreater(model.players["changing"]["WaktuSiklusTim"], wake)
-                    self.assertIsNone(model.globals["PemainSiklusGlobal"])
+                    self.assertEqual(model.players["changing"]["TeamCycleTargetTeam"], 1)
+                    self.assertGreater(model.players["changing"]["TeamCycleDeadline"], wake)
+                    self.assertIsNone(model.globals["TeamCyclePlayer"])
                     self.assertNotIn("changing", model.workers)
                     self.assertFalse(model.resume_worker("changing", wake))
                     self.assertEqual(model.phase_calls, calls)
                     self.assertEqual(model.destroyed, destroyed)
-                    deadline = model.players["changing"]["WaktuSiklusTim"]
+                    deadline = model.players["changing"]["TeamCycleDeadline"]
                     model.fast_tick("changing", deadline + 0.001)
-                    self.assertEqual(model.globals["PemainSiklusGlobal"], "changing")
+                    self.assertEqual(model.globals["TeamCyclePlayer"], "changing")
                     self.assertFalse(model.resume_worker("changing", deadline + 0.001))
-                    self.assertEqual(model.globals["PemainSiklusGlobal"], "changing")
-                    self.assertFalse(model.players["changing"]["SudahSiap"])
+                    self.assertEqual(model.globals["TeamCyclePlayer"], "changing")
+                    self.assertFalse(model.players["changing"]["IsPrepared"])
 
     def test_team_out_and_back_requires_a_fresh_stability_deadline(self):
         for name, source in self.sources():
@@ -123,13 +123,13 @@ class StagedTeamCleanupTests(unittest.TestCase):
                     model.change_team("changing", 2, interruption + 0.01)
                     model.fast_tick("changing", interruption + 0.01)
                     state = model.players["changing"]
-                    self.assertEqual(state["TimSiklusTarget"], 2)
-                    self.assertGreater(state["WaktuSiklusTim"], wake)
+                    self.assertEqual(state["TeamCycleTargetTeam"], 2)
+                    self.assertGreater(state["TeamCycleDeadline"], wake)
                     self.assertNotIn("changing", model.workers)
                     self.assertFalse(model.resume_worker("changing", wake))
                     self.assertFalse(model.start_worker("changing", wake, reserve=True))
                     self.assertEqual(model.phase_calls, calls)
-                    self.assertFalse(state["SudahSiap"])
+                    self.assertFalse(state["IsPrepared"])
 
     def test_new_owner_lease_survives_old_worker_resume_at_either_boundary(self):
         for name, source in self.sources():
@@ -137,16 +137,16 @@ class StagedTeamCleanupTests(unittest.TestCase):
                 with self.subTest(source=name, boundary=boundary):
                     model, interruption, wake = self.paused(source, boundary, other=True)
                     model.change_team("observer", 2, 100.12)
-                    model.globals["PemainSiklusGlobal"] = "observer"
+                    model.globals["TeamCyclePlayer"] = "observer"
                     model.observe_waits(interruption)
                     self.assertNotIn("changing", model.workers)
                     self.assertTrue(model.start_worker("observer", interruption))
                     observer_wait = model.workers["observer"]["waiting"]
                     self.assertFalse(model.resume_worker("changing", wake))
-                    self.assertEqual(model.globals["PemainSiklusGlobal"], "observer")
+                    self.assertEqual(model.globals["TeamCyclePlayer"], "observer")
                     self.assertEqual(model.workers["observer"]["waiting"], observer_wait)
-                    self.assertFalse(model.players["changing"]["SudahSiap"])
-                    self.assertFalse(any(owner == "changing" and routine == "SiapkanPemain"
+                    self.assertFalse(model.players["changing"]["IsPrepared"])
+                    self.assertFalse(any(owner == "changing" and routine == "PreparePlayer"
                                          for owner, routine, _ in model.phase_calls))
 
     def test_post_wait_native_change_is_caught_by_explicit_wake_guard(self):
@@ -159,7 +159,7 @@ class StagedTeamCleanupTests(unittest.TestCase):
                     self.assertNotIn("changing", model.workers)
                     self.assertEqual(model.phase_calls, calls)
                     self.assertEqual(model.destroyed, destroyed)
-                    self.assertFalse(model.players["changing"]["SudahSiap"])
+                    self.assertFalse(model.players["changing"]["IsPrepared"])
 
     def test_twelve_queued_plain_owners_keep_identity_and_cleanup_scratch_separate(self):
         for name, source in self.sources():
@@ -169,37 +169,37 @@ class StagedTeamCleanupTests(unittest.TestCase):
                 for owner in owners:
                     model.add(owner)
                     model.change_team(owner, 2, 100.1)
-                old_huds = set(model.globals["HudKiriPemain"])
+                old_huds = set(model.globals["PlayerListHudIds"])
                 for index, owner in enumerate(owners):
                     now = 100.6 + index * 0.351
                     for queued in owners[index:]:
                         model.fast_tick(queued, now)
-                    self.assertEqual(model.globals["PemainSiklusGlobal"], owner)
+                    self.assertEqual(model.globals["TeamCyclePlayer"], owner)
                     self.assertTrue(model.start_worker(owner, now))
                     # Interleave another player's scheduler context while this
                     # worker sleeps; resumed cleanup must still own Event Player.
                     if index + 1 < len(owners):
                         model.fast_tick(owners[index + 1], now + 0.025)
                     self.assertTrue(model.resume_worker(owner, now + 0.05))
-                    self.assertIsNone(model.globals["PemainPembersihan"])
-                    self.assertEqual(model.globals["IndeksPembersihan"], -1)
+                    self.assertIsNone(model.globals["CleanupSubject"])
+                    self.assertEqual(model.globals["CleanupPlayerIndex"], -1)
                     self.assertTrue(model.resume_worker(owner, now + 0.1))
                     self.assertTrue(model.register_ready(owner, now + 0.1))
                     model.fast_tick(owner, now + 0.1)
-                    self.assertIsNone(model.globals["PemainSiklusGlobal"])
-                    self.assertFalse(model.players[owner]["PindahTimDiproses"])
-                    self.assertEqual(len(model.globals["PemainManusia"]), 12)
-                    self.assertEqual(model.globals["SlotHUDTersedia"], [])
+                    self.assertIsNone(model.globals["TeamCyclePlayer"])
+                    self.assertFalse(model.players[owner]["TeamChangeProcessed"])
+                    self.assertEqual(len(model.globals["HumanPlayers"]), 12)
+                    self.assertEqual(model.globals["AvailableHudSlots"], [])
                 self.assertCountEqual(model.destroyed, old_huds)
                 self.assertEqual(len(model.destroyed), 12)
-                self.assertEqual(len(set(model.globals["HudKiriPemain"])), 12)
-                self.assertTrue(old_huds.isdisjoint(model.globals["HudKiriPemain"]))
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                self.assertEqual(len(set(model.globals["PlayerListHudIds"])), 12)
+                self.assertTrue(old_huds.isdisjoint(model.globals["PlayerListHudIds"]))
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
                 self.assertEqual(model.icons, {})
                 self.assertEqual(model.workers, {})
                 for owner in owners:
                     self.assertEqual([routine for current, routine, _ in model.phase_calls if current == owner],
-                                     ["TenangkanPemain", "BersihkanPemain", "SiapkanPemain"])
+                                     ["QuiescePlayer", "CleanupPlayer", "PreparePlayer"])
 
 
 if __name__ == "__main__":

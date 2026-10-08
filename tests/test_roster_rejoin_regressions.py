@@ -11,12 +11,15 @@ from tests.test_fly_motion import Expression
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
-    (ROOT / "source" / "ruang_irama.it-IT.source", "regola", "Globale"),
+    (ROOT / "source" / "ruang_irama.en-US.source", "rule", "Global"),
     (ROOT / "tests" / "fixtures" / "semantic_reference.txt", "rule", "Global"),
 )
 
 
 def block(source: str, start: str, end: str) -> str:
+    # Rule IDs are stable when descriptions are translated or clarified.
+    start = re.match(r'(?:rule|regola)\("[A-Za-z0-9]+ - ', start)[0]
+    end = re.match(r'(?:rule|regola)\("[A-Za-z0-9]+ - ', end)[0]
     return source.split(start, 1)[1].split(end, 1)[0]
 
 
@@ -27,8 +30,8 @@ class LifecycleSourceEvaluator:
     Engine HUD rendering, event ordering, and entity lifetime still need live QA.
     """
 
-    ARRAYS = ("PemainManusia", "SlotHUDPemain", "HudKiriPemain",
-              "HudMenuPemain", "TeksDuniaPemain")
+    ARRAYS = ("HumanPlayers", "PlayerHudSlots", "PlayerListHudIds",
+              "MenuHudIds", "InspectionTextIds")
 
     def __init__(self, source: str) -> None:
         if re.search(r'(?m)^regola\(', source):
@@ -39,21 +42,22 @@ class LifecycleSourceEvaluator:
             source = "".join(segments)
         self.rules = validator.extract_rules(source)
         self.globals = {name: [] for name in self.ARRAYS}
-        self.globals.update(SlotHUDTersedia=list(range(12)), PemainSiklusGlobal=None,
-                            WaktuSiklusGlobal=0, PemainAktif=None)
+        self.globals.update(AvailableHudSlots=list(range(12)), TeamCyclePlayer=None,
+                            TeamCycleTime=0, ActivePlayer=None)
         self.players = {}
         self.event_player = None
         self.now = 0
         self.destroyed = []
         self.created = []
-        cleanup = validator.rule_by_subroutine(self.rules, "BersihkanPemain")
+        cleanup = validator.rule_by_subroutine(self.rules, "CleanupPlayer")
         self.cleanup = validator.mask_strings(validator.rule_block(cleanup, "actions"))
         classifier = next(rule for rule in self.rules
-                          if "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+                          if "Append To Array(Global.HumanPlayers, Event Player)" in rule.body)
         self.classifier = validator.mask_strings(validator.rule_block(classifier, "actions"))
 
     def resolve(self, name):
         constants = {"True": True, "False": False, "Null": None,
+                     "White": (255, 255, 255, 255),
                      "TotalTimeElapsed": self.now, "EventPlayer": self.event_player,
                      "CurrentArrayElement": "sort-key",
                      "LastTextID": self.created[-1] if self.created else 0}
@@ -68,6 +72,7 @@ class LifecycleSourceEvaluator:
         raise AssertionError(f"unsupported lifecycle value {name}")
 
     def call(self, name, args):
+        if name == "Color": return args[0]
         if name == "And": return all(args)
         if name == "Or": return any(args)
         if name == "CountOf": return len(args[0])
@@ -130,59 +135,59 @@ class LifecycleSourceEvaluator:
 
     def tick_pending(self, identity, now):
         self.now = now
-        self.globals["PemainAktif"] = identity
+        self.globals["ActivePlayer"] = identity
         scheduler = next(rule for rule in self.rules
                          if validator.event_type(rule) == "Ongoing - Global"
-                         and "Call Subroutine(ProsesCepatPemain);" in rule.body)
-        self.execute_atomic(self.source_branch(scheduler, "Global.PemainSiklusGlobal = Null;"))
-        fast = validator.rule_by_subroutine(self.rules, "ProsesCepatPemain")
-        self.execute_atomic(self.source_branch(fast, "Global.PemainAktif.TimSiklusTarget = Team Of(Global.PemainAktif);"))
-        self.execute_atomic(self.source_branch(fast, "Global.PemainSiklusGlobal = Global.PemainAktif;"))
+                         and "Call Subroutine(ProcessPlayerFastState);" in rule.body)
+        self.execute_atomic(self.source_branch(scheduler, "Global.TeamCyclePlayer = Null;"))
+        fast = validator.rule_by_subroutine(self.rules, "ProcessPlayerFastState")
+        self.execute_atomic(self.source_branch(fast, "Global.ActivePlayer.TeamCycleTargetTeam = Team Of(Global.ActivePlayer);"))
+        self.execute_atomic(self.source_branch(fast, "Global.TeamCyclePlayer = Global.ActivePlayer;"))
 
     def close_menu(self, identity):
         self.event_player = identity
-        rule = validator.rule_by_subroutine(self.rules, "TutupMenu")
+        rule = validator.rule_by_subroutine(self.rules, "CloseMenu")
         actions = validator.rule_block(rule, "actions")
-        self.execute_atomic(actions.split("Event Player.MenuTerbuka = False;", 1)[0])
+        self.execute_atomic(actions.split("Event Player.MenuOpen = False;", 1)[0])
 
     def join(self, identity):
         self.event_player = identity
         self.players.setdefault(identity, {"team": 1, "spawned": True, "exists": True, "dummy": False})
-        duplicate = re.search(r"Abort If\((Array Contains\(Global.PemainManusia, Event Player\))\);", self.classifier)
-        empty = re.search(r"If\((Count Of\(Global.SlotHUDTersedia\) == 0)\);", self.classifier)
+        duplicate = re.search(r"Abort If\((Array Contains\(Global.HumanPlayers, Event Player\))\);", self.classifier)
+        empty = re.search(r"If\((Count Of\(Global.AvailableHudSlots\) == 0)\);", self.classifier)
         if self.evaluate(duplicate.group(1)) or self.evaluate(empty.group(1)):
             return False
         for statement in self.classifier.split(";"):
             statement = statement.strip()
-            if statement.startswith("Event Player.UrutanHUD ="):
+            if statement.startswith("Event Player.HudSlot ="):
                 self.execute_assignment(statement)
             elif re.match(r"Global\.(?:" + "|".join(self.ARRAYS) + r") = Append To Array\(", statement):
                 self.execute_assignment(statement)
-            elif statement == "Modify Global Variable(SlotHUDTersedia, Remove From Array By Index, 0)":
-                self.globals["SlotHUDTersedia"].pop(0)
+            elif statement == "Modify Global Variable(AvailableHudSlots, Remove From Array By Index, 0)":
+                self.globals["AvailableHudSlots"].pop(0)
         return True
 
     def remove(self, identity):
         self.event_player = identity
-        for name in ("PemainPembersihan", "IndeksKeluar"):
+        for name in ("CleanupSubject", "LeavingPlayerIndex"):
             expression = re.search(rf"Global\.{name} = ([^;]+);", self.cleanup).group(1)
             self.globals[name] = self.evaluate(expression)
-        recycle_position = self.cleanup.index("Global.SlotHUDTersedia =")
+        recycle_position = self.cleanup.index("Global.AvailableHudSlots =")
         branches = validator.conditional_branches_containing(self.cleanup, recycle_position)
         guard = branches[0].splitlines()[0].strip()[3:-2]
         if not self.evaluate(guard):
             return
         for statement in branches[0].split(";"):
             statement = statement.strip()
-            if re.match(r"Global\.(IndeksPembersihan|IndeksUtangKeluar|SlotHUDTersedia) =", statement):
+            if re.match(r"Global\.(CleanupPlayerIndex|LeavingDebtIndex|AvailableHudSlots) =", statement):
                 self.execute_assignment(statement)
-            elif re.match(r"Destroy (?:HUD|In-World) Text\(Global\.(?:HudKiriPemain|HudMenuPemain|TeksDuniaPemain)\[", statement):
+            elif re.match(r"Destroy (?:HUD|In-World) Text\(Global\.(?:PlayerListHudIds|MenuHudIds|InspectionTextIds)\[", statement):
                 expression = statement[statement.index("(") + 1:-1]
                 handle = self.evaluate(expression)
                 if handle:
                     self.destroyed.append(handle)
             else:
-                removal = re.fullmatch(r"Modify Global Variable\((\w+), Remove From Array By Index, (Global\.IndeksPembersihan)\)", statement)
+                removal = re.fullmatch(r"Modify Global Variable\((\w+), Remove From Array By Index, (Global\.CleanupPlayerIndex)\)", statement)
                 if removal:
                     self.globals[removal.group(1)].pop(int(self.evaluate(removal.group(2))))
 
@@ -195,9 +200,9 @@ class LifecycleSourceEvaluator:
             statement = statement.strip()
             if statement.startswith("Create HUD Text("):
                 self.created.append(10000 + len(self.created))
-            elif re.match(r"Event Player\.Hud\w+ = Last Text ID$", statement):
+            elif re.match(r"Event Player\.PlayerListHud = Last Text ID$", statement):
                 self.execute_assignment(statement)
-            elif re.match(r"Global\.Hud\w+Pemain\[.*\] = Event Player\.Hud\w+$", statement):
+            elif re.match(r"Global\.PlayerListHudIds\[.*\] = Event Player\.PlayerListHud$", statement):
                 self.execute_assignment(statement)
         return True
 
@@ -219,7 +224,7 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
                 self.assertEqual(len(model.created), 12)
                 for turn in range(120):
                     identity = f"player-{turn % 12}"
-                    old_handle = model.globals["HudKiriPemain"][model.globals["PemainManusia"].index(identity)]
+                    old_handle = model.globals["PlayerListHudIds"][model.globals["HumanPlayers"].index(identity)]
                     model.remove(identity)
                     model.remove(identity)
                     self.assertEqual(model.destroyed.count(old_handle), 1)
@@ -227,14 +232,14 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
                     self.assertFalse(model.join_with_roster_hud(identity))
                     live = set(model.created) - set(model.destroyed)
                     self.assertEqual(len(live), 12)
-                    self.assertEqual(live, set(model.globals["HudKiriPemain"]))
+                    self.assertEqual(live, set(model.globals["PlayerListHudIds"]))
                     self.assertTrue(all(len(model.globals[name]) == 12 for name in model.ARRAYS))
-                for identity in list(model.globals["PemainManusia"]):
+                for identity in list(model.globals["HumanPlayers"]):
                     model.remove(identity)
                 self.assertEqual(set(model.created), set(model.destroyed))
                 self.assertEqual(len(model.destroyed), len(model.created))
                 self.assertTrue(all(not model.globals[name] for name in model.ARRAYS))
-                self.assertEqual(model.globals["SlotHUDTersedia"], list(range(12)))
+                self.assertEqual(model.globals["AvailableHudSlots"], list(range(12)))
 
     def test_leave_rejoin_reuses_only_the_freed_slot_without_inheriting_handles(self):
         model = self.model()
@@ -244,14 +249,14 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
             model.globals[array] = [100 + offset, 200 + offset, 300 + offset]
         model.remove("bob")
         self.assertEqual(model.destroyed, [200, 201, 202])
-        self.assertEqual(model.globals["PemainManusia"], ["alice", "carol"])
-        self.assertEqual(model.globals["SlotHUDPemain"], [0, 2])
+        self.assertEqual(model.globals["HumanPlayers"], ["alice", "carol"])
+        self.assertEqual(model.globals["PlayerHudSlots"], [0, 2])
         model.remove("bob")
         self.assertTrue(model.join("dave"))
-        self.assertEqual(model.globals["SlotHUDPemain"], [0, 2, 1])
+        self.assertEqual(model.globals["PlayerHudSlots"], [0, 2, 1])
         for array in model.ARRAYS[2:]:
             self.assertEqual(model.globals[array][-1], 0)
-        before = {key: list(model.globals[key]) for key in model.ARRAYS + ("SlotHUDTersedia",)}
+        before = {key: list(model.globals[key]) for key in model.ARRAYS + ("AvailableHudSlots",)}
         model.remove("bob")
         self.assertEqual(before, {key: model.globals[key] for key in before})
         self.assertEqual(len(model.destroyed), 3)
@@ -265,8 +270,8 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
             self.assertTrue(model.join("alice"))
             self.assertFalse(model.join("alice"))
             self.assertTrue(all(len(model.globals[array]) == 2 for array in model.ARRAYS))
-            self.assertEqual(sorted(model.globals["SlotHUDPemain"] + model.globals["SlotHUDTersedia"]), list(range(12)))
-            self.assertEqual(len(set(model.globals["SlotHUDTersedia"])), 10)
+            self.assertEqual(sorted(model.globals["PlayerHudSlots"] + model.globals["AvailableHudSlots"]), list(range(12)))
+            self.assertEqual(len(set(model.globals["AvailableHudSlots"])), 10)
 
     def test_full_lobby_rejects_extra_join_then_admits_a_new_identity_to_freed_slot(self):
         model = self.model()
@@ -275,41 +280,41 @@ class ExecutedRosterLifecycleTests(unittest.TestCase):
         self.assertFalse(model.join("extra"))
         model.remove("player-5")
         self.assertTrue(model.join("extra"))
-        self.assertEqual(model.players["extra"]["UrutanHUD"], 5)
-        self.assertEqual(model.globals["SlotHUDTersedia"], [])
+        self.assertEqual(model.players["extra"]["HudSlot"], 5)
+        self.assertEqual(model.globals["AvailableHudSlots"], [])
 
     def test_rapid_second_team_switch_updates_pending_target_without_blocking_next_player(self):
         model = self.model()
         model.players["alice"] = {"team": 2, "spawned": True, "exists": True, "dummy": False,
-                                  "PindahTimDiproses": True, "TimSiklusTarget": 1, "WaktuSiklusTim": 10}
-        model.globals["PemainSiklusGlobal"] = "alice"
+                                  "TeamChangeProcessed": True, "TeamCycleTargetTeam": 1, "TeamCycleDeadline": 10}
+        model.globals["TeamCyclePlayer"] = "alice"
         model.tick_pending("alice", 10)
-        self.assertEqual(model.players["alice"]["TimSiklusTarget"], 2)
-        self.assertEqual(model.players["alice"]["WaktuSiklusTim"], 10.25)
-        self.assertIsNone(model.globals["PemainSiklusGlobal"])
+        self.assertEqual(model.players["alice"]["TeamCycleTargetTeam"], 2)
+        self.assertEqual(model.players["alice"]["TeamCycleDeadline"], 10.25)
+        self.assertIsNone(model.globals["TeamCyclePlayer"])
         model.tick_pending("alice", 10.24)
-        self.assertIsNone(model.globals["PemainSiklusGlobal"])
+        self.assertIsNone(model.globals["TeamCyclePlayer"])
         model.tick_pending("alice", 10.25)
-        self.assertEqual(model.globals["PemainSiklusGlobal"], "alice")
+        self.assertEqual(model.globals["TeamCyclePlayer"], "alice")
         model.players["alice"]["spawned"] = False
         model.players["bob"] = {"team": 1, "spawned": True, "exists": True, "dummy": False,
-                                "PindahTimDiproses": True, "TimSiklusTarget": 1, "WaktuSiklusTim": 10}
+                                "TeamChangeProcessed": True, "TeamCycleTargetTeam": 1, "TeamCycleDeadline": 10}
         model.tick_pending("bob", 10.30)
-        self.assertIsNone(model.globals["PemainSiklusGlobal"])
+        self.assertIsNone(model.globals["TeamCyclePlayer"])
         model.tick_pending("bob", 10.55)
-        self.assertEqual(model.globals["PemainSiklusGlobal"], "bob")
+        self.assertEqual(model.globals["TeamCyclePlayer"], "bob")
 
     def test_menu_cleanup_finds_canonical_handle_even_when_local_handle_was_lost(self):
         for local_handle, expected_destroyed in ((None, [501]), (501, [501]), (502, [501, 502])):
             with self.subTest(local_handle=local_handle):
                 model = self.model()
                 model.join("alice")
-                model.globals["HudMenuPemain"][0] = 501
-                model.players["alice"]["HudMenu"] = local_handle
+                model.globals["MenuHudIds"][0] = 501
+                model.players["alice"]["MenuHud"] = local_handle
                 model.close_menu("alice")
                 self.assertEqual(model.destroyed, expected_destroyed)
-                self.assertEqual(model.globals["HudMenuPemain"], [0])
-                self.assertIsNone(model.players["alice"]["HudMenu"])
+                self.assertEqual(model.globals["MenuHudIds"], [0])
+                self.assertIsNone(model.players["alice"]["MenuHud"])
                 model.close_menu("alice")
                 self.assertEqual(model.destroyed, expected_destroyed)
 
@@ -335,40 +340,40 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             source = path.read_text(encoding="utf-8")
             left = block(
                 source,
-                f'{rule_kw}("04 - Pemain Keluar: Bersihkan hanya saat benar-benar keluar")',
-                f'{rule_kw}("04g - Utama global: Penjadwal pusat 20 Hz")',
+                f'{rule_kw}("04 - Player left: Clean up only after an actual departure")',
+                f'{rule_kw}("04g - Global main loop: Central scheduler at 20 Hz")',
             )
             self.assertIn("Wait(0.500,", left)
             self.assertIn("Abort If(Entity Exists(Event Player) == True);", left)
-            self.assertIn("Call Subroutine(BersihkanPemain);", left)
+            self.assertIn("Call Subroutine(CleanupPlayer);", left)
             self.assertNotIn("Custom String(\"{0}\", Event Player)", left)
 
             cleanup = block(
                 source,
-                f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")',
+                f'{rule_kw}("93c - Subroutine: Clear references to players who actually left")',
                 f'{rule_kw}("94 - Subrutin: Siapkan pemain',
             )
             recycle = (
-                f"{global_name}.SlotHUDTersedia = Sorted Array(Append To Array("
-                f"{global_name}.SlotHUDTersedia, {global_name}.IndeksUtangKeluar), Current Array Element);"
+                f"{global_name}.AvailableHudSlots = Sorted Array(Append To Array("
+                f"{global_name}.AvailableHudSlots, {global_name}.LeavingDebtIndex), Current Array Element);"
             )
             self.assertIn(recycle, cleanup)
-            self.assertIn("Modify Global Variable(SlotHUDPemain, Remove From Array By Index", cleanup)
-            self.assertIn("Modify Global Variable(PemainManusia, Remove From Array By Index", cleanup)
+            self.assertIn("Modify Global Variable(PlayerHudSlots, Remove From Array By Index", cleanup)
+            self.assertIn("Modify Global Variable(HumanPlayers, Remove From Array By Index", cleanup)
 
     def test_duplicate_and_temporarily_blank_names_never_own_or_replace_roster_identity(self):
         for path, rule_kw, global_name in SOURCES:
             source = path.read_text(encoding="utf-8")
             classifier = block(
                 source,
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
+                f'{rule_kw}("02 - Player: Classify humans and automatic bots")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            capture = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
-            allocation = f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);"
+            capture = 'Event Player.DisplayName = Evaluate Once(Custom String("{0}", Event Player));'
+            allocation = f"Event Player.HudSlot = First Of({global_name}.AvailableHudSlots);"
             self.assertIn(capture, classifier)
             self.assertIn(allocation, classifier)
-            self.assertIn(f"{global_name}.PemainManusia = Append To Array({global_name}.PemainManusia, Event Player);", classifier)
+            self.assertIn(f"{global_name}.HumanPlayers = Append To Array({global_name}.HumanPlayers, Event Player);", classifier)
             between_capture_and_slot = classifier.split(capture, 1)[1].split(allocation, 1)[0]
             self.assertNotIn("Index Of Array Value", between_capture_and_slot)
             self.assertNotIn("NamaSlotHUD", classifier)
@@ -376,25 +381,25 @@ class RosterRejoinRegressionTests(unittest.TestCase):
 
             roster = block(
                 source,
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
+                f'{rule_kw}("02 - Player: Classify humans and automatic bots")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
             self.assertIn(
-                'And(Event Player.NamaTampilan != Null, Event Player.NamaTampilan != Custom String(""))',
+                'And(Event Player.DisplayName != Null, Event Player.DisplayName != Custom String(""))',
                 roster,
             )
 
             fast = block(
                 source,
-                f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")',
+                f'{rule_kw}("89a - Subroutine: Process fast player state")',
                 f'{rule_kw}("89b - Subrutin',
             )
             self.assertIn(
-                f'Custom String("{{0}}", {global_name}.PemainAktif) != Custom String("")',
+                f'Custom String("{{0}}", {global_name}.ActivePlayer) != Custom String("")',
                 fast,
             )
             self.assertIn(
-                f'{global_name}.PemainAktif.NamaTampilan = Evaluate Once(Custom String("{{0}}", {global_name}.PemainAktif));',
+                f'{global_name}.ActivePlayer.DisplayName = Evaluate Once(Custom String("{{0}}", {global_name}.ActivePlayer));',
                 fast,
             )
 
@@ -403,22 +408,22 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             source = path.read_text(encoding="utf-8")
             classifier = block(
                 source,
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
+                f'{rule_kw}("02 - Player: Classify humans and automatic bots")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            capture = 'Event Player.NamaTampilan = Evaluate Once(Custom String("{0}", Event Player));'
-            allocation = f"Event Player.UrutanHUD = First Of({global_name}.SlotHUDTersedia);"
+            capture = 'Event Player.DisplayName = Evaluate Once(Custom String("{0}", Event Player));'
+            allocation = f"Event Player.HudSlot = First Of({global_name}.AvailableHudSlots);"
             self.assertIn(capture, classifier)
             self.assertIn(allocation, classifier)
             before_allocation = classifier.split(capture, 1)[1].split(allocation, 1)[0]
             blank_name_gate = (
-                'If(Or(Event Player.NamaTampilan == Null, '
-                'Event Player.NamaTampilan == Custom String("")));'
+                'If(Or(Event Player.DisplayName == Null, '
+                'Event Player.DisplayName == Custom String("")));'
             )
             self.assertIn(blank_name_gate, before_allocation)
             blank_retry = before_allocation.split(blank_name_gate, 1)[1]
-            self.assertIn("Event Player.SudahDiperiksa = False;", blank_retry)
-            self.assertIn("Event Player.SudahSiap = False;", blank_retry)
+            self.assertIn("Event Player.IsClassified = False;", blank_retry)
+            self.assertIn("Event Player.IsPrepared = False;", blank_retry)
             self.assertIn("Abort;", blank_retry)
             self.assertNotIn("Remove From Array By Index", blank_retry)
 
@@ -427,16 +432,16 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             source = path.read_text(encoding="utf-8")
             cleanup = block(
                 source,
-                f'{rule_kw}("93c - Subrutin: Bersihkan referensi pemain yang benar-benar keluar")',
+                f'{rule_kw}("93c - Subroutine: Clear references to players who actually left")',
                 f'{rule_kw}("94 - Subrutin: Siapkan pemain',
             )
             voters = (
-                f"Filtered Array({global_name}.PemainManusia, "
-                f"Player Variable(Current Array Element, PemainDipilih) == "
-                f"{global_name}.PemainPembersihan)"
+                f"Filtered Array({global_name}.HumanPlayers, "
+                f"Player Variable(Current Array Element, VotedPlayer) == "
+                f"{global_name}.CleanupSubject)"
             )
-            clear_votes = f"Set Player Variable({voters}, PemainDipilih, Null);"
-            roster_removal = "Modify Global Variable(PemainManusia, Remove From Array By Index"
+            clear_votes = f"Set Player Variable({voters}, VotedPlayer, Null);"
+            roster_removal = "Modify Global Variable(HumanPlayers, Remove From Array By Index"
             self.assertIn(clear_votes, cleanup)
             self.assertIn(roster_removal, cleanup)
             self.assertLess(cleanup.index(clear_votes), cleanup.index(roster_removal))
@@ -450,11 +455,11 @@ class RosterRejoinRegressionTests(unittest.TestCase):
                 f'{rule_kw}("95 - Subrutin: Segarkan daftar tontonan',
             )
             for expected in (
-                "Event Player.PemainDipilih = Null;",
-                "Event Player.JumlahPilihan = 0;",
-                "Event Player.KebalAktif = False;",
-                "Event Player.KursorKebal = 0;",
-                "Event Player.ModeKebal = 0;",
+                "Event Player.VotedPlayer = Null;",
+                "Event Player.VoteCount = 0;",
+                "Event Player.UnkillableActive = False;",
+                "Event Player.UnkillableCursor = 0;",
+                "Event Player.UnkillableMode = 0;",
             ):
                 self.assertIn(expected, setup)
 
@@ -463,42 +468,42 @@ class RosterRejoinRegressionTests(unittest.TestCase):
             source = path.read_text(encoding="utf-8")
             fast = block(
                 source,
-                f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")',
+                f'{rule_kw}("89a - Subroutine: Process fast player state")',
                 f'{rule_kw}("89b - Subrutin',
             )
-            self.assertIn(f"{global_name}.PemainAktif.KebalAktif == True", fast)
-            self.assertIn(f"Has Status({global_name}.PemainAktif, Unkillable) == False", fast)
-            self.assertIn(f"Set Status({global_name}.PemainAktif, Null, Unkillable, 9999);", fast)
-            self.assertIn(f"Set Damage Received({global_name}.PemainAktif, 0);", fast)
+            self.assertIn(f"{global_name}.ActivePlayer.UnkillableActive == True", fast)
+            self.assertIn(f"Has Status({global_name}.ActivePlayer, Unkillable) == False", fast)
+            self.assertIn(f"Set Status({global_name}.ActivePlayer, Null, Unkillable, 9999);", fast)
+            self.assertIn(f"Set Damage Received({global_name}.ActivePlayer, 0);", fast)
 
     def test_special_player_rejoin_uses_documented_defaults(self):
         for path, rule_kw, global_name in SOURCES:
             source = path.read_text(encoding="utf-8")
             classifier = block(
                 source,
-                f'{rule_kw}("02 - Pemain: Pisahkan manusia dari pasukan kaleng")',
+                f'{rule_kw}("02 - Player: Classify humans and automatic bots")',
                 f'{rule_kw}("03c - Bot/Dummy',
             )
-            self.assertIn('If(Event Player.NamaTampilan == Custom String("งูแรร์"));', classifier)
+            self.assertIn('If(Event Player.DisplayName == Custom String("งูแรร์"));', classifier)
             self.assertNotIn('If(Custom String("{0}", Event Player) == Custom String("งูแรร์"));', classifier)
-            self.assertIn('Event Player.MusikKhusus = Custom String("Draconian");', classifier)
-            self.assertIn("Event Player.IndeksWarna = 2;", classifier)
-            self.assertIn("Event Player.KursorWarna = 2;", classifier)
-            self.assertIn("Event Player.IndeksIkon = 23;", classifier)
-            self.assertIn("Event Player.KursorIkon = 23;", classifier)
+            self.assertIn('Event Player.CustomSoundtrack = Custom String("Draconian");', classifier)
+            self.assertIn("Event Player.ColorIndex = 2;", classifier)
+            self.assertIn("Event Player.ColorCursor = 2;", classifier)
+            self.assertIn("Event Player.IconIndex = 23;", classifier)
+            self.assertIn("Event Player.IconCursor = 23;", classifier)
             self.assertNotIn("Profil", classifier)
 
             fast = block(
                 source,
-                f'{rule_kw}("89a - Subrutin: Proses status cepat pemain")',
+                f'{rule_kw}("89a - Subroutine: Process fast player state")',
                 f'{rule_kw}("89b - Subrutin',
             )
             self.assertIn(
-                f'If({global_name}.PemainAktif.NamaTampilan == Custom String("งูแรร์"));',
+                f'If({global_name}.ActivePlayer.DisplayName == Custom String("งูแรร์"));',
                 fast,
             )
             self.assertNotIn(
-                f'If(Custom String("{{0}}", {global_name}.PemainAktif) == Custom String("งูแรร์"));',
+                f'If(Custom String("{{0}}", {global_name}.ActivePlayer) == Custom String("งูแรร์"));',
                 fast,
             )
 

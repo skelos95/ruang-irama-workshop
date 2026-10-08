@@ -23,29 +23,29 @@ class HeroSelectionEvaluator(AuditLifecycleEvaluator):
         self.scheduler = project(
             statements(validator.rule_block(scheduler, "actions")), self.keep
         )
-        fast = validator.rule_by_subroutine(self.rules, "ProsesCepatPemain")
+        fast = validator.rule_by_subroutine(self.rules, "ProcessPlayerFastState")
         self.fast = project(statements(validator.rule_block(fast, "actions")), self.keep)
-        setup = validator.rule_by_subroutine(self.rules, "SiapkanPemain")
+        setup = validator.rule_by_subroutine(self.rules, "PreparePlayer")
         self.setup = project(statements(validator.rule_block(setup, "actions")), self.keep)
 
     @staticmethod
     def keep(token):
         return bool(
-            re.match(r"Global\.(PemainAktif|SalinanDaftarPemain) =", token)
+            re.match(r"Global\.(ActivePlayer|PlayerListSnapshot) =", token)
             or re.match(
-                r"(?:Global\.PemainAktif|Event Player)\."
-                r"(?:WaktuPilihPahlawan|PilihanPahlawanSelesai) =", token
+                r"(?:Global\.ActivePlayer|Event Player)\."
+                r"(?:AutoHeroSelectionDeadline|AutoHeroSelectionComplete) =", token
             )
             or token.startswith("Start Forcing Player To Be Hero(")
             or token.startswith("Stop Forcing Player To Be Hero(")
-            or token == "Call Subroutine(ProsesCepatPemain)"
+            or token == "Call Subroutine(ProcessPlayerFastState)"
         )
 
     def add(self, identity, team=1, **changes):
         state = dict(
-            team=team, exists=True, dummy=False, BotOtomatis=False,
-            spawned=False, alive=False, Manusia=False, slot=0,
-            WaktuPilihPahlawan=0, PilihanPahlawanSelesai=False,
+            team=team, exists=True, dummy=False, IsAutomaticBot=False,
+            spawned=False, alive=False, IsHuman=False, slot=0,
+            AutoHeroSelectionDeadline=0, AutoHeroSelectionComplete=False,
             hero=None, forced_hero=None,
         )
         state.update(changes)
@@ -76,8 +76,8 @@ class HeroSelectionEvaluator(AuditLifecycleEvaluator):
 
     def execute(self, nodes):
         for node in nodes:
-            if node[0] == "Call Subroutine(ProsesCepatPemain)":
-                self.calls.append((self.globals["PemainAktif"], "ProsesCepatPemain"))
+            if node[0] == "Call Subroutine(ProcessPlayerFastState)":
+                self.calls.append((self.globals["ActivePlayer"], "ProcessPlayerFastState"))
                 self.execute(self.fast)
             elif node[0].startswith(("Start Forcing Player To Be Hero(",
                                      "Stop Forcing Player To Be Hero(")):
@@ -88,7 +88,7 @@ class HeroSelectionEvaluator(AuditLifecycleEvaluator):
 
     def tick(self, now, tick=20):
         self.now = now
-        self.globals["LangkahPenjadwal"] = tick
+        self.globals["SchedulerStep"] = tick
         self.execute(self.scheduler)
 
     def prepare(self, identity):
@@ -110,10 +110,10 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("waiting")
                 model.tick(10)
-                self.assertEqual(state["WaktuPilihPahlawan"], 70)
-                self.assertFalse(state["PilihanPahlawanSelesai"])
-                self.assertEqual(model.globals["PemainManusia"], [])
-                self.assertEqual(model.globals["SlotHUDTersedia"], list(range(12)))
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 70)
+                self.assertFalse(state["AutoHeroSelectionComplete"])
+                self.assertEqual(model.globals["HumanPlayers"], [])
+                self.assertEqual(model.globals["AvailableHudSlots"], list(range(12)))
                 self.assertEqual(model.native, [])
 
     def test_exact_sixty_second_boundary_assigns_shion_once_and_releases_force(self):
@@ -128,8 +128,8 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
                     ("StartForcingPlayerToBeHero", "waiting", "Shion"),
                     ("StopForcingPlayerToBeHero", "waiting"),
                 ])
-                self.assertTrue(state["PilihanPahlawanSelesai"])
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertTrue(state["AutoHeroSelectionComplete"])
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 self.assertIsNone(state["forced_hero"])
                 for now in (70.05, 71, 120, 3600):
                     model.tick(now)
@@ -149,7 +149,7 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("waiting")
                 model.tick(1, 1)
-                self.assertEqual(state["WaktuPilihPahlawan"], 61)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 61)
                 for tick in range(2, 20):
                     model.tick(61, tick)
                 self.assertEqual(model.native, [])
@@ -175,8 +175,8 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
                 model.tick(10)
                 state.update(spawned=True, alive=True, hero="Ana")
                 model.tick(69)
-                self.assertTrue(state["PilihanPahlawanSelesai"])
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertTrue(state["AutoHeroSelectionComplete"])
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 model.tick(1000)
                 self.assertEqual(model.native, [])
                 self.assertEqual(state["hero"], "Ana")
@@ -194,10 +194,10 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
     def test_setup_marks_first_selection_complete_before_classification(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("spawned", spawned=True, hero="Ana", WaktuPilihPahlawan=100)
+                state = model.add("spawned", spawned=True, hero="Ana", AutoHeroSelectionDeadline=100)
                 model.prepare("spawned")
-                self.assertTrue(state["PilihanPahlawanSelesai"])
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertTrue(state["AutoHeroSelectionComplete"])
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 state.update(spawned=False, alive=False)
                 model.tick(200)
                 self.assertEqual(model.native, [])
@@ -207,11 +207,11 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("selected", spawned=True, hero="Ana")
                 model.tick(1)
-                state.update(team=2, spawned=False, alive=False, Manusia=False)
+                state.update(team=2, spawned=False, alive=False, IsHuman=False)
                 for now in (2, 62, 120):
                     model.tick(now)
-                self.assertTrue(state["PilihanPahlawanSelesai"])
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertTrue(state["AutoHeroSelectionComplete"])
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 self.assertEqual(model.native, [])
 
     def test_unselected_team_switch_preserves_existing_deadline(self):
@@ -221,7 +221,7 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
                 model.tick(10)
                 state["team"] = 2
                 model.tick(45)
-                self.assertEqual(state["WaktuPilihPahlawan"], 70)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 70)
                 model.tick(70)
                 self.assertEqual(len(model.assignments("waiting")), 1)
 
@@ -232,42 +232,42 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
                 model.tick(100)
                 second = model.add("second", team=2)
                 model.tick(125)
-                self.assertEqual(first["WaktuPilihPahlawan"], 160)
-                self.assertEqual(second["WaktuPilihPahlawan"], 185)
+                self.assertEqual(first["AutoHeroSelectionDeadline"], 160)
+                self.assertEqual(second["AutoHeroSelectionDeadline"], 185)
                 model.tick(160)
                 self.assertEqual(len(model.assignments("first")), 1)
                 self.assertEqual(model.assignments("second"), [])
-                self.assertFalse(second["PilihanPahlawanSelesai"])
+                self.assertFalse(second["AutoHeroSelectionComplete"])
                 model.tick(185)
                 self.assertEqual(len(model.assignments("second")), 1)
 
     def test_dummy_and_ai_entities_never_enter_hero_timeout_even_with_stale_state(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                dummy = model.add("dummy", dummy=True, WaktuPilihPahlawan=1)
-                bot = model.add("ai", BotOtomatis=True, WaktuPilihPahlawan=1)
+                dummy = model.add("dummy", dummy=True, AutoHeroSelectionDeadline=1)
+                bot = model.add("ai", IsAutomaticBot=True, AutoHeroSelectionDeadline=1)
                 model.tick(100)
                 self.assertEqual(model.native, [])
-                self.assertFalse(dummy["PilihanPahlawanSelesai"])
-                self.assertFalse(bot["PilihanPahlawanSelesai"])
+                self.assertFalse(dummy["AutoHeroSelectionComplete"])
+                self.assertFalse(bot["AutoHeroSelectionComplete"])
 
     def test_non_playing_team_does_not_start_timer_and_clears_pending_deadline(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.add("spectator", team=None)
                 model.tick(10)
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 state["team"] = 1
                 model.tick(20)
-                self.assertEqual(state["WaktuPilihPahlawan"], 80)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 80)
                 state["team"] = None
                 model.tick(40)
-                self.assertEqual(state["WaktuPilihPahlawan"], 0)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 0)
                 model.tick(100)
                 self.assertEqual(model.native, [])
                 state["team"] = 2
                 model.tick(101)
-                self.assertEqual(state["WaktuPilihPahlawan"], 161)
+                self.assertEqual(state["AutoHeroSelectionDeadline"], 161)
 
     def test_departed_player_is_skipped_and_new_entity_gets_a_fresh_minute(self):
         for source, model in self.models():
@@ -279,7 +279,7 @@ class HeroSelectionTimeoutTests(unittest.TestCase):
                 self.assertEqual(model.native, [])
                 new = model.add("new")
                 model.tick(100)
-                self.assertEqual(new["WaktuPilihPahlawan"], 160)
+                self.assertEqual(new["AutoHeroSelectionDeadline"], 160)
                 model.tick(159)
                 self.assertEqual(model.native, [])
                 model.tick(160)

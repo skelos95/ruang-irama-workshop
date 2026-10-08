@@ -31,23 +31,23 @@ class DiagnosticsHudEvaluator(MenuLoadEvaluator):
         self.host = "host"
         self.viewer = self.host
         for slot in range(12):
-            self.add(self.host if slot == 0 else f"player-{slot}", UrutanHUD=slot,
-                     NamaTampilan=f"player-{slot}", IndeksIkon=0,
-                     MusikKhusus=None, IndeksGenre=-1, WarnaNama=(255, 255, 255, 255))
-        self.globals.update(DiagnostikPerforma=True, SlotHUDTerakhir=11,
-                            HudKiriPemain=list(range(100, 112)),
-                            HudMenuPemain=[0, 200, 0, 201] + [0] * 8,
-                            HudEfekSementara=[300, 301, 0, 302] + [0] * 20,
-                            TeksDuniaPemain=[0, 400, 0, 401] + [0] * 8,
-                            TeksTeleportasiSementara=[500] + [0] * 23,
-                            TeksVisiSementara=[600, 0, 601] + [0] * 21,
-                            EntitasIkonPilar=list(range(700, 712)),
-                            DaftarIkon=["icon"], DaftarGenre=["soundtrack"])
+            self.add(self.host if slot == 0 else f"player-{slot}", HudSlot=slot,
+                     DisplayName=f"player-{slot}", IconIndex=0,
+                     CustomSoundtrack=None, GenreIndex=-1, NameColor=(255, 255, 255, 255))
+        self.globals.update(PerformanceDiagnostics=True, LastHudSlot=11,
+                            PlayerListHudIds=list(range(100, 112)),
+                            MenuHudIds=[0, 200, 0, 201] + [0] * 8,
+                            TemporaryEffectHudIds=[300, 301, 0, 302] + [0] * 20,
+                            InspectionTextIds=[0, 400, 0, 401] + [0] * 8,
+                            TemporaryTravelTextIds=[500] + [0] * 23,
+                            TemporaryVisionTextIds=[600, 0, 601] + [0] * 21,
+                            ObjectiveIconIds=list(range(700, 712)),
+                            PlayerIcons=["icon"], GenreNames=["soundtrack"])
         self.hud = next(validator.iter_calls(self.rule("02").body, "Create HUD Text"))
 
     def resolve(self, name):
         native = {"LocalPlayer": self.viewer, "HostPlayer": self.host,
-                  "IndeksBahasa": "IndeksBahasa", "ServerLoad": 12,
+                  "ServerLoad": 12,
                   "ServerLoadAverage": 23, "ServerLoadPeak": 34,
                   "White": (255, 255, 255, 255)}
         return native[name] if name in native else super().resolve(name)
@@ -68,39 +68,30 @@ class DiagnosticsHudEvaluator(MenuLoadEvaluator):
 
 class DiagnosticsRecordingTests(unittest.TestCase):
     def test_only_host_sees_diagnostics_on_the_current_last_roster_slot(self):
-        translated_load = (
-            "LOAD 12% | AVG 23% | MAX 34%",
-            "BEBAN 12% | RATA 23% | PUNCAK 34%",
-            "โหลด 12% | เฉลี่ย 23% | สูงสุด 34%",
-        )
         for path, _, _ in SOURCES:
             model = DiagnosticsHudEvaluator(path.read_text(encoding="utf-8"))
-            for language in range(3):
-                for state in model.players.values():
-                    state["IndeksBahasa"] = language
-                for enabled in (False, True):
-                    model.globals["DiagnostikPerforma"] = enabled
-                    for viewer in (model.host, "player-1"):
-                        model.viewer = viewer
-                        for last_slot in (11, 5, 0):
-                            model.globals["SlotHUDTerakhir"] = last_slot
-                            visible = []
-                            for owner, state in model.players.items():
-                                with self.subTest(source=path.name, language=language,
-                                                  enabled=enabled, viewer=viewer,
-                                                  last_slot=last_slot, owner=owner):
-                                    model.event_player = owner
-                                    previous_filters = model.filter_builds
-                                    text = model.evaluate(model.hud.args[3])
-                                    show = enabled and viewer == model.host and state["UrutanHUD"] == last_slot
-                                    if show:
-                                        visible.append(owner)
-                                        self.assertEqual(text.strip(),
-                                                         translated_load[language] + "\nHUD 26 | IWT 5")
-                                    else:
-                                        self.assertEqual(text, "")
-                                        self.assertEqual(model.filter_builds, previous_filters)
-                            self.assertEqual(len(visible), int(enabled and viewer == model.host))
+            for enabled in (False, True):
+                model.globals["PerformanceDiagnostics"] = enabled
+                for viewer in (model.host, "player-1"):
+                    model.viewer = viewer
+                    for last_slot in (11, 5, 0):
+                        model.globals["LastHudSlot"] = last_slot
+                        visible = []
+                        for owner, state in model.players.items():
+                            with self.subTest(source=path.name, enabled=enabled,
+                                              viewer=viewer, last_slot=last_slot, owner=owner):
+                                model.event_player = owner
+                                previous_filters = model.filter_builds
+                                text = model.evaluate(model.hud.args[3])
+                                show = enabled and viewer == model.host and state["HudSlot"] == last_slot
+                                if show:
+                                    visible.append(owner)
+                                    self.assertEqual(text.strip(),
+                                        "LOAD 12% | AVG 23% | MAX 34%\nHUD 23 | IWT 5")
+                                else:
+                                    self.assertEqual(text, "")
+                                    self.assertEqual(model.filter_builds, previous_filters)
+                        self.assertEqual(len(visible), int(enabled and viewer == model.host))
 
     def test_diagnostics_stay_white_when_player_and_title_colors_change(self):
         for path, _, _ in SOURCES:
@@ -117,7 +108,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
                 ((255, 255, 255, 255), (0, 0, 255, 255)),
             ):
                 with self.subTest(source=path.name, name_color=name_color, title_rgb=title_rgb):
-                    player["WarnaNama"] = name_color
+                    player["NameColor"] = name_color
                     model.globals["RGB"] = title_rgb
                     self.assertEqual(model.evaluate(model.hud.args[2]), row)
                     self.assertEqual(model.evaluate(model.hud.args[3]), diagnostic)
@@ -129,13 +120,13 @@ class DiagnosticsRecordingTests(unittest.TestCase):
             for diagnostics in (False, True):
                 with self.subTest(source=path.name, diagnostics=diagnostics):
                     model = RecordingEvaluator(path.read_text(encoding="utf-8"))
-                    model.globals["DiagnostikPerforma"] = diagnostics
+                    model.globals["PerformanceDiagnostics"] = diagnostics
                     init = next(rule for rule in model.rules if rule.name.startswith("00 - "))
                     actions = validator.rule_block(init, "actions")
                     model.execute(project(statements(actions), lambda token: token in (
                         "Disable Inspector Recording", "Enable Inspector Recording")))
                     self.assertFalse(model.recording)
-                    self.assertEqual(model.globals["DiagnostikPerforma"], diagnostics)
+                    self.assertEqual(model.globals["PerformanceDiagnostics"], diagnostics)
 
     def gate_errors(self, source):
         checks = validator.Checks()
@@ -145,7 +136,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
     def test_gate_rejects_recording_coupled_to_diagnostics(self):
         source = validator.SOURCE.read_text(encoding="utf-8")
         changed = source.replace("Disable Inspector Recording;",
-            "If(Global.DiagnostikPerforma == False);\nDisable Inspector Recording;\nEnd;", 1)
+            "If(Global.PerformanceDiagnostics == False);\nDisable Inspector Recording;\nEnd;", 1)
         self.assertTrue(self.gate_errors(changed))
 
     def test_gate_rejects_missing_disable_and_later_enable(self):

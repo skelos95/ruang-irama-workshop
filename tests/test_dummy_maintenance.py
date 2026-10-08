@@ -15,10 +15,10 @@ from tests.test_roster_rejoin_regressions import SOURCES
 class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
     def __init__(self, source):
         super().__init__(source)
-        self.globals.update(Siap=True, WaktuCobaBotBuatanTim1=0,
-                            WaktuCobaBotBuatanTim2=0, TimBotBuatanAktif=1,
-                            PemilikTeksSementara=[], TeksVisiSementara=[],
-                            LangkahPenjadwal=0)
+        self.globals.update(IsReady=True, Team1DummyBotRetryTime=0,
+                            Team2DummyBotRetryTime=0, ActiveDummyBotTeam=1,
+                            TemporaryTextOwners=[], TemporaryVisionTextIds=[],
+                            SchedulerStep=0)
         self.in_progress = True
         self.mode = "Skirmish"
         self.slots = {1: 6, 2: 6}
@@ -33,15 +33,15 @@ class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
         state = dict(team=team, dummy=dummy, exists=True, spawned=True,
                      alive=True, slot=sum(p["team"] == team and p["exists"]
                                           for p in self.players.values()),
-                     Manusia=not dummy, BotOtomatis=False, TeksVisiNasib=None,
-                     KunciBotAktif=True, PindahTimDiproses=False,
-                     SiklusPemainAktif=False, SudahDiperiksa=True,
-                     IzinkanBotBuatanMengikuti=False, TargetIkutiBotBuatan=None,
-                     DaftarTargetInspeksi=[], position=0)
+                     IsHuman=not dummy, IsAutomaticBot=False, LuckVisionText=None,
+                     BotLocked=True, TeamChangeProcessed=False,
+                     PlayerCycleActive=False, IsClassified=True,
+                     AllowDummyBotFollow=False, DummyBotFollowTarget=None,
+                     InspectionTargets=[], position=0)
         state.update(changes)
         self.players[identity] = state
-        if state["Manusia"]:
-            self.globals["PemainManusia"].append(identity)
+        if state["IsHuman"]:
+            self.globals["HumanPlayers"].append(identity)
         return state
 
     def resolve(self, name):
@@ -50,8 +50,8 @@ class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
                   "AllHeroes": "all-heroes"}
         if name in values:
             return values[name]
-        if name in {"TeksVisiNasib", "DaftarTargetInspeksi", "Manusia",
-                    "IzinkanBotBuatanMengikuti", "TargetIkutiBotBuatan"}:
+        if name in {"LuckVisionText", "InspectionTargets", "IsHuman",
+                    "AllowDummyBotFollow", "DummyBotFollowTarget"}:
             return name
         return super().resolve(name)
 
@@ -120,7 +120,7 @@ class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
                 elif token.startswith("Set Player Variable("):
                     args = next(validator.iter_calls(token, "Set Player Variable")).args
                     self.players[self.evaluate(args[0])][args[1].strip()] = self.evaluate(args[2])
-                    if args[1].strip() == "DaftarTargetInspeksi":
+                    if args[1].strip() == "InspectionTargets":
                         self.follow_filters += 1
                 elif token.startswith("Global.") and " = " in token:
                     target, value = token.rsplit(" = ", 1)
@@ -131,7 +131,7 @@ class DummyMaintenanceEvaluator(AuditLifecycleEvaluator):
                     self.evaluate(token)
         if frames: raise AssertionError("unbalanced dummy maintenance control flow")
 
-    def run(self, routine="RawatBotBuatan", now=None):
+    def run(self, routine="MaintainDummyBots", now=None):
         if now is not None: self.now = now
         rule = validator.rule_by_subroutine(self.rules, routine)
         if rule is None: raise AssertionError(f"missing dummy routine: {routine}")
@@ -164,7 +164,7 @@ class DummyMaintenanceTests(unittest.TestCase):
     def test_team_cooldowns_do_not_block_the_other_team(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                model.globals["WaktuCobaBotBuatanTim1"] = 110
+                model.globals["Team1DummyBotRetryTime"] = 110
                 model.run(now=100)
                 self.assertEqual(model.attempts, [(2, 100, 101)])
                 model.run(now=110)
@@ -178,7 +178,7 @@ class DummyMaintenanceTests(unittest.TestCase):
                 model.add("last-human")
                 model.run(now=101)
                 self.assertEqual(len(model.removals), 1)
-                self.assertEqual(model.globals["WaktuCobaBotBuatanTim1"], 102)
+                self.assertEqual(model.globals["Team1DummyBotRetryTime"], 102)
                 self.assertEqual([name for name, _ in model.native_actions],
                                  ["StopFacing", "StopThrottleInDirection", "DestroyDummyBot"])
                 for now in range(102, 122): model.run(now=now)
@@ -201,11 +201,11 @@ class DummyMaintenanceTests(unittest.TestCase):
             with self.subTest(source=source):
                 model.add("existing", dummy=True)
                 for index in range(5): model.add(f"human-{index}")
-                model.globals["PemainSiklusGlobal"] = "human-0"
+                model.globals["TeamCyclePlayer"] = "human-0"
                 model.run(now=100)
                 self.assertEqual(model.attempts, [])
                 self.assertEqual(model.removals, [])
-                model.globals["PemainSiklusGlobal"] = None
+                model.globals["TeamCyclePlayer"] = None
                 model.run(now=101)
                 self.assertEqual(model.removals, ["existing"])
                 self.assertEqual([team for team, _, _ in model.attempts], [2])
@@ -214,7 +214,7 @@ class DummyMaintenanceTests(unittest.TestCase):
         for source, model in self.models():
             for reason in ("not-ready", "not-running", "other-mode", "no-spawns"):
                 with self.subTest(source=source, reason=reason):
-                    model.globals["Siap"] = reason != "not-ready"
+                    model.globals["IsReady"] = reason != "not-ready"
                     model.in_progress = reason != "not-running"
                     model.mode = "TeamDeathmatch" if reason == "other-mode" else "Skirmish"
                     model.spawns = {1: [], 2: []} if reason == "no-spawns" else {1: [1], 2: [2]}
@@ -236,12 +236,12 @@ class DummyMaintenanceTests(unittest.TestCase):
     def test_dummy_removal_destroys_only_its_registered_vision_text(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                model.add("existing", dummy=True, TeksVisiNasib=123)
+                model.add("existing", dummy=True, LuckVisionText=123)
                 for index in range(5): model.add(f"human-{index}")
-                model.globals["PemilikTeksSementara"] = ["existing", "human-0"]
-                model.globals["TeksVisiSementara"] = [123, 456]
+                model.globals["TemporaryTextOwners"] = ["existing", "human-0"]
+                model.globals["TemporaryVisionTextIds"] = [123, 456]
                 model.run(now=100)
-                self.assertEqual(model.globals["TeksVisiSementara"], [0, 456])
+                self.assertEqual(model.globals["TemporaryVisionTextIds"], [0, 456])
                 self.assertEqual(model.native_actions[0], ("DestroyInWorldText", 123))
                 self.assertEqual(model.removals, ["existing"])
 
@@ -250,43 +250,43 @@ class DummyMaintenanceTests(unittest.TestCase):
             for dummy in (True, False):
                 for alive, spawned in ((False, True), (True, False)):
                     with self.subTest(source=source, dummy=dummy, alive=alive, spawned=spawned):
-                        player = model.add("bot", dummy=dummy, Manusia=False,
-                                           BotOtomatis=not dummy, alive=alive, spawned=spawned)
-                        model.globals["PemainAktif"] = "bot"
-                        model.run("ProsesBotPemain", now=100)
-                        self.assertFalse(player["KunciBotAktif"])
+                        player = model.add("bot", dummy=dummy, IsHuman=False,
+                                           IsAutomaticBot=not dummy, alive=alive, spawned=spawned)
+                        model.globals["ActivePlayer"] = "bot"
+                        model.run("ProcessPlayerBot", now=100)
+                        self.assertFalse(player["BotLocked"])
 
     def test_normal_ai_releases_pending_lifecycle_after_classification_and_lock(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                player = model.add("bot", Manusia=False, BotOtomatis=True,
-                                   PindahTimDiproses=True, SiklusPemainAktif=True)
-                model.globals["PemainAktif"] = "bot"
-                model.globals["PemainSiklusGlobal"] = "bot"
-                model.run("ProsesBotPemain", now=100)
-                self.assertFalse(player["PindahTimDiproses"])
-                self.assertFalse(player["SiklusPemainAktif"])
-                self.assertIsNone(model.globals["PemainSiklusGlobal"])
-                self.assertEqual(model.globals["WaktuSiklusGlobal"], 100.25)
+                player = model.add("bot", IsHuman=False, IsAutomaticBot=True,
+                                   TeamChangeProcessed=True, PlayerCycleActive=True)
+                model.globals["ActivePlayer"] = "bot"
+                model.globals["TeamCyclePlayer"] = "bot"
+                model.run("ProcessPlayerBot", now=100)
+                self.assertFalse(player["TeamChangeProcessed"])
+                self.assertFalse(player["PlayerCycleActive"])
+                self.assertIsNone(model.globals["TeamCyclePlayer"])
+                self.assertEqual(model.globals["TeamCycleTime"], 100.25)
 
     def test_dummy_follow_refreshes_five_times_a_second_and_keeps_nearest_enemy_opt_in(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 dummy = model.add("dummy", dummy=True, slot=0)
-                model.add("friendly", team=1, position=1, IzinkanBotBuatanMengikuti=True)
+                model.add("friendly", team=1, position=1, AllowDummyBotFollow=True)
                 model.add("opt-out", team=2, position=2)
-                model.add("far", team=2, position=8, IzinkanBotBuatanMengikuti=True)
-                model.add("near", team=2, position=4, IzinkanBotBuatanMengikuti=True)
-                model.globals["PemainAktif"] = "dummy"
+                model.add("far", team=2, position=8, AllowDummyBotFollow=True)
+                model.add("near", team=2, position=4, AllowDummyBotFollow=True)
+                model.globals["ActivePlayer"] = "dummy"
                 for step in range(1, 21):
-                    model.globals["LangkahPenjadwal"] = step
-                    if step % 2 == 0: model.run("ProsesBotPemain", now=100 + step / 20)
+                    model.globals["SchedulerStep"] = step
+                    if step % 2 == 0: model.run("ProcessPlayerBot", now=100 + step / 20)
                 self.assertEqual(model.follow_filters, 5)
-                self.assertEqual(dummy["TargetIkutiBotBuatan"], "near")
-                model.players["near"]["IzinkanBotBuatanMengikuti"] = False
-                model.globals["LangkahPenjadwal"] = 24
-                model.run("ProsesBotPemain", now=101.2)
-                self.assertEqual(dummy["TargetIkutiBotBuatan"], "far")
+                self.assertEqual(dummy["DummyBotFollowTarget"], "near")
+                model.players["near"]["AllowDummyBotFollow"] = False
+                model.globals["SchedulerStep"] = 24
+                model.run("ProcessPlayerBot", now=101.2)
+                self.assertEqual(dummy["DummyBotFollowTarget"], "far")
 
 
 if __name__ == "__main__":

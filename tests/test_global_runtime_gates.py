@@ -6,17 +6,17 @@ from tools import validate_global_runtime as gate
 MINIMAL = '''variables
 {
  global:
-  0: PemainPemicu
-  1: PemainAktif
-  2: AntreanPeristiwa
+  0: TriggerPlayer
+  1: ActivePlayer
+  2: EventQueue
  player:
-  0: WarnaNama
+  0: NameColor
 }
 subroutines
 {
  0: Gambar
 }
-rule("04g - Penjadwal")
+rule("04g - Global main loop: Central scheduler at 20 Hz")
 {
  event
  {
@@ -28,8 +28,8 @@ rule("04g - Penjadwal")
  }
  actions
  {
-  Global.PemainPemicu = Null;
-  Global.PemainAktif = Null;
+  Global.TriggerPlayer = Null;
+  Global.ActivePlayer = Null;
   Wait(0.050, Ignore Condition);
   Loop;
  }
@@ -42,7 +42,7 @@ rule("Gambar")
  }
  actions
  {
-  Create HUD Text(Evaluate Once(Global.PemainPemicu), Null, Null, Custom String("OK"), Left, 1, Color(White), Color(White), Player Variable(Evaluate Once(Global.PemainPemicu), WarnaNama), Visible To String and Color, Default Visibility);
+  Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Null, Custom String("OK"), Left, 1, Color(White), Color(White), Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor), Visible To String and Color, Default Visibility);
  }
 }
 rule("Catat")
@@ -53,7 +53,7 @@ rule("Catat")
  }
  actions
  {
-  Global.AntreanPeristiwa = Array(Event Player, Attacker);
+  Global.EventQueue = Array(Event Player, Attacker);
  }
 }
 '''
@@ -86,37 +86,37 @@ class GlobalRuntimeGateTests(unittest.TestCase):
                     "Each Player vietato")
 
     def test_cleanup_cannot_be_executed_in_native_callback(self):
-        self.reject(MINIMAL.replace("Global.AntreanPeristiwa = Array(Event Player, Attacker);",
+        self.reject(MINIMAL.replace("Global.EventQueue = Array(Event Player, Attacker);",
                                     "Destroy HUD Text(10);"), "deve solo registrare")
 
     def test_callback_cannot_call_subroutine(self):
-        self.reject(MINIMAL.replace("Global.AntreanPeristiwa = Array(Event Player, Attacker);",
+        self.reject(MINIMAL.replace("Global.EventQueue = Array(Event Player, Attacker);",
                                     "Call Subroutine(Gambar);"), "deve solo registrare")
 
     def test_callback_cannot_mutate_shared_actor(self):
-        self.reject(MINIMAL.replace("Global.AntreanPeristiwa =", "Global.PemainPemicu ="),
+        self.reject(MINIMAL.replace("Global.EventQueue =", "Global.TriggerPlayer ="),
                     "attore dello scheduler condiviso")
 
     def test_callback_cannot_set_player_state(self):
-        self.reject(MINIMAL.replace("Global.AntreanPeristiwa = Array(Event Player, Attacker);",
-                                    "Event Player.WarnaNama = Color(White);"),
+        self.reject(MINIMAL.replace("Global.EventQueue = Array(Event Player, Attacker);",
+                                    "Event Player.NameColor = Color(White);"),
                     "deve solo registrare")
 
     def test_owner_pointer_cannot_be_reevaluated_after_scheduler_advances(self):
-        self.reject(MINIMAL.replace("Player Variable(Evaluate Once(Global.PemainPemicu), WarnaNama)",
-                                    "Global.PemainPemicu.WarnaNama"), "proprietario non congelato")
+        self.reject(MINIMAL.replace("Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor)",
+                                    "Global.TriggerPlayer.NameColor"), "proprietario non congelato")
 
     def test_freezing_identity_allows_dynamic_color(self):
         self.assertEqual(gate.unfrozen_actors(
-            "Player Variable(Evaluate Once(Global.PemainPemicu), WarnaNama)"), [])
+            "Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor)"), [])
 
     def test_freezing_other_subexpression_does_not_freeze_owner(self):
         self.assertEqual(gate.unfrozen_actors(
-            "Array(Evaluate Once(1), Global.PemainPemicu.WarnaNama)"),
-            ["Global.PemainPemicu"])
+            "Array(Evaluate Once(1), Global.TriggerPlayer.NameColor)"),
+            ["Global.TriggerPlayer"])
 
     def test_shared_actor_must_be_cleared_before_wait(self):
-        self.reject(MINIMAL.replace("Global.PemainPemicu = Null;", "Global.PemainPemicu = Host Player;"),
+        self.reject(MINIMAL.replace("Global.TriggerPlayer = Null;", "Global.TriggerPlayer = Host Player;"),
                     "svuotato prima del Wait")
 
     def test_no_subroutine_wait_even_with_frozen_owner(self):
@@ -124,7 +124,7 @@ class GlobalRuntimeGateTests(unittest.TestCase):
                     "solo lo scheduler può attendere")
 
     def test_async_rule_can_never_inherit_mutable_actor(self):
-        self.reject(MINIMAL.replace("Global.PemainPemicu = Null;", "Start Rule(Gambar, Do Nothing);\n  Global.PemainPemicu = Null;"),
+        self.reject(MINIMAL.replace("Global.TriggerPlayer = Null;", "Start Rule(Gambar, Do Nothing);\n  Global.TriggerPlayer = Null;"),
                     "avvio asincrono")
 
     def test_native_attacker_is_not_available_in_global_renderer(self):
@@ -132,15 +132,15 @@ class GlobalRuntimeGateTests(unittest.TestCase):
                     "valore nativo evento non catturato")
 
     def test_references_to_missing_player_fields_fail(self):
-        self.reject(MINIMAL.replace("Global.PemainPemicu = Null;", "Global.PemainPemicu.NonDichiarata = True;\n  Global.PemainPemicu = Null;"),
+        self.reject(MINIMAL.replace("Global.TriggerPlayer = Null;", "Global.TriggerPlayer.NonDichiarata = True;\n  Global.TriggerPlayer = Null;"),
                     "player non dichiarato")
 
     def test_variable_indices_stay_within_native_capacity(self):
-        self.reject(MINIMAL.replace("2: AntreanPeristiwa", "128: AntreanPeristiwa"), "oltre 128 slot")
+        self.reject(MINIMAL.replace("2: EventQueue", "128: EventQueue"), "oltre 128 slot")
 
     def test_callback_cannot_corrupt_another_scheduler_field(self):
-        source = MINIMAL.replace("2: AntreanPeristiwa", "2: AntreanPeristiwa\n  3: IndeksPemainGlobal")
-        self.reject(source.replace("Global.AntreanPeristiwa =", "Global.IndeksPemainGlobal ="),
+        source = MINIMAL.replace("2: EventQueue", "2: EventQueue\n  3: SchedulerPlayerIndex")
+        self.reject(source.replace("Global.EventQueue =", "Global.SchedulerPlayerIndex ="),
                     "scrittura fuori dalla coda")
 
     def test_quoted_event_words_are_not_runtime_context(self):
@@ -148,13 +148,13 @@ class GlobalRuntimeGateTests(unittest.TestCase):
         self.assertEqual(gate.validate_runtime(source), [])
 
     def test_hyphenated_native_action_cannot_become_subtraction(self):
-        source = MINIMAL.replace("Global.PemainPemicu = Null;", "(Create In - World Text(Host Player, Null, Vector(0, 0, 0), 1, Do Not Clip, Visible To, Color(White), Default Visibility));\n  Global.PemainPemicu = Null;")
+        source = MINIMAL.replace("Global.TriggerPlayer = Null;", "(Create In - World Text(Host Player, Null, Vector(0, 0, 0), 1, Do Not Clip, Visible To, Color(White), Default Visibility));\n  Global.TriggerPlayer = Null;")
         self.reject(source, "azione convertita in espressione")
 
     def test_italian_normalization_cannot_hide_partial_native_translations(self):
         source = italian_minimal()
-        extra = """Globale.AntreanPeristiwa = All Players(All Teams);
-  For Global Variable(AntreanPeristiwa, 0, 1, 1); End;
+        extra = """Globale.EventQueue = All Players(All Teams);
+  For Global Variable(EventQueue, 0, 1, 1); End;
   If(Is True For All(Empty Array, True)); End;
   """
         source = source.replace("Wait(0.050", extra + "Wait(0.050", 1)
@@ -176,15 +176,15 @@ class GlobalRuntimeGateTests(unittest.TestCase):
         for source, namespace in ((MINIMAL, 'Global.'), (italian_minimal(), 'Globale.')):
             for value in ('-(1)', '- (1)', '+(1)', 'Array(-(-1))', 'Vector(0, -(2), 0)'):
                 with self.subTest(namespace=namespace, value=value):
-                    broken = source.replace(namespace + 'PemainPemicu = Null;',
-                                            namespace + 'PemainPemicu = ' + value + ';', 1)
+                    broken = source.replace(namespace + 'TriggerPlayer = Null;',
+                                            namespace + 'TriggerPlayer = ' + value + ';', 1)
                     self.reject(broken, 'segno unario')
 
     def test_native_signed_literals_binary_subtraction_and_quoted_signs_are_allowed(self):
         for value in ('-1', 'Array(-1, -0.500)', '(1 - (2 + 3))', 'Multiply(-1, (1 + 2))'):
             with self.subTest(value=value):
-                source = MINIMAL.replace('Global.PemainAktif = Null;',
-                                         'Global.AntreanPeristiwa = ' + value + ';\n  Global.PemainAktif = Null;', 1)
+                source = MINIMAL.replace('Global.ActivePlayer = Null;',
+                                         'Global.EventQueue = ' + value + ';\n  Global.ActivePlayer = Null;', 1)
                 self.assertEqual(gate.validate_runtime(source), [])
         source = MINIMAL.replace('Custom String("OK")', 'Custom String("= -(1); Vector(0, -(2), 0)")')
         self.assertEqual(gate.validate_runtime(source), [])

@@ -30,16 +30,16 @@ class JumpEvaluator(SpawnEvaluator):
         self.ray_result = Vector(100, 20, 40)
 
     def add_player(self, identity, **changes):
-        defaults = dict(Manusia=True, dummy=False, alive=True, jump=False,
-                        BangkitLompatDipakai=False, FisikaHantuTerbangDiterapkan=True,
-                        WaktuMulaiTerbangMaju=20, PerintahMenu=1, PerintahTeleportasi=1,
+        defaults = dict(IsHuman=True, dummy=False, alive=True, jump=False,
+                        JumpReviveConsumed=False, GhostFlyPhysicsApplied=True,
+                        FlyRampStartTime=20, MenuCommand=1, TravelCommand=1,
                         resurrect_alive=True, resurrect_position=None,
                         corpse_teleport_honored=True)
         defaults.update(changes)
         return super().add_player(identity, **defaults)
 
     def resolve(self, name):
-        if name in ("Jump", "TerapkanFisikaHantuTerbang"):
+        if name in ("Jump", "ApplyGhostFlyPhysics"):
             return name
         return super().resolve(name)
 
@@ -106,7 +106,7 @@ class JumpEvaluator(SpawnEvaluator):
 
 class JumpResurrectTests(unittest.TestCase):
     def models(self):
-        for path in (ROOT / "source/ruang_irama.it-IT.source",
+        for path in (ROOT / "source/ruang_irama.en-US.source",
                      ROOT / "tests/fixtures/semantic_reference.txt"):
             yield path.name, JumpEvaluator(path.read_text(encoding="utf-8"))
 
@@ -122,7 +122,7 @@ class JumpResurrectTests(unittest.TestCase):
                         model.die()
                     model.step(100 + tick / 10, prefix="12f")
                 self.assertEqual(model.count("Resurrect"), 1)
-                self.assertTrue(player["BangkitLompatDipakai"])
+                self.assertTrue(player["JumpReviveConsumed"])
                 player["jump"] = False
                 model.step(103, prefix="12g")
                 player["jump"] = True
@@ -137,10 +137,10 @@ class JumpResurrectTests(unittest.TestCase):
                     before = model.count("Resurrect")
                     model.die()
                     model.step(100, prefix="12f")
-                    self.assertTrue(player["BangkitLompatDipakai"])
+                    self.assertTrue(player["JumpReviveConsumed"])
                     player.update(alive=alive, jump=False)
                     model.step(101, prefix="12g")
-                    self.assertFalse(player["BangkitLompatDipakai"])
+                    self.assertFalse(player["JumpReviveConsumed"])
                     model.die()
                     player["jump"] = True
                     model.step(102, prefix="12f")
@@ -164,12 +164,12 @@ class JumpResurrectTests(unittest.TestCase):
                 model.step(103, "one", "12f")
                 self.assertEqual(model.count("Resurrect", "one"), 1)
                 self.assertEqual(model.count("Resurrect", "two"), 1)
-                self.assertTrue(first["BangkitLompatDipakai"])
-                self.assertFalse(second["BangkitLompatDipakai"])
+                self.assertTrue(first["JumpReviveConsumed"])
+                self.assertFalse(second["JumpReviveConsumed"])
 
     def test_nonhuman_players_do_not_enter_the_jump_revive_rules(self):
         for source, model in self.models():
-            for excluded in (dict(dummy=True), dict(Manusia=False), dict(BotOtomatis=True)):
+            for excluded in (dict(dummy=True), dict(IsHuman=False), dict(IsAutomaticBot=True)):
                 with self.subTest(source=source, excluded=excluded):
                     player = model.add_player("one", alive=False, jump=True, **excluded)
                     before = dict(player)
@@ -193,7 +193,7 @@ class JumpResurrectTests(unittest.TestCase):
                 self.assertEqual([event[2] for event in model.events if event[0] == "Teleport"],
                                  [target, target])
                 self.assertEqual(model.navigation_queries, [("one", death)])
-                self.assertFalse(player["BangkitPerluTeleportasi"])
+                self.assertFalse(player["ReviveTeleportNeeded"])
 
     def test_downward_raycast_miss_still_requests_a_walkable_destination(self):
         for source, model in self.models():
@@ -237,7 +237,7 @@ class JumpResurrectTests(unittest.TestCase):
                 self.assertEqual(model.count("Teleport"), 0)
                 self.assertEqual(player["position"], death)
                 self.assertEqual(model.navigation_queries, [("one", death)])
-                self.assertFalse(player["BangkitPerluTeleportasi"])
+                self.assertFalse(player["ReviveTeleportNeeded"])
 
     def test_void_recovery_handles_engine_accepting_or_ignoring_corpse_teleport(self):
         for source, model in self.models():
@@ -282,10 +282,10 @@ class JumpResurrectTests(unittest.TestCase):
                     model.die(position=death)
                     model.step(100, prefix="12f")
                     helpers = [event for event in model.events
-                               if event[0] == "TerapkanFisikaHantuTerbang"]
+                               if event[0] == "ApplyGhostFlyPhysics"]
                     if resurrection_succeeds:
                         self.assertEqual([event[0] for event in helpers],
-                                         ["TerapkanFisikaHantuTerbang"])
+                                         ["ApplyGhostFlyPhysics"])
                         target = model.navigation_result + Vector(0, 0.5, 0)
                         self.assertEqual([event[2:] for event in helpers], [(target, True)])
                         self.assertEqual(model.events[-1:], helpers)

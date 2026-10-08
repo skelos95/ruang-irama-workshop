@@ -16,13 +16,13 @@ from tests.test_roster_rejoin_regressions import SOURCES
 class DummyFollowEvaluator(AuditLifecycleEvaluator):
     def __init__(self, source):
         super().__init__(source)
-        apply = validator.rule_by_subroutine(self.rules, "TerapkanHalamanIkutiBotBuatan")
+        apply = validator.rule_by_subroutine(self.rules, "ApplyDummyBotFollowPage")
         self.program = statements(validator.rule_block(apply, "actions"))
 
     def add(self, identity, team=1, **changes):
         state = dict(team=team, exists=True, visible=True, dummy=False,
-                     BotOtomatis=False, spawned=True, alive=True, Manusia=True,
-                     MenuTerbuka=False, HalamanMenu=-1, IzinkanBotBuatanMengikuti=False)
+                     IsAutomaticBot=False, spawned=True, alive=True, IsHuman=True,
+                     MenuOpen=False, MenuPage=-1, AllowDummyBotFollow=False)
         state.update(changes)
         self.players[identity] = state
         return state
@@ -38,7 +38,7 @@ class DummyFollowEvaluator(AuditLifecycleEvaluator):
         return super().call(name, args)
 
     def resolve(self, name):
-        if name == "IzinkanBotBuatanMengikuti":
+        if name == "AllowDummyBotFollow":
             return name
         return super().resolve(name)
 
@@ -86,8 +86,8 @@ class DummyFollowEvaluator(AuditLifecycleEvaluator):
         self.execute(self.program)
 
     def cache_tick(self, identity):
-        self.globals["PemainAktif"] = identity
-        cache = validator.rule_by_subroutine(self.rules, "ProsesSimpananPemain")
+        self.globals["ActivePlayer"] = identity
+        cache = validator.rule_by_subroutine(self.rules, "ProcessPlayerMaintenance")
         self.execute(statements(validator.rule_block(cache, "actions")))
 
     def applied_effects(self):
@@ -104,7 +104,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("human")
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
                 self.assertEqual(model.applied_effects(), [])
 
     def test_same_team_dummy_does_not_allow_activation(self):
@@ -114,7 +114,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                     state = model.add("human", team=team)
                     model.add("dummy", team=team, dummy=True)
                     model.apply("human")
-                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                    self.assertFalse(state["AllowDummyBotFollow"])
                     self.assertEqual(model.applied_effects(), [])
 
     def test_one_team_one_dummy_allows_only_team_two_consent(self):
@@ -125,8 +125,8 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 model.add("dummy-one", team=1, dummy=True)
                 model.apply("team-one")
                 model.apply("team-two")
-                self.assertFalse(first["IzinkanBotBuatanMengikuti"])
-                self.assertTrue(second["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(first["AllowDummyBotFollow"])
+                self.assertTrue(second["AllowDummyBotFollow"])
                 self.assertEqual(model.applied_effects(), [])
 
     def test_two_team_dummies_allow_each_player_independent_consent(self):
@@ -139,18 +139,18 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 model.add("dummy-two", team=2, dummy=True)
                 model.apply("team-one")
                 model.apply("team-two")
-                self.assertTrue(first["IzinkanBotBuatanMengikuti"])
-                self.assertTrue(second["IzinkanBotBuatanMengikuti"])
-                self.assertFalse(observer["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(first["AllowDummyBotFollow"])
+                self.assertTrue(second["AllowDummyBotFollow"])
+                self.assertFalse(observer["AllowDummyBotFollow"])
 
     def test_enemy_humans_and_normal_ai_do_not_enable_dummy_follow(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.add("human", team=2)
                 model.add("enemy-human", team=1)
-                model.add("normal-ai", team=1, BotOtomatis=True)
+                model.add("normal-ai", team=1, IsAutomaticBot=True)
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
 
     def test_stale_enemy_dummy_reference_does_not_enable_follow(self):
         for source, model in self.models():
@@ -158,7 +158,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 state = model.add("human", team=2)
                 model.add("gone", team=1, dummy=True, exists=False)
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
 
     def test_respawning_enemy_dummy_still_counts_as_present(self):
         for source, model in self.models():
@@ -166,7 +166,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 state = model.add("human", team=2)
                 model.add("respawning", team=1, dummy=True, spawned=False, alive=False)
                 model.apply("human")
-                self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(state["AllowDummyBotFollow"])
 
     def test_disabled_consent_can_always_be_applied_after_dummy_removal(self):
         for source, model in self.models():
@@ -176,7 +176,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 model.apply("human")
                 dummy.update(exists=False, visible=False)
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
                 self.assertEqual(model.applied_effects(), [])
 
     def test_dummy_disappearing_between_menu_open_and_apply_blocks_activation(self):
@@ -186,17 +186,17 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 dummy = model.add("dummy", team=1, dummy=True)
                 dummy.update(exists=False, visible=False)
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
                 dummy.update(exists=True, visible=True)
                 model.apply("human")
-                self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(state["AllowDummyBotFollow"])
 
     def test_interact_turns_existing_consent_off_even_without_dummy(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("human", IzinkanBotBuatanMengikuti=True)
+                state = model.add("human", AllowDummyBotFollow=True)
                 model.apply("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
                 self.assertEqual(model.applied_effects(), [])
 
     def test_disappearing_enemy_dummy_turns_follow_off_without_menu_and_return_requires_opt_in(self):
@@ -208,35 +208,35 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                     dummy = model.add("enemy", team=3 - team, dummy=True)
                     model.add("own", team=team, dummy=True)
                     model.apply("human")
-                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                    self.assertTrue(state["AllowDummyBotFollow"])
                     model.cache_tick("human")
-                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                    self.assertTrue(state["AllowDummyBotFollow"])
                     dummy.update(exists=False)
                     model.cache_tick("human")
-                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                    self.assertFalse(state["AllowDummyBotFollow"])
                     dummy.update(exists=True)
                     model.cache_tick("human")
-                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
+                    self.assertFalse(state["AllowDummyBotFollow"])
                     model.apply("human")
-                    self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                    self.assertTrue(state["AllowDummyBotFollow"])
 
     def test_automatic_off_leaves_other_players_and_bot_permissions_untouched(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("human", IzinkanBotBuatanMengikuti=True)
-                other = model.add("other", IzinkanBotBuatanMengikuti=True)
-                bot = model.add("bot", Manusia=False, dummy=True, IzinkanBotBuatanMengikuti=True)
+                state = model.add("human", AllowDummyBotFollow=True)
+                other = model.add("other", AllowDummyBotFollow=True)
+                bot = model.add("bot", IsHuman=False, dummy=True, AllowDummyBotFollow=True)
                 model.cache_tick("human")
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
-                self.assertTrue(other["IzinkanBotBuatanMengikuti"])
+                self.assertFalse(state["AllowDummyBotFollow"])
+                self.assertTrue(other["AllowDummyBotFollow"])
                 model.cache_tick("bot")
-                self.assertTrue(bot["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(bot["AllowDummyBotFollow"])
 
     def test_main_menu_reads_consent_without_rebuilding_dummy_availability_queries(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                page = validator.rule_by_subroutine(model.rules, "GambarUtama")
-                apply = validator.rule_by_subroutine(model.rules, "TerapkanHalamanIkutiBotBuatan")
+                page = validator.rule_by_subroutine(model.rules, "DrawMainMenu")
+                apply = validator.rule_by_subroutine(model.rules, "ApplyDummyBotFollowPage")
                 condition = (
                     "Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), "
                     "And(Entity Exists(Current Array Element), Is Dummy Bot(Current Array Element) == True))"

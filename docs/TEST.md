@@ -9,7 +9,8 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 | Release storica 0.8.1 | La documentazione precedente riporta la regressione client completata nell'agosto 2026. | Non valida automaticamente i successivi commit di `main`; metriche mancanti non vengono ricostruite. |
 | 25 settembre, ripristino PR #77 | L'utente conferma la scomparsa del crash al cambio squadra introdotto dalla PR #76. | Singola istruzione responsabile non isolata. |
 | 5 ottobre, dopo PR #94 | Nuovo crash al cambio squadra segnalato in lobby nuova con un umano, senza menu. | Forward rimosso nella PR #95; non ha eliminato il crash. |
-| Riscontro successivo alle PR #95–96 | Il crash persiste anche al primo cambio diretto, senza menu né icone; passando prima dagli spettatori l'utente non lo osserva. | Le attese per-player della PR #96 non hanno risolto. Il nuovo runtime globale richiede un'importazione e una nuova verifica nel client. |
+| Riscontro successivo alle PR #95–96 | Il crash persisteva anche al primo cambio diretto, senza menu né icone; passando prima dagli spettatori l'utente non lo osservava. | Le attese per-player della PR #96 non avevano risolto; vedere il riscontro successivo sul runtime globale. |
+| Riscontro sul runtime globale, precedente alla revisione Camera/Info | L'utente conferma importazione riuscita e cambio diretto di squadra senza il crash precedentemente osservato. | Conferma qualitativa; SHA importato, durata, numero di player e metriche native non registrati. Non valida le successive modifiche Camera e interfaccia. |
 | 27 settembre, PR #80 | L'utente conferma il recupero dal punto nel vuoto prima problematico e la resurrezione sul terreno. | Altre mappe e combinazioni richiedono prove dedicate. |
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
@@ -22,13 +23,15 @@ Questa è la matrice operativa per il sorgente corrente, non una dichiarazione c
 
 Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 10 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
+L’importazione con grammatica inglese, la Camera dopo Travel/cambio eroe e la nuova interfaccia con Info / Controls sono da verificare nel client della nuova revisione. Il riscontro positivo precedente non completa queste nuove prove.
+
 ## Preparazione
 
-Il clipboard corrente viene generato dalla specifica comportamentale. Importare soltanto `workshop/ruang_irama.it-IT.workshop`: i test dei vecchi contratti sulla specifica non certificano il nuovo contesto di esecuzione.
+Il clipboard corrente viene generato dalla specifica comportamentale. Importare soltanto `workshop/ruang_irama.en-US.workshop`: i test dei vecchi contratti sulla specifica non certificano il nuovo contesto di esecuzione.
 
 Per il runtime globale iniziare con una lobby nuova, un umano e dummy presenti: primo cambio diretto 1→2, poi 2→1 senza usare menu. Confrontare il percorso via spettatori; ripetere ingresso/uscita e cambi rapidi con 12 umani. Provare Melee/Interact tenuti 0,5 s e i comandi simultanei: timer, testi e colori devono restare individuali. Verificare Revenge dopo KO nemici/alleati, morte e rinascita rapida, cambio eroe durante un evento pendente, e la pulizia dopo uscita e riuso dello stesso slot.
 
-Usare una nuova lobby sulla build corrente del client, lingua testo italiana, Schermaglia e mappe standard escluse quelle Workshop. Importare il [file completo](../workshop/ruang_irama.it-IT.workshop), annotando SHA e metriche di compilazione. Le mappe appartengono al preset della lobby.
+Usare una nuova lobby sulla build corrente del client, lingua testo English, Schermaglia e mappe standard escluse quelle Workshop. Importare il [file completo](../workshop/ruang_irama.en-US.workshop), annotando SHA e metriche di compilazione. Le mappe appartengono al preset della lobby.
 
 Per il confronto di stabilità impostare **60 minuti**; il riavvio allo zero è previsto e va distinto dalla chiusura con errore. La diagnostica host mostra carico e risorse senza abilitare Inspector Recording. Per input simultanei servono più utenti reali, non solo bot.
 
@@ -45,23 +48,25 @@ Per il confronto di stabilità impostare **60 minuti**; il riavvio allo zero è 
 
 Misurare baseline vuota, dopo gli ingressi, durante il picco e dopo cleanup completo. Ripetere la stessa configurazione quando si confrontano revisioni; una singola sessione riuscita non copre tutte le combinazioni.
 
-Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 21 HUD: nove fissi più una riga Player Vibes per umano. Le icone e gli In-World Text vanno confrontati separatamente.
+Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 18 HUD: sei fissi più una riga Player Vibes per umano. I menu si aprono alla registrazione: chiuderli prima di misurare questo baseline. Le icone e gli In-World Text vanno confrontati separatamente.
 
 ## Regressioni da provare
 
 ### Input, menu e HUD
 
-- In EN/ID/TH percorrere tutte le 16 voci del principale; per quelle con più opzioni aprire il sottomenu, applicare, tornare e riaprire. Percorrere `11→12→13→14→15→0` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
-- Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato EN/ID/TH. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
+- Percorrere tutte le 16 voci del principale inglese: Info / Controls 0, Name Color 1, Camera 2, Soundtrack 3, poi le funzioni 4–15. Per quelle con opzioni aprire il sottomenu, applicare, tornare e riaprire. Percorrere `15→0→1→2→3→4` e l'inverso. Navigare nella stessa pagina non deve creare altri HUD.
+- Al primo spawn il principale deve aprirsi una sola volta su Info / Controls, senza entrare automaticamente nel sottomenu. Crouch + Interact apre Info; Crouch + Reload torna al principale. Verificare tutti i comandi e i binding dinamici nel corpo, senza colonna o sottotitolo comandi duplicati. Negli altri menu verificare comandi a sinistra e opzioni a destra, separati da `|`, senza troncamenti o sovrapposizioni. Nessun vecchio promemoria fisso agli angoli.
+- Chiudere o cambiare pagina e poi morire/cambiare eroe: non riaprire Info né azzerare pagina/cursore. Cambio squadra e uscita/rientro devono invece ripristinare i default e aprire il principale su Info. Provare registrazioni simultanee e doppie notifiche di ingresso.
+- Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato in inglese. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
-- Controllare binding dinamici, glifi Thai, righe leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi.
+- Controllare binding dinamici, righe inglesi leggibili, un unico Player Vibes, Host nel campo Text con spazio sopra/sotto e RGB del titolo; niente `0` diagnostico o sovrapposizioni con HUD nativi. L'HUD Top 1 deve mostrare esattamente `cozywatch.org`; nessuna impostazione, voce menu o etichetta per lingua/località deve rimanere.
 - Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
 - Il profilo `งูแรร์` parte Charcoal / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
 - Sull'obiettivo devono apparire solo le icone, senza Light Shaft né nomi: raggio fisso di 10 m con 1/6/12 umani. AI e dummy non ne creano. Le icone conservano il colore esatto del proprietario anche quando cambia l'host; NONE non crea simboli.
 - Le icone devono muoversi senza pause fra percorsi, anche con aggiornamenti leggermente sfalsati rispetto al secondo. Il rinnovo anticipato non deve spostarle istantaneamente. Devono restare entro il raggio di 10 m anche quando escono player e non accumularsi dopo 50 ricambi/cambi squadra. Provare NONE→icona→NONE, duplicati della stessa icona con colori diversi e obiettivo non visibile/assente. Create Icon aumenta al massimo di un'entità per umano con icona; IWT non cambia. Provare cambi colore senza ricreazioni, cambi tipo senza doppioni e traiettorie fino a 8 m sopra l'obiettivo. Il Chase del vecchio proprietario deve fermarsi al cleanup; il nuovo occupante non deve ereditare movimento o handle.
-- Soundtrack: 200 generi, venti per gruppo, wrap 1↔200 e ±10 ai confini. Name Color: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette EN/ID/TH allineate, Black nero anche nella preview. Menu 0–15: accenti nella stessa progressione, funzioni nelle posizioni abituali e stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
+- Soundtrack, pagina 3: 200 generi, venti per gruppo, titoli inglesi, wrap 1↔200 e ±10 ai confini. Name Color, pagina 1: 40 colori, wrap 1↔40, ordine bianco → grigi → nero → colori caldi → rosa → viola → blu → verdi; etichette inglesi allineate ai colori, Black nero anche nella preview. Menu 0–15: stessa tinta tra preview e sottomenu. Tinte fluide in 0,180 s, senza pulsazioni all'apertura, applicazione o revoca Camera/Revenge.
 
 ### Jump, Ghost e Fly
 
@@ -77,10 +82,12 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 ### Camera, Privacy e Travel
 
 - Camera personale/watch fluida in corsa, strafe e salto. Target morto, uscito, privato o in quarantena fa tornare alla visuale normale; altre Camera valide restano indipendenti.
+- Con Camera attiva provare ciascun Travel riuscito verso spawn, obiettivo e player/bot: nessuna visuale bloccata nella vecchia posizione, stessa modalità e bersaglio valido dopo il reset. Provare Camera OFF, destinazione assente/non sicura e target invalidato al click: nessuna attivazione o riattivazione indesiderata. Ripetere rapidamente e con due giocatori indipendenti.
+- Cambiare il proprio eroe con Camera personale e watch attive: visuale riagganciata al nuovo eroe e modalità/bersaglio validi conservati. Con Camera OFF deve restare OFF. Provare cambio eroe del bersaglio osservato, morte/respawn, Privacy e cambio squadra durante il refresh: una revoca deve prevalere, senza riavviare una Camera non valida.
 - Verificare la revoca al cambio squadra anche con lo stesso eroe e prima della morte/respawn del target.
 - Privacy ON esclude Camera, inspection, Teleport e Attach. Vision ignora intenzionalmente Privacy, ma elimina le targhette Crouch concorrenti.
 - Provare tutte le 5 pagine Travel, navigazione senza esecuzione, esecuzione solo con Interact, binding reali e Self Elimination con cooldown per-player 3 s.
-- Travel: verificare esattamente cinque pagine in EN/ID/TH, incluso il passaggio 5→1 e 1→5. Spawn e Objective esplicitano il teletrasporto; Interact tenuto non deve ripetere alcuna azione. Forward non deve comparire né muovere il player. Provare un cambio squadra in una lobby nuova con un umano, senza aprire menu, poi cambi ripetuti con dummy, menu, Attach e Superman Punch. Al cambio squadra Punch deve tornare OFF; la fase globale di cleanup deve fermare il Chase e rimuovere l'icona personale prima della nuova registrazione. Anche il profilo thailandese ha un'icona di default senza uso dei menu. Provare due player: l'icona del superstite deve continuare. Il crash segnalato dopo la PR #94 non è riproducibile dal modello offline: registrare l'esito nel client della revisione esatta.
+- Travel: verificare esattamente cinque pagine in inglese, incluso il passaggio 5→1 e 1→5. Spawn e Objective esplicitano il teletrasporto; Interact tenuto non deve ripetere alcuna azione. Forward non deve comparire né muovere il player. Provare un cambio squadra in una lobby nuova con un umano, chiudendo il principale iniziale, poi cambi ripetuti con dummy, menu, Attach e Superman Punch. Al cambio squadra Punch deve tornare OFF; la fase globale di cleanup deve fermare il Chase e rimuovere l'icona personale prima della nuova registrazione. Anche il profilo thailandese ha un'icona di default senza uso dei menu. Provare due player: l'icona del superstite deve continuare. Il crash storico non è riproducibile dal modello offline: ripetere la regressione nel client della revisione esatta.
 - Teleport a spawn, obiettivo e Player/Bot: target riletto al click, destinazione sicura oppure azione annullata. Provare obiettivi non visibili e target che muore/esce tra preview e click.
 - Attach: rifiutare self-attach, `A→B→C→A` e cicli lunghi senza rompere relazioni valide. Sgancio con Crouch+Reload; Reload solo resta nativo. Morte, uscita, Privacy e quarantena invalidano i collegamenti.
 - Targhette: un solo IWT con icona/nome/salute segue il soggetto giusto durante movimento e cambio target, senza trasferire un vecchio handle a un altro player.
@@ -117,7 +124,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 2
 - Senza destinazione valida restare in spawn, senza teleport all'origine o nel vuoto. Verificare anche mappe senza obiettivo visibile.
 - Velocità 20%, danni/urti ricevuti normali, collisioni native e assenza di input offensivi/menu. Gli AI normali conservano la loro navigazione.
 - Follow inizialmente OFF; ON seleziona solo il nemico umano vivo più vicino fra gli opt-in. Invertire distanze, opt-out, morte e squadra; stop entro 4 m e ripartenza oltre. Se nessun target resta idoneo, stop facing/throttle. La selezione è a 5 Hz.
-- Con il solo dummy della squadra 1, solo la squadra 2 può attivare Follow; ripetere invertendo i team. Senza dummy ON è bloccato, OFF resta disponibile. Con menu chiuso, rimuovere il dummy avversario: stato OFF entro un secondo; quando ritorna serve un nuovo Interact. Rimuovere il dummy dopo aver aperto il menu e verificare disponibilità e feedback EN/ID/TH senza un'errata conferma di attivazione.
+- Con il solo dummy della squadra 1, solo la squadra 2 può attivare Follow; ripetere invertendo i team. Senza dummy ON è bloccato, OFF resta disponibile. Con menu chiuso, rimuovere il dummy avversario: stato OFF entro un secondo; quando ritorna serve un nuovo Interact. Rimuovere il dummy dopo aver aperto il menu e verificare disponibilità e feedback inglesi senza un'errata conferma di attivazione.
 - Nelle modalità escluse non devono essere creati dummy; i bot restano target validi per Camera/inspection/Vision senza attivare funzioni umane.
 
 ## Metriche e rapporto

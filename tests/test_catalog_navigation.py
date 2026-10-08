@@ -1,4 +1,4 @@
-"""Exercise the source's catalog cursor expressions and localized headings.
+"""Exercise the source's catalog cursor expressions and English headings.
 
 The existing menu evaluator projects cursor assignments under the real rule's
 guards. It does not emulate native HUD rendering or Workshop performance.
@@ -17,7 +17,7 @@ from tests.test_roster_rejoin_regressions import ROOT, SOURCES
 
 
 PALETTE_ARRAY_NAMES = (
-    "NamaWarnaInggris", "DaftarWarna", "DaftarWarnaRGB", "NamaWarna", "NamaWarnaThai",
+    "ColorNames", "NameColors", "NameColorRGBValues",
 )
 EXPECTED_PALETTE_ORDER = (
     "Snow White", "Silver Mist", "Charcoal", "Black", "Ivory", "Lemon Pop", "Sunny Gold",
@@ -29,10 +29,10 @@ EXPECTED_PALETTE_ORDER = (
     "Neon Chartreuse", "Lime Green", "Emerald Green", "Forest Green",
 )
 # Hash all forty records, sorted by English label, preserving each label's actual
-# color, preview RGB, Indonesian label, and Thai label. Captured from main
+# color and preview RGB. Captured from main
 # 23f892b70027c90cb0fc217e4f4e7da0d31c4d62 with Black's preview corrected to (0, 0, 0).
 # The expected hash is available without Git in the workflow's shallow checkout.
-PALETTE_RECORDS_DIGEST = "f3e22b795d8ab9e12c6dbc49d45902a504dec43c0462bf7e63cf39f2f2a25ed6"
+PALETTE_RECORDS_DIGEST = "0c54447de3177255855ab1fc4490f21ea2d4c9fb1d3caf1ddbca29baf5eaf2b1"
 OLD_GENRE_GROUPS = (
     "375e0d302f43aa81daf5343b19ed175097d024ea554ecb228754c0327e39fe1a",
     "4d19059cb1cf07e58a4eed4666c8efa8bb685c884052bc821f7602616c1d0251",
@@ -56,7 +56,7 @@ class CatalogMenuEvaluator(MenuLoadEvaluator):
     def __init__(self, source):
         super().__init__(source)
         normalized = "\n".join(rule.body for rule in self.rules)
-        names = (*PALETTE_ARRAY_NAMES, "DaftarGenre", "NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai")
+        names = (*PALETTE_ARRAY_NAMES, "GenreNames", "MenuPageNames")
         self.items = {name: validator.array_assignment_items(normalized, name) for name in names}
         if any(items is None for items in self.items.values()):
             raise AssertionError("catalog initializer array missing")
@@ -82,13 +82,13 @@ class CatalogMenuEvaluator(MenuLoadEvaluator):
         return super().call(name, args)
 
     def add_viewer(self, name="viewer", **changes):
-        state = dict(MenuTerbuka=True, HalamanMenu=2, MusikKhusus=None,
-                     KursorGenre=0, KursorWarna=0, PerintahMenu=3, IndeksGenre=-1)
+        state = dict(MenuOpen=True, MenuPage=3, CustomSoundtrack=None,
+                     GenreCursor=0, ColorCursor=0, MenuCommand=3, GenreIndex=-1)
         state.update(changes)
         return self.add(name, **state)
 
     def navigate(self, owner, field, command, *, jump=False):
-        self.players[owner]["PerintahMenu"] = command
+        self.players[owner]["MenuCommand"] = command
         prefix = "08" if jump else "06"
         if not self.conditions(prefix, owner):
             return
@@ -115,9 +115,9 @@ class CatalogNavigationTests(unittest.TestCase):
             for start, expected in cases.items():
                 for command, target in zip((3, 4), expected):
                     with self.subTest(source=source, start=start, command=command):
-                        viewer["KursorGenre"] = start
-                        model.navigate("viewer", "KursorGenre", command)
-                        self.assertEqual(viewer["KursorGenre"], target)
+                        viewer["GenreCursor"] = start
+                        model.navigate("viewer", "GenreCursor", command)
+                        self.assertEqual(viewer["GenreCursor"], target)
 
     def test_ten_genre_jumps_cross_group_and_catalog_boundaries(self):
         cases = {0: (10, 190), 19: (29, 9), 20: (30, 10), 199: (9, 189)}
@@ -126,9 +126,9 @@ class CatalogNavigationTests(unittest.TestCase):
             for start, expected in cases.items():
                 for command, target in zip((5, 6), expected):
                     with self.subTest(source=source, start=start, command=command):
-                        viewer["KursorGenre"] = start
-                        model.navigate("viewer", "KursorGenre", command, jump=True)
-                        self.assertEqual(viewer["KursorGenre"], target)
+                        viewer["GenreCursor"] = start
+                        model.navigate("viewer", "GenreCursor", command, jump=True)
+                        self.assertEqual(viewer["GenreCursor"], target)
 
     def test_every_genre_is_reachable_in_one_cursor_cycle(self):
         for source, model in self.models():
@@ -136,64 +136,64 @@ class CatalogNavigationTests(unittest.TestCase):
                 viewer = model.add_viewer()
                 visited = set()
                 for _ in range(200):
-                    visited.add(viewer["KursorGenre"])
-                    model.navigate("viewer", "KursorGenre", 3)
+                    visited.add(viewer["GenreCursor"])
+                    model.navigate("viewer", "GenreCursor", 3)
                 self.assertEqual(visited, set(range(200)))
-                self.assertEqual(viewer["KursorGenre"], 0)
+                self.assertEqual(viewer["GenreCursor"], 0)
 
     def test_navigation_uses_loaded_array_lengths_instead_of_fixed_limits(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 viewer = model.add_viewer()
-                model.globals["DaftarGenre"].extend(f"future-{i}" for i in range(10))
-                model.navigate("viewer", "KursorGenre", 4)
-                self.assertEqual(viewer["KursorGenre"], 209)
-                model.navigate("viewer", "KursorGenre", 3)
-                self.assertEqual(viewer["KursorGenre"], 0)
-                viewer["KursorGenre"] = 199
-                model.navigate("viewer", "KursorGenre", 5, jump=True)
-                self.assertEqual(viewer["KursorGenre"], 209)
-                model.navigate("viewer", "KursorGenre", 6, jump=True)
-                self.assertEqual(viewer["KursorGenre"], 199)
-                model.globals["DaftarWarna"].extend(((10, 20, 30, 255), (40, 50, 60, 255)))
-                viewer["HalamanMenu"] = 0
-                model.navigate("viewer", "KursorWarna", 4)
-                self.assertEqual(viewer["KursorWarna"], 41)
-                model.navigate("viewer", "KursorWarna", 3)
-                self.assertEqual(viewer["KursorWarna"], 0)
+                model.globals["GenreNames"].extend(f"future-{i}" for i in range(10))
+                model.navigate("viewer", "GenreCursor", 4)
+                self.assertEqual(viewer["GenreCursor"], 209)
+                model.navigate("viewer", "GenreCursor", 3)
+                self.assertEqual(viewer["GenreCursor"], 0)
+                viewer["GenreCursor"] = 199
+                model.navigate("viewer", "GenreCursor", 5, jump=True)
+                self.assertEqual(viewer["GenreCursor"], 209)
+                model.navigate("viewer", "GenreCursor", 6, jump=True)
+                self.assertEqual(viewer["GenreCursor"], 199)
+                model.globals["NameColors"].extend(((10, 20, 30, 255), (40, 50, 60, 255)))
+                viewer["MenuPage"] = 1
+                model.navigate("viewer", "ColorCursor", 4)
+                self.assertEqual(viewer["ColorCursor"], 41)
+                model.navigate("viewer", "ColorCursor", 3)
+                self.assertEqual(viewer["ColorCursor"], 0)
 
     def test_navigation_of_two_players_keeps_independent_cursors(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                first = model.add_viewer("first", KursorGenre=199)
-                second = model.add_viewer("second", KursorGenre=20)
-                model.navigate("first", "KursorGenre", 3)
-                self.assertEqual((first["KursorGenre"], second["KursorGenre"]), (0, 20))
-                model.navigate("second", "KursorGenre", 4)
-                self.assertEqual((first["KursorGenre"], second["KursorGenre"]), (0, 19))
+                first = model.add_viewer("first", GenreCursor=199)
+                second = model.add_viewer("second", GenreCursor=20)
+                model.navigate("first", "GenreCursor", 3)
+                self.assertEqual((first["GenreCursor"], second["GenreCursor"]), (0, 20))
+                model.navigate("second", "GenreCursor", 4)
+                self.assertEqual((first["GenreCursor"], second["GenreCursor"]), (0, 19))
 
     def test_ten_genre_jump_respects_locked_music_and_menu_guards(self):
-        changes = ({"MusikKhusus": "Draconian"}, {"HalamanMenu": 0},
-                   {"MenuTerbuka": False}, {"alive": False})
+        changes = ({"CustomSoundtrack": "Draconian"}, {"MenuPage": 0},
+                   {"MenuOpen": False}, {"alive": False})
         for source, model in self.models():
             for index, change in enumerate(changes):
                 with self.subTest(source=source, change=change):
                     owner = f"viewer-{index}"
-                    viewer = model.add_viewer(owner, KursorGenre=199, **change)
-                    model.navigate(owner, "KursorGenre", 5, jump=True)
-                    self.assertEqual(viewer["KursorGenre"], 199)
+                    viewer = model.add_viewer(owner, GenreCursor=199, **change)
+                    model.navigate(owner, "GenreCursor", 5, jump=True)
+                    self.assertEqual(viewer["GenreCursor"], 199)
 
     def test_two_hundred_unique_genres_keep_original_ten_first_in_each_group(self):
         requested = {"Synthwave", "Doom Metal", "Atmospheric Black Metal", "Gothic Metal",
                      "Hip-Hop", "Trap", "Moombahton"}
         for source, model in self.models():
             with self.subTest(source=source):
-                genres = model.globals["DaftarGenre"]
+                genres = model.globals["GenreNames"]
                 self.assertEqual(len(genres), 200)
                 self.assertEqual(len(set(genres)), 200)
                 self.assertLessEqual(requested, set(genres))
                 for group, digest in enumerate(OLD_GENRE_GROUPS):
-                    self.assertEqual(prefix_digest(model.items["DaftarGenre"][group*20:group*20+10]), digest)
+                    self.assertEqual(prefix_digest(model.items["GenreNames"][group*20:group*20+10]), digest)
 
     def test_documentation_lists_exact_runtime_catalog_and_group_headings(self):
         documentation = (ROOT / "docs" / "GENERI.md").read_text(encoding="utf-8")
@@ -201,37 +201,38 @@ class CatalogNavigationTests(unittest.TestCase):
         headings = re.findall(r"^## Gruppo ([0-9]+)/10 — (.+)$", documentation, re.M)
         for source, model in self.models():
             with self.subTest(source=source):
-                self.assertEqual(listed, [(str(i+1), genre) for i, genre in enumerate(model.globals["DaftarGenre"])])
-                self.assertEqual(headings, [(str(i+1), heading) for i, heading in enumerate(model.globals["NamaHalaman"])])
-                for name in ("NamaHalaman", "NamaHalamanInggris", "NamaHalamanThai"):
+                self.assertEqual(listed, [(str(i+1), genre) for i, genre in enumerate(model.globals["GenreNames"])])
+                self.assertEqual(headings, [(str(i+1), heading) for i, heading in enumerate(model.globals["MenuPageNames"])])
+                for name in ("MenuPageNames",):
                     self.assertEqual(len(model.globals[name]), 10)
 
-    def test_music_hud_counter_displays_actual_catalog_length_in_all_languages(self):
+    def test_music_hud_counter_displays_actual_catalog_length_in_english(self):
         for source, model in self.models():
-            viewer = model.add_viewer(IndeksGenre=199)
+            viewer = model.add_viewer(GenreIndex=199)
             model.event_player = "viewer"
-            music = validator.rule_by_subroutine(model.rules, "GambarMusik")
+            music = validator.rule_by_subroutine(model.rules, "DrawSoundtrackMenu")
             headers = [call for call in validator.iter_calls(music.body, "Custom String")
                        if call.args and (validator.parse_literal(call.args[0]) or "").startswith(
-                           ("2 - SOUNDTRACK ", "2 - MUSIK ", "2 - เพลงประกอบ "))]
-            self.assertEqual(len(headers), 3)
+                           ("3 - SOUNDTRACK ",))]
+            self.assertEqual(len(headers), 1)
             for cursor in (0, 19, 20, 199):
-                viewer["KursorGenre"] = cursor
+                viewer["GenreCursor"] = cursor
                 for header in headers:
                     with self.subTest(source=source, cursor=cursor, header=header.args[0]):
                         rendered = model.evaluate(header.raw)
                         self.assertIn(f"{cursor+1}/200", rendered)
-                        self.assertIn(model.globals["DaftarGenre"][199], rendered)
+                        hud = next(validator.iter_calls(music.body, "Create HUD Text"))
+                        self.assertIn(model.globals["GenreNames"][199], model.evaluate(hud.args[3]))
 
     def test_music_hud_group_selection_uses_twenty_entries_per_group(self):
         for source, model in self.models():
             viewer = model.add_viewer()
             model.event_player = "viewer"
-            music = validator.rule_by_subroutine(model.rules, "GambarMusik")
+            music = validator.rule_by_subroutine(model.rules, "DrawSoundtrackMenu")
             selectors = list(validator.iter_calls(music.body, "Round To Integer"))
-            self.assertEqual(len(selectors), 3)
+            self.assertEqual(len(selectors), 1)
             for cursor, group in ((0, 0), (19, 0), (20, 1), (39, 1), (180, 9), (199, 9)):
-                viewer["KursorGenre"] = cursor
+                viewer["GenreCursor"] = cursor
                 for selector in selectors:
                     with self.subTest(source=source, cursor=cursor):
                         expression = Expression(re.sub(r"\s+", "", selector.raw))
@@ -243,7 +244,7 @@ class CatalogNavigationTests(unittest.TestCase):
                 with self.subTest(source=source, array=name):
                     self.assertEqual(len(model.items[name]), 40)
             with self.subTest(source=source):
-                self.assertEqual(tuple(model.globals["NamaWarnaInggris"]), EXPECTED_PALETTE_ORDER)
+                self.assertEqual(tuple(model.globals["ColorNames"]), EXPECTED_PALETTE_ORDER)
                 records = sorted(zip(*(model.items[name] for name in PALETTE_ARRAY_NAMES)),
                                  key=lambda record: record[0])
                 self.assertEqual(prefix_digest(["Array(" + ",".join(record) + ")" for record in records]),
@@ -252,22 +253,20 @@ class CatalogNavigationTests(unittest.TestCase):
     def test_black_name_color_uses_pure_black_for_actual_color_and_menu_preview(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                self.assertEqual(model.globals["DaftarWarna"][3], (0, 0, 0, 255))
-                self.assertEqual(model.globals["DaftarWarnaRGB"][3], (0, 0, 0))
-                self.assertEqual(model.globals["NamaWarnaInggris"][3], "Black")
-                self.assertEqual(model.globals["NamaWarna"][3], "Hitam")
-                self.assertEqual(model.globals["NamaWarnaThai"][3], "ดำ")
+                self.assertEqual(model.globals["NameColors"][3], (0, 0, 0, 255))
+                self.assertEqual(model.globals["NameColorRGBValues"][3], (0, 0, 0))
+                self.assertEqual(model.globals["ColorNames"][3], "Black")
 
     def test_color_navigation_crosses_black_and_wraps_all_forty_colors(self):
         cases = {0: (1, 39), 2: (3, 1), 3: (4, 2), 4: (5, 3), 39: (0, 38)}
         for source, model in self.models():
-            viewer = model.add_viewer(HalamanMenu=0)
+            viewer = model.add_viewer(MenuPage=1)
             for start, expected in cases.items():
                 for command, target in zip((3, 4), expected):
                     with self.subTest(source=source, start=start, command=command):
-                        viewer["KursorWarna"] = start
-                        model.navigate("viewer", "KursorWarna", command)
-                        self.assertEqual(viewer["KursorWarna"], target)
+                        viewer["ColorCursor"] = start
+                        model.navigate("viewer", "ColorCursor", command)
+                        self.assertEqual(viewer["ColorCursor"], target)
 
 
 if __name__ == "__main__":

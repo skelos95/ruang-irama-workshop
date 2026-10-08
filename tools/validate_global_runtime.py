@@ -17,13 +17,15 @@ from tools import validate_workshop as semantic
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ACTORS = ("Global.PemainPemicu", "Global.PemainAktif")
-PERSISTENT_ACTORS = (*ACTORS, "Global.PemainIkonPilar")
+ACTORS = ("Global.TriggerPlayer", "Global.ActivePlayer")
+PERSISTENT_ACTORS = (*ACTORS, "Global.ObjectiveIconPlayer", "Global.CameraPlayer")
 PERSISTENT_ACTIONS = (
     "Create HUD Text", "Create In-World Text", "Create Icon", "Create Effect",
     "Start Camera", "Start Facing", "Start Throttle In Direction",
     "Start Accelerating", "Start Transforming Throttle",
     "Chase Player Variable At Rate", "Chase Player Variable Over Time",
+    "Attach Players", "Start Forcing Dummy Bot Name",
+    "Start Forcing Player To Be Hero", "Start Forcing Player Position",
 )
 NATIVE_EVENTS = {"Player Died", "Player Left Match", "Player Dealt Damage"}
 RECORD_ACTIONS = {
@@ -31,7 +33,7 @@ RECORD_ACTIONS = {
     "Set Global Variable", "Set Global Variable At Index",
     "Modify Global Variable", "Modify Global Variable At Index",
 }
-COLLECTOR_FIELDS = {"AntreanPeristiwa", "EkorPeristiwa", "JumlahPeristiwa", "PeristiwaTerlewat"}
+COLLECTOR_FIELDS = {"EventQueue", "EventQueueTail", "EventCount", "DroppedEventCount"}
 
 
 def english(text: str) -> str:
@@ -124,7 +126,7 @@ def validate_runtime(text: str) -> list[str]:
     if palette:
         chases = list(semantic.iter_calls(palette.body, "Chase Player Variable Over Time"))
         if len(chases) != 2 or any(len(call.args) != 5 or
-                call.args[1] != "WarnaMenu" or call.args[3:] != ("0.180", "None")
+                call.args[1] != "MenuColor" or call.args[3:] != ("0.180", "None")
                 for call in chases):
             errors.append("runtime globale: colori menu richiedono due destinazioni sincrone con transizione 0.180 e None")
     for rule in rules:
@@ -179,8 +181,8 @@ def validate_generated(root: Path = ROOT) -> list[str]:
     errors: list[str] = []
     try:
         from tools import build_global_runtime as compiler
-        source = (root / "source/ruang_irama.it-IT.source").read_text(encoding="utf-8")
-        runtime = (root / "workshop/ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        source = (root / "source/ruang_irama.en-US.source").read_text(encoding="utf-8")
+        runtime = (root / "workshop/ruang_irama.en-US.workshop").read_text(encoding="utf-8")
         expected = compiler.build(source)
         if runtime != expected:
             errors.append("runtime globale obsoleto: rigenerare con build_global_runtime.py")

@@ -20,11 +20,11 @@ class MultijumpEvaluator(MenuLoadEvaluator):
         self.globals["RGB"] = "global-rgb"
 
     def add(self, name, **changes):
-        defaults = dict(ModeLompatGanda=True, KursorLompatGanda=1, TingkatLompatGanda=1,
-                        LompatGandaDipakai=False, LompatDiTanah=False, MenuTerbuka=False, ModeTerbangAktif=False,
-                        WaktuLompatGandaBerikut=0,
-                        LampiranTeleportasiAktif=False, BangkitLompatDipakai=False,
-                        EfekNasib=0, EfekNasibBerakhir=0, jump=False, grounded=False,
+        defaults = dict(MultijumpEnabled=True, MultijumpCursor=1, MultijumpLevel=1,
+                        MultijumpConsumed=False, JumpWasGrounded=False, MenuOpen=False, FlyModeActive=False,
+                        NextMultijumpTime=0,
+                        TravelAttachmentActive=False, JumpReviveConsumed=False,
+                        LuckEffect=0, LuckEffectEndTime=0, jump=False, grounded=False,
                         position=Vector(2, 10, 3), velocity=ZERO)
         defaults.update(changes)
         return super().add(name, **defaults)
@@ -50,7 +50,7 @@ class MultijumpEvaluator(MenuLoadEvaluator):
             key = f"_literal{len(self.literals)}"
             self.literals[key] = match[0][1:-1].replace(r"\n", "\n")
             return key
-        expression = expression.replace("Global.PemainAktif.", "Event Player.").replace("Global.PemainAktif", "Event Player")
+        expression = expression.replace("Global.ActivePlayer.", "Event Player.").replace("Global.ActivePlayer", "Event Player")
         if expression not in self.expressions:
             packed = re.sub(r'"(?:\\.|[^"\\])*"', literal, expression)
             self.expressions[expression] = SpawnExpression(re.sub(r"\s+", "", packed)).tree
@@ -73,7 +73,7 @@ class MultijumpEvaluator(MenuLoadEvaluator):
 
     def execute(self, actions):
         actions = re.sub(r'(?m)^\s*"(?:\\.|[^"\\])*"\s*$', "", actions)
-        actions = actions.replace("Global.PemainAktif.", "Event Player.").replace("Global.PemainAktif", "Event Player")
+        actions = actions.replace("Global.ActivePlayer.", "Event Player.").replace("Global.ActivePlayer", "Event Player")
         frames, active = [], True
         for statement in actions.split(";"):
             statement = statement.strip()
@@ -115,7 +115,7 @@ class MultijumpEvaluator(MenuLoadEvaluator):
         self.event_player = player
         scheduler = self.rule("04g")
         call = next(call for call in validator.iter_calls(scheduler.body, "Call Subroutine")
-                    if call.args == ("ProsesLompatGanda",))
+                    if call.args == ("ProcessMultijump",))
         branch = validator.conditional_branches_containing(scheduler.body, call.start)[0]
         if self.evaluate(branch.splitlines()[0].strip()[3:-2]):
             self.run("89h", player)
@@ -129,19 +129,19 @@ class MultijumpTests(unittest.TestCase):
     def test_off_executes_no_impulse_or_ring_even_while_jump_is_held(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", ModeLompatGanda=False, jump=True)
+                state = model.add("one", MultijumpEnabled=False, jump=True)
                 for step in range(200):
                     model.now = step / 20
                     model.tick("one")
                 self.assertEqual(model.impulses, [])
                 self.assertEqual(model.rings, [])
-                self.assertFalse(state["LompatGandaDipakai"])
+                self.assertFalse(state["MultijumpConsumed"])
 
     def test_fresh_presses_before_repeat_deadline_preserve_selected_boost(self):
         for name, model in self.models():
             for level in range(1, 11):
                 with self.subTest(source=name, percent=100 * level):
-                    state = model.add("one", TingkatLompatGanda=level, velocity=Vector(3, -30, -4))
+                    state = model.add("one", MultijumpLevel=level, velocity=Vector(3, -30, -4))
                     count = len(model.impulses)
                     for cycle in range(20):
                         state["jump"] = True
@@ -149,7 +149,7 @@ class MultijumpTests(unittest.TestCase):
                             model.now = cycle * 0.25 + step * 0.01
                             model.tick("one")
                         self.assertEqual(state["velocity"], Vector(3, 6 * level, -4))
-                        self.assertEqual(state["TingkatLompatGanda"], level)
+                        self.assertEqual(state["MultijumpLevel"], level)
                         state["jump"] = False
                         model.now = cycle * 0.25 + 0.20
                         model.tick("one")
@@ -159,7 +159,7 @@ class MultijumpTests(unittest.TestCase):
     def test_fast_upward_motion_is_corrected_without_stacking_or_horizontal_braking(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", jump=True, TingkatLompatGanda=2, velocity=Vector(4, 80, -6))
+                state = model.add("one", jump=True, MultijumpLevel=2, velocity=Vector(4, 80, -6))
                 model.tick("one")
                 self.assertEqual(state["velocity"], Vector(4, 12, -6))
                 self.assertEqual(model.impulses[0][1], Vector(0, -1, 0))
@@ -181,23 +181,23 @@ class MultijumpTests(unittest.TestCase):
     def test_first_takeoff_does_not_gain_an_impulse_when_native_jump_has_already_left_ground(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", LompatDiTanah=True, grounded=False, jump=True,
-                                  velocity=Vector(3, 7, -4), TingkatLompatGanda=10)
+                state = model.add("one", JumpWasGrounded=True, grounded=False, jump=True,
+                                  velocity=Vector(3, 7, -4), MultijumpLevel=10)
                 model.tick("one")
                 self.assertEqual(model.impulses, [])
                 self.assertEqual(len(model.rings), 1)
                 self.assertEqual(state["velocity"], Vector(3, 7, -4))
-                self.assertFalse(state["LompatDiTanah"])
+                self.assertFalse(state["JumpWasGrounded"])
                 state["jump"] = False; model.tick("one")
                 state["jump"] = True; model.tick("one")
                 self.assertEqual(state["velocity"], Vector(3, 60, -4))
                 self.assertEqual(len(model.impulses), 1)
 
     def test_blocked_held_press_waits_until_cadence_then_resumes_after_recovery(self):
-        blocked = ({"alive": False}, {"spawned": False}, {"Manusia": False},
-                   {"ModeTerbangAktif": True},
-                   {"LampiranTeleportasiAktif": True},
-                   {"EfekNasib": 2, "EfekNasibBerakhir": 20})
+        blocked = ({"alive": False}, {"spawned": False}, {"IsHuman": False},
+                   {"FlyModeActive": True},
+                   {"TravelAttachmentActive": True},
+                   {"LuckEffect": 2, "LuckEffectEndTime": 20})
         for name, model in self.models():
             for changes in blocked:
                 with self.subTest(source=name, changes=changes):
@@ -205,28 +205,28 @@ class MultijumpTests(unittest.TestCase):
                     model.impulses.clear(); model.rings.clear()
                     model.now = 0
                     model.tick("one")
-                    self.assertTrue(state["LompatGandaDipakai"])
-                    self.assertAlmostEqual(state["WaktuLompatGandaBerikut"], 0.3)
+                    self.assertTrue(state["MultijumpConsumed"])
+                    self.assertAlmostEqual(state["NextMultijumpTime"], 0.3)
                     self.assertEqual((model.impulses, model.rings), ([], []))
                     model.now = 0.3
                     model.tick("one")
                     self.assertEqual((model.impulses, model.rings), ([], []))
-                    self.assertAlmostEqual(state["WaktuLompatGandaBerikut"], 0.6)
-                    state.update(alive=True, spawned=True, Manusia=True, MenuTerbuka=False,
-                                 ModeTerbangAktif=False, LampiranTeleportasiAktif=False,
-                                 BangkitLompatDipakai=False, EfekNasib=0)
+                    self.assertAlmostEqual(state["NextMultijumpTime"], 0.6)
+                    state.update(alive=True, spawned=True, IsHuman=True, MenuOpen=False,
+                                 FlyModeActive=False, TravelAttachmentActive=False,
+                                 JumpReviveConsumed=False, LuckEffect=0)
                     model.now = 0.59
                     model.tick("one")
                     self.assertEqual((model.impulses, model.rings), ([], []))
                     model.now = 0.6
                     model.tick("one")
                     self.assertEqual(len(model.impulses), 1)
-                    self.assertAlmostEqual(state["WaktuLompatGandaBerikut"], 0.9)
+                    self.assertAlmostEqual(state["NextMultijumpTime"], 0.9)
 
     def test_resurrect_latch_blocks_held_repeats_until_native_release_rule_clears_it(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", jump=True, BangkitLompatDipakai=True)
+                state = model.add("one", jump=True, JumpReviveConsumed=True)
                 for now in (0, 0.3, 0.6):
                     model.now = now
                     model.tick("one")
@@ -237,8 +237,8 @@ class MultijumpTests(unittest.TestCase):
                 self.assertTrue(model.conditions("12g", "one"))
                 model.run("12g", "one")
                 model.tick("one")
-                self.assertFalse(state["BangkitLompatDipakai"])
-                self.assertEqual(state["WaktuLompatGandaBerikut"], 0)
+                self.assertFalse(state["JumpReviveConsumed"])
+                self.assertEqual(state["NextMultijumpTime"], 0)
                 state["jump"] = True
                 model.now = 0.66
                 model.tick("one")
@@ -247,52 +247,52 @@ class MultijumpTests(unittest.TestCase):
     def test_fresh_press_is_immediate_even_with_a_future_repeat_deadline(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", jump=True, LompatGandaDipakai=False,
-                                  WaktuLompatGandaBerikut=50)
+                state = model.add("one", jump=True, MultijumpConsumed=False,
+                                  NextMultijumpTime=50)
                 model.now = 1
                 model.tick("one")
                 self.assertEqual(len(model.impulses), 1)
-                self.assertAlmostEqual(state["WaktuLompatGandaBerikut"], 1.3)
+                self.assertAlmostEqual(state["NextMultijumpTime"], 1.3)
 
     def test_enabling_while_jump_held_delays_repeat_and_off_preserves_selected_level(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", ModeLompatGanda=False, KursorLompatGanda=10, jump=True)
+                state = model.add("one", MultijumpEnabled=False, MultijumpCursor=10, jump=True)
                 model.run("99p", "one")
-                self.assertTrue(state["ModeLompatGanda"])
-                self.assertEqual(state["TingkatLompatGanda"], 10)
+                self.assertTrue(state["MultijumpEnabled"])
+                self.assertEqual(state["MultijumpLevel"], 10)
                 model.tick("one")
                 self.assertEqual(model.impulses, [])
-                self.assertAlmostEqual(state["WaktuLompatGandaBerikut"], 0.3)
+                self.assertAlmostEqual(state["NextMultijumpTime"], 0.3)
                 model.now = 0.29
                 model.tick("one")
                 self.assertEqual(model.impulses, [])
                 model.now = 0.3
                 model.tick("one")
                 self.assertEqual(len(model.impulses), 1)
-                state["KursorLompatGanda"] = 0
+                state["MultijumpCursor"] = 0
                 model.run("99p", "one")
-                self.assertFalse(state["ModeLompatGanda"])
-                self.assertEqual(state["TingkatLompatGanda"], 10)
+                self.assertFalse(state["MultijumpEnabled"])
+                self.assertEqual(state["MultijumpLevel"], 10)
 
     def test_open_menu_repeats_held_air_jump_on_cadence_while_navigating(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", MenuTerbuka=True, HalamanMenu=14,
-                                  TingkatLompatGanda=3, KursorLompatGanda=3,
-                                  jump=True, velocity=Vector(2, -15, -4), PerintahMenu=3)
+                state = model.add("one", MenuOpen=True, MenuPage=14,
+                                  MultijumpLevel=3, MultijumpCursor=3,
+                                  jump=True, velocity=Vector(2, -15, -4), MenuCommand=3)
                 model.tick("one")
                 self.assertEqual(state["velocity"], Vector(2, 18, -4))
                 self.assertEqual((len(model.impulses), len(model.rings)), (1, 1))
                 navigation = next(line for line in model.rule("06").body.splitlines()
-                                  if "Event Player.KursorLompatGanda =" in line)
+                                  if "Event Player.MultijumpCursor =" in line)
                 model.execute(navigation)
-                self.assertEqual(state["KursorLompatGanda"], 4)
+                self.assertEqual(state["MultijumpCursor"], 4)
                 for now, expected in ((0.29, 1), (0.3, 2), (0.59, 2), (0.6, 3)):
                     model.now = now
                     model.tick("one")
                     self.assertEqual((len(model.impulses), len(model.rings)), (expected, expected))
-                self.assertEqual(state["TingkatLompatGanda"], 3)
+                self.assertEqual(state["MultijumpLevel"], 3)
                 self.assertEqual(state["velocity"], Vector(2, 18, -4))
                 state["jump"] = False
                 model.now = 0.61
@@ -301,36 +301,36 @@ class MultijumpTests(unittest.TestCase):
                 model.now = 0.62
                 model.tick("one")
                 self.assertEqual((len(model.impulses), len(model.rings)), (4, 4))
-                self.assertTrue(state["MenuTerbuka"])
+                self.assertTrue(state["MenuOpen"])
 
     def test_open_menu_preview_and_apply_keep_strength_and_repeat_deadlines_per_player(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                first = model.add("first", MenuTerbuka=True, HalamanMenu=14,
-                                  TingkatLompatGanda=2, KursorLompatGanda=2,
-                                  PerintahMenu=4, jump=True)
-                second = model.add("second", MenuTerbuka=True, HalamanMenu=14,
-                                   TingkatLompatGanda=6, KursorLompatGanda=6, jump=True)
+                first = model.add("first", MenuOpen=True, MenuPage=14,
+                                  MultijumpLevel=2, MultijumpCursor=2,
+                                  MenuCommand=4, jump=True)
+                second = model.add("second", MenuOpen=True, MenuPage=14,
+                                   MultijumpLevel=6, MultijumpCursor=6, jump=True)
                 navigation = next(line for line in model.rule("06").body.splitlines()
-                                  if "Event Player.KursorLompatGanda =" in line)
+                                  if "Event Player.MultijumpCursor =" in line)
                 model.event_player = "first"
                 model.execute(navigation)
                 model.execute(navigation)
-                self.assertEqual(first["KursorLompatGanda"], 0)  # Preview OFF only.
-                self.assertTrue(first["ModeLompatGanda"])
-                self.assertEqual(first["TingkatLompatGanda"], 2)
+                self.assertEqual(first["MultijumpCursor"], 0)  # Preview OFF only.
+                self.assertTrue(first["MultijumpEnabled"])
+                self.assertEqual(first["MultijumpLevel"], 2)
                 model.tick("first")
                 model.tick("second")
                 self.assertEqual((first["velocity"].y, second["velocity"].y), (12, 36))
                 self.assertEqual(len(model.impulses), 2)
 
-                first["KursorLompatGanda"] = 10
+                first["MultijumpCursor"] = 10
                 model.now = 0.1
                 model.run("99p", "first")  # Apply 1000% while Jump remains held.
-                self.assertEqual(first["TingkatLompatGanda"], 10)
-                self.assertEqual((second["TingkatLompatGanda"], second["KursorLompatGanda"]), (6, 6))
-                self.assertAlmostEqual(first["WaktuLompatGandaBerikut"], 0.4)
-                self.assertAlmostEqual(second["WaktuLompatGandaBerikut"], 0.3)
+                self.assertEqual(first["MultijumpLevel"], 10)
+                self.assertEqual((second["MultijumpLevel"], second["MultijumpCursor"]), (6, 6))
+                self.assertAlmostEqual(first["NextMultijumpTime"], 0.4)
+                self.assertAlmostEqual(second["NextMultijumpTime"], 0.3)
                 model.now = 0.29
                 model.tick("first")
                 model.tick("second")
@@ -351,8 +351,8 @@ class MultijumpTests(unittest.TestCase):
         for name, model in self.models():
             with self.subTest(source=name):
                 for index in range(12):
-                    model.add(str(index), TingkatLompatGanda=index % 10 + 1,
-                              jump=index % 2 == 0, MenuTerbuka=index % 3 == 0)
+                    model.add(str(index), MultijumpLevel=index % 10 + 1,
+                              jump=index % 2 == 0, MenuOpen=index % 3 == 0)
                 for _ in range(20):
                     for index in range(12): model.tick(str(index))
                 self.assertEqual(len(model.impulses), 6)
@@ -364,8 +364,8 @@ class MultijumpTests(unittest.TestCase):
         for name, model in self.models():
             with self.subTest(source=name):
                 for index in range(12):
-                    model.add(str(index), TingkatLompatGanda=index % 10 + 1,
-                              jump=True, MenuTerbuka=index % 2 == 0)
+                    model.add(str(index), MultijumpLevel=index % 10 + 1,
+                              jump=True, MenuOpen=index % 2 == 0)
                 for now, expected in ((0, 12), (0.29, 12), (0.3, 24), (0.59, 24), (0.6, 36)):
                     model.now = now
                     for index in range(12):
@@ -374,82 +374,80 @@ class MultijumpTests(unittest.TestCase):
                     for index in range(12):
                         state = model.players[str(index)]
                         self.assertEqual(state["velocity"].y, 6 * (index % 10 + 1))
-                        self.assertEqual(state["TingkatLompatGanda"], index % 10 + 1)
+                        self.assertEqual(state["MultijumpLevel"], index % 10 + 1)
                 self.assertEqual([sum(impulse[0] == str(index) for impulse in model.impulses)
                                   for index in range(12)], [3] * 12)
 
     def test_eleven_menu_choices_wrap_both_ways_and_preview_does_not_apply_them(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                state = model.add("one", HalamanMenu=14, KursorLompatGanda=0,
-                                  TingkatLompatGanda=7, PerintahMenu=3)
+                state = model.add("one", MenuPage=14, MultijumpCursor=0,
+                                  MultijumpLevel=7, MenuCommand=3)
                 navigation = next(line for line in model.rule("06").body.splitlines()
-                                  if "Event Player.KursorLompatGanda =" in line)
+                                  if "Event Player.MultijumpCursor =" in line)
                 model.event_player = "one"
                 for index in range(1, 23):
                     model.execute(navigation)
-                    self.assertEqual(state["KursorLompatGanda"], index % 11)
-                    self.assertEqual(state["TingkatLompatGanda"], 7)
-                state["PerintahMenu"] = 4
+                    self.assertEqual(state["MultijumpCursor"], index % 11)
+                    self.assertEqual(state["MultijumpLevel"], 7)
+                state["MenuCommand"] = 4
                 for index in range(1, 23):
                     model.execute(navigation)
-                    self.assertEqual(state["KursorLompatGanda"], -index % 11)
+                    self.assertEqual(state["MultijumpCursor"], -index % 11)
                 for level in range(1, 11):
-                    state["KursorLompatGanda"] = level
+                    state["MultijumpCursor"] = level
                     model.run("99p", "one")
-                    self.assertEqual(state["TingkatLompatGanda"], level)
-                    self.assertTrue(state["ModeLompatGanda"])
+                    self.assertEqual(state["MultijumpLevel"], level)
+                    self.assertTrue(state["MultijumpEnabled"])
 
-    def test_menu_shows_hundred_percent_steps_and_fixed_applied_value_in_all_languages(self):
-        for name, model in self.models():
-            for language in range(3):
-                with self.subTest(source=name, language=language):
-                    state = model.add("one", IndeksBahasa=language, TingkatLompatGanda=6,
-                                      KursorLompatGanda=10)
-                    model.event_player = "one"
-                    renderer = validator.rule_by_subroutine(model.rules, "GambarLompatGanda")
-                    hud = next(validator.iter_calls(renderer.body, "Create HUD Text"))
-                    body = model.evaluate(hud.args[3])
-                    self.assertIn("600%", body)
-                    self.assertIn("1000%", body)
-                    self.assertIn("11/11", body)
-                    state["KursorLompatGanda"] = 2
-                    self.assertIn("200%", model.evaluate(hud.args[3]))
-                    self.assertEqual(state["TingkatLompatGanda"], 6)
-
-    def test_setup_and_team_quiet_reset_owned_state_and_death_does_not_erase_preferences(self):
-        fields = {"ModeLompatGanda", "KursorLompatGanda", "TingkatLompatGanda",
-                  "LompatGandaDipakai", "LompatDiTanah", "WaktuLompatGandaBerikut"}
+    def test_menu_shows_hundred_percent_steps_and_fixed_applied_value_in_english(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                for owner in ("SiapkanPemain", "TenangkanPemain"):
-                    state = model.add("one", TingkatLompatGanda=10, KursorLompatGanda=10,
-                                      ModeLompatGanda=True, LompatGandaDipakai=True,
-                                      WaktuLompatGandaBerikut=500)
+                state = model.add("one", MultijumpLevel=6, MultijumpCursor=10)
+                model.event_player = "one"
+                renderer = validator.rule_by_subroutine(model.rules, "DrawMultijumpMenu")
+                hud = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+                body = model.evaluate(hud.args[3])
+                self.assertIn("600%", body)
+                self.assertIn("1000%", body)
+                self.assertIn("11/11", body)
+                state["MultijumpCursor"] = 2
+                self.assertIn("200%", model.evaluate(hud.args[3]))
+                self.assertEqual(state["MultijumpLevel"], 6)
+
+    def test_setup_and_team_quiet_reset_owned_state_and_death_does_not_erase_preferences(self):
+        fields = {"MultijumpEnabled", "MultijumpCursor", "MultijumpLevel",
+                  "MultijumpConsumed", "JumpWasGrounded", "NextMultijumpTime"}
+        for name, model in self.models():
+            with self.subTest(source=name):
+                for owner in ("PreparePlayer", "QuiescePlayer"):
+                    state = model.add("one", MultijumpLevel=10, MultijumpCursor=10,
+                                      MultijumpEnabled=True, MultijumpConsumed=True,
+                                      NextMultijumpTime=500)
                     model.event_player = "one"
                     rule = validator.rule_by_subroutine(model.rules, owner)
                     resets = "\n".join(line for line in rule.body.splitlines()
                                        if any("Event Player." + field + " =" in line for field in fields))
                     model.execute(resets)
                     self.assertEqual(tuple(state[field] for field in
-                                           ("ModeLompatGanda", "KursorLompatGanda", "TingkatLompatGanda",
-                                            "LompatGandaDipakai", "LompatDiTanah")), (False, 0, 1, False, True))
-                    self.assertEqual(state["WaktuLompatGandaBerikut"], 0)
+                                           ("MultijumpEnabled", "MultijumpCursor", "MultijumpLevel",
+                                            "MultijumpConsumed", "JumpWasGrounded")), (False, 0, 1, False, True))
+                    self.assertEqual(state["NextMultijumpTime"], 0)
                 death = model.rule("12e")
                 self.assertFalse(any("Event Player." + field + " =" in death.body for field in fields))
 
     def test_validator_rejects_unbounded_repeat_additive_velocity_persistent_effect_and_unbounded_choices(self):
         mutations = (
-            ("LompatGandaDipakai == False", "LompatGandaDipakai == True", "guardia input"),
-            ("Global.PemainAktif.WaktuLompatGandaBerikut = Total Time Elapsed + 0.300;",
-             "Global.PemainAktif.WaktuLompatGandaBerikut = Total Time Elapsed + 0.050;",
+            ("MultijumpConsumed == False", "MultijumpConsumed == True", "guardia input"),
+            ("Global.ActivePlayer.NextMultijumpTime = Total Time Elapsed + 0.300;",
+             "Global.ActivePlayer.NextMultijumpTime = Total Time Elapsed + 0.050;",
              "guardia input"),
-            ("6 * Global.PemainAktif.TingkatLompatGanda - Y Component Of(Velocity Of(Global.PemainAktif))", "6 * Global.PemainAktif.TingkatLompatGanda", "senza accumulo"),
+            ("6 * Global.ActivePlayer.MultijumpLevel - Y Component Of(Velocity Of(Global.ActivePlayer))", "6 * Global.ActivePlayer.MultijumpLevel", "senza accumulo"),
             ("Play Effect(All Players(All Teams), Ring Explosion, Global.RGB", "Create Effect(All Players(All Teams), Ring, Global.RGB", "ring temporaneo"),
-            ("KursorLompatGanda %= 11", "KursorLompatGanda %= 100", "apply deve"),
-            ("Global.PemainAktif.LompatDiTanah == False", "Global.PemainAktif.LompatDiTanah == True", "guardia input"),
-            ("Global.PemainAktif.LompatGandaDipakai = True;",
-             "Global.PemainAktif.LompatGandaDipakai = True;\nGlobal.PemainAktif.TingkatLompatGanda = Global.PemainAktif.TingkatLompatGanda + 1;",
+            ("MultijumpCursor %= 11", "MultijumpCursor %= 100", "apply deve"),
+            ("Global.ActivePlayer.JumpWasGrounded == False", "Global.ActivePlayer.JumpWasGrounded == True", "guardia input"),
+            ("Global.ActivePlayer.MultijumpConsumed = True;",
+             "Global.ActivePlayer.MultijumpConsumed = True;\nGlobal.ActivePlayer.MultijumpLevel = Global.ActivePlayer.MultijumpLevel + 1;",
              "spinta fissa"),
         )
         # English fixture is selected explicitly for portable action spellings.

@@ -27,18 +27,19 @@ class ResourceExpressions:
         _, fields, _, _ = semantic.declaration_entries(runtime.english(text))
         self.fields = {item.name for item in fields}
         self.players = {}
-        self.globals = {"PemainPemicu": None, "PemainAktif": None,
-                        "PemainIkonPilar": None, "PemainManusia": [],
-                        "JarakBidik": 25}
+        self.globals = {"TriggerPlayer": None, "ActivePlayer": None,
+                        "ObjectiveIconPlayer": None, "CameraPlayer": None, "HumanPlayers": [],
+                        "AimDistance": 25}
         self.values = {}
         self.trees = {}
         self.viewer = None
         self.objective = Vector(100, 2, 40)
 
     def actor(self, identity):
-        self.globals["PemainPemicu"] = identity
-        self.globals["PemainAktif"] = identity
-        self.globals["PemainIkonPilar"] = identity
+        self.globals["TriggerPlayer"] = identity
+        self.globals["ActivePlayer"] = identity
+        self.globals["ObjectiveIconPlayer"] = identity
+        self.globals["CameraPlayer"] = identity
 
     def resolve(self, name):
         if name in self.values:
@@ -140,7 +141,7 @@ class ResourceExpressions:
 class GlobalResourceBindingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.text = (ROOT / "workshop/ruang_irama.it-IT.workshop").read_text(encoding="utf-8")
+        cls.text = (ROOT / "workshop/ruang_irama.en-US.workshop").read_text(encoding="utf-8")
         cls.normalized = runtime.english(cls.text)
         if "Ongoing - Each Player" in cls.normalized:
             raise AssertionError("tests must exercise the generated global artifact")
@@ -151,14 +152,14 @@ class GlobalResourceBindingTests(unittest.TestCase):
             owner = f"owner{index}"
             target = f"target{index}"
             model.players[owner] = {
-                "WarnaNama": (index, index + 30, index + 70, 255),
-                "WarnaMenu": Vector(index, index + 20, index + 40),
-                "TargetKamera": target, "TargetInspeksi": target,
-                "NamaTampilan": owner,
+                "NameColor": (index, index + 30, index + 70, 255),
+                "MenuColor": Vector(index, index + 20, index + 40),
+                "CameraTarget": target, "InspectionTarget": target,
+                "DisplayName": owner,
             }
             model.players[target] = {"eye": Vector(index, 5, index * 2),
                                      "facing": Vector(0, 0, 1), "health": 200}
-            model.globals["PemainManusia"].append(owner)
+            model.globals["HumanPlayers"].append(owner)
         return model
 
     def test_twelve_roster_huds_keep_owner_while_name_color_updates(self):
@@ -175,7 +176,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
             for index in range(12):
                 owner = f"owner{index}"
                 value = (255 - index, index, 150 + index, 255)
-                model.players[owner]["WarnaNama"] = value
+                model.players[owner]["NameColor"] = value
                 self.assertEqual(model.evaluate(installed[owner]), value)
 
     def test_two_menu_colors_remain_live_and_do_not_follow_shared_actor(self):
@@ -190,8 +191,8 @@ class GlobalResourceBindingTests(unittest.TestCase):
             installed[owner] = model.install(color)
             viewers[owner] = model.install(hud.args[0])
         model.actor(None)
-        model.players["owner0"]["WarnaMenu"] = Vector(220, 10, 30)
-        model.players["owner1"]["WarnaMenu"] = Vector(15, 160, 240)
+        model.players["owner0"]["MenuColor"] = Vector(220, 10, 30)
+        model.players["owner1"]["MenuColor"] = Vector(15, 160, 240)
         for owner, value in (("owner0", (220, 10, 30, 255)),
                              ("owner1", (15, 160, 240, 255))):
             model.viewer = owner
@@ -199,7 +200,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
             self.assertEqual(model.evaluate(installed[owner]), value)
         model.actor("owner1")
         model.viewer = "owner0"
-        model.players["owner0"]["WarnaMenu"] = Vector(100, 75, 20)
+        model.players["owner0"]["MenuColor"] = Vector(100, 75, 20)
         self.assertEqual(model.evaluate(installed["owner0"]), (100, 75, 20, 255))
 
     def test_twelve_cameras_follow_owned_targets_after_actor_changes(self):
@@ -220,7 +221,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
             self.assertEqual(model.evaluate(installed[owner][0]), owner)
             self.assertEqual(model.evaluate(installed[owner][1]), eye + facing * 25)
         # A fresh identity using the same synthetic slot must not steal a capture.
-        model.players["replacement"] = {"TargetKamera": "target11", "slot": 0}
+        model.players["replacement"] = {"CameraTarget": "target11", "slot": 0}
         model.players["owner0"]["slot"] = 0
         model.actor("replacement")
         self.assertEqual(model.evaluate(installed["owner0"][0]), "owner0")
@@ -232,7 +233,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
         position = model.call_in("13", "Create In-World Text").args[2]
         model.actor("owner0")
         installed = model.install(position)
-        model.players["owner0"]["TargetInspeksi"] = "target1"
+        model.players["owner0"]["InspectionTarget"] = "target1"
         model.actor("owner1")
         model.players["target0"]["eye"] = Vector(90, 12, 3)
         self.assertEqual(model.evaluate(installed), Vector(90, 12.45, 3))
@@ -245,7 +246,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
         for index in range(12):
             owner = f"owner{index}"
             model.actor(owner)
-            model.players[owner]["PosisiIkonPilar"] = Vector(index, 1, -index)
+            model.players[owner]["ObjectiveIconPosition"] = Vector(index, 1, -index)
             installed[owner] = (model.install(icon.args[1]), model.install(icon.args[4]))
         model.actor(None)
         model.objective = Vector(200, 10, -30)
@@ -253,7 +254,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
             owner = f"owner{index}"
             offset = Vector(-index, index / 2 + 0.5, index)
             color = (index, index * 2, 255 - index, 255)
-            model.players[owner].update(PosisiIkonPilar=offset, WarnaNama=color)
+            model.players[owner].update(ObjectiveIconPosition=offset, NameColor=color)
             self.assertEqual(model.evaluate(installed[owner][0]), model.objective + offset)
             self.assertEqual(model.evaluate(installed[owner][1]), color)
 
@@ -266,7 +267,7 @@ class GlobalResourceBindingTests(unittest.TestCase):
         model.actor("owner0")
         installed = model.install(mutated)
         model.actor("owner1")
-        self.assertNotEqual(model.evaluate(installed), model.players["owner0"]["WarnaNama"])
+        self.assertNotEqual(model.evaluate(installed), model.players["owner0"]["NameColor"])
 
     def test_freezing_name_color_data_is_observable_after_owner_changes_color(self):
         model = self.model(2)
@@ -274,9 +275,9 @@ class GlobalResourceBindingTests(unittest.TestCase):
         model.actor("owner0")
         installed = model.install(f"Evaluate Once({color})")
         original = model.evaluate(installed)
-        model.players["owner0"]["WarnaNama"] = (0, 0, 0, 255)
+        model.players["owner0"]["NameColor"] = (0, 0, 0, 255)
         self.assertEqual(model.evaluate(installed), original)
-        self.assertNotEqual(model.evaluate(installed), model.players["owner0"]["WarnaNama"])
+        self.assertNotEqual(model.evaluate(installed), model.players["owner0"]["NameColor"])
 
 
 if __name__ == "__main__":

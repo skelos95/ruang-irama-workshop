@@ -1,7 +1,7 @@
 """Deterministic lowering of the logical Workshop into one global runtime.
 
-The explicit behavioral input is lowered into the Italian import and its
-English runtime reference. --check verifies both deterministic artifacts;
+The English behavioral input is lowered into the English import and its
+runtime reference. --check verifies both deterministic artifacts;
 native engine lifetime and rendering still require an in-game test.
 """
 from __future__ import annotations
@@ -17,10 +17,10 @@ sys.path.insert(0, str(REPO / "tools"))
 import check_clipboard_import as clipboard
 import validate_workshop as validator
 
-ACTOR = "Global.PemainPemicu"
-RECORD = "Global.PeristiwaAktif"
-STATE = f"{ACTOR}.StatusPengatur"
-TIME = f"{ACTOR}.WaktuPengatur"
+ACTOR = "Global.TriggerPlayer"
+RECORD = "Global.ActiveEvent"
+STATE = f"{ACTOR}.ControllerState"
+TIME = f"{ACTOR}.ControllerTimes"
 CAPACITY = 256
 NATIVE_PERSISTENT = (
     "Create HUD Text", "Create In-World Text", "Create Icon", "Create Effect",
@@ -33,9 +33,9 @@ EVENT_PREFIXES = ["03i", "04", "12e", "16a", "17", "18f", "89i1"]
 # These leave their input/target predicate true while the button/target remains.
 LATCH_PREFIXES = {"03g", "03h", "06", "08", "10", "11", "19c", "19e"}
 GLOBALS = [
-    "PemainPemicu", "GenerasiPengatur", "FaseSiklusGlobal", "WaktuFaseSiklusGlobal", "PemilikFaseSiklus",
-    "AntreanPeristiwa", "KepalaPeristiwa", "EkorPeristiwa", "JumlahPeristiwa", "JumlahPeristiwaAwal", "KursorPeristiwa",
-    "PeristiwaAktif", "PeristiwaTerlewat", "KeluarTertunda", "KursorKeluarTertunda", "WaktuHilangHUD", "KursorDaftarHilang", "PilihanIkonTerlihat",
+    "TriggerPlayer", "ControllerGeneration", "TeamCyclePhase", "TeamCyclePhaseTime", "TeamCyclePhaseOwner",
+    "EventQueue", "EventQueueHead", "EventQueueTail", "EventCount", "InitialEventCount", "EventCursor",
+    "ActiveEvent", "DroppedEventCount", "PendingLeaves", "PendingLeaveCursor", "MissingHudDeadlines", "MissingPlayerCursor", "VisibleIconChoices",
 ]
 
 
@@ -199,20 +199,9 @@ def compact_booleans(text: str) -> str:
 
 
 def compact_palette(text: str) -> str:
-    """Factor the palette and snapshot each command's colour destination."""
+    """Snapshot each command's colour destination from the logical palette."""
     rule = next(item for item in validator.extract_rules(text) if prefix(item) == '91k')
-    call = list(validator.iter_calls(rule.body, 'Chase Player Variable Over Time'))[-1]
-    # Palette values come from the logical expression, not a second manual list.
-    vectors = [item.raw for item in validator.iter_calls(call.args[2], 'Vector')]
-    assert len(vectors) == 15
-    owner = f'Evaluate Once({ACTOR})'
-    index = f'(Player Variable({owner}, HalamanMenu) == -1 ? Player Variable({owner}, KursorUtama) : Player Variable({owner}, HalamanMenu))'
-    color = f'Global.DaftarWarnaRGB[Player Variable({owner}, IndeksWarna)]'
-    palette = 'Array(Vector(0, 0, 0), ' + ', '.join(vectors) + ')'
-    args = list(call.args)
-    args[2] = f'{index} == 0 ? Global.DaftarWarnaRGB[Player Variable({owner}, KursorWarna)] : And({index} >= 1, {index} <= 15) ? {color} * 0.680 + {palette}[{index}] * 0.320 : {color}'
-    changed = 'Chase Player Variable Over Time(' + ', '.join(args) + ')'
-    body = rule.body[:call.start] + changed + rule.body[call.end:]
+    body = rule.body
     # Global dispatch clears its actor before the native Chase's next frame.
     # Menu entry/navigation already restarts this 0.180 s interpolation, so
     # evaluate the destination now instead of capturing the cleared pointer
@@ -221,7 +210,7 @@ def compact_palette(text: str) -> str:
     assert len(chases) == 2
     for chase in reversed(chases):
         values = list(chase.args)
-        assert values[1] == 'WarnaMenu' and values[3] == '0.180'
+        assert values[1] == 'MenuColor' and values[3] == '0.180'
         values[4] = 'None'
         replacement = 'Chase Player Variable Over Time(' + ', '.join(values) + ')'
         body = body[:chase.start] + replacement + body[chase.end:]
@@ -234,9 +223,9 @@ def compact_icon_visibility(text: str) -> str:
     body = rule.body
     for call in reversed(list(validator.iter_calls(body, 'Create Icon'))):
         args = list(call.args)
-        selected = re.search(r'IndeksIkon\) == (\d+)', args[0])
+        selected = re.search(r'IconIndex\) == (\d+)', args[0])
         assert selected is not None
-        args[0] = f'And(Entity Exists(Evaluate Once(Global.PemainIkonPilar)), Global.PilihanIkonTerlihat[Evaluate Once(Global.IndeksIkonPilar)] == {selected[1]}) ? All Players(All Teams) : Empty Array'
+        args[0] = f'And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == {selected[1]}) ? All Players(All Teams) : Empty Array'
         replacement = 'Create Icon(' + ', '.join(args) + ')'
         body = body[:call.start] + replacement + body[call.end:]
     return text[:rule.start] + body + text[rule.end:]
@@ -252,7 +241,7 @@ def compact_fixed_pools(text: str) -> str:
         assignment = re.fullmatch(r'(Global\.[A-Za-z][A-Za-z0-9_]*)\s*=\s*Array\(([^;]*)\);', piece)
         if not assignment: continue
         values = [item.strip() for item in validator.split_top_level(assignment[2], ',')]
-        owner = 'Global.SlotHUDTersedia' if len(values) == 12 else 'Global.PemilikTeksSementara' if len(values) == 24 else ''
+        owner = 'Global.AvailableHudSlots' if len(values) == 12 else 'Global.TemporaryTextOwners' if len(values) == 24 else ''
         if owner in initialized and len(set(values)) == 1 and values[0] in {'0', 'Null'}:
             pieces[index] = f'{assignment[1]} = Mapped Array({owner}, {values[0]});'
         initialized.add(assignment[1])
@@ -351,7 +340,7 @@ def persistent(text: str) -> str:
                 values[index] = re.sub(rf"\b{re.escape(ACTOR)}\.([A-Za-z][A-Za-z0-9_]*)", lambda m: f"Player Variable(Local Player, {m.group(1)})", values[index])
                 values[index] = re.sub(rf"\b{re.escape(ACTOR)}\b", "Local Player", values[index])
             bound = "Create HUD Text(" + ", ".join(values) + ")"
-        for actor in (ACTOR, "Global.PemainAktif", "Global.PemainIkonPilar"):
+        for actor in (ACTOR, "Global.ActivePlayer", "Global.ObjectiveIconPlayer", "Global.CameraPlayer"):
             bound = capture(bound, actor)
         text = text[:call.start] + bound + text[call.end:]
     return text
@@ -369,25 +358,25 @@ def actions(rule: validator.Rule) -> str:
 
 
 def controller_name(rule: validator.Rule) -> str:
-    return "Pengatur" + prefix(rule).replace("-", "").capitalize()
+    return "Controller" + prefix(rule).replace("-", "").capitalize()
 
 
 def state_controller(rule: validator.Rule, index: int) -> str:
     p = prefix(rule)
     entry = actor_text(conjunction(validator.rule_block(rule, "conditions")))
     if p not in {'01a', '01b', '02', '03c', '03f', '03g', '03h', '18i', '18j'}:
-        # The human branch in ProsesPengaturGlobal and its initial existence
+        # The human branch in ProcessGlobalController and its initial existence
         # guard prove these facts once for the whole batch of controllers.
         conditions = [item.strip() for item in validator.split_top_level(validator.rule_block(rule, 'conditions') or '', ';') if item.strip()]
-        proven = {'Global.Siap == True', 'Event Player.Manusia == True', 'Event Player.BotOtomatis == False', 'Is Dummy Bot(Event Player) == False', 'Entity Exists(Event Player) == True'}
+        proven = {'Global.IsReady == True', 'Event Player.IsHuman == True', 'Event Player.IsAutomaticBot == False', 'Is Dummy Bot(Event Player) == False', 'Entity Exists(Event Player) == True'}
         entry = actor_text(conjunction(';'.join(item for item in conditions if item not in proven)))
     code = persistent(actor_text(actions(rule)))
     if p == "01a":
         # Cancel human held-input continuations; serial lifecycle phases live globally.
-        code = code.replace("\t\tIf(Entity Exists(" + ACTOR + ") == True);\n\t\t\tStop Chasing Player Variable(" + ACTOR + ", PosisiIkonPilar);\n\t\tEnd;\n", "")
+        code = code.replace("\t\tIf(Entity Exists(" + ACTOR + ") == True);\n\t\t\tStop Chasing Player Variable(" + ACTOR + ", ObjectiveIconPosition);\n\t\tEnd;\n", "")
         code += f"\n\t\t{TIME}[36] = {STATE}[36];\n\t\t{STATE} = Empty Array;\n\t\t{STATE}[36] = {TIME}[36];\n"
         code += f"\t\t{TIME} = Empty Array;\n"
-        code += f"\t\tIf(Global.PemilikFaseSiklus == {ACTOR});\n\t\t\tGlobal.PemilikFaseSiklus = Null;\n\t\t\tGlobal.FaseSiklusGlobal = 0;\n\t\tEnd;\n"
+        code += f"\t\tIf(Global.TeamCyclePhaseOwner == {ACTOR});\n\t\t\tGlobal.TeamCyclePhaseOwner = Null;\n\t\t\tGlobal.TeamCyclePhase = 0;\n\t\tEnd;\n"
         return subrule(rule.name, controller_name(rule), f"\t\tAbort If(({entry}) == False);\n" + code)
     if p == "01b":
         waits = list(validator.iter_calls(code, "Wait"))
@@ -396,19 +385,19 @@ def state_controller(rule: validator.Rule, index: int) -> str:
         pieces = [part.lstrip(";\n\t") for part in pieces]
         pieces = [re.sub(r'(?m)^\s*Abort If\([^\n]*\);\s*', '', part) for part in pieces]
         body = f"\t\tAbort If(({entry}) == False);\n"
-        body += f"\t\tIf(Global.PemilikFaseSiklus != {ACTOR});\n\t\t\tGlobal.PemilikFaseSiklus = {ACTOR};\n\t\t\tGlobal.FaseSiklusGlobal = 0;\n\t\t\tGlobal.WaktuFaseSiklusGlobal = 0;\n\t\tEnd;\n"
-        body += "\t\tAbort If(Total Time Elapsed < Global.WaktuFaseSiklusGlobal);\n"
+        body += f"\t\tIf(Global.TeamCyclePhaseOwner != {ACTOR});\n\t\t\tGlobal.TeamCyclePhaseOwner = {ACTOR};\n\t\t\tGlobal.TeamCyclePhase = 0;\n\t\t\tGlobal.TeamCyclePhaseTime = 0;\n\t\tEnd;\n"
+        body += "\t\tAbort If(Total Time Elapsed < Global.TeamCyclePhaseTime);\n"
         for phase, part in enumerate(pieces):
-            body += f"\t\t{'If' if phase == 0 else 'Else If'}(Global.FaseSiklusGlobal == {phase});\n\t\t\t" + part.strip() + "\n"
-            body += f"\t\t\tGlobal.FaseSiklusGlobal = {phase + 1};\n"
+            body += f"\t\t{'If' if phase == 0 else 'Else If'}(Global.TeamCyclePhase == {phase});\n\t\t\t" + part.strip() + "\n"
+            body += f"\t\t\tGlobal.TeamCyclePhase = {phase + 1};\n"
             if phase < 2:
-                body += "\t\t\tGlobal.WaktuFaseSiklusGlobal = Total Time Elapsed + 0.050;\n"
+                body += "\t\t\tGlobal.TeamCyclePhaseTime = Total Time Elapsed + 0.050;\n"
         body += "\t\tEnd;\n"
-        body += f"\t\tIf(Global.FaseSiklusGlobal == 3);\n\t\t\tGlobal.PemilikFaseSiklus = Null;\n\t\t\tGlobal.FaseSiklusGlobal = 0;\n\t\tEnd;\n"
+        body += f"\t\tIf(Global.TeamCyclePhase == 3);\n\t\t\tGlobal.TeamCyclePhaseOwner = Null;\n\t\t\tGlobal.TeamCyclePhase = 0;\n\t\tEnd;\n"
         return subrule(rule.name, controller_name(rule), body)
     if p == "02":
         wait = next(iter(validator.iter_calls(code, "Wait")))
-        cached_start = code.index("\t\tIf(And(" + ACTOR + ".PernahDisiapkan")
+        cached_start = code.index("\t\tIf(And(" + ACTOR + ".WasPrepared")
         # Known nested IgnoreCondition split. Keep the original guards and tail.
         cached_end = validator.matching_parenthesis(code, code.index("(", cached_start)) + 1
         cached_condition = code[code.index("(", cached_start) + 1:cached_end - 1]
@@ -421,10 +410,10 @@ def state_controller(rule: validator.Rule, index: int) -> str:
         pre_wait = code[cached_end:wait.start]
         forcing_start = pre_wait.index("Start Forcing Dummy Bot Name(")
         forcing = pre_wait[forcing_start:].strip()
-        body = f"\t\tIf({STATE}[{index}] == 2);\n\t\t\tAbort If(Total Time Elapsed < {TIME}[{index}]);\n\t\t\tIf(Or({ACTOR}.TimTerakhir != Team Of({ACTOR}), {ACTOR}.TimSiklusTarget != Team Of({ACTOR})));\n\t\t\t\tStop Forcing Dummy Bot Name({ACTOR});\n\t\t\t\t{ACTOR}.SudahDiperiksa = False;\n\t\t\t\t{STATE}[{index}] = 0;\n\t\t\t\tAbort;\n\t\t\tEnd;\n\t\t\t{STATE}[{index}] = 1;\n\t\t\t" + resumed.strip() + f"\n\t\t\t{STATE}[{index}] = 3;\n"
+        body = f"\t\tIf({STATE}[{index}] == 2);\n\t\t\tAbort If(Total Time Elapsed < {TIME}[{index}]);\n\t\t\tIf(Or({ACTOR}.LastTeam != Team Of({ACTOR}), {ACTOR}.TeamCycleTargetTeam != Team Of({ACTOR})));\n\t\t\t\tStop Forcing Dummy Bot Name({ACTOR});\n\t\t\t\t{ACTOR}.IsClassified = False;\n\t\t\t\t{STATE}[{index}] = 0;\n\t\t\t\tAbort;\n\t\t\tEnd;\n\t\t\t{STATE}[{index}] = 1;\n\t\t\t" + resumed.strip() + f"\n\t\t\t{STATE}[{index}] = 3;\n"
         body += f"\t\tElse;\n\t\t\tAbort If(({entry}) == False);\n" + before
         body += f"\t\t\tIf({cached_condition});\n\t\t\t\t{STATE}[{index}] = 3;\n\t\t\tElse;\n\t\t\t\t{forcing}\n\t\t\t\t{STATE}[{index}] = 2;\n\t\t\t\t{TIME}[{index}] = Total Time Elapsed + 0.016;\n\t\t\tEnd;\n\t\tEnd;\n"
-        tail = tail.replace(f'{ACTOR}.UrutanHUD = First Of(Global.SlotHUDTersedia);', f'{ACTOR}.UrutanHUD = First Of(Global.SlotHUDTersedia);\n\t\tGlobal.WaktuHilangHUD[{ACTOR}.UrutanHUD] = 0;')
+        tail = tail.replace(f'{ACTOR}.HudSlot = First Of(Global.AvailableHudSlots);', f'{ACTOR}.HudSlot = First Of(Global.AvailableHudSlots);\n\t\tGlobal.MissingHudDeadlines[{ACTOR}.HudSlot] = 0;')
         body += f"\t\tIf({STATE}[{index}] == 3);\n\t\t\t{STATE}[{index}] = 0;\n" + tail + "\n\t\tEnd;\n"
         return subrule(rule.name, controller_name(rule), body)
     waits = list(validator.iter_calls(code, "Wait"))
@@ -450,30 +439,30 @@ def event_snapshot(rule: validator.Rule, kind: int) -> str:
     data = ["Null"] * 25
     data[0:2] = [str(kind), "Event Player"]
     data[7] = "Total Time Elapsed"
-    data[18:23] = ["Hero Of(Event Player)", "Team Of(Event Player)", "Event Player.StatusPengatur[36]", 'Event Player.Manusia == True ? Event Player.NamaTampilan : Custom String("{0}", Event Player)', "Null"]
+    data[18:23] = ["Hero Of(Event Player)", "Team Of(Event Player)", "Event Player.ControllerState[36]", 'Event Player.IsHuman == True ? Event Player.DisplayName : Custom String("{0}", Event Player)', "Null"]
     if p == "12e":
         data[6] = "Position Of(Event Player)"
     if p == "04":
-        data[12:14] = ["Event Player.BotOtomatis", "Event Player.TeksVisiNasib"]
+        data[12:14] = ["Event Player.IsAutomaticBot", "Event Player.LuckVisionText"]
     if p == "17":
         data[2] = "Attacker"
-        data[8:12] = ["Event Player.KematianBalasDendam", "Event Player.PenagihBalasDendam", "And(Event Player.PenagihBalasDendam != Null, And(Entity Exists(Event Player.PenagihBalasDendam), Player Variable(Event Player.PenagihBalasDendam, Manusia) == True))", "Player Variable(Attacker, Manusia)"]
+        data[8:12] = ["Event Player.RevengeDeathPending", "Event Player.RevengeClaimant", "And(Event Player.RevengeClaimant != Null, And(Entity Exists(Event Player.RevengeClaimant), Player Variable(Event Player.RevengeClaimant, IsHuman) == True))", "Player Variable(Attacker, IsHuman)"]
         data[17] = "Is Alive(Event Player) == False"
-        data[23:25] = ['Player Variable(Event Player.PenagihBalasDendam, StatusPengatur)[36]', 'Player Variable(Attacker, StatusPengatur)[36]']
+        data[23:25] = ['Player Variable(Event Player.RevengeClaimant, ControllerState)[36]', 'Player Variable(Attacker, ControllerState)[36]']
     if p == "18f":
-        data[14] = "Event Player.MenuTerbuka == False"
+        data[14] = "Event Player.MenuOpen == False"
     if p == "89i1":
         data[3:6] = ["Victim", "Event Ability", "Event Damage"]
-        data[15] = "Or(Has Status(Victim, Phased Out), Or(Has Status(Victim, Unkillable), And(Player Variable(Victim, KebalAktif), Player Variable(Victim, ModeKebal) != 0)))"
-        data[16] = "Event Player.UrutanHUD"
-        data[22] = "Player Variable(Victim, StatusPengatur)[36]"
+        data[15] = "Or(Has Status(Victim, Phased Out), Or(Has Status(Victim, Unkillable), And(Player Variable(Victim, UnkillableActive), Player Variable(Victim, UnkillableMode) != 0)))"
+        data[16] = "Event Player.HudSlot"
+        data[22] = "Player Variable(Victim, ControllerState)[36]"
     if p == '04': data = data[:13]
     elif p != '17': data = data[:23] if p == '89i1' else data[:22]
     event = validator.event_block(rule)
     conditions = validator.rule_block(rule, "conditions") or ""
     limit = 192 if p == "89i1" else CAPACITY
-    enqueue = f"\t\tIf(Global.JumlahPeristiwa < {limit});\n\t\t\tGlobal.AntreanPeristiwa[Global.EkorPeristiwa] = Array(" + ", ".join(data) + ");\n"
-    enqueue += f"\t\t\tGlobal.EkorPeristiwa = (Global.EkorPeristiwa + 1) % {CAPACITY};\n\t\t\tGlobal.JumlahPeristiwa += 1;\n\t\tElse;\n\t\t\tGlobal.PeristiwaTerlewat += 1;\n\t\tEnd;\n"
+    enqueue = f"\t\tIf(Global.EventCount < {limit});\n\t\t\tGlobal.EventQueue[Global.EventQueueTail] = Array(" + ", ".join(data) + ");\n"
+    enqueue += f"\t\t\tGlobal.EventQueueTail = (Global.EventQueueTail + 1) % {CAPACITY};\n\t\t\tGlobal.EventCount += 1;\n\t\tElse;\n\t\t\tGlobal.DroppedEventCount += 1;\n\t\tEnd;\n"
     return f'rule("{rule.name}")\n{{\n\tevent\n\t{{{event}\t}}\n\n\tconditions\n\t{{{conditions}\t}}\n\n\tactions\n\t{{\n{enqueue}\t}}\n}}'
 
 
@@ -485,13 +474,13 @@ def event_worker(rule: validator.Rule) -> str:
     code = code.replace("Event Ability", f"{RECORD}[4]").replace("Event Damage", f"{RECORD}[5]")
     if p == "04":
         # Bot text handles are owned by the global temporary registry; no absent-player reads.
-        body = f"\t\tIf({RECORD}[12] == True);\n\t\t\tGlobal.PemainTeksPembersihan = {ACTOR};\n\t\t\tCall Subroutine(BersihkanTeksYatim);\n\t\tElse;\n\t\t\tGlobal.KursorKeluarTertunda = Index Of Array Value(Global.KeluarTertunda, Null);\n\t\t\tIf(Global.KursorKeluarTertunda < 0);\n\t\t\t\tGlobal.KursorKeluarTertunda = Count Of(Global.KeluarTertunda);\n\t\t\tEnd;\n\t\t\tIf(Global.KursorKeluarTertunda < 24);\n\t\t\t\tGlobal.KeluarTertunda[Global.KursorKeluarTertunda] = {RECORD};\n\t\t\tElse;\n\t\t\t\tGlobal.PeristiwaTerlewat += 1;\n\t\t\tEnd;\n\t\tEnd;\n"
-        return subrule(rule.name + " global", "Peristiwa" + p.capitalize(), body)
-    guards = f"\t\tAbort If(Entity Exists({ACTOR}) == False);\n\t\tAbort If({RECORD}[20] != {STATE}[36]);\n\t\tAbort If({RECORD}[21] != ({ACTOR}.Manusia == True ? {ACTOR}.NamaTampilan : Custom String(\"{{0}}\", {ACTOR})));\n"
+        body = f"\t\tIf({RECORD}[12] == True);\n\t\t\tGlobal.TextCleanupPlayer = {ACTOR};\n\t\t\tCall Subroutine(CleanupOrphanedText);\n\t\tElse;\n\t\t\tGlobal.PendingLeaveCursor = Index Of Array Value(Global.PendingLeaves, Null);\n\t\t\tIf(Global.PendingLeaveCursor < 0);\n\t\t\t\tGlobal.PendingLeaveCursor = Count Of(Global.PendingLeaves);\n\t\t\tEnd;\n\t\t\tIf(Global.PendingLeaveCursor < 24);\n\t\t\t\tGlobal.PendingLeaves[Global.PendingLeaveCursor] = {RECORD};\n\t\t\tElse;\n\t\t\t\tGlobal.DroppedEventCount += 1;\n\t\t\tEnd;\n\t\tEnd;\n"
+        return subrule(rule.name + " global", "NativeEvent" + p.capitalize(), body)
+    guards = f"\t\tAbort If(Entity Exists({ACTOR}) == False);\n\t\tAbort If({RECORD}[20] != {STATE}[36]);\n\t\tAbort If({RECORD}[21] != ({ACTOR}.IsHuman == True ? {ACTOR}.DisplayName : Custom String(\"{{0}}\", {ACTOR})));\n"
     if p in {'12e', '16a', '17', '18f'}:
-        guards += f'\t\tAbort If(Or({ACTOR}.SiklusPemainAktif == True, {ACTOR}.TimTerakhir != Team Of({ACTOR})));\n'
+        guards += f'\t\tAbort If(Or({ACTOR}.PlayerCycleActive == True, {ACTOR}.LastTeam != Team Of({ACTOR})));\n'
     if p == '89i1':
-        guards += f"\t\tAbort If(Or({ACTOR}.TimTerakhir != Team Of({ACTOR}), {ACTOR}.TimSiklusTarget != Team Of({ACTOR})));\n"
+        guards += f"\t\tAbort If(Or({ACTOR}.LastTeam != Team Of({ACTOR}), {ACTOR}.TeamCycleTargetTeam != Team Of({ACTOR})));\n"
     if p in {"03i", "12e", "18f"}:
         guards += f"\t\tAbort If(Is Alive({ACTOR}) == True);\n"
     if p == "16a":
@@ -499,25 +488,25 @@ def event_worker(rule: validator.Rule) -> str:
     if p == "12e":
         code = code.replace(f"Position Of({ACTOR})", f"{RECORD}[6]")
     if p == "18f":
-        code = code.replace(f"{ACTOR}.MenuTerbuka == False", f"{RECORD}[14]")
+        code = code.replace(f"{ACTOR}.MenuOpen == False", f"{RECORD}[14]")
     if p == "17":
-        code = code.replace(f"If({ACTOR}.KematianBalasDendam == True)", f"If({RECORD}[8] == True)")
+        code = code.replace(f"If({ACTOR}.RevengeDeathPending == True)", f"If({RECORD}[8] == True)")
         code = code.replace(f"Is Alive({ACTOR}) == False", f"{RECORD}[17] == True")
-        code = re.sub(rf"{re.escape(ACTOR)}\.PenagihBalasDendam(?!\s*=(?!=))", f"{RECORD}[9]", code)
-        code = code.replace(f"Player Variable({RECORD}[9], Manusia) == True", f"{RECORD}[10] == True")
-        code = code.replace(f"Player Variable({RECORD}[2], Manusia) == False", f"{RECORD}[11] == False")
-        code = code.replace(f'Entity Exists({RECORD}[9])', f'And(Entity Exists({RECORD}[9]), Player Variable({RECORD}[9], StatusPengatur)[36] == {RECORD}[23])')
-        code = code.replace(f'Abort If({RECORD}[11] == False);', f'Abort If({RECORD}[11] == False);\n\t\tAbort If(Entity Exists({RECORD}[2]) == False);\n\t\tAbort If(Player Variable({RECORD}[2], StatusPengatur)[36] != {RECORD}[24]);')
+        code = re.sub(rf"{re.escape(ACTOR)}\.RevengeClaimant(?!\s*=(?!=))", f"{RECORD}[9]", code)
+        code = code.replace(f"Player Variable({RECORD}[9], IsHuman) == True", f"{RECORD}[10] == True")
+        code = code.replace(f"Player Variable({RECORD}[2], IsHuman) == False", f"{RECORD}[11] == False")
+        code = code.replace(f'Entity Exists({RECORD}[9])', f'And(Entity Exists({RECORD}[9]), Player Variable({RECORD}[9], ControllerState)[36] == {RECORD}[23])')
+        code = code.replace(f'Abort If({RECORD}[11] == False);', f'Abort If({RECORD}[11] == False);\n\t\tAbort If(Entity Exists({RECORD}[2]) == False);\n\t\tAbort If(Player Variable({RECORD}[2], ControllerState)[36] != {RECORD}[24]);')
     if p == "89i1":
         victim = f"{RECORD}[3]"
         slot = f"{RECORD}[16]"
-        guards += f"\t\tAbort If({ACTOR}.UrutanHUD != {slot});\n\t\tAbort If(Array Contains(Global.PemainPukulanSuper, {ACTOR}) == False);\n"
-        code = code.replace(f"{ACTOR}.UrutanHUD", slot)
+        guards += f"\t\tAbort If({ACTOR}.HudSlot != {slot});\n\t\tAbort If(Array Contains(Global.SuperPunchPlayers, {ACTOR}) == False);\n"
+        code = code.replace(f"{ACTOR}.HudSlot", slot)
         original_if = next(c for c in validator.iter_calls(code, "If") if "Has Status(" in c.raw)
         protected_now = original_if.args[0]
-        new_if = f"If(And({RECORD}[15] == False, And(Entity Exists({victim}), And(Has Spawned({victim}), And(Is Alive({victim}), And(Player Variable({victim}, StatusPengatur)[36] == {RECORD}[22], {protected_now}))))))"
+        new_if = f"If(And({RECORD}[15] == False, And(Entity Exists({victim}), And(Has Spawned({victim}), And(Is Alive({victim}), And(Player Variable({victim}, ControllerState)[36] == {RECORD}[22], {protected_now}))))))"
         code = code[:original_if.start] + new_if + code[original_if.end:]
-    return subrule(rule.name + " global", "Peristiwa" + p.capitalize(), guards + persistent(code))
+    return subrule(rule.name + " global", "NativeEvent" + p.capitalize(), guards + persistent(code))
 
 
 def build_english(source: str) -> tuple[str, dict]:
@@ -529,14 +518,18 @@ def build_english(source: str) -> tuple[str, dict]:
     assert len(callback) == 7
     by_prefix = {prefix(r): r for r in each}
     indices = {prefix(r): i for i, r in enumerate(each)}
-    header = logical[:rules[0].start]
-    header = header.replace("\t\t59: PrivasiInspeksiAktif\n", "\t\t59: PrivasiInspeksiAktif\n\t\t60: StatusPengatur\n")
-    header = header.replace("\t\t91: IzinkanBotBuatanMengikuti\n", "\t\t91: IzinkanBotBuatanMengikuti\n\t\t92: WaktuPengatur\n")
-    old_subs = validator.declaration_entries(logical)[2]
-    targets = [controller_name(r) for r in each] + ["Peristiwa" + p.capitalize() for p in EVENT_PREFIXES] + ["ProsesPengaturGlobal", "ProsesAntreanGlobal", "ProsesKeluarGlobal", "ProsesIkonTerlihat"]
+    old_globals, old_players, old_subs, _ = validator.declaration_entries(logical)
+    targets = [controller_name(r) for r in each] + ["NativeEvent" + p.capitalize() for p in EVENT_PREFIXES] + ["ProcessGlobalController", "ProcessGlobalEventQueue", "ProcessGlobalLeaves", "ProcessVisibleIcons"]
     assert len(old_subs) + len(targets) <= 128
-    header = header.replace("\t\t80: PemainIkonPilar\n", "\t\t80: PemainIkonPilar\n" + "".join(f"\t\t{81+i}: {name}\n" for i, name in enumerate(GLOBALS)))
-    header = header.replace("\t66: BersihkanIkonPilar\n", "\t66: BersihkanIkonPilar\n" + "".join(f"\t{67+i}: {name}\n" for i, name in enumerate(targets)))
+    # Allocate backend fields after the actual logical declarations. UI changes
+    # may compact any namespace; no fixed slot or textual anchor is an ABI.
+    def namespace(entries, additions, indent):
+        names = [entry.name for entry in entries] + list(additions)
+        assert len(names) == len(set(names)) and len(names) <= 128
+        return ''.join(f'{indent}{index}: {name}\n' for index, name in enumerate(names))
+    header = ('variables\n{\n\tglobal:\n' + namespace(old_globals, GLOBALS, '\t\t')
+              + '\tplayer:\n' + namespace(old_players, ('ControllerState', 'ControllerTimes'), '\t\t')
+              + '}\nsubroutines\n{\n' + namespace(old_subs, targets, '\t') + '}\n\n')
 
     lowered: list[str] = []
     for original in rules:
@@ -551,33 +544,33 @@ def build_english(source: str) -> tuple[str, dict]:
         if validator.event_type(original) == "Subroutine":
             body = persistent(actor_text(body))
         if p == '93c':
-            marker = 'Global.IndeksUtangKeluar = Global.SlotHUDPemain[Global.IndeksPembersihan];'
-            body = body.replace(marker, marker + '\n\t\tGlobal.WaktuHilangHUD[Global.IndeksUtangKeluar] = 0;')
+            marker = 'Global.LeavingDebtIndex = Global.PlayerHudSlots[Global.CleanupPlayerIndex];'
+            body = body.replace(marker, marker + '\n\t\tGlobal.MissingHudDeadlines[Global.LeavingDebtIndex] = 0;')
         if p == '89a':
             # Losing a lifecycle reservation also invalidates its suspended
             # phase, including team flips before the first roster registration.
-            body = body.replace('Global.PemainSiklusGlobal = Null;', 'Global.PemainSiklusGlobal = Null;\n\t\tGlobal.PemilikFaseSiklus = Null;')
+            body = body.replace('Global.TeamCyclePlayer = Null;', 'Global.TeamCyclePlayer = Null;\n\t\tGlobal.TeamCyclePhaseOwner = Null;')
         if p == "00":
-            init = "".join(f"\t\tGlobal.{name} = {'Empty Array' if name in {'AntreanPeristiwa','KeluarTertunda','WaktuHilangHUD','PilihanIkonTerlihat'} else 'Null' if name in {'PemainPemicu','PemilikFaseSiklus','PeristiwaAktif'} else '0'};\n" for name in GLOBALS)
-            body = body.replace("\t\tGlobal.Siap = True;", init + "\t\tGlobal.Siap = True;")
+            init = "".join(f"\t\tGlobal.{name} = {'Empty Array' if name in {'EventQueue','PendingLeaves','MissingHudDeadlines','VisibleIconChoices'} else 'Null' if name in {'TriggerPlayer','TeamCyclePhaseOwner','ActiveEvent'} else '0'};\n" for name in GLOBALS)
+            body = body.replace("\t\tGlobal.IsReady = True;", init + "\t\tGlobal.IsReady = True;")
         if p == "04g":
             # Existing global loop remains the sole clock. Events drain before menu/gameplay work.
-            body = body.replace('\t\tGlobal.SalinanDaftarPemain = All Players(All Teams);\n', '')
-            body = body.replace("\t\tGlobal.LangkahPenjadwal =", "\t\tGlobal.SalinanDaftarPemain = All Players(All Teams);\n\t\tCall Subroutine(ProsesAntreanGlobal);\n\t\tCall Subroutine(ProsesKeluarGlobal);\n\t\tGlobal.LangkahPenjadwal =", 1)
-            body = body.replace('Has Spawned(Global.PemainSiklusGlobal) == False', 'Or(Has Spawned(Global.PemainSiklusGlobal) == False, Array Contains(Global.SalinanDaftarPemain, Global.PemainSiklusGlobal) == False)')
-            body = body.replace('Global.PemainSiklusGlobal = Null;', 'Global.PemainSiklusGlobal = Null;\n\t\tGlobal.PemilikFaseSiklus = Null;')
-            body = body.replace("\t\t\tGlobal.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];", "\t\t\tGlobal.PemainAktif = Global.SalinanDaftarPemain[Global.IndeksPemainGlobal];\n\t\t\tGlobal.PemainPemicu = Global.PemainAktif;\n\t\t\tCall Subroutine(ProsesPengaturGlobal);")
-            body = body.replace("\t\tGlobal.PemainAktif = Null;", "\t\tGlobal.PemainPemicu = Null;\n\t\tGlobal.PemainAktif = Null;")
-            body = body.replace('\t\tIf(Global.PilihanPerluDihitung == True);', '\t\tCall Subroutine(ProsesIkonTerlihat);\n\t\tIf(Global.PilihanPerluDihitung == True);')
-        lowered.append(body)
+            body = body.replace('\t\tGlobal.PlayerListSnapshot = All Players(All Teams);\n', '')
+            body = body.replace("\t\tGlobal.SchedulerStep =", "\t\tGlobal.PlayerListSnapshot = All Players(All Teams);\n\t\tCall Subroutine(ProcessGlobalEventQueue);\n\t\tCall Subroutine(ProcessGlobalLeaves);\n\t\tGlobal.SchedulerStep =", 1)
+            body = body.replace('Has Spawned(Global.TeamCyclePlayer) == False', 'Or(Has Spawned(Global.TeamCyclePlayer) == False, Array Contains(Global.PlayerListSnapshot, Global.TeamCyclePlayer) == False)')
+            body = body.replace('Global.TeamCyclePlayer = Null;', 'Global.TeamCyclePlayer = Null;\n\t\tGlobal.TeamCyclePhaseOwner = Null;')
+            body = body.replace("\t\t\tGlobal.ActivePlayer = Global.PlayerListSnapshot[Global.SchedulerPlayerIndex];", "\t\t\tGlobal.ActivePlayer = Global.PlayerListSnapshot[Global.SchedulerPlayerIndex];\n\t\t\tGlobal.TriggerPlayer = Global.ActivePlayer;\n\t\t\tCall Subroutine(ProcessGlobalController);")
+            body = body.replace("\t\tGlobal.ActivePlayer = Null;", "\t\tGlobal.TriggerPlayer = Null;\n\t\tGlobal.ActivePlayer = Null;")
+            body = body.replace('\t\tIf(Global.VoteRecountNeeded == True);', '\t\tCall Subroutine(ProcessVisibleIcons);\n\t\tIf(Global.VoteRecountNeeded == True);')
+        lowered.append(persistent(body))
 
     # Group calls by human/bot state. Inactive human menu/Travel groups are skipped.
-    controls = f"\t\tAbort If(Entity Exists({ACTOR}) == False);\n\t\tIf(Count Of({STATE}) < 37);\n\t\t\tGlobal.GenerasiPengatur += 1;\n\t\t\t{STATE} = Empty Array;\n\t\t\t{STATE}[36] = Global.GenerasiPengatur;\n\t\t\t{TIME} = Empty Array;\n\t\tEnd;\n"
+    controls = f"\t\tAbort If(Entity Exists({ACTOR}) == False);\n\t\tIf(Count Of({STATE}) < 37);\n\t\t\tGlobal.ControllerGeneration += 1;\n\t\t\t{STATE} = Empty Array;\n\t\t\t{STATE}[36] = Global.ControllerGeneration;\n\t\t\t{TIME} = Empty Array;\n\t\tEnd;\n"
     controls += f"\t\tCall Subroutine({controller_name(by_prefix['01a'])});\n\t\tCall Subroutine({controller_name(by_prefix['01b'])});\n\t\tCall Subroutine({controller_name(by_prefix['02'])});\n"
-    controls += f"\t\tIf(Or(Is Dummy Bot({ACTOR}), {ACTOR}.BotOtomatis));\n"
+    controls += f"\t\tIf(Or(Is Dummy Bot({ACTOR}), {ACTOR}.IsAutomaticBot));\n"
     for p in ["03c", "03f", "03g", "03h", "18i", "18j"]:
         controls += f"\t\t\tCall Subroutine({controller_name(by_prefix[p])});\n"
-    controls += f"\t\tElse If(And({ACTOR}.Manusia == True, And(Is Dummy Bot({ACTOR}) == False, {ACTOR}.BotOtomatis == False)));\n"
+    controls += f"\t\tElse If(And({ACTOR}.IsHuman == True, And(Is Dummy Bot({ACTOR}) == False, {ACTOR}.IsAutomaticBot == False)));\n"
     menu_group = {'05c', '05d', '05e', '05f', '06', '08', '10', '11'}
     travel_group = {'19a', '19b', '19c', '19d', '19e', '19g'}
     for original in each:
@@ -585,7 +578,7 @@ def build_english(source: str) -> tuple[str, dict]:
         if p in {"01a", "01b", "02", "03c", "03f", "03g", "03h"}:
             continue
         if p == '05c':
-            controls += f'\t\t\tIf(Or({ACTOR}.MenuTerbuka == True, Or({ACTOR}.PerintahMenu != 0, {ACTOR}.MasukanMenuDikunci == True)));\n'
+            controls += f'\t\t\tIf(Or({ACTOR}.MenuOpen == True, Or({ACTOR}.MenuCommand != 0, {ACTOR}.MenuInputLocked == True)));\n'
             for member in [item for item in each if prefix(item) in menu_group]:
                 controls += f'\t\t\t\tCall Subroutine({controller_name(member)});\n'
             controls += '\t\t\tElse;\n'
@@ -595,61 +588,61 @@ def build_english(source: str) -> tuple[str, dict]:
             continue
         if p in menu_group: continue
         if p == '19a':
-            controls += f'\t\t\tIf({ACTOR}.TeleportasiJongkokAktif == True);\n'
+            controls += f'\t\t\tIf({ACTOR}.CrouchTravelActive == True);\n'
             for member in [item for item in each if prefix(item) in travel_group]:
                 controls += f'\t\t\t\tCall Subroutine({controller_name(member)});\n'
             controls += '\t\t\tEnd;\n'
-            controls += f'\t\t\tIf({ACTOR}.TeleportasiJongkokAktif == False);\n'
+            controls += f'\t\t\tIf({ACTOR}.CrouchTravelActive == False);\n'
             for member in ('19c', '19e'):
                 controls += f'\t\t\t\t{STATE}[{indices[member]}] = 0;\n'
             controls += '\t\t\tEnd;\n'
             continue
         if p in travel_group: continue
         if p in {'19f', '19h'}:
-            controls += f'\t\t\tIf({ACTOR}.LampiranTeleportasiAktif == True);\n\t\t\t\tCall Subroutine({controller_name(original)});\n\t\t\tEnd;\n'
+            controls += f'\t\t\tIf({ACTOR}.TravelAttachmentActive == True);\n\t\t\t\tCall Subroutine({controller_name(original)});\n\t\t\tEnd;\n'
             continue
         if p in {'18i', '18j'}:
-            controls += f'\t\t\tIf(Or(Count Of(Global.PenontonVisiNasib) > 0, And({ACTOR}.TeksVisiNasib != Null, {ACTOR}.TeksVisiNasib != 0)));\n\t\t\t\tCall Subroutine({controller_name(original)});\n\t\t\tEnd;\n'
+            controls += f'\t\t\tIf(Or(Count Of(Global.LuckVisionViewers) > 0, And({ACTOR}.LuckVisionText != Null, {ACTOR}.LuckVisionText != 0)));\n\t\t\t\tCall Subroutine({controller_name(original)});\n\t\t\tEnd;\n'
             continue
         controls += f"\t\t\tCall Subroutine({controller_name(original)});\n"
     controls += "\t\tEnd;\n"
-    lowered.append(subrule("04h - Subrutin: Pengatur pemain dari konteks global", "ProsesPengaturGlobal", controls))
+    lowered.append(subrule("04h - Subroutine: Control players from global context", "ProcessGlobalController", controls))
 
-    drain = "\t\tGlobal.JumlahPeristiwaAwal = Global.JumlahPeristiwa;\n\t\tFor Global Variable(KursorPeristiwa, 0, Global.JumlahPeristiwaAwal, 1);\n"
-    drain += f"\t\t\tGlobal.PeristiwaAktif = Global.AntreanPeristiwa[Global.KepalaPeristiwa];\n\t\t\tGlobal.AntreanPeristiwa[Global.KepalaPeristiwa] = Null;\n\t\t\tGlobal.KepalaPeristiwa = (Global.KepalaPeristiwa + 1) % {CAPACITY};\n\t\t\tGlobal.JumlahPeristiwa -= 1;\n\t\t\tGlobal.PemainPemicu = Global.PeristiwaAktif[1];\n"
+    drain = "\t\tGlobal.InitialEventCount = Global.EventCount;\n\t\tFor Global Variable(EventCursor, 0, Global.InitialEventCount, 1);\n"
+    drain += f"\t\t\tGlobal.ActiveEvent = Global.EventQueue[Global.EventQueueHead];\n\t\t\tGlobal.EventQueue[Global.EventQueueHead] = Null;\n\t\t\tGlobal.EventQueueHead = (Global.EventQueueHead + 1) % {CAPACITY};\n\t\t\tGlobal.EventCount -= 1;\n\t\t\tGlobal.TriggerPlayer = Global.ActiveEvent[1];\n"
     for kind, p in enumerate(EVENT_PREFIXES):
-        drain += f"\t\t\t{'If' if kind == 0 else 'Else If'}(Global.PeristiwaAktif[0] == {kind});\n\t\t\t\tCall Subroutine(Peristiwa{p.capitalize()});\n"
-    drain += "\t\t\tEnd;\n\t\tEnd;\n\t\tGlobal.PemainPemicu = Null;\n\t\tGlobal.PeristiwaAktif = Null;\n"
-    lowered.append(subrule("04i - Subrutin: Proses antrean peristiwa yang dibekukan", "ProsesAntreanGlobal", drain))
+        drain += f"\t\t\t{'If' if kind == 0 else 'Else If'}(Global.ActiveEvent[0] == {kind});\n\t\t\t\tCall Subroutine(NativeEvent{p.capitalize()});\n"
+    drain += "\t\t\tEnd;\n\t\tEnd;\n\t\tGlobal.TriggerPlayer = Null;\n\t\tGlobal.ActiveEvent = Null;\n"
+    lowered.append(subrule("04i - Subroutine: Drain the native event queue", "ProcessGlobalEventQueue", drain))
 
-    leaves = "\t\tFor Global Variable(KursorKeluarTertunda, 0, Count Of(Global.KeluarTertunda), 1);\n\t\t\tIf(Global.KeluarTertunda[Global.KursorKeluarTertunda] != Null);\n\t\t\t\tGlobal.PeristiwaAktif = Global.KeluarTertunda[Global.KursorKeluarTertunda];\n\t\t\t\tIf(Total Time Elapsed >= Global.PeristiwaAktif[7] + 0.500);\n\t\t\t\t\tGlobal.PemainPemicu = Global.PeristiwaAktif[1];\n\t\t\t\t\tGlobal.KeluarTertunda[Global.KursorKeluarTertunda] = Null;\n\t\t\t\t\tIf(Entity Exists(Global.PemainPemicu) == False);\n\t\t\t\t\t\tCall Subroutine(BersihkanPemain);\n\t\t\t\t\tEnd;\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;\n"
-    leaves += "\t\tIf(Global.LangkahPenjadwal % 20 == 0);\n\t\t\tFor Global Variable(KursorDaftarHilang, Count Of(Global.PemainManusia) - 1, -1, -1);\n\t\t\t\tGlobal.PemainPemicu = Global.PemainManusia[Global.KursorDaftarHilang];\n\t\t\t\tIf(Entity Exists(Global.PemainPemicu));\n\t\t\t\t\tGlobal.WaktuHilangHUD[Global.SlotHUDPemain[Global.KursorDaftarHilang]] = 0;\n\t\t\t\tElse If(Global.WaktuHilangHUD[Global.SlotHUDPemain[Global.KursorDaftarHilang]] == 0);\n\t\t\t\t\tGlobal.WaktuHilangHUD[Global.SlotHUDPemain[Global.KursorDaftarHilang]] = Total Time Elapsed + 0.500;\n\t\t\t\tElse If(Total Time Elapsed >= Global.WaktuHilangHUD[Global.SlotHUDPemain[Global.KursorDaftarHilang]]);\n\t\t\t\t\tCall Subroutine(BersihkanPemain);\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;\n\t\tGlobal.PeristiwaAktif = Null;\n\t\tGlobal.PemainPemicu = Null;\n"
+    leaves = "\t\tFor Global Variable(PendingLeaveCursor, 0, Count Of(Global.PendingLeaves), 1);\n\t\t\tIf(Global.PendingLeaves[Global.PendingLeaveCursor] != Null);\n\t\t\t\tGlobal.ActiveEvent = Global.PendingLeaves[Global.PendingLeaveCursor];\n\t\t\t\tIf(Total Time Elapsed >= Global.ActiveEvent[7] + 0.500);\n\t\t\t\t\tGlobal.TriggerPlayer = Global.ActiveEvent[1];\n\t\t\t\t\tGlobal.PendingLeaves[Global.PendingLeaveCursor] = Null;\n\t\t\t\t\tIf(Entity Exists(Global.TriggerPlayer) == False);\n\t\t\t\t\t\tCall Subroutine(CleanupPlayer);\n\t\t\t\t\tEnd;\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;\n"
+    leaves += "\t\tIf(Global.SchedulerStep % 20 == 0);\n\t\t\tFor Global Variable(MissingPlayerCursor, Count Of(Global.HumanPlayers) - 1, -1, -1);\n\t\t\t\tGlobal.TriggerPlayer = Global.HumanPlayers[Global.MissingPlayerCursor];\n\t\t\t\tIf(Entity Exists(Global.TriggerPlayer));\n\t\t\t\t\tGlobal.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]] = 0;\n\t\t\t\tElse If(Global.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]] == 0);\n\t\t\t\t\tGlobal.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]] = Total Time Elapsed + 0.500;\n\t\t\t\tElse If(Total Time Elapsed >= Global.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]]);\n\t\t\t\t\tCall Subroutine(CleanupPlayer);\n\t\t\t\tEnd;\n\t\t\tEnd;\n\t\tEnd;\n\t\tGlobal.ActiveEvent = Null;\n\t\tGlobal.TriggerPlayer = Null;\n"
     # Spectators can retain a native entity while no longer belonging to either
     # playing team. Treat that membership loss as departure for global resources.
-    present = 'And(Entity Exists(Global.PemainPemicu), Array Contains(Global.SalinanDaftarPemain, Global.PemainPemicu))'
-    leaves = leaves.replace('Entity Exists(Global.PemainPemicu) == False', f'{present} == False').replace('If(Entity Exists(Global.PemainPemicu))', f'If({present})')
-    lowered.append(subrule("04j - Subrutin: Bersihkan keluar tertunda tanpa konteks pemain", "ProsesKeluarGlobal", leaves))
-    icon_cache = '\t\tFor Global Variable(IndeksIkonPilar, 0, 12, 1);\n\t\t\tGlobal.PemainIkonPilar = Global.PemilikIkonPilar[Global.IndeksIkonPilar];\n\t\t\tGlobal.PilihanIkonTerlihat[Global.IndeksIkonPilar] = And(Entity Exists(Global.PemainIkonPilar), And(Array Contains(Global.PemainManusia, Global.PemainIkonPilar), And(Global.PemainIkonPilar.Manusia == True, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100))) ? Global.PemainIkonPilar.IndeksIkon : 0;\n\t\tEnd;\n\t\tGlobal.PemainIkonPilar = Null;\n'
-    lowered.append(subrule('04k - Subrutin: Simpan visibilitas ikon setelah semua perintah', 'ProsesIkonTerlihat', icon_cache))
+    present = 'And(Entity Exists(Global.TriggerPlayer), Array Contains(Global.PlayerListSnapshot, Global.TriggerPlayer))'
+    leaves = leaves.replace('Entity Exists(Global.TriggerPlayer) == False', f'{present} == False').replace('If(Entity Exists(Global.TriggerPlayer))', f'If({present})')
+    lowered.append(subrule("04j - Subroutine: Reconcile departed players from global context", "ProcessGlobalLeaves", leaves))
+    icon_cache = '\t\tFor Global Variable(ObjectiveIconIndex, 0, 12, 1);\n\t\t\tGlobal.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];\n\t\t\tGlobal.VisibleIconChoices[Global.ObjectiveIconIndex] = And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), And(Global.ObjectiveIconPlayer.IsHuman == True, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100))) ? Global.ObjectiveIconPlayer.IconIndex : 0;\n\t\tEnd;\n\t\tGlobal.ObjectiveIconPlayer = Null;\n'
+    lowered.append(subrule('04k - Subroutine: Cache visible objective icon choices', 'ProcessVisibleIcons', icon_cache))
     output = compact_booleans(compact_unused_constants(compact_fixed_pools(compact_icon_visibility(compact_palette(header + "\n\n".join(lowered) + "\n")))))
     return output, {"controllers": {prefix(r): {"target": controller_name(r), "index": indices[prefix(r)]} for r in each}, "callbacks": {p: i for i, p in enumerate(EVENT_PREFIXES)}, "capacity": CAPACITY, "latches": sorted(LATCH_PREFIXES)}
 
 
 def build(source: str) -> str:
     runtime, _ = build_english(source)
-    return translate(runtime, to_italian=True)
+    return runtime
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=REPO / "source" / "ruang_irama.it-IT.source")
-    parser.add_argument("--output", type=Path, default=REPO / 'workshop' / 'ruang_irama.it-IT.workshop')
+    parser.add_argument("--source", type=Path, default=REPO / "source" / "ruang_irama.en-US.source")
+    parser.add_argument("--output", type=Path, default=REPO / 'workshop' / 'ruang_irama.en-US.workshop')
     parser.add_argument('--reference', type=Path, default=REPO / 'tests' / 'fixtures' / 'global_runtime_reference.txt')
     parser.add_argument('--check', action='store_true', help='Verify both generated files without writing them.')
     args = parser.parse_args()
     source = args.source.read_text(encoding="utf-8")
     english, _ = build_english(source)
-    runtime = translate(english, to_italian=True)
+    runtime = english
     parsed = validator.extract_rules(english)
     checks = validator.Checks()
     validator.validate_rule_grammar(checks, parsed)
@@ -657,8 +650,8 @@ def main() -> None:
     assert not validator.rules_with_event(parsed, "Ongoing - Each Player")
     assert not validator.global_player_context_errors(parsed)
     assert len(list(validator.iter_calls(english, "Wait"))) == 1
-    report = clipboard.check_text(runtime, "it-IT")
-    reference = translate(runtime)
+    report = clipboard.check_text(runtime, "en-US")
+    reference = runtime
     if args.check:
         if args.output.read_text(encoding='utf-8') != runtime or args.reference.read_text(encoding='utf-8') != reference:
             raise SystemExit('Generated runtime is stale; run tools/build_global_runtime.py.')

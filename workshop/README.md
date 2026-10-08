@@ -1,5 +1,7 @@
 # Codice da importare
 
-**[ruang_irama.it-IT.workshop](ruang_irama.it-IT.workshop)** è l'unico file da copiare nel Workshop con client in italiano. Apri **Raw** e copia tutto.
+**[ruang_irama.en-US.workshop](ruang_irama.en-US.workshop)** è l'unico file da copiare nel Workshop, con la lingua testo del client impostata su **English**. Apri **Raw** e copia tutto.
 
-[Guida di importazione](../docs/IMPORTAZIONE_ITALIANO.md) · [Funzioni e comandi](../README.md) · [Controlli della revisione corrente](../docs/VALIDAZIONE.md)
+Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre il menu principale sulla voce **0 — Info / Controls**: Crouch + Interact apre la guida completa. Il sito **[cozywatch.org](https://cozywatch.org)** compare nell'HUD centrale.
+
+[Guida di importazione](../docs/IMPORTAZIONE.md) · [Funzioni e comandi](../README.md) · [Controlli della revisione corrente](../docs/VALIDAZIONE.md)

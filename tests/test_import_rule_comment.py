@@ -21,7 +21,7 @@ class RuleCommentImportTests(unittest.TestCase):
                     # "sementara" is valid Indonesian, but contains a possible
                     # English filter match. Keep this safeguard title-only.
                     self.assertNotIn('semen', title.casefold(), title)
-                self.assertIn('PemilikTeksSementara', source)
+                self.assertIn('TemporaryTextOwners', source)
 
     def test_renamed_rule_keeps_the_same_cleanup_subroutine(self):
         for path, _, _ in SOURCES:
@@ -30,9 +30,9 @@ class RuleCommentImportTests(unittest.TestCase):
                 source = re.sub(r'(?m)^regola\(', 'rule(', source)
                 source = source.replace('\tevento\n', '\tevent\n')
                 rules = validator.extract_rules(source)
-                cleanup = validator.rule_by_subroutine(rules, 'BersihkanTeksYatim')
+                cleanup = validator.rule_by_subroutine(rules, 'CleanupOrphanedText')
                 self.assertIsNotNone(cleanup)
-                self.assertEqual(cleanup.name, '93d - Subrutin: Bersihkan teks yatim')
+                self.assertEqual(cleanup.name, '93d - Subroutine: Clean up orphaned text')
 
 
 if __name__ == '__main__':

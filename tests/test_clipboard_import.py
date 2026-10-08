@@ -12,15 +12,18 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import check_clipboard_import as clipboard  # noqa: E402
+from tools import build_global_runtime as compiler
 
 
 class ClipboardImportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source_path = ROOT / "tests" / "fixtures" / "global_runtime_reference.txt"
-        cls.italian_path = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
+        cls.output_path = ROOT / "workshop" / "ruang_irama.en-US.workshop"
         cls.source = cls.source_path.read_text(encoding="utf-8")
-        cls.italian = cls.italian_path.read_text(encoding="utf-8")
+        cls.output = cls.output_path.read_text(encoding="utf-8")
+        # Keep generic Italian parser coverage with a synthetic translation.
+        cls.italian = compiler.translate(cls.source, to_italian=True)
 
     def assert_semantic_mismatch(self, mutated_italian: str) -> None:
         error = clipboard.semantic_equivalence_error(self.source, mutated_italian)
@@ -41,7 +44,7 @@ class ClipboardImportTests(unittest.TestCase):
                              clipboard.SOURCE_RULE_STRUCTURAL_TARGET)
 
     def test_italian_compiled_clipboard_output_is_safe(self) -> None:
-        report = clipboard.check_path(self.italian_path, "it-IT")
+        report = clipboard.check_text(self.italian, "it-IT")
         self.assertEqual(report.language, "it-IT")
         self.assertGreater(report.rule_count, 0)
         self.assertLessEqual(report.largest_rule.bytes_utf8, clipboard.SOURCE_RULE_SAFETY_TARGET_BYTES)
@@ -49,10 +52,12 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertLessEqual(report.largest_structural_rule.structural_units,
                              clipboard.SOURCE_RULE_STRUCTURAL_TARGET)
 
-    def test_only_italian_workshop_is_user_facing(self) -> None:
-        self.assertTrue(self.italian_path.is_file())
+    def test_only_english_workshop_is_user_facing(self) -> None:
+        self.assertTrue(self.output_path.is_file())
         self.assertFalse((ROOT / "workshop" / "ruang_irama.workshop").exists())
-        self.assertFalse((ROOT / "workshop" / "ruang_irama.it-IT.manifest").exists())
+        self.assertFalse((ROOT / "workshop" / "ruang_irama.it-IT.workshop").exists())
+        self.assertEqual(clipboard.check_path(self.output_path, "en-US").language, "en-US")
+        self.assertEqual(self.source, self.output)
 
     def test_italian_source_uses_localized_structural_grammar(self) -> None:
         stripped = self.italian.lstrip()
@@ -72,14 +77,14 @@ class ClipboardImportTests(unittest.TestCase):
         self.assertNotIn("Color(Gray)", without_custom_colors)
         self.assertNotIn("Danneggia(", self.italian)
         self.assertIn("Damage(", self.italian)
-        self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.EfekNasib == 5", self.italian)
-        self.assertNotIn("If(And(Globale.PemainAktif.Manusia == True, And(Globale.PemainAktif.KartuNasibAktif == True, And(Globale.PemainAktif.PutaranKartuNasib == 0, And(Globale.PemainAktif.EfekNasibBerakhir > 0", self.italian)
-        self.assertNotIn("If(And(Globale.PemainAktif.WaktuIkonNasibBerakhir > 0", self.italian)
-        self.assertNotIn("If(And(Globale.PemainAktif.KartuNasibAktif == False, Globale.PemainAktif.MenuTerbuka == False", self.italian)
+        self.assertNotIn("If(And(Globale.ActivePlayer.IsHuman == True, And(Globale.ActivePlayer.LuckEffect == 5", self.italian)
+        self.assertNotIn("If(And(Globale.ActivePlayer.IsHuman == True, And(Globale.ActivePlayer.LuckActive == True, And(Globale.ActivePlayer.LuckSpinCount == 0, And(Globale.ActivePlayer.LuckEffectEndTime > 0", self.italian)
+        self.assertNotIn("If(And(Globale.ActivePlayer.LuckIconEndTime > 0", self.italian)
+        self.assertNotIn("If(And(Globale.ActivePlayer.LuckActive == False, Globale.ActivePlayer.MenuOpen == False", self.italian)
 
     def test_compiled_reference_and_italian_output_are_exactly_equivalent(self) -> None:
         english = clipboard.check_path(self.source_path, "en-US")
-        italian = clipboard.check_path(self.italian_path, "it-IT")
+        italian = clipboard.check_text(self.italian, "it-IT")
         self.assertEqual(english.rule_count, italian.rule_count)
         self.assertIsNone(
             clipboard.semantic_equivalence_error(self.source, self.italian)
@@ -138,49 +143,44 @@ class ClipboardImportTests(unittest.TestCase):
                     clipboard.check_text(changed, "it-IT")
 
     def test_semantic_gate_rejects_italian_only_privacy_default_change(self) -> None:
-        needle = "PrivasiInspeksiAktif = False;"
+        needle = "InspectionPrivacyActive = False;"
         self.assertIn(needle, self.italian)
         self.assert_semantic_mismatch(
             self.italian.replace(
-                needle, "PrivasiInspeksiAktif = True;", 1
+                needle, "InspectionPrivacyActive = True;", 1
             )
         )
 
-    def test_check_path_rejects_semantically_divergent_italian_source(self) -> None:
-        mutated = self.italian.replace(
-            "PrivasiInspeksiAktif = False;",
-            "PrivasiInspeksiAktif = True;",
-            1,
-        )
-        with tempfile.TemporaryDirectory() as temp_dir:
+    def test_check_path_rejects_semantically_divergent_english_output(self) -> None:
+        mutated = self.output.replace(
+            "InspectionPrivacyActive = False;", "InspectionPrivacyActive = True;", 1)
+        self.assertNotEqual(mutated, self.output)
+        with tempfile.TemporaryDirectory(dir=ROOT.parent) as temp_dir:
             temp_root = Path(temp_dir)
             reference_path = temp_root / "global_runtime_reference.txt"
-            italian_path = temp_root / "ruang_irama.it-IT.workshop"
+            output_path = temp_root / "ruang_irama.en-US.workshop"
             reference_path.write_text(self.source, encoding="utf-8")
-            italian_path.write_text(mutated, encoding="utf-8")
+            output_path.write_text(mutated, encoding="utf-8")
             with (
-                patch.object(clipboard, "ITALIAN_SOURCE", italian_path),
+                patch.object(clipboard, "ENGLISH_SOURCE", output_path),
                 patch.object(clipboard, "SEMANTIC_REFERENCE", reference_path),
-                self.assertRaisesRegex(
-                    clipboard.ClipboardImportError,
-                    "equivalenza semantica EN/IT fallita",
-                ),
+                self.assertRaises(clipboard.ClipboardImportError),
             ):
-                clipboard.check_path(italian_path, "it-IT")
+                clipboard.check_path(output_path, "en-US")
 
     def test_semantic_gate_rejects_italian_only_acceleration_direction(self) -> None:
-        needle = "Facing Direction Of(Evaluate Once(Globale.PemainAktif))"
+        needle = "Facing Direction Of(Evaluate Once(Globale.ActivePlayer))"
         self.assertIn(needle, self.italian)
         self.assert_semantic_mismatch(
             self.italian.replace(needle, "Vector(1, 0, 0)", 1)
         )
 
     def test_semantic_gate_rejects_italian_only_privacy_polarity(self) -> None:
-        needle = "Not(Player Variable(Current Array Element, PrivasiInspeksiAktif))"
+        needle = "Not(Player Variable(Current Array Element, InspectionPrivacyActive))"
         self.assertTrue(needle in self.italian, "compiled privacy predicate missing")
         self.assert_semantic_mismatch(
             self.italian.replace(
-                needle, "Player Variable(Current Array Element, PrivasiInspeksiAktif)", 1
+                needle, "Player Variable(Current Array Element, InspectionPrivacyActive)", 1
             )
         )
 
@@ -199,12 +199,12 @@ class ClipboardImportTests(unittest.TestCase):
         )
 
     def test_semantic_gate_rejects_italian_only_rule_structure_change(self) -> None:
-        needle = "\t\tGlobale.Siap == False;\n"
+        needle = "\t\tGlobale.IsReady == False;\n"
         self.assertIn(needle, self.italian)
         self.assert_semantic_mismatch(self.italian.replace(needle, "", 1))
 
     def test_italian_profile_rejects_english_namespace_even_if_semantics_match(self) -> None:
-        mutated = self.italian.replace("Globale.Siap", "Global.Siap", 1)
+        mutated = self.italian.replace("Globale.IsReady", "Global.IsReady", 1)
         self.assertIsNone(clipboard.semantic_equivalence_error(self.source, mutated))
         with self.assertRaisesRegex(clipboard.ClipboardImportError, "namespace Global en-US"):
             clipboard.check_text(mutated, "it-IT")

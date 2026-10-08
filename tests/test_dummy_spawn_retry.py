@@ -60,10 +60,10 @@ class SpawnEvaluator:
         self.add_player("one")
 
     def add_player(self, identity, **changes):
-        state = dict(dummy=True, BotOtomatis=False, spawned=True, alive=True,
+        state = dict(dummy=True, IsAutomaticBot=False, spawned=True, alive=True,
                      spawn_room=True, team=1, position=self.spawn[1], hero="Ana",
-                     PahlawanTerakhir="Ana", KunciBotAktif=True,
-                     WaktuTeleportasiBotBuatan=0, KursorTeleportasiBotBuatan=0)
+                     LastHero="Ana", BotLocked=True,
+                     DummyBotTravelTime=0, DummyBotTravelCursor=0)
         state.update(changes)
         self.players[identity] = state
         return state
@@ -74,7 +74,7 @@ class SpawnEvaluator:
     def resolve(self, name):
         if name.startswith("EventPlayer."):
             return self.players[self.selected].get(name.split(".", 1)[1], 0)
-        values = {"EventPlayer": self.selected, "True": True, "False": False, "Global.Siap": True,
+        values = {"EventPlayer": self.selected, "True": True, "False": False, "Global.IsReady": True,
                   "Null": None, "TotalTimeElapsed": self.now,
                   "CurrentGameMode": self.mode, "ObjectiveIndex": self.objective_index,
                   "EmptyArray": [], "Skirmish": "Skirmish"}
@@ -179,9 +179,9 @@ class SpawnEvaluator:
                     self.players[self.selected][assignment.group(1)] = value
                 elif token.startswith("Call Subroutine("):
                     routine = token[len("Call Subroutine("):-1]
-                    if routine == "KunciBot":
+                    if routine == "LockBot":
                         continue  # Hero ability locking is outside spawn placement.
-                    if routine != "CariPosisiTeleportasiAman":
+                    if routine != "FindSafeTravelPosition":
                         raise AssertionError(f"unexpected spawn helper: {routine}")
                     helper = validator.rule_by_subroutine(self.rules, routine)
                     self.inside_helper = True
@@ -204,7 +204,7 @@ class SpawnEvaluator:
 
 class DummySpawnRetryTests(unittest.TestCase):
     def models(self):
-        for path in (ROOT / "source/ruang_irama.it-IT.source",
+        for path in (ROOT / "source/ruang_irama.en-US.source",
                      ROOT / "tests/fixtures/semantic_reference.txt"):
             yield path.name, SpawnEvaluator(path.read_text(encoding="utf-8"))
 
@@ -218,7 +218,7 @@ class DummySpawnRetryTests(unittest.TestCase):
                         model.add_player("one", team=team, position=model.spawn[team])
                         model.step(100)
                         model.step(101)
-                        self.assertEqual(model.players["one"]["PosisiMati"], model.objectives[objective_index])
+                        self.assertEqual(model.players["one"]["DeathPosition"], model.objectives[objective_index])
                         self.assertEqual(len(model.teleports), 1)
 
     def test_other_modes_do_not_start_dummy_spawn_teleports(self):
@@ -247,7 +247,7 @@ class DummySpawnRetryTests(unittest.TestCase):
                     model.step(101)
                     self.assertEqual(model.candidates, [])
                     self.assertEqual(model.teleports, [])
-                    self.assertEqual(model.players["one"]["WaktuTeleportasiBotBuatan"], 102)
+                    self.assertEqual(model.players["one"]["DummyBotTravelTime"], 102)
                     model.objectives[0] = Vector(100, 20, 100)
                     model.step(102)
                     self.assertEqual(len(model.teleports), 1)
@@ -264,7 +264,7 @@ class DummySpawnRetryTests(unittest.TestCase):
                 second = model.candidates[-1][2]
                 self.assertNotEqual(first, second)
                 self.assertEqual(len(model.teleports), 1)
-                self.assertEqual(model.players["one"]["KursorTeleportasiBotBuatan"], 2)
+                self.assertEqual(model.players["one"]["DummyBotTravelCursor"], 2)
                 # A Teleport call alone is not proof the engine moved it out of spawn.
                 model.step(103)
                 self.assertEqual(len(model.teleports), 2)
@@ -287,7 +287,7 @@ class DummySpawnRetryTests(unittest.TestCase):
                 for index, point in enumerate(points):
                     self.assertAlmostEqual(point.y, model.objectives[0].y)
                     self.assertAlmostEqual((point - model.objectives[0]).magnitude(), 8 if index < 8 else 12)
-                self.assertEqual(model.players["one"]["KursorTeleportasiBotBuatan"], 0)
+                self.assertEqual(model.players["one"]["DummyBotTravelCursor"], 0)
                 self.assertEqual(model.teleports, [])
 
     def test_attempts_are_one_second_apart_and_humans_dead_or_outside_spawn_are_excluded(self):
@@ -298,7 +298,7 @@ class DummySpawnRetryTests(unittest.TestCase):
                     model.step(100 + tick * 0.05)
                 self.assertEqual([round(row[1], 2) for row in model.candidates], [101, 102, 103])
                 before = len(model.candidates)
-                for changed in (dict(dummy=False, BotOtomatis=True), dict(alive=False),
+                for changed in (dict(dummy=False, IsAutomaticBot=True), dict(alive=False),
                                 dict(spawned=False), dict(spawn_room=False)):
                     model.add_player("one", **changed)
                     model.step(200)
@@ -318,10 +318,10 @@ class DummySpawnRetryTests(unittest.TestCase):
                 model.step(102.5, "two")
                 model.step(103.5, "two")
                 self.assertEqual(model.players["one"], first)
-                self.assertEqual(model.players["one"]["KursorTeleportasiBotBuatan"], 2)
-                self.assertEqual(model.players["two"]["KursorTeleportasiBotBuatan"], 1)
-                self.assertEqual(model.players["one"]["WaktuTeleportasiBotBuatan"], 103)
-                self.assertEqual(model.players["two"]["WaktuTeleportasiBotBuatan"], 104.5)
+                self.assertEqual(model.players["one"]["DummyBotTravelCursor"], 2)
+                self.assertEqual(model.players["two"]["DummyBotTravelCursor"], 1)
+                self.assertEqual(model.players["one"]["DummyBotTravelTime"], 103)
+                self.assertEqual(model.players["two"]["DummyBotTravelTime"], 104.5)
 
     def test_death_and_respawn_reset_the_search_and_require_the_initial_delay_again(self):
         for source, model in self.models():
@@ -334,12 +334,12 @@ class DummySpawnRetryTests(unittest.TestCase):
                 player = model.players["one"]
                 player["alive"] = False
                 model.step(102.1, prefix="03i")
-                self.assertEqual(player["KursorTeleportasiBotBuatan"], 0)
-                self.assertEqual(player["WaktuTeleportasiBotBuatan"], 0)
-                player.update(alive=True, KunciBotAktif=False, KursorTeleportasiBotBuatan=7)
+                self.assertEqual(player["DummyBotTravelCursor"], 0)
+                self.assertEqual(player["DummyBotTravelTime"], 0)
+                player.update(alive=True, BotLocked=False, DummyBotTravelCursor=7)
                 model.step(105, prefix="03c")
-                self.assertEqual(player["KursorTeleportasiBotBuatan"], 0)
-                self.assertEqual(player["WaktuTeleportasiBotBuatan"], 106)
+                self.assertEqual(player["DummyBotTravelCursor"], 0)
+                self.assertEqual(player["DummyBotTravelTime"], 106)
                 before = len(model.candidates)
                 model.step(105)
                 model.step(105.99)

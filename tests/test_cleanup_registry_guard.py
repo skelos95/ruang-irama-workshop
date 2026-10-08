@@ -9,7 +9,7 @@ from tests.test_roster_rejoin_regressions import SOURCES
 
 
 class RegistryCleanupEvaluator(AuditLifecycleEvaluator):
-    RESOURCE = re.compile(r"Destroy (?:HUD|In-World) Text\(Global\.(?:HudKiriPemain|HudMenuPemain|TeksDuniaPemain)\[")
+    RESOURCE = re.compile(r"Destroy (?:HUD|In-World) Text\(Global\.(?:PlayerListHudIds|MenuHudIds|InspectionTextIds)\[")
 
     def keep_cleanup(self, token):
         return super().keep_cleanup(token) or bool(self.RESOURCE.match(token))
@@ -25,7 +25,7 @@ class RegistryCleanupEvaluator(AuditLifecycleEvaluator):
 
 
 class CleanupRegistryGuardTests(unittest.TestCase):
-    ARRAYS = ("SlotHUDPemain", "HudKiriPemain", "HudMenuPemain", "TeksDuniaPemain")
+    ARRAYS = ("PlayerHudSlots", "PlayerListHudIds", "MenuHudIds", "InspectionTextIds")
 
     def test_each_short_registry_uses_safe_cleanup_and_preserves_survivors(self):
         for path, _, _ in SOURCES:
@@ -41,28 +41,28 @@ class CleanupRegistryGuardTests(unittest.TestCase):
                     before = copy.deepcopy(model.globals)
                     # Out-of-range indexing raises in this evaluator, exposing a missing guard.
                     model.remove("departed")
-                    self.assertEqual(model.globals["PemainManusia"], ["alice", "bob"])
+                    self.assertEqual(model.globals["HumanPlayers"], ["alice", "bob"])
                     for array in self.ARRAYS:
                         self.assertEqual(model.globals[array], before[array][:2])
                     expected_texts = [before[array][2] for array in self.ARRAYS[1:] if len(before[array]) > 2]
                     self.assertCountEqual([handle for handle in model.destroyed if 300 <= handle < 400], expected_texts)
                     self.assertFalse(any(handle < 300 for handle in model.destroyed))
-                    expected_free = list(range(3, 12)) if short_array == "SlotHUDPemain" else list(range(2, 12))
-                    self.assertEqual(model.globals["SlotHUDTersedia"], expected_free)
+                    expected_free = list(range(3, 12)) if short_array == "PlayerHudSlots" else list(range(2, 12))
+                    self.assertEqual(model.globals["AvailableHudSlots"], expected_free)
                     snapshot = copy.deepcopy(model.globals)
                     destroyed = list(model.destroyed)
                     model.remove("departed")
-                    for array in self.ARRAYS + ("PemainManusia", "SlotHUDTersedia"):
+                    for array in self.ARRAYS + ("HumanPlayers", "AvailableHudSlots"):
                         self.assertEqual(model.globals[array], snapshot[array])
                     self.assertEqual(model.destroyed, destroyed)
 
     def test_validator_rejects_missing_guard_and_each_missing_array_check(self):
         source = validator.SOURCE.read_text(encoding="utf-8")
-        cleanup = validator.rule_by_subroutine(validator.extract_rules(source), "BersihkanPemain")
-        marker = cleanup.body.index("Global.IndeksKeluar = -2;")
+        cleanup = validator.rule_by_subroutine(validator.extract_rules(source), "CleanupPlayer")
+        marker = cleanup.body.index("Global.LeavingPlayerIndex = -2;")
         branch = min(validator.conditional_branches_containing(cleanup.body, marker), key=len)
         mutations = [cleanup.body.replace(branch, "", 1)]
-        mutations += [cleanup.body.replace(f"Global.IndeksKeluar >= Count Of(Global.{array})", "False", 1)
+        mutations += [cleanup.body.replace(f"Global.LeavingPlayerIndex >= Count Of(Global.{array})", "False", 1)
                       for array in self.ARRAYS]
         for body in mutations:
             with self.subTest(body=body[:60]):

@@ -10,8 +10,8 @@ from tests.test_roster_rejoin_regressions import SOURCES
 from tools import validate_workshop as validator
 
 
-VIEWS = (("13", "TargetInspeksi", "CalonTargetInspeksi", "TeksDunia"),
-         ("19d", "TargetTeleportasiTeks", "CalonTargetTeleportasi", "TeksTeleportasi"))
+VIEWS = (("13", "InspectionTarget", "InspectionTargetCandidate", "InspectionText"),
+         ("19d", "TravelTextTarget", "TravelTargetCandidate", "TravelText"))
 
 
 class LabelEvaluator(MenuLoadEvaluator):
@@ -22,7 +22,7 @@ class LabelEvaluator(MenuLoadEvaluator):
 
     def resolve(self, name):
         if name in ("Crouch", "PrimaryFire", "SecondaryFire", "Interact", "Down",
-                    "NamaTampilan", "WarnaNama"):
+                    "DisplayName", "NameColor"):
             return name
         return super().resolve(name)
 
@@ -61,13 +61,13 @@ class LabelEvaluator(MenuLoadEvaluator):
         if self.conditions(prefix, owner): self.run(prefix, owner)
 
     def viewer(self, prefix, owner="viewer"):
-        return self.add(owner, MenuTerbuka=False, ModeKamera=0,
-                        TeleportasiJongkokAktif=prefix == "19d",
-                        TeleportasiJongkokDiaktifkan=prefix == "19d",
-                        KursorTeleportasi=2, crouching=True)
+        return self.add(owner, MenuOpen=False, CameraMode=0,
+                        CrouchTravelActive=prefix == "19d",
+                        CrouchTravelEnabled=prefix == "19d",
+                        TravelCursor=2, crouching=True)
 
     def target(self, name, **changes):
-        return self.add(name, NamaTampilan=name, hero="Ana", health=200, **changes)
+        return self.add(name, DisplayName=name, hero="Ana", health=200, **changes)
 
 
 class TargetLabelLoadTests(unittest.TestCase):
@@ -125,8 +125,8 @@ class TargetLabelLoadTests(unittest.TestCase):
 
     def test_invalid_targets_are_removed_during_cooldown_without_cached_target_change(self):
         invalidations = ({"alive": False}, {"spawned": False}, {"exists": False},
-                         {"Manusia": False}, {"PrivasiInspeksiAktif": True},
-                         {"PembaruanDaftarTertunda": True})
+                         {"IsHuman": False}, {"InspectionPrivacyActive": True},
+                         {"PlayerListUpdatePending": True})
         for source, model in self.models():
             for prefix, target, candidate, handle in VIEWS:
                 for invalid in invalidations:
@@ -151,37 +151,37 @@ class TargetLabelLoadTests(unittest.TestCase):
     def test_public_dummy_targets_remain_allowed(self):
         for source, model in self.models():
             for prefix, _, candidate, handle in VIEWS:
-                for kind in ({"dummy": True}, {"BotOtomatis": True}):
+                for kind in ({"dummy": True}, {"IsAutomaticBot": True}):
                     with self.subTest(source=source, view=prefix, kind=kind):
                         player = model.viewer(prefix)
-                        model.target("dummy", Manusia=False, PrivasiInspeksiAktif=True, **kind)
+                        model.target("dummy", IsHuman=False, InspectionPrivacyActive=True, **kind)
                         player[candidate] = "dummy"
                         model.tick(prefix, "viewer")
                         self.assertIsNotNone(player[handle])
 
     def test_cooldown_survives_view_switch_close_death_and_menu_open(self):
         for source, model in self.models():
-            for closing in ({"crouching": False}, {"alive": False}, {"MenuTerbuka": True}):
+            for closing in ({"crouching": False}, {"alive": False}, {"MenuOpen": True}):
                 with self.subTest(source=source, closing=closing):
                     player = model.viewer("19d")
                     model.target("alice")
-                    player["CalonTargetTeleportasi"] = "alice"
+                    player["TravelTargetCandidate"] = "alice"
                     model.now = 10
                     model.tick("19d", "viewer")
-                    previous = player["TeksTeleportasi"]
+                    previous = player["TravelText"]
                     model.now = 10.05
                     player.update(closing)
                     model.tick("19g", "viewer")
                     self.assertIn(previous, model.destroyed_world)
-                    self.assertIsNone(player["TeksTeleportasi"])
-                    self.assertEqual(player["WaktuTeksTargetBerikut"], 10.25)
-                    player.update(crouching=True, alive=True, MenuTerbuka=False,
-                                  TeleportasiJongkokDiaktifkan=False, CalonTargetInspeksi="alice")
+                    self.assertIsNone(player["TravelText"])
+                    self.assertEqual(player["NextTargetTextTime"], 10.25)
+                    player.update(crouching=True, alive=True, MenuOpen=False,
+                                  CrouchTravelEnabled=False, InspectionTargetCandidate="alice")
                     model.tick("13", "viewer")
-                    self.assertIsNone(player["TeksDunia"])
+                    self.assertIsNone(player["InspectionText"])
                     model.now = 10.25
                     model.tick("13", "viewer")
-                    self.assertIsNotNone(player["TeksDunia"])
+                    self.assertIsNotNone(player["InspectionText"])
 
     def test_live_hero_and_health_keep_the_captured_identity_when_candidate_changes(self):
         for source, model in self.models():
@@ -202,27 +202,27 @@ class TargetLabelLoadTests(unittest.TestCase):
 
     def test_inspection_close_and_death_cleanup_do_not_wait_for_the_label_deadline(self):
         for source, model in self.models():
-            for closing in ({"crouching": False}, {"alive": False}, {"MenuTerbuka": True}):
+            for closing in ({"crouching": False}, {"alive": False}, {"MenuOpen": True}):
                 with self.subTest(source=source, closing=closing):
                     player = model.viewer("13")
                     model.target("alice")
-                    player["CalonTargetInspeksi"] = "alice"
+                    player["InspectionTargetCandidate"] = "alice"
                     model.now = 10
                     model.tick("13", "viewer")
-                    previous = player["TeksDunia"]
+                    previous = player["InspectionText"]
                     model.now = 10.05
                     player.update(closing)
-                    scheduler = validator.rule_by_subroutine(model.rules, "ProsesSiklusPemain")
-                    position = scheduler.body.index("Destroy In-World Text(Global.PemainAktif.TeksDunia);")
+                    scheduler = validator.rule_by_subroutine(model.rules, "ProcessPlayerCycle")
+                    position = scheduler.body.index("Destroy In-World Text(Global.ActivePlayer.InspectionText);")
                     branch = next(branch for branch in validator.conditional_branches_containing(scheduler.body, position)
-                                  if "Global.PemainAktif.InspeksiAktif == True" in branch.split(";", 1)[0])
+                                  if "Global.ActivePlayer.InspectionActive == True" in branch.split(";", 1)[0])
                     # Bind the scheduler's player parameter to the same viewer;
                     # execute the complete cleanup branch, including its guard.
-                    model.execute(branch.replace("Global.PemainAktif", "Event Player"))
+                    model.execute(branch.replace("Global.ActivePlayer", "Event Player"))
                     self.assertIn(previous, model.destroyed_world)
-                    self.assertIsNone(player["TeksDunia"])
-                    self.assertFalse(player["InspeksiAktif"])
-                    self.assertEqual(player["WaktuTeksTargetBerikut"], 10.25)
+                    self.assertIsNone(player["InspectionText"])
+                    self.assertFalse(player["InspectionActive"])
+                    self.assertEqual(player["NextTargetTextTime"], 10.25)
 
     def test_narrow_validator_rejects_deadline_invalidation_and_identity_regressions(self):
         for source, model in self.models():
@@ -234,10 +234,10 @@ class TargetLabelLoadTests(unittest.TestCase):
                 rule = model.rule(prefix)
                 identity = target if prefix == "13" else candidate
                 mutations = (
-                    ("Total Time Elapsed >= Event Player.WaktuTeksTargetBerikut", "False", "risveglio"),
+                    ("Total Time Elapsed >= Event Player.NextTargetTextTime", "False", "risveglio"),
                     (f"Is Alive(Event Player.{target}) == False", "False", "invalidazione"),
                     ("Total Time Elapsed + 0.250", "Total Time Elapsed + 0.100", "0.250"),
-                    ("Abort If(Total Time Elapsed < Event Player.WaktuTeksTargetBerikut);", "", "distruzione"),
+                    ("Abort If(Total Time Elapsed < Event Player.NextTargetTextTime);", "", "distruzione"),
                     (f"Health(Evaluate Once(Event Player.{identity}))", f"Health(Event Player.{identity})", "identità"),
                 )
                 for before, after, diagnostic in mutations:
