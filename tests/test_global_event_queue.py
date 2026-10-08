@@ -11,6 +11,7 @@ import unittest
 
 from tests.test_global_controller_execution import GeneratedControllerEvaluator
 from tests.test_fly_motion import Vector
+from tests.runtime_selection import rule_for_logical_id
 from tools import validate_global_runtime as runtime
 from tools import validate_workshop as semantic
 
@@ -75,27 +76,18 @@ class EventQueueEvaluator(GeneratedControllerEvaluator):
             return args[0]
         return super().call(name, args)
 
-    def rule(self, prefix, event_type):
-        matches = [rule for rule in self.rules
-                   if rule.name.startswith(prefix + " -")
-                   and semantic.event_type(rule) == event_type]
-        if len(matches) != 1:
-            raise AssertionError((prefix, event_type, len(matches)))
-        return matches[0]
-
     def fire(self, prefix, owner, *, attacker=None, victim=None, damage=30):
         self.event = {"EventPlayer": owner, "Attacker": attacker,
                       "Victim": victim, "EventAbility": "Melee",
                       "EventDamage": damage}
-        callbacks = [rule for rule in self.rules if rule.name.startswith(prefix + " -")
-                     and semantic.event_type(rule) in runtime.NATIVE_EVENTS]
-        if len(callbacks) != 1:
-            raise AssertionError((prefix, len(callbacks)))
-        condition = semantic.rule_block(callbacks[0], "conditions") or ""
+        callback = rule_for_logical_id(self.rules, prefix)
+        if semantic.event_type(callback) not in runtime.NATIVE_EVENTS:
+            raise AssertionError((prefix, "expected a native callback"))
+        condition = semantic.rule_block(callback, "conditions") or ""
         for expression in semantic.split_top_level(condition, ";"):
             if expression.strip() and not self.expression(expression):
                 return False
-        self.execute(callbacks[0])
+        self.execute(callback)
         return True
 
     @staticmethod
@@ -212,7 +204,7 @@ class EventQueueEvaluator(GeneratedControllerEvaluator):
 
     def drain(self, *, workers=False):
         self.worker_mode = workers
-        self.execute(self.rule("04i", "Subroutine"))
+        self.execute(semantic.rule_by_subroutine(self.rules, "ProcessGlobalEventQueue"))
 
 
 class GlobalEventQueueTests(unittest.TestCase):

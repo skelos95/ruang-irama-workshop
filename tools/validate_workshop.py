@@ -3402,8 +3402,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             in transition_code,
             "feedback visuale: Name Color deve mostrare il colore esatto della preview",
         )
-        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(255, 255, 255) :")
-                       in transition_code, "Info: white menu accent")
+        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(160, 195, 235) :")
+                       in transition_code, "Info: light blue menu accent")
         anchors = {
             2: (190, 210, 230), 3: (100, 110, 120),
             4: (255, 245, 215), 5: (255, 200, 70), 6: (236, 153, 0),

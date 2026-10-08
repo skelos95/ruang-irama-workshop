@@ -10,6 +10,8 @@ Questa pagina descrive il sorgente corrente. Comandi e menu sono nel [README](..
 - Identificatori, nomi regola, commenti e keyword native usano soltanto l’inglese. HUD, feedback, cataloghi e impostazioni personalizzate sono in inglese, senza selettore o stato della lingua.
 - La modalità si chiama Cozywatch. Le regole supportano Schermaglia; mappe e slot si configurano nella lobby. Il timer dura 10–60 minuti, default 30. L'HUD centrale mostra `cozywatch.org`; impostazione e cataloghi delle località sono rimossi.
 
+Il clipboard pubblico numera le 127 regole da 0 a 126 nel loro ordine fisico, senza duplicati o suffissi alfabetici. I riferimenti alle regole della specifica usati in questa pagina restano identificatori interni stabili: la nuova numerazione dei titoli generati non cambia controller, subroutine o comportamento.
+
 ## Scheduler
 
 Il runtime non contiene `Ongoing - Each Player`. `04g` prende uno snapshot dei player e scandisce le entità ogni 0,05 s. Controller di input, classificazione, HUD, eventi e pulizia sono subroutine atomiche dello scheduler globale. Esistono un solo `Wait` e un solo `Loop`, entrambi nello scheduler; le attese dei comandi e delle transizioni sono scadenze individuali. `ActivePlayer` e `TriggerPlayer` sono attori temporanei distinti, svuotati prima dell'attesa. Le espressioni persistenti congelano l'identità del proprietario, mantenendo dinamici colori, testi e posizioni.
@@ -66,7 +68,7 @@ Travel/Attach, Privacy, Dummy Follow e Superman Punch mostrano lo stato corrente
 
 Il catalogo contiene 200 generi in dieci gruppi da venti: i dieci precedenti restano primi in ciascun gruppo. Navigazione ±1/±10 e denominatore HUD usano la lunghezza corrente; i titoli inglesi del gruppo usano divisione per venti. Le etichette inglesi e i valori della palette contengono 40 colori ordinati per famiglie e sfumature: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. White resta all'indice 0 e Silver Mist all'indice 1; il profilo งูแรร์ parte da Charcoal, indice 2; Black è all'indice 3 e usa RGB (0, 0, 0) sia per il nome sia per la preview.
 
-La pagina Name Color 1 mostra il colore selezionato. Le altre pagine usano il 68% del Name Color attivo e il 32% del proprio accento. Preview del menu principale e sottomenu condividono la stessa tinta. Restano un solo Chase per ramo, la transizione di 0,180 s e i cinque colori Travel indipendenti.
+La pagina Info / Controls 0 usa l'azzurro fisso RGB (160, 195, 235), indipendente dal Name Color. La pagina Name Color 1 mostra esattamente il colore selezionato, bianco per il default ordinario. Le pagine 2–15 usano il 68% del Name Color attivo e il 32% del proprio accento. Preview del menu principale e sottomenu condividono la stessa tinta. Restano un solo Chase per ramo, la transizione di 0,180 s e i cinque colori Travel indipendenti.
 
 Rimosso il vecchio effetto di applicazione, comprese le pulsazioni di Revenge e revoca Camera. Le tinte dei menu conservano la transizione nativa `Chase` di 0,180 s, interrotta dal cleanup del proprietario; non aggiungono cicli o attese. L'unico `Play Effect` è il Ring Explosion dei salti multipli: effetto nativo temporaneo, senza handle persistenti o distruzioni periodiche.
 

@@ -55,6 +55,7 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             for rule, old, new, error in (
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
+                (transition, "Vector(160, 195, 235)", "Vector(255, 255, 255)", "Info: light blue menu accent"),
                 (transition, "MenuPage) == 14 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "sedici tinte menu in ordine"),
                 (transition, "MenuPage) == 13 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "sedici tinte menu in ordine"),
                 (transition, "MenuPage) == 15 ? Global.NameColorRGBValues", "MenuPage) == 16 ? Global.NameColorRGBValues", "sedici tinte menu in ordine"),

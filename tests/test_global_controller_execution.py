@@ -119,7 +119,10 @@ class GeneratedControllerEvaluator:
         return state
 
     def controller(self, prefix):
-        matching = [rule for rule in self.rules if prefix + " -" in rule.name]
+        target = "ProcessGlobalController" if prefix == "04h" else "Controller" + prefix.capitalize()
+        matching = [rule for rule in self.rules
+                    if semantic.event_type(rule) == "Subroutine"
+                    and semantic.subroutine_target(rule) == target]
         if len(matching) != 1:
             raise AssertionError(f"expected one generated controller {prefix}: {[rule.name for rule in matching]}")
         if semantic.event_type(matching[0]) != "Subroutine":
@@ -292,7 +295,7 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         self.assertTrue(old["TeamChangeProcessed"])
         self.assertFalse(any(old[model.deadline_field]))
         before = len(model.native_calls)
-        model.execute(model.controller("04h"))
+        model.execute(semantic.rule_by_subroutine(model.rules, "ProcessGlobalController"))
         emitted = [call[1] for call in model.native_calls[before:]]
         self.assertNotIn("CallSubroutine(Controller05)", emitted)
         self.assertNotIn("CallSubroutine(Controller12c)", emitted)

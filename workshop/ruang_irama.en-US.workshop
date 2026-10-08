@@ -335,7 +335,7 @@ subroutines
 	112: ProcessVisibleIcons
 }
 
-rule("00 - Global: Initialize 200 genres, from calm to chaos")
+rule("0 - Global: Initialize 200 genres, from calm to chaos")
 {
 	event
 	{
@@ -445,7 +445,7 @@ rule("00 - Global: Initialize 200 genres, from calm to chaos")
 	}
 }
 
-rule("00a1 - Global: Start the game immediately while waiting for players")
+rule("1 - Global: Start the game immediately while waiting for players")
 {
 	event
 	{
@@ -467,7 +467,7 @@ rule("00a1 - Global: Start the game immediately while waiting for players")
 	}
 }
 
-rule("00a2 - Global: Skip hero selection")
+rule("2 - Global: Skip hero selection")
 {
 	event
 	{
@@ -491,7 +491,7 @@ rule("00a2 - Global: Skip hero selection")
 	}
 }
 
-rule("00a3 - Global: Skip initial setup")
+rule("3 - Global: Skip initial setup")
 {
 	event
 	{
@@ -515,7 +515,7 @@ rule("00a3 - Global: Skip initial setup")
 	}
 }
 
-rule("00a4 - Global: Lock initial phase skipping after the game starts")
+rule("4 - Global: Lock initial phase skipping after the game starts")
 {
 	event
 	{
@@ -536,7 +536,7 @@ rule("00a4 - Global: Lock initial phase skipping after the game starts")
 	}
 }
 
-rule("00c - Global: Restart exactly once when the countdown ends")
+rule("5 - Global: Restart exactly once when the countdown ends")
 {
 	event
 	{
@@ -560,7 +560,7 @@ rule("00c - Global: Restart exactly once when the countdown ends")
 	}
 }
 
-rule("01a - Team cycle: Quarantine before preparation")
+rule("6 - Team cycle: Quarantine before preparation")
 {
 	event
 	{
@@ -595,7 +595,7 @@ rule("01a - Team cycle: Quarantine before preparation")
 	}
 }
 
-rule("01b - Team cycle: Preparation worker from the global scheduler")
+rule("7 - Team cycle: Preparation worker from the global scheduler")
 {
 	event
 	{
@@ -643,7 +643,7 @@ rule("01b - Team cycle: Preparation worker from the global scheduler")
 	}
 }
 
-rule("02 - Player: Classify humans and automatic bots")
+rule("8 - Player: Classify humans and automatic bots")
 {
 	event
 	{
@@ -771,7 +771,7 @@ rule("02 - Player: Classify humans and automatic bots")
 	}
 }
 
-rule("03c - Bot: Lock on respawn or hero change")
+rule("9 - Bot: Lock on respawn or hero change")
 {
 	event
 	{
@@ -791,7 +791,7 @@ rule("03c - Bot: Lock on respawn or hero change")
 	}
 }
 
-rule("03d - Subroutine: Maintain dummy bot slots for both teams at 1 Hz")
+rule("10 - Subroutine: Maintain dummy bot slots for both teams at 1 Hz")
 {
 	event
 	{
@@ -833,7 +833,7 @@ rule("03d - Subroutine: Maintain dummy bot slots for both teams at 1 Hz")
 	}
 }
 
-rule("03f - Bot: Travel from spawn to the objective")
+rule("11 - Bot: Travel from spawn to the objective")
 {
 	event
 	{
@@ -870,7 +870,7 @@ rule("03f - Bot: Travel from spawn to the objective")
 	}
 }
 
-rule("03g - Bot: Face and approach the nearest living enemy human")
+rule("12 - Bot: Face and approach the nearest living enemy human")
 {
 	event
 	{
@@ -891,7 +891,7 @@ rule("03g - Bot: Face and approach the nearest living enemy human")
 	}
 }
 
-rule("03h - Bot: Stop moving when no enemy human is alive")
+rule("13 - Bot: Stop moving when no enemy human is alive")
 {
 	event
 	{
@@ -912,7 +912,7 @@ rule("03h - Bot: Stop moving when no enemy human is alive")
 	}
 }
 
-rule("03i - Bot: Stop moving on death")
+rule("14 - Bot: Stop moving on death")
 {
 	event
 	{
@@ -939,7 +939,7 @@ rule("03i - Bot: Stop moving on death")
 	}
 }
 
-rule("03i - Bot: Stop moving on death global")
+rule("15 - Bot: Stop moving on death global")
 {
 	event
 	{
@@ -961,7 +961,7 @@ rule("03i - Bot: Stop moving on death global")
 	}
 }
 
-rule("04 - Player left: Clean up only after an actual departure")
+rule("16 - Player left: Clean up only after an actual departure")
 {
 	event
 	{
@@ -988,7 +988,7 @@ rule("04 - Player left: Clean up only after an actual departure")
 	}
 }
 
-rule("04 - Player left: Clean up only after an actual departure global")
+rule("17 - Player left: Clean up only after an actual departure global")
 {
 	event
 	{
@@ -1015,7 +1015,7 @@ rule("04 - Player left: Clean up only after an actual departure global")
 	}
 }
 
-rule("04g - Global main loop: Central scheduler at 20 Hz")
+rule("18 - Global main loop: Central scheduler at 20 Hz")
 {
 	event
 	{
@@ -1125,7 +1125,7 @@ rule("04g - Global main loop: Central scheduler at 20 Hz")
 	}
 }
 
-rule("05 - Menu: Hold Melee for 0.5 seconds to open or close")
+rule("19 - Menu: Hold Melee for 0.5 seconds to open or close")
 {
 	event
 	{
@@ -1156,7 +1156,7 @@ rule("05 - Menu: Hold Melee for 0.5 seconds to open or close")
 	}
 }
 
-rule("05b - Menu: Release Melee before using it again")
+rule("20 - Menu: Release Melee before using it again")
 {
 	event
 	{
@@ -1174,7 +1174,7 @@ rule("05b - Menu: Release Melee before using it again")
 	}
 }
 
-rule("05c - Menu: Input controller with fixed priority")
+rule("21 - Menu: Input controller with fixed priority")
 {
 	event
 	{
@@ -1202,7 +1202,7 @@ rule("05c - Menu: Input controller with fixed priority")
 	}
 }
 
-rule("05d - Menu: Release the controller after all inputs are released")
+rule("22 - Menu: Release the controller after all inputs are released")
 {
 	event
 	{
@@ -1217,7 +1217,7 @@ rule("05d - Menu: Release the controller after all inputs are released")
 	}
 }
 
-rule("05e - Menu: Crouch locks hero inputs only during navigation")
+rule("23 - Menu: Crouch locks hero inputs only during navigation")
 {
 	event
 	{
@@ -1239,7 +1239,7 @@ rule("05e - Menu: Crouch locks hero inputs only during navigation")
 	}
 }
 
-rule("05f - Menu: Release Crouch and immediately restore hero inputs")
+rule("24 - Menu: Release Crouch and immediately restore hero inputs")
 {
 	event
 	{
@@ -1262,7 +1262,7 @@ rule("05f - Menu: Release Crouch and immediately restore hero inputs")
 	}
 }
 
-rule("06 - Menu: Navigate forward and backward")
+rule("25 - Menu: Navigate forward and backward")
 {
 	event
 	{
@@ -1311,7 +1311,7 @@ rule("06 - Menu: Navigate forward and backward")
 	}
 }
 
-rule("08 - Soundtrack menu: Jump forward or backward by ten genres")
+rule("26 - Soundtrack menu: Jump forward or backward by ten genres")
 {
 	event
 	{
@@ -1331,7 +1331,7 @@ rule("08 - Soundtrack menu: Jump forward or backward by ten genres")
 	}
 }
 
-rule("10 - Menu: Apply the active page")
+rule("27 - Menu: Apply the active page")
 {
 	event
 	{
@@ -1399,7 +1399,7 @@ rule("10 - Menu: Apply the active page")
 	}
 }
 
-rule("99a - Subroutine: Apply the Soundtrack page")
+rule("28 - Subroutine: Apply the Soundtrack page")
 {
 	event
 	{
@@ -1416,7 +1416,7 @@ rule("99a - Subroutine: Apply the Soundtrack page")
 	}
 }
 
-rule("99b - Subroutine: Apply the Camera page")
+rule("29 - Subroutine: Apply the Camera page")
 {
 	event
 	{
@@ -1463,7 +1463,7 @@ rule("99b - Subroutine: Apply the Camera page")
 	}
 }
 
-rule("99c - Subroutine: Apply the Name Color page")
+rule("30 - Subroutine: Apply the Name Color page")
 {
 	event
 	{
@@ -1483,7 +1483,7 @@ rule("99c - Subroutine: Apply the Name Color page")
 	}
 }
 
-rule("99e - Subroutine: Apply the Revenge page")
+rule("31 - Subroutine: Apply the Revenge page")
 {
 	event
 	{
@@ -1531,7 +1531,7 @@ rule("99e - Subroutine: Apply the Revenge page")
 	}
 }
 
-rule("99f - Subroutine: Apply the Unkillable page")
+rule("32 - Subroutine: Apply the Unkillable page")
 {
 	event
 	{
@@ -1602,7 +1602,7 @@ rule("99f - Subroutine: Apply the Unkillable page")
 	}
 }
 
-rule("99g - Subroutine: Apply the Hero Voice page")
+rule("33 - Subroutine: Apply the Hero Voice page")
 {
 	event
 	{
@@ -1629,7 +1629,7 @@ rule("99g - Subroutine: Apply the Hero Voice page")
 	}
 }
 
-rule("99h - Subroutine: Apply the Player Icon page")
+rule("34 - Subroutine: Apply the Player Icon page")
 {
 	event
 	{
@@ -1645,7 +1645,7 @@ rule("99h - Subroutine: Apply the Player Icon page")
 	}
 }
 
-rule("99i - Subroutine: Apply Crouch Travel")
+rule("35 - Subroutine: Apply Crouch Travel")
 {
 	event
 	{
@@ -1659,7 +1659,7 @@ rule("99i - Subroutine: Apply Crouch Travel")
 	}
 }
 
-rule("99j - Subroutine: Apply the Inspection Privacy page")
+rule("36 - Subroutine: Apply the Inspection Privacy page")
 {
 	event
 	{
@@ -1673,7 +1673,7 @@ rule("99j - Subroutine: Apply the Inspection Privacy page")
 	}
 }
 
-rule("99k - Subroutine: Apply the Try Your Luck page")
+rule("37 - Subroutine: Apply the Try Your Luck page")
 {
 	event
 	{
@@ -1709,7 +1709,7 @@ rule("99k - Subroutine: Apply the Try Your Luck page")
 	}
 }
 
-rule("99l - Subroutine: Apply the Vote page")
+rule("38 - Subroutine: Apply the Vote page")
 {
 	event
 	{
@@ -1729,7 +1729,7 @@ rule("99l - Subroutine: Apply the Vote page")
 	}
 }
 
-rule("99m - Subroutine: Apply dummy bot follow permission")
+rule("39 - Subroutine: Apply dummy bot follow permission")
 {
 	event
 	{
@@ -1744,7 +1744,7 @@ rule("99m - Subroutine: Apply dummy bot follow permission")
 	}
 }
 
-rule("99n - Subroutine: Apply the Ghost / Fly page")
+rule("40 - Subroutine: Apply the Ghost / Fly page")
 {
 	event
 	{
@@ -1764,7 +1764,7 @@ rule("99n - Subroutine: Apply the Ghost / Fly page")
 	}
 }
 
-rule("99o - Subroutine: Apply Ghost / Fly physics")
+rule("41 - Subroutine: Apply Ghost / Fly physics")
 {
 	event
 	{
@@ -1799,7 +1799,7 @@ rule("99o - Subroutine: Apply Ghost / Fly physics")
 	}
 }
 
-rule("11 - Menu: Reload returns from a submenu to the main menu")
+rule("42 - Menu: Reload returns from a submenu to the main menu")
 {
 	event
 	{
@@ -1820,7 +1820,7 @@ rule("11 - Menu: Reload returns from a submenu to the main menu")
 	}
 }
 
-rule("12c - Camera: Hold Interact for half a second to switch")
+rule("43 - Camera: Hold Interact for half a second to switch")
 {
 	event
 	{
@@ -1855,7 +1855,7 @@ rule("12c - Camera: Hold Interact for half a second to switch")
 	}
 }
 
-rule("12d - Camera: Release Interact before using it again")
+rule("44 - Camera: Release Interact before using it again")
 {
 	event
 	{
@@ -1870,7 +1870,7 @@ rule("12d - Camera: Release Interact before using it again")
 	}
 }
 
-rule("12e - Jump revive: Store the death position")
+rule("45 - Jump revive: Store the death position")
 {
 	event
 	{
@@ -1899,7 +1899,7 @@ rule("12e - Jump revive: Store the death position")
 	}
 }
 
-rule("12e - Jump revive: Store the death position global")
+rule("46 - Jump revive: Store the death position global")
 {
 	event
 	{
@@ -1928,7 +1928,7 @@ rule("12e - Jump revive: Store the death position global")
 	}
 }
 
-rule("12f - Jump revive: Revive at a safe walkable position")
+rule("47 - Jump revive: Revive at a safe walkable position")
 {
 	event
 	{
@@ -1957,7 +1957,7 @@ rule("12f - Jump revive: Revive at a safe walkable position")
 	}
 }
 
-rule("12g - Jump revive: Release Jump before trying again")
+rule("48 - Jump revive: Release Jump before trying again")
 {
 	event
 	{
@@ -1972,7 +1972,7 @@ rule("12g - Jump revive: Release Jump before trying again")
 	}
 }
 
-rule("13 - Hero inspection: Name follows the aim target")
+rule("49 - Hero inspection: Name follows the aim target")
 {
 	event
 	{
@@ -2011,7 +2011,7 @@ rule("13 - Hero inspection: Name follows the aim target")
 	}
 }
 
-rule("16a - Anran: Ultimate charge reaches 100 percent on each death")
+rule("50 - Anran: Ultimate charge reaches 100 percent on each death")
 {
 	event
 	{
@@ -2040,7 +2040,7 @@ rule("16a - Anran: Ultimate charge reaches 100 percent on each death")
 	}
 }
 
-rule("16a - Anran: Ultimate charge reaches 100 percent on each death global")
+rule("51 - Anran: Ultimate charge reaches 100 percent on each death global")
 {
 	event
 	{
@@ -2059,7 +2059,7 @@ rule("16a - Anran: Ultimate charge reaches 100 percent on each death global")
 	}
 }
 
-rule("17 - Revenge: Record only the direct killer")
+rule("52 - Revenge: Record only the direct killer")
 {
 	event
 	{
@@ -2085,7 +2085,7 @@ rule("17 - Revenge: Record only the direct killer")
 	}
 }
 
-rule("17 - Revenge: Record only the direct killer global")
+rule("53 - Revenge: Record only the direct killer global")
 {
 	event
 	{
@@ -2140,7 +2140,7 @@ rule("17 - Revenge: Record only the direct killer global")
 	}
 }
 
-rule("18c - Unkillable: Disable only the 1 HP mode in spawn")
+rule("54 - Unkillable: Disable only the 1 HP mode in spawn")
 {
 	event
 	{
@@ -2172,7 +2172,7 @@ rule("18c - Unkillable: Disable only the 1 HP mode in spawn")
 	}
 }
 
-rule("18f - Luck: Clear effects on death")
+rule("55 - Luck: Clear effects on death")
 {
 	event
 	{
@@ -2199,7 +2199,7 @@ rule("18f - Luck: Clear effects on death")
 	}
 }
 
-rule("18f - Luck: Clear effects on death global")
+rule("56 - Luck: Clear effects on death global")
 {
 	event
 	{
@@ -2219,7 +2219,7 @@ rule("18f - Luck: Clear effects on death global")
 	}
 }
 
-rule("18g - Luck: Reopen the menu after the effect ends")
+rule("57 - Luck: Reopen the menu after the effect ends")
 {
 	event
 	{
@@ -2239,7 +2239,7 @@ rule("18g - Luck: Reopen the menu after the effect ends")
 	}
 }
 
-rule("18i - Luck: Vision displays all player and bot names")
+rule("58 - Luck: Vision displays all player and bot names")
 {
 	event
 	{
@@ -2273,7 +2273,7 @@ rule("18i - Luck: Vision displays all player and bot names")
 	}
 }
 
-rule("18j - Luck: Clear vision names when no longer needed")
+rule("59 - Luck: Clear vision names when no longer needed")
 {
 	event
 	{
@@ -2294,7 +2294,7 @@ rule("18j - Luck: Clear vision names when no longer needed")
 	}
 }
 
-rule("18k - Luck: Show effect and duration HUD while the menu is closed")
+rule("60 - Luck: Show effect and duration HUD while the menu is closed")
 {
 	event
 	{
@@ -2328,7 +2328,7 @@ rule("18k - Luck: Show effect and duration HUD while the menu is closed")
 	}
 }
 
-rule("19 - Crouch Travel: Open five pages while Crouch is held")
+rule("61 - Crouch Travel: Open five pages while Crouch is held")
 {
 	event
 	{
@@ -2353,7 +2353,7 @@ rule("19 - Crouch Travel: Open five pages while Crouch is held")
 	}
 }
 
-rule("19a - Crouch Travel: Primary Fire advances, Secondary Fire reverses, Interact applies")
+rule("62 - Crouch Travel: Primary Fire advances, Secondary Fire reverses, Interact applies")
 {
 	event
 	{
@@ -2374,7 +2374,7 @@ rule("19a - Crouch Travel: Primary Fire advances, Secondary Fire reverses, Inter
 	}
 }
 
-rule("19b - Crouch Travel: Release navigation and action locks")
+rule("63 - Crouch Travel: Release navigation and action locks")
 {
 	event
 	{
@@ -2389,7 +2389,7 @@ rule("19b - Crouch Travel: Release navigation and action locks")
 	}
 }
 
-rule("19c - Crouch Travel: Navigate five pages with Primary and Secondary Fire")
+rule("64 - Crouch Travel: Navigate five pages with Primary and Secondary Fire")
 {
 	event
 	{
@@ -2450,7 +2450,7 @@ rule("19c - Crouch Travel: Navigate five pages with Primary and Secondary Fire")
 	}
 }
 
-rule("19d - Crouch Travel: Recreate the name when the target changes")
+rule("65 - Crouch Travel: Recreate the name when the target changes")
 {
 	event
 	{
@@ -2506,7 +2506,7 @@ rule("19d - Crouch Travel: Recreate the name when the target changes")
 	}
 }
 
-rule("19e - Crouch Travel: Interact applies the active page")
+rule("66 - Crouch Travel: Interact applies the active page")
 {
 	event
 	{
@@ -2582,7 +2582,7 @@ rule("19e - Crouch Travel: Interact applies the active page")
 	}
 }
 
-rule("19f - Crouch Travel: Reload detaches the player")
+rule("67 - Crouch Travel: Reload detaches the player")
 {
 	event
 	{
@@ -2601,7 +2601,7 @@ rule("19f - Crouch Travel: Reload detaches the player")
 	}
 }
 
-rule("19h - Crouch Travel: Detach when player state changes")
+rule("68 - Crouch Travel: Detach when player state changes")
 {
 	event
 	{
@@ -2620,7 +2620,7 @@ rule("19h - Crouch Travel: Detach when player state changes")
 	}
 }
 
-rule("19g - Crouch Travel: Close when Crouch is released")
+rule("69 - Crouch Travel: Close when Crouch is released")
 {
 	event
 	{
@@ -2678,7 +2678,7 @@ rule("19g - Crouch Travel: Close when Crouch is released")
 	}
 }
 
-rule("89a - Subroutine: Process fast player state")
+rule("70 - Subroutine: Process fast player state")
 {
 	event
 	{
@@ -2796,7 +2796,7 @@ rule("89a - Subroutine: Process fast player state")
 	}
 }
 
-rule("89a2 - Subroutine: Process 3D flight per player at 20 Hz")
+rule("71 - Subroutine: Process 3D flight per player at 20 Hz")
 {
 	event
 	{
@@ -2837,7 +2837,7 @@ rule("89a2 - Subroutine: Process 3D flight per player at 20 Hz")
 	}
 }
 
-rule("89b - Subroutine: Process the player cycle at 10 Hz")
+rule("72 - Subroutine: Process the player cycle at 10 Hz")
 {
 	event
 	{
@@ -2946,7 +2946,7 @@ rule("89b - Subroutine: Process the player cycle at 10 Hz")
 	}
 }
 
-rule("89b2 - Subroutine: Maintain bots at 10 Hz and follow targets at 5 Hz")
+rule("73 - Subroutine: Maintain bots at 10 Hz and follow targets at 5 Hz")
 {
 	event
 	{
@@ -2981,7 +2981,7 @@ rule("89b2 - Subroutine: Maintain bots at 10 Hz and follow targets at 5 Hz")
 	}
 }
 
-rule("89c - Subroutine: Process player maintenance at 1 Hz")
+rule("74 - Subroutine: Process player maintenance at 1 Hz")
 {
 	event
 	{
@@ -3030,7 +3030,7 @@ rule("89c - Subroutine: Process player maintenance at 1 Hz")
 	}
 }
 
-rule("89d - Subroutine: Process the Try Your Luck state machine")
+rule("75 - Subroutine: Process the Try Your Luck state machine")
 {
 	event
 	{
@@ -3194,7 +3194,7 @@ rule("89d - Subroutine: Process the Try Your Luck state machine")
 	}
 }
 
-rule("90 - Subroutine: Close the menu and restore buttons")
+rule("76 - Subroutine: Close the menu and restore buttons")
 {
 	event
 	{
@@ -3240,7 +3240,7 @@ rule("90 - Subroutine: Close the menu and restore buttons")
 	}
 }
 
-rule("91 - Subroutine: Draw one active menu HUD")
+rule("77 - Subroutine: Draw one active menu HUD")
 {
 	event
 	{
@@ -3264,7 +3264,7 @@ rule("91 - Subroutine: Draw one active menu HUD")
 	}
 }
 
-rule("91a - Subroutine: Draw the main menu")
+rule("78 - Subroutine: Draw the main menu")
 {
 	event
 	{
@@ -3279,7 +3279,7 @@ rule("91a - Subroutine: Draw the main menu")
 	}
 }
 
-rule("91b - Subroutine: Draw the Soundtrack menu")
+rule("79 - Subroutine: Draw the Soundtrack menu")
 {
 	event
 	{
@@ -3294,7 +3294,7 @@ rule("91b - Subroutine: Draw the Soundtrack menu")
 	}
 }
 
-rule("91c - Subroutine: Draw the Camera menu")
+rule("80 - Subroutine: Draw the Camera menu")
 {
 	event
 	{
@@ -3309,7 +3309,7 @@ rule("91c - Subroutine: Draw the Camera menu")
 	}
 }
 
-rule("91d - Subroutine: Draw the Name Color menu")
+rule("81 - Subroutine: Draw the Name Color menu")
 {
 	event
 	{
@@ -3324,7 +3324,7 @@ rule("91d - Subroutine: Draw the Name Color menu")
 	}
 }
 
-rule("91e - Subroutine: Draw information and controls")
+rule("82 - Subroutine: Draw information and controls")
 {
 	event
 	{
@@ -3339,7 +3339,7 @@ rule("91e - Subroutine: Draw information and controls")
 	}
 }
 
-rule("91f - Subroutine: Draw the Revenge menu")
+rule("83 - Subroutine: Draw the Revenge menu")
 {
 	event
 	{
@@ -3355,7 +3355,7 @@ rule("91f - Subroutine: Draw the Revenge menu")
 	}
 }
 
-rule("91g - Subroutine: Draw the Travel menu")
+rule("84 - Subroutine: Draw the Travel menu")
 {
 	event
 	{
@@ -3385,7 +3385,7 @@ rule("91g - Subroutine: Draw the Travel menu")
 	}
 }
 
-rule("91h - Subroutine: Draw the Unkillable menu")
+rule("85 - Subroutine: Draw the Unkillable menu")
 {
 	event
 	{
@@ -3400,7 +3400,7 @@ rule("91h - Subroutine: Draw the Unkillable menu")
 	}
 }
 
-rule("91i - Subroutine: Draw the Hero Voice menu")
+rule("86 - Subroutine: Draw the Hero Voice menu")
 {
 	event
 	{
@@ -3415,7 +3415,7 @@ rule("91i - Subroutine: Draw the Hero Voice menu")
 	}
 }
 
-rule("91j - Subroutine: Draw the Player Icon menu")
+rule("87 - Subroutine: Draw the Player Icon menu")
 {
 	event
 	{
@@ -3430,7 +3430,7 @@ rule("91j - Subroutine: Draw the Player Icon menu")
 	}
 }
 
-rule("91n - Subroutine: Draw the Luck card")
+rule("88 - Subroutine: Draw the Luck card")
 {
 	event
 	{
@@ -3445,7 +3445,7 @@ rule("91n - Subroutine: Draw the Luck card")
 	}
 }
 
-rule("91p - Subroutine: Draw the active page")
+rule("89 - Subroutine: Draw the active page")
 {
 	event
 	{
@@ -3485,7 +3485,7 @@ rule("91p - Subroutine: Draw the active page")
 	}
 }
 
-rule("91k - Subroutine: Transition the menu color smoothly")
+rule("90 - Subroutine: Transition the menu color smoothly")
 {
 	event
 	{
@@ -3498,12 +3498,12 @@ rule("91k - Subroutine: Transition the menu color smoothly")
 		If(Global.TriggerPlayer.CrouchTravelActive);
 		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 0) ? Vector(80, 255, 160) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 1) ? Vector(65, 225, 255) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 2) ? Vector(95, 150, 255) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 3) ? Vector(195, 100, 255) : Vector(255, 85, 135))))), 0.180, None);
 		Else;
-		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 0) ? Vector(255, 255, 255) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 1) ? Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorCursor)] : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 2) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(190, 210, 230) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 3) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(100, 110, 120) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 4) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 245, 215) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 5) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 200, 70) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 6) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(236, 153, 0) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 7) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 120, 105) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 8) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 75, 75) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 9) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 50, 145) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 10) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(205, 160, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 11) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(100, 50, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 12) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(70, 145, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 13) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(0, 234, 234) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 14) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(70, 220, 110) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 15) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(65, 155, 110) * 0.320)) : Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)])))))))))))))))), 0.180, None);
+		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 0) ? Vector(160, 195, 235) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 1) ? Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorCursor)] : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 2) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(190, 210, 230) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 3) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(100, 110, 120) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 4) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 245, 215) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 5) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 200, 70) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 6) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(236, 153, 0) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 7) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 120, 105) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 8) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 75, 75) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 9) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(255, 50, 145) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 10) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(205, 160, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 11) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(100, 50, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 12) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(70, 145, 255) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 13) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(0, 234, 234) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 14) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(70, 220, 110) * 0.320)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 15) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.680) + (Vector(65, 155, 110) * 0.320)) : Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)])))))))))))))))), 0.180, None);
 		End;
 	}
 }
 
-rule("92 - Subroutine: Lock the bot while allowing movement")
+rule("91 - Subroutine: Lock the bot while allowing movement")
 {
 	event
 	{
@@ -3546,7 +3546,7 @@ rule("92 - Subroutine: Lock the bot while allowing movement")
 	}
 }
 
-rule("91o - Subroutine: Draw the Vote menu")
+rule("92 - Subroutine: Draw the Vote menu")
 {
 	event
 	{
@@ -3561,7 +3561,7 @@ rule("91o - Subroutine: Draw the Vote menu")
 	}
 }
 
-rule("91s - Subroutine: Draw the Ghost / Fly menu")
+rule("93 - Subroutine: Draw the Ghost / Fly menu")
 {
 	event
 	{
@@ -3576,7 +3576,7 @@ rule("91s - Subroutine: Draw the Ghost / Fly menu")
 	}
 }
 
-rule("91q - Subroutine: Recount votes and determine a sole leader")
+rule("94 - Subroutine: Recount votes and determine a sole leader")
 {
 	event
 	{
@@ -3613,7 +3613,7 @@ rule("91q - Subroutine: Recount votes and determine a sole leader")
 	}
 }
 
-rule("93 - Subroutine: Start the dynamic left shoulder camera")
+rule("95 - Subroutine: Start the dynamic left shoulder camera")
 {
 	event
 	{
@@ -3632,7 +3632,7 @@ rule("93 - Subroutine: Start the dynamic left shoulder camera")
 	}
 }
 
-rule("93b2 - Subroutine: Quiesce the trigger player before cleanup")
+rule("96 - Subroutine: Quiesce the trigger player before cleanup")
 {
 	event
 	{
@@ -3717,7 +3717,7 @@ rule("93b2 - Subroutine: Quiesce the trigger player before cleanup")
 	}
 }
 
-rule("93c - Subroutine: Clear references to players who actually left")
+rule("97 - Subroutine: Clear references to players who actually left")
 {
 	event
 	{
@@ -3908,7 +3908,7 @@ rule("93c - Subroutine: Clear references to players who actually left")
 	}
 }
 
-rule("93d - Subroutine: Clean up orphaned text")
+rule("98 - Subroutine: Clean up orphaned text")
 {
 	event
 	{
@@ -3943,7 +3943,7 @@ rule("93d - Subroutine: Clean up orphaned text")
 	}
 }
 
-rule("94 - Subroutine: Prepare the player and initialize variables")
+rule("99 - Subroutine: Prepare the player and initialize variables")
 {
 	event
 	{
@@ -4097,7 +4097,7 @@ rule("94 - Subroutine: Prepare the player and initialize variables")
 	}
 }
 
-rule("95 - Subroutine: Refresh camera targets, including bots")
+rule("100 - Subroutine: Refresh camera targets, including bots")
 {
 	event
 	{
@@ -4122,7 +4122,7 @@ rule("95 - Subroutine: Refresh camera targets, including bots")
 	}
 }
 
-rule("96 - Subroutine: Find the nearest public inspection target under the crosshair")
+rule("101 - Subroutine: Find the nearest public inspection target under the crosshair")
 {
 	event
 	{
@@ -4141,7 +4141,7 @@ rule("96 - Subroutine: Find the nearest public inspection target under the cross
 	}
 }
 
-rule("97 - Subroutine: Refresh Revenge targets")
+rule("102 - Subroutine: Refresh Revenge targets")
 {
 	event
 	{
@@ -4167,7 +4167,7 @@ rule("97 - Subroutine: Refresh Revenge targets")
 	}
 }
 
-rule("98 - Subroutine: Find the nearest public Travel target under the crosshair")
+rule("103 - Subroutine: Find the nearest public Travel target under the crosshair")
 {
 	event
 	{
@@ -4187,7 +4187,7 @@ rule("98 - Subroutine: Find the nearest public Travel target under the crosshair
 	}
 }
 
-rule("98a - Subroutine: Restore Luck state for the trigger player")
+rule("104 - Subroutine: Restore Luck state for the trigger player")
 {
 	event
 	{
@@ -4259,7 +4259,7 @@ rule("98a - Subroutine: Restore Luck state for the trigger player")
 	}
 }
 
-rule("98b - Subroutine: Restore Luck state for the globally active player")
+rule("105 - Subroutine: Restore Luck state for the globally active player")
 {
 	event
 	{
@@ -4334,7 +4334,7 @@ rule("98b - Subroutine: Restore Luck state for the globally active player")
 	}
 }
 
-rule("98c - Subroutine: Refresh public targets for the trigger player")
+rule("106 - Subroutine: Refresh public targets for the trigger player")
 {
 	event
 	{
@@ -4348,7 +4348,7 @@ rule("98c - Subroutine: Refresh public targets for the trigger player")
 	}
 }
 
-rule("98d - Subroutine: Refresh public targets for the globally active player")
+rule("107 - Subroutine: Refresh public targets for the globally active player")
 {
 	event
 	{
@@ -4363,7 +4363,7 @@ rule("98d - Subroutine: Refresh public targets for the globally active player")
 	}
 }
 
-rule("98e - Subroutine: Create a dummy bot for the active team")
+rule("108 - Subroutine: Create a dummy bot for the active team")
 {
 	event
 	{
@@ -4377,7 +4377,7 @@ rule("98e - Subroutine: Create a dummy bot for the active team")
 	}
 }
 
-rule("98f - Subroutine: Remove a dummy bot from the active team")
+rule("109 - Subroutine: Remove a dummy bot from the active team")
 {
 	event
 	{
@@ -4402,7 +4402,7 @@ rule("98f - Subroutine: Remove a dummy bot from the active team")
 	}
 }
 
-rule("98g - Subroutine: Travel to spawn")
+rule("110 - Subroutine: Travel to spawn")
 {
 	event
 	{
@@ -4430,7 +4430,7 @@ rule("98g - Subroutine: Travel to spawn")
 	}
 }
 
-rule("98h - Subroutine: Travel to the objective")
+rule("111 - Subroutine: Travel to the objective")
 {
 	event
 	{
@@ -4462,7 +4462,7 @@ rule("98h - Subroutine: Travel to the objective")
 	}
 }
 
-rule("98i - Subroutine: Travel to the target player")
+rule("112 - Subroutine: Travel to the target player")
 {
 	event
 	{
@@ -4514,7 +4514,7 @@ rule("98i - Subroutine: Travel to the target player")
 	}
 }
 
-rule("98j - Subroutine: Find a safe Travel position")
+rule("113 - Subroutine: Find a safe Travel position")
 {
 	event
 	{
@@ -4604,7 +4604,7 @@ rule("98j - Subroutine: Find a safe Travel position")
 	}
 }
 
-rule("99p - Subroutine: Apply the Multijump choice")
+rule("114 - Subroutine: Apply the Multijump choice")
 {
 	event
 	{
@@ -4625,7 +4625,7 @@ rule("99p - Subroutine: Apply the Multijump choice")
 	}
 }
 
-rule("91t - Subroutine: Draw Multijump choices")
+rule("115 - Subroutine: Draw Multijump choices")
 {
 	event
 	{
@@ -4640,7 +4640,7 @@ rule("91t - Subroutine: Draw Multijump choices")
 	}
 }
 
-rule("89h - Subroutine: Repeat air jumps with a cooldown")
+rule("116 - Subroutine: Repeat air jumps with a cooldown")
 {
 	event
 	{
@@ -4671,7 +4671,7 @@ rule("89h - Subroutine: Repeat air jumps with a cooldown")
 	}
 }
 
-rule("99q - Subroutine: Apply the Super Punch toggle")
+rule("117 - Subroutine: Apply the Super Punch toggle")
 {
 	event
 	{
@@ -4693,7 +4693,7 @@ rule("99q - Subroutine: Apply the Super Punch toggle")
 	}
 }
 
-rule("89i - Subroutine: Apply Super Punch once per swing")
+rule("118 - Subroutine: Apply Super Punch once per swing")
 {
 	event
 	{
@@ -4725,7 +4725,7 @@ rule("89i - Subroutine: Apply Super Punch once per swing")
 	}
 }
 
-rule("89i1 - Super Punch: Handle native melee impact")
+rule("119 - Super Punch: Handle native melee impact")
 {
 	event
 	{
@@ -4769,7 +4769,7 @@ rule("89i1 - Super Punch: Handle native melee impact")
 	}
 }
 
-rule("89i1 - Super Punch: Handle native melee impact global")
+rule("120 - Super Punch: Handle native melee impact global")
 {
 	event
 	{
@@ -4794,7 +4794,7 @@ rule("89i1 - Super Punch: Handle native melee impact global")
 	}
 }
 
-rule("89e - Subroutine: Maintain floating objective icons once per second")
+rule("121 - Subroutine: Maintain floating objective icons once per second")
 {
 	event
 	{
@@ -4921,7 +4921,7 @@ rule("89e - Subroutine: Maintain floating objective icons once per second")
 	}
 }
 
-rule("93e - Subroutine: Remove the objective icon on departure or team change")
+rule("122 - Subroutine: Remove the objective icon on departure or team change")
 {
 	event
 	{
@@ -4949,7 +4949,7 @@ rule("93e - Subroutine: Remove the objective icon on departure or team change")
 	}
 }
 
-rule("04h - Subroutine: Control players from global context")
+rule("123 - Subroutine: Control players from global context")
 {
 	event
 	{
@@ -5031,7 +5031,7 @@ rule("04h - Subroutine: Control players from global context")
 	}
 }
 
-rule("04i - Subroutine: Drain the native event queue")
+rule("124 - Subroutine: Drain the native event queue")
 {
 	event
 	{
@@ -5069,7 +5069,7 @@ rule("04i - Subroutine: Drain the native event queue")
 	}
 }
 
-rule("04j - Subroutine: Reconcile departed players from global context")
+rule("125 - Subroutine: Reconcile departed players from global context")
 {
 	event
 	{
@@ -5108,7 +5108,7 @@ rule("04j - Subroutine: Reconcile departed players from global context")
 	}
 }
 
-rule("04k - Subroutine: Cache visible objective icon choices")
+rule("126 - Subroutine: Cache visible objective icon choices")
 {
 	event
 	{

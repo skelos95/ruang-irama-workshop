@@ -625,7 +625,25 @@ def build_english(source: str) -> tuple[str, dict]:
     icon_cache = '\t\tFor Global Variable(ObjectiveIconIndex, 0, 12, 1);\n\t\t\tGlobal.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];\n\t\t\tGlobal.VisibleIconChoices[Global.ObjectiveIconIndex] = And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), And(Global.ObjectiveIconPlayer.IsHuman == True, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100))) ? Global.ObjectiveIconPlayer.IconIndex : 0;\n\t\tEnd;\n\t\tGlobal.ObjectiveIconPlayer = Null;\n'
     lowered.append(subrule('04k - Subroutine: Cache visible objective icon choices', 'ProcessVisibleIcons', icon_cache))
     output = compact_booleans(compact_unused_constants(compact_fixed_pools(compact_icon_visibility(compact_palette(header + "\n\n".join(lowered) + "\n")))))
+    output = number_runtime_rules(output)
     return output, {"controllers": {prefix(r): {"target": controller_name(r), "index": indices[prefix(r)]} for r in each}, "callbacks": {p: i for i, p in enumerate(EVENT_PREFIXES)}, "capacity": CAPACITY, "latches": sorted(LATCH_PREFIXES)}
+
+
+def number_runtime_rules(text: str) -> str:
+    """Give the final import a unique, consecutive display order from zero.
+
+    Logical rule IDs remain compiler inputs; native subroutine declarations and
+    controller targets are untouched by this presentation-only final pass.
+    """
+    rules = validator.extract_rules(text)
+    for index, rule in reversed(list(enumerate(rules))):
+        _, separator, title = rule.name.partition(" - ")
+        if not separator or not title:
+            raise ValueError(f"runtime rule has no descriptive title: {rule.name}")
+        replacement = rule.body.replace('rule("' + rule.name + '")',
+                                        'rule("' + str(index) + ' - ' + title + '")', 1)
+        text = text[:rule.start] + replacement + text[rule.end:]
+    return text
 
 
 def build(source: str) -> str:

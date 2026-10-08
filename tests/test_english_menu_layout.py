@@ -10,6 +10,7 @@ import unittest
 from tools import build_global_runtime as compiler
 from tools import validate_workshop as validator
 from tests.test_roster_rejoin_regressions import LifecycleSourceEvaluator, SOURCES
+from tests.runtime_selection import rule_for_logical_id
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (*[path for path, _, _ in SOURCES],
@@ -49,7 +50,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
             rules = validator.extract_rules(path.read_text(encoding="utf-8"))
             for prefix in MENU_PREFIXES:
                 with self.subTest(artifact=path.name, menu=prefix):
-                    rule = next(rule for rule in rules if compiler.prefix(rule) == prefix)
+                    rule = rule_for_logical_id(rules, prefix)
                     calls = list(validator.iter_calls(rule.body, "Create HUD Text"))
                     self.assertEqual(len(calls), 1)
                     self.assertEqual(calls[0].args[1], "Null")
@@ -78,7 +79,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
         for path in ARTIFACTS:
             with self.subTest(artifact=path.name):
                 rules = validator.extract_rules(path.read_text(encoding="utf-8"))
-                info = next(rule for rule in rules if compiler.prefix(rule) == "91e")
+                info = validator.rule_by_subroutine(rules, "DrawInfoMenu")
                 call = next(validator.iter_calls(info.body, "Create HUD Text"))
                 self.assertEqual(call.args[1:3], ("Null", "Null"))
                 self.assertEqual({button.args[0] for button in

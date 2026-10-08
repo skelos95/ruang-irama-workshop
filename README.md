@@ -6,13 +6,15 @@ Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori conte
 
 Imposta la lingua testo del client su **English** per importare il codice. **Grammatica Workshop, identificatori, regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese**. Le mappe si configurano nella lobby: tutte quelle standard disponibili in Schermaglia, escluse le mappe Workshop come Isola.
 
+Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
+
 ## Stato attuale
 
 L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La successiva disposizione dei comandi nel sottotitolo del menu richiede ancora una verifica nel client.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.374 unità (−17,5%)**. Il testo da importare passa da 348.732 a 288.890 byte UTF-8 (−17,2%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.374 unità (−17,5%)**. Il testo da importare passa da 348.732 a 288.793 byte UTF-8 (−17,2%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -83,7 +85,7 @@ Superman Punch è inizialmente OFF e funziona anche con il menu principale, un s
 
 La diagnostica server rimane bianca ed è visibile solo all'host. Tutti i testi dell'interfaccia sono in inglese; il nome personale `งูแรร์` conserva i suoi caratteri originali.
 
-Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. Black usa nero puro sia per il nome sia per la preview. Le tinte dei menu mescolano l'accento della pagina al Name Color scelto, con transizioni fluide di 0,180 s.
+Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. La pagina 1 mostra esattamente il colore selezionato, inizialmente bianco; Black usa nero puro sia per il nome sia per la preview. Info / Controls 0 usa un azzurro fisso. Le altre pagine mescolano il proprio accento al Name Color scelto, con transizioni fluide di 0,180 s.
 
 Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 

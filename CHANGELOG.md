@@ -1,11 +1,13 @@
 # Changelog
 
-## Comandi nei sottotitoli dei menu — 2026-10-08
+## Sottotitoli e numerazione delle regole — 2026-10-08
 
+- Le 127 regole del codice da importare ricevono numeri consecutivi da 0 a 126 nell'ordine del file, senza duplicati o suffissi alfabetici. I titoli inglesi conservano la descrizione della regola; il comportamento resta invariato.
 - I comandi contestuali tornano nel campo `Subheader` dell'HUD Arcade; funzioni e opzioni restano nel campo `Text`. Rimossa la disposizione affiancata con separatore `|`, mantenendo un solo handle per pagina.
 - Info / Controls mantiene tutti i comandi nel corpo e lascia vuoto il sottotitolo, senza duplicazioni. Conservati il principale aperto su Info al primo spawn, la numerazione 0/1/2/3, l'importazione inglese, cozywatch.org e i reset Camera.
+- Info / Controls 0 riceve un azzurro fisso RGB (160, 195, 235), distinto dal bianco iniziale di Name Color 1. Name Color conserva il colore selezionato esatto; preview e pagina Info condividono il nuovo azzurro.
 - L'utente conferma il funzionamento nel gioco della precedente revisione inglese con Info / Controls. Il riscontro è qualitativo e non include ancora la nuova disposizione dei sottotitoli né nuove metriche native.
-- Il runtime da importare usa 288.890 byte UTF-8, 1.216 in meno rispetto alla prima revisione inglese, e 26.374 unità strutturali offline. Rispetto al precedente codice prima della conversione inglese, le riduzioni sono del 17,2% nel testo e del 17,5% nella stima strutturale. Restano 127 regole e 2.566 unità nella regola strutturalmente maggiore; i conteggi nativi vanno misurati nel client.
+- Il runtime da importare usa 288.793 byte UTF-8, 1.313 in meno rispetto alla prima revisione inglese, e 26.374 unità strutturali offline. Rispetto al precedente codice prima della conversione inglese, le riduzioni sono del 17,2% nel testo e del 17,5% nella stima strutturale. Restano 127 regole e 2.566 unità nella regola strutturalmente maggiore; i conteggi nativi vanno misurati nel client.
 
 ## Codice inglese, Info e reset Camera — 2026-10-08
 

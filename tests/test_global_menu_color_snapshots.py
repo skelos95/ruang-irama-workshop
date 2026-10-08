@@ -9,6 +9,7 @@ import unittest
 
 from tests.test_fly_motion import Vector
 from tests.test_global_compaction import CompactionContext
+from tests.runtime_selection import rule_for_logical_id
 from tools import validate_global_runtime as gate
 from tools import validate_workshop as semantic
 
@@ -65,12 +66,12 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
     def setUpClass(cls):
         cls.text = gate.english((ROOT / 'workshop/ruang_irama.en-US.workshop').read_text(encoding='utf-8'))
         cls.rules = semantic.extract_rules(cls.text)
-        cls.palette = next(rule for rule in cls.rules if rule.name.startswith('91k -'))
+        cls.palette = semantic.rule_by_subroutine(cls.rules, "TransitionMenuColor")
         cls.chases = list(semantic.iter_calls(cls.palette.body, 'Chase Player Variable Over Time'))
         cls.travel, cls.menu = cls.chases
         _, fields, _, _ = semantic.declaration_entries(cls.text)
         cls.fields = {field.name for field in fields}
-        bootstrap = next(rule for rule in cls.rules if rule.name.startswith('00 -'))
+        bootstrap = rule_for_logical_id(cls.rules, "00")
         statement = next(statement for statement in semantic.split_top_level(
             semantic.rule_block(bootstrap, 'actions'), ';')
             if statement.strip().startswith('Global.NameColorRGBValues ='))
@@ -139,7 +140,20 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
                 self.assertEqual(model.frame_destination('owner0'), expected)
                 self.assertEqual(model.frame_destination('owner1'), untouched)
 
-    def test_deferred_mode_mutation_reproduces_white_and_green_with_zero_cursor(self):
+    def test_info_and_default_name_color_remain_distinct_after_dispatch(self):
+        model = self.model(2)
+        for main in (True, False):
+            for owner, page in (("owner0", 0), ("owner1", 1)):
+                model.players[owner].update(MenuPage=-1 if main else page,
+                                           MainMenuCursor=page, ColorCursor=0, ColorIndex=0)
+                model.globals['TriggerPlayer'] = owner
+                model.command(self.menu)
+            model.globals['TriggerPlayer'] = None
+            self.assertEqual(model.frame_destination('owner0'), Vector(160, 195, 235))
+            self.assertEqual(model.frame_destination('owner1'), self.colors[0])
+            self.assertNotEqual(model.frame_destination('owner0'), model.frame_destination('owner1'))
+
+    def test_deferred_mode_mutation_reproduces_info_accent_and_green_with_zero_cursor(self):
         model = self.model(2)
         model.globals['TriggerPlayer'] = 'owner0'
         model.players['owner0'].update(ColorCursor=12, TravelCursor=4)
@@ -150,7 +164,7 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
         model.players['owner1']['TravelCursor'] = 4
         model.command(self.travel, mode='Destination and Duration')
         model.globals['TriggerPlayer'] = None
-        self.assertEqual(model.frame_destination('owner0'), self.colors[0])
+        self.assertEqual(model.frame_destination('owner0'), Vector(160, 195, 235))
         self.assertEqual(model.frame_destination('owner1'), Vector(80, 255, 160))
         self.assertNotEqual(model.frame_destination('owner0'), intended_menu)
         self.assertNotEqual(model.frame_destination('owner1'), intended_travel)
