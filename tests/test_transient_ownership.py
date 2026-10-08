@@ -14,12 +14,12 @@ from tests.test_roster_rejoin_regressions import SOURCES
 
 
 FIELDS = {
-    "HudEfekNasib": ("HudEfekSementara", "HUD Text", "98a -"),
-    "TeksTeleportasi": ("TeksTeleportasiSementara", "In-World Text", "19g -"),
-    "TeksVisiNasib": ("TeksVisiSementara", "In-World Text", "18j -"),
+    "LuckEffectHud": ("TemporaryEffectHudIds", "HUD Text", "98a -"),
+    "TravelText": ("TemporaryTravelTextIds", "In-World Text", "19g -"),
+    "LuckVisionText": ("TemporaryVisionTextIds", "In-World Text", "18j -"),
 }
-REGISTRY = ("PemilikTeksSementara",) + tuple(value[0] for value in FIELDS.values())
-SCRATCH = ("IndeksTeksPembersihan", "PemainTeksPembersihan", "KursorTeksPembersihan")
+REGISTRY = ("TemporaryTextOwners",) + tuple(value[0] for value in FIELDS.values())
+SCRATCH = ("TextCleanupIndex", "TextCleanupPlayer", "TextCleanupCursor")
 
 
 class TransientSourceEvaluator(AuditLifecycleEvaluator):
@@ -38,10 +38,10 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
             if initializer is None:
                 raise AssertionError(f"missing durable registry {field}")
             self.globals[field] = self.evaluate(initializer.group(1))
-        self.globals.update(IndeksTeksPembersihan=-1, PemainTeksPembersihan=None,
-                            KursorTeksPembersihan=0)
+        self.globals.update(TextCleanupIndex=-1, TextCleanupPlayer=None,
+                            TextCleanupCursor=0)
         self.reaper = statements(validator.rule_block(
-            validator.rule_by_subroutine(self.rules, "BersihkanTeksYatim"), "actions"))
+            validator.rule_by_subroutine(self.rules, "CleanupOrphanedText"), "actions"))
         self.creators = {}
         self.capacity = {}
         self.closers = {}
@@ -52,7 +52,7 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
             self.creators[field] = project(statements(actions), self.keep(field, create=True))
             conditions = validator.rule_block(creator, "conditions")
             guard = next((token.strip() for token in conditions.split(";")
-                          if "Array Contains(Global.PemilikTeksSementara" in token), None)
+                          if "Array Contains(Global.TemporaryTextOwners" in token), None)
             if guard is None:
                 raise AssertionError(f"creator cannot wake when registry capacity returns: {field}")
             self.capacity[field] = guard
@@ -64,12 +64,12 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
         selected = set(FIELDS) if field is None else {field}
         arrays = {FIELDS[name][0] for name in selected} | {REGISTRY[0]} | set(SCRATCH)
         if cleanup:
-            arrays |= {"PemainPembersihan", "IndeksKeluar", "IndeksPembersihan"}
+            arrays |= {"CleanupSubject", "LeavingPlayerIndex", "CleanupPlayerIndex"}
 
         def keep(token):
-            if token == "Call Subroutine(BersihkanTeksYatim)":
+            if token == "Call Subroutine(CleanupOrphanedText)":
                 return True
-            if token.startswith("Abort If(Global.IndeksTeksPembersihan"):
+            if token.startswith("Abort If(Global.TextCleanupIndex"):
                 return True
             if token.startswith("Create "):
                 return create
@@ -77,7 +77,7 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
                 return any(re.search(rf"\b{name}\b", token) for name in selected)
             if re.match(r"Global\.(?:" + "|".join(arrays) + r")(?:\[| =)", token):
                 return True
-            return bool(re.match(r"(?:Event Player|Global\.PemainAktif|Global\.PemainPembersihan)\.(?:"
+            return bool(re.match(r"(?:Event Player|Global\.ActivePlayer|Global\.CleanupSubject)\.(?:"
                                  + "|".join(selected) + r") =", token))
         return keep
 
@@ -132,7 +132,7 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
                     raise AssertionError(f"destroyed an unowned or already destroyed resource: {key}")
                 owner = self.live_texts.pop(key)
                 self.destroyed_texts.append((key, owner))
-            elif token == "Call Subroutine(BersihkanTeksYatim)":
+            elif token == "Call Subroutine(CleanupOrphanedText)":
                 self.execute(self.reaper)
             else:
                 super().execute([(token, body, otherwise)])
@@ -156,11 +156,11 @@ class TransientSourceEvaluator(AuditLifecycleEvaluator):
 
     def close(self, identity, field):
         self.event_player = identity
-        self.globals["PemainAktif"] = identity
+        self.globals["ActivePlayer"] = identity
         self.execute(self.closers[field])
 
     def reap(self, identity=None):
-        self.globals["PemainTeksPembersihan"] = identity
+        self.globals["TextCleanupPlayer"] = identity
         self.execute(self.reaper)
 
 
@@ -250,7 +250,7 @@ class TransientOwnershipTests(unittest.TestCase):
                 for index in range(24):
                     identity = f"occupied-{index}"
                     model.add_player(identity)
-                    self.assertTrue(model.create(identity, "TeksVisiNasib"))
+                    self.assertTrue(model.create(identity, "LuckVisionText"))
                 model.add_player("waiting")
                 snapshot = copy.deepcopy(model.live_texts)
                 for field in FIELDS:
@@ -259,25 +259,25 @@ class TransientOwnershipTests(unittest.TestCase):
                     self.assertEqual(model.live_texts, snapshot)
                 model.players["occupied-3"] = {"exists": False}
                 # The normal ongoing creator stays false until the 1 Hz reaper frees its row.
-                self.assertFalse(model.create("waiting", "TeksVisiNasib"))
+                self.assertFalse(model.create("waiting", "LuckVisionText"))
                 model.reap()
-                self.assertTrue(model.create("waiting", "TeksVisiNasib"))
+                self.assertTrue(model.create("waiting", "LuckVisionText"))
                 model.add_player("lazy-waiting")
                 model.players["occupied-7"] = {"exists": False}
-                self.assertTrue(model.create("lazy-waiting", "TeksVisiNasib", check_capacity=False))
+                self.assertTrue(model.create("lazy-waiting", "LuckVisionText", check_capacity=False))
                 self.assert_bounded(model)
 
     def test_null_owner_with_retained_handles_is_reaped_before_reallocation(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.add_player("old-bot", dummy=True)
-                self.assertTrue(model.create("old-bot", "TeksVisiNasib"))
+                self.assertTrue(model.create("old-bot", "LuckVisionText"))
                 slot = model.globals[REGISTRY[0]].index("old-bot")
-                old_id = model.players["old-bot"]["TeksVisiNasib"]
+                old_id = model.players["old-bot"]["LuckVisionText"]
                 model.players["old-bot"] = {"exists": False}
                 model.globals[REGISTRY[0]][slot] = None  # Engine references may collapse to Null.
                 model.add_player("new-bot", dummy=True)
-                self.assertTrue(model.create("new-bot", "TeksVisiNasib"))
+                self.assertTrue(model.create("new-bot", "LuckVisionText"))
                 self.assertIn((("In-World Text", old_id), "old-bot"), model.destroyed_texts)
                 self.assertEqual(len(model.live_texts), 1)
                 self.assert_bounded(model)
@@ -310,7 +310,7 @@ class TransientOwnershipTests(unittest.TestCase):
     def test_every_local_destroy_checks_owner_then_mirror_and_clears_that_mirror(self):
         local_destroy = re.compile(
             r"Destroy (HUD Text|In-World Text)\(((?:Event Player|Global\.\w+)\."
-            r"(HudEfekNasib|TeksTeleportasi|TeksVisiNasib))\)")
+            r"(LuckEffectHud|TravelText|LuckVisionText))\)")
         for source, model in self.models():
             counts = dict.fromkeys(FIELDS, 0)
             for rule in model.rules:
@@ -325,7 +325,7 @@ class TransientOwnershipTests(unittest.TestCase):
                     kind, local, field = match.groups()
                     owner = local.rsplit(".", 1)[0]
                     array, expected_kind, _ = FIELDS[field]
-                    lookup = f"Index Of Array Value(Global.PemilikTeksSementara, {owner})"
+                    lookup = f"Index Of Array Value(Global.TemporaryTextOwners, {owner})"
                     owner_guard = f"If({lookup} >= 0)"
                     mirror = f"Global.{array}[{lookup}]"
                     mirror_guard = f"If({mirror} == {local})"
@@ -352,7 +352,7 @@ class TransientOwnershipTests(unittest.TestCase):
                 nodes = statements(actions)
                 for siblings, index, _ in self.walk_actions(nodes):
                     capture = re.fullmatch(
-                        r"Event Player\.(HudEfekNasib|TeksTeleportasi|TeksVisiNasib) = Last Text ID",
+                        r"Event Player\.(LuckEffectHud|TravelText|LuckVisionText) = Last Text ID",
                         siblings[index][0])
                     if capture is None:
                         continue
@@ -362,30 +362,30 @@ class TransientOwnershipTests(unittest.TestCase):
                         self.assertGreaterEqual(index, 3)
                         self.assertTrue(siblings[index - 1][0].startswith(f"Create {kind}("))
                         allocation_index = index - 2
-                        if field == "TeksTeleportasi":
+                        if field == "TravelText":
                             # The creation deadline is armed after ownership is
                             # secured, so a failed allocation consumes no delay.
                             self.assertEqual(siblings[allocation_index], (
-                                "Event Player.WaktuTeksTargetBerikut = Total Time Elapsed + 0.250",
+                                "Event Player.NextTargetTextTime = Total Time Elapsed + 0.250",
                                 None, None))
                             allocation_index -= 1
                         self.assertEqual(siblings[allocation_index - 1], (
-                            "Global.IndeksTeksPembersihan = Index Of Array Value("
-                            "Global.PemilikTeksSementara, Event Player)", None, None))
+                            "Global.TextCleanupIndex = Index Of Array Value("
+                            "Global.TemporaryTextOwners, Event Player)", None, None))
                         allocation, body, otherwise = siblings[allocation_index]
-                        self.assertEqual(allocation, "If(Global.IndeksTeksPembersihan < 0)")
+                        self.assertEqual(allocation, "If(Global.TextCleanupIndex < 0)")
                         self.assertFalse(otherwise)
                         self.assertEqual(body[0], (
-                            "Global.IndeksTeksPembersihan = Index Of Array Value("
-                            "Global.PemilikTeksSementara, Null)", None, None))
+                            "Global.TextCleanupIndex = Index Of Array Value("
+                            "Global.TemporaryTextOwners, Null)", None, None))
                         self.assertEqual(body[-2], (
-                            "Abort If(Global.IndeksTeksPembersihan < 0)", None, None))
+                            "Abort If(Global.TextCleanupIndex < 0)", None, None))
                         self.assertEqual(body[-1], (
-                            "Global.PemilikTeksSementara[Global.IndeksTeksPembersihan] = Event Player",
+                            "Global.TemporaryTextOwners[Global.TextCleanupIndex] = Event Player",
                             None, None))
                         self.assertLess(index + 1, len(siblings))
                         self.assertEqual(siblings[index + 1], (
-                            f"Global.{array}[Index Of Array Value(Global.PemilikTeksSementara, "
+                            f"Global.{array}[Index Of Array Value(Global.TemporaryTextOwners, "
                             f"Event Player)] = Event Player.{field}", None, None))
                         allocation_tokens = [items[position][0] for items, position, _
                                              in self.walk_actions([siblings[allocation_index]])]

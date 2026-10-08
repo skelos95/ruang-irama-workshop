@@ -18,11 +18,11 @@ from tests.test_roster_rejoin_regressions import SOURCES
 
 
 STEP = Decimal("0.050")
-PHASE = "Global.LangkahPenjadwal % 4 == Global.PemainAktif.UrutanHUD % 4"
-OLD_GUARD = ("If(And(Global.PemainAktif.PutaranKartuNasib > 0, "
-             "Total Time Elapsed >= Global.PemainAktif.WaktuPutaranNasibBerikut));")
-NEW_GUARD = ("If(And(" + PHASE + ", And(Global.PemainAktif.PutaranKartuNasib > 0, "
-             "Total Time Elapsed >= Global.PemainAktif.WaktuPutaranNasibBerikut)));")
+PHASE = "Global.SchedulerStep % 4 == Global.ActivePlayer.HudSlot % 4"
+OLD_GUARD = ("If(And(Global.ActivePlayer.LuckSpinCount > 0, "
+             "Total Time Elapsed >= Global.ActivePlayer.NextLuckSpinTime));")
+NEW_GUARD = ("If(And(" + PHASE + ", And(Global.ActivePlayer.LuckSpinCount > 0, "
+             "Total Time Elapsed >= Global.ActivePlayer.NextLuckSpinTime)));")
 
 
 class RouletteSourceEvaluator(AuditLifecycleEvaluator):
@@ -42,8 +42,8 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
         self.completion_counts = Counter()
         self.expired = {}
         self.native = []
-        apply = validator.rule_by_subroutine(self.rules, "TerapkanHalamanNasib")
-        machine = validator.rule_by_subroutine(self.rules, "ProsesNasibPemain")
+        apply = validator.rule_by_subroutine(self.rules, "ApplyLuckPage")
+        machine = validator.rule_by_subroutine(self.rules, "ProcessPlayerLuck")
         self.apply_actions = self.tokens(validator.rule_block(apply, "actions"))
         body = validator.rule_block(machine, "actions")
         if baseline:
@@ -52,11 +52,11 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
             body = body.replace(NEW_GUARD, OLD_GUARD, 1)
         self.machine_actions = self.tokens(body)
         scheduler = next(rule for rule in self.rules
-                         if "Global.LangkahPenjadwal =" in rule.body
-                         and "Call Subroutine(ProsesNasibPemain);" in rule.body)
+                         if "Global.SchedulerStep =" in rule.body
+                         and "Call Subroutine(ProcessPlayerLuck);" in rule.body)
         self.advance = next(token for token in self.tokens(validator.rule_block(scheduler, "actions"))
-                            if token.startswith("Global.LangkahPenjadwal ="))
-        self.globals["LangkahPenjadwal"] = 0
+                            if token.startswith("Global.SchedulerStep ="))
+        self.globals["SchedulerStep"] = 0
 
     @staticmethod
     def tokens(body):
@@ -66,10 +66,10 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
         if not self.join(identity):
             raise AssertionError("no free roster slot")
         self.players[identity].update(
-            KartuNasibAktif=False, KematianBalasDendam=False, PutaranKartuNasib=0,
-            EfekNasib=0, EfekNasibBerakhir=0, WaktuPutaranNasibBerikut=0,
-            WaktuIkonNasibBerakhir=0, WaktuBakarNasibBerikut=0, IkonKartuNasib=None,
-            HudEfekNasib=None, HudMenu=None, MenuTerbuka=True, ModeTerbangAktif=False,
+            LuckActive=False, RevengeDeathPending=False, LuckSpinCount=0,
+            LuckEffect=0, LuckEffectEndTime=0, NextLuckSpinTime=0,
+            LuckIconEndTime=0, NextLuckBurnTime=0, LuckIcon=None,
+            LuckEffectHud=None, MenuHud=None, MenuOpen=True, FlyModeActive=False,
             rounds=rounds, outcome=outcome,
         )
 
@@ -80,7 +80,7 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
 
     def call(self, name, args):
         if name == "RandomInteger":
-            state = self.players[self.globals["PemainAktif"] or self.event_player]
+            state = self.players[self.globals["ActivePlayer"] or self.event_player]
             if args == [20, 24]:
                 return state["rounds"]
             if args == [1, 6]:
@@ -137,7 +137,7 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
     def execute_actions(self, tokens):
         frames = []
         active = True
-        owner = self.globals["PemainAktif"] or self.event_player
+        owner = self.globals["ActivePlayer"] or self.event_player
         for token in tokens:
             if token.startswith("If("):
                 condition = active and bool(self.evaluate(token[3:-1]))
@@ -173,12 +173,12 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
                     target, expression = token.split("=", 1)
                     value = self.evaluate(expression)
                     state = self.players[owner]
-                    if target.strip().endswith(".WaktuPutaranNasibBerikut") and value == 0:
-                        if state["WaktuPutaranNasibBerikut"] > 0:
+                    if target.strip().endswith(".NextLuckSpinTime") and value == 0:
+                        if state["NextLuckSpinTime"] > 0:
                             self.completed[owner] = self.now
                             self.completion_counts[owner] += 1
-                    if target.strip().endswith(".EfekNasibBerakhir") and value == 0:
-                        if state["EfekNasibBerakhir"] > 0:
+                    if target.strip().endswith(".LuckEffectEndTime") and value == 0:
+                        if state["LuckEffectEndTime"] > 0:
                             self.expired[owner] = self.now
                     self.assign(target.strip(), value)
                 elif token.split("(", 1)[0] in self.NATIVE:
@@ -191,18 +191,18 @@ class RouletteSourceEvaluator(AuditLifecycleEvaluator):
     def start(self, identity, now):
         self.now = Decimal(str(now))
         self.event_player = identity
-        self.globals["PemainAktif"] = identity
+        self.globals["ActivePlayer"] = identity
         self.execute_actions(self.apply_actions)
-        self.globals["PemainAktif"] = None
+        self.globals["ActivePlayer"] = None
 
     def tick(self, now, order=None):
         self.now = Decimal(str(now))
         self.execute_assignment(self.advance)
         for identity in order or list(self.players):
             if self.players[identity].get("exists"):
-                self.globals["PemainAktif"] = identity
+                self.globals["ActivePlayer"] = identity
                 self.execute_actions(self.machine_actions)
-        self.globals["PemainAktif"] = None
+        self.globals["ActivePlayer"] = None
 
     def remove(self, identity):
         first = len(self.destroyed)
@@ -242,7 +242,7 @@ class RouletteLoadTests(unittest.TestCase):
             for initial_phase in (0, 1, 198, 199):
                 with self.subTest(source=name, phase=initial_phase):
                     model = RouletteSourceEvaluator(source)
-                    model.globals["LangkahPenjadwal"] = initial_phase
+                    model.globals["SchedulerStep"] = initial_phase
                     rng = random.Random(91 + initial_phase)
                     starts = {f"p{slot}": rng.randrange(1, 81) for slot in range(12)}
                     for slot in range(12):
@@ -275,7 +275,7 @@ class RouletteLoadTests(unittest.TestCase):
                 model.players["p3"]["exists"] = False
                 departed_count = len(model.rotations)
                 model.add("replacement", rounds=20)
-                self.assertEqual(model.players["replacement"]["UrutanHUD"], 3)
+                self.assertEqual(model.players["replacement"]["HudSlot"], 3)
                 model.start("replacement", 80 * STEP)
                 for tick in range(81, 601):
                     model.tick(tick * STEP)
@@ -292,17 +292,17 @@ class RouletteLoadTests(unittest.TestCase):
                     model = RouletteSourceEvaluator(source)
                     model.add("one", outcome=outcome)
                     state = model.players["one"]
-                    state.update(KartuNasibAktif=True, PutaranKartuNasib=0, EfekNasib=outcome,
-                                 WaktuPutaranNasibBerikut=Decimal("10.037"))
+                    state.update(LuckActive=True, LuckSpinCount=0, LuckEffect=outcome,
+                                 NextLuckSpinTime=Decimal("10.037"))
                     # Slot 0 cannot rotate at phase 1; final outcome still applies here.
                     model.tick(Decimal("10.050"))
                     self.assertEqual(model.completed["one"], Decimal("10.050"))
-                    self.assertEqual(state["EfekNasibBerakhir"], Decimal("10.050") + duration)
-                    state["WaktuIkonNasibBerakhir"] = 0
-                    model.globals["LangkahPenjadwal"] = 0
+                    self.assertEqual(state["LuckEffectEndTime"], Decimal("10.050") + duration)
+                    state["LuckIconEndTime"] = 0
+                    model.globals["SchedulerStep"] = 0
                     model.tick(Decimal("10.050") + duration)
                     self.assertEqual(model.expired["one"], Decimal("10.050") + duration)
-                    self.assertFalse(state["KartuNasibAktif"])
+                    self.assertFalse(state["LuckActive"])
 
     def test_all_six_final_outcomes_apply_once_without_waiting_for_the_icon_phase(self):
         for name, source in self.sources():
@@ -312,8 +312,8 @@ class RouletteLoadTests(unittest.TestCase):
                     owner = f"p{slot}"
                     model.add(owner, outcome=1 + slot % 6)
                     model.players[owner].update(
-                        KartuNasibAktif=True, PutaranKartuNasib=0, EfekNasib=1 + slot % 6,
-                        WaktuPutaranNasibBerikut=Decimal("10.037"))
+                        LuckActive=True, LuckSpinCount=0, LuckEffect=1 + slot % 6,
+                        NextLuckSpinTime=Decimal("10.037"))
                 model.tick(Decimal("10.050"))
                 self.assertEqual(set(model.completed.values()), {Decimal("10.050")})
                 self.assertEqual(len(model.completed), 12)
@@ -328,14 +328,14 @@ class RouletteLoadTests(unittest.TestCase):
         for name, source in self.sources():
             with self.subTest(source=name):
                 model = RouletteSourceEvaluator(source)
-                model.globals["LangkahPenjadwal"] = 198
+                model.globals["SchedulerStep"] = 198
                 for slot in range(12):
                     model.add(f"p{slot}")
                     model.start(f"p{slot}", 0)
                 phases = []
                 for tick in range(1, 5):
                     model.tick(tick * STEP)
-                    phases.append(model.globals["LangkahPenjadwal"])
+                    phases.append(model.globals["SchedulerStep"])
                 self.assertEqual(phases, [199, 0, 1, 2])
                 self.assertEqual(Counter(owner for _, owner, _ in model.rotations),
                                  Counter({f"p{slot}": 1 for slot in range(12)}))
@@ -362,10 +362,10 @@ class RouletteLoadTests(unittest.TestCase):
     def test_validator_rejects_missing_unstable_or_overbroad_phase(self):
         source = SOURCES[1][0].read_text(encoding="utf-8")
         mutations = [source.replace(NEW_GUARD, OLD_GUARD, 1),
-                     source.replace(PHASE, PHASE.replace("Global.PemainAktif.UrutanHUD", "Global.IndeksPemainGlobal"), 1),
+                     source.replace(PHASE, PHASE.replace("Global.ActivePlayer.HudSlot", "Global.SchedulerPlayerIndex"), 1),
                      source.replace(PHASE, PHASE.replace("% 4", "% 3"), 1),
-                     source.replace("If(Global.PemainAktif.WaktuIkonNasibBerakhir > 0);",
-                                    "If(And(" + PHASE + ", Global.PemainAktif.WaktuIkonNasibBerakhir > 0));", 1)]
+                     source.replace("If(Global.ActivePlayer.LuckIconEndTime > 0);",
+                                    "If(And(" + PHASE + ", Global.ActivePlayer.LuckIconEndTime > 0));", 1)]
         for mutated in mutations:
             self.assertNotEqual(mutated, source)
             checks = validator.Checks()

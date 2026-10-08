@@ -27,8 +27,8 @@ class CompactionContext:
     def __init__(self, fields):
         self.fields = set(fields)
         self.player = {field: False for field in fields}
-        self.globals = {"PemainPemicu": "owner", "PemainAktif": "owner",
-                        "PemainPukulanSuper": [], "Siap": True}
+        self.globals = {"TriggerPlayer": "owner", "ActivePlayer": "owner",
+                        "SuperPunchPlayers": [], "IsReady": True}
         self.values = {}
         self.native = {name: False for name in (
             "EntityExists", "IsAlive", "IsDummyBot", "HasSpawned",
@@ -49,7 +49,7 @@ class CompactionContext:
             if len(parts) == 3:
                 return self.player[parts[2]]
             return self.globals[parts[1]]
-        if name in ("PrimaryFire", "SecondaryFire", "Interact", "Melee", "Reload", "Jump", "Unkillable"):
+        if name in ("PrimaryFire", "SecondaryFire", "Interact", "Melee", "Reload", "Jump", "Crouch", "Ability1", "Ability2", "Unkillable"):
             return name
         raise AssertionError(f"unsupported compaction value: {name}")
 
@@ -99,8 +99,8 @@ def folded_operand(expression, initialization=""):
 class GlobalCompactionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.logical = compiler.translate((ROOT / "source/ruang_irama.it-IT.source").read_text(encoding="utf-8"))
-        cls.runtime, _ = compiler.build_english((ROOT / "source/ruang_irama.it-IT.source").read_text(encoding="utf-8"))
+        cls.logical = compiler.translate((ROOT / "source/ruang_irama.en-US.source").read_text(encoding="utf-8"))
+        cls.runtime, _ = compiler.build_english((ROOT / "source/ruang_irama.en-US.source").read_text(encoding="utf-8"))
         cls.rules = semantic.extract_rules(cls.logical)
         cls.emitted = semantic.extract_rules(cls.runtime)
         _, fields, _, _ = semantic.declaration_entries(cls.logical)
@@ -121,12 +121,12 @@ class GlobalCompactionTests(unittest.TestCase):
     def test_typed_boolean_functions_and_live_flags_keep_their_truth_table(self):
         functions = ("Entity Exists", "Is Alive", "Is Dummy Bot", "Has Spawned",
                      "Is On Ground", "Is In Spawn Room", "Is Button Held", "Has Status")
-        operands = [f"{name}(Global.PemainPemicu)" for name in functions[:-2]]
-        operands += ["Is Button Held(Global.PemainPemicu, Button(Jump))", "Has Status(Global.PemainPemicu, Unkillable)"]
-        operands += ["Global.PemainPemicu.Manusia", "Global.PemainPemicu.MenuTerbuka",
-                     "Player Variable(Local Player, ModeTerbangAktif)", "Global.Siap"]
+        operands = [f"{name}(Global.TriggerPlayer)" for name in functions[:-2]]
+        operands += ["Is Button Held(Global.TriggerPlayer, Button(Jump))", "Has Status(Global.TriggerPlayer, Unkillable)"]
+        operands += ["Global.TriggerPlayer.IsHuman", "Global.TriggerPlayer.MenuOpen",
+                     "Player Variable(Local Player, FlyModeActive)", "Global.IsReady"]
         context = self.context()
-        initialization = "Global.PemainPemicu.Manusia = True; Global.PemainPemicu.MenuTerbuka = False; Global.PemainPemicu.ModeTerbangAktif = True; Global.Siap = True;"
+        initialization = "Global.TriggerPlayer.IsHuman = True; Global.TriggerPlayer.MenuOpen = False; Global.TriggerPlayer.FlyModeActive = True; Global.IsReady = True;"
         for operand, operation, boolean in itertools.product(operands, ("==", "!="), ("True", "False")):
             expression = f"{operand} {operation} {boolean}"
             before = context.parse(expression)
@@ -134,25 +134,25 @@ class GlobalCompactionTests(unittest.TestCase):
             self.assertNotRegex(folded, r"==|!=", "typed comparisons should actually be compacted")
             after = context.parse(folded)
             for value in (False, True):
-                context.player.update(Manusia=value, MenuTerbuka=value, ModeTerbangAktif=value)
-                context.globals["Siap"] = value
+                context.player.update(IsHuman=value, MenuOpen=value, FlyModeActive=value)
+                context.globals["IsReady"] = value
                 context.native.update({key: value for key in context.native if key != "Health"})
                 with self.subTest(expression=expression, value=value):
                     self.assert_value_equal(before, after, context)
 
     def test_nested_boolean_logic_and_double_negation_preserve_results(self):
-        expression = "Not(Not(And(Global.PemainPemicu.Manusia == True, Or(Is Alive(Global.PemainPemicu) == False, Global.Siap != False)))) == True"
+        expression = "Not(Not(And(Global.TriggerPlayer.IsHuman == True, Or(Is Alive(Global.TriggerPlayer) == False, Global.IsReady != False)))) == True"
         context = self.context()
         before, after = context.parse(expression), context.parse(folded_operand(expression))
         for human, alive, ready in itertools.product((False, True), repeat=3):
-            context.player["Manusia"] = human
+            context.player["IsHuman"] = human
             context.native["IsAlive"] = alive
-            context.globals["Siap"] = ready
+            context.globals["IsReady"] = ready
             self.assert_value_equal(before, after, context)
 
     def test_unknown_numbers_are_not_reclassified_as_boolean_flags(self):
         context = self.context()
-        for expression in ("Health(Global.PemainPemicu) == True", "Global.Number == False",
+        for expression in ("Health(Global.TriggerPlayer) == True", "Global.Number == False",
                            "Global.Number != True"):
             folded = folded_operand(expression)
             self.assertRegex(folded, r"==|!=", "unknown scalar comparison must remain explicit")
@@ -164,7 +164,7 @@ class GlobalCompactionTests(unittest.TestCase):
 
     def test_double_negation_keeps_a_boolean_result_for_unknown_numbers(self):
         context = self.context()
-        expression = "Not(Not(Health(Global.PemainPemicu)))"
+        expression = "Not(Not(Health(Global.TriggerPlayer)))"
         before, after = context.parse(expression), context.parse(folded_operand(expression))
         for value in (0, 1, 2, -1, 100):
             context.native["Health"] = value
@@ -192,8 +192,8 @@ class GlobalCompactionTests(unittest.TestCase):
             self.assert_value_equal(before, emitted, context)
 
     def test_literal_bytes_are_preserved_even_when_they_look_like_code(self):
-        quoted = json.dumps('งูแรร์ / COZYWATCH; {0}; "quote"; Global.PemainPemicu.Manusia == True', ensure_ascii=False)
-        source = 'rule("Literal")\n{\n event\n{\n Subroutine;\n Test;\n}\n actions\n{\n Small Message(Global.PemainPemicu, Custom String(' + quoted + ', True));\n}\n}'
+        quoted = json.dumps('งูแรร์ / COZYWATCH; {0}; "quote"; Global.TriggerPlayer.IsHuman == True', ensure_ascii=False)
+        source = 'rule("Literal")\n{\n event\n{\n Subroutine;\n Test;\n}\n actions\n{\n Small Message(Global.TriggerPlayer, Custom String(' + quoted + ', True));\n}\n}'
         before = list(re.findall(r'"(?:\\.|[^"\\])*"', source))
         after = list(re.findall(r'"(?:\\.|[^"\\])*"', compiler.compact_booleans(source)))
         self.assertEqual(before, after)
@@ -209,43 +209,42 @@ class GlobalCompactionTests(unittest.TestCase):
         self.assertEqual(after.args[4], 'None')
         original_vectors = [call.raw for call in semantic.iter_calls(before.args[2], "Vector")]
         compact_vectors = [call.raw for call in semantic.iter_calls(after.args[2], "Vector")]
-        self.assertEqual(original_vectors, compact_vectors[1:])
+        self.assertEqual(original_vectors, compact_vectors)
         context = self.context()
-        context.globals["DaftarWarnaRGB"] = [Vector(i * 6, 255 - i * 6, i * 3) for i in range(40)]
+        context.globals["NameColorRGBValues"] = [Vector(i * 6, 255 - i * 6, i * 3) for i in range(40)]
         left, right = context.parse(before.args[2]), context.parse(after.args[2])
         pages = [(-1, cursor) for cursor in range(16)] + [(page, 7) for page in range(16)] + [(-2, 7), (16, 7)]
         for (page, cursor), index in itertools.product(pages, range(40)):
-            context.player.update(HalamanMenu=page, KursorUtama=cursor, IndeksWarna=index, KursorWarna=(index * 7) % 40)
+            context.player.update(MenuPage=page, MainMenuCursor=cursor, ColorIndex=index, ColorCursor=(index * 7) % 40)
             with self.subTest(page=page, cursor=cursor, colour=index):
                 self.assert_value_equal(left, right, context)
 
-    def test_main_menu_text_matches_every_language_and_cursor_with_live_states(self):
+    def test_main_menu_text_matches_every_cursor_with_live_states(self):
         original = next(rule for rule in self.rules if compiler.prefix(rule) == "91a")
         before = next(semantic.iter_calls(compiler.persistent(compiler.actor_text(original.body)), "Create HUD Text"))
         after = next(semantic.iter_calls(next(rule for rule in self.emitted if compiler.prefix(rule) == "91a").body, "Create HUD Text"))
         context = self.context()
-        for name in ("NamaWarnaInggris", "NamaWarna", "NamaWarnaThai", "DaftarGenre", "NamaBahasa",
-                     "DaftarIkon", "NamaIkonInggris", "NamaIkonIndonesia", "NamaIkonThai"):
+        for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
             context.globals[name] = [f"{name}:{index}" for index in range(200)]
-        context.player.update(IndeksWarna=3, KursorWarna=3, IndeksGenre=17, MusikKhusus=None,
-                              PemainDipilih="vote target", TargetKamera="camera target", IndeksIkon=23,
-                              TingkatLompatGanda=10)
+        context.player.update(ColorIndex=3, ColorCursor=3, GenreIndex=17, CustomSoundtrack=None,
+                              VotedPlayer="vote target", CameraTarget="camera target", IconIndex=23,
+                              MultijumpLevel=10)
         parsed = [(context.parse(before.args[index]), context.parse(after.args[index])) for index in (2, 3)]
-        for language, cursor, state in itertools.product(range(3), range(16), range(4)):
-            context.player.update(IndeksBahasa=language, KursorUtama=cursor, ModeKamera=state % 3,
-                                  ModeKebal=state % 3, IndeksSuara=state, PutaranKartuNasib=state,
-                                  TeleportasiJongkokDiaktifkan=bool(state % 2), PrivasiInspeksiAktif=bool(state % 2),
-                                  KartuNasibAktif=bool(state % 2), IzinkanBotBuatanMengikuti=bool(state % 2),
-                                  ModeLompatGanda=bool(state % 2), ModeHantuAktif=bool(state % 2), ModeTerbangAktif=bool(state % 2))
-            context.globals["PemainPukulanSuper"] = ["owner"] if state % 2 else []
-            with self.subTest(language=language, cursor=cursor, state=state):
+        for cursor, state in itertools.product(range(16), range(4)):
+            context.player.update(MainMenuCursor=cursor, CameraMode=state % 3,
+                                  UnkillableMode=state % 3, VoiceIndex=state, LuckSpinCount=state,
+                                  CrouchTravelEnabled=bool(state % 2), InspectionPrivacyActive=bool(state % 2),
+                                  LuckActive=bool(state % 2), AllowDummyBotFollow=bool(state % 2),
+                                  MultijumpEnabled=bool(state % 2), GhostModeActive=bool(state % 2), FlyModeActive=bool(state % 2))
+            context.globals["SuperPunchPlayers"] = ["owner"] if state % 2 else []
+            with self.subTest(cursor=cursor, state=state):
                 for left, right in parsed:
                     self.assert_value_equal(left, right, context)
 
     def test_fixed_registry_arrays_keep_lengths_contents_and_initialization_order(self):
         original = next(rule for rule in self.rules if compiler.prefix(rule) == "00")
         emitted = next(rule for rule in self.emitted if compiler.prefix(rule) == "00")
-        wanted = {"SlotHUDTersedia"}
+        wanted = {"AvailableHudSlots"}
         for statement in semantic.split_top_level(semantic.rule_block(original, "actions"), ";"):
             match = re.search(r"Global\.(\w+)\s*=\s*(Array\(.*\))\s*$", statement.strip(), re.S)
             if match:
@@ -264,11 +263,9 @@ class GlobalCompactionTests(unittest.TestCase):
         self.assertGreaterEqual(len(wanted), 10)
         self.assertEqual(*results)
 
-    def test_localized_catalogues_icons_and_colour_constants_are_unchanged(self):
-        names = {"DaftarGenre", "DaftarWarna", "DaftarWarnaRGB", "DaftarIkon", "NamaBahasa",
-                 "NamaWarna", "NamaWarnaInggris", "NamaWarnaThai", "NamaIkonInggris",
-                 "NamaIkonIndonesia", "NamaIkonThai", "NamaHalaman", "NamaHalamanInggris",
-                 "NamaHalamanThai"}
+    def test_english_catalogues_icons_and_colour_constants_are_unchanged(self):
+        names = {"GenreNames", "NameColors", "NameColorRGBValues", "PlayerIcons",
+                 "ColorNames", "IconNames", "MenuPageNames"}
         tables = []
         for rules in (self.rules, self.emitted):
             rule = next(rule for rule in rules if compiler.prefix(rule) == "00")
@@ -284,7 +281,7 @@ class GlobalCompactionTests(unittest.TestCase):
 
     def test_oversized_runtime_is_rejected_without_raising_the_offline_budget(self):
         self.assertEqual(clipboard.SOURCE_TOTAL_STRUCTURAL_TARGET, 32_000)
-        extra = '\nrule("Overflow")\n{\nevent\n{\nOngoing - Global;\n}\nactions\n{\nGlobal.Siap = Array(' + ', '.join(["0"] * 1200) + ');\n}\n}\n'
+        extra = '\nrule("Overflow")\n{\nevent\n{\nOngoing - Global;\n}\nactions\n{\nGlobal.IsReady = Array(' + ', '.join(["0"] * 1200) + ');\n}\n}\n'
         oversized = self.runtime + extra * 12
         self.assertLess(clipboard.structural_rule_units(extra, clipboard.LANGUAGE_PROFILES["en-US"]), 5000)
         with self.assertRaisesRegex(clipboard.ClipboardImportError, r"budget locale|structural"):
@@ -297,12 +294,12 @@ class GlobalExpressionEmissionTests(unittest.TestCase):
 {
  event { Subroutine; Angka; }
  actions {
-  Global.IndeksKeluar = -1;
-  Global.PemainPemicu.HalamanMenu = -1;
-  Global.PemainPemicu.ModeKebal = +1;
-  For Global Variable(IndeksKeluar, 0, -1, -1); End;
-  If(Global.PemainPemicu.HalamanMenu == -1); End;
-  Global.PemainPemicu.PosisiMati = Vector(-0.500, -2, 3);
+  Global.LeavingPlayerIndex = -1;
+  Global.TriggerPlayer.MenuPage = -1;
+  Global.TriggerPlayer.UnkillableMode = +1;
+  For Global Variable(LeavingPlayerIndex, 0, -1, -1); End;
+  If(Global.TriggerPlayer.MenuPage == -1); End;
+  Global.TriggerPlayer.DeathPosition = Vector(-0.500, -2, 3);
  }
 }
 '''
@@ -322,11 +319,11 @@ class GlobalExpressionEmissionTests(unittest.TestCase):
                 self.assertEqual(compiler._emit(compiler._Expression(source).tree), expected)
 
     def test_actual_import_restores_negative_sentinels_and_contains_no_unary_parentheses(self):
-        runtime = (ROOT / 'workshop/ruang_irama.it-IT.workshop').read_text(encoding='utf-8')
+        runtime = (ROOT / 'workshop/ruang_irama.en-US.workshop').read_text(encoding='utf-8')
         syntax = semantic.mask_strings(runtime)
-        self.assertIn('Globale.IndeksKeluar = -1;', syntax)
-        self.assertIn('Globale.SlotHUDTerakhir = -1;', syntax)
-        self.assertIn('Globale.PemainPemicu.HalamanMenu = -1;', syntax)
+        self.assertIn('Global.LeavingPlayerIndex = -1;', syntax)
+        self.assertIn('Global.LastHudSlot = -1;', syntax)
+        self.assertIn('Global.TriggerPlayer.MenuPage = -1;', syntax)
         self.assertNotRegex(syntax, r'(?:^|[=,(\[?:<>+*/%\-])\s*[-+]\s*\(')
 
 
@@ -353,7 +350,7 @@ Custom String("Global. All; Ongoing - Global; All Players");
         self.assertEqual(compiler.translate(english, to_italian=True), expected)
 
     def test_import_artifact_keeps_all_native_function_identifiers(self):
-        italian = (ROOT / 'workshop/ruang_irama.it-IT.workshop').read_text(encoding='utf-8')
+        italian = (ROOT / 'workshop/ruang_irama.en-US.workshop').read_text(encoding='utf-8')
         english = (ROOT / 'tests/fixtures/global_runtime_reference.txt').read_text(encoding='utf-8')
         syntax = semantic.mask_strings(english)
         names = set(re.findall(r'\b([A-Z][A-Za-z0-9]*(?:[ -][A-Za-z0-9]+)*)\s*\(', syntax))

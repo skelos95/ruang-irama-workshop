@@ -53,8 +53,8 @@ def beacon_statements(source):
 
 
 class SocialBeaconEvaluator(AuditLifecycleEvaluator):
-    ARRAY_NAMES = ("PemilikIkonPilar", "EntitasIkonPilar",
-                   "WaktuIkonPilar", "PilihanIkonPilar")
+    ARRAY_NAMES = ("ObjectiveIconOwners", "ObjectiveIconIds",
+                   "ObjectiveIconTimes", "ObjectiveIconChoices")
 
     def __init__(self, source):
         super().__init__(source)
@@ -67,8 +67,8 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
         self.chase_started = []
         self.chase_stopped = []
         self.icon_choices = re.findall(r'Icon String\(([^)]+)\)',
-                                      source[source.index("DaftarIkon = Array("):source.index("NamaIkonInggris = Array(")])
-        self.globals.update(IndeksIkonPilar=0, DaftarIkon=[""] + [f"glyph-{i}" for i in range(1, 21)])
+                                      source[source.index("PlayerIcons = Array("):source.index("IconNames = Array(")])
+        self.globals.update(ObjectiveIconIndex=0, PlayerIcons=[""] + [f"glyph-{i}" for i in range(1, 21)])
         for name in self.ARRAY_NAMES:
             init = re.search(rf"Global\.{name} = ([^;]+);", self.initializers)
             if init is None:
@@ -77,9 +77,9 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
 
     def add(self, identity, **changes):
         self.join(identity)
-        defaults = dict(Manusia=True, IndeksIkon=1, IndeksWarna=0,
-                        PembaruanDaftarTertunda=False, PindahTimDiproses=False,
-                        WarnaNama=(255, 255, 255, 255), PosisiIkonPilar=Vector(0, 0.5, 0), exists=True)
+        defaults = dict(IsHuman=True, IconIndex=1, ColorIndex=0,
+                        PlayerListUpdatePending=False, TeamChangeProcessed=False,
+                        NameColor=(255, 255, 255, 255), ObjectiveIconPosition=Vector(0, 0.5, 0), exists=True)
         defaults.update(changes)
         self.players[identity].update(defaults)
         return self.players[identity]
@@ -87,14 +87,14 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
     def resolve(self, name):
         if name == "ObjectiveIndex": return 0
         if name == "LastCreatedEntity": return self.created[-1] if self.created else 0
-        if name in {"IndeksIkon", "IndeksWarna", "UrutanHUD", "Manusia",
-                    "PembaruanDaftarTertunda", "PindahTimDiproses", "WarnaNama"}:
+        if name in {"IconIndex", "ColorIndex", "HudSlot", "IsHuman",
+                    "PlayerListUpdatePending", "TeamChangeProcessed", "NameColor"}:
             return name
-        if name == "PosisiIkonPilar": return name
+        if name == "ObjectiveIconPosition": return name
         return super().resolve(name)
 
     def call(self, name, args):
-        if name == "PlayerVariable" and args[1] == "PosisiIkonPilar" and args[0] in self.chases:
+        if name == "PlayerVariable" and args[1] == "ObjectiveIconPosition" and args[0] in self.chases:
             start, target, when, duration = self.chases[args[0]]
             fraction = min(1, max(0, (self.now - when) / duration))
             self.players[args[0]][args[1]] = start + (target - start) * fraction
@@ -170,10 +170,10 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                 call = next(validator.iter_calls(token, "Create Icon"))
                 # Freeze the owner PLAYER identity, while its animated position
                 # and Name Color remain dynamically read by the native icon.
-                owner = self.globals["PemainIkonPilar"]
+                owner = self.globals["ObjectiveIconPlayer"]
                 self.globals[f"CapturedOwner{self.next_entity}"] = owner
                 captured = f"Global.CapturedOwner{self.next_entity}"
-                args = tuple(arg.replace("Evaluate Once(Global.PemainIkonPilar)", captured) for arg in call.args)
+                args = tuple(arg.replace("Evaluate Once(Global.ObjectiveIconPlayer)", captured) for arg in call.args)
                 handle = self.next_entity
                 self.next_entity += 1
                 self.created.append(handle)
@@ -205,7 +205,7 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                 return True
         return False
 
-    def run(self, routine="PerbaruiPilarSosial", now=None):
+    def run(self, routine="UpdateSocialObjectiveIcons", now=None):
         if now is not None: self.now = now
         # The native engine releases player variables when an entity disappears.
         self.chases = {owner: chase for owner, chase in self.chases.items()
@@ -215,20 +215,20 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
 
     @staticmethod
     def assert_chase_field(field):
-        if field != "PosisiIkonPilar":
+        if field != "ObjectiveIconPosition":
             raise AssertionError(f"unexpected beacon chase field: {field}")
 
     def visual(self, owner):
-        slot = self.globals["PemilikIkonPilar"].index(owner)
-        return self.icons[self.globals["EntitasIkonPilar"][slot]]
+        slot = self.globals["ObjectiveIconOwners"].index(owner)
+        return self.icons[self.globals["ObjectiveIconIds"][slot]]
 
     def cleanup_beacon(self, identity, routine):
         self.event_player = identity
         rule = validator.rule_by_subroutine(self.rules, routine)
         actions = validator.rule_block(rule, "actions")
-        if "Call Subroutine(BersihkanIkonPilar);" not in actions:
+        if "Call Subroutine(CleanupObjectiveIcon);" not in actions:
             raise AssertionError(f"missing beacon cleanup hook: {routine}")
-        self.run("BersihkanIkonPilar")
+        self.run("CleanupObjectiveIcon")
 
 
 class SocialBeaconTests(unittest.TestCase):
@@ -276,11 +276,11 @@ class SocialBeaconTests(unittest.TestCase):
         for source, model in self.models():
             with self.subTest(source=source):
                 for slot in range(12):
-                    model.add(f"human-{slot}", IndeksIkon=slot + 1, WarnaNama=(slot, 90, 180, 255))
+                    model.add(f"human-{slot}", IconIndex=slot + 1, NameColor=(slot, 90, 180, 255))
                 model.run(now=100)
                 self.assertEqual(len(model.created), 12)
                 self.assertEqual(len(model.icons), 12)
-                self.assertEqual(model.globals["PemilikIkonPilar"], [f"human-{i}" for i in range(12)])
+                self.assertEqual(model.globals["ObjectiveIconOwners"], [f"human-{i}" for i in range(12)])
                 for slot in range(12):
                     visual = model.visual(f"human-{slot}")
                     self.assertEqual(visual[2], model.icon_choices[slot])
@@ -288,9 +288,9 @@ class SocialBeaconTests(unittest.TestCase):
                     self.assertEqual(visual[5], "False")
                     self.assertEqual(model.evaluate(visual[4]), (slot, 90, 180, 255))
                     self.assertEqual(len(model.evaluate(visual[0])), 12)
-                model.globals["IndeksIkonPilar"] = 11
+                model.globals["ObjectiveIconIndex"] = 11
                 state = model.players["human-0"]
-                state.update(WarnaNama=(1, 2, 3, 255))
+                state.update(NameColor=(1, 2, 3, 255))
                 visual = model.visual("human-0")
                 self.assertEqual(model.evaluate(visual[4]), (1, 2, 3, 255))
                 model.run(now=101)
@@ -303,30 +303,30 @@ class SocialBeaconTests(unittest.TestCase):
                 for selected, expected in enumerate(model.icon_choices, 1):
                     if selected > 1:
                         old = model.visual("human")
-                        state["IndeksIkon"] = selected
+                        state["IconIndex"] = selected
                         self.assertEqual(model.evaluate(old[0]), [])
                     model.run(now=100 + selected)
                     self.assertEqual(len(model.icons), 1)
                     self.assertEqual(model.visual("human")[2], expected)
-                    self.assertEqual(model.globals["PilihanIkonPilar"][0], selected)
+                    self.assertEqual(model.globals["ObjectiveIconChoices"][0], selected)
                     self.assertEqual(len(model.created), selected)
                     self.assertEqual(len(model.destroyed), selected - 1)
                     model.run(now=100 + selected)
                     self.assertEqual(len(model.created), selected)
 
     def test_nonhuman_no_icon_and_quarantined_humans_never_allocate(self):
-        cases = ({"Manusia": False}, {"IndeksIkon": 0},
-                 {"PembaruanDaftarTertunda": True}, {"PindahTimDiproses": True}, {"exists": False})
+        cases = ({"IsHuman": False}, {"IconIndex": 0},
+                 {"PlayerListUpdatePending": True}, {"TeamChangeProcessed": True}, {"exists": False})
         for path, _, _ in SOURCES:
-            visible_changes = ({"Manusia": False, "PindahTimDiproses": True},
-                               {"exists": False}, {"IndeksIkon": 0})
+            visible_changes = ({"IsHuman": False, "TeamChangeProcessed": True},
+                               {"exists": False}, {"IconIndex": 0})
             for changes in cases:
                 with self.subTest(source=path.name, player=changes):
                     model = SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
                     model.add("human", **changes)
                     model.run(now=100)
                     self.assertEqual(model.created, [])
-                    self.assertEqual(model.globals["PemilikIkonPilar"], [None] * 12)
+                    self.assertEqual(model.globals["ObjectiveIconOwners"], [None] * 12)
             model = SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
             model.add("human")
             model.objective = Vector(0, 0, 0)
@@ -351,13 +351,13 @@ class SocialBeaconTests(unittest.TestCase):
                 model.run(now=100)
                 visual = model.visual("human")
                 handle = model.created[-1]
-                state["IndeksIkon"] = 0
+                state["IconIndex"] = 0
                 self.assertEqual(model.evaluate(visual[0]), [])
                 model.run(now=101)
                 model.run(now=102)
                 self.assertEqual(model.destroyed, [handle])
                 self.assertEqual(model.icons, {})
-                state["IndeksIkon"] = 2
+                state["IconIndex"] = 2
                 model.run(now=103)
                 self.assertEqual(len(model.created), 2)
                 self.assertEqual(model.visual("human")[2], model.icon_choices[1])
@@ -371,8 +371,8 @@ class SocialBeaconTests(unittest.TestCase):
                     model.run(now=100 + turn)
                     handle = model.created[-1]
                     model.players[identity]["exists"] = bool(turn % 2)
-                    model.cleanup_beacon(identity, "TenangkanPemain" if turn % 2 else "BersihkanPemain")
-                    model.cleanup_beacon(identity, "BersihkanPemain")
+                    model.cleanup_beacon(identity, "QuiescePlayer" if turn % 2 else "CleanupPlayer")
+                    model.cleanup_beacon(identity, "CleanupPlayer")
                     self.assertEqual(model.destroyed.count(handle), 1)
                     model.remove(identity)
                     model.players[identity]["exists"] = False
@@ -393,8 +393,8 @@ class SocialBeaconTests(unittest.TestCase):
                 model.add("replacement")
                 model.run(now=101)
                 self.assertEqual(model.destroyed, [old_handle])
-                self.assertEqual(model.globals["PemilikIkonPilar"][0], "replacement")
-                self.assertNotEqual(model.globals["EntitasIkonPilar"][0], old_handle)
+                self.assertEqual(model.globals["ObjectiveIconOwners"][0], "replacement")
+                self.assertNotEqual(model.globals["ObjectiveIconIds"][0], old_handle)
 
     def test_captured_waypoints_interpolate_smoothly_inside_fixed_radius(self):
         for source, model in self.models():
@@ -424,7 +424,7 @@ class SocialBeaconTests(unittest.TestCase):
                 model.run(now=103)
                 self.assertEqual(model.random_calls, 108)
                 self.assertEqual(len(model.chase_started), 24)
-                for identity in list(model.globals["PemainManusia"])[1:]: model.remove(identity)
+                for identity in list(model.globals["HumanPlayers"])[1:]: model.remove(identity)
                 for now in (103, 103.5, 104, 104.5, 106):
                     model.now = now
                     actual = model.evaluate(visual[1]) - model.objective
@@ -439,9 +439,9 @@ class SocialBeaconTests(unittest.TestCase):
                 model.add("second")
                 model.run(now=100)
                 second = model.chases["second"]
-                model.cleanup_beacon("first", "TenangkanPemain")
+                model.cleanup_beacon("first", "QuiescePlayer")
                 self.assertNotIn("first", model.chases)
-                self.assertEqual(model.players["first"]["PosisiIkonPilar"], Vector(0, 0.5, 0))
+                self.assertEqual(model.players["first"]["ObjectiveIconPosition"], Vector(0, 0.5, 0))
                 self.assertEqual(model.chases["second"], second)
                 self.assertEqual(model.chase_stopped, ["first"])
 

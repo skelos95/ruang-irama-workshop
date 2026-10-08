@@ -17,7 +17,7 @@ from tests.test_roster_rejoin_regressions import SOURCES
 class SuperPunchEvaluator(DummyMaintenanceEvaluator):
     def __init__(self, source):
         super().__init__(source)
-        for name in ("PemainPukulanSuper", "WaktuPukulanSuper", "TargetPukulanSuper"):
+        for name in ("SuperPunchPlayers", "SuperPunchTimes", "SuperPunchTarget"):
             initializer = re.search(rf"Global\.{name} = ([^;]+);", self.initializers)
             if initializer is None:
                 raise AssertionError(f"missing Super Punch initializer: {name}")
@@ -30,23 +30,23 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         self.punch_calls = []
         self.kills = []
         self.ledger = next(rule for rule in self.rules
-                           if "Event Player.PembunuhBalasDendam = Append To Array(" in rule.body)
+                           if "Event Player.RevengeKillers = Append To Array(" in rule.body)
 
     def add(self, identity, **changes):
         self.join(identity)
         defaults = dict(team=1, dummy=False, exists=True, spawned=True, alive=True,
-                        Manusia=True, BotOtomatis=False, SiklusPemainAktif=False,
-                        PindahTimDiproses=False, MenuTerbuka=False,
-                        TeleportasiJongkokAktif=False, SeranganDekatDipakai=False,
-                        TeleportasiJongkokDiaktifkan=False, KartuNasibAktif=False,
-                        PrivasiNasibAktif=False, buttons=set(),
-                        KebalAktif=False, ModeKebal=0, statuses=set(), melee=False,
+                        IsHuman=True, IsAutomaticBot=False, PlayerCycleActive=False,
+                        TeamChangeProcessed=False, MenuOpen=False,
+                        CrouchTravelActive=False, MeleeConsumed=False,
+                        CrouchTravelEnabled=False, LuckActive=False,
+                        LuckPrivacyActive=False, buttons=set(),
+                        UnkillableActive=False, UnkillableMode=0, statuses=set(), melee=False,
                         position=Vector(0, 0, 0), facing=Vector(0, 0, 1), wall=False,
-                        KematianBalasDendam=False, PembunuhBalasDendam=[],
-                        JumlahBalasDendam=[], IndeksBalasDendam=-1, hero="Ana")
+                        RevengeDeathPending=False, RevengeKillers=[],
+                        RevengeDebts=[], RevengeIndex=-1, hero="Ana")
         defaults.update(changes)
         self.players[identity].update(defaults)
-        reset = re.search(r"Global\.WaktuPukulanSuper\[[^;]+\] = 0", self.classifier)
+        reset = re.search(r"Global\.SuperPunchTimes\[[^;]+\] = 0", self.classifier)
         self.execute_source(reset[0])
         return self.players[identity]
 
@@ -61,9 +61,9 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
             return self.event_damage
         if name == "JunkerQueen":
             return "Junker Queen"
-        if name in {"KebalAktif", "ModeKebal", "Unkillable", "PhasedOut",
-                    "BarriersDoNotBlockLOS", "PembunuhBalasDendam",
-                    "JumlahBalasDendam", "IndeksBalasDendam", "Add", "Subtract", "Melee",
+        if name in {"UnkillableActive", "UnkillableMode", "Unkillable", "PhasedOut",
+                    "BarriersDoNotBlockLOS", "RevengeKillers",
+                    "RevengeDebts", "RevengeIndex", "Add", "Subtract", "Melee",
                     "Crouch"}:
             return name
         return super().resolve(name)
@@ -128,20 +128,20 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         return super().call(name, args)
 
     def enable(self, identity):
-        self.globals["PemainPukulanSuper"].append(identity)
-        self.globals["WaktuPukulanSuper"][int(self.players[identity]["UrutanHUD"])] = -1
+        self.globals["SuperPunchPlayers"].append(identity)
+        self.globals["SuperPunchTimes"][int(self.players[identity]["HudSlot"])] = -1
         self.tick(identity, self.now)
 
     def tick(self, identity, now):
         self.now = now
-        self.globals["PemainAktif"] = identity
+        self.globals["ActivePlayer"] = identity
         scheduler = next(rule for rule in self.rules if rule.name.startswith("04g -"))
         call = next(call for call in validator.iter_calls(scheduler.body, "Call Subroutine")
-                    if call.args == ("ProsesPukulanSuper",))
+                    if call.args == ("ProcessSuperPunch",))
         branches = validator.conditional_branches_containing(scheduler.body, call.start)
         if all(self.evaluate(branch.splitlines()[0].strip()[3:-2]) for branch in branches):
             self.punch_calls.append(identity)
-            self.run("ProsesPukulanSuper")
+            self.run("ProcessSuperPunch")
 
     def swing(self, identity, start=100):
         self.players[identity]["melee"] = True
@@ -156,7 +156,7 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         self.event_ability = ability
         self.event_damage = damage
         impact = next(rule for rule in self.rules if rule.name.startswith("89i1 -"))
-        self.globals["Siap"] = True
+        self.globals["IsReady"] = True
         conditions = validator.rule_block(impact, "conditions")
         if all(self.evaluate(token.strip()) for token in conditions.split(";") if token.strip()):
             self.execute_source(validator.rule_block(impact, "actions"))
@@ -165,7 +165,7 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
         """Run real Crouch admission and state setup, projecting away HUD rendering."""
         self.event_player = identity
         actor = self.players[identity]
-        actor.update(TeleportasiJongkokDiaktifkan=True, KursorTeleportasi=page,
+        actor.update(CrouchTravelEnabled=True, TravelCursor=page,
                      buttons={"Crouch"})
         entry = next(rule for rule in self.rules if rule.name.startswith("19 -"))
         conditions = validator.rule_block(entry, "conditions")
@@ -177,15 +177,22 @@ class SuperPunchEvaluator(DummyMaintenanceEvaluator):
     def travel_state(self, identity):
         actor = self.players[identity]
         return copy.deepcopy({field: value for field, value in actor.items()
-                              if "Teleportasi" in field or field in {"buttons", "MenuTerbuka"}})
+                              if "Travel" in field or field in {"buttons", "MenuOpen", "ReviveTeleportNeeded"}})
 
     def clear_registry(self, identity, routine):
         self.event_player = identity
         rule = validator.rule_by_subroutine(self.rules, routine)
         actions = validator.rule_block(rule, "actions")
-        removal = next(token.strip() for token in actions.split(";")
-                       if "Global.PemainPukulanSuper = Remove From Array(" in token)
-        self.execute_source(removal)
+        # Comments may contain semicolons; select the actual assignment using
+        # the masked source rather than splitting commentary into statements.
+        removals = list(re.finditer(
+            r"Global\.SuperPunchPlayers\s*=\s*Remove From Array\([^;]+\);",
+            validator.mask_strings(actions),
+        ))
+        if len(removals) != 1:
+            raise AssertionError(f"expected one Super Punch registry removal in {routine}")
+        removal = removals[0]
+        self.execute_source(actions[removal.start():removal.end()])
 
 
 class SuperPunchTests(unittest.TestCase):
@@ -222,9 +229,9 @@ class SuperPunchTests(unittest.TestCase):
                 model.tick("attacker", 102)
                 model.swing("attacker", 103)
                 self.assertEqual(len(model.kills), 2)
-                self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
-                self.assertEqual(target["JumlahBalasDendam"], [2])
-                self.assertIsNone(model.globals["TargetPukulanSuper"])
+                self.assertEqual(target["RevengeKillers"], ["attacker"])
+                self.assertEqual(target["RevengeDebts"], [2])
+                self.assertIsNone(model.globals["SuperPunchTarget"])
 
     def test_allies_and_enemies_credit_the_attacker_and_create_one_revenge_debt(self):
         for path, _, _ in SOURCES:
@@ -238,8 +245,8 @@ class SuperPunchTests(unittest.TestCase):
                         model.swing("attacker")
                         self.assertEqual(len(model.kills), 1)
                         self.assertEqual(model.kills[0][:2], ("target", "attacker"))
-                        self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
-                        self.assertEqual(target["JumlahBalasDendam"], [1])
+                        self.assertEqual(target["RevengeKillers"], ["attacker"])
+                        self.assertEqual(target["RevengeDebts"], [1])
 
     def test_range_forward_view_world_los_and_target_lifecycle_limit_the_hit(self):
         blocked = (
@@ -259,14 +266,14 @@ class SuperPunchTests(unittest.TestCase):
                     self.assertEqual(model.kills, [])
                     # No target keeps the swing eligible; protected contact consumes it.
                     self.assertEqual(model.probes, 1 if changes.get("statuses") else 3)
-                    self.assertIsNone(model.globals["TargetPukulanSuper"])
+                    self.assertIsNone(model.globals["SuperPunchTarget"])
 
     def test_unkillable_status_or_active_mode_blocks_both_teams(self):
         for path, _, _ in SOURCES:
             for team in (1, 2):
                 for protection in ({"statuses": {"Unkillable"}},
-                                   {"KebalAktif": True, "ModeKebal": 1},
-                                   {"KebalAktif": True, "ModeKebal": 2}):
+                                   {"UnkillableActive": True, "UnkillableMode": 1},
+                                   {"UnkillableActive": True, "UnkillableMode": 2}):
                     with self.subTest(source=path.name, team=team, protection=protection):
                         model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
                         model.add("attacker")
@@ -276,10 +283,10 @@ class SuperPunchTests(unittest.TestCase):
                         self.assertEqual(model.kills, [])
 
     def test_input_consumption_quarantine_and_invalid_actor_cancel_the_in_progress_swing(self):
-        blocked = ({"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
-                   {"PindahTimDiproses": True}, {"alive": False},
-                   {"spawned": False}, {"exists": False}, {"Manusia": False},
-                   {"BotOtomatis": True}, {"dummy": True})
+        blocked = ({"MeleeConsumed": True}, {"PlayerCycleActive": True},
+                   {"TeamChangeProcessed": True}, {"alive": False},
+                   {"spawned": False}, {"exists": False}, {"IsHuman": False},
+                   {"IsAutomaticBot": True}, {"dummy": True})
         for path, _, _ in SOURCES:
             for changes in blocked:
                 with self.subTest(source=path.name, actor=changes):
@@ -293,12 +300,12 @@ class SuperPunchTests(unittest.TestCase):
                     model.tick("attacker", 100.1)
                     self.assertEqual((model.probes, model.kills), (1, []))
                     # A scheduler-excluded bot cannot advance the pending swing.
-                    if changes.keys() & {"dummy", "BotOtomatis"}:
+                    if changes.keys() & {"dummy", "IsAutomaticBot"}:
                         continue
-                    actor.update(MenuTerbuka=False, TeleportasiJongkokAktif=False,
-                                 SeranganDekatDipakai=False, SiklusPemainAktif=False,
-                                 PindahTimDiproses=False, alive=True, spawned=True, exists=True,
-                                 Manusia=True, BotOtomatis=False, dummy=False)
+                    actor.update(MenuOpen=False, CrouchTravelActive=False,
+                                 MeleeConsumed=False, PlayerCycleActive=False,
+                                 TeamChangeProcessed=False, alive=True, spawned=True, exists=True,
+                                 IsHuman=True, IsAutomaticBot=False, dummy=False)
                     model.tick("attacker", 101)
                     self.assertEqual((model.probes, model.kills), (1, []))
                     actor["melee"] = False
@@ -317,18 +324,18 @@ class SuperPunchTests(unittest.TestCase):
                         target = model.add("target", team=team, position=Vector(0, 0, 1))
                         model.enable("attacker")
                         model.enter_travel("attacker", page)
-                        self.assertTrue(attacker["TeleportasiJongkokAktif"])
+                        self.assertTrue(attacker["CrouchTravelActive"])
                         before = model.travel_state("attacker")
                         if native:
-                            model.globals["PemainAktif"] = "unrelated"
+                            model.globals["ActivePlayer"] = "unrelated"
                             model.native_hit("attacker", "target")
-                            self.assertEqual(model.globals["PemainAktif"], "unrelated")
+                            self.assertEqual(model.globals["ActivePlayer"], "unrelated")
                         else:
                             attacker["melee"] = True
                             model.tick("attacker", 100)
                         self.assertEqual(model.kills, [("target", "attacker", 100)])
-                        self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
-                        self.assertEqual(target["JumlahBalasDendam"], [1])
+                        self.assertEqual(target["RevengeKillers"], ["attacker"])
+                        self.assertEqual(target["RevengeDebts"], [1])
                         self.assertEqual(model.travel_state("attacker"), before)
                         # Scanner/native impact share one contact even while Crouch stays held.
                         target["alive"] = True
@@ -336,13 +343,13 @@ class SuperPunchTests(unittest.TestCase):
                         model.tick("attacker", 100.01)
                         model.native_hit("attacker", "target", now=100.02)
                         self.assertEqual(len(model.kills), 1)
-                        self.assertEqual(target["JumlahBalasDendam"], [1])
+                        self.assertEqual(target["RevengeDebts"], [1])
                         self.assertEqual(model.travel_state("attacker"), before)
 
     def test_crouch_travel_melee_preserves_unkillable_and_consumes_protected_contact(self):
         protections = ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
-                       {"KebalAktif": True, "ModeKebal": 1},
-                       {"KebalAktif": True, "ModeKebal": 2})
+                       {"UnkillableActive": True, "UnkillableMode": 1},
+                       {"UnkillableActive": True, "UnkillableMode": 2})
         for path, _, _ in SOURCES:
             for native, team in ((False, 1), (False, 2), (True, 2)):
                 for protection in protections:
@@ -360,10 +367,10 @@ class SuperPunchTests(unittest.TestCase):
                         else:
                             attacker["melee"] = True
                             model.tick("attacker", 100)
-                        self.assertEqual((model.kills, target["JumlahBalasDendam"]), ([], []))
-                        self.assertEqual(model.globals["WaktuPukulanSuper"][
-                            int(attacker["UrutanHUD"])], -1)
-                        target.update(KebalAktif=False, ModeKebal=0, statuses=set())
+                        self.assertEqual((model.kills, target["RevengeDebts"]), ([], []))
+                        self.assertEqual(model.globals["SuperPunchTimes"][
+                            int(attacker["HudSlot"])], -1)
+                        target.update(UnkillableActive=False, UnkillableMode=0, statuses=set())
                         model.native_hit("attacker", "target", now=100.01)
                         self.assertEqual(model.kills, [])
                         self.assertEqual(model.travel_state("attacker"), before)
@@ -403,7 +410,7 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertEqual(model.kills, [("target", "attacker", 100.05)])
                 attacker["melee"] = False
                 model.tick("attacker", 100.1)
-                self.assertEqual(target["JumlahBalasDendam"], [1])
+                self.assertEqual(target["RevengeDebts"], [1])
 
     def test_real_enemy_impact_works_outside_sampled_animation_and_without_scheduler_scratch(self):
         for source, model in self.models():
@@ -411,19 +418,19 @@ class SuperPunchTests(unittest.TestCase):
                 model.add("attacker", melee=False)
                 target = model.add("target", team=2, position=Vector(0, 0, 5))
                 model.enable("attacker")
-                model.globals["PemainAktif"] = "unrelated"
+                model.globals["ActivePlayer"] = "unrelated"
                 model.native_hit("attacker", "target")
                 self.assertEqual(model.kills, [("target", "attacker", 100)])
-                self.assertEqual(target["JumlahBalasDendam"], [1])
+                self.assertEqual(target["RevengeDebts"], [1])
                 self.assertEqual(model.probes, 0)
-                self.assertEqual(model.globals["PemainAktif"], "unrelated")
+                self.assertEqual(model.globals["ActivePlayer"], "unrelated")
 
     def test_each_open_menu_keeps_the_first_scanned_hit_instant_and_credits_revenge(self):
         for path, _, _ in SOURCES:
             for page in range(-1, 16):
                 with self.subTest(source=path.name, page=page):
                     model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
-                    attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=page,
+                    attacker = model.add("attacker", MenuOpen=True, MenuPage=page,
                                          hero="Junker Queen" if page == 15 else "Ana")
                     target = model.add("target", team=1 if page % 2 else 2,
                                        position=Vector(0, 0, 1))
@@ -431,10 +438,10 @@ class SuperPunchTests(unittest.TestCase):
                     attacker["melee"] = True
                     model.tick("attacker", 100)
                     self.assertEqual(model.kills, [("target", "attacker", 100)])
-                    self.assertEqual(target["PembunuhBalasDendam"], ["attacker"])
-                    self.assertEqual(target["JumlahBalasDendam"], [1])
-                    self.assertTrue(attacker["MenuTerbuka"])
-                    self.assertEqual(attacker["HalamanMenu"], page)
+                    self.assertEqual(target["RevengeKillers"], ["attacker"])
+                    self.assertEqual(target["RevengeDebts"], [1])
+                    self.assertTrue(attacker["MenuOpen"])
+                    self.assertEqual(attacker["MenuPage"], page)
                     target["alive"] = True
                     model.native_hit("attacker", "target", now=100.01)
                     self.assertEqual(len(model.kills), 1)
@@ -445,21 +452,21 @@ class SuperPunchTests(unittest.TestCase):
             for page in range(-1, 16):
                 with self.subTest(source=path.name, page=page):
                     model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
-                    attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=page)
+                    attacker = model.add("attacker", MenuOpen=True, MenuPage=page)
                     target = model.add("target", team=2, position=Vector(0, 0, 5))
                     model.enable("attacker")
-                    model.globals["PemainAktif"] = "unrelated"
+                    model.globals["ActivePlayer"] = "unrelated"
                     model.native_hit("attacker", "target")
                     self.assertEqual(model.kills, [("target", "attacker", 100)])
-                    self.assertEqual(target["JumlahBalasDendam"], [1])
-                    self.assertTrue(attacker["MenuTerbuka"])
+                    self.assertEqual(target["RevengeDebts"], [1])
+                    self.assertTrue(attacker["MenuOpen"])
                     self.assertEqual(model.probes, 0)
-                    self.assertEqual(model.globals["PemainAktif"], "unrelated")
+                    self.assertEqual(model.globals["ActivePlayer"], "unrelated")
 
     def test_open_menu_still_respects_protection_and_consumes_one_contact(self):
         protections = ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
-                       {"KebalAktif": True, "ModeKebal": 1},
-                       {"KebalAktif": True, "ModeKebal": 2})
+                       {"UnkillableActive": True, "UnkillableMode": 1},
+                       {"UnkillableActive": True, "UnkillableMode": 2})
         for path, _, _ in SOURCES:
             for native in (False, True):
                 for team in (1, 2):
@@ -467,7 +474,7 @@ class SuperPunchTests(unittest.TestCase):
                         with self.subTest(source=path.name, native=native, team=team,
                                           protection=protection):
                             model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
-                            attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=15)
+                            attacker = model.add("attacker", MenuOpen=True, MenuPage=15)
                             target = model.add("target", team=team, position=Vector(0, 0, 1),
                                                **protection)
                             model.enable("attacker")
@@ -477,25 +484,25 @@ class SuperPunchTests(unittest.TestCase):
                                 attacker["melee"] = True
                                 model.tick("attacker", 100)
                             self.assertEqual(model.kills, [])
-                            self.assertEqual(target["JumlahBalasDendam"], [])
-                            self.assertEqual(model.globals["WaktuPukulanSuper"][
-                                int(attacker["UrutanHUD"])], -1)
-                            target.update(KebalAktif=False, ModeKebal=0, statuses=set())
+                            self.assertEqual(target["RevengeDebts"], [])
+                            self.assertEqual(model.globals["SuperPunchTimes"][
+                                int(attacker["HudSlot"])], -1)
+                            target.update(UnkillableActive=False, UnkillableMode=0, statuses=set())
                             model.native_hit("attacker", "target", now=100.01)
                             self.assertEqual(model.kills, [])
 
     def test_open_menu_hold_consumption_still_requires_a_new_melee_swing(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                attacker = model.add("attacker", MenuTerbuka=True, HalamanMenu=15)
+                attacker = model.add("attacker", MenuOpen=True, MenuPage=15)
                 target = model.add("target", team=2, position=Vector(0, 0, 1))
                 model.enable("attacker")
                 # The existing 0.5 s menu toggle owns this latch until release.
-                attacker.update(melee=True, SeranganDekatDipakai=True)
+                attacker.update(melee=True, MeleeConsumed=True)
                 model.tick("attacker", 100)
                 model.native_hit("attacker", "target", now=100.01)
                 self.assertEqual((model.probes, model.kills), (0, []))
-                attacker["SeranganDekatDipakai"] = False
+                attacker["MeleeConsumed"] = False
                 model.tick("attacker", 100.1)
                 model.native_hit("attacker", "target", now=100.11)
                 self.assertEqual((model.probes, model.kills), (0, []))
@@ -504,8 +511,8 @@ class SuperPunchTests(unittest.TestCase):
                 attacker["melee"] = True
                 model.tick("attacker", 101)
                 self.assertEqual(model.kills, [("target", "attacker", 101)])
-                self.assertEqual(target["JumlahBalasDendam"], [1])
-                self.assertTrue(attacker["MenuTerbuka"])
+                self.assertEqual(target["RevengeDebts"], [1])
+                self.assertTrue(attacker["MenuOpen"])
 
     def test_native_impact_shares_consumption_and_ignores_non_melee_damage(self):
         for source, model in self.models():
@@ -528,9 +535,9 @@ class SuperPunchTests(unittest.TestCase):
                 self.assertTrue(enemy["alive"])
 
     def test_native_impact_obeys_off_state_lifecycle_input_latch_and_unkillable(self):
-        blocked = ({"SeranganDekatDipakai": True}, {"SiklusPemainAktif": True},
-                   {"PindahTimDiproses": True}, {"alive": False}, {"Manusia": False},
-                   {"dummy": True}, {"BotOtomatis": True})
+        blocked = ({"MeleeConsumed": True}, {"PlayerCycleActive": True},
+                   {"TeamChangeProcessed": True}, {"alive": False}, {"IsHuman": False},
+                   {"dummy": True}, {"IsAutomaticBot": True})
         for path, _, _ in SOURCES:
             for changes in blocked:
                 with self.subTest(source=path.name, actor=changes):
@@ -542,8 +549,8 @@ class SuperPunchTests(unittest.TestCase):
                     model.native_hit("attacker", "target")
                     self.assertEqual(model.kills, [])
             for protection in ({"statuses": {"Unkillable"}}, {"statuses": {"PhasedOut"}},
-                               {"KebalAktif": True, "ModeKebal": 1},
-                               {"KebalAktif": True, "ModeKebal": 2}, {}):
+                               {"UnkillableActive": True, "UnkillableMode": 1},
+                               {"UnkillableActive": True, "UnkillableMode": 2}, {}):
                 with self.subTest(source=path.name, protection=protection):
                     model = SuperPunchEvaluator(path.read_text(encoding="utf-8"))
                     model.add("attacker")
@@ -562,14 +569,14 @@ class SuperPunchTests(unittest.TestCase):
                     model.enable(identity)
                     actor["melee"] = True
                     model.tick(identity, 100 + index)
-                    model.clear_registry(identity, "TenangkanPemain" if index % 2 else "BersihkanPemain")
-                    self.assertNotIn(identity, model.globals["PemainPukulanSuper"])
+                    model.clear_registry(identity, "QuiescePlayer" if index % 2 else "CleanupPlayer")
+                    self.assertNotIn(identity, model.globals["SuperPunchPlayers"])
                     model.remove(identity)
                     actor["exists"] = False
                 replacement = model.add("replacement")
-                self.assertNotIn("replacement", model.globals["PemainPukulanSuper"])
-                self.assertEqual(model.globals["WaktuPukulanSuper"][int(replacement["UrutanHUD"])], 0)
-                self.assertEqual(len(model.globals["WaktuPukulanSuper"]), 12)
+                self.assertNotIn("replacement", model.globals["SuperPunchPlayers"])
+                self.assertEqual(model.globals["SuperPunchTimes"][int(replacement["HudSlot"])], 0)
+                self.assertEqual(len(model.globals["SuperPunchTimes"]), 12)
 
 
 if __name__ == "__main__":

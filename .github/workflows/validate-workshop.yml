@@ -102,8 +102,8 @@ jobs:
       - name: Validate behavioral input and compiled global output
         run: python tools/validate_workshop.py
 
-      - name: Preflight compiled Italian clipboard output
-        run: python tools/check_clipboard_import.py workshop/ruang_irama.it-IT.workshop --language it-IT
+      - name: Preflight compiled English clipboard output
+        run: python tools/check_clipboard_import.py workshop/ruang_irama.en-US.workshop --language en-US
 
   required:
     name: Required checks

@@ -14,9 +14,9 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = validator.SOURCE.read_text(encoding="utf-8")
         cls.rules = validator.extract_rules(cls.source)
-        cls.player = "Global.PemainAktif"
-        cls.clock = cls.player + ".WaktuPilihPahlawan"
-        cls.latch = cls.player + ".PilihanPahlawanSelesai"
+        cls.player = "Global.ActivePlayer"
+        cls.clock = cls.player + ".AutoHeroSelectionDeadline"
+        cls.latch = cls.player + ".AutoHeroSelectionComplete"
         cls.arm = cls.clock + " = Total Time Elapsed + 60;"
         cls.start = f"Start Forcing Player To Be Hero({cls.player}, Hero(Shion));"
         cls.stop = f"Stop Forcing Player To Be Hero({cls.player});"
@@ -55,7 +55,7 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
                 self.assertTrue(self.errors(self.mutation(old, new)))
 
     def test_arming_cannot_wait_for_human_classification_or_world_entity(self):
-        for condition in (f"{self.player}.Manusia == True", f"Has Spawned({self.player}) == True",
+        for condition in (f"{self.player}.IsHuman == True", f"Has Spawned({self.player}) == True",
                           f"Entity Exists({self.player}) == True"):
             with self.subTest(condition=condition):
                 self.assertTrue(self.errors(self.mutation(
@@ -63,9 +63,9 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
 
     def test_force_must_keep_one_hz_bot_and_team_guards(self):
         for old, new in (
-            (f"If(Global.LangkahPenjadwal % 20 == ({self.player}.Manusia == True ? "
-             f"{self.player}.UrutanHUD : Slot Of({self.player})) % 20);", "If(True);"),
-            (f"If(And(Is Dummy Bot({self.player}) == False, {self.player}.BotOtomatis == False));",
+            (f"If(Global.SchedulerStep % 20 == ({self.player}.IsHuman == True ? "
+             f"{self.player}.HudSlot : Slot Of({self.player})) % 20);", "If(True);"),
+            (f"If(And(Is Dummy Bot({self.player}) == False, {self.player}.IsAutomaticBot == False));",
              "If(True);"),
             (f"If(Or(Team Of({self.player}) == Team 1, Team Of({self.player}) == Team 2));", "If(True);"),
         ):
@@ -85,7 +85,7 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
         pattern = re.escape(self.start) + r"\s*" + re.escape(self.stop)
         match = re.search(pattern, self.source)
         self.assertIsNotNone(match)
-        for condition in (f"{self.player}.Manusia == True", f"Has Spawned({self.player}) == True",
+        for condition in (f"{self.player}.IsHuman == True", f"Has Spawned({self.player}) == True",
                           f"Entity Exists({self.player}) == True"):
             with self.subTest(condition=condition):
                 changed = self.mutation(match.group(0), f"If({condition});\n{match.group(0)}\nEnd;")
@@ -121,21 +121,21 @@ class HeroTimeoutValidatorTests(unittest.TestCase):
             old = self.arm if replacement.endswith(self.arm) else self.start
             with self.subTest(replacement=replacement):
                 self.assertTrue(self.errors(self.mutation(old, replacement)))
-        changed = self.routine_mutation("ProsesCepatPemain", self.arm,
+        changed = self.routine_mutation("ProcessPlayerFastState", self.arm,
                                        self.arm + "\n" + self.start + "\n" + self.stop)
         self.assertTrue(self.errors(changed))
 
     def test_setup_and_cleanup_never_rearm_finished_selection(self):
         for routine, old, new in (
-            ("SiapkanPemain", "Event Player.PilihanPahlawanSelesai = True;",
-             "Event Player.PilihanPahlawanSelesai = False;"),
-            ("SiapkanPemain", "Event Player.WaktuPilihPahlawan = 0;",
-             "Event Player.WaktuPilihPahlawan = Total Time Elapsed + 60;"),
-            ("TenangkanPemain", "Call Subroutine(TutupMenu);",
-             "Call Subroutine(TutupMenu);\nEvent Player.PilihanPahlawanSelesai = False;"),
-            ("BersihkanPemain", "Global.PemainPembersihan = Event Player;",
-             "Global.PemainPembersihan = Event Player;\n"
-             "Set Player Variable(Event Player, PilihanPahlawanSelesai, False);"),
+            ("PreparePlayer", "Event Player.AutoHeroSelectionComplete = True;",
+             "Event Player.AutoHeroSelectionComplete = False;"),
+            ("PreparePlayer", "Event Player.AutoHeroSelectionDeadline = 0;",
+             "Event Player.AutoHeroSelectionDeadline = Total Time Elapsed + 60;"),
+            ("QuiescePlayer", "Call Subroutine(CloseMenu);",
+             "Call Subroutine(CloseMenu);\nEvent Player.AutoHeroSelectionComplete = False;"),
+            ("CleanupPlayer", "Global.CleanupSubject = Event Player;",
+             "Global.CleanupSubject = Event Player;\n"
+             "Set Player Variable(Event Player, AutoHeroSelectionComplete, False);"),
         ):
             with self.subTest(routine=routine, new=new):
                 self.assertTrue(self.errors(self.routine_mutation(routine, old, new)))

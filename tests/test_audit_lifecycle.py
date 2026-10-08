@@ -78,8 +78,8 @@ def project(nodes, keep):
 
 
 class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
-    ICONS = {"IkonKebalPemain": "IkonKebal", "IkonKartuNasibPemain": "IkonKartuNasib"}
-    FIELDS = {"PemainDipilih", "JumlahPilihan", "NamaTampilan", "WarnaNama"}
+    ICONS = {"UnkillableIconIds": "UnkillableIcon", "LuckIconIds": "LuckIcon"}
+    FIELDS = {"VotedPlayer", "VoteCount", "DisplayName", "NameColor"}
 
     def __init__(self, source):
         if re.search(r'(?m)^regola\(', source):
@@ -90,8 +90,8 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
             source = "".join(segments)
         super().__init__(source)
         self.current = None
-        self.globals["PilihanPerluDihitung"] = False
-        self.globals.update(Siap=True, PemainPukulanSuper=[])
+        self.globals["VoteRecountNeeded"] = False
+        self.globals.update(IsReady=True, SuperPunchPlayers=[])
         self.calls = []
         self.lock_at_bot_call = []
         self.initializers = "\n".join(validator.mask_strings(rule.body) for rule in self.rules)
@@ -99,7 +99,7 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
             match = re.search(rf"Global\.{name} = (Array\([^;]+\));", self.initializers)
             if match is not None:
                 self.globals[name] = self.evaluate(match.group(1))
-        self.vote = validator.rule_block(validator.rule_by_subroutine(self.rules, "HitungPilihan"), "actions")
+        self.vote = validator.rule_block(validator.rule_by_subroutine(self.rules, "RecountVotes"), "actions")
         self.cleanup_program = project(statements(self.cleanup), self.keep_cleanup)
 
     def resolve(self, name):
@@ -211,11 +211,11 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
                     self.players[identity][field] = result
             elif token.startswith("Call Subroutine("):
                 name = token[len("Call Subroutine("):-1]
-                self.calls.append((self.globals.get("PemainAktif"), name))
-                if name == "HitungPilihan":
+                self.calls.append((self.globals.get("ActivePlayer"), name))
+                if name == "RecountVotes":
                     self.execute(statements(self.vote))
-                elif name == "KunciBot":
-                    self.lock_at_bot_call.append(self.globals["PemainSiklusGlobal"])
+                elif name == "LockBot":
+                    self.lock_at_bot_call.append(self.globals["TeamCyclePlayer"])
             elif re.match(r"(?:Global\.|Event Player\.)[^=]+=(?!=)", token):
                 self.execute_assignment(token)
             else:
@@ -223,38 +223,38 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         return False
 
     def keep_cleanup(self, token):
-        indices = "PemainPembersihan|IndeksKeluar|IndeksPembersihan|IndeksUtangKeluar|SlotHUDTersedia"
+        indices = "CleanupSubject|LeavingPlayerIndex|CleanupPlayerIndex|LeavingDebtIndex|AvailableHudSlots"
         return bool(
             re.match(rf"Global\.({indices}) =", token)
             or token.startswith("Modify Global Variable(")
             or token.startswith("Destroy Icon(")
-            or re.match(r"Global\.Ikon(?:Kebal|KartuNasib)Pemain\[", token)
-            or re.match(r"(?:Global\.PemainPembersihan|Event Player)\.Ikon(?:Kebal|KartuNasib) =", token)
-            or (token.startswith("Set Player Variable(Filtered Array(") and ", PemainDipilih, Null)" in token)
-            or token == "Call Subroutine(HitungPilihan)"
-            or token == "Global.PilihanPerluDihitung = True"
+            or re.match(r"Global\.(?:UnkillableIconIds|LuckIconIds)\[", token)
+            or re.match(r"(?:Global\.CleanupSubject|Event Player)\.(?:UnkillableIcon|LuckIcon) =", token)
+            or (token.startswith("Set Player Variable(Filtered Array(") and ", VotedPlayer, Null)" in token)
+            or token == "Call Subroutine(RecountVotes)"
+            or token == "Global.VoteRecountNeeded = True"
         )
 
     def join(self, identity):
         admitted = super().join(identity)
         if admitted:
-            self.players[identity].update(Manusia=True, PemainDipilih=None, JumlahPilihan=0, NamaTampilan=identity,
-                                          WarnaNama=(255, 255, 255, 255), alive=True,
-                                          BotOtomatis=False, ModeTerbangAktif=False,
-                                          KartuNasibAktif=False, PutaranKartuNasib=0,
-                                          EfekNasib=0, WaktuIkonNasibBerakhir=0,
-                                          MenuTerbuka=False, HalamanMenu=-1)
-            self.players[identity]["slot"] = int(self.players[identity]["UrutanHUD"]) % 6
+            self.players[identity].update(IsHuman=True, VotedPlayer=None, VoteCount=0, DisplayName=identity,
+                                          NameColor=(255, 255, 255, 255), alive=True,
+                                          IsAutomaticBot=False, FlyModeActive=False,
+                                          LuckActive=False, LuckSpinCount=0,
+                                          LuckEffect=0, LuckIconEndTime=0,
+                                          MenuOpen=False, MenuPage=-1)
+            self.players[identity]["slot"] = int(self.players[identity]["HudSlot"]) % 6
         return admitted
 
     def install_icons(self, identity, number):
         self.event_player = identity
-        self.globals["PemainAktif"] = identity
+        self.globals["ActivePlayer"] = identity
         expected = []
         for offset, (array, field) in enumerate(self.ICONS.items()):
             handle = number * 10 + offset + 1
             self.players[identity][field] = handle
-            match = re.search(rf"Global\.{array}\[[^;]+\] = (?:Event Player|Global\.PemainAktif)\.{field};", self.initializers)
+            match = re.search(rf"Global\.{array}\[[^;]+\] = (?:Event Player|Global\.ActivePlayer)\.{field};", self.initializers)
             if match is None:
                 raise AssertionError(f"source does not persist {field} in canonical slots")
             self.execute_assignment(match.group(0).rstrip(";"))
@@ -270,9 +270,9 @@ class AuditLifecycleEvaluator(LifecycleSourceEvaluator):
         actions = validator.rule_block(scheduler, "actions")
         keep = lambda token: (
             token.startswith("Call Subroutine(")
-            or re.match(r"Global\.(PemainAktif|SalinanDaftarPemain|PemainSiklusGlobal|WaktuSiklusGlobal|PilihanPerluDihitung) =", token)
+            or re.match(r"Global\.(ActivePlayer|PlayerListSnapshot|TeamCyclePlayer|TeamCycleTime|VoteRecountNeeded) =", token)
         )
-        self.globals["LangkahPenjadwal"] = tick
+        self.globals["SchedulerStep"] = tick
         self.execute(project(statements(actions), keep))
 
 
@@ -283,11 +283,11 @@ class AuditLifecycleTests(unittest.TestCase):
 
     def assert_roster(self, model, expected_count):
         self.assertTrue(all(len(model.globals[name]) == expected_count for name in model.ARRAYS))
-        occupied = model.globals["SlotHUDPemain"]
-        available = model.globals["SlotHUDTersedia"]
+        occupied = model.globals["PlayerHudSlots"]
+        available = model.globals["AvailableHudSlots"]
         self.assertEqual(sorted(occupied + available), list(range(12)))
         self.assertEqual(len(set(occupied)), expected_count)
-        self.assertEqual(len(set(model.globals["PemainManusia"])), expected_count)
+        self.assertEqual(len(set(model.globals["HumanPlayers"])), expected_count)
 
     def test_240_distinct_players_recycle_all_twelve_slots_with_lost_local_state(self):
         for source, model in self.models():
@@ -298,12 +298,12 @@ class AuditLifecycleTests(unittest.TestCase):
                     identity = f"player-{number}"
                     if len(active) == 12:
                         departed = active.pop(0)
-                        freed = model.globals["SlotHUDPemain"][model.globals["PemainManusia"].index(departed)]
+                        freed = model.globals["PlayerHudSlots"][model.globals["HumanPlayers"].index(departed)]
                         model.players[departed] = {"exists": False}
                         before_destroyed = len(model.destroyed)
                         model.remove(departed)
                         self.assertCountEqual(model.destroyed[before_destroyed:], handles[departed])
-                        self.assertEqual(model.globals["SlotHUDTersedia"], [freed])
+                        self.assertEqual(model.globals["AvailableHudSlots"], [freed])
                         for array in model.ICONS:
                             self.assertFalse(model.globals[array][int(freed)])
                     self.assertTrue(model.join(identity))
@@ -316,7 +316,7 @@ class AuditLifecycleTests(unittest.TestCase):
                         previous_destroyed = list(model.destroyed)
                         model.remove(departed)
                         # Cleanup scratch is allowed to change; ownership and resources are not.
-                        for key in model.ARRAYS + ("SlotHUDTersedia",) + tuple(model.ICONS):
+                        for key in model.ARRAYS + ("AvailableHudSlots",) + tuple(model.ICONS):
                             self.assertEqual(model.globals[key], snapshot[key])
                         self.assertEqual(model.destroyed, previous_destroyed)
                 self.assertFalse(model.join("overflow"))
@@ -324,7 +324,7 @@ class AuditLifecycleTests(unittest.TestCase):
                     model.players[departed] = {"exists": False}
                     model.remove(departed)
                 self.assert_roster(model, 0)
-                self.assertEqual(model.globals["SlotHUDTersedia"], list(range(12)))
+                self.assertEqual(model.globals["AvailableHudSlots"], list(range(12)))
                 self.assertEqual(len(model.destroyed), 480)
                 self.assertEqual(len(set(model.destroyed)), 480)
                 for array in model.ICONS:
@@ -336,69 +336,69 @@ class AuditLifecycleTests(unittest.TestCase):
             with self.subTest(source=source):
                 for identity in ("alice", "bob", "carol", "departed"):
                     model.join(identity)
-                model.players["alice"]["PemainDipilih"] = "departed"
-                model.players["carol"]["PemainDipilih"] = "bob"
-                model.players["departed"]["PemainDipilih"] = "bob"
-                model.players["bob"]["JumlahPilihan"] = 2
-                model.players["departed"]["JumlahPilihan"] = 1
+                model.players["alice"]["VotedPlayer"] = "departed"
+                model.players["carol"]["VotedPlayer"] = "bob"
+                model.players["departed"]["VotedPlayer"] = "bob"
+                model.players["bob"]["VoteCount"] = 2
+                model.players["departed"]["VoteCount"] = 1
                 model.players["departed"] = {"exists": False}
                 model.remove("departed")
-                self.assertIsNone(model.players["alice"]["PemainDipilih"])
+                self.assertIsNone(model.players["alice"]["VotedPlayer"])
                 model.scheduler_tick(1)
-                self.assertEqual(model.players["bob"]["JumlahPilihan"], 1)
-                self.assertEqual(model.globals["PemimpinPilihan"], "bob")
+                self.assertEqual(model.players["bob"]["VoteCount"], 1)
+                self.assertEqual(model.globals["VoteLeader"], "bob")
                 model.players["carol"] = {"exists": False}
                 model.remove("carol")
                 model.scheduler_tick(2)
-                self.assertEqual(model.players["bob"]["JumlahPilihan"], 0)
-                self.assertIsNone(model.globals["PemimpinPilihan"])
+                self.assertEqual(model.players["bob"]["VoteCount"], 0)
+                self.assertIsNone(model.globals["VoteLeader"])
 
     def test_luck_reset_then_leave_does_not_destroy_an_icon_reused_by_another_player(self):
         for source, model in self.models():
-            for routine in ("PulihkanNasibPemain", "PulihkanNasibAktif"):
+            for routine in ("RestorePlayerLuck", "RestoreActivePlayerLuck"):
                 with self.subTest(source=source, routine=routine):
                     model.join("alice")
                     model.join("bob")
                     model.install_icons("alice", 50)
-                    old_handle = model.players["alice"]["IkonKartuNasib"]
+                    old_handle = model.players["alice"]["LuckIcon"]
                     model.event_player = "alice"
-                    model.globals["PemainAktif"] = "alice"
+                    model.globals["ActivePlayer"] = "alice"
                     rule = validator.rule_by_subroutine(model.rules, routine)
                     actions = validator.rule_block(rule, "actions")
                     keep = lambda token: (
                         token.startswith("Destroy Icon(")
-                        or re.match(r"(?:Event Player|Global\.PemainAktif)\.IkonKartuNasib =", token)
-                        or token.startswith("Global.IkonKartuNasibPemain[")
+                        or re.match(r"(?:Event Player|Global\.ActivePlayer)\.LuckIcon =", token)
+                        or token.startswith("Global.LuckIconIds[")
                     )
                     before = len(model.destroyed)
                     model.execute(project(statements(actions), keep))
                     self.assertEqual(model.destroyed[before:], [old_handle])
-                    alice_slot = model.players["alice"]["UrutanHUD"]
-                    bob_slot = model.players["bob"]["UrutanHUD"]
-                    self.assertEqual(model.globals["IkonKartuNasibPemain"][alice_slot], 0)
+                    alice_slot = model.players["alice"]["HudSlot"]
+                    bob_slot = model.players["bob"]["HudSlot"]
+                    self.assertEqual(model.globals["LuckIconIds"][alice_slot], 0)
                     # Model a recycled engine ID now owned by a different player.
-                    model.players["bob"]["IkonKartuNasib"] = old_handle
-                    model.globals["IkonKartuNasibPemain"][bob_slot] = old_handle
+                    model.players["bob"]["LuckIcon"] = old_handle
+                    model.globals["LuckIconIds"][bob_slot] = old_handle
                     model.players["alice"] = {"exists": False}
                     before = len(model.destroyed)
                     model.remove("alice")
                     self.assertNotIn(old_handle, model.destroyed[before:])
-                    self.assertEqual(model.globals["IkonKartuNasibPemain"][bob_slot], old_handle)
+                    self.assertEqual(model.globals["LuckIconIds"][bob_slot], old_handle)
                     model.remove("bob")
 
     def test_pending_dead_bot_does_not_starve_runtime_of_ready_players(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                model.players["dead-bot"] = {"exists": True, "spawned": True, "alive": False, "BotOtomatis": True}
+                model.players["dead-bot"] = {"exists": True, "spawned": True, "alive": False, "IsAutomaticBot": True}
                 for identity in ("alice", "bob"):
                     model.join(identity)
-                model.globals["PemainSiklusGlobal"] = "dead-bot"
+                model.globals["TeamCyclePlayer"] = "dead-bot"
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
                 for identity in ("alice", "bob"):
-                    for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 0),
-                                              ("ProsesTerbangPemain", 0), ("ProsesSiklusPemain", 10),
-                                              ("ProsesSimpananPemain", 0)):
+                    for routine, expected in (("ProcessPlayerFastState", 20), ("ProcessPlayerLuck", 0),
+                                              ("ProcessPlayerFlight", 0), ("ProcessPlayerCycle", 10),
+                                              ("ProcessPlayerMaintenance", 0)):
                         self.assertEqual(model.calls.count((identity, routine)), expected, (source, identity, routine))
 
     def test_bot_classifier_releases_only_its_own_reservation_before_engine_lock(self):
@@ -407,19 +407,19 @@ class AuditLifecycleTests(unittest.TestCase):
                 with self.subTest(source=source, owner=owner):
                     model.event_player = "dead-bot"
                     model.players["dead-bot"] = {"exists": True, "spawned": True, "alive": False,
-                                                  "BotOtomatis": True, "SiklusPemainAktif": True,
-                                                  "PindahTimDiproses": True}
-                    model.globals["PemainSiklusGlobal"] = owner
+                                                  "IsAutomaticBot": True, "PlayerCycleActive": True,
+                                                  "TeamChangeProcessed": True}
+                    model.globals["TeamCyclePlayer"] = owner
                     model.now = 5
                     tree = statements(model.classifier)
-                    branch = next(node for node in tree if node[0] == "If(Event Player.BotOtomatis == True)")
+                    branch = next(node for node in tree if node[0] == "If(Event Player.IsAutomaticBot == True)")
                     keep = lambda token: token.startswith(("Global.", "Event Player.", "Call Subroutine(")) or token == "Abort"
                     model.execute(project([branch], keep))
                     expected = None if owner == "dead-bot" else owner
-                    self.assertEqual(model.globals["PemainSiklusGlobal"], expected)
+                    self.assertEqual(model.globals["TeamCyclePlayer"], expected)
                     self.assertEqual(model.lock_at_bot_call[-1], expected)
-                    self.assertFalse(model.players["dead-bot"]["SiklusPemainAktif"])
-                    self.assertFalse(model.players["dead-bot"]["PindahTimDiproses"])
+                    self.assertFalse(model.players["dead-bot"]["PlayerCycleActive"])
+                    self.assertFalse(model.players["dead-bot"]["TeamChangeProcessed"])
 
 
 if __name__ == "__main__":

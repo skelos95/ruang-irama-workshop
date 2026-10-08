@@ -28,28 +28,28 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         self.workers = {}
         self.cancelled_workers = []
         self.phase_calls = []
-        self.programs = {"BersihkanPemain": self.cleanup_program}
+        self.programs = {"CleanupPlayer": self.cleanup_program}
         # Project only irrelevant native effects away. Keep resource destruction,
         # source reset assignments, and the real cleanup call order.
-        for routine in ("TenangkanPemain", "TutupMenu", "PulihkanNasibPemain",
-                        "SiapkanPemain", "BersihkanTeksYatim"):
+        for routine in ("QuiescePlayer", "CloseMenu", "RestorePlayerLuck",
+                        "PreparePlayer", "CleanupOrphanedText"):
             actions = validator.rule_block(validator.rule_by_subroutine(self.rules, routine), "actions")
             self.programs[routine] = project(beacon_statements(actions), lambda token: bool(
                 re.match(r"(?:Global\.|Event Player\.)[^=]+=(?!=)", token)
                 or token.startswith(("Destroy ", "Call Subroutine("))))
-        actions = validator.rule_block(validator.rule_by_subroutine(self.rules, "BersihkanIkonPilar"), "actions")
-        self.programs["BersihkanIkonPilar"] = beacon_statements(actions)
-        for name in ("PemilikTeksSementara", "HudEfekSementara",
-                     "TeksTeleportasiSementara", "TeksVisiSementara"):
+        actions = validator.rule_block(validator.rule_by_subroutine(self.rules, "CleanupObjectiveIcon"), "actions")
+        self.programs["CleanupObjectiveIcon"] = beacon_statements(actions)
+        for name in ("TemporaryTextOwners", "TemporaryEffectHudIds",
+                     "TemporaryTravelTextIds", "TemporaryVisionTextIds"):
             expression = re.search(rf"Global\.{name} = ([^;]+);", self.initializers)[1]
             self.globals[name] = self.evaluate(expression)
 
     def keep_cleanup(self, token):
         return (super().keep_cleanup(token)
                 or token.startswith(("Destroy HUD Text(", "Destroy In-World Text(",
-                                     "Global.PemainPukulanSuper =", "Global.PemainTeksPembersihan ="))
-                or token in ("Call Subroutine(BersihkanIkonPilar)", "Call Subroutine(BersihkanTeksYatim)")
-                or bool(re.match(r"(?:Global\.PemainPembersihan|Event Player)\.(?:Hud\w+|Teks\w+) =", token)))
+                                     "Global.SuperPunchPlayers =", "Global.TextCleanupPlayer ="))
+                or token in ("Call Subroutine(CleanupObjectiveIcon)", "Call Subroutine(CleanupOrphanedText)")
+                or bool(re.match(r"(?:Global\.CleanupSubject|Event Player)\.(?:PlayerListHud|MenuHud|LuckEffectHud|InspectionText|TravelText|LuckVisionText) =", token)))
 
     def resolve(self, name):
         if name in ("White", "Melee"):
@@ -68,11 +68,11 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         return super().call(name, args)
 
     def add(self, identity, **changes):
-        defaults = dict(IndeksIkon=0, TimTerakhir=1, TimSiklusTarget=1,
-                        SudahSiap=True, SiklusPemainAktif=False,
-                        WaktuSiklusTim=0, HudKiri=None, HudMenu=None,
-                        HudEfekNasib=None, TeksVisiNasib=None, TeksTeleportasi=None,
-                        IkonKebal=None, IkonKartuNasib=None, ModeKebal=0)
+        defaults = dict(IconIndex=0, LastTeam=1, TeamCycleTargetTeam=1,
+                        IsPrepared=True, PlayerCycleActive=False,
+                        TeamCycleDeadline=0, PlayerListHud=None, MenuHud=None,
+                        LuckEffectHud=None, LuckVisionText=None, TravelText=None,
+                        UnkillableIcon=None, LuckIcon=None, UnkillableMode=0)
         defaults.update(changes)
         state = super().add(identity, **defaults)
         # Allocate the permanent roster HUD through its actual classifier writes;
@@ -87,18 +87,18 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
             token = token.strip()
             if token.startswith("Create HUD Text("):
                 self.created.append(10000 + len(self.created))
-            elif re.match(r"Event Player\.Hud\w+ = Last Text ID$", token):
+            elif re.match(r"Event Player\.PlayerListHud = Last Text ID$", token):
                 self.execute_assignment(token)
-            elif re.match(r"Global\.Hud\w+Pemain\[.*\] = Event Player\.Hud\w+$", token):
+            elif re.match(r"Global\.PlayerListHudIds\[.*\] = Event Player\.PlayerListHud$", token):
                 self.execute_assignment(token)
-            elif token == "Event Player.HudPemainDibuat = True":
+            elif token == "Event Player.PlayerHudCreated = True":
                 self.execute_assignment(token)
 
     def register_ready(self, identity, now):
         """Run actual classifier gates before its projected admission/HUD writes."""
         self.event_player, self.now = identity, now
         classifier = next(rule for rule in self.rules
-                          if "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
+                          if "Append To Array(Global.HumanPlayers, Event Player)" in rule.body)
         if not all(self.evaluate(condition) for condition in self.conditions(classifier)):
             return False
         if not self.join(identity):
@@ -107,15 +107,15 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         return True
 
     def apply_special_icon_default(self, identity):
-        classifier = next(rule for rule in self.rules if "Append To Array(Global.PemainManusia, Event Player)" in rule.body)
-        marker = classifier.body.index("Event Player.IndeksIkon = 23;")
+        classifier = next(rule for rule in self.rules if "Append To Array(Global.HumanPlayers, Event Player)" in rule.body)
+        marker = classifier.body.index("Event Player.IconIndex = 23;")
         branch = min(validator.conditional_branches_containing(classifier.body, marker), key=len)
-        if 'If(Event Player.NamaTampilan == Custom String("งูแรร์"))' not in branch:
+        if 'If(Event Player.DisplayName == Custom String("งูแรร์"))' not in branch:
             raise AssertionError("special icon must remain an admission default")
         self.event_player = identity
         for token in validator.mask_strings(branch).split(";"):
             token = token.strip()
-            if re.match(r"Event Player\.(?:IndeksIkon|KursorIkon) =", token):
+            if re.match(r"Event Player\.(?:IconIndex|IconCursor) =", token):
                 self.execute_assignment(token)
 
     def execute(self, nodes):
@@ -132,7 +132,7 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
             elif token.startswith("Call Subroutine(") and token[len("Call Subroutine("):-1] in self.programs:
                 routine = token[len("Call Subroutine("):-1]
                 self.calls.append((self.event_player, routine))
-                if routine in ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain"):
+                if routine in ("QuiescePlayer", "CleanupPlayer", "PreparePlayer"):
                     self.phase_calls.append((self.event_player, routine, self.now))
                 if self.execute(self.programs[routine]):
                     return True
@@ -167,7 +167,7 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         # Execute the real central lease and pending-target branches. No worker
         # owns global cleanup scratch across either yield boundary.
         self.tick_pending(identity, now)
-        release = "Global.PemainAktif.PindahTimDiproses = False;"
+        release = "Global.ActivePlayer.TeamChangeProcessed = False;"
         cycle = next(rule for rule in self.rules if release in rule.body)
         self.execute_atomic(self.source_branch(cycle, release))
         self.observe_waits(now)
@@ -191,7 +191,7 @@ class TeamTransitionEvaluator(SocialBeaconEvaluator):
         if identity in self.workers:
             return False
         if reserve:
-            self.globals["PemainSiklusGlobal"] = identity
+            self.globals["TeamCyclePlayer"] = identity
         if not self.worker_eligible():
             return False
         # Only Event Player's identity and the remaining source nodes survive a
@@ -257,27 +257,27 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
             with self.subTest(source=source):
                 changing = model.add("งูแรร์")
                 model.apply_special_icon_default("งูแรร์")
-                observer = model.add("observer", IndeksIkon=1)
-                model.globals["PemainPukulanSuper"] = ["งูแรร์", "observer"]
+                observer = model.add("observer", IconIndex=1)
+                model.globals["SuperPunchPlayers"] = ["งูแรร์", "observer"]
                 model.run(now=100)
                 visual = model.visual("งูแรร์")
                 other_visual, other_chase = model.visual("observer"), model.chases["observer"]
-                self.assertEqual(changing["IndeksIkon"], 23)
+                self.assertEqual(changing["IconIndex"], 23)
                 self.assertEqual(visual[2], model.icon_choices[22])
-                self.assertFalse(changing["MenuTerbuka"])
+                self.assertFalse(changing["MenuOpen"])
                 model.now = 100.1
-                frozen = model.call("PlayerVariable", ["งูแรร์", "PosisiIkonPilar"])
+                frozen = model.call("PlayerVariable", ["งูแรร์", "ObjectiveIconPosition"])
                 roster = {name: copy.deepcopy(model.globals[name]) for name in model.ARRAYS}
                 self.assertTrue(model.change_team("งูแรร์", 2, 100.1))
                 self.assertEqual(model.evaluate(visual[0]), [])
                 self.assertNotIn("งูแรร์", model.chases)
-                self.assertEqual(model.globals["PemainPukulanSuper"], ["observer"])
+                self.assertEqual(model.globals["SuperPunchPlayers"], ["observer"])
                 self.assertEqual(model.chases["observer"], other_chase)
                 self.assertTrue(model.evaluate(other_visual[0]))
-                self.assertTrue(observer["Manusia"])
-                self.assertEqual(changing["PosisiIkonPilar"], frozen)
+                self.assertTrue(observer["IsHuman"])
+                self.assertEqual(changing["ObjectiveIconPosition"], frozen)
                 model.now = 100.2
-                self.assertEqual(model.call("PlayerVariable", ["งูแรร์", "PosisiIkonPilar"]), frozen)
+                self.assertEqual(model.call("PlayerVariable", ["งูแรร์", "ObjectiveIconPosition"]), frozen)
                 self.assertEqual(model.destroyed, [])
                 self.assertEqual(model.text_destroyed, [])
                 self.assertEqual(roster, {name: model.globals[name] for name in model.ARRAYS})
@@ -288,13 +288,13 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
             with self.subTest(source=source):
                 state = model.add("งูแรร์")
                 model.apply_special_icon_default("งูแรร์")
-                self.assertEqual(state["IndeksIkon"], 23)
-                self.assertFalse(state["MenuTerbuka"])
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                self.assertEqual(state["IconIndex"], 23)
+                self.assertFalse(state["MenuOpen"])
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
                 model.run(now=100)
                 visual = model.visual("งูแรร์")
-                beacon = model.globals["EntitasIkonPilar"][0]
-                hud = model.globals["HudKiriPemain"][0]
+                beacon = model.globals["ObjectiveIconIds"][0]
+                hud = model.globals["PlayerListHudIds"][0]
                 self.assertIn("งูแรร์", model.chases)
                 self.assertTrue(model.change_team("งูแรร์", 2, 100.1))
                 self.assertEqual(model.evaluate(visual[0]), [])
@@ -302,7 +302,7 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertEqual(model.chase_stopped, ["งูแรร์"])
                 self.assertEqual(model.destroyed, [])
                 self.assertEqual(model.text_destroyed, [])
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
                 self.assertFalse(model.worker_tick("งูแรร์", 100.599))
                 self.assertEqual(model.destroyed, [])
                 self.assertTrue(model.worker_tick("งูแรร์", 100.6))
@@ -311,35 +311,35 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertTrue(model.resume_worker("งูแรร์", 100.65))
                 self.assertCountEqual(model.destroyed, [beacon, hud])
                 self.assertEqual(model.text_destroyed, [hud])
-                self.assertFalse(state["SudahSiap"])
+                self.assertFalse(state["IsPrepared"])
                 self.assertTrue(model.resume_worker("งูแรร์", 100.7))
-                self.assertTrue(state["SudahSiap"])
+                self.assertTrue(state["IsPrepared"])
                 self.assertFalse(model.worker_tick("งูแรร์", 100.8))
                 model.run(now=101)
                 self.assertEqual(model.destroyed.count(beacon), 1)
                 self.assertEqual(model.destroyed.count(hud), 1)
                 self.assertEqual(model.icons, {})
                 self.assertEqual(model.chases, {})
-                self.assertEqual(model.globals["PemainManusia"], [])
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
-                self.assertEqual(model.globals["SlotHUDTersedia"], list(range(12)))
+                self.assertEqual(model.globals["HumanPlayers"], [])
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
+                self.assertEqual(model.globals["AvailableHudSlots"], list(range(12)))
                 for name in model.ARRAY_NAMES + tuple(model.ICONS):
                     self.assertEqual(len(model.globals[name]), 12)
 
     def test_stable_worker_releases_exact_handles_after_half_second_and_recycles_slot(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                model.add("changing", IndeksIkon=23)
-                model.add("observer", IndeksIkon=1)
+                model.add("changing", IconIndex=23)
+                model.add("observer", IconIndex=1)
                 own_static = model.install_icons("changing", 51)
                 other_static = model.install_icons("observer", 52)
-                model.globals["PemainPukulanSuper"] = ["changing", "observer"]
+                model.globals["SuperPunchPlayers"] = ["changing", "observer"]
                 model.run(now=100)
-                own_beacon = model.globals["EntitasIkonPilar"][0]
-                other_beacon = model.globals["EntitasIkonPilar"][1]
-                own_hud = model.globals["HudKiriPemain"][0]
-                other_hud = model.globals["HudKiriPemain"][1]
-                slot = model.players["changing"]["UrutanHUD"]
+                own_beacon = model.globals["ObjectiveIconIds"][0]
+                other_beacon = model.globals["ObjectiveIconIds"][1]
+                own_hud = model.globals["PlayerListHudIds"][0]
+                other_hud = model.globals["PlayerListHudIds"][1]
+                slot = model.players["changing"]["HudSlot"]
                 model.change_team("changing", 2, 100.1)
                 self.assertFalse(model.worker_tick("changing", 100.599))
                 self.assertEqual(model.destroyed, [])
@@ -348,29 +348,29 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 self.assertTrue(model.resume_worker("changing", 100.7))
                 self.assertCountEqual(model.destroyed, [own_beacon, own_hud] + own_static)
                 self.assertEqual(len(model.destroyed), len(set(model.destroyed)))
-                self.assertEqual(model.globals["PemainManusia"], ["observer"])
-                self.assertIn(slot, model.globals["SlotHUDTersedia"])
-                self.assertEqual(model.globals["EntitasIkonPilar"][0], 0)
-                self.assertEqual(model.globals["EntitasIkonPilar"][1], other_beacon)
-                self.assertEqual(model.globals["HudKiriPemain"], [other_hud])
+                self.assertEqual(model.globals["HumanPlayers"], ["observer"])
+                self.assertIn(slot, model.globals["AvailableHudSlots"])
+                self.assertEqual(model.globals["ObjectiveIconIds"][0], 0)
+                self.assertEqual(model.globals["ObjectiveIconIds"][1], other_beacon)
+                self.assertEqual(model.globals["PlayerListHudIds"], [other_hud])
                 self.assertTrue(all(handle not in model.destroyed for handle in other_static + [other_beacon, other_hud]))
-                self.assertEqual(model.globals["PemainPukulanSuper"], ["observer"])
+                self.assertEqual(model.globals["SuperPunchPlayers"], ["observer"])
                 self.assertEqual([routine for _, routine in model.calls if routine in
-                                  ("TenangkanPemain", "BersihkanPemain", "SiapkanPemain")],
-                                 ["TenangkanPemain", "BersihkanPemain", "SiapkanPemain"])
-                model.add("replacement", IndeksIkon=2)
-                self.assertEqual(model.players["replacement"]["UrutanHUD"], slot)
+                                  ("QuiescePlayer", "CleanupPlayer", "PreparePlayer")],
+                                 ["QuiescePlayer", "CleanupPlayer", "PreparePlayer"])
+                model.add("replacement", IconIndex=2)
+                self.assertEqual(model.players["replacement"]["HudSlot"], slot)
                 model.run(now=100.7)
                 replacement = model.visual("replacement")
-                replacement_handle = model.globals["EntitasIkonPilar"][0]
+                replacement_handle = model.globals["ObjectiveIconIds"][0]
                 destroyed = list(model.destroyed)
                 model.event_player = "changing"
-                model.execute(model.programs["BersihkanPemain"])
+                model.execute(model.programs["CleanupPlayer"])
                 self.assertEqual(model.destroyed, destroyed)
-                self.assertEqual(model.globals["PemilikIkonPilar"][0], "replacement")
-                self.assertEqual(model.globals["EntitasIkonPilar"][0], replacement_handle)
+                self.assertEqual(model.globals["ObjectiveIconOwners"][0], "replacement")
+                self.assertEqual(model.globals["ObjectiveIconIds"][0], replacement_handle)
                 self.assertTrue(model.evaluate(replacement[0]))
-                self.assertNotIn("replacement", model.globals["PemainPukulanSuper"])
+                self.assertNotIn("replacement", model.globals["SuperPunchPlayers"])
 
     def test_ordinary_no_functions_join_can_change_team_without_allocating_icons(self):
         for source, model in self.models():
@@ -379,8 +379,8 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 model.run(now=100)
                 self.assertEqual(model.icons, {})
                 self.assertEqual(model.chases, {})
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
-                own_hud = model.globals["HudKiriPemain"][0]
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
+                own_hud = model.globals["PlayerListHudIds"][0]
                 self.assertTrue(model.change_team("ordinary", 2, 100.1))
                 self.assertEqual(model.destroyed, [])
                 self.assertFalse(model.worker_tick("ordinary", 100.599))
@@ -395,17 +395,17 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
     def test_rapid_changes_extend_quarantine_without_new_chases_or_duplicate_cleanup(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("changing", IndeksIkon=23)
-                model.add("observer", IndeksIkon=1)
-                model.globals["PemainPukulanSuper"] = ["changing", "observer"]
+                state = model.add("changing", IconIndex=23)
+                model.add("observer", IconIndex=1)
+                model.globals["SuperPunchPlayers"] = ["changing", "observer"]
                 model.run(now=100)
                 started = list(model.chase_started)
                 self.assertTrue(model.change_team("changing", 2, 100.1))
                 self.assertTrue(model.change_team("changing", 1, 100.2))
                 self.assertFalse(model.change_team("changing", 1, 100.3))
-                self.assertAlmostEqual(state["WaktuSiklusTim"], 100.7)
+                self.assertAlmostEqual(state["TeamCycleDeadline"], 100.7)
                 self.assertEqual(model.chase_started, started)
-                self.assertEqual(model.globals["PemainPukulanSuper"], ["observer"])
+                self.assertEqual(model.globals["SuperPunchPlayers"], ["observer"])
                 self.assertEqual(model.chase_stopped, ["changing", "changing"])
                 self.assertEqual(model.destroyed, [])
                 self.assertFalse(model.worker_tick("changing", 100.6))
@@ -415,16 +415,16 @@ class TeamTransitionRecentFeaturesTests(unittest.TestCase):
                 destroyed = list(model.destroyed)
                 self.assertFalse(model.worker_tick("changing", 100.9))
                 model.event_player = "changing"
-                model.execute(model.programs["BersihkanPemain"])
+                model.execute(model.programs["CleanupPlayer"])
                 self.assertEqual(model.destroyed, destroyed)
                 model.run(now=101)
                 self.assertEqual(model.chase_started, started)
-                self.assertEqual(model.globals["PemainManusia"], ["observer"])
+                self.assertEqual(model.globals["HumanPlayers"], ["observer"])
 
     def test_worker_waits_for_matching_team_and_spawn_after_quarantine(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("changing", IndeksIkon=23)
+                state = model.add("changing", IconIndex=23)
                 model.run(now=100)
                 model.change_team("changing", 2, 100.1)
                 state["spawned"] = False

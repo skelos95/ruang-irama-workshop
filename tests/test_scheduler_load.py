@@ -23,16 +23,16 @@ class LoadSourceEvaluator(AuditLifecycleEvaluator):
         super().__init__(source)
         self.native = []
         self.run_icon_cleanup = False
-        fast = validator.rule_by_subroutine(self.rules, "ProsesCepatPemain")
-        position = fast.body.index("Set Player Health(Global.PemainAktif, 1);")
+        fast = validator.rule_by_subroutine(self.rules, "ProcessPlayerFastState")
+        position = fast.body.index("Set Player Health(Global.ActivePlayer, 1);")
         branches = validator.conditional_branches_containing(fast.body, position)
         self.protection = next(branch for branch in branches
-                               if "Global.PemainAktif.KebalAktif == True" in branch.split(";", 1)[0])
-        vote = validator.rule_by_subroutine(self.rules, "TerapkanHalamanPilihan")
+                               if "Global.ActivePlayer.UnkillableActive == True" in branch.split(";", 1)[0])
+        vote = validator.rule_by_subroutine(self.rules, "ApplyVotePage")
         self.apply_vote = statements(validator.rule_block(vote, "actions"))
-        luck = validator.rule_by_subroutine(self.rules, "ProsesNasibPemain")
+        luck = validator.rule_by_subroutine(self.rules, "ProcessPlayerLuck")
         self.icon_cleanup = next(node for node in statements(validator.rule_block(luck, "actions"))
-                                 if node[0] == "If(Global.PemainAktif.WaktuIkonNasibBerakhir > 0)")
+                                 if node[0] == "If(Global.ActivePlayer.LuckIconEndTime > 0)")
 
     def resolve(self, name):
         if name == "Unkillable":
@@ -65,7 +65,7 @@ class LoadSourceEvaluator(AuditLifecycleEvaluator):
             else:
                 if super().execute([node]):
                     return True
-                if self.run_icon_cleanup and token == "Call Subroutine(ProsesNasibPemain)":
+                if self.run_icon_cleanup and token == "Call Subroutine(ProcessPlayerLuck)":
                     self.execute([self.icon_cleanup])
         return False
 
@@ -74,26 +74,26 @@ class LoadSourceEvaluator(AuditLifecycleEvaluator):
         if admitted:
             # Execute the classifier's dirty marker rather than synthesizing a recount.
             self.execute(project(statements(self.classifier),
-                                 lambda token: token == "Global.PilihanPerluDihitung = True"))
+                                 lambda token: token == "Global.VoteRecountNeeded = True"))
         return admitted
 
     def vote_for(self, identity, target):
         self.event_player = identity
-        self.players[identity]["KursorPilihan"] = self.globals["PemainManusia"].index(target)
+        self.players[identity]["VoteCursor"] = self.globals["HumanPlayers"].index(target)
         self.execute(self.apply_vote)
 
     def prepare_protection(self, identity, mode):
         self.join(identity)
         self.players[identity].update(
-            Manusia=True, KebalAktif=True, KematianBalasDendam=False,
-            KartuNasibAktif=False, PutaranKartuNasib=0, EfekNasib=0,
-            WaktuPaksaBerakhir=0, EfekNasibBerakhir=0, ModeKebal=mode,
-            PahlawanTerakhir="Ana", hero="Ana", health=50, max_health=250,
-            in_spawn=False, statuses={"Unkillable"}, IkonKebal=identity,
+            IsHuman=True, UnkillableActive=True, RevengeDeathPending=False,
+            LuckActive=False, LuckSpinCount=0, LuckEffect=0,
+            ForcedRevengeEndTime=0, LuckEffectEndTime=0, UnkillableMode=mode,
+            LastHero="Ana", hero="Ana", health=50, max_health=250,
+            in_spawn=False, statuses={"Unkillable"}, UnkillableIcon=identity,
         )
 
     def protection_tick(self, identity, tick, index):
-        self.globals.update(PemainAktif=identity, LangkahPenjadwal=tick, IndeksPemainGlobal=index)
+        self.globals.update(ActivePlayer=identity, SchedulerStep=tick, SchedulerPlayerIndex=index)
         self.now = 10 + tick / 20
         # The same flat branch interpreter as the Fly tests, including Else If.
         frames = []
@@ -139,14 +139,14 @@ class SchedulerLoadTests(unittest.TestCase):
                     model.scheduler_tick(tick)
                     loads.append(Counter(name for _, name in model.calls[before:]))
                 for identity in players:
-                    for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 0),
-                                              ("ProsesTerbangPemain", 0), ("ProsesSiklusPemain", 10),
-                                              ("ProsesSimpananPemain", 0)):
+                    for routine, expected in (("ProcessPlayerFastState", 20), ("ProcessPlayerLuck", 0),
+                                              ("ProcessPlayerFlight", 0), ("ProcessPlayerCycle", 10),
+                                              ("ProcessPlayerMaintenance", 0)):
                         self.assertEqual(model.calls.count((identity, routine)), expected, (identity, routine))
-                self.assertEqual({load["ProsesSiklusPemain"] for load in loads}, {6})
-                self.assertEqual(sum(load["ProsesSimpananPemain"] for load in loads), 0)
-                self.assertIsNone(model.globals["PemainAktif"])
-                self.assertEqual(model.globals["SalinanDaftarPemain"], [])
+                self.assertEqual({load["ProcessPlayerCycle"] for load in loads}, {6})
+                self.assertEqual(sum(load["ProcessPlayerMaintenance"] for load in loads), 0)
+                self.assertIsNone(model.globals["ActivePlayer"])
+                self.assertEqual(model.globals["PlayerListSnapshot"], [])
 
     def test_twelve_active_players_keep_fast_feature_timing_and_staggered_menu_caches(self):
         for source, model in self.models():
@@ -154,53 +154,53 @@ class SchedulerLoadTests(unittest.TestCase):
                 players = [f"player-{index}" for index in range(12)]
                 for index, identity in enumerate(players):
                     model.join(identity)
-                    model.players[identity].update(ModeTerbangAktif=True, KartuNasibAktif=True,
-                                                   MenuTerbuka=True, HalamanMenu=1 if index % 2 else 4)
+                    model.players[identity].update(FlyModeActive=True, LuckActive=True,
+                                                   MenuOpen=True, MenuPage=2 if index % 2 else 4)
                 loads = []
                 for tick in range(1, 21):
                     before = len(model.calls)
                     model.scheduler_tick(tick)
                     loads.append(Counter(name for _, name in model.calls[before:]))
                 for identity in players:
-                    for routine, expected in (("ProsesCepatPemain", 20), ("ProsesNasibPemain", 20),
-                                              ("ProsesTerbangPemain", 20), ("ProsesSiklusPemain", 10),
-                                              ("ProsesSimpananPemain", 1)):
+                    for routine, expected in (("ProcessPlayerFastState", 20), ("ProcessPlayerLuck", 20),
+                                              ("ProcessPlayerFlight", 20), ("ProcessPlayerCycle", 10),
+                                              ("ProcessPlayerMaintenance", 1)):
                         self.assertEqual(model.calls.count((identity, routine)), expected, (identity, routine))
-                self.assertEqual({load["ProsesSiklusPemain"] for load in loads}, {6})
-                self.assertEqual(max(load["ProsesSimpananPemain"] for load in loads), 1)
-                self.assertEqual(sum(load["ProsesSimpananPemain"] for load in loads), 12)
+                self.assertEqual({load["ProcessPlayerCycle"] for load in loads}, {6})
+                self.assertEqual(max(load["ProcessPlayerMaintenance"] for load in loads), 1)
+                self.assertEqual(sum(load["ProcessPlayerMaintenance"] for load in loads), 12)
 
     def test_each_pending_luck_state_keeps_twenty_hz_dispatch_until_cleared(self):
         for source, model in self.models():
-            for field, value in (("KartuNasibAktif", True), ("PutaranKartuNasib", 3),
-                                 ("EfekNasib", 2), ("WaktuIkonNasibBerakhir", 10)):
+            for field, value in (("LuckActive", True), ("LuckSpinCount", 3),
+                                 ("LuckEffect", 2), ("LuckIconEndTime", 10)):
                 with self.subTest(source=source, field=field):
                     identity = f"luck-{field}"
                     model.join(identity)
                     model.players[identity][field] = value
                     for tick in range(1, 21):
                         model.scheduler_tick(tick)
-                    self.assertEqual(model.calls.count((identity, "ProsesNasibPemain")), 20)
+                    self.assertEqual(model.calls.count((identity, "ProcessPlayerLuck")), 20)
                     model.players[identity][field] = 0
                     for tick in range(21, 41):
                         model.scheduler_tick(tick)
-                    self.assertEqual(model.calls.count((identity, "ProsesNasibPemain")), 20)
+                    self.assertEqual(model.calls.count((identity, "ProcessPlayerLuck")), 20)
 
     def test_fly_toggle_changes_dispatch_on_the_next_tick_only_for_humans(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.join("human")
                 model.scheduler_tick(1)
-                self.assertNotIn(("human", "ProsesTerbangPemain"), model.calls)
-                model.players["human"]["ModeTerbangAktif"] = True
+                self.assertNotIn(("human", "ProcessPlayerFlight"), model.calls)
+                model.players["human"]["FlyModeActive"] = True
                 model.scheduler_tick(2)
-                self.assertEqual(model.calls.count(("human", "ProsesTerbangPemain")), 1)
-                model.players["human"]["ModeTerbangAktif"] = False
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerFlight")), 1)
+                model.players["human"]["FlyModeActive"] = False
                 model.scheduler_tick(3)
-                self.assertEqual(model.calls.count(("human", "ProsesTerbangPemain")), 1)
-                model.players["human"].update(ModeTerbangAktif=True, Manusia=False)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerFlight")), 1)
+                model.players["human"].update(FlyModeActive=True, IsHuman=False)
                 model.scheduler_tick(4)
-                self.assertEqual(model.calls.count(("human", "ProsesTerbangPemain")), 1)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerFlight")), 1)
 
     def test_mixed_lobby_excludes_bots_even_with_stale_human_feature_flags(self):
         for source, model in self.models():
@@ -208,31 +208,31 @@ class SchedulerLoadTests(unittest.TestCase):
                 model.join("human")
                 for identity, dummy, automatic in (("dummy", True, False), ("ai", False, True)):
                     model.players[identity] = dict(exists=True, spawned=True, alive=True, slot=5,
-                                                   dummy=dummy, BotOtomatis=automatic, Manusia=True,
-                                                   ModeTerbangAktif=True, KartuNasibAktif=True,
-                                                   PutaranKartuNasib=3, EfekNasib=2,
-                                                   WaktuIkonNasibBerakhir=10, MenuTerbuka=True,
-                                                   HalamanMenu=1, UrutanHUD=0)
+                                                   dummy=dummy, IsAutomaticBot=automatic, IsHuman=True,
+                                                   FlyModeActive=True, LuckActive=True,
+                                                   LuckSpinCount=3, LuckEffect=2,
+                                                   LuckIconEndTime=10, MenuOpen=True,
+                                                   MenuPage=2, HudSlot=0)
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
                 for identity in ("dummy", "ai"):
                     calls = Counter(name for owner, name in model.calls if owner == identity)
-                    self.assertEqual(calls, Counter({"ProsesBotPemain": 10}))
-                self.assertEqual(model.calls.count(("human", "ProsesCepatPemain")), 20)
-                self.assertEqual(model.calls.count(("human", "ProsesSiklusPemain")), 10)
+                    self.assertEqual(calls, Counter({"ProcessPlayerBot": 10}))
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerFastState")), 20)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerCycle")), 10)
 
     def test_pending_human_keeps_lifecycle_and_cycle_without_menu_or_fly_work(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.players["pending"] = dict(exists=True, spawned=False, alive=False, slot=3,
-                                                 dummy=False, BotOtomatis=False, Manusia=False,
-                                                 ModeTerbangAktif=True, KartuNasibAktif=False,
-                                                 PutaranKartuNasib=0, EfekNasib=0,
-                                                 WaktuIkonNasibBerakhir=0, MenuTerbuka=True, HalamanMenu=1)
+                                                 dummy=False, IsAutomaticBot=False, IsHuman=False,
+                                                 FlyModeActive=True, LuckActive=False,
+                                                 LuckSpinCount=0, LuckEffect=0,
+                                                 LuckIconEndTime=0, MenuOpen=True, MenuPage=2)
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
                 self.assertEqual(Counter(name for owner, name in model.calls if owner == "pending"),
-                                 Counter({"ProsesCepatPemain": 20, "ProsesSiklusPemain": 10}))
+                                 Counter({"ProcessPlayerFastState": 20, "ProcessPlayerCycle": 10}))
 
     def test_idle_human_two_dummies_two_ai_use_seventy_entity_calls_and_one_slot_pass(self):
         for source, model in self.models():
@@ -240,24 +240,24 @@ class SchedulerLoadTests(unittest.TestCase):
                 model.join("human")
                 for index in range(4):
                     model.players[f"bot-{index}"] = dict(exists=True, dummy=index < 2,
-                        BotOtomatis=index >= 2, Manusia=False, slot=index % 2)
+                        IsAutomaticBot=index >= 2, IsHuman=False, slot=index % 2)
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
                 entity_calls = [name for owner, name in model.calls if owner is not None]
-                self.assertEqual(Counter(entity_calls), Counter({"ProsesCepatPemain": 20,
-                    "ProsesSiklusPemain": 10, "ProsesBotPemain": 40}))
+                self.assertEqual(Counter(entity_calls), Counter({"ProcessPlayerFastState": 20,
+                    "ProcessPlayerCycle": 10, "ProcessPlayerBot": 40}))
                 self.assertEqual(len(entity_calls), 70)
-                self.assertEqual(model.calls.count((None, "RawatBotBuatan")), 1)
-                self.assertEqual(model.calls.count((None, "BersihkanTeksYatim")), 1)
+                self.assertEqual(model.calls.count((None, "MaintainDummyBots")), 1)
+                self.assertEqual(model.calls.count((None, "CleanupOrphanedText")), 1)
 
     def test_quarantined_human_luck_icon_expires_then_stops_dispatching(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.join("human")
-                slot = model.players["human"]["UrutanHUD"]
-                model.players["human"].update(Manusia=False, IkonKartuNasib=77,
-                                               WaktuIkonNasibBerakhir=1)
-                model.globals["IkonKartuNasibPemain"][int(slot)] = 77
+                slot = model.players["human"]["HudSlot"]
+                model.players["human"].update(IsHuman=False, LuckIcon=77,
+                                               LuckIconEndTime=1)
+                model.globals["LuckIconIds"][int(slot)] = 77
                 model.run_icon_cleanup = True
                 model.now = 0.95
                 model.scheduler_tick(19)
@@ -265,12 +265,12 @@ class SchedulerLoadTests(unittest.TestCase):
                 model.now = 1
                 model.scheduler_tick(20)
                 self.assertEqual(model.destroyed, [77])
-                self.assertEqual(model.globals["IkonKartuNasibPemain"][int(slot)], 0)
-                self.assertEqual(model.players["human"]["WaktuIkonNasibBerakhir"], 0)
-                self.assertIsNone(model.players["human"]["IkonKartuNasib"])
-                self.assertTrue(model.players["human"]["MenuNasibHarusDibuka"])
+                self.assertEqual(model.globals["LuckIconIds"][int(slot)], 0)
+                self.assertEqual(model.players["human"]["LuckIconEndTime"], 0)
+                self.assertIsNone(model.players["human"]["LuckIcon"])
+                self.assertTrue(model.players["human"]["LuckMenuReopenNeeded"])
                 model.scheduler_tick(21)
-                self.assertEqual(model.calls.count(("human", "ProsesNasibPemain")), 2)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerLuck")), 2)
 
     def test_menu_cache_runs_only_on_camera_or_revenge_pages(self):
         for source, model in self.models():
@@ -279,30 +279,30 @@ class SchedulerLoadTests(unittest.TestCase):
                     with self.subTest(source=source, page=page, opened=opened):
                         if "human" not in model.players:
                             model.join("human")
-                        model.players["human"].update(MenuTerbuka=opened, HalamanMenu=page)
+                        model.players["human"].update(MenuOpen=opened, MenuPage=page)
                         model.calls.clear()
                         for tick in range(1, 21):
                             model.scheduler_tick(tick)
-                        self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")),
-                                         int(opened and page in (1, 4)))
+                        self.assertEqual(model.calls.count(("human", "ProcessPlayerMaintenance")),
+                                         int(opened and page in (2, 4)))
 
     def test_dummy_follow_on_adds_only_one_human_maintenance_call_per_second(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 model.join("human")
-                model.players["human"].update(MenuTerbuka=False, HalamanMenu=-1,
-                                               IzinkanBotBuatanMengikuti=True)
-                model.players["bot"] = dict(exists=True, dummy=True, BotOtomatis=False,
-                                              Manusia=False, slot=1, IzinkanBotBuatanMengikuti=True)
+                model.players["human"].update(MenuOpen=False, MenuPage=-1,
+                                               AllowDummyBotFollow=True)
+                model.players["bot"] = dict(exists=True, dummy=True, IsAutomaticBot=False,
+                                              IsHuman=False, slot=1, AllowDummyBotFollow=True)
                 for tick in range(1, 21):
                     model.scheduler_tick(tick)
-                self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")), 1)
-                self.assertEqual(model.calls.count(("bot", "ProsesSimpananPemain")), 0)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerMaintenance")), 1)
+                self.assertEqual(model.calls.count(("bot", "ProcessPlayerMaintenance")), 0)
                 model.calls.clear()
-                model.players["human"]["IzinkanBotBuatanMengikuti"] = False
+                model.players["human"]["AllowDummyBotFollow"] = False
                 for tick in range(21, 41):
                     model.scheduler_tick(tick)
-                self.assertEqual(model.calls.count(("human", "ProsesSimpananPemain")), 0)
+                self.assertEqual(model.calls.count(("human", "ProcessPlayerMaintenance")), 0)
 
     def test_stable_protection_has_36_property_writes_per_second_for_twelve_players(self):
         for source, model in self.models():
@@ -332,7 +332,7 @@ class SchedulerLoadTests(unittest.TestCase):
                 # every tick. The same player's assigned HUD slot stays stable.
                 model.players["changing-slot"] = {
                     "exists": False, "spawned": True, "alive": True,
-                    "dummy": True, "BotOtomatis": True, "Manusia": False, "slot": 5,
+                    "dummy": True, "IsAutomaticBot": True, "IsHuman": False, "slot": 5,
                 }
                 model.prepare_protection("stable-player", 2)
                 seen_indices = set()
@@ -344,8 +344,8 @@ class SchedulerLoadTests(unittest.TestCase):
                     seen_indices.add(index)
                     model.protection_tick("stable-player", tick, index)
                 self.assertEqual(seen_indices, {0, 1})
-                for routine, expected in (("ProsesCepatPemain", 60), ("ProsesSiklusPemain", 30),
-                                          ("ProsesSimpananPemain", 0)):
+                for routine, expected in (("ProcessPlayerFastState", 60), ("ProcessPlayerCycle", 30),
+                                          ("ProcessPlayerMaintenance", 0)):
                     self.assertEqual(model.calls.count(("stable-player", routine)), expected, routine)
                 self.assertEqual(sum(action[0] in model.PROPERTY_ACTIONS for action in model.native), 9)
 
@@ -355,7 +355,7 @@ class SchedulerLoadTests(unittest.TestCase):
                 players = [f"player-{index}" for index in range(12)]
                 for identity in players:
                     model.join(identity)
-                    model.players[identity].update(MenuTerbuka=True, HalamanMenu=1)
+                    model.players[identity].update(MenuOpen=True, MenuPage=2)
                 for tick in range(1, 21):
                     offset = tick % len(players)
                     order = players[offset:] + players[:offset]
@@ -363,11 +363,11 @@ class SchedulerLoadTests(unittest.TestCase):
                     before = len(model.calls)
                     model.scheduler_tick(tick)
                     load = Counter(name for _, name in model.calls[before:])
-                    self.assertEqual(load["ProsesSiklusPemain"], 6)
-                    self.assertLessEqual(load["ProsesSimpananPemain"], 1)
+                    self.assertEqual(load["ProcessPlayerCycle"], 6)
+                    self.assertLessEqual(load["ProcessPlayerMaintenance"], 1)
                 for identity in players:
-                    self.assertEqual(model.calls.count((identity, "ProsesSiklusPemain")), 10)
-                    self.assertEqual(model.calls.count((identity, "ProsesSimpananPemain")), 1)
+                    self.assertEqual(model.calls.count((identity, "ProcessPlayerCycle")), 10)
+                    self.assertEqual(model.calls.count((identity, "ProcessPlayerMaintenance")), 1)
 
     def test_health_guard_still_runs_every_fast_tick(self):
         for source, model in self.models():
@@ -401,9 +401,9 @@ class SchedulerLoadTests(unittest.TestCase):
 
     def test_forced_death_and_active_burning_never_reapply_protection(self):
         exclusions = (
-            {"KematianBalasDendam": True},
-            {"KartuNasibAktif": True, "EfekNasib": 3, "WaktuPaksaBerakhir": 30},
-            {"KartuNasibAktif": True, "EfekNasib": 5, "EfekNasibBerakhir": 30},
+            {"RevengeDeathPending": True},
+            {"LuckActive": True, "LuckEffect": 3, "ForcedRevengeEndTime": 30},
+            {"LuckActive": True, "LuckEffect": 5, "LuckEffectEndTime": 30},
             {"alive": False},
             {"spawned": False},
         )
@@ -428,22 +428,22 @@ class SchedulerLoadTests(unittest.TestCase):
                     model.vote_for(identity, players[0])
                 self.assertEqual(model.calls, [])
                 model.scheduler_tick(1)
-                self.assertEqual(model.calls.count((None, "HitungPilihan")), 1)
-                self.assertEqual(model.players[players[0]]["JumlahPilihan"], 12)
-                self.assertEqual(model.globals["PemimpinPilihan"], players[0])
-                self.assertFalse(model.globals["PilihanPerluDihitung"])
+                self.assertEqual(model.calls.count((None, "RecountVotes")), 1)
+                self.assertEqual(model.players[players[0]]["VoteCount"], 12)
+                self.assertEqual(model.globals["VoteLeader"], players[0])
+                self.assertFalse(model.globals["VoteRecountNeeded"])
                 for identity in players:
                     model.vote_for(identity, players[0])
                 model.scheduler_tick(2)
-                self.assertEqual(model.calls.count((None, "HitungPilihan")), 1)
+                self.assertEqual(model.calls.count((None, "RecountVotes")), 1)
                 for identity in players[6:]:
                     model.vote_for(identity, players[1])
                 model.scheduler_tick(3)
-                self.assertEqual(model.calls.count((None, "HitungPilihan")), 2)
-                self.assertEqual(model.players[players[0]]["JumlahPilihan"], 6)
-                self.assertEqual(model.players[players[1]]["JumlahPilihan"], 6)
-                self.assertTrue(model.globals["PilihanSeri"])
-                self.assertIsNone(model.globals["PemimpinPilihan"])
+                self.assertEqual(model.calls.count((None, "RecountVotes")), 2)
+                self.assertEqual(model.players[players[0]]["VoteCount"], 6)
+                self.assertEqual(model.players[players[1]]["VoteCount"], 6)
+                self.assertTrue(model.globals["VoteTied"])
+                self.assertIsNone(model.globals["VoteLeader"])
 
     def test_vote_batch_with_lost_departures_and_rejoins_has_no_stale_owner(self):
         for source, model in self.models():
@@ -461,16 +461,16 @@ class SchedulerLoadTests(unittest.TestCase):
                     model.vote_for(identity, players[1])
                 self.assertEqual(model.calls, [])
                 model.scheduler_tick(1)
-                self.assertEqual(model.calls.count((None, "HitungPilihan")), 1)
-                self.assertEqual(model.players[players[1]]["JumlahPilihan"], 7)
-                self.assertEqual(model.globals["PemimpinPilihan"], players[1])
-                self.assertFalse(model.globals["PilihanSeri"])
-                for identity in model.globals["PemainManusia"]:
-                    self.assertNotIn(model.players[identity]["PemainDipilih"], (players[0], players[6]))
-                self.assertEqual(len(model.globals["PemainManusia"]), 12)
-                self.assertEqual(sorted(model.globals["SlotHUDPemain"]), list(range(12)))
+                self.assertEqual(model.calls.count((None, "RecountVotes")), 1)
+                self.assertEqual(model.players[players[1]]["VoteCount"], 7)
+                self.assertEqual(model.globals["VoteLeader"], players[1])
+                self.assertFalse(model.globals["VoteTied"])
+                for identity in model.globals["HumanPlayers"]:
+                    self.assertNotIn(model.players[identity]["VotedPlayer"], (players[0], players[6]))
+                self.assertEqual(len(model.globals["HumanPlayers"]), 12)
+                self.assertEqual(sorted(model.globals["PlayerHudSlots"]), list(range(12)))
                 model.scheduler_tick(2)
-                self.assertEqual(model.calls.count((None, "HitungPilihan")), 1)
+                self.assertEqual(model.calls.count((None, "RecountVotes")), 1)
 
 
 if __name__ == "__main__":

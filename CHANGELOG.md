@@ -1,5 +1,15 @@
 # Changelog
 
+## Codice inglese, Info e reset Camera — 2026-10-08
+
+- Unico sorgente e clipboard in inglese: grammatica nativa, identificatori, regole, commenti, testi e impostazioni personalizzate. Rimosso il sistema EN/ID/TH, con cataloghi, stato e menu Language; i nomi propri conservano i caratteri originali. Per importare, la lingua testo del client deve essere English.
+- Info / Controls diventa la voce 0; Name Color, Camera e Soundtrack passano a 1, 2 e 3, mentre le funzioni 4–15 conservano il numero. La registrazione iniziale apre il principale su Info; morte e cambio eroe conservano pagina e cursore. Cambio squadra e rientro ripartono dai default.
+- Rimossi i due promemoria fissi negli angoli e il relativo spazio laterale. Descrizioni e tutti i binding sono nella preview e nella pagina Info. Negli altri menu i comandi stanno a sinistra e le opzioni a destra, separati da `|`; Info evita i comandi duplicati.
+- Rimossi impostazione e cataloghi Server Location. L'HUD centrale mostra cozywatch.org, il sito della modalità.
+- Una Camera attiva viene fermata prima dei tre teletrasporti Travel riusciti e riavviata subito dopo. Al cambio del proprio eroe viene ricreata una sola volta, preservando modalità e bersaglio valido. Rimane un solo Start Camera centralizzato, senza nuove attese o cicli.
+- Aggiornati documentazione, regressioni e controlli GitHub. La release storica v0.8.1 conserva tag e contenuto precedente: il collegamento finale al changelog ora punta al file della revisione della release. La versione nominale resta 0.8.1.
+- Con gli stessi budget offline, il runtime passa da 31.966 a 26.536 unità strutturali (−17,0%); il testo da importare da 348.732 a 290.106 byte UTF-8 (−16,8%). I conteggi compilati richiedono una prova nel client inglese.
+
 ## Colori dei menu nel runtime globale — 2026-10-07
 
 - L'utente conferma che la revisione #98 non provoca più il crash, ma i menu restano bianchi e Travel verde. Le due transizioni colore di `91k` ora acquisiscono la destinazione durante il comando globale, con reevaluation `None`: la rivalutazione asincrona poteva leggere il puntatore temporaneo già svuotato e quindi il cursore zero.

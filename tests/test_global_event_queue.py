@@ -16,7 +16,7 @@ from tools import validate_workshop as semantic
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARTIFACT = ROOT / "workshop/ruang_irama.it-IT.workshop"
+ARTIFACT = ROOT / "workshop/ruang_irama.en-US.workshop"
 
 
 class EventQueueEvaluator(GeneratedControllerEvaluator):
@@ -24,11 +24,11 @@ class EventQueueEvaluator(GeneratedControllerEvaluator):
 
     def __init__(self, source):
         super().__init__(source)
-        self.globals.update(AntreanPeristiwa=[], KepalaPeristiwa=0,
-                            EkorPeristiwa=0, JumlahPeristiwa=0,
-                            JumlahPeristiwaAwal=0, PeristiwaTerlewat=0,
-                            PemainPemicu=None, PeristiwaAktif=None,
-                            WaktuPukulanSuper=[0] * 12, KeluarTertunda=[])
+        self.globals.update(EventQueue=[], EventQueueHead=0,
+                            EventQueueTail=0, EventCount=0,
+                            InitialEventCount=0, DroppedEventCount=0,
+                            TriggerPlayer=None, ActiveEvent=None,
+                            SuperPunchTimes=[0] * 12, PendingLeaves=[])
         self.event = {}
         self.dispatched = []
         self.worker_mode = False
@@ -40,9 +40,9 @@ class EventQueueEvaluator(GeneratedControllerEvaluator):
         state.setdefault("name", identity)
         state.setdefault("position", Vector(2, 5, 8))
         state.setdefault("statuses", set())
-        state.setdefault("UrutanHUD", len(self.players) - 1)
-        state.setdefault("PembunuhBalasDendam", [])
-        state.setdefault("JumlahBalasDendam", [])
+        state.setdefault("HudSlot", len(self.players) - 1)
+        state.setdefault("RevengeKillers", [])
+        state.setdefault("RevengeDebts", [])
         state[self.state_field] = [0] * 36 + [len(self.players)]
         return state
 
@@ -171,13 +171,13 @@ class EventQueueEvaluator(GeneratedControllerEvaluator):
                         self.assign(match[1], value)
                     elif statement.startswith("CallSubroutine("):
                         target = statement[15:-1]
-                        packet = self.globals["PeristiwaAktif"]
+                        packet = self.globals["ActiveEvent"]
                         self.dispatched.append((target, None if packet is None else list(packet)))
                         if self.worker_mode:
                             matches = [rule for rule in self.rules
                                        if semantic.event_type(rule) == "Subroutine"
                                        and semantic.subroutine_target(rule) == target]
-                            if target.startswith("Peristiwa"):
+                            if target.startswith("NativeEvent"):
                                 if len(matches) != 1:
                                     raise AssertionError((target, len(matches)))
                                 self.execute(matches[0])
@@ -224,14 +224,14 @@ class GlobalEventQueueTests(unittest.TestCase):
 
     def test_snapshots_keep_death_position_and_revenge_state_at_delivery(self):
         model = self.model()
-        player = model.add_player("p", alive=False, KematianBalasDendam=True,
-                                  PenagihBalasDendam="collector")
+        player = model.add_player("p", alive=False, RevengeDeathPending=True,
+                                  RevengeClaimant="collector")
         model.add_player("collector")
         model.now = 1.2
         self.assertTrue(model.fire("12e", "p", attacker="collector"))
         self.assertTrue(model.fire("17", "p", attacker="collector"))
-        player.update(position=Vector(100, 2, 8), KematianBalasDendam=False,
-                      PenagihBalasDendam=None)
+        player.update(position=Vector(100, 2, 8), RevengeDeathPending=False,
+                      RevengeClaimant=None)
         model.now = 1.25
         model.drain()
         first, second = [entry[1] for entry in model.dispatched]
@@ -254,30 +254,30 @@ class GlobalEventQueueTests(unittest.TestCase):
             before = len(model.dispatched)
             model.drain()
             self.assertEqual([packet[7] for _, packet in model.dispatched[before:]], expected)
-            self.assertEqual(model.globals["JumlahPeristiwa"], 0)
-            self.assertEqual(model.globals["KepalaPeristiwa"], model.globals["EkorPeristiwa"])
-            self.assertTrue(all(value is None for value in model.globals["AntreanPeristiwa"]))
-            self.assertLessEqual(len(model.globals["AntreanPeristiwa"]), 256)
-            self.assertIsNone(model.globals["PemainPemicu"])
-            self.assertIsNone(model.globals["PeristiwaAktif"])
+            self.assertEqual(model.globals["EventCount"], 0)
+            self.assertEqual(model.globals["EventQueueHead"], model.globals["EventQueueTail"])
+            self.assertTrue(all(value is None for value in model.globals["EventQueue"]))
+            self.assertLessEqual(len(model.globals["EventQueue"]), 256)
+            self.assertIsNone(model.globals["TriggerPlayer"])
+            self.assertIsNone(model.globals["ActiveEvent"])
 
     def test_damage_reserves_capacity_for_twelve_deaths_and_leaves(self):
         model = self.model()
         for index in range(12):
-            model.add_player(f"p{index}", KartuNasibAktif=True)
-        model.globals["PemainPukulanSuper"] = ["p0"]
+            model.add_player(f"p{index}", LuckActive=True)
+        model.globals["SuperPunchPlayers"] = ["p0"]
         for _ in range(256):
             model.fire("89i1", "p0", victim="p1")
-        damage_count = model.globals["JumlahPeristiwa"]
-        lost_before = model.globals["PeristiwaTerlewat"]
+        damage_count = model.globals["EventCount"]
+        lost_before = model.globals["DroppedEventCount"]
         for index in range(12):
             identity = f"p{index}"
             model.players[identity]["alive"] = False
             for prefix in ("12e", "16a", "17", "18f", "04"):
                 self.assertTrue(model.fire(prefix, identity, attacker="p0"))
-        self.assertEqual(model.globals["PeristiwaTerlewat"], lost_before)
-        self.assertEqual(model.globals["JumlahPeristiwa"], damage_count + 60)
-        self.assertLessEqual(len(model.globals["AntreanPeristiwa"]), 256)
+        self.assertEqual(model.globals["DroppedEventCount"], lost_before)
+        self.assertEqual(model.globals["EventCount"], damage_count + 60)
+        self.assertLessEqual(len(model.globals["EventQueue"]), 256)
 
     def test_events_produced_during_drain_wait_for_next_fixed_batch(self):
         model = self.model()
@@ -289,10 +289,10 @@ class GlobalEventQueueTests(unittest.TestCase):
         model.after_dispatch = emit_once
         model.drain()
         self.assertEqual(len(model.dispatched), 1)
-        self.assertEqual(model.globals["JumlahPeristiwa"], 1)
+        self.assertEqual(model.globals["EventCount"], 1)
         model.drain()
         self.assertEqual(len(model.dispatched), 2)
-        self.assertEqual(model.dispatched[-1][0], "Peristiwa17")
+        self.assertEqual(model.dispatched[-1][0], "NativeEvent17")
 
     def test_full_ring_never_overwrites_already_queued_critical_records(self):
         model = self.model()
@@ -300,25 +300,25 @@ class GlobalEventQueueTests(unittest.TestCase):
         for index in range(300):
             model.now = index
             model.fire("12e", "p")
-        self.assertEqual(model.globals["JumlahPeristiwa"], 256)
-        self.assertEqual(model.globals["PeristiwaTerlewat"], 44)
-        self.assertEqual(len(model.globals["AntreanPeristiwa"]), 256)
+        self.assertEqual(model.globals["EventCount"], 256)
+        self.assertEqual(model.globals["DroppedEventCount"], 44)
+        self.assertEqual(len(model.globals["EventQueue"]), 256)
         model.drain()
         self.assertEqual([packet[7] for _, packet in model.dispatched], list(range(256)))
 
     def punch(self):
         model = self.model()
-        model.add_player("p", UrutanHUD=0)
-        model.add_player("v", UrutanHUD=1)
-        model.globals["PemainPukulanSuper"] = ["p"]
+        model.add_player("p", HudSlot=0)
+        model.add_player("v", HudSlot=1)
+        model.globals["SuperPunchPlayers"] = ["p"]
         self.assertTrue(model.fire("89i1", "p", victim="v"))
         return model
 
     def test_punch_retains_protection_at_event_time_even_if_later_removed(self):
         model = self.model()
-        model.add_player("p", UrutanHUD=0)
-        victim = model.add_player("v", UrutanHUD=1, statuses={"Unkillable"})
-        model.globals["PemainPukulanSuper"] = ["p"]
+        model.add_player("p", HudSlot=0)
+        victim = model.add_player("v", HudSlot=1, statuses={"Unkillable"})
+        model.globals["SuperPunchPlayers"] = ["p"]
         self.assertTrue(model.fire("89i1", "p", victim="v"))
         victim["statuses"] = set()
         model.drain(workers=True)
@@ -352,29 +352,29 @@ class GlobalEventQueueTests(unittest.TestCase):
         model.fire("12e", "p")
         player["position"] = Vector(90, -500, 40)
         model.drain(workers=True)
-        self.assertEqual(player["PosisiMati"], Vector(2, 5, 8))
+        self.assertEqual(player["DeathPosition"], Vector(2, 5, 8))
 
     def test_queued_luck_cleanup_cannot_bypass_team_quarantine(self):
         model = self.model()
-        player = model.add_player("p", alive=False, KartuNasibAktif=True)
+        player = model.add_player("p", alive=False, LuckActive=True)
         model.fire("18f", "p")
-        player.update(Manusia=False, SiklusPemainAktif=True, PindahTimDiproses=True)
+        player.update(IsHuman=False, PlayerCycleActive=True, TeamChangeProcessed=True)
         model.drain(workers=True)
-        self.assertNotIn("PulihkanNasibPemain", [name for name, _ in model.dispatched])
+        self.assertNotIn("RestorePlayerLuck", [name for name, _ in model.dispatched])
 
     def test_team_switch_death_cannot_reset_before_quarantine_is_detected(self):
         for prefix in ("12e", "18f"):
             with self.subTest(prefix=prefix):
                 model = self.model()
-                player = model.add_player("p", alive=False, KartuNasibAktif=True)
+                player = model.add_player("p", alive=False, LuckActive=True)
                 # Native team movement may emit death before the global tick
                 # gets its chance to mark the entity's quarantine flags.
                 player["team"] = 2
-                self.assertFalse(player["SiklusPemainAktif"])
+                self.assertFalse(player["PlayerCycleActive"])
                 self.assertTrue(model.fire(prefix, "p"))
                 model.drain(workers=True)
                 self.assertFalse(model.native_calls)
-                self.assertNotIn("PulihkanNasibPemain", [name for name, _ in model.dispatched])
+                self.assertNotIn("RestorePlayerLuck", [name for name, _ in model.dispatched])
 
     def test_revenge_counts_teammate_and_enemy_deaths_from_captured_killer(self):
         for killer_team in (1, 2):
@@ -386,20 +386,20 @@ class GlobalEventQueueTests(unittest.TestCase):
                     model.fire("17", "v", attacker="killer")
                     model.event["Attacker"] = "different-live-event"
                     model.drain(workers=True)
-                    self.assertEqual(victim["PembunuhBalasDendam"], ["killer"])
-                    self.assertEqual(victim["JumlahBalasDendam"], [expected])
+                    self.assertEqual(victim["RevengeKillers"], ["killer"])
+                    self.assertEqual(victim["RevengeDebts"], [expected])
 
     def test_revenge_collection_uses_captured_claimant_after_flags_reset(self):
         model = self.model()
-        victim = model.add_player("v", alive=False, KematianBalasDendam=True,
-                                  PenagihBalasDendam="collector")
-        collector = model.add_player("collector", PembunuhBalasDendam=["v"],
-                                     JumlahBalasDendam=[2])
+        victim = model.add_player("v", alive=False, RevengeDeathPending=True,
+                                  RevengeClaimant="collector")
+        collector = model.add_player("collector", RevengeKillers=["v"],
+                                     RevengeDebts=[2])
         model.fire("17", "v", attacker="collector")
-        victim.update(KematianBalasDendam=False, PenagihBalasDendam=None)
+        victim.update(RevengeDeathPending=False, RevengeClaimant=None)
         model.drain(workers=True)
-        self.assertEqual(collector["JumlahBalasDendam"], [1])
-        self.assertIsNone(collector["TargetBalasDendamTerkunci"])
+        self.assertEqual(collector["RevengeDebts"], [1])
+        self.assertIsNone(collector["LockedRevengeTarget"])
 
     def test_revenge_cannot_add_debt_for_a_recycled_killer_identity(self):
         model = self.model()
@@ -408,29 +408,29 @@ class GlobalEventQueueTests(unittest.TestCase):
         model.fire("17", "v", attacker="killer")
         killer[model.state_field][36] += 100
         model.drain(workers=True)
-        self.assertEqual(victim["PembunuhBalasDendam"], [])
-        self.assertEqual(victim["JumlahBalasDendam"], [])
+        self.assertEqual(victim["RevengeKillers"], [])
+        self.assertEqual(victim["RevengeDebts"], [])
 
     def test_revenge_cannot_write_to_a_recycled_claimant_identity(self):
         model = self.model()
-        model.add_player("v", alive=False, KematianBalasDendam=True,
-                         PenagihBalasDendam="collector")
-        collector = model.add_player("collector", PembunuhBalasDendam=["v"],
-                                     JumlahBalasDendam=[2], TargetBalasDendamTerkunci="replacement-own-target")
+        model.add_player("v", alive=False, RevengeDeathPending=True,
+                         RevengeClaimant="collector")
+        collector = model.add_player("collector", RevengeKillers=["v"],
+                                     RevengeDebts=[2], LockedRevengeTarget="replacement-own-target")
         model.fire("17", "v", attacker="collector")
         collector[model.state_field][36] += 100
         model.drain(workers=True)
-        self.assertEqual(collector["JumlahBalasDendam"], [2])
-        self.assertEqual(collector["TargetBalasDendamTerkunci"], "replacement-own-target")
+        self.assertEqual(collector["RevengeDebts"], [2])
+        self.assertEqual(collector["LockedRevengeTarget"], "replacement-own-target")
 
     def test_removing_victim_generation_guard_exposes_recycled_target(self):
         text = runtime.english(ARTIFACT.read_text(encoding="utf-8"))
-        guard = "Player Variable(Global.PeristiwaAktif[3], StatusPengatur)[36] == Global.PeristiwaAktif[22]"
+        guard = "Player Variable(Global.ActiveEvent[3], ControllerState)[36] == Global.ActiveEvent[22]"
         self.assertIn(guard, text)
         model = EventQueueEvaluator(text.replace(guard, "True", 1))
-        model.add_player("p", UrutanHUD=0)
-        model.add_player("v", UrutanHUD=1)
-        model.globals["PemainPukulanSuper"] = ["p"]
+        model.add_player("p", HudSlot=0)
+        model.add_player("v", HudSlot=1)
+        model.globals["SuperPunchPlayers"] = ["p"]
         model.fire("89i1", "p", victim="v")
         model.players["v"][model.state_field][36] += 100
         model.drain(workers=True)

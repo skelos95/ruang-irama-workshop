@@ -25,10 +25,10 @@ class MenuLoadEvaluator:
             source = "".join(parts)
         self.rules = validator.extract_rules(source)
         self.players = {}
-        self.globals = {"PemainManusia": [], "HudMenuPemain": [], "TeksDuniaPemain": [],
-                        "PenontonVisiNasib": [], "PemilikTeksSementara": [None] * 24,
-                        "HudEfekSementara": [0] * 24, "TeksTeleportasiSementara": [0] * 24,
-                        "TeksVisiSementara": [0] * 24}
+        self.globals = {"HumanPlayers": [], "MenuHudIds": [], "InspectionTextIds": [],
+                        "LuckVisionViewers": [], "TemporaryTextOwners": [None] * 24,
+                        "TemporaryEffectHudIds": [0] * 24, "TemporaryTravelTextIds": [0] * 24,
+                        "TemporaryVisionTextIds": [0] * 24}
         self.event_player = None
         self.element = None
         self.last_text = None
@@ -49,33 +49,35 @@ class MenuLoadEvaluator:
         return next(rule for rule in self.rules if rule.name.startswith(prefix + " -"))
 
     def add(self, name, **changes):
-        state = dict(Manusia=True, PrivasiNasibAktif=False, alive=True, exists=True,
-                     dummy=False, BotOtomatis=False, KursorTeleportasi=0,
-                     IndeksBahasa=0, HudMenu=None, TeksDunia=None,
-                     TeksTeleportasi=None, TeksVisiNasib=None,
-                     PelatNamaDinonaktifkan=False, TeleportasiJongkokAktif=True,
-                     CalonTargetTeleportasi=None, InspeksiAktif=False,
-                     TargetTeleportasiTeks=None, TargetInspeksi=None,
-                     CalonTargetInspeksi=None, WaktuTeksTargetBerikut=0,
-                     spawned=True, PrivasiInspeksiAktif=False,
-                     PembaruanDaftarTertunda=False)
+        state = dict(IsHuman=True, LuckPrivacyActive=False, alive=True, exists=True,
+                     dummy=False, IsAutomaticBot=False, TravelCursor=0,
+                     MenuHud=None, InspectionText=None,
+                     TravelText=None, LuckVisionText=None,
+                     NameplatesDisabled=False, CrouchTravelActive=True,
+                     TravelTargetCandidate=None, InspectionActive=False,
+                     TravelTextTarget=None, InspectionTarget=None,
+                     InspectionTargetCandidate=None, NextTargetTextTime=0,
+                     spawned=True, InspectionPrivacyActive=False,
+                     PlayerListUpdatePending=False)
         state.update(changes)
         self.players[name] = state
-        if state["Manusia"]:
-            self.globals["PemainManusia"].append(name)
-            self.globals["HudMenuPemain"].append(0)
-            self.globals["TeksDuniaPemain"].append(0)
+        if state["IsHuman"]:
+            self.globals["HumanPlayers"].append(name)
+            self.globals["MenuHudIds"].append(0)
+            self.globals["InspectionTextIds"].append(0)
         return state
 
     def resolve(self, name):
         values = {"True": True, "False": False, "Null": None, "EmptyArray": [],
                   "AllTeams": "AllTeams", "EventPlayer": self.event_player,
                   "CurrentArrayElement": self.element, "LastTextID": self.last_text,
-                  "Manusia": "Manusia", "PrivasiNasibAktif": "PrivasiNasibAktif",
-                  "PelatNamaDinonaktifkan": "PelatNamaDinonaktifkan",
+                  "IsHuman": "IsHuman", "LuckPrivacyActive": "LuckPrivacyActive",
+                  "NameplatesDisabled": "NameplatesDisabled",
                   "Melee": "Melee", "TotalTimeElapsed": self.now,
-                  "BotOtomatis": "BotOtomatis", "PrivasiInspeksiAktif": "PrivasiInspeksiAktif",
-                  "PembaruanDaftarTertunda": "PembaruanDaftarTertunda"}
+                  "IsAutomaticBot": "IsAutomaticBot", "InspectionPrivacyActive": "InspectionPrivacyActive",
+                  "PlayerListUpdatePending": "PlayerListUpdatePending"}
+        if name in ("Crouch", "PrimaryFire", "SecondaryFire", "Interact", "Reload", "Melee", "Ability1", "Ability2", "Jump"):
+            return name
         if name in values: return values[name]
         if name in self.literals: return self.literals[name]
         if name.startswith("EventPlayer."):
@@ -94,6 +96,7 @@ class MenuLoadEvaluator:
             packed = re.sub(r"((?:Global|EventPlayer)\.\w+)\[([^\]]+)\]", r"At(\1,\2)", packed)
             self.expressions[expression] = SpawnExpression(packed).tree
         operations = {"+": operator.add, "-": operator.sub, "%": operator.mod,
+                      "/": operator.truediv,
                       "==": operator.eq, "!=": operator.ne, ">": operator.gt,
                       "<": operator.lt, ">=": operator.ge, "<=": operator.le}
 
@@ -148,7 +151,7 @@ class MenuLoadEvaluator:
             values = [int(value) if isinstance(value, float) and value.is_integer() else value
                       for value in args[1:]]
             return args[0].format(*values)
-        if name == "Button": return args[0]
+        if name in ("Button", "InputBindingString"): return args[0]
         if name == "IsButtonHeld": return False
         raise AssertionError(f"unsupported menu call {name}")
 
@@ -164,7 +167,7 @@ class MenuLoadEvaluator:
     def execute(self, actions):
         actions = re.sub(r'(?m)^\s*"(?:\\.|[^"\\])*"\s*$', "", actions)
         frames, active = [], True
-        for statement in actions.split(";"):
+        for statement in validator.split_top_level(actions, ";"):
             statement = statement.strip()
             if not statement: continue
             if statement.startswith("If("):
@@ -191,8 +194,8 @@ class MenuLoadEvaluator:
                 call = next(validator.iter_calls(statement + ";", statement.split("(", 1)[0]))
                 name, args = statement.split("(", 1)[0], call.args
                 if name == "Call Subroutine":
-                    if args[0] == "TransisiWarnaMenu": continue  # Color animation is native.
-                    if args[0] == "SegarkanTargetTeleportasi" and self.stub_aim: continue
+                    if args[0] == "TransitionMenuColor": continue  # Color animation is native.
+                    if args[0] == "RefreshTravelTarget" and self.stub_aim: continue
                     rule = validator.rule_by_subroutine(self.rules, args[0])
                     self.execute(validator.rule_block(rule, "actions"))
                 elif name == "Create HUD Text":
@@ -221,7 +224,7 @@ class MenuLoadEvaluator:
 
     def cache_tick(self):
         actions = validator.rule_block(self.rule("04g"), "actions")
-        start = actions.index("Global.SalinanDaftarPemain =")
+        start = actions.index("Global.PlayerListSnapshot =")
         end = actions.index("For Global Variable(", start)
         self.execute(actions[start:end])
 
@@ -248,32 +251,32 @@ class MenuLoadRegressionTests(unittest.TestCase):
                 for owner in owners:
                     model.add(owner)
                     model.run("91g", owner)
-                handles = {owner: model.players[owner]["HudMenu"] for owner in owners}
+                handles = {owner: model.players[owner]["MenuHud"] for owner in owners}
                 for step in range(50):
                     for index, owner in enumerate(owners):
-                        model.players[owner]["PerintahTeleportasi"] = 1 if index % 2 == 0 else 2
+                        model.players[owner]["TravelCommand"] = 1 if index % 2 == 0 else 2
                         model.run("19c", owner)
-                        self.assertEqual(model.players[owner]["KursorTeleportasi"],
+                        self.assertEqual(model.players[owner]["TravelCursor"],
                                          ((step + 1) * (1 if index % 2 == 0 else -1)) % 5)
-                        self.assertEqual(model.players[owner]["HudMenu"], handles[owner])
+                        self.assertEqual(model.players[owner]["MenuHud"], handles[owner])
                 self.assertEqual(len(model.created_huds), 12)
                 self.assertEqual(model.destroyed_huds, [])
                 model.run("90", owners[0])
                 self.assertEqual(model.destroyed_huds, [handles[owners[0]]])
-                self.assertEqual(model.globals["HudMenuPemain"][1:], [handles[p] for p in owners[1:]])
+                self.assertEqual(model.globals["MenuHudIds"][1:], [handles[p] for p in owners[1:]])
 
     def test_existing_teleport_hud_keeps_live_page_and_target_text(self):
         for name, model in self.models():
             with self.subTest(source=name):
                 player = model.add("viewer")
                 model.run("91g", "viewer")
-                expression = model.hud_bodies[player["HudMenu"]]
-                player["KursorTeleportasi"] = 2
-                player["CalonTargetTeleportasi"] = "alice"
+                expression = model.hud_bodies[player["MenuHud"]]
+                player["TravelCursor"] = 2
+                player["TravelTargetCandidate"] = "alice"
                 self.assertIn("3/5", model.evaluate(expression))
                 self.assertIn("alice", model.evaluate(expression))
-                player["KursorTeleportasi"] = 3
-                player["CalonTargetTeleportasi"] = "bob"
+                player["TravelCursor"] = 3
+                player["TravelTargetCandidate"] = "bob"
                 self.assertIn("4/5", model.evaluate(expression))
                 self.assertIn("bob", model.evaluate(expression))
                 self.assertNotIn("alice", model.evaluate(expression))
@@ -282,33 +285,32 @@ class MenuLoadRegressionTests(unittest.TestCase):
         for path, _, _ in SOURCES:
             source = path.read_text(encoding="utf-8")
             for cursor in (5, 6, 9, 10, 25):
-                for language in range(3):
-                    with self.subTest(source=path.name, cursor=cursor, language=language):
-                        model = MenuLoadEvaluator(source)
-                        player = model.add("viewer", KursorTeleportasi=cursor, IndeksBahasa=language)
-                        model.run("91g", "viewer")
-                        self.assertEqual(player["KursorTeleportasi"], cursor % 5)
-                        body = model.evaluate(model.hud_bodies[player["HudMenu"]])
-                        self.assertIn(f"{cursor % 5 + 1}/5", body)
-                        self.assertNotIn("/6", body)
-                        self.assertEqual(len(model.created_huds), 1)
+                with self.subTest(source=path.name, cursor=cursor):
+                    model = MenuLoadEvaluator(source)
+                    player = model.add("viewer", TravelCursor=cursor)
+                    model.run("91g", "viewer")
+                    self.assertEqual(player["TravelCursor"], cursor % 5)
+                    body = model.evaluate(model.hud_bodies[player["MenuHud"]])
+                    self.assertIn(f"{cursor % 5 + 1}/5", body)
+                    self.assertNotIn("/6", body)
+                    self.assertEqual(len(model.created_huds), 1)
 
     def test_vision_cache_is_shared_but_audiences_exclude_self_and_inactive_players(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                model.add("alice", PrivasiNasibAktif=True)
-                model.add("bob", PrivasiNasibAktif=True)
+                model.add("alice", LuckPrivacyActive=True)
+                model.add("bob", LuckPrivacyActive=True)
                 model.add("inactive")
-                model.add("dummy", Manusia=False, dummy=True, PrivasiNasibAktif=True)
+                model.add("dummy", IsHuman=False, dummy=True, LuckPrivacyActive=True)
                 model.cache_tick()
-                self.assertEqual(model.globals["PenontonVisiNasib"], ["alice", "bob"])
+                self.assertEqual(model.globals["LuckVisionViewers"], ["alice", "bob"])
                 self.assertEqual(model.audience("alice"), ["bob"])
                 self.assertEqual(model.audience("bob"), ["alice"])
                 self.assertEqual(model.audience("dummy"), ["alice", "bob"])
                 self.assertTrue(model.conditions("18i", "dummy"))
                 actions = validator.rule_block(model.rule("04g"), "actions")
-                self.assertEqual(actions.count("Global.PenontonVisiNasib = Filtered Array"), 1)
-                self.assertLess(actions.index("Global.PenontonVisiNasib ="), actions.index("For Global Variable("))
+                self.assertEqual(actions.count("Global.LuckVisionViewers = Filtered Array"), 1)
+                self.assertLess(actions.index("Global.LuckVisionViewers ="), actions.index("For Global Variable("))
                 for prefix in ("18i", "18j"):
                     self.assertNotIn("Filtered Array(All Players", model.rule(prefix).body)
 
@@ -316,39 +318,39 @@ class MenuLoadRegressionTests(unittest.TestCase):
         for name, model in self.models():
             with self.subTest(source=name):
                 viewer = model.add("viewer")
-                model.add("dummy", Manusia=False, dummy=True)
-                initial = model.globals["PenontonVisiNasib"]
+                model.add("dummy", IsHuman=False, dummy=True)
+                initial = model.globals["LuckVisionViewers"]
                 for _ in range(40):
                     model.cache_tick()
                 self.assertEqual(model.filter_builds, 0)
-                self.assertIs(model.globals["PenontonVisiNasib"], initial)
-                viewer["PrivasiNasibAktif"] = True
+                self.assertIs(model.globals["LuckVisionViewers"], initial)
+                viewer["LuckPrivacyActive"] = True
                 model.cache_tick()
-                self.assertEqual(model.globals["PenontonVisiNasib"], ["viewer"])
+                self.assertEqual(model.globals["LuckVisionViewers"], ["viewer"])
                 self.assertEqual(model.filter_builds, 1)
-                viewer["PrivasiNasibAktif"] = False
+                viewer["LuckPrivacyActive"] = False
                 model.cache_tick()
-                cleared = model.globals["PenontonVisiNasib"]
+                cleared = model.globals["LuckVisionViewers"]
                 self.assertEqual(cleared, [])
                 for _ in range(40):
                     model.cache_tick()
-                self.assertIs(model.globals["PenontonVisiNasib"], cleared)
+                self.assertIs(model.globals["LuckVisionViewers"], cleared)
                 self.assertEqual(model.filter_builds, 1)
-                viewer["PrivasiNasibAktif"] = True
+                viewer["LuckPrivacyActive"] = True
                 model.cache_tick()
                 viewer["exists"] = False
                 model.cache_tick()
-                self.assertEqual(model.globals["PenontonVisiNasib"], [])
+                self.assertEqual(model.globals["LuckVisionViewers"], [])
 
     def test_vision_revocation_and_departure_apply_before_next_cache_tick(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                model.add("target", TeksVisiNasib=15)
-                model.add("viewer", PrivasiNasibAktif=True)
+                model.add("target", LuckVisionText=15)
+                model.add("viewer", LuckPrivacyActive=True)
                 model.cache_tick()
                 self.assertEqual(model.audience("target"), ["viewer"])
-                for changes in ({"PrivasiNasibAktif": False}, {"Manusia": False}, {"exists": False}):
-                    model.players["viewer"].update(PrivasiNasibAktif=True, Manusia=True, exists=True)
+                for changes in ({"LuckPrivacyActive": False}, {"IsHuman": False}, {"exists": False}):
+                    model.players["viewer"].update(LuckPrivacyActive=True, IsHuman=True, exists=True)
                     model.players["viewer"].update(changes)
                     self.assertEqual(model.audience("target"), [])
                     self.assertTrue(model.conditions("18j", "target"))
@@ -356,23 +358,23 @@ class MenuLoadRegressionTests(unittest.TestCase):
     def test_vision_cache_replaces_departed_identities_during_repeated_joins(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                model.add("target", Manusia=False, dummy=True)
+                model.add("target", IsHuman=False, dummy=True)
                 previous = None
                 for index in range(100):
                     if previous: model.players[previous]["exists"] = False
                     viewer = f"viewer-{index}"
-                    model.add(viewer, PrivasiNasibAktif=True)
+                    model.add(viewer, LuckPrivacyActive=True)
                     model.cache_tick()
-                    self.assertEqual(model.globals["PenontonVisiNasib"], [viewer])
+                    self.assertEqual(model.globals["LuckVisionViewers"], [viewer])
                     self.assertEqual(model.audience("target"), [viewer])
                     previous = viewer
 
     def test_nameplates_hide_once_per_viewer_and_newcomers_inherit_both_viewer_modes(self):
         for name, model in self.models():
             with self.subTest(source=name):
-                model.add("teleport", CalonTargetTeleportasi="target")
+                model.add("teleport", TravelTargetCandidate="target")
                 model.add("target")
-                model.add("inspect", InspeksiAktif=True, PelatNamaDinonaktifkan=True)
+                model.add("inspect", InspectionActive=True, NameplatesDisabled=True)
                 model.add("normal")
                 model.run("19d", "teleport")
                 for _ in range(20):
@@ -381,9 +383,9 @@ class MenuLoadRegressionTests(unittest.TestCase):
                     self.assertFalse(model.conditions("19d", "teleport"))
                 self.assertEqual(model.nameplate_hides, ["teleport"])
                 self.assertEqual(model.destroyed_world, model.created_world[:-1])
-                self.assertEqual(model.globals["PemilikTeksSementara"].count("teleport"), 1)
-                slot = model.globals["PemilikTeksSementara"].index("teleport")
-                self.assertEqual(model.globals["TeksTeleportasiSementara"][slot], model.created_world[-1])
+                self.assertEqual(model.globals["TemporaryTextOwners"].count("teleport"), 1)
+                slot = model.globals["TemporaryTextOwners"].index("teleport")
+                self.assertEqual(model.globals["TemporaryTravelTextIds"][slot], model.created_world[-1])
                 model.event_player = "newcomer"
                 for prefix in ("02", "92"):
                     call = next(validator.iter_calls(model.rule(prefix).body, "Disable Nameplates"))

@@ -15,7 +15,7 @@ class AttachEvaluator(LifecycleSourceEvaluator):
         return super().call(name, args)
 
     def resolve(self, name):
-        if name in ('AllTeams', 'LampiranTeleportasiAktif', 'TargetLampiranTeleportasi'):
+        if name in ('AllTeams', 'TravelAttachmentActive', 'TravelAttachmentTarget'):
             return name
         return super().resolve(name)
 
@@ -64,14 +64,14 @@ class AttachEvaluator(LifecycleSourceEvaluator):
 
     def refused(self, owner, target):
         self.event_player = owner
-        self.players[owner]['TargetTeleportasiTerkunci'] = target
+        self.players[owner]['LockedTravelTarget'] = target
         rule = next(rule for rule in self.rules if rule.name.startswith('19e -'))
         actions = validator.mask_strings(validator.rule_block(rule, 'actions'))
-        start = actions.index('Event Player.RantaiLampiran =')
-        stop = actions.index('If(Or(Or(Event Player.TargetTeleportasiTerkunci', start)
+        start = actions.index('Event Player.AttachmentChain =')
+        stop = actions.index('If(Or(Or(Event Player.LockedTravelTarget', start)
         self.execute([s.strip() for s in actions[start:stop].split(';') if s.strip()])
         gate = next(call for call in validator.iter_calls(actions, 'Else If')
-                    if 'SiklusLampiran' in call.raw)
+                    if 'AttachmentCycleDetected' in call.raw)
         return bool(self.evaluate(gate.args[0]))
 
 
@@ -80,8 +80,8 @@ class AttachCycleTests(unittest.TestCase):
         model = AttachEvaluator(validator.SOURCE.read_text(encoding='utf-8'))
         for identity in set(edges) | set(edges.values()) | set(extra):
             model.players[identity] = {
-                'LampiranTeleportasiAktif': identity in edges,
-                'TargetLampiranTeleportasi': edges.get(identity),
+                'TravelAttachmentActive': identity in edges,
+                'TravelAttachmentTarget': edges.get(identity),
             }
         return model
 
@@ -91,7 +91,7 @@ class AttachCycleTests(unittest.TestCase):
                 edges = {f'p{i}': f'p{i+1}' for i in range(count-1)}
                 model = self.model(edges)
                 self.assertTrue(model.refused(f'p{count-1}', 'p0'))
-                self.assertEqual({p: state['TargetLampiranTeleportasi'] for p, state in model.players.items()},
+                self.assertEqual({p: state['TravelAttachmentTarget'] for p, state in model.players.items()},
                                  {p: edges.get(p) for p in model.players})
 
     def test_valid_chain_and_bot_endpoint_are_allowed(self):
@@ -109,13 +109,13 @@ class AttachCycleTests(unittest.TestCase):
         model = self.model({'alice': 'bob'}, extra=('carol',))
         self.assertTrue(model.refused('bob', 'alice'))
         self.assertFalse(model.refused('carol', 'alice'))
-        self.assertTrue(model.players['bob']['SiklusLampiran'])
+        self.assertTrue(model.players['bob']['AttachmentCycleDetected'])
 
     def test_team_quarantine_detaches_incoming_attachment_even_with_same_hero(self):
         rule = next(rule for rule in validator.extract_rules(validator.SOURCE.read_text(encoding='utf-8'))
                     if rule.name.startswith('19h -'))
         conditions = validator.rule_block(rule, 'conditions')
-        self.assertIn('Player Variable(Event Player.TargetLampiranTeleportasi, SiklusPemainAktif) == True', conditions)
+        self.assertIn('Player Variable(Event Player.TravelAttachmentTarget, PlayerCycleActive) == True', conditions)
         self.assertIn('Detach Players(Event Player);', validator.rule_block(rule, 'actions'))
 
 

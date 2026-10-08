@@ -2,7 +2,7 @@
 """Static preflight for Workshop text copied into Overwatch.
 
 Overwatch's Workshop clipboard grammar is localized. The default check covers
-the generated it-IT clipboard output against its generated en-US reference.
+the generated en-US clipboard output against its generated reference.
 The logical behavioral input and its reference have separate paths and gates.
 This checker validates either profile without pretending to reproduce the
 client's compiled Element Count or Largest Rule metrics.
@@ -18,10 +18,10 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
-ITALIAN_SOURCE = ROOT / "workshop" / "ruang_irama.it-IT.workshop"
+DEFAULT_SOURCE = ROOT / "workshop" / "ruang_irama.en-US.workshop"
+ENGLISH_SOURCE = DEFAULT_SOURCE
 SEMANTIC_REFERENCE = ROOT / "tests" / "fixtures" / "global_runtime_reference.txt"
-BEHAVIORAL_SOURCE = ROOT / "source" / "ruang_irama.it-IT.source"
+BEHAVIORAL_SOURCE = ROOT / "source" / "ruang_irama.en-US.source"
 BEHAVIORAL_REFERENCE = ROOT / "tests" / "fixtures" / "semantic_reference.txt"
 
 CLIENT_LARGEST_RULE_LIMIT_BYTES = 98_000
@@ -732,7 +732,7 @@ def check_path(path: Path = DEFAULT_SOURCE, language: str | None = None) -> Repo
         raise ClipboardImportError(f"file non UTF-8: {exc}") from exc
     report = check_text(text, language)
 
-    if path.resolve() == ITALIAN_SOURCE.resolve():
+    if path.resolve() == ENGLISH_SOURCE.resolve():
         reference_raw = SEMANTIC_REFERENCE.read_bytes()
         if reference_raw.startswith(b"\xef\xbb\xbf"):
             raise ClipboardImportError("BOM UTF-8 nel riferimento output compilato EN")
@@ -743,7 +743,8 @@ def check_path(path: Path = DEFAULT_SOURCE, language: str | None = None) -> Repo
                 f"riferimento output compilato EN non UTF-8: {exc}"
             ) from exc
         check_text(reference, "en-US")
-        require_semantic_equivalence(reference, text)
+        if canonical_semantic_text(reference, "en-US") != canonical_semantic_text(text, "en-US"):
+            raise ClipboardImportError("runtime English differs from its generated reference")
 
     return report
 

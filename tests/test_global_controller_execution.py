@@ -17,7 +17,7 @@ from tests.test_fly_motion import Expression
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIME = ROOT / "workshop/ruang_irama.it-IT.workshop"
+RUNTIME = ROOT / "workshop/ruang_irama.en-US.workshop"
 
 
 class ControllerExpression(Expression):
@@ -91,31 +91,31 @@ class GeneratedControllerEvaluator:
     def __init__(self, source):
         self.rules = semantic.extract_rules(source)
         _, fields, _, _ = semantic.declaration_entries(source)
-        self.state_field = next(field.name for field in fields if field.index == 60)
-        self.deadline_field = next(field.name for field in fields if field.index == 92)
+        self.state_field = next(field.name for field in fields if field.name == "ControllerState")
+        self.deadline_field = next(field.name for field in fields if field.name == "ControllerTimes")
         self.players = {}
-        self.globals = {"Siap": True, "PemainManusia": [], "PemainPukulanSuper": [],
-                        "PemainSiklusGlobal": None, "WaktuSiklusGlobal": 0,
-                        "PenontonVisiNasib": []}
+        self.globals = {"IsReady": True, "HumanPlayers": [], "SuperPunchPlayers": [],
+                        "TeamCyclePlayer": None, "TeamCycleTime": 0,
+                        "LuckVisionViewers": []}
         self.now = 0
         self.native_calls = []
         self.expressions = {}
         self.literals = {}
 
     def add_player(self, identity, **changes):
-        state = dict(Manusia=True, BotOtomatis=False, MenuTerbuka=False,
-                     SeranganDekatDipakai=False, TeleportasiJongkokAktif=False,
-                     KartuNasibAktif=False, InteraksiKameraDipakai=False,
-                     PerintahMenu=0, HalamanMenu=-1, ModeKamera=0,
-                     SiklusPemainAktif=False, PindahTimDiproses=False,
-                     TimTerakhir=1, TimSiklusTarget=1, SudahSiap=True,
-                     WaktuSiklusTim=0, team=1, alive=True, spawned=True,
+        state = dict(IsHuman=True, IsAutomaticBot=False, MenuOpen=False,
+                     MeleeConsumed=False, CrouchTravelActive=False,
+                     LuckActive=False, CameraInteractConsumed=False,
+                     MenuCommand=0, MenuPage=-1, CameraMode=0,
+                     PlayerCycleActive=False, TeamChangeProcessed=False,
+                     LastTeam=1, TeamCycleTargetTeam=1, IsPrepared=True,
+                     TeamCycleDeadline=0, team=1, alive=True, spawned=True,
                      exists=True, dummy=False, slot=0, held=set())
         state[self.state_field] = []
         state[self.deadline_field] = []
         state.update(changes)
         self.players[identity] = state
-        self.globals["PemainManusia"].append(identity)
+        self.globals["HumanPlayers"].append(identity)
         return state
 
     def controller(self, prefix):
@@ -218,17 +218,17 @@ class GeneratedControllerEvaluator:
                     value = self.expression(f"{match[1]}{match[2][0]}({match[3]})")
                 self.assign(match[1], value)
             elif statement.startswith("CallSubroutine("):
-                self.native_calls.append((self.globals["PemainPemicu"], statement, self.now))
+                self.native_calls.append((self.globals["TriggerPlayer"], statement, self.now))
             elif statement.startswith(("AllowButton(", "StopCamera(", "StopChasingPlayerVariable(")):
-                self.native_calls.append((self.globals["PemainPemicu"], statement, self.now))
+                self.native_calls.append((self.globals["TriggerPlayer"], statement, self.now))
             else:
                 raise AssertionError(f"unsupported emitted action {raw.strip()}")
         if len(active) != 1:
             raise AssertionError("unclosed emitted branch")
 
     def tick(self, identity, *prefixes):
-        self.globals["PemainPemicu"] = identity
-        self.globals["PemainAktif"] = "other-scheduler-owner"
+        self.globals["TriggerPlayer"] = identity
+        self.globals["ActivePlayer"] = "other-scheduler-owner"
         for prefix in prefixes:
             self.execute(self.controller(prefix))
 
@@ -247,8 +247,8 @@ class GlobalControllerExecutionTests(unittest.TestCase):
                 state["held"] = {"Melee"} if model.now >= start else set()
                 if model.now >= round(start + 0.15, 3): state["held"].add("Interact")
                 model.tick(identity, "05", "12c")
-                self.assertEqual(state["MenuTerbuka"], model.now >= round(start + 0.5, 3))
-                self.assertEqual(state["ModeKamera"], int(model.now >= round(start + 0.65, 3)))
+                self.assertEqual(state["MenuOpen"], model.now >= round(start + 0.5, 3))
+                self.assertEqual(state["CameraMode"], int(model.now >= round(start + 0.65, 3)))
 
     def test_release_aborts_menu_hold_and_next_press_requires_full_half_second(self):
         model = self.model()
@@ -262,24 +262,24 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         model.tick("p", "05")
         model.now = 0.899
         model.tick("p", "05")
-        self.assertFalse(state["MenuTerbuka"])
+        self.assertFalse(state["MenuOpen"])
         model.now = 0.9
         model.tick("p", "05")
-        self.assertTrue(state["MenuTerbuka"])
+        self.assertTrue(state["MenuOpen"])
 
     def test_command_priority_release_and_next_press_follow_emitted_actions(self):
         model = self.model()
-        state = model.add_player("p", MenuTerbuka=True, held={"Crouch", "Interact", "PrimaryFire"})
+        state = model.add_player("p", MenuOpen=True, held={"Crouch", "Interact", "PrimaryFire"})
         model.tick("p", "05c", "05d")
-        self.assertEqual(state["PerintahMenu"], 1)
+        self.assertEqual(state["MenuCommand"], 1)
         model.tick("p", "05c", "05d")
-        self.assertEqual(state["PerintahMenu"], 1)
+        self.assertEqual(state["MenuCommand"], 1)
         state["held"] = set()
         model.tick("p", "05c", "05d", "12d")
-        self.assertEqual(state["PerintahMenu"], 0)
+        self.assertEqual(state["MenuCommand"], 0)
         state["held"] = {"Crouch", "PrimaryFire", "SecondaryFire"}
         model.tick("p", "05c", "05d")
-        self.assertEqual(state["PerintahMenu"], 3)
+        self.assertEqual(state["MenuCommand"], 3)
 
     def test_team_quarantine_cancels_old_hold_and_reused_slot_starts_fresh(self):
         model = self.model()
@@ -288,22 +288,22 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         model.now = 0.3
         old["team"] = 2
         model.tick("old", "01a")
-        self.assertFalse(old["Manusia"])
-        self.assertTrue(old["PindahTimDiproses"])
+        self.assertFalse(old["IsHuman"])
+        self.assertTrue(old["TeamChangeProcessed"])
         self.assertFalse(any(old[model.deadline_field]))
         before = len(model.native_calls)
         model.execute(model.controller("04h"))
         emitted = [call[1] for call in model.native_calls[before:]]
-        self.assertNotIn("CallSubroutine(Pengatur05)", emitted)
-        self.assertNotIn("CallSubroutine(Pengatur12c)", emitted)
+        self.assertNotIn("CallSubroutine(Controller05)", emitted)
+        self.assertNotIn("CallSubroutine(Controller12c)", emitted)
         replacement = model.add_player("replacement", slot=old["slot"], team=2, held={"Melee"})
         model.tick("replacement", "05")
         model.now = 0.5
         model.tick("replacement", "05")
-        self.assertFalse(replacement["MenuTerbuka"])
+        self.assertFalse(replacement["MenuOpen"])
         model.now = 0.8
         model.tick("replacement", "05")
-        self.assertTrue(replacement["MenuTerbuka"])
+        self.assertTrue(replacement["MenuOpen"])
 
     def test_same_owner_can_complete_two_separate_team_transition_phases(self):
         model = self.model()
@@ -311,20 +311,20 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         for transition, team in enumerate((2, 1)):
             start = 1 + transition * 2
             model.now = start
-            state.update(Manusia=True, SudahSiap=True, PindahTimDiproses=False,
-                         SiklusPemainAktif=False, team=team)
+            state.update(IsHuman=True, IsPrepared=True, TeamChangeProcessed=False,
+                         PlayerCycleActive=False, team=team)
             model.tick("p", "01a")
-            self.assertFalse(state["Manusia"])
-            self.assertEqual(state["TimSiklusTarget"], team)
-            model.globals["PemainSiklusGlobal"] = "p"
+            self.assertFalse(state["IsHuman"])
+            self.assertEqual(state["TeamCycleTargetTeam"], team)
+            model.globals["TeamCyclePlayer"] = "p"
             calls_before = len(model.native_calls)
             for delay in (0.5, 0.551, 0.602):
                 model.now = start + delay
                 model.tick("p", "01b")
             emitted = [call[1] for call in model.native_calls[calls_before:]]
-            self.assertEqual(emitted, ["CallSubroutine(TenangkanPemain)",
-                                       "CallSubroutine(BersihkanPemain)",
-                                       "CallSubroutine(SiapkanPemain)"])
+            self.assertEqual(emitted, ["CallSubroutine(QuiescePlayer)",
+                                       "CallSubroutine(CleanupPlayer)",
+                                       "CallSubroutine(PreparePlayer)"])
             # The interpreter mocks native subroutines; this exercises the actual
             # emitted phase machine without claiming to emulate engine setup.
 
@@ -333,7 +333,7 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         state = model.add_player("p", team=2)
         model.now = 1
         model.tick("p", "01a")
-        model.globals["PemainSiklusGlobal"] = "p"
+        model.globals["TeamCyclePlayer"] = "p"
         model.now = 1.5
         model.tick("p", "01b")
         before = list(model.native_calls)
@@ -347,18 +347,18 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         state = model.add_player("p", team=2)
         model.now = 1
         model.tick("p", "01a")
-        model.globals["PemainSiklusGlobal"] = "p"
+        model.globals["TeamCyclePlayer"] = "p"
         model.now = 1.5
         model.tick("p", "01b")
         state["team"] = 1
         model.now = 1.52
         model.tick("p", "01a")
-        self.assertEqual(state["TimSiklusTarget"], 1)
-        self.assertIsNone(model.globals["PemainSiklusGlobal"])
-        model.globals["PemainSiklusGlobal"] = "p"
+        self.assertEqual(state["TeamCycleTargetTeam"], 1)
+        self.assertIsNone(model.globals["TeamCyclePlayer"])
+        model.globals["TeamCyclePlayer"] = "p"
         model.now = 2.02
         model.tick("p", "01b")
-        self.assertEqual(model.native_calls[-1][1], "CallSubroutine(TenangkanPemain)")
+        self.assertEqual(model.native_calls[-1][1], "CallSubroutine(QuiescePlayer)")
 
     def test_idle_human_skips_closed_menu_navigation_and_inactive_travel(self):
         model = self.model()
@@ -367,7 +367,7 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         emitted = {call[1] for call in model.native_calls}
         for prefix in ("05c", "05d", "05e", "05f", "06", "08", "10", "11",
                        "19a", "19b", "19c", "19d", "19e", "19f", "19h", "19g"):
-            self.assertNotIn(f"CallSubroutine(Pengatur{prefix})", emitted)
+            self.assertNotIn(f"CallSubroutine(Controller{prefix})", emitted)
 
     def test_skipped_closed_menu_and_travel_groups_rearm_their_press_latches(self):
         model = self.model()
@@ -376,7 +376,7 @@ class GlobalControllerExecutionTests(unittest.TestCase):
         indices = []
         for prefix in ("06", "08", "10", "11", "19c", "19e"):
             controller = model.controller(prefix)
-            pattern = re.escape(f"Global.PemainPemicu.{model.state_field}") + r"\[(\d+)\]\s*=\s*0;"
+            pattern = re.escape(f"Global.TriggerPlayer.{model.state_field}") + r"\[(\d+)\]\s*=\s*0;"
             index = int(re.search(pattern, controller.body)[1])
             indices.append(index)
             state[model.state_field][index] = 1

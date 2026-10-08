@@ -10,10 +10,10 @@ from tests.test_menu_load_regressions import MenuLoadEvaluator
 from tests.test_roster_rejoin_regressions import SOURCES
 
 
-PAGES = ((8, "TeleportasiJongkokDiaktifkan"),
-         (9, "PrivasiInspeksiAktif"),
-         (12, "IzinkanBotBuatanMengikuti"),
-         (15, "PemainPukulanSuper"))
+PAGES = ((8, "CrouchTravelEnabled"),
+         (9, "InspectionPrivacyActive"),
+         (12, "AllowDummyBotFollow"),
+         (15, "SuperPunchPlayers"))
 
 
 class DirectToggleEvaluator(MenuLoadEvaluator):
@@ -24,18 +24,18 @@ class DirectToggleEvaluator(MenuLoadEvaluator):
     def __init__(self, source):
         super().__init__(source)
         self.previous_conditions = {}
-        self.globals.update(PemainPukulanSuper=[], WaktuPukulanSuper=[0] * 12)
+        self.globals.update(SuperPunchPlayers=[], SuperPunchTimes=[0] * 12)
         self.subroutine_calls = []
         self.hud_commands = {}
 
     def add(self, name, **changes):
         state = super().add(name, **changes)
-        defaults = dict(held=set(), MenuTerbuka=True, HalamanMenu=-1, KursorUtama=8,
-                        PerintahMenu=0, InteraksiKameraDipakai=False,
-                        KartuNasibAktif=False, TeleportasiJongkokAktif=False,
-                        TeleportasiJongkokDiaktifkan=False, PrivasiInspeksiAktif=False,
-                        IzinkanBotBuatanMengikuti=False, UrutanHUD=len(self.globals["PemainManusia"]) - 1,
-                        KursorPilihan=0, KursorHantuTerbang=0, ModeKebal=0,
+        defaults = dict(held=set(), MenuOpen=True, MenuPage=-1, MainMenuCursor=8,
+                        MenuCommand=0, CameraInteractConsumed=False,
+                        LuckActive=False, CrouchTravelActive=False,
+                        CrouchTravelEnabled=False, InspectionPrivacyActive=False,
+                        AllowDummyBotFollow=False, HudSlot=len(self.globals["HumanPlayers"]) - 1,
+                        VoteCursor=0, GhostFlyCursor=0, UnkillableMode=0,
                         team=1)
         for field, value in defaults.items():
             state[field] = changes.get(field, value)
@@ -63,20 +63,20 @@ class DirectToggleEvaluator(MenuLoadEvaluator):
         return super().call(name, args)
 
     def enabled(self, owner, field):
-        if field == "PemainPukulanSuper":
+        if field == "SuperPunchPlayers":
             return owner in self.globals[field]
         return self.players[owner][field]
 
     def render_main(self, owner):
         self.event_player = owner
-        rule = validator.rule_by_subroutine(self.rules, "GambarUtama")
+        rule = validator.rule_by_subroutine(self.rules, "DrawMainMenu")
         self.execute(validator.rule_block(rule, "actions"))
 
     def execute(self, actions):
         # Extend the shared source evaluator with the dispatcher's Else If chain.
         actions = re.sub(r'(?m)^\s*"(?:\\.|[^"\\])*"\s*$', "", actions)
         frames, active = [], True
-        for statement in actions.split(";"):
+        for statement in validator.split_top_level(actions, ";"):
             statement = statement.strip()
             if not statement:
                 continue
@@ -105,7 +105,7 @@ class DirectToggleEvaluator(MenuLoadEvaluator):
                         name = statement[len("Call Subroutine("):-1]
                         self.subroutine_calls.append((self.event_player, name))
                         # These unrelated target queries have their own tests.
-                        if name in ("SegarkanTargetKamera", "SegarkanTargetBalasDendam"):
+                        if name in ("RefreshCameraTargets", "RefreshRevengeTargets"):
                             continue
                     elif statement.startswith("Modify Global Variable("):
                         call = next(validator.iter_calls(statement, "Modify Global Variable"))
@@ -151,20 +151,20 @@ class DirectMenuToggleTests(unittest.TestCase):
             for page, field in PAGES:
                 with self.subTest(source=source, page=page):
                     owner = f"owner-{page}"
-                    state = model.add(owner, KursorUtama=page, team=2)
+                    state = model.add(owner, MainMenuCursor=page, team=2)
                     other_name = f"other-{page}"
-                    other = model.add(other_name, KursorUtama=page, team=2)
-                    model.add(f"dummy-{page}", Manusia=False, dummy=True, team=1)
+                    other = model.add(other_name, MainMenuCursor=page, team=2)
+                    model.add(f"dummy-{page}", IsHuman=False, dummy=True, team=1)
                     model.input(owner, "Interact", ticks=20)
                     self.assertTrue(model.enabled(owner, field))
                     self.assertFalse(model.enabled(other_name, field))
-                    self.assertEqual((state["HalamanMenu"], state["KursorUtama"]), (-1, page))
+                    self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
                     self.assertEqual(model.created_huds, [])
                     model.input(owner, ticks=2)
                     model.input(owner, "Interact", ticks=20)
                     self.assertFalse(model.enabled(owner, field))
                     self.assertFalse(model.enabled(other_name, field))
-                    self.assertEqual((state["HalamanMenu"], state["KursorUtama"]), (-1, page))
+                    self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
                     self.assertEqual(model.created_huds, [])
 
     def test_primary_and_secondary_keep_main_navigation_without_toggling(self):
@@ -173,8 +173,8 @@ class DirectMenuToggleTests(unittest.TestCase):
                 for enabled in (False, True):
                     with self.subTest(source=source, page=page, enabled=enabled):
                         owner = f"owner-{page}-{enabled}"
-                        state = model.add(owner, KursorUtama=page)
-                        if field == "PemainPukulanSuper":
+                        state = model.add(owner, MainMenuCursor=page)
+                        if field == "SuperPunchPlayers":
                             if enabled:
                                 model.globals[field].append(owner)
                         else:
@@ -182,8 +182,8 @@ class DirectMenuToggleTests(unittest.TestCase):
                         for button in ("Primary Fire", "Secondary Fire"):
                             model.input(owner, button, ticks=10)
                             self.assertEqual(model.enabled(owner, field), enabled)
-                            self.assertEqual(state["HalamanMenu"], -1)
-                            self.assertEqual(state["KursorUtama"], (page + 1) % 16 if button == "Primary Fire" else page)
+                            self.assertEqual(state["MenuPage"], -1)
+                            self.assertEqual(state["MainMenuCursor"], (page + 1) % 16 if button == "Primary Fire" else page)
                             model.input(owner, ticks=2)
                         self.assertEqual(model.created_huds, [])
 
@@ -192,55 +192,54 @@ class DirectMenuToggleTests(unittest.TestCase):
             for page in sorted(set(range(16)) - {page for page, _ in PAGES}):
                 with self.subTest(source=source, page=page):
                     owner = f"owner-{page}"
-                    state = model.add(owner, KursorUtama=page, team=2)
+                    state = model.add(owner, MainMenuCursor=page, team=2)
                     model.input(owner, "Interact", ticks=20)
-                    self.assertEqual(state["HalamanMenu"], page)
-                    self.assertEqual(state["KursorUtama"], page)
-                    self.assertFalse(state["TeleportasiJongkokDiaktifkan"])
-                    self.assertFalse(state["PrivasiInspeksiAktif"])
-                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
-                    self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                    self.assertEqual(state["MenuPage"], page)
+                    self.assertEqual(state["MainMenuCursor"], page)
+                    self.assertFalse(state["CrouchTravelEnabled"])
+                    self.assertFalse(state["InspectionPrivacyActive"])
+                    self.assertFalse(state["AllowDummyBotFollow"])
+                    self.assertEqual(model.globals["SuperPunchPlayers"], [])
                     self.assertEqual(len([hud for hud in model.created_huds if hud[0] == owner]), 1)
 
-    def test_existing_hud_shows_applied_state_in_three_languages_without_option_rows(self):
+    def test_existing_hud_shows_applied_state_in_english_without_option_rows(self):
         for source, model in self.models():
             for page, field in PAGES:
-                for language, words in enumerate((("ON", "OFF"), ("AKTIF", "MATI"), ("เปิด", "ปิด"))):
-                    with self.subTest(source=source, page=page, language=language):
-                        owner = f"owner-{page}-{language}"
-                        state = model.add(owner, KursorUtama=page, IndeksBahasa=language, team=2)
-                        model.add(f"dummy-{page}-{language}", Manusia=False, dummy=True, team=1)
-                        model.render_main(owner)
-                        handle = state["HudMenu"]
-                        expression = model.hud_bodies[handle]
-                        self.assertIn(words[1], model.evaluate(expression))
-                        model.input(owner, "Interact", ticks=20)
-                        rendered = model.evaluate(expression)
-                        self.assertIn(words[0], rendered)
-                        self.assertNotIn("/2", rendered)
-                        self.assertNotIn("\n>", rendered)
-                        self.assertEqual(state["HudMenu"], handle)
-                        self.assertEqual(len([hud for hud in model.created_huds if hud[0] == owner]), 1)
+                with self.subTest(source=source, page=page):
+                    owner = f"owner-{page}"
+                    state = model.add(owner, MainMenuCursor=page, team=2)
+                    model.add(f"dummy-{page}", IsHuman=False, dummy=True, team=1)
+                    model.render_main(owner)
+                    handle = state["MenuHud"]
+                    expression = model.hud_bodies[handle]
+                    self.assertIn("OFF", model.evaluate(expression))
+                    model.input(owner, "Interact", ticks=20)
+                    rendered = model.evaluate(expression)
+                    self.assertIn("ON", rendered)
+                    self.assertNotIn("/2", rendered)
+                    self.assertNotIn("\n>", rendered)
+                    self.assertEqual(state["MenuHud"], handle)
+                    self.assertEqual(len([hud for hud in model.created_huds if hud[0] == owner]), 1)
 
     def test_main_toggle_guard_still_requires_live_opposing_dummy_and_allows_off(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                state = model.add("owner", KursorUtama=12, team=2)
-                model.add("own-dummy", Manusia=False, dummy=True, team=2)
-                stale = model.add("stale-enemy", Manusia=False, dummy=True, team=1, exists=False)
+                state = model.add("owner", MainMenuCursor=12, team=2)
+                model.add("own-dummy", IsHuman=False, dummy=True, team=2)
+                stale = model.add("stale-enemy", IsHuman=False, dummy=True, team=1, exists=False)
                 for _ in range(2):
                     model.input("owner", "Interact", ticks=20)
-                    self.assertFalse(state["IzinkanBotBuatanMengikuti"])
-                    self.assertEqual(state["HalamanMenu"], -1)
+                    self.assertFalse(state["AllowDummyBotFollow"])
+                    self.assertEqual(state["MenuPage"], -1)
                     model.input("owner", ticks=2)
                 stale["exists"] = True
                 model.input("owner", "Interact", ticks=20)
-                self.assertTrue(state["IzinkanBotBuatanMengikuti"])
+                self.assertTrue(state["AllowDummyBotFollow"])
                 stale["exists"] = False
                 model.input("owner", ticks=2)
                 model.input("owner", "Interact", ticks=20)
-                self.assertFalse(state["IzinkanBotBuatanMengikuti"])
-                self.assertEqual((state["HalamanMenu"], state["KursorUtama"]), (-1, 12))
+                self.assertFalse(state["AllowDummyBotFollow"])
+                self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, 12))
                 self.assertEqual((model.created_huds, model.destroyed_huds), ([], []))
 
     def test_twelve_owners_repeat_toggles_without_hud_or_registry_accumulation(self):
@@ -249,54 +248,51 @@ class DirectMenuToggleTests(unittest.TestCase):
                 owners = [f"player-{index}" for index in range(12)]
                 handles = {}
                 for index, owner in enumerate(owners):
-                    state = model.add(owner, IndeksBahasa=index % 3)
+                    state = model.add(owner)
                     model.render_main(owner)
-                    handles[owner] = state["HudMenu"]
+                    handles[owner] = state["MenuHud"]
                 for cycle in range(4):
                     expected = cycle % 2 == 0
                     for page, field in (entry for entry in PAGES if entry[0] != 12):
                         for owner in owners:
                             state = model.players[owner]
-                            state["KursorUtama"] = page
+                            state["MainMenuCursor"] = page
                             model.input(owner, ticks=2)
                             model.input(owner, "Interact", ticks=3)
                             self.assertEqual(model.enabled(owner, field), expected)
-                            self.assertEqual((state["HalamanMenu"], state["KursorUtama"]), (-1, page))
-                            self.assertEqual(state["HudMenu"], handles[owner])
-                            self.assertLessEqual(len(model.globals["PemainPukulanSuper"]), 12)
-                            self.assertEqual(len(model.globals["PemainPukulanSuper"]),
-                                             len(set(model.globals["PemainPukulanSuper"])))
-                    self.assertEqual(model.globals["WaktuPukulanSuper"], [-1 if expected else 0] * 12)
+                            self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
+                            self.assertEqual(state["MenuHud"], handles[owner])
+                            self.assertLessEqual(len(model.globals["SuperPunchPlayers"]), 12)
+                            self.assertEqual(len(model.globals["SuperPunchPlayers"]),
+                                             len(set(model.globals["SuperPunchPlayers"])))
+                    self.assertEqual(model.globals["SuperPunchTimes"], [-1 if expected else 0] * 12)
                     self.assertEqual(len(model.created_huds), 12)
                     self.assertEqual(model.destroyed_huds, [])
-                self.assertEqual(model.globals["PemainPukulanSuper"], [])
+                self.assertEqual(model.globals["SuperPunchPlayers"], [])
 
     def test_toggle_input_ignores_closed_menu_dead_player_and_consumed_interact(self):
-        blocked = ({"MenuTerbuka": False}, {"alive": False}, {"Manusia": False},
-                   {"BotOtomatis": True}, {"dummy": True}, {"InteraksiKameraDipakai": True})
+        blocked = ({"MenuOpen": False}, {"alive": False}, {"IsHuman": False},
+                   {"IsAutomaticBot": True}, {"dummy": True}, {"CameraInteractConsumed": True})
         for source, model in self.models():
             for page, field in PAGES:
                 for changes in blocked:
                     with self.subTest(source=source, page=page, actor=changes):
                         owner = f"owner-{page}-{len(model.players)}"
-                        state = model.add(owner, KursorUtama=page, team=2, UrutanHUD=0, **changes)
-                        model.add(f"enemy-{owner}", Manusia=False, dummy=True, team=1)
+                        state = model.add(owner, MainMenuCursor=page, team=2, HudSlot=0, **changes)
+                        model.add(f"enemy-{owner}", IsHuman=False, dummy=True, team=1)
                         model.input(owner, "Interact", ticks=20)
                         self.assertFalse(model.enabled(owner, field))
-                        self.assertEqual((state["HalamanMenu"], state["KursorUtama"]), (-1, page))
+                        self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
 
-    def test_three_language_main_help_keeps_interact_and_melee_bindings(self):
+    def test_english_main_help_keeps_interact_and_melee_bindings(self):
         for source, model in self.models():
-            for language, verb in enumerate(("use", "pakai", "ใช้")):
-                with self.subTest(source=source, language=language):
-                    state = model.add(f"owner-{language}", IndeksBahasa=language)
-                    model.render_main(f"owner-{language}")
-                    expression = model.hud_commands[state["HudMenu"]]
-                    # Binding rendering is native; assert the ordered source calls
-                    # and evaluate the surrounding strings with stable binding names.
-                    rendered = model.evaluate(expression)
-                    self.assertIn(f"Interact: {verb}", rendered)
-                    self.assertIn("Melee", rendered)
+            with self.subTest(source=source):
+                state = model.add("owner")
+                model.render_main("owner")
+                expression = model.hud_bodies[state["MenuHud"]]
+                rendered = model.evaluate(expression)
+                self.assertIn("Interact: select", rendered)
+                self.assertIn("Melee", rendered)
 
 
 if __name__ == "__main__":
