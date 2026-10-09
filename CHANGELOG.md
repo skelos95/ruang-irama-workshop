@@ -1,5 +1,12 @@
 # Changelog
 
+## Margine inferiore HOST su main — 2026-10-09
+
+- Ripristinata soltanto la riga vuota sotto HOST per distanziarlo dal killfeed. Il formato diventa `{0} {1} {2}\n `, senza spazio iniziale o riga vuota sopra. Host, icona, nome, visibilità e handle conservano il comportamento esistente.
+- Correzione applicata al codice corrente di `main`, mantenendo `VERSION` a 0.8.2. La release 0.8.2 e il relativo tag conservano il contenuto già pubblicato.
+- L'utente conferma di avere testato tutto il codice e che le prove nel gioco passano, oltre a stabilità del server e funzionamento della modalità. Riscontro qualitativo; il successivo margine inferiore di HOST va ricontrollato vicino al killfeed.
+- Clipboard corrente: 289.505 byte UTF-8; specifica: 270.637 byte. Il margine aggiunge tre byte testuali; restano 127 regole, 26.372 unità strutturali offline e massimo 2.566 unità per regola.
+
 ## 0.8.2 — Info compatta e HOST senza spazio — 2026-10-09
 
 - Titolo e anteprima Info / Controls 0 passano interamente nel `Subheader`, per una visualizzazione più piccola. Il ramo `Text` usa una stringa vuota, evitando lo `0` derivato da un `Null` condizionale.
@@ -216,7 +223,7 @@ Le date seguenti descrivono revisioni di `main`. `VERSION` resta nominalmente 0.
 
 Stato: **live-ready** nella documentazione della regressione storica di agosto 2026; questa attestazione non si applica automaticamente al `main` successivo.
 
-Il [tag v0.8.1](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.1) identifica `14ad403babb56c58f9b55f8ebe902f13b18cd02c`. Le successive correzioni hanno mantenuto la versione nominale.
+La release storica 0.8.1 identificava il [commit `14ad403babb56c58f9b55f8ebe902f13b18cd02c`](https://github.com/skelos95/ruang-irama-workshop/commit/14ad403babb56c58f9b55f8ebe902f13b18cd02c). Le successive correzioni hanno mantenuto la versione nominale.
 
 - Completati menu personali EN/ID/TH, Dummy Follow, Ghost/Fly, Camera condivisa, Travel & Attach e diagnostica.
 - Regressioni su input, ownership, roster e cambio squadra. Il limite Fly storico era 500%; profilo e comportamento Resurrect hanno ricevuto correzioni successive.

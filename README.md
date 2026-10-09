@@ -10,15 +10,15 @@ Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126*
 
 ## Stato attuale
 
-Il 9 ottobre l'utente ha confermato che il server è stabile e la modalità funziona, dopo avere confermato il corretto funzionamento del menu 2 con la correzione Camera della PR #103. Sono già confermati anche importazione, cambio diretto di squadra e revisione inglese con Info / Controls. Questi riscontri sono qualitativi; SHA importato, durata, numero di player e nuove metriche native non sono stati forniti. La disposizione più compatta di Info e HOST richiede ancora una verifica visiva nel client.
+Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funziona e tutto il codice provato supera i test nel gioco. È confermato anche il corretto funzionamento del menu 2 dopo la correzione Camera della PR #103. Questi riscontri sono qualitativi; SHA importato, durata, numero di player e nuove metriche native non sono stati forniti. Il successivo ripristino del margine inferiore di HOST va ricontrollato vicino al killfeed.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.372 unità (−17,5%)**. Il testo da importare passa da 348.732 a 289.502 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.372 unità (−17,5%)**. Il testo da importare passa da 348.732 a 289.505 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
-La versione corrente in [VERSION](VERSION) è **[0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2)**. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
+La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende la successiva correzione del margine inferiore di HOST; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
 ## Avvio rapido
 
@@ -53,7 +53,7 @@ Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciat
 
 Quando Info / Controls 0 è selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo dell'HUD (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. I binding del giocatore mostrano Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch con Arcade chiuso e Travel OFF, oppure nelle pagine Teleport Player/Bot e Attach per vedere eroe e HP. Sono inclusi Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Anche il sottomenu Info mantiene titolo e guida completa nel `Subheader`, con i dodici comandi e i binding dinamici, senza duplicazioni. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. Ogni pagina usa un solo HUD Arcade; i due promemoria fissi agli angoli dello schermo sono rimossi.
 
-HOST compare in una sola riga a destra, senza righe vuote sopra o sotto. Icona e nome seguono l'host corrente; la riga si svuota quando l'host è assente.
+HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota sotto per distanziarlo dal killfeed. Icona e nome seguono l'host corrente; la riga si svuota quando l'host è assente.
 
 ## Menu personali
 
