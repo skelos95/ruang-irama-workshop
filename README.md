@@ -14,11 +14,11 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.372 unità (−17,5%)**. Il testo da importare passa da 348.732 a 289.505 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.336 unità (−17,6%)**. Il testo da importare passa da 348.732 a 289.224 byte UTF-8 (−17,1%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
-La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende la successiva correzione del margine inferiore di HOST; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
+La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende la successiva correzione del margine inferiore di HOST e la pulizia delle espressioni ridondanti nei titoli Icon e nel filtro dei proprietari delle icone; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
 ## Avvio rapido
 

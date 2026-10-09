@@ -96,7 +96,6 @@ GLOBAL_MODIFIER_CLAUSES = (
     "di menu: pengubah semua perintah",
     "ในเมนู: ใช้ร่วมกับทุกคำสั่ง",
 )
-MENU_CROUCH_INSTRUCTIONS = ("Hold CROUCH",)
 SCHEDULER_SUBROUTINES = {
     "ProcessPlayerFastState",
     "ProcessPlayerCycle",
@@ -219,13 +218,6 @@ FORBIDDEN_LEGACY_IDENTIFIERS = {
     "ArahNasib",
     "KategoriTeleportNasib",
 }
-FORBIDDEN_PROSE = re.compile(
-    r"\b(?:rilascia|restituisci|reticolo|senza|roulette|sei effetti|risultato|"
-    r"reset completo|alla morte|riapri|solo quando|scadenza|temporanei|pulisce|"
-    r"proporzionale|aggiorna|distruggi|ricrea|menu ?render|target ?page ?render|"
-    r"submenu ?preload|preload|cleanup|english comment|italian comment)\b",
-    re.IGNORECASE,
-)
 FORBIDDEN_RESULT_ACTIONS = (
     "Declare Match Draw(",
     "Declare Player Victory(",
@@ -957,7 +949,7 @@ def validate_declarations(checks: Checks, source: str, rules: list[Rule], global
     all_names = {entry.name for entry in globals_ + players + subroutines}
     for legacy in sorted(FORBIDDEN_LEGACY_IDENTIFIERS):
         checks.require(legacy not in all_names and re.search(rf"\b{re.escape(legacy)}\b", mask_strings(source)) is None,
-                       f"identificatore legacy o non indonesiano presente: {legacy}")
+                       f"identificatore legacy vietato presente: {legacy}")
 
     code = source[:declaration_span[0]] + source[declaration_span[1]:]
     masked_code = mask_strings(code)

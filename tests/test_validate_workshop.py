@@ -573,7 +573,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         changed = cleanup.body[:closing] + extra + cleanup.body[closing:]
         mutated = mutated[:cleanup.start] + changed + mutated[cleanup.end:]
-        self.assert_rejected(mutated, "identificatore legacy o non indonesiano presente: TeksDiri")
+        self.assert_rejected(mutated, "identificatore legacy vietato presente: TeksDiri")
 
     def test_self_assignment_no_op_is_rejected(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "PreparePlayer")
