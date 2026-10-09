@@ -1,11 +1,19 @@
 # Changelog
 
+## Controllo generale e pulizia su main — 2026-10-09
+
+- Revisione di lingua, riferimenti, regole, lifecycle, Camera, input e risorse: nessun nuovo errore funzionale, corpo di regola duplicato o subroutine irraggiungibile individuato. Tutte le 127 regole native restano numerate da 0 a 126.
+- Semplificati due titoli Icon che sceglievano lo stesso testo in entrambi i rami. Rimosso dal filtro dei nuovi proprietari delle icone il controllo di appartenenza a `HumanPlayers`, già garantito dall'array filtrato; conservate le verifiche di entità, slot, stato e appartenenza necessarie negli altri contesti. Eliminato un commento consecutivo duplicato.
+- Rimosse due costanti mai usate nel validatore e corretta la diagnostica degli identificatori legacy, che faceva ancora riferimento all'indonesiano. I controlli di lingua inglese restano attivi.
+- Clipboard: 289.224 byte UTF-8, 281 in meno; specifica: 270.315 byte, 322 in meno. Stima strutturale: 26.336 unità, 36 in meno; massimo 2.566 e regola testualmente più grande 22.472 byte. Sono piccole riduzioni offline, senza una misura del guadagno di carico nativo.
+- GitHub verificato: protezione di `main`, controlli obbligatori, release e riferimenti coerenti. Versione nominale 0.8.2; tag e allegato della release conservano il contenuto pubblicato.
+
 ## Margine inferiore HOST su main — 2026-10-09
 
 - Ripristinata soltanto la riga vuota sotto HOST per distanziarlo dal killfeed. Il formato diventa `{0} {1} {2}\n `, senza spazio iniziale o riga vuota sopra. Host, icona, nome, visibilità e handle conservano il comportamento esistente.
 - Correzione applicata al codice corrente di `main`, mantenendo `VERSION` a 0.8.2. La release 0.8.2 e il relativo tag conservano il contenuto già pubblicato.
 - L'utente conferma di avere testato tutto il codice e che le prove nel gioco passano, oltre a stabilità del server e funzionamento della modalità. Dopo la PR #105 conferma anche che il margine inferiore di HOST e la distanza dal killfeed sono corretti nel gioco.
-- Clipboard corrente: 289.505 byte UTF-8; specifica: 270.637 byte. Il margine aggiunge tre byte testuali; restano 127 regole, 26.372 unità strutturali offline e massimo 2.566 unità per regola.
+- Clipboard alla revisione HOST: 289.505 byte UTF-8; specifica: 270.637 byte. Il margine aggiunge tre byte testuali; restano 127 regole, 26.372 unità strutturali offline e massimo 2.566 unità per regola.
 
 ## 0.8.2 — Info compatta e HOST senza spazio — 2026-10-09
 
