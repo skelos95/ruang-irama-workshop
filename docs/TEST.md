@@ -82,6 +82,8 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 1
 
 ### Camera, Privacy e Travel
 
+- Inspection: con Arcade chiuso, Travel OFF mostra eroe/nome/HP del bersaglio. Con Travel ON la targhetta compare nelle pagine 3/5 Teleport to Player/Bot e 4/5 Attach to Player/Bot; deve sparire su Spawn, Objective e Self Elimination. La descrizione in Info deve includere entrambi i casi.
+- Nel menu 2 applicare più volte lo stesso bersaglio dopo il primo utilizzo, passare tra due giocatori e alternare Your Hero / WATCH / Camera OFF. Ogni scelta valida deve ricreare la visuale del proprietario senza richiedere un diverso target. Ripetere dopo cambio eroe o Travel, con due spettatori indipendenti; target privati o morti non devono essere avviati.
 - Camera personale/watch fluida in corsa, strafe e salto. Target morto, uscito, privato o in quarantena fa tornare alla visuale normale; altre Camera valide restano indipendenti.
 - Con Camera attiva provare ciascun Travel riuscito verso spawn, obiettivo e player/bot: nessuna visuale bloccata nella vecchia posizione, stessa modalità e bersaglio valido dopo il reset. Provare Camera OFF, destinazione assente/non sicura e target invalidato al click: nessuna attivazione o riattivazione indesiderata. Ripetere rapidamente e con due giocatori indipendenti.
 - Cambiare il proprio eroe con Camera personale e watch attive: visuale riagganciata al nuovo eroe e modalità/bersaglio validi conservati. Con Camera OFF deve restare OFF. Provare cambio eroe del bersaglio osservato, morte/respawn, Privacy e cambio squadra durante il refresh: una revoca deve prevalere, senza riavviare una Camera non valida.
