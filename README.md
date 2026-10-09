@@ -10,7 +10,7 @@ Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126*
 
 ## Stato attuale
 
-Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funziona e tutto il codice provato supera i test nel gioco. È confermato anche il corretto funzionamento del menu 2 dopo la correzione Camera della PR #103. Questi riscontri sono qualitativi; SHA importato, durata, numero di player e nuove metriche native non sono stati forniti. Il successivo ripristino del margine inferiore di HOST va ricontrollato vicino al killfeed.
+Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funziona e tutto il codice provato supera i test nel gioco. Sono confermati anche il corretto funzionamento del menu 2 dopo la correzione Camera della PR #103 e la distanza tra HOST e killfeed dopo il ripristino del margine inferiore nella PR #105. Questi riscontri sono qualitativi; SHA importato, durata, numero di player e nuove metriche native non sono stati forniti.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 

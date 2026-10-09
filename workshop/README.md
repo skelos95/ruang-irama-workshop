@@ -8,6 +8,6 @@ Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre
 
 Info 0 selezionata nel principale mostra titolo e binding interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. Anche il sottomenu Info usa il `Subheader` per titolo e guida completa, mantenendo tutti i dodici comandi e i binding dinamici senza duplicazioni. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed.
 
-L'utente conferma che il server è stabile, la modalità funziona e tutto il codice provato supera i test nel gioco. Il successivo ripristino del margine inferiore di HOST va ricontrollato vicino al killfeed.
+L'utente conferma che il server è stabile, la modalità funziona e tutto il codice provato supera i test nel gioco. Anche la distanza tra HOST e killfeed è stata verificata e confermata dopo il ripristino del margine inferiore nella PR #105.
 
 [Guida di importazione](../docs/IMPORTAZIONE.md) · [Funzioni e comandi](../README.md) · [Controlli della revisione corrente](../docs/VALIDAZIONE.md)

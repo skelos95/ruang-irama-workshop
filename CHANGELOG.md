@@ -4,7 +4,7 @@
 
 - Ripristinata soltanto la riga vuota sotto HOST per distanziarlo dal killfeed. Il formato diventa `{0} {1} {2}\n `, senza spazio iniziale o riga vuota sopra. Host, icona, nome, visibilità e handle conservano il comportamento esistente.
 - Correzione applicata al codice corrente di `main`, mantenendo `VERSION` a 0.8.2. La release 0.8.2 e il relativo tag conservano il contenuto già pubblicato.
-- L'utente conferma di avere testato tutto il codice e che le prove nel gioco passano, oltre a stabilità del server e funzionamento della modalità. Riscontro qualitativo; il successivo margine inferiore di HOST va ricontrollato vicino al killfeed.
+- L'utente conferma di avere testato tutto il codice e che le prove nel gioco passano, oltre a stabilità del server e funzionamento della modalità. Dopo la PR #105 conferma anche che il margine inferiore di HOST e la distanza dal killfeed sono corretti nel gioco.
 - Clipboard corrente: 289.505 byte UTF-8; specifica: 270.637 byte. Il margine aggiunge tre byte testuali; restano 127 regole, 26.372 unità strutturali offline e massimo 2.566 unità per regola.
 
 ## 0.8.2 — Info compatta e HOST senza spazio — 2026-10-09
@@ -12,7 +12,7 @@
 - Titolo e anteprima Info / Controls 0 passano interamente nel `Subheader`, per una visualizzazione più piccola. Il ramo `Text` usa una stringa vuota, evitando lo `0` derivato da un `Null` condizionale.
 - La guida completa Info usa anch'essa il `Subheader`: conserva titolo, dodici descrizioni dei comandi e binding reali del giocatore, senza duplicazioni. `Header` e `Text` sono `Null`; ogni pagina mantiene un solo handle Arcade. Il colore Info continua a leggere `MenuColor` per l'azzurro fisso.
 - HOST usa il formato singolo `{0} {1} {2}`, senza spazi esterni o ritorni a capo. Host, icona e nome restano dinamici e il campo si svuota in assenza dell'host.
-- Versione aggiornata a 0.8.2. L'utente conferma che il server è stabile e la modalità funziona, dopo avere confermato che il menu 2 funziona correttamente con la PR #103. I riscontri sono qualitativi; la nuova disposizione Info/HOST richiede ancora una verifica visiva nel client.
+- Versione aggiornata a 0.8.2. L'utente conferma che il server è stabile e la modalità funziona, dopo avere confermato che il menu 2 funziona correttamente con la PR #103. Alla pubblicazione la nuova disposizione Info/HOST attendeva una verifica visiva; il successivo riscontro dopo la PR #105 ne conferma il funzionamento e la distanza dal killfeed.
 - Clipboard: 289.502 byte UTF-8, 26.372 unità strutturali offline, 127 regole; massimo strutturale 2.566 unità e regola testualmente più grande 22.537 byte. Rispetto al codice precedente alla conversione inglese, riduzioni del 17,0% nel testo e del 17,5% nella stima; i conteggi compilati si misurano nel client.
 
 ## Camera, descrizione Inspection e viola neon — 2026-10-09
