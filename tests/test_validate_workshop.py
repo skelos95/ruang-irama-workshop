@@ -657,12 +657,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute_call, 0, "Empty Array")
         self.assert_rejected(mutated, "nascosto/precaricato")
 
-    def test_info_cannot_duplicate_the_commands_in_a_subtitle(self) -> None:
+    def test_info_requires_all_content_in_subheader_with_empty_text(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(absolute, 2, 'Custom String("Hold {0}", Input Binding String(Button(Crouch)))')
-        self.assert_rejected(mutated, "Info: no redundant command subtitle")
+        mutated = self.replace_call_argument(absolute, 2, "Null")
+        self.assert_rejected(mutated, "Info: content must use Subheader")
+        for text in (call.args[2], 'Custom String("Hold {0}", Input Binding String(Button(Crouch)))'):
+            with self.subTest(text=text):
+                mutated = self.replace_call_argument(absolute, 3, text)
+                self.assert_rejected(mutated, "Info: keep Text empty")
 
     def test_main_menu_requires_commands_in_the_subtitle(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -674,17 +678,42 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info} : Null")
         self.assert_rejected(mutated, "DrawMainMenu: commands must use Subheader")
 
-    def test_main_info_preview_cannot_keep_a_command_subtitle(self) -> None:
+    def test_main_info_preview_requires_content_in_subheader(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
         branches = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(branches)
         condition, _, commands = branches
-        for kind, info_subtitle in (("commands", commands), ("null", "Null"), ("number", "0")):
+        for kind, info_subtitle in (("commands", commands), ("empty", 'Custom String("")'), ("null", "Null")):
             with self.subTest(info_subtitle=kind):
                 mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info_subtitle} : {commands}")
-                self.assert_rejected(mutated, "Main Info preview: no command subtitle")
+                self.assert_rejected(mutated, "Main Info preview: content must use Subheader")
+
+    def test_main_info_preview_uses_empty_string_text_to_avoid_client_zero(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        branches = validator.parse_top_level_ternary(call.args[3])
+        self.assertIsNotNone(branches)
+        condition, _, functions = branches
+        info = validator.parse_top_level_ternary(call.args[2])[1]
+        for kind, text in (("duplicate info", info), ("null", "Null"), ("number", "0")):
+            with self.subTest(text=kind):
+                mutated = self.replace_call_argument(absolute, 3, f"{condition} ? {text} : {functions}")
+                self.assert_rejected(mutated, "Main Info preview: Text must be an empty string")
+
+    def test_info_subheader_retains_menu_color(self) -> None:
+        for target, fragment in (
+            ("DrawMainMenu", "Main Info preview: Subheader must retain the menu color"),
+            ("DrawInfoMenu", "Info: Subheader must retain the menu color"),
+        ):
+            with self.subTest(renderer=target):
+                renderer = self.rule(lambda rule: validator.subroutine_target(rule) == target)
+                call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+                absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+                mutated = self.replace_call_argument(absolute, 7, "Color(White)")
+                self.assert_rejected(mutated, fragment)
 
     def test_main_menu_function_text_cannot_duplicate_input_hints(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -826,6 +855,17 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed = host.args[3].rsplit(': Custom String("")', 1)[0] + ": Null"
         self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: fallback senza host deve essere stringa vuota")
+
+    def test_host_row_rejects_artificial_spacing_and_blank_lines(self) -> None:
+        host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
+                    if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
+        for padded_format in (" {0} {1} {2}", r"\n{0} {1} {2}", "{0} {1} {2} ",
+                              r"{0} {1} {2}\n", r" \n{0} {1} {2}\n "):
+            with self.subTest(format=padded_format):
+                changed = host.args[3].replace('"{0} {1} {2}"', f'"{padded_format}"', 1)
+                self.assertNotEqual(changed, host.args[3])
+                self.assert_rejected(self.replace_call_argument(host, 3, changed),
+                                     "HUD Host: Text deve essere una riga compatta senza spazi o righe vuote")
 
     def test_chill_grid_rejects_a_seventh_fixed_hud(self) -> None:
         init = self.rule(
@@ -4278,13 +4318,13 @@ class RepositoryMetadataTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:
         (root / ".github" / "workflows").mkdir(parents=True)
         (root / "docs").mkdir()
-        (root / "VERSION").write_text("0.8.1\n", encoding="utf-8")
+        (root / "VERSION").write_text(f"{validator.CURRENT_VERSION}\n", encoding="utf-8")
         for relative in validator.CORE_DOCS:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("Guida operativa del progetto.\n", encoding="utf-8")
         (root / "CHANGELOG.md").write_text(
-            "## 0.8.1\n\nStato: **live-ready** (release storica).\n",
+            f"## {validator.CURRENT_VERSION}\n\nStato: **live-ready** (release storica).\n",
             encoding="utf-8",
         )
         (root / ".github" / "workflows" / "validate-workshop.yml").write_text(
@@ -4355,10 +4395,10 @@ class RepositoryMetadataTests(unittest.TestCase):
 
     def test_offline_metadata_does_not_claim_a_remote_release_is_missing(self) -> None:
         claims = (
-            "Il tag finale v0.8.1 identifica il commit pubblicato e validato.",
-            "La release 0.8.1 è stata pubblicata.",
-            "La release v0.8.1 è stata pubblicata.",
-            "https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.1",
+            f"Il tag finale v{validator.CURRENT_VERSION} identifica il commit pubblicato e validato.",
+            f"La release {validator.CURRENT_VERSION} è stata pubblicata.",
+            f"La release v{validator.CURRENT_VERSION} è stata pubblicata.",
+            f"https://github.com/skelos95/ruang-irama-workshop/releases/tag/v{validator.CURRENT_VERSION}",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory(dir=validator.ROOT.parent) as directory:
@@ -4383,11 +4423,11 @@ class RepositoryMetadataTests(unittest.TestCase):
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
-                "# Changelog\n\nVersione nominale 0.8.1.\n\n## 0.8.0\n",
+                f"# Changelog\n\nVersione nominale {validator.CURRENT_VERSION}.\n\n## 0.8.0\n",
                 encoding="utf-8",
             )
             self.assertIn(
-                "CHANGELOG.md senza sezione storica 0.8.1",
+                f"CHANGELOG.md senza sezione storica {validator.CURRENT_VERSION}",
                 self.metadata_errors(root),
             )
 
@@ -4396,7 +4436,7 @@ class RepositoryMetadataTests(unittest.TestCase):
             root = Path(directory)
             self.make_repo(root)
             (root / "CHANGELOG.md").write_text(
-                "## v0.8.1 — 2026-08-25\n\nRiscontri storici conservati.\n",
+                f"## v{validator.CURRENT_VERSION} — 2026-10-09\n\nRiscontri storici conservati.\n",
                 encoding="utf-8",
             )
             self.assertEqual(self.metadata_errors(root), [])
@@ -4408,7 +4448,7 @@ class RepositoryMetadataTests(unittest.TestCase):
             (root / "CHANGELOG.md").write_text(
                 "## Revisione main — 2026-09-29\n"
                 "Stato: **static-ready / live-pending**.\n"
-                "## 0.8.1\nStato: **live-ready** (release storica).\n"
+                f"## {validator.CURRENT_VERSION}\nStato: **live-ready** (release storica).\n"
                 "## 0.8.0\nStato: **live-pending**.\n",
                 encoding="utf-8",
             )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Semantic static gate for Cozywatch Workshop 0.8.1.
+"""Semantic static gate for Cozywatch Workshop 0.8.2.
 
 The behavioral contracts validate the explicit logical input, while main also
 checks its English source parity and the real generated global runtime. No compiled
@@ -31,7 +31,7 @@ SOURCE = BEHAVIORAL_REFERENCE
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
-CURRENT_VERSION = "0.8.1"
+CURRENT_VERSION = "0.8.2"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
 MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
@@ -1259,8 +1259,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                       "Hero Icon String(Hero Of(Host Player))", "Player Variable(Host Player, DisplayName)",
                       'Custom String("{0}", Host Player)'):
             checks.require(token in host.args[3], f"HUD Host: riferimento dinamico assente: {token}")
-        checks.require('Custom String(" \\n{0} {1} {2}\\n "' in host.args[3],
-                       "HUD Host: Text deve mantenere una riga vuota sopra e sotto")
+        host_formats = [parse_literal(custom.args[0])
+                        for custom in iter_calls(host.args[3], "Custom String")
+                        if len(custom.args) == 4]
+        checks.equal(host_formats, ["{0} {1} {2}"],
+                     "HUD Host: Text deve essere una riga compatta senza spazi o righe vuote")
         checks.require("Evaluate Once(" not in host.args[3], "HUD Host: nome e icona devono seguire l'host corrente")
         checks.require(host.args[3].strip().endswith(': Custom String("")'),
                        "HUD Host: fallback senza host deve essere stringa vuota")
@@ -1568,14 +1571,18 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                          f"{subroutine_target(rule)}: HUD menu non deve essere nascosto/precaricato")
             checks.equal(calls[0].args[1].strip(), "Null",
                          f"{subroutine_target(rule)}: keep the Header empty")
-            checks.require(calls[0].args[3].strip() != "Null",
+            content_field = 2 if subroutine_target(rule) == "DrawInfoMenu" else 3
+            checks.require(calls[0].args[content_field].strip() != "Null",
                            f"{subroutine_target(rule)}: menu content missing")
             checks.equal(calls[0].args[4].strip(), "Top", f"{subroutine_target(rule)}: HUD location")
             checks.equal(calls[0].args[5].strip(), "3", f"{subroutine_target(rule)}: HUD order")
-            paired_rows = [custom for custom in iter_calls(calls[0].args[3], "Custom String")
+            paired_rows = [custom for custom in iter_calls(calls[0].args[content_field], "Custom String")
                            if custom.args and parse_literal(custom.args[0]) == "{0} | {1}"]
             if subroutine_target(rule) == "DrawInfoMenu":
-                checks.equal(calls[0].args[2].strip(), "Null", "Info: no redundant command subtitle")
+                checks.require(calls[0].args[2].strip() != "Null", "Info: content must use Subheader")
+                checks.equal(calls[0].args[3].strip(), "Null", "Info: keep Text empty")
+                checks.require("Event Player.MenuColor" in calls[0].args[7],
+                               "Info: Subheader must retain the menu color")
                 checks.require(not paired_rows, "Info: do not duplicate commands in a side column")
                 info_controls = (
                     ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
@@ -1592,7 +1599,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     ("Superman Punch ON: use {0} to punch", ("Melee",)),
                 )
                 for description, buttons in info_controls:
-                    lines = [custom for custom in iter_calls(calls[0].args[3], "Custom String")
+                    lines = [custom for custom in iter_calls(calls[0].args[2], "Custom String")
                              if custom.args and parse_literal(custom.args[0]) == description]
                     checks.equal(len(lines), 1, f"Info: exactly one instruction for {description}")
                     if lines:
@@ -1605,7 +1612,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 for token in ("0 - INFO / CONTROLS", "0.5s", "with {1} released",
                               "inspect hero + HP", "+10 / -10", "detach", "resurrect",
                               "Multijump ON", "Superman Punch ON"):
-                    checks.require(token in calls[0].args[3], f"Info: description missing: {token}")
+                    checks.require(token in calls[0].args[2], f"Info: description missing: {token}")
             else:
                 subtitle = calls[0].args[2]
                 function_text = calls[0].args[3]
@@ -1614,14 +1621,22 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     info_subtitle = (subtitle_branches[1] if subtitle_branches
                                      and subtitle_branches[0] == "Event Player.MainMenuCursor == 0"
                                      else None)
-                    # Conditional text must use an empty string: Null can render as 0.
-                    checks.equal(info_subtitle, 'Custom String("")', "Main Info preview: no command subtitle")
-                    subtitle = subtitle_branches[2] if info_subtitle == 'Custom String("")' else "Null"
+                    checks.require(bool(info_subtitle) and "0 - INFO / CONTROLS" in info_subtitle,
+                                   "Main Info preview: content must use Subheader")
+                    subtitle_colors = parse_top_level_ternary(calls[0].args[7])
+                    checks.require(bool(subtitle_colors)
+                                   and subtitle_colors[0] == "Event Player.MainMenuCursor == 0"
+                                   and "Event Player.MenuColor" in subtitle_colors[1],
+                                   "Main Info preview: Subheader must retain the menu color")
+                    subtitle = subtitle_branches[2] if info_subtitle else "Null"
                     text_branches = parse_top_level_ternary(function_text)
                     checks.require(bool(text_branches)
                                    and text_branches[0] == "Event Player.MainMenuCursor == 0",
                                    "DrawMainMenu: function Text must not duplicate input hints")
                     if text_branches and text_branches[0] == "Event Player.MainMenuCursor == 0":
+                        # Conditional text must use an empty string: Null can render as 0.
+                        checks.equal(text_branches[1], 'Custom String("")',
+                                     "Main Info preview: Text must be an empty string")
                         function_text = text_branches[2]
                 checks.require(subtitle.strip() != "Null" and "Input Binding String(" in subtitle,
                                f"{subroutine_target(rule)}: commands must use Subheader")
@@ -1757,9 +1772,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW' in main_renderer.body,
                        "pagina 12 e pagina 13 non sono distinte")
         main_hud = next(iter_calls(main_renderer.body, "Create HUD Text"), None)
-        text_branches = parse_top_level_ternary(main_hud.args[3]) if main_hud else None
-        preview = (text_branches[1] if text_branches
-                   and text_branches[0] == "Event Player.MainMenuCursor == 0" else "")
+        subtitle_branches = parse_top_level_ternary(main_hud.args[2]) if main_hud else None
+        preview = (subtitle_branches[1] if subtitle_branches
+                   and subtitle_branches[0] == "Event Player.MainMenuCursor == 0" else "")
         checks.require("0 - INFO / CONTROLS" in preview, "Main Info preview: title missing")
         preview_controls = (
             ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
@@ -7473,7 +7488,7 @@ def main() -> int:
     checks.finish()
     rules = extract_rules(source)
     print(
-        "OK - English behavioral contracts v0.8.1 and source parity verified "
+        f"OK - English behavioral contracts v{CURRENT_VERSION} and source parity verified "
         f"({len(rules)} regole, {len(wait_calls(source))} Wait, {action_loop_count(source)} Loop)"
     )
     print("OK - gate dell'output globale compilato e aggiornamento della generazione superati")
