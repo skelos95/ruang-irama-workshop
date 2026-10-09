@@ -1,6 +1,6 @@
 # Architettura del Workshop
 
-Questa pagina descrive il sorgente corrente di Cozywatch **0.8.2**. Comandi e menu sono nel [README](../README.md); storia e revisioni ritirate nel [changelog](../CHANGELOG.md).
+Questa pagina descrive il sorgente corrente di `main`, con versione **0.8.2**. Il ripristino del margine inferiore di HOST è successivo alla release e non modifica il tag pubblicato. Comandi e menu sono nel [README](../README.md); storia e revisioni ritirate nel [changelog](../CHANGELOG.md).
 
 ## Sorgenti e confini
 
@@ -58,13 +58,13 @@ Ogni umano ha al massimo un HUD Arcade: la navigazione sulla stessa pagina aggio
 |---|---|---|
 | Top | Titolo/countdown 0, cozywatch.org 1, spazio 2 | Menu, Travel o effetto in 3 |
 | Left | Player Vibes 0, Chill Star 13 | Unico roster in 1–12 |
-| Right | Host 0 | Host nel campo Text su una sola riga, senza spazio sopra o sotto, RGB del titolo |
+| Right | Host 0 | Host nel campo Text su una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed, RGB del titolo |
 
 I sei handle globali sono inclusi nella diagnostica: rimossi i due promemoria laterali e lo spazio Left −1. Il leader usa nome/colore stabili. Il roster mantiene il Name Color nel Subheader; la diagnostica usa il campo Text bianco dello stesso handle, visibile solo all'host sull'ultima riga. Il ramo nascosto restituisce una stringa vuota, evitando lo `0` derivato da un `Null` tipizzato come testo. IWT e icone catturano soltanto l'identità con `Evaluate Once`; posizione/testo/pubblico necessari restano rivalutati. Le targhette riuniscono icona, nome e salute, ancorati a `Eye Position + Vector(0, 0.450, 0)`.
 
 Il principale conserva 16 voci: Info / Controls 0, Name Color 1, Camera 2, Soundtrack 3 e funzioni 4–15 invariate. Quando il cursore principale è 0, titolo e preview Info occupano interamente `Subheader`, con binding dinamici: Camera da Interact tenuto 0,5 s con Crouch rilasciato, Arcade da Melee tenuto 0,5 s, ispezione eroe/HP da Crouch con Arcade chiuso e Travel OFF, oppure nelle pagine Teleport Player/Bot e Attach, navigazione e apertura della guida da Crouch + Primary/Secondary/Interact, ritorno da Crouch + Reload. Il ramo `Text` restituisce `Custom String("")`, evitando lo `0` che un `Null` condizionale può produrre nel campo testo. Con le altre voci selezionate e negli altri sottomenu, i comandi contestuali occupano `Subheader` e funzioni/opzioni occupano `Text`. La pagina Info mantiene titolo e tutti i dodici comandi in `Subheader`, con `Header` e `Text` a `Null`, senza comandi duplicati. Il colore del `Subheader` Info legge dinamicamente `MenuColor`, conservando l'azzurro fisso anche nella preview. Ogni pagina mantiene un solo handle Arcade.
 
-Il campo `Text` di HOST usa il formato singolo `{0} {1} {2}`, senza spazi iniziali/finali o ritorni a capo. `HostPlayer`, icona e nome restano dinamici; in assenza dell'host restituisce una stringa vuota. L'handle e il colore RGB del titolo restano quelli esistenti.
+Il campo `Text` di HOST usa il formato singolo `{0} {1} {2}\n `: nessuno spazio iniziale o riga vuota sopra, con un solo ritorno a capo finale e uno spazio per mantenere il margine inferiore vicino al killfeed. `HostPlayer`, icona e nome restano dinamici; in assenza dell'host restituisce una stringa vuota. L'handle e il colore RGB del titolo restano quelli esistenti.
 
 Travel/Attach, Privacy, Dummy Follow e Superman Punch mostrano lo stato corrente nella voce principale: Crouch + Interact lo alterna senza aprire un sottomenu o ricreare l'HUD. La pagina rimane −1 e il cursore resta sulla stessa voce; Primary/Secondary continuano a navigare nel menu principale. I quattro renderer esclusivi e i loro rami non più raggiungibili sono rimossi. I tre cursori ON/OFF precedenti restano rimossi; gli indici già assegnati alle preferenze restano stabili. Input, cursori ancora necessari, target, latch e timer appartengono al player. Menu e Camera condividono il latch Interact fino al rilascio fisico; Crouch decide quale comando può consumarlo. La pressione tenuta usa una scadenza nel controller globale: nessun `Wait` nei comandi, nel cleanup o in Resurrect.
 

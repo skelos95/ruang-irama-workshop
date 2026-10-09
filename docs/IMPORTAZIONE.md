@@ -3,7 +3,7 @@
 ## Procedura
 
 1. Salva il preset con le tue mappe e imposta la lingua testo di Overwatch su **English**.
-2. Apri il codice di Cozywatch **0.8.2**, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**.
+2. Apri il codice corrente di `main`, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione resta **0.8.2**; il margine inferiore di HOST è una correzione successiva alla release pubblicata.
 3. Copia tutto, da `variables` alla graffa finale, senza numeri di riga o testo della pagina GitHub.
 4. In **Custom Game → Settings → Workshop**, usa **Paste Rules**.
 5. Apri **Script Diagnostics** e annota Element Count e Largest Rule, insieme al commit importato.
@@ -13,7 +13,7 @@ L'unico codice da importare usa la grammatica nativa inglese. Anche identificato
 
 Le 127 regole sono numerate da 0 a 126 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
 
-Con Info 0 selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola, e il corpo (`Text`) è vuoto. L'anteprima mostra i binding per Camera, Arcade, ispezione eroe/HP, navigazione e apertura della guida completa. Il sottomenu Info mantiene titolo e tutti i dodici comandi nel `Subheader`, con i binding reali del giocatore e senza duplicazioni. Le altre voci e pagine mostrano i comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra o sotto. La leggibilità di questa disposizione va verificata nel client.
+Con Info 0 selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola, e il corpo (`Text`) è vuoto. L'anteprima mostra i binding per Camera, Arcade, ispezione eroe/HP, navigazione e apertura della guida completa. Il sottomenu Info mantiene titolo e tutti i dodici comandi nel `Subheader`, con i binding reali del giocatore e senza duplicazioni. Le altre voci e pagine mostrano i comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed; ricontrollare questo margine nel client dopo l'importazione.
 
 I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni dei test. Importa soltanto il file `.workshop` pubblico: contiene il runtime globale generato.
 

@@ -1,6 +1,6 @@
 # Test nel gioco
 
-Questa è la matrice operativa per Cozywatch **0.8.2**, non una dichiarazione che tutte le prove siano già completate. Eseguire prima i [controlli automatici](VALIDAZIONE.md), poi associare ogni prova al commit importato.
+Questa è la matrice operativa per il codice corrente di `main`, con versione **0.8.2**. Il margine inferiore di HOST è una correzione successiva alla release pubblicata, che conserva il proprio tag. Eseguire prima i [controlli automatici](VALIDAZIONE.md), poi associare ogni prova al commit importato.
 
 ## Riscontri disponibili
 
@@ -14,6 +14,8 @@ Questa è la matrice operativa per Cozywatch **0.8.2**, non una dichiarazione ch
 | 8 ottobre, revisione inglese con Info / Controls | L'utente conferma il funzionamento del codice nel gioco. | Conferma funzionale generale; SHA importato, durata e metriche native non registrati. La successiva disposizione dei comandi in `Subheader` non è ancora stata provata. |
 | 9 ottobre, riscontro utente dopo PR #103 | L'utente conferma: «il menu 2 ora funziona correttamente», dopo la correzione della riapplicazione Camera. | Conferma qualitativa del menu 2; SHA importato, numero di player, durata e metriche native non forniti. Non comprende la successiva disposizione compatta di Info e HOST né tutti i casi Camera della matrice. |
 | 9 ottobre, preparazione release 0.8.2 | L'utente conferma che il server è stabile e la modalità funziona. | Riscontro qualitativo; SHA importato, durata, numero di player e nuove metriche native non forniti. La disposizione compatta Info/HOST resta da verificare visivamente. |
+| 9 ottobre, riscontro successivo alla release 0.8.2 | L'utente conferma di avere provato tutto il codice e che i test nel gioco passano. | Riscontro qualitativo generale, senza SHA importato, durata, numero di player o nuove metriche native. Il ripristino successivo del solo margine inferiore di HOST va ricontrollato vicino al killfeed. |
+| 9 ottobre, baseline client riferita dall'utente | L'utente indica l'aggiornamento di Overwatch del 7 ottobre 2026, con stagione 5, nuovo eroe Doctrine e nuova mappa Grimsvötn. | Data del client riferita dall'utente, senza identificativo esatto della build; distinta dalla data ufficiale di avvio della stagione. |
 | 27 settembre, PR #80 | L'utente conferma il recupero dal punto nel vuoto prima problematico e la resurrezione sul terreno. | Altre mappe e combinazioni richiedono prove dedicate. |
 | 29 settembre, `68cbc832` / PR #81 | 591 test e 9 controlli GitHub superati; modello idle con 1 umano + 2 dummy + 2 AI: 355 → 70 chiamate complessive/s alle routine delle cinque entità. | Numero di chiamate, non consumo del server. |
 | 30 settembre, riscontro utente dopo PR #81 | Il server sembra molto più stabile; l'utente prevede test più aggressivi. | Non sono stati forniti durata, configurazione completa o metriche di questo riscontro. |
@@ -26,7 +28,7 @@ Questa è la matrice operativa per Cozywatch **0.8.2**, non una dichiarazione ch
 
 Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch; il Light Shaft è rimosso e le icone hanno raggio fisso di 10 m. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
-L'utente conferma stabilità del server, funzionamento della modalità e menu 2 corretto dopo la correzione Camera. La disposizione più piccola di Info, con titolo e contenuto nel `Subheader`, e HOST senza spazio sopra/sotto richiedono una prova visiva dedicata nel client. Le prove specifiche della matrice seguente permettono di registrare separatamente Camera dopo Travel/cambio eroe, durata e carico.
+L'utente conferma stabilità del server, funzionamento della modalità e superamento dei test nel gioco su tutto il codice provato. Il successivo ripristino della sola riga vuota sotto HOST richiede un controllo vicino al killfeed. La matrice seguente resta il riferimento per registrare separatamente i casi Camera dopo Travel/cambio eroe, durata e carico.
 
 ## Preparazione
 
@@ -35,6 +37,8 @@ Il clipboard corrente viene generato dalla specifica comportamentale. Importare 
 Per il runtime globale iniziare con una lobby nuova, un umano e dummy presenti: primo cambio diretto 1→2, poi 2→1 senza usare menu. Confrontare il percorso via spettatori; ripetere ingresso/uscita e cambi rapidi con 12 umani. Provare Melee/Interact tenuti 0,5 s e i comandi simultanei: timer, testi e colori devono restare individuali. Verificare Revenge dopo KO nemici/alleati, morte e rinascita rapida, cambio eroe durante un evento pendente, e la pulizia dopo uscita e riuso dello stesso slot.
 
 Usare una nuova lobby sulla build corrente del client, lingua testo English, Schermaglia e mappe standard escluse quelle Workshop. Importare il [file completo](../workshop/ruang_irama.en-US.workshop), annotando SHA e metriche di compilazione. Le mappe appartengono al preset della lobby.
+
+Per i riscontri del 9 ottobre, l'utente indica il 7 ottobre 2026 come data dell'aggiornamento del proprio client, con stagione 5, Doctrine e Grimsvötn. Registrare anche l'identificativo della build client nelle nuove prove. L'annuncio ufficiale Blizzard colloca l'avvio della stagione al **6 ottobre**, con Doctrine e la nuova mappa Escort **Watchpoint: Grímsvötn**; le due date restano distinte. [Annuncio Blizzard della stagione 5](https://overwatch.blizzard.com/en-us/news/24303008/stillt-euren-hunger-mit-talons-herrschaft-saison-5-eine-duestere-doktrin/).
 
 Per il confronto di stabilità impostare **60 minuti**; il riavvio allo zero è previsto e va distinto dalla chiusura con errore. La diagnostica host mostra carico e risorse senza abilitare Inspector Recording. Per input simultanei servono più utenti reali, non solo bot.
 
@@ -64,7 +68,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 1
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
-- Controllare binding dinamici, righe inglesi leggibili, un unico Player Vibes e HOST nel campo `Text` su una sola riga, senza righe vuote sopra/sotto, spazi esterni o ritorni a capo. Icona e nome devono seguire il cambio dell'host e la riga deve sparire in sua assenza; RGB del titolo conservato. Niente `0` diagnostico o sovrapposizioni con HUD nativi. L'HUD Top 1 deve mostrare esattamente `cozywatch.org`; nessuna impostazione, voce menu o etichetta per lingua/località deve rimanere.
+- Controllare binding dinamici, righe inglesi leggibili, un unico Player Vibes e HOST nel campo `Text` su una sola riga: nessuno spazio sopra, una sola riga vuota sotto per il killfeed. Verificare il distacco durante sequenze di uccisioni, senza sovrapposizioni con HUD nativi. Icona e nome devono seguire il cambio dell'host e la riga deve sparire in sua assenza; RGB del titolo conservato. Niente `0` diagnostico. L'HUD Top 1 deve mostrare esattamente `cozywatch.org`; nessuna impostazione, voce menu o etichetta per lingua/località deve rimanere.
 - Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
 - Il profilo `งูแรร์` parte Charcoal / Poison 2 modificabili e Draconian fisso; il Soundtrack resta in sola lettura senza aggiungere un genere al catalogo globale.
 - Sull'obiettivo devono apparire solo le icone, senza Light Shaft né nomi: raggio fisso di 10 m con 1/6/12 umani. AI e dummy non ne creano. Le icone conservano il colore esatto del proprietario anche quando cambia l'host; NONE non crea simboli.

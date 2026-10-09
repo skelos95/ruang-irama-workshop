@@ -856,16 +856,16 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: fallback senza host deve essere stringa vuota")
 
-    def test_host_row_rejects_artificial_spacing_and_blank_lines(self) -> None:
+    def test_host_row_rejects_top_padding_or_wrong_bottom_spacing(self) -> None:
         host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
                     if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
-        for padded_format in (" {0} {1} {2}", r"\n{0} {1} {2}", "{0} {1} {2} ",
-                              r"{0} {1} {2}\n", r" \n{0} {1} {2}\n "):
+        for padded_format in (r" {0} {1} {2}\n ", r"\n{0} {1} {2}\n ", "{0} {1} {2}",
+                              r"{0} {1} {2}\n", r"{0} {1} {2}\n \n "):
             with self.subTest(format=padded_format):
-                changed = host.args[3].replace('"{0} {1} {2}"', f'"{padded_format}"', 1)
+                changed = host.args[3].replace(r'"{0} {1} {2}\n "', f'"{padded_format}"', 1)
                 self.assertNotEqual(changed, host.args[3])
                 self.assert_rejected(self.replace_call_argument(host, 3, changed),
-                                     "HUD Host: Text deve essere una riga compatta senza spazi o righe vuote")
+                                     "HUD Host: Text deve lasciare spazio solo sotto il testo")
 
     def test_chill_grid_rejects_a_seventh_fixed_hud(self) -> None:
         init = self.rule(

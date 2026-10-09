@@ -222,7 +222,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 self.assertEqual(context.parse(compiler.actor_text(info_hud.args[7])).evaluate(context),
                                  (190, 210, 230, 255))
 
-    def test_host_row_is_a_single_compact_line(self):
+    def test_host_row_has_only_one_bottom_blank_row(self):
         for path in ARTIFACTS:
             with self.subTest(artifact=path.name):
                 rules = validator.extract_rules(path.read_text(encoding="utf-8"))
@@ -233,7 +233,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 self.assertEqual(node.kind, "conditional")
                 row, absent = node.children[1:]
                 self.assertEqual((row.kind, row.value), ("call", "Custom String"))
-                self.assertEqual(validator.parse_literal(compiler._emit(row.children[0])), "{0} {1} {2}")
+                self.assertEqual(validator.parse_literal(compiler._emit(row.children[0])), "{0} {1} {2}\n ")
                 self.assertEqual(len(row.children), 4)
                 self.assertEqual(compiler._emit(absent), 'Custom String("")')
 

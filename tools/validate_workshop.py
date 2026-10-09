@@ -1262,8 +1262,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         host_formats = [parse_literal(custom.args[0])
                         for custom in iter_calls(host.args[3], "Custom String")
                         if len(custom.args) == 4]
-        checks.equal(host_formats, ["{0} {1} {2}"],
-                     "HUD Host: Text deve essere una riga compatta senza spazi o righe vuote")
+        checks.equal(host_formats, ["{0} {1} {2}\n "],
+                     "HUD Host: Text deve lasciare spazio solo sotto il testo")
         checks.require("Evaluate Once(" not in host.args[3], "HUD Host: nome e icona devono seguire l'host corrente")
         checks.require(host.args[3].strip().endswith(': Custom String("")'),
                        "HUD Host: fallback senza host deve essere stringa vuota")
