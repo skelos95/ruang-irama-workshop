@@ -10,11 +10,11 @@ Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126*
 
 ## Stato attuale
 
-L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La nuova anteprima di Info, con i binding nel testo e senza sottotitolo, richiede ancora una verifica nel client.
+L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La nuova anteprima di Info e il recupero della Camera tramite riapplicazione nel menu 2 richiedono ancora una verifica nel client.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.392 unità (−17,4%)**. Il testo da importare passa da 348.732 a 289.427 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.349 unità (−17,6%)**. Il testo da importare passa da 348.732 a 289.257 byte UTF-8 (−17,1%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -27,7 +27,7 @@ La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il co
 3. Nelle impostazioni Workshop scegli durata **10–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel testo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
-Il file contiene le regole, non il preset delle mappe. L'HUD centrale mostra **[cozywatch.org](https://cozywatch.org)**, il sito della modalità. Il precedente sistema Server Location è rimosso.
+Il file contiene le regole, non il preset delle mappe. L'HUD centrale mostra **[cozywatch.org](https://cozywatch.org)** in viola neon (`#825AFF`), il sito della modalità. Il precedente sistema Server Location è rimosso.
 
 Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
 
@@ -41,7 +41,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Sottomenu | Crouch + Reload | Torna al menu principale |
 | Soundtrack | Crouch + Ability 1 / 2 | Salta avanti / indietro di 10 generi |
 | Crouch rilasciato | Interact tenuto 0,5 s | Alterna Camera, anche con menu aperto |
-| Menu chiuso, Travel OFF | Crouch tenuto | Inspection: eroe e HP del bersaglio |
+| Arcade chiuso, Travel OFF o pagine Travel Player/Bot / Attach | Crouch tenuto | Inspection: eroe e HP del bersaglio |
 | Menu chiuso, Travel ON | Crouch tenuto | Travel & Attach |
 | Travel & Attach | Crouch + Primary / Secondary, poi Interact | Cambia pagina, poi esegue |
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
@@ -51,7 +51,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 
 Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
-Quando Info / Controls 0 è selezionata nel principale, il sottotitolo dell'HUD (`Subheader`) è vuoto e l'anteprima nel corpo (`Text`) mostra i binding del giocatore: Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch a menu chiuso con Travel OFF per vedere eroe e HP. Include anche Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Il sottomenu Info mantiene la guida completa nel corpo e nessun sottotitolo. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. I due promemoria fissi agli angoli dello schermo sono rimossi.
+Quando Info / Controls 0 è selezionata nel principale, il sottotitolo dell'HUD (`Subheader`) è vuoto e l'anteprima nel corpo (`Text`) mostra i binding del giocatore: Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch con Arcade chiuso e Travel OFF, oppure nelle pagine Teleport Player/Bot e Attach per vedere eroe e HP. Include anche Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Il sottomenu Info mantiene la guida completa nel corpo e nessun sottotitolo. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. I due promemoria fissi agli angoli dello schermo sono rimossi.
 
 ## Menu personali
 
@@ -76,7 +76,7 @@ Quando Info / Controls 0 è selezionata nel principale, il sottotitolo dell'HUD 
 
 Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni.
 
-La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
+Nel menu 2 ogni applicazione di Your Hero o di un bersaglio valido ferma e ricrea la Camera, anche se la stessa scelta era già attiva. Camera OFF ferma sempre la camera nativa. La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
 

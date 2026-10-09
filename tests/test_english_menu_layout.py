@@ -21,7 +21,7 @@ MENU_PREFIXES = ("91a", "91b", "91c", "91d", "91f", "91g", "91h",
 MAIN_INFO_CONTROLS = (
     ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
     ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
-    ("HERO + HP INSPECTION: hold Crouch ({0}); menu closed, Travel OFF", ("Crouch",)),
+    ("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", ("Crouch",)),
     ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
      ("Crouch", "Primary Fire", "Secondary Fire")),
     ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",

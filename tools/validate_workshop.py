@@ -1243,8 +1243,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if server_location:
         checks.equal(
             re.sub(r"\s+", "", server_location.args[7]),
-            "CustomColor(255,205,110,255)",
-            'WEBSITE: colore subheader pastel gold esatto',
+            "CustomColor(130,90,255,255)",
+            'WEBSITE: colore subheader cyber violet esatto',
         )
     if server_location and player_vibes:
         checks.require(
@@ -1582,7 +1582,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     ("Hold {0} + {1}: select / apply | + {2}: back", ("Crouch", "Interact", "Reload")),
                     ("Hold {0} 0.5s: open / close Arcade", ("Melee",)),
                     ("Hold {0} 0.5s with {1} released: toggle camera", ("Interact", "Crouch")),
-                    ("Menu closed: hold {0}: inspect hero + HP (Travel OFF)", ("Crouch",)),
+                    ("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", ("Crouch",)),
                     ("Soundtrack: hold {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
                     ("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
                     ("Travel: {0}: use | release {1}: close", ("Interact", "Crouch")),
@@ -1764,7 +1764,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         preview_controls = (
             ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
             ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
-            ("HERO + HP INSPECTION: hold Crouch ({0}); menu closed, Travel OFF", ("Crouch",)),
+            ("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", ("Crouch",)),
             ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
              ("Crouch", "Primary Fire", "Secondary Fire")),
             ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
@@ -7351,6 +7351,25 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                        and apply_camera.body.count("Call Subroutine(StartCamera);") == 2
                        and quick_camera.body.count("Call Subroutine(StartCamera);") == 1,
                        "Camera personale, watch e toggle rapido devono condividere StartCamera")
+        if apply_camera:
+            apply_actions = rule_block(apply_camera, "actions") or ""
+            conditions = [call.args[0] for name in ("If", "Else If", "Abort If")
+                          for call in iter_calls(apply_actions, name) if call.args]
+            checks.require(not any(re.search(r"Event Player\.(?:CameraMode|CameraTarget)\b",
+                                             mask_strings(condition)) for condition in conditions),
+                           "Camera menu: explicit apply must recreate the native camera")
+            for start in iter_calls(apply_actions, "Call Subroutine"):
+                if start.args != ("StartCamera",):
+                    continue
+                branches = conditional_branches_containing(apply_actions, start.start)
+                branch = branches[0] if branches else ""
+                starts = [call for call in iter_calls(branch, "Call Subroutine")
+                          if call.args == ("StartCamera",)]
+                stops = list(iter_calls(branch, "Stop Camera"))
+                checks.require(len(starts) == 1 and len(stops) == 1
+                               and stops[0].args == ("Event Player",)
+                               and stops[0].end < starts[0].start,
+                               "Camera menu: stop before every valid start")
         for rule in callers:
             actions = rule_block(rule, "actions") or ""
             for call in iter_calls(actions, "Call Subroutine"):

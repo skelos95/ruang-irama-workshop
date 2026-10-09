@@ -998,7 +998,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(info, old, new)
         self.assert_rejected(mutated, "Info")
 
-    def test_website_hud_keeps_its_distinct_pastel_gold_color(self) -> None:
+    def test_website_hud_keeps_its_distinct_cyber_violet_color(self) -> None:
         calls = list(validator.iter_calls(self.source, "Create HUD Text"))
         server_location = next(
             call for call in calls
@@ -1015,9 +1015,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(
             server_location,
             7,
-            "Custom Color(254, 205, 110, 255)",
+            "Custom Color(129, 90, 255, 255)",
         )
-        self.assert_rejected(mutated, 'WEBSITE: colore subheader pastel gold esatto')
+        self.assert_rejected(mutated, 'WEBSITE: colore subheader cyber violet esatto')
         mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
         self.assert_rejected(mutated, "colore distinto da PLAYER VIBES")
 

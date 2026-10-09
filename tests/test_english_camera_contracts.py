@@ -29,6 +29,42 @@ class EnglishCameraContractTests(unittest.TestCase):
     def test_current_camera_boundaries_pass(self) -> None:
         self.assertEqual(self.camera_errors(self.source), [])
 
+    def test_camera_menu_rejects_same_mode_or_target_shortcuts(self) -> None:
+        for target, mode, indent in (("Event Player", 1, "\t\t\t"),
+                                     ("Event Player.CameraTargetCandidate", 2, "\t\t\t\t")):
+            with self.subTest(mode=mode):
+                block = "\n".join(indent + action for action in (
+                    "Stop Camera(Event Player);",
+                    f"Event Player.CameraTarget = {target};",
+                    f"Event Player.CameraMode = {mode};",
+                    "Global.CameraPlayer = Event Player;",
+                    "Call Subroutine(StartCamera);",
+                    "Global.CameraPlayer = Null;",
+                ))
+                guarded = (indent + f"If(Or(Event Player.CameraMode != {mode}, Event Player.CameraTarget != {target}));\n"
+                           + block + "\n" + indent + "End;")
+                changed = self.changed_rule("ApplyCameraPage", block, guarded)
+                self.assert_camera_rejected(changed, "Camera menu: explicit apply must recreate the native camera")
+
+    def test_camera_menu_requires_stop_before_both_native_start_branches(self) -> None:
+        for target, mode, indent in (("Event Player", 1, "\t\t\t"),
+                                     ("Event Player.CameraTargetCandidate", 2, "\t\t\t\t")):
+            block = "\n".join(indent + action for action in (
+                "Stop Camera(Event Player);",
+                f"Event Player.CameraTarget = {target};",
+                f"Event Player.CameraMode = {mode};",
+                "Global.CameraPlayer = Event Player;",
+                "Call Subroutine(StartCamera);",
+                "Global.CameraPlayer = Null;",
+            ))
+            without_stop = block.replace(indent + "Stop Camera(Event Player);\n", "", 1)
+            late_stop = without_stop.replace("Call Subroutine(StartCamera);",
+                "Call Subroutine(StartCamera);\n" + indent + "Stop Camera(Event Player);", 1)
+            for kind, replacement in (("missing", without_stop), ("late", late_stop)):
+                with self.subTest(mode=mode, stop=kind):
+                    changed = self.changed_rule("ApplyCameraPage", block, replacement)
+                    self.assert_camera_rejected(changed, "Camera menu: stop before every valid start")
+
     def test_every_travel_route_requires_native_stop_before_teleport(self) -> None:
         for routine in ("TravelToSpawn", "TravelToObjective", "TravelToPlayer"):
             with self.subTest(routine=routine):

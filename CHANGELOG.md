@@ -1,5 +1,11 @@
 # Changelog
 
+## Camera, descrizione Inspection e viola neon — 2026-10-09
+
+- Corretto il ramo che saltava il riavvio quando WATCH aveva già la stessa modalità e lo stesso bersaglio. Ogni applicazione valida di Your Hero o WATCH esegue ora Stop Camera e richiama StartCamera, anche quando le preferenze sono invariate; Camera OFF ferma sempre la visuale nativa.
+- Conservati filtro dei bersagli pubblici, privacy, isolamento dei giocatori e un solo Start Camera centralizzato. Nessuna nuova variabile, attesa o regola.
+- Info, sia anteprima sia guida completa, specifica Inspection con Arcade chiuso e Travel OFF oppure nelle pagine Teleport Player/Bot e Attach. Il sito cozywatch.org usa viola neon RGB 130/90/255 (#825AFF), distinto da Player Vibes.
+
 ## Binding nell'anteprima Info — 2026-10-08
 
 - Con Info / Controls 0 selezionata nel principale, il sottotitolo viene nascosto e il testo della preview mostra i binding reali del giocatore, insieme alle condizioni dei comandi.

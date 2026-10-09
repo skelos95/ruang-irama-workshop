@@ -4,6 +4,7 @@ Native teleport/rendering and the walkable-position solver are controlled
 boundaries. These tests assert ordering and ownership, not client rendering.
 """
 from pathlib import Path
+import operator
 import re
 import unittest
 
@@ -21,6 +22,45 @@ PATHS = (
 )
 
 
+class CameraExpression(ControllerExpression):
+    """Evaluate native array filters lazily with their current-element scope."""
+    def evaluate(self, context):
+        operations = {
+            "+": operator.add, "-": operator.sub, "*": operator.mul,
+            "/": operator.truediv, "%": operator.mod, "==": operator.eq,
+            "!=": operator.ne, ">=": operator.ge, "<=": operator.le,
+            ">": operator.gt, "<": operator.lt,
+        }
+
+        def visit(node):
+            kind = node[0]
+            if kind == "literal": return node[1]
+            if kind == "name": return context.resolve(node[1])
+            if kind == "negate": return -visit(node[1])
+            if kind == "conditional": return visit(node[2] if visit(node[1]) else node[3])
+            if kind == "index":
+                array, index = visit(node[1]), int(visit(node[2]))
+                return array[index] if 0 <= index < len(array) else 0
+            if kind == "call":
+                name, args = node[1:]
+                if name in ("And", "Or"):
+                    return (all if name == "And" else any)(bool(visit(arg)) for arg in args)
+                if name == "FilteredArray":
+                    context.filter_builds += 1
+                    previous = context.element
+                    try:
+                        result = []
+                        for context.element in visit(args[0]):
+                            if visit(args[1]): result.append(context.element)
+                        return result
+                    finally:
+                        context.element = previous
+                return context.call(name, [visit(arg) for arg in args])
+            return operations[kind](visit(node[1]), visit(node[2]))
+
+        return visit(self.tree)
+
+
 class CameraResetEvaluator:
     def __init__(self, text):
         text = runtime.english(text) if text.lstrip().startswith("variabili") else text
@@ -32,6 +72,9 @@ class CameraResetEvaluator:
         self.literals = {}
         self.steps = []
         self.native_cameras = {}
+        self.element = None
+        self.filter_builds = 0
+        self.player_order = None
         self.now = 10
         self.spawn_points = [Vector(100, 2, 10)]
         self.objective = Vector(50, 2, 20)
@@ -45,7 +88,8 @@ class CameraResetEvaluator:
                      LuckSpinCount=0, LuckEffect=0, LuckEffectEndTime=0,
                      MenuOpen=False, LockedTravelTarget="target",
                      TravelTargets=["target"], PlayerCycleActive=False,
-                     InspectionPrivacyActive=False)
+                     InspectionPrivacyActive=False, PlayerListUpdatePending=False,
+                     IsAutomaticBot=False, dummy=False, CameraCursor=0, CameraTargets=[])
         state.update(changes)
         self.players[name] = state
         return state
@@ -58,6 +102,7 @@ class CameraResetEvaluator:
                      "ObjectiveIndex": 0, "Team1": 1, "Team2": 2}
         if name in constants:
             return constants[name]
+        if name == "CurrentArrayElement": return self.element
         if name.startswith("Global."):
             parts = name.split(".")
             value = self.globals.get(parts[1])
@@ -73,6 +118,8 @@ class CameraResetEvaluator:
         if name == "Array": return list(args)
         if name == "CountOf": return len(args[0])
         if name == "ArrayContains": return args[1] in args[0]
+        if name == "IndexOfArrayValue": return args[0].index(args[1]) if args[1] in args[0] else -1
+        if name == "AllPlayers": return list(self.players) if self.player_order is None else self.player_order
         if name == "PlayerVariable": return self.players.get(args[0], {}).get(args[1], False)
         if name == "EvaluateOnce": return args[0]
         if name == "Vector": return Vector(*args)
@@ -83,7 +130,7 @@ class CameraResetEvaluator:
         if name == "CustomString": return args[0].format(*args[1:])
         keys = {"EntityExists": "exists", "HasSpawned": "spawned", "IsAlive": "alive",
                 "TeamOf": "team", "IsInSpawnRoom": "in_spawn", "HeroOf": "hero",
-                "PositionOf": "position", "FacingDirectionOf": "facing"}
+                "PositionOf": "position", "FacingDirectionOf": "facing", "IsDummyBot": "dummy"}
         if name in keys:
             if name == "PositionOf" and isinstance(args[0], Vector): return args[0]
             return self.players.get(args[0], {}).get(keys[name], False)
@@ -95,7 +142,7 @@ class CameraResetEvaluator:
             self.literals[key] = match[0][1:-1]
             return key
         source = re.sub(r'"(?:\\.|[^"\\])*"', literal, source)
-        return ControllerExpression(re.sub(r"\s+", "", source)).evaluate(self)
+        return CameraExpression(re.sub(r"\s+", "", source)).evaluate(self)
 
     def assign(self, target, value):
         parts = re.sub(r"\s+", "", target).split(".")
@@ -136,9 +183,11 @@ class CameraResetEvaluator:
                 if statement.startswith("Abort If("):
                     if self.expression(statement[9:-1]): return
                     continue
-                assignment = re.fullmatch(r"(Global\.\w+(?:\.\w+)?)\s*=\s*(.+)", statement, re.S)
+                assignment = re.fullmatch(r"(Global\.\w+(?:\.\w+)?)\s*(=|%=)\s*(.+)", statement, re.S)
                 if assignment:
-                    self.assign(assignment[1], self.expression(assignment[2]))
+                    value = self.expression(assignment[3])
+                    if assignment[2] == "%=": value = self.expression(assignment[1]) % value
+                    self.assign(assignment[1], value)
                     continue
                 name = statement.split("(", 1)[0]
                 call = next(semantic.iter_calls(statement, name))
@@ -272,6 +321,97 @@ class CameraReinitializationTests(unittest.TestCase):
                 model.hero_change("other")
                 self.assertEqual(model.steps[-2:], [("stop", "other"), ("start", "other")])
                 self.assertEqual(model.native_cameras["viewer"], "viewer")
+
+    def test_camera_menu_same_watch_recovers_after_native_camera_is_lost(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                viewer = model.add("viewer", CameraMode=0, CameraTarget=None,
+                                   CameraCursor=2, CameraTargets=["target"])
+                model.add("target")
+                model.route("viewer", "ApplyCameraPage")
+                self.assertEqual(model.native_cameras.get("viewer"), "target")
+                self.assertGreaterEqual(model.filter_builds, 2)
+                self.assertEqual((viewer["CameraMode"], viewer["CameraTarget"]), (2, "target"))
+                model.native_cameras.pop("viewer")
+                model.steps.clear()
+                model.route("viewer", "ApplyCameraPage")
+                self.assertEqual(model.steps, [("stop", "viewer"), ("start", "viewer")])
+                self.assertEqual(model.native_cameras.get("viewer"), "target")
+                self.assertIsNone(model.globals["CameraPlayer"])
+
+    def test_camera_menu_switches_and_reapplies_self_and_other_targets(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                viewer = model.add("viewer", CameraMode=0, CameraTarget=None,
+                                   CameraTargets=["first", "second"])
+                model.add("first")
+                model.add("second")
+                for selection in ("first", "first", "second", "viewer", "viewer", "first"):
+                    with self.subTest(selection=selection):
+                        viewer["CameraCursor"] = 1 if selection == "viewer" else viewer["CameraTargets"].index(selection) + 2
+                        model.steps.clear()
+                        model.route("viewer", "ApplyCameraPage")
+                        self.assertEqual(model.steps, [("stop", "viewer"), ("start", "viewer")])
+                        self.assertEqual((viewer["CameraMode"], viewer["CameraTarget"]),
+                                         (1 if selection == "viewer" else 2, selection))
+                        self.assertEqual(model.native_cameras["viewer"], selection)
+                        self.assertIsNone(model.globals["CameraPlayer"])
+                # Native player order may change while the menu keeps the selected identity.
+                viewer["CameraCursor"] = viewer["CameraTargets"].index("second") + 2
+                model.player_order = ["second", "viewer", "first"]
+                model.steps.clear()
+                model.route("viewer", "ApplyCameraPage")
+                self.assertEqual(viewer["CameraTarget"], "second")
+                self.assertEqual(viewer["CameraCursor"], 2)
+                self.assertEqual(model.steps, [("stop", "viewer"), ("start", "viewer")])
+
+    def test_camera_menu_off_always_stops_and_clears_preferences(self):
+        for source, model in self.models():
+            for mode in (0, 1, 2):
+                with self.subTest(source=source, mode=mode):
+                    viewer = model.add("viewer", CameraMode=mode, CameraTarget="target", CameraCursor=0)
+                    model.add("target")
+                    model.native_cameras["viewer"] = "target"
+                    for _ in range(2):
+                        model.steps.clear()
+                        model.route("viewer", "ApplyCameraPage")
+                        self.assertEqual(model.steps, [("stop", "viewer")])
+                        self.assertEqual((viewer["CameraMode"], viewer["CameraTarget"]), (0, None))
+                        self.assertNotIn("viewer", model.native_cameras)
+
+    def test_camera_menu_public_filter_never_starts_on_private_or_invalid_target(self):
+        cases = ({"InspectionPrivacyActive": True}, {"alive": False},
+                 {"exists": False}, {"spawned": False}, {"PlayerListUpdatePending": True})
+        for path in PATHS:
+            for changes in cases:
+                with self.subTest(source=path.name, target=changes):
+                    model = CameraResetEvaluator(path.read_text(encoding="utf-8"))
+                    viewer = model.add("viewer", CameraMode=2, CameraTarget="target",
+                                       CameraCursor=2, CameraTargets=["target"])
+                    model.add("target", **changes)
+                    model.native_cameras["viewer"] = "target"
+                    model.route("viewer", "ApplyCameraPage")
+                    self.assertEqual(viewer["CameraTargets"], [])
+                    self.assertEqual((viewer["CameraMode"], viewer["CameraTarget"]), (0, None))
+                    self.assertEqual(model.steps, [("stop", "viewer")])
+                    self.assertNotIn("viewer", model.native_cameras)
+
+    def test_camera_menu_reapply_keeps_two_viewers_independent(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                model.add("target")
+                for owner in ("viewer", "other"):
+                    model.add(owner, CameraMode=0, CameraTarget=None,
+                              CameraCursor=2, CameraTargets=["target"])
+                    model.route(owner, "ApplyCameraPage")
+                self.assertEqual(model.native_cameras, {"viewer": "target", "other": "target"})
+                model.native_cameras.pop("viewer")
+                for owner, unchanged in (("viewer", "other"), ("other", "viewer")):
+                    model.steps.clear()
+                    model.route(owner, "ApplyCameraPage")
+                    self.assertEqual(model.steps, [("stop", owner), ("start", owner)])
+                    self.assertEqual(model.native_cameras[unchanged], "target")
+                    self.assertIsNone(model.globals["CameraPlayer"])
 
 
 if __name__ == "__main__":
