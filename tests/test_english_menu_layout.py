@@ -27,6 +27,26 @@ MAIN_INFO_CONTROLS = (
     ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
      ("Crouch", "Interact", "Reload")),
 )
+INFO_CONTROLS = (
+    ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("Hold {0} + {1}: select / apply | + {2}: back", ("Crouch", "Interact", "Reload")),
+    ("Hold {0} 0.5s: open / close Arcade", ("Melee",)),
+    ("Hold {0} 0.5s with {1} released: toggle camera", ("Interact", "Crouch")),
+    ("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", ("Crouch",)),
+    ("Soundtrack: hold {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
+    ("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("Travel: {0}: use | release {1}: close", ("Interact", "Crouch")),
+    ("Attached, menu closed: hold {0} + {1}: detach", ("Crouch", "Reload")),
+    ("Dead: press {0} to resurrect on safe ground", ("Jump",)),
+    ("Multijump ON: tap / hold {0} in air to boost", ("Jump",)),
+    ("Superman Punch ON: use {0} to punch", ("Melee",)),
+)
+
+
+def rendered_control_lines(controls):
+    return ["0 - INFO / CONTROLS", *(
+        literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
+        for literal, buttons in controls)]
 
 
 def main_menu_branch(expression, cursor):
@@ -66,8 +86,17 @@ class RegistrationMenuEvaluator(LifecycleSourceEvaluator):
         return True
 
 
+class MenuColorContext(CompactionContext):
+    def call(self, name, args):
+        if name == "CustomColor":
+            return tuple(args)
+        if name in ("XComponentOf", "YComponentOf", "ZComponentOf"):
+            return args[0][("XComponentOf", "YComponentOf", "ZComponentOf").index(name)]
+        return super().call(name, args)
+
+
 class EnglishMenuLayoutTests(unittest.TestCase):
-    def test_commands_use_subtitle_and_functions_use_text_in_one_hud(self):
+    def test_commands_and_info_use_subheader_and_functions_use_text_in_one_hud(self):
         for path in ARTIFACTS:
             rules = validator.extract_rules(path.read_text(encoding="utf-8"))
             for prefix in MENU_PREFIXES:
@@ -80,8 +109,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     self.assertNotEqual(calls[0].args[3], "Null")
                     subtitle, content = calls[0].args[2:4]
                     if prefix == "91a":
-                        info_subtitle = main_menu_branch(subtitle, 0)
-                        self.assertEqual(compiler._emit(info_subtitle), 'Custom String("")')
+                        self.assertEqual(compiler._emit(main_menu_branch(content, 0)), 'Custom String("")')
                         _, fields, _, _ = validator.declaration_entries(path.read_text(encoding="utf-8"))
                         context = CompactionContext([field.name for field in fields])
                         for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
@@ -91,12 +119,10 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         context.player["MainMenuCursor"] = 0
                         text_tree = context.parse(compiler.actor_text(content))
                         subtitle_tree = context.parse(compiler.actor_text(subtitle))
-                        rendered = text_tree.evaluate(context)
-                        expected_lines = ["0 - INFO / CONTROLS", *(
-                            literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
-                            for literal, buttons in MAIN_INFO_CONTROLS)]
+                        rendered = subtitle_tree.evaluate(context)
+                        expected_lines = rendered_control_lines(MAIN_INFO_CONTROLS)
                         self.assertEqual(rendered.splitlines(), expected_lines)
-                        self.assertEqual(subtitle_tree.evaluate(context), "")
+                        self.assertEqual(text_tree.evaluate(context), "")
                         for cursor in range(1, 16):
                             with self.subTest(cursor=cursor):
                                 normal_content = compiler._emit(main_menu_branch(content, cursor))
@@ -108,8 +134,8 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                 self.assertTrue(rendered.startswith(f"{cursor} - "))
                                 self.assertIn("<Interact>", subtitle_tree.evaluate(context))
                         context.player["MainMenuCursor"] = 0
-                        self.assertEqual(text_tree.evaluate(context).splitlines(), expected_lines)
-                        self.assertEqual(subtitle_tree.evaluate(context), "")
+                        self.assertEqual(subtitle_tree.evaluate(context).splitlines(), expected_lines)
+                        self.assertEqual(text_tree.evaluate(context), "")
                         subtitle = compiler._emit(main_menu_branch(subtitle, 1))
                         content = compiler._emit(main_menu_branch(content, 1))
                     self.assertEqual(list(validator.iter_calls(content, "Input Binding String")), [])
@@ -141,16 +167,14 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 subtitle = context.parse(hud.args[2])
                 body = context.parse(hud.args[3])
                 context.globals.update(TriggerPlayer=None, ActivePlayer=None)
-                expected = ["0 - INFO / CONTROLS", *(
-                    literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
-                    for literal, buttons in MAIN_INFO_CONTROLS)]
+                expected = rendered_control_lines(MAIN_INFO_CONTROLS)
                 for cursor in (0, 1, 0):
                     context.player["MainMenuCursor"] = cursor
                     rendered_subtitle = subtitle.evaluate(context)
                     rendered_body = body.evaluate(context)
                     if cursor == 0:
-                        self.assertEqual(rendered_subtitle, "")
-                        self.assertEqual(rendered_body.splitlines(), expected)
+                        self.assertEqual(rendered_subtitle.splitlines(), expected)
+                        self.assertEqual(rendered_body, "")
                     else:
                         self.assertIn("<Interact>", rendered_subtitle)
                         self.assertIn("<Melee>", rendered_subtitle)
@@ -158,22 +182,60 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         self.assertIn("White", rendered_body)
                         self.assertNotIn("<Interact>", rendered_body)
 
-    def test_info_has_all_bindings_without_an_extra_commands_subtitle(self):
+    def test_info_has_all_controls_in_one_subheader_with_empty_header_and_text(self):
         expected = {"Crouch", "Primary Fire", "Secondary Fire", "Interact",
                     "Reload", "Melee", "Ability 1", "Ability 2", "Jump"}
         for path in ARTIFACTS:
             with self.subTest(artifact=path.name):
                 rules = validator.extract_rules(path.read_text(encoding="utf-8"))
                 info = validator.rule_by_subroutine(rules, "DrawInfoMenu")
-                call = next(validator.iter_calls(info.body, "Create HUD Text"))
-                self.assertEqual(call.args[1:3], ("Null", "Null"))
+                calls = list(validator.iter_calls(info.body, "Create HUD Text"))
+                self.assertEqual(len(calls), 1)
+                call = calls[0]
+                self.assertEqual(call.args[1], "Null")
+                self.assertEqual(call.args[3], "Null")
                 self.assertEqual({button.args[0] for button in
-                    validator.iter_calls(call.args[3], "Button")}, expected)
-                literals = [validator.parse_literal(item.args[0]) for item in
-                            validator.iter_calls(call.args[3], "Custom String")]
-                for topic in ("0 - INFO / CONTROLS", "Soundtrack:", "Travel ON:",
-                              "Attached, menu closed:", "Dead:", "Multijump ON:", "Superman Punch ON:"):
-                    self.assertTrue(any(topic in text for text in literals))
+                    validator.iter_calls(call.args[2], "Button")}, expected)
+                _, fields, _, _ = validator.declaration_entries(path.read_text(encoding="utf-8"))
+                context = CompactionContext([field.name for field in fields])
+                rendered = context.parse(compiler.actor_text(call.args[2])).evaluate(context)
+                self.assertEqual(rendered.splitlines(), rendered_control_lines(INFO_CONTROLS))
+
+    def test_info_subheader_keeps_menu_color_and_other_main_commands_keep_their_color(self):
+        for path in ARTIFACTS:
+            with self.subTest(artifact=path.name):
+                text = path.read_text(encoding="utf-8")
+                rules = validator.extract_rules(text)
+                _, fields, _, _ = validator.declaration_entries(text)
+                context = MenuColorContext([field.name for field in fields])
+                context.globals.update(TriggerPlayer=None, ActivePlayer=None)
+                context.player["MenuColor"] = (190, 210, 230)
+                main = validator.rule_by_subroutine(rules, "DrawMainMenu")
+                main_hud = next(validator.iter_calls(main.body, "Create HUD Text"))
+                color = context.parse(compiler.actor_text(main_hud.args[7]))
+                for cursor in (0, 1, 15, 0):
+                    context.player["MainMenuCursor"] = cursor
+                    self.assertEqual(color.evaluate(context), (190, 210, 230, 255) if cursor == 0
+                                     else (210, 230, 255, 255))
+                info = validator.rule_by_subroutine(rules, "DrawInfoMenu")
+                info_hud = next(validator.iter_calls(info.body, "Create HUD Text"))
+                self.assertEqual(context.parse(compiler.actor_text(info_hud.args[7])).evaluate(context),
+                                 (190, 210, 230, 255))
+
+    def test_host_row_is_a_single_compact_line(self):
+        for path in ARTIFACTS:
+            with self.subTest(artifact=path.name):
+                rules = validator.extract_rules(path.read_text(encoding="utf-8"))
+                hosts = [call for rule in rules for call in validator.iter_calls(rule.body, "Create HUD Text")
+                         if call.args[4].strip() == "Right" and call.args[5].strip() == "0"]
+                self.assertEqual(len(hosts), 1)
+                node = compiler._Expression(hosts[0].args[3]).tree
+                self.assertEqual(node.kind, "conditional")
+                row, absent = node.children[1:]
+                self.assertEqual((row.kind, row.value), ("call", "Custom String"))
+                self.assertEqual(validator.parse_literal(compiler._emit(row.children[0])), "{0} {1} {2}")
+                self.assertEqual(len(row.children), 4)
+                self.assertEqual(compiler._emit(absent), 'Custom String("")')
 
     def test_registration_opens_info_preview_once_and_rejoin_resets_it(self):
         for path, _, _ in SOURCES:
