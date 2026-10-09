@@ -11,12 +11,34 @@ from tools import build_global_runtime as compiler
 from tools import validate_workshop as validator
 from tests.test_roster_rejoin_regressions import LifecycleSourceEvaluator, SOURCES
 from tests.runtime_selection import rule_for_logical_id
+from tests.test_global_compaction import CompactionContext
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (*[path for path, _, _ in SOURCES],
              ROOT / "workshop/ruang_irama.en-US.workshop")
 MENU_PREFIXES = ("91a", "91b", "91c", "91d", "91f", "91g", "91h",
                  "91i", "91j", "91n", "91o", "91s", "91t")
+MAIN_INFO_CONTROLS = (
+    ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
+    ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
+    ("HERO + HP INSPECTION: hold Crouch ({0}); menu closed, Travel OFF", ("Crouch",)),
+    ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
+     ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
+     ("Crouch", "Interact", "Reload")),
+)
+
+
+def main_menu_branch(expression, cursor):
+    """Select only the explicit Info-zero exception in each native HUD field."""
+    node = compiler._Expression(expression).tree
+    if node.kind != "conditional":
+        raise AssertionError("main menu HUD fields must branch explicitly on Info 0")
+    condition = re.sub(r"\s+", "", compiler._emit(node.children[0])).strip("()")
+    if condition not in ("EventPlayer.MainMenuCursor==0",
+                         "PlayerVariable(LocalPlayer,MainMenuCursor)==0"):
+        raise AssertionError(f"unexpected main menu Info guard: {condition}")
+    return node.children[1 if cursor == 0 else 2]
 
 
 def soundtrack_branch_bindings(node, locked):
@@ -57,6 +79,39 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     self.assertNotEqual(calls[0].args[2], "Null")
                     self.assertNotEqual(calls[0].args[3], "Null")
                     subtitle, content = calls[0].args[2:4]
+                    if prefix == "91a":
+                        info_subtitle = main_menu_branch(subtitle, 0)
+                        self.assertEqual(compiler._emit(info_subtitle), 'Custom String("")')
+                        _, fields, _, _ = validator.declaration_entries(path.read_text(encoding="utf-8"))
+                        context = CompactionContext([field.name for field in fields])
+                        for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
+                            context.globals[name] = [f"{name}:{index}" for index in range(200)]
+                        context.player.update(GenreIndex=-1, CustomSoundtrack=None,
+                                              VotedPlayer=None, CameraTarget="camera target")
+                        context.player["MainMenuCursor"] = 0
+                        text_tree = context.parse(compiler.actor_text(content))
+                        subtitle_tree = context.parse(compiler.actor_text(subtitle))
+                        rendered = text_tree.evaluate(context)
+                        expected_lines = ["0 - INFO / CONTROLS", *(
+                            literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
+                            for literal, buttons in MAIN_INFO_CONTROLS)]
+                        self.assertEqual(rendered.splitlines(), expected_lines)
+                        self.assertEqual(subtitle_tree.evaluate(context), "")
+                        for cursor in range(1, 16):
+                            with self.subTest(cursor=cursor):
+                                normal_content = compiler._emit(main_menu_branch(content, cursor))
+                                self.assertEqual(list(validator.iter_calls(normal_content, "Input Binding String")), [])
+                                context.player["MainMenuCursor"] = cursor
+                                rendered = text_tree.evaluate(context)
+                                self.assertIn(len(rendered.splitlines()), (1, 2))
+                                self.assertNotIn("\n\n", rendered)
+                                self.assertTrue(rendered.startswith(f"{cursor} - "))
+                                self.assertIn("<Interact>", subtitle_tree.evaluate(context))
+                        context.player["MainMenuCursor"] = 0
+                        self.assertEqual(text_tree.evaluate(context).splitlines(), expected_lines)
+                        self.assertEqual(subtitle_tree.evaluate(context), "")
+                        subtitle = compiler._emit(main_menu_branch(subtitle, 1))
+                        content = compiler._emit(main_menu_branch(content, 1))
                     self.assertEqual(list(validator.iter_calls(content, "Input Binding String")), [])
                     for text in validator.iter_calls(subtitle, "Custom String"):
                         self.assertNotIn("\n", validator.parse_literal(text.args[0]))
@@ -72,6 +127,36 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         self.assertEqual(soundtrack_branch_bindings(tree, False),
                                          ["Crouch", "Primary Fire", "Secondary Fire",
                                           "Ability 1", "Ability 2", "Interact", "Reload", "Melee"])
+
+    def test_compiled_main_hud_reevaluates_info_and_name_color_with_empty_global_actors(self):
+        for path in (ROOT / "workshop/ruang_irama.en-US.workshop",
+                     ROOT / "tests/fixtures/global_runtime_reference.txt"):
+            with self.subTest(artifact=path.name):
+                text = path.read_text(encoding="utf-8")
+                rule = validator.rule_by_subroutine(validator.extract_rules(text), "DrawMainMenu")
+                hud = next(validator.iter_calls(rule.body, "Create HUD Text"))
+                _, fields, _, _ = validator.declaration_entries(text)
+                context = CompactionContext([field.name for field in fields])
+                context.globals["ColorNames"] = ["White"]
+                subtitle = context.parse(hud.args[2])
+                body = context.parse(hud.args[3])
+                context.globals.update(TriggerPlayer=None, ActivePlayer=None)
+                expected = ["0 - INFO / CONTROLS", *(
+                    literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
+                    for literal, buttons in MAIN_INFO_CONTROLS)]
+                for cursor in (0, 1, 0):
+                    context.player["MainMenuCursor"] = cursor
+                    rendered_subtitle = subtitle.evaluate(context)
+                    rendered_body = body.evaluate(context)
+                    if cursor == 0:
+                        self.assertEqual(rendered_subtitle, "")
+                        self.assertEqual(rendered_body.splitlines(), expected)
+                    else:
+                        self.assertIn("<Interact>", rendered_subtitle)
+                        self.assertIn("<Melee>", rendered_subtitle)
+                        self.assertTrue(rendered_body.startswith("1 - NAME COLOR\n"))
+                        self.assertIn("White", rendered_body)
+                        self.assertNotIn("<Interact>", rendered_body)
 
     def test_info_has_all_bindings_without_an_extra_commands_subtitle(self):
         expected = {"Crouch", "Primary Fire", "Secondary Fire", "Interact",

@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from tools import validate_workshop as validator
+from tests.test_english_menu_layout import MAIN_INFO_CONTROLS
 
 
 class PlayerContextCallGraphTests(unittest.TestCase):
@@ -667,16 +668,34 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        mutated = self.replace_call_argument(absolute, 2, "Null")
+        branches = validator.parse_top_level_ternary(call.args[2])
+        self.assertIsNotNone(branches)
+        condition, info, _ = branches
+        mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info} : Null")
         self.assert_rejected(mutated, "DrawMainMenu: commands must use Subheader")
+
+    def test_main_info_preview_cannot_keep_a_command_subtitle(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        branches = validator.parse_top_level_ternary(call.args[2])
+        self.assertIsNotNone(branches)
+        condition, _, commands = branches
+        for kind, info_subtitle in (("commands", commands), ("null", "Null"), ("number", "0")):
+            with self.subTest(info_subtitle=kind):
+                mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info_subtitle} : {commands}")
+                self.assert_rejected(mutated, "Main Info preview: no command subtitle")
 
     def test_main_menu_function_text_cannot_duplicate_input_hints(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
         absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-        duplicate = ('Custom String("{0}\\n{1}", ' + call.args[3] + ', '
+        branches = validator.parse_top_level_ternary(call.args[3])
+        self.assertIsNotNone(branches)
+        condition, info, functions = branches
+        duplicate = ('Custom String("{0}\\n{1}", ' + functions + ', '
                      'Custom String("Hold {0}", Input Binding String(Button(Crouch))))')
-        mutated = self.replace_call_argument(absolute, 3, duplicate)
+        mutated = self.replace_call_argument(absolute, 3, f"{condition} ? {info} : {duplicate}")
         self.assert_rejected(mutated, "DrawMainMenu: function Text must not duplicate input hints")
 
     def test_main_menu_subtitle_keeps_actual_bindings_and_the_close_hold(self) -> None:
@@ -947,8 +966,23 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "colore Subheader deve usare la cache leader")
 
     def test_info_preview_keeps_the_removed_fixed_hud_descriptions(self) -> None:
-        mutated = self.replace_once('HERO + HP INSPECTION', "HERO")
-        self.assert_rejected(mutated, "Info preview must include the descriptions removed from the fixed HUDs")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        for literal, _ in MAIN_INFO_CONTROLS:
+            with self.subTest(description=literal):
+                mutated = self.replace_in_rule(renderer, literal, "MISSING CONTROL")
+                self.assert_rejected(mutated, f"Main Info preview: exactly one instruction for {literal}")
+
+    def test_main_info_preview_keeps_action_binding_order(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        for literal, buttons in MAIN_INFO_CONTROLS:
+            with self.subTest(description=literal):
+                line = next(call for call in validator.iter_calls(renderer.body, "Custom String")
+                            if validator.parse_literal(call.args[0]) == literal)
+                wrong_button = "Melee" if buttons[0] != "Melee" else "Interact"
+                changed = line.raw.replace(f"Button({buttons[0]})", f"Button({wrong_button})", 1)
+                self.assertNotEqual(changed, line.raw)
+                mutated = self.replace_in_rule(renderer, line.raw, changed)
+                self.assert_rejected(mutated, f"Main Info preview: input binding order for {literal}")
 
     def test_info_controls_keep_the_crouch_binding(self) -> None:
         info = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")

@@ -13,7 +13,7 @@ L'unico codice da importare usa la grammatica nativa inglese. Anche identificato
 
 Le 127 regole sono numerate da 0 a 126 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
 
-Nel principale e negli altri menu i comandi contestuali sono nel sottotitolo (`Subheader`), mentre funzioni e opzioni sono nel corpo (`Text`). Info contiene tutti i comandi nel corpo e non li duplica nel sottotitolo. La leggibilità di questa nuova disposizione va verificata nel client.
+Con Info 0 selezionata nel principale, il sottotitolo (`Subheader`) è vuoto e il corpo (`Text`) mostra i binding per Camera, Arcade, ispezione eroe/HP, navigazione e apertura della guida completa. Il sottomenu Info mantiene tutti i comandi nel corpo e nessun sottotitolo. Le altre voci e pagine mostrano i comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. La leggibilità della nuova anteprima va verificata nel client.
 
 I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni dei test. Importa soltanto il file `.workshop` pubblico: contiene il runtime globale generato.
 

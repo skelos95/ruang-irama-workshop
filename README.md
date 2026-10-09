@@ -10,11 +10,11 @@ Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126*
 
 ## Stato attuale
 
-L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La successiva disposizione dei comandi nel sottotitolo del menu richiede ancora una verifica nel client.
+L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra senza il crash precedentemente osservato nel runtime globale. Ha poi confermato il funzionamento nel gioco della revisione inglese con Info / Controls. Sono riscontri qualitativi: non sono state fornite nuove metriche native o una prova completa di durata e concorrenza. La nuova anteprima di Info, con i binding nel testo e senza sottotitolo, richiede ancora una verifica nel client.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.374 unità (−17,5%)**. Il testo da importare passa da 348.732 a 288.793 byte UTF-8 (−17,2%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.392 unità (−17,4%)**. Il testo da importare passa da 348.732 a 289.427 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -25,7 +25,7 @@ La versione nominale in [VERSION](VERSION) resta `0.8.1`; il tag storico e il co
 1. Salva il preset della lobby, imposta la lingua testo del client su English e scegli Schermaglia e le mappe desiderate.
 2. Apri il codice qui sopra, scegli **Raw** e copia tutto nelle regole Workshop.
 3. Nelle impostazioni Workshop scegli durata **10–60 minuti** (default **30**) e diagnostica host, se necessaria.
-4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**; aprila con Crouch + Interact per leggere tutti i comandi. Allo zero del countdown la partita si riavvia.
+4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel testo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
 Il file contiene le regole, non il preset delle mappe. L'HUD centrale mostra **[cozywatch.org](https://cozywatch.org)**, il sito della modalità. Il precedente sistema Server Location è rimosso.
 
@@ -41,7 +41,8 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 | Sottomenu | Crouch + Reload | Torna al menu principale |
 | Soundtrack | Crouch + Ability 1 / 2 | Salta avanti / indietro di 10 generi |
 | Crouch rilasciato | Interact tenuto 0,5 s | Alterna Camera, anche con menu aperto |
-| Menu chiuso | Crouch tenuto | Inspection e, se abilitato, Travel & Attach |
+| Menu chiuso, Travel OFF | Crouch tenuto | Inspection: eroe e HP del bersaglio |
+| Menu chiuso, Travel ON | Crouch tenuto | Travel & Attach |
 | Travel & Attach | Crouch + Primary / Secondary, poi Interact | Cambia pagina, poi esegue |
 | Attaccato, menu chiuso | Crouch + Reload | Sgancia |
 | Morto | Jump | Resuscita sul posto sicuro o recupera dal vuoto |
@@ -50,7 +51,7 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 
 Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
-Info / Controls contiene tutti i comandi con i binding del giocatore; la sua anteprima nel principale ne mostra un riepilogo. Nel principale e negli altri menu i comandi contestuali compaiono nel sottotitolo dell'HUD (`Subheader`), mentre funzioni e opzioni restano nel corpo (`Text`). La pagina Info mostra la guida completa nel corpo, senza ripetere i comandi nel sottotitolo. I due promemoria fissi agli angoli dello schermo sono rimossi.
+Quando Info / Controls 0 è selezionata nel principale, il sottotitolo dell'HUD (`Subheader`) è vuoto e l'anteprima nel corpo (`Text`) mostra i binding del giocatore: Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch a menu chiuso con Travel OFF per vedere eroe e HP. Include anche Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Il sottomenu Info mantiene la guida completa nel corpo e nessun sottotitolo. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. I due promemoria fissi agli angoli dello schermo sono rimossi.
 
 ## Menu personali
 

@@ -6,6 +6,6 @@ Le 127 regole seguono una numerazione unica da **0 a 126**, nell'ordine del file
 
 Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre il menu principale sulla voce **0 — Info / Controls**: Crouch + Interact apre la guida completa. Il sito **[cozywatch.org](https://cozywatch.org)** compare nell'HUD centrale.
 
-I menu mostrano i comandi contestuali nel sottotitolo (`Subheader`) e le funzioni/opzioni nel corpo (`Text`). Info contiene la guida nel corpo, senza sottotitolo comandi duplicato. Questa nuova disposizione richiede ancora una prova nel client.
+Info 0 selezionata nel principale mostra i binding dei comandi nel corpo (`Text`), senza sottotitolo (`Subheader`). Il sottomenu Info mantiene la guida completa nel corpo e nessun sottotitolo. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. La nuova anteprima richiede ancora una prova nel client.
 
 [Guida di importazione](../docs/IMPORTAZIONE.md) · [Funzioni e comandi](../README.md) · [Controlli della revisione corrente](../docs/VALIDAZIONE.md)
