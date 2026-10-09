@@ -14,7 +14,7 @@ L'utente ha confermato l'importazione riuscita e il cambio diretto di squadra se
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.388 unità (−17,4%)**. Il testo da importare passa da 348.732 a 289.414 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.392 unità (−17,4%)**. Il testo da importare passa da 348.732 a 289.427 byte UTF-8 (−17,0%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 

@@ -81,7 +81,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     subtitle, content = calls[0].args[2:4]
                     if prefix == "91a":
                         info_subtitle = main_menu_branch(subtitle, 0)
-                        self.assertEqual(compiler._emit(info_subtitle), "Null")
+                        self.assertEqual(compiler._emit(info_subtitle), 'Custom String("")')
                         _, fields, _, _ = validator.declaration_entries(path.read_text(encoding="utf-8"))
                         context = CompactionContext([field.name for field in fields])
                         for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
@@ -96,7 +96,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                             literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
                             for literal, buttons in MAIN_INFO_CONTROLS)]
                         self.assertEqual(rendered.splitlines(), expected_lines)
-                        self.assertIsNone(subtitle_tree.evaluate(context))
+                        self.assertEqual(subtitle_tree.evaluate(context), "")
                         for cursor in range(1, 16):
                             with self.subTest(cursor=cursor):
                                 normal_content = compiler._emit(main_menu_branch(content, cursor))
@@ -109,7 +109,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                 self.assertIn("<Interact>", subtitle_tree.evaluate(context))
                         context.player["MainMenuCursor"] = 0
                         self.assertEqual(text_tree.evaluate(context).splitlines(), expected_lines)
-                        self.assertIsNone(subtitle_tree.evaluate(context))
+                        self.assertEqual(subtitle_tree.evaluate(context), "")
                         subtitle = compiler._emit(main_menu_branch(subtitle, 1))
                         content = compiler._emit(main_menu_branch(content, 1))
                     self.assertEqual(list(validator.iter_calls(content, "Input Binding String")), [])
@@ -149,7 +149,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     rendered_subtitle = subtitle.evaluate(context)
                     rendered_body = body.evaluate(context)
                     if cursor == 0:
-                        self.assertIsNone(rendered_subtitle)
+                        self.assertEqual(rendered_subtitle, "")
                         self.assertEqual(rendered_body.splitlines(), expected)
                     else:
                         self.assertIn("<Interact>", rendered_subtitle)

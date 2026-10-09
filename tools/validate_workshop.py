@@ -1614,8 +1614,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     info_subtitle = (subtitle_branches[1] if subtitle_branches
                                      and subtitle_branches[0] == "Event Player.MainMenuCursor == 0"
                                      else None)
-                    checks.equal(info_subtitle, "Null", "Main Info preview: no command subtitle")
-                    subtitle = subtitle_branches[2] if info_subtitle == "Null" else "Null"
+                    # Conditional text must use an empty string: Null can render as 0.
+                    checks.equal(info_subtitle, 'Custom String("")', "Main Info preview: no command subtitle")
+                    subtitle = subtitle_branches[2] if info_subtitle == 'Custom String("")' else "Null"
                     text_branches = parse_top_level_ternary(function_text)
                     checks.require(bool(text_branches)
                                    and text_branches[0] == "Event Player.MainMenuCursor == 0",

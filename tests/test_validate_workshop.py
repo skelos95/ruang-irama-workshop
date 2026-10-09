@@ -681,8 +681,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         branches = validator.parse_top_level_ternary(call.args[2])
         self.assertIsNotNone(branches)
         condition, _, commands = branches
-        mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {commands} : {commands}")
-        self.assert_rejected(mutated, "Main Info preview: no command subtitle")
+        for kind, info_subtitle in (("commands", commands), ("null", "Null"), ("number", "0")):
+            with self.subTest(info_subtitle=kind):
+                mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info_subtitle} : {commands}")
+                self.assert_rejected(mutated, "Main Info preview: no command subtitle")
 
     def test_main_menu_function_text_cannot_duplicate_input_hints(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
