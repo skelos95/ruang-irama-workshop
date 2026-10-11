@@ -2395,6 +2395,8 @@ rule("19a - Crouch Travel: Primary Fire advances, Secondary Fire reverses, Inter
 		Event Player.TeamChangeProcessed == False;
 		Event Player.PlayerCycleActive == False;
 		Event Player.CrouchTravelActive == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
 		Event Player.TravelCommand == 0;
 		Is Button Held(Event Player, Button(Crouch)) == True;
 		Or(Or(Is Button Held(Event Player, Button(Primary Fire)), Is Button Held(Event Player, Button(Secondary Fire))), Is Button Held(Event Player, Button(Interact))) == True;
@@ -2451,6 +2453,8 @@ rule("19c - Crouch Travel: Navigate five pages with Primary and Secondary Fire")
 		Event Player.TeamChangeProcessed == False;
 		Event Player.PlayerCycleActive == False;
 		Event Player.CrouchTravelActive == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
 		Or(Event Player.TravelCommand == 1, Event Player.TravelCommand == 2) == True;
 	}
 
@@ -2586,6 +2590,8 @@ rule("19e - Crouch Travel: Interact applies the active page")
 		Event Player.TeamChangeProcessed == False;
 		Event Player.PlayerCycleActive == False;
 		Event Player.CrouchTravelActive == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
 		Event Player.TravelCommand == 3;
 	}
 
@@ -3554,7 +3560,7 @@ rule("91n - Subroutine: Draw the Luck card")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: spin / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY"))), Custom String("> {0}", Event Player.LuckActive ? Custom String("WATCH IT SPIN") : Custom String("GIVE IT A SPIN"))), Top, 3, Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.LuckActive ? Custom String("LUCK IN PROGRESS: PLEASE WAIT") : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: spin / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY"))), Custom String("> {0}", Event Player.LuckActive ? Custom String("WATCH IT SPIN") : Custom String("GIVE IT A SPIN"))), Top, 3, Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -4761,7 +4767,7 @@ rule("91t - Subroutine: Draw Multijump choices")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", Event Player.MultijumpCursor + 1), Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100)), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", Event Player.MultijumpCursor * 100))), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP"))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", Event Player.MultijumpCursor + 1), Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100)), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", Event Player.MultijumpCursor * 100))), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP"))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }

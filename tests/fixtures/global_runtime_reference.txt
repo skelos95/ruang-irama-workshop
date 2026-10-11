@@ -2359,7 +2359,7 @@ rule("62 - Crouch Travel: Primary Fire advances, Secondary Fire reverses, Intera
 
 	actions
 	{
-		Abort If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, And((Global.TriggerPlayer.TravelCommand == 0), And(Is Button Held(Global.TriggerPlayer, Button(Crouch)), Or(Or(Is Button Held(Global.TriggerPlayer, Button(Primary Fire)), Is Button Held(Global.TriggerPlayer, Button(Secondary Fire))), Is Button Held(Global.TriggerPlayer, Button(Interact))))))))));
+		Abort If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, And(Has Spawned(Global.TriggerPlayer), And(Is Alive(Global.TriggerPlayer), And((Global.TriggerPlayer.TravelCommand == 0), And(Is Button Held(Global.TriggerPlayer, Button(Crouch)), Or(Or(Is Button Held(Global.TriggerPlayer, Button(Primary Fire)), Is Button Held(Global.TriggerPlayer, Button(Secondary Fire))), Is Button Held(Global.TriggerPlayer, Button(Interact))))))))))));
 		If(Is Button Held(Global.TriggerPlayer, Button(Primary Fire)));
 		Global.TriggerPlayer.TravelCommand = 1;
 		Else If(Is Button Held(Global.TriggerPlayer, Button(Secondary Fire)));
@@ -2395,7 +2395,7 @@ rule("64 - Crouch Travel: Navigate five pages with Primary and Secondary Fire")
 
 	actions
 	{
-		If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, Or((Global.TriggerPlayer.TravelCommand == 1), (Global.TriggerPlayer.TravelCommand == 2)))))));
+		If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, And(Has Spawned(Global.TriggerPlayer), And(Is Alive(Global.TriggerPlayer), Or((Global.TriggerPlayer.TravelCommand == 1), (Global.TriggerPlayer.TravelCommand == 2)))))))));
 		Global.TriggerPlayer.ControllerState[30] = 0;
 		Abort;
 		End;
@@ -2512,7 +2512,7 @@ rule("66 - Crouch Travel: Interact applies the active page")
 
 	actions
 	{
-		If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, (Global.TriggerPlayer.TravelCommand == 3))))));
+		If(Not(And(Not(Global.TriggerPlayer.TeamChangeProcessed), And(Not(Global.TriggerPlayer.PlayerCycleActive), And(Global.TriggerPlayer.CrouchTravelActive, And(Has Spawned(Global.TriggerPlayer), And(Is Alive(Global.TriggerPlayer), (Global.TriggerPlayer.TravelCommand == 3))))))));
 		Global.TriggerPlayer.ControllerState[32] = 0;
 		Abort;
 		End;
@@ -3436,7 +3436,7 @@ rule("88 - Subroutine: Draw the Luck card")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: spin / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY")))), Custom String("> {0}", (Player Variable(Local Player, LuckActive) ? Custom String("WATCH IT SPIN") : Custom String("GIVE IT A SPIN")))), Top, 3, Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, (Player Variable(Local Player, LuckActive) ? Custom String("LUCK IN PROGRESS: PLEASE WAIT") : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: spin / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY")))), Custom String("> {0}", (Player Variable(Local Player, LuckActive) ? Custom String("WATCH IT SPIN") : Custom String("GIVE IT A SPIN")))), Top, 3, Color(White), Custom Color(255, 240, 190, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -4631,7 +4631,7 @@ rule("115 - Subroutine: Draw Multijump choices")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", (Player Variable(Local Player, MultijumpCursor) + 1)), Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", (Player Variable(Local Player, MultijumpCursor) * 100))))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP")))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", (Player Variable(Local Player, MultijumpCursor) + 1)), Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", (Player Variable(Local Player, MultijumpCursor) * 100))))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP")))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -5082,6 +5082,12 @@ rule("125 - Subroutine: Reconcile departed players from global context")
 		Global.TriggerPlayer = Global.ActiveEvent[1];
 		Global.PendingLeaves[Global.PendingLeaveCursor] = Null;
 		If(Not(And(Entity Exists(Global.TriggerPlayer), Array Contains(Global.PlayerListSnapshot, Global.TriggerPlayer))));
+		If(Entity Exists(Global.TriggerPlayer));
+		Global.TriggerPlayer.IsPrepared = False;
+		Global.TriggerPlayer.IsHuman = False;
+		Global.TriggerPlayer.TeamChangeProcessed = False;
+		Global.TriggerPlayer.PlayerCycleActive = False;
+		End;
 		Call Subroutine(CleanupPlayer);
 		End;
 		End;
@@ -5095,6 +5101,12 @@ rule("125 - Subroutine: Reconcile departed players from global context")
 		Else If((Global.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]] == 0));
 		Global.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]] = (Total Time Elapsed + 0.500);
 		Else If((Total Time Elapsed >= Global.MissingHudDeadlines[Global.PlayerHudSlots[Global.MissingPlayerCursor]]));
+		If(Entity Exists(Global.TriggerPlayer));
+		Global.TriggerPlayer.IsPrepared = False;
+		Global.TriggerPlayer.IsHuman = False;
+		Global.TriggerPlayer.TeamChangeProcessed = False;
+		Global.TriggerPlayer.PlayerCycleActive = False;
+		End;
 		Call Subroutine(CleanupPlayer);
 		End;
 		End;

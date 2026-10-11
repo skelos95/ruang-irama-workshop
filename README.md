@@ -14,11 +14,11 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.336 unità (−17,6%)**. Il testo da importare passa da 348.732 a 289.224 byte UTF-8 (−17,1%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.393 unità (−17,4%)**. Il testo da importare passa da 348.732 a 290.019 byte UTF-8 (−16,8%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
-La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende la successiva correzione del margine inferiore di HOST e la pulizia delle espressioni ridondanti nei titoli Icon e nel filtro dei proprietari delle icone; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
+La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende le successive correzioni di HOST, dei comandi Travel e del rientro dagli spettatori, la pulizia delle espressioni Icon e i sottotitoli corretti di Multijump e Luck; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
 ## Avvio rapido
 
@@ -76,7 +76,7 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
 
-Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni.
+Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni. Input, navigazione e applicazione richiedono un giocatore vivo e spawnato; alla morte o alla perdita dello spawn la chiusura e la pulizia restano attive.
 
 Nel menu 2 ogni applicazione di Your Hero o di un bersaglio valido ferma e ricrea la Camera, anche se la stessa scelta era già attiva. Camera OFF ferma sempre la camera nativa. La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
 
