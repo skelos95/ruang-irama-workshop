@@ -1,5 +1,14 @@
 # Changelog
 
+## Controllo mirato: Travel, spettatori e sottotitoli — 2026-10-11
+
+- Impedito a input, navigazione e applicazione Travel di lavorare quando il proprietario è morto o non spawnato. Prima, un input nello stesso tick della morte poteva eseguire una scelta prima della chiusura; il controller di chiusura resta libero di pulire HUD, testi e blocchi dei tasti.
+- Quando un'entità ancora esistente passa agli spettatori, la pulizia del registro invalida preparazione e classificazione. Il ritorno nella stessa squadra non recupera più direttamente le vecchie preferenze: riutilizza il worker a fasi esistente e riparte dai default con Info aperta. Nessuna nuova attesa, regola o variabile; nessun ripristino nativo aggiunto nello stesso tick della pulizia.
+- Multijump descrive Interact come `apply`, coerentemente con la scelta OFF o del livello fisso. Luck mostra un messaggio di attesa mentre la funzione blocca i comandi; i binding normali tornano alla fine.
+- Aggiunte regressioni sull'import effettivo per Travel, rientro dagli spettatori e sottotitolo Luck. Le prove automatiche eseguono i rami del codice con risposte native controllate; non rappresentano una nuova sessione nel client.
+- GitHub verificato: branch e release coerenti, protezione attiva, Actions fissate alle ultime versioni ufficiali disponibili. Versione nominale 0.8.2; tag e allegato pubblicati conservati.
+- Clipboard corrente: 290.019 byte UTF-8; specifica: 270.602 byte. Stima strutturale 26.393 unità, massimo 2.566; restano 127 regole numerate 0–126. Rispetto alla pulizia del 9 ottobre, le guardie e l'invalidazione aggiungono 57 unità offline, entro i budget invariati.
+
 ## Controllo generale e pulizia su main — 2026-10-09
 
 - Revisione di lingua, riferimenti, regole, lifecycle, Camera, input e risorse: nessun nuovo errore funzionale, corpo di regola duplicato o subroutine irraggiungibile individuato. Tutte le 127 regole native restano numerate da 0 a 126.

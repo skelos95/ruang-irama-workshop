@@ -154,6 +154,30 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                          ["Crouch", "Primary Fire", "Secondary Fire",
                                           "Ability 1", "Ability 2", "Interact", "Reload", "Melee"])
 
+    def test_luck_subheader_hides_locked_commands_until_luck_finishes(self):
+        for path in ARTIFACTS:
+            with self.subTest(artifact=path.name):
+                source = path.read_text(encoding="utf-8")
+                rules = validator.extract_rules(source)
+                rule = validator.rule_by_subroutine(rules, "DrawLuckMenu")
+                hud = next(validator.iter_calls(rule.body, "Create HUD Text"))
+                _, fields, _, _ = validator.declaration_entries(source)
+                context = CompactionContext([field.name for field in fields])
+                subtitle = context.parse(compiler.actor_text(hud.args[2]))
+                context.player.update(LuckActive=False, LuckSpinCount=0)
+                normal = subtitle.evaluate(context)
+                self.assertIn("<Interact>: spin", normal)
+                self.assertIn("<Reload>: back", normal)
+                self.assertIn("<Melee>", normal)
+                for spins in (20, 1, 0):
+                    context.player.update(LuckActive=True, LuckSpinCount=spins)
+                    waiting = subtitle.evaluate(context)
+                    self.assertIn("WAIT", waiting)
+                    self.assertNotIn("<", waiting)
+                    self.assertNotIn("spin /", waiting)
+                context.player["LuckActive"] = False
+                self.assertEqual(subtitle.evaluate(context), normal)
+
     def test_compiled_main_hud_reevaluates_info_and_name_color_with_empty_global_actors(self):
         for path in (ROOT / "workshop/ruang_irama.en-US.workshop",
                      ROOT / "tests/fixtures/global_runtime_reference.txt"):

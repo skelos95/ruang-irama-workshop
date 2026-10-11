@@ -621,6 +621,13 @@ def build_english(source: str) -> tuple[str, dict]:
     # playing team. Treat that membership loss as departure for global resources.
     present = 'And(Entity Exists(Global.TriggerPlayer), Array Contains(Global.PlayerListSnapshot, Global.TriggerPlayer))'
     leaves = leaves.replace('Entity Exists(Global.TriggerPlayer) == False', f'{present} == False').replace('If(Entity Exists(Global.TriggerPlayer))', f'If({present})')
+    # A spectator can keep its entity and variables after its registry entry
+    # is removed. Invalidate classification so reentry uses the existing
+    # staged worker instead of registering stale preferences directly.
+    # Keep native restoration in that worker, separated from registry cleanup.
+    invalidate = '\t\tIf(Entity Exists(Global.TriggerPlayer));\n\t\t\tGlobal.TriggerPlayer.IsPrepared = False;\n\t\t\tGlobal.TriggerPlayer.IsHuman = False;\n\t\t\tGlobal.TriggerPlayer.TeamChangeProcessed = False;\n\t\t\tGlobal.TriggerPlayer.PlayerCycleActive = False;\n\t\tEnd;\n\t\tCall Subroutine(CleanupPlayer);'
+    assert leaves.count('Call Subroutine(CleanupPlayer);') == 2
+    leaves = leaves.replace('Call Subroutine(CleanupPlayer);', invalidate)
     lowered.append(subrule("04j - Subroutine: Reconcile departed players from global context", "ProcessGlobalLeaves", leaves))
     icon_cache = '\t\tFor Global Variable(ObjectiveIconIndex, 0, 12, 1);\n\t\t\tGlobal.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];\n\t\t\tGlobal.VisibleIconChoices[Global.ObjectiveIconIndex] = And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), And(Global.ObjectiveIconPlayer.IsHuman == True, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100))) ? Global.ObjectiveIconPlayer.IconIndex : 0;\n\t\tEnd;\n\t\tGlobal.ObjectiveIconPlayer = Null;\n'
     lowered.append(subrule('04k - Subroutine: Cache visible objective icon choices', 'ProcessVisibleIcons', icon_cache))

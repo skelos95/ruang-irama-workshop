@@ -6,6 +6,7 @@ Questa è la matrice operativa per il codice corrente di `main`, con versione **
 
 | Data / revisione | Riscontro | Limite |
 |---|---|---|
+| 11 ottobre, controllo mirato di `main` | Riprodotti nei test automatici il comando Travel elaborato dopo la morte e il rientro dagli spettatori nella stessa squadra senza reset; aggiunte correzioni e regressioni. Corrette le istruzioni di Multijump e Luck. | Prove con risposte native controllate; nessun nuovo riscontro nel client fornito per queste correzioni. |
 | Release storica 0.8.1 | La documentazione precedente riporta la regressione client completata nell'agosto 2026. | Non valida automaticamente i successivi commit di `main`; metriche mancanti non vengono ricostruite. |
 | 25 settembre, ripristino PR #77 | L'utente conferma la scomparsa del crash al cambio squadra introdotto dalla PR #76. | Singola istruzione responsabile non isolata. |
 | 5 ottobre, dopo PR #94 | Nuovo crash al cambio squadra segnalato in lobby nuova con un umano, senza menu. | Forward rimosso nella PR #95; non ha eliminato il crash. |
@@ -68,6 +69,9 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 1
 - Sulle voci principali 8, 9, 12 e 15, Crouch + Interact alterna subito lo stato senza aprire sottomenu: stesso cursore e HUD, stato aggiornato in inglese. Tenere premuto non ripete; rilascio e nuova pressione alternano di nuovo. Primary/Secondary navigano normalmente verso le altre voci. Provare player simultanei, Dummy Follow senza dummy avversario e OFF automatico alla sua scomparsa.
 - Verificare Crouch come modificatore menu, hold Melee/Interact di 0,5 s, salto musica ±10 e wrap. Melee e Jump restano nativi da vivi.
 - Tenere Interact e cambiare soltanto Crouch: menu e Camera non possono riutilizzare la stessa pressione. Serve rilasciare Interact.
+- Morire con Travel aperto e Primary, Secondary o Interact premuti: nessuna navigazione o applicazione dopo la morte; HUD, testi e blocchi dei tasti devono essere puliti. Ripetere con perdita dello spawn.
+- Durante lo spin di Luck il sottotitolo deve mostrare l'attesa, senza pubblicizzare spin/back/close bloccati; dopo la fine i comandi normali devono tornare.
+- Passare agli spettatori e tornare nella stessa squadra, anche conservando l'entità: preferenze ai default e principale su Info. Ripetere tornando nell'altra squadra e verificare che gli altri player conservino i propri menu e preferenze.
 - Da morto il menu resta visibile ma congelato; Jump funziona anche con menu, Camera o Luck precedentemente attivi.
 - Controllare binding dinamici, righe inglesi leggibili, un unico Player Vibes e HOST nel campo `Text` su una sola riga: nessuno spazio sopra, una sola riga vuota sotto per il killfeed. Il distacco dal killfeed è stato verificato e confermato dall'utente il 9 ottobre dopo la PR #105; nelle future regressioni ripetere la prova durante sequenze di uccisioni. Icona e nome devono seguire il cambio dell'host e la riga deve sparire in sua assenza; RGB del titolo conservato. Niente `0` diagnostico. L'HUD Top 1 deve mostrare esattamente `cozywatch.org`; nessuna impostazione, voce menu o etichetta per lingua/località deve rimanere.
 - Diagnostica OFF/ON: testo sempre bianco solo per l'host, anche con Name Color e menu di colori diversi. Provare ingressi, uscite e cambio dell'ultima riga; nessuno `0` o righe fantasma quando nascosta. Verificare la leggibilità del campo Text, senza nuovi handle.
