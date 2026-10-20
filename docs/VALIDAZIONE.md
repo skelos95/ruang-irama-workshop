@@ -36,7 +36,7 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.393 unità strutturali invece di 31.966 (−17,4%)**, con 2.566 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 290.019 byte UTF-8 (−16,8%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.417 unità strutturali invece di 31.966 (−17,4%)**, con 2.566 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 290.655 byte UTF-8 (−16,7%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
@@ -44,7 +44,7 @@ Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.393 unit�
 | Variabili globali | 71 | 89 |
 | Variabili player | 124 | 126 |
 | Subroutine | 66 | 113 |
-| Byte di testo UTF-8 | 270.602 | 290.019 |
+| Byte di testo UTF-8 | 271.146 | 290.655 |
 
 La regola più grande per testo usa 22.472 byte UTF-8; la regola con più unità strutturali ne usa 2.566. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 

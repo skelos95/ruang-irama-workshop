@@ -7030,6 +7030,10 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
                 Stop Camera(Event Player);
             End;
             Teleport(Event Player, Event Player.SafeRevivePosition);
+            Event Player.TravelAttachmentActive = False;
+            Event Player.TravelAttachmentTarget = Null;
+            Event Player.AttachmentOwnerHero = Null;
+            Event Player.AttachmentTargetHero = Null;
             If(Event Player.CameraMode != 0);
                 Global.CameraPlayer = Event Player;
                 Call Subroutine(StartCamera);
@@ -7096,6 +7100,8 @@ def validate_modes_and_camera(checks: Checks, source: str, rules: list[Rule]) ->
         )
     before_travel = "If(EventPlayer.CameraMode!=0);StopCamera(EventPlayer);End;"
     after_travel = (
+        "EventPlayer.TravelAttachmentActive=False;EventPlayer.TravelAttachmentTarget=Null;"
+        "EventPlayer.AttachmentOwnerHero=Null;EventPlayer.AttachmentTargetHero=Null;"
         "If(EventPlayer.CameraMode!=0);Global.CameraPlayer=EventPlayer;"
         "CallSubroutine(StartCamera);Global.CameraPlayer=Null;End;"
     )

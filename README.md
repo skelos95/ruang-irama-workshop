@@ -14,7 +14,7 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.393 unità (−17,4%)**. Il testo da importare passa da 348.732 a 290.019 byte UTF-8 (−16,8%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.417 unità (−17,4%)**. Il testo da importare passa da 348.732 a 290.655 byte UTF-8 (−16,7%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -77,6 +77,8 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 15 | Superman Punch | ON/OFF dal menu principale |
 
 Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni. Input, navigazione e applicazione richiedono un giocatore vivo e spawnato; alla morte o alla perdita dello spawn la chiusura e la pulizia restano attive.
+
+Un teletrasporto Travel riuscito chiude anche lo stato Attach del proprietario: Multijump può riprendere e il controllo delle catene non conserva il vecchio collegamento. Se la destinazione viene rifiutata o il giocatore è già nello spawn, l'aggancio resta attivo.
 
 Nel menu 2 ogni applicazione di Your Hero o di un bersaglio valido ferma e ricrea la Camera, anche se la stessa scelta era già attiva. Camera OFF ferma sempre la camera nativa. La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
 
