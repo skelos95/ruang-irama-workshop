@@ -4417,6 +4417,10 @@ rule("110 - Subroutine: Travel to spawn")
 		Stop Camera(Global.TriggerPlayer);
 		End;
 		Teleport(Global.TriggerPlayer, Position Of(First Of(Spawn Points(Team Of(Global.TriggerPlayer)))));
+		Global.TriggerPlayer.TravelAttachmentActive = False;
+		Global.TriggerPlayer.TravelAttachmentTarget = Null;
+		Global.TriggerPlayer.AttachmentOwnerHero = Null;
+		Global.TriggerPlayer.AttachmentTargetHero = Null;
 		If((Global.TriggerPlayer.CameraMode != 0));
 		Global.CameraPlayer = Global.TriggerPlayer;
 		Call Subroutine(StartCamera);
@@ -4450,6 +4454,10 @@ rule("111 - Subroutine: Travel to the objective")
 		Stop Camera(Global.TriggerPlayer);
 		End;
 		Teleport(Global.TriggerPlayer, Global.TriggerPlayer.SafeRevivePosition);
+		Global.TriggerPlayer.TravelAttachmentActive = False;
+		Global.TriggerPlayer.TravelAttachmentTarget = Null;
+		Global.TriggerPlayer.AttachmentOwnerHero = Null;
+		Global.TriggerPlayer.AttachmentTargetHero = Null;
 		If((Global.TriggerPlayer.CameraMode != 0));
 		Global.CameraPlayer = Global.TriggerPlayer;
 		Call Subroutine(StartCamera);
@@ -4502,6 +4510,10 @@ rule("112 - Subroutine: Travel to the target player")
 		Stop Camera(Global.TriggerPlayer);
 		End;
 		Teleport(Global.TriggerPlayer, Global.TriggerPlayer.SafeRevivePosition);
+		Global.TriggerPlayer.TravelAttachmentActive = False;
+		Global.TriggerPlayer.TravelAttachmentTarget = Null;
+		Global.TriggerPlayer.AttachmentOwnerHero = Null;
+		Global.TriggerPlayer.AttachmentTargetHero = Null;
 		If((Global.TriggerPlayer.CameraMode != 0));
 		Global.CameraPlayer = Global.TriggerPlayer;
 		Call Subroutine(StartCamera);

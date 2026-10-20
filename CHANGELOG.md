@@ -1,5 +1,12 @@
 # Changelog
 
+## Stato Attach dopo Travel — 2026-10-20
+
+- I tre teletrasporti Travel riusciti azzerano il flag Attach, il vecchio bersaglio e i due riferimenti agli eroi del proprietario. Prima il teletrasporto nativo poteva liberare il giocatore lasciando uno stato Attach obsoleto, che bloccava Multijump e generava falsi cicli negli agganci successivi.
+- Le rotte rifiutate o senza spostamento conservano l'aggancio. Il reset Camera esistente, gli altri giocatori e la numerazione delle 127 regole restano invariati; nessuna nuova attesa, variabile o subroutine.
+- Aggiunti cinque test di regressione su sorgente e runtime effettivo, inclusi rifiuti, Camera OFF, isolamento e ripresa Multijump. Il validatore richiede esplicitamente i quattro reset dopo ciascun Teleport. Il comportamento fisico nel client resta da verificare.
+- Specifica: 271.146 byte UTF-8; clipboard: 290.655 byte. Stima strutturale 26.417 unità (+24), massimo 2.566 invariato; budget offline invariati. Versione nominale 0.8.2.
+
 ## Controllo mirato: Travel, spettatori e sottotitoli — 2026-10-11
 
 - Impedito a input, navigazione e applicazione Travel di lavorare quando il proprietario è morto o non spawnato. Prima, un input nello stesso tick della morte poteva eseguire una scelta prima della chiusura; il controller di chiusura resta libero di pulire HUD, testi e blocchi dei tasti.

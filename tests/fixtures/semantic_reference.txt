@@ -4550,6 +4550,10 @@ rule("98g - Subroutine: Travel to spawn")
 				Stop Camera(Event Player);
 			End;
 			Teleport(Event Player, Position Of(First Of(Spawn Points(Team Of(Event Player)))));
+			Event Player.TravelAttachmentActive = False;
+			Event Player.TravelAttachmentTarget = Null;
+			Event Player.AttachmentOwnerHero = Null;
+			Event Player.AttachmentTargetHero = Null;
 			If(Event Player.CameraMode != 0);
 				Global.CameraPlayer = Event Player;
 				Call Subroutine(StartCamera);
@@ -4583,6 +4587,10 @@ rule("98h - Subroutine: Travel to the objective")
 			Stop Camera(Event Player);
 		End;
 		Teleport(Event Player, Event Player.SafeRevivePosition);
+		Event Player.TravelAttachmentActive = False;
+		Event Player.TravelAttachmentTarget = Null;
+		Event Player.AttachmentOwnerHero = Null;
+		Event Player.AttachmentTargetHero = Null;
 		If(Event Player.CameraMode != 0);
 			Global.CameraPlayer = Event Player;
 			Call Subroutine(StartCamera);
@@ -4635,6 +4643,10 @@ rule("98i - Subroutine: Travel to the target player")
 			Stop Camera(Event Player);
 		End;
 		Teleport(Event Player, Event Player.SafeRevivePosition);
+		Event Player.TravelAttachmentActive = False;
+		Event Player.TravelAttachmentTarget = Null;
+		Event Player.AttachmentOwnerHero = Null;
+		Event Player.AttachmentTargetHero = Null;
 		If(Event Player.CameraMode != 0);
 			Global.CameraPlayer = Event Player;
 			Call Subroutine(StartCamera);
