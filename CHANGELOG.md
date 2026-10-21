@@ -1,5 +1,13 @@
 # Changelog
 
+## Titolo e menu Movement / Gravity — 2026-10-21
+
+- Il titolo centrale diventa `cozywatch.org` con il countdown esistente; rimosso il sottotitolo separato del sito e aggiornato il conteggio a cinque HUD globali.
+- Aggiunto il menu 16 personale: Speed 50–1000% e Gravity 0–500%, default 100/100, passi del 50%. Interact sceglie il parametro, Primary/Secondary ne cambiano subito il valore. Le preferenze persistono dopo morte e cambio eroe e si azzerano al cambio squadra o al nuovo ingresso.
+- Fly usa subito la velocità scelta, senza rampa temporale. La gravità nativa resta sempre 0 durante Fly e torna al valore personale quando Fly viene disattivata. Luck Acceleration mantiene la propria priorità temporanea, poi ripristina le impostazioni personali.
+- Aggiornati compilazione, contratti, regressioni di menu/fisica e documentazione. La verifica nel client resta distinta dalle prove automatiche.
+- Runtime: 129 regole, 127 variabili player, 115 subroutine, 293.273 byte UTF-8 e 26.680 unità strutturali stimate; massimo per regola 2.549 unità. Specifica: 273.170 byte. I limiti restano invariati e VERSION resta 0.8.2.
+
 ## Stato Attach dopo Travel — 2026-10-20
 
 - I tre teletrasporti Travel riusciti azzerano il flag Attach, il vecchio bersaglio e i due riferimenti agli eroi del proprietario. Prima il teletrasporto nativo poteva liberare il giocatore lasciando uno stato Attach obsoleto, che bloccava Multijump e generava falsi cicli negli agganci successivi.

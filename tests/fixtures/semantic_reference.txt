@@ -179,8 +179,8 @@ variables
 		103: GhostFlyCursor
 		104: GhostFlyPhysicsApplied
 		105: NextSuicideTime
-		106: FlyRampStartTime
-		107: FlyPercent
+		106: MovementGravity
+		107: MovementSpeed
 		108: FlyDirection
 		109: FlyVelocityDelta
 		110: AttachmentChain
@@ -197,6 +197,7 @@ variables
 		121: MultijumpConsumed
 		122: JumpWasGrounded
 		123: NextMultijumpTime
+		124: MovementCursor
 }
 
 subroutines
@@ -267,6 +268,8 @@ subroutines
 	63: ProcessSuperPunch
 	64: UpdateSocialObjectiveIcons
 	65: CleanupObjectiveIcon
+	66: ApplyMovementPage
+	67: DrawMovementMenu
 }
 
 rule("00 - Global: Initialize 200 genres, from calm to chaos")
@@ -352,8 +355,7 @@ rule("00 - Global: Initialize 200 genres, from calm to chaos")
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
 		Disable Inspector Recording;
-		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("COZYWATCH [{0}]", Global.ServerTimeText), Top, 0, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
-		Create HUD Text(Global.HumanPlayers, Null, Custom String("cozywatch.org"), Null, Top, 1, Color(White), Custom Color(130, 90, 255, 255), Global.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("cozywatch.org [{0}]", Global.ServerTimeText), Top, 0, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("  "), Top, 2, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.HumanPlayers, Null, Global.VoteLeaderName != Custom String("") ? Custom String("\nCHILL STAR: {0}", Global.VoteLeaderName) : Custom String(""), Null, Left, 13, Color(White), Global.VoteLeaderColor, Color(White), Visible To String and Color, Visible Never);
 		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("PLAYER VIBES"), Left, 0, Color(White), Custom Color(235, 195, 255, 255), Custom Color(210, 110, 255, 255), Visible To and String, Visible Never);
@@ -704,7 +706,7 @@ rule("02 - Player: Classify humans and automatic bots")
 		Event Player.IsHuman = True;
 		Event Player.LastHero = Hero Of(Event Player);
 		Global.VoteRecountNeeded = True;
-		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("no soundtrack yet"))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 6 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("no soundtrack yet"))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 5 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
 		Event Player.PlayerListHud = Last Text ID;
 		If(And(Index Of Array Value(Global.HumanPlayers, Event Player) >= 0, Index Of Array Value(Global.HumanPlayers, Event Player) < Count Of(Global.PlayerListHudIds)));
 			Global.PlayerListHudIds[Index Of Array Value(Global.HumanPlayers, Event Player)] = Event Player.PlayerListHud;
@@ -1279,7 +1281,7 @@ rule("06 - Menu: Navigate forward and backward")
 	actions
 	{
 		If(Event Player.MenuPage == -1);
-			Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 15)) % 16;
+			Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 16)) % 17;
 		Else If(Event Player.MenuPage == 1);
 			Event Player.ColorCursor = (Event Player.ColorCursor + (Event Player.MenuCommand == 3 ? 1 : Count Of(Global.NameColors) - 1)) % Count Of(Global.NameColors);
 		Else If(Event Player.MenuPage == 2);
@@ -1306,6 +1308,13 @@ rule("06 - Menu: Navigate forward and backward")
 			Event Player.GhostFlyCursor = (Event Player.GhostFlyCursor + 1) % 2;
 		Else If(Event Player.MenuPage == 14);
 			Event Player.MultijumpCursor = (Event Player.MultijumpCursor + (Event Player.MenuCommand == 3 ? 1 : 10)) % 11;
+		Else If(Event Player.MenuPage == 16);
+			If(Event Player.MovementCursor == 0);
+				Event Player.MovementSpeed = Min(1000, Max(50, Event Player.MovementSpeed + (Event Player.MenuCommand == 3 ? 50 : -50)));
+			Else;
+				Event Player.MovementGravity = Min(500, Max(0, Event Player.MovementGravity + (Event Player.MenuCommand == 3 ? 50 : -50)));
+			End;
+			Call Subroutine(ApplyGhostFlyPhysics);
 		End;
 		Call Subroutine(TransitionMenuColor);
 	}
@@ -1383,6 +1392,8 @@ rule("10 - Menu: Apply the active page")
 					Event Player.GhostFlyCursor %= 2;
 				Else If(Event Player.MenuPage == 14);
 					Event Player.MultijumpCursor = Event Player.MultijumpEnabled ? Event Player.MultijumpLevel : 0;
+				Else If(Event Player.MenuPage == 16);
+					Event Player.MovementCursor %= 2;
 				End;
 				Call Subroutine(DrawMenu);
 			End;
@@ -1408,6 +1419,8 @@ rule("10 - Menu: Apply the active page")
 			Call Subroutine(ApplyGhostFlyPage);
 		Else If(Event Player.MenuPage == 14);
 			Call Subroutine(ApplyMultijumpPage);
+		Else If(Event Player.MenuPage == 16);
+			Call Subroutine(ApplyMovementPage);
 		End;
 	}
 }
@@ -1792,7 +1805,6 @@ rule("99o - Subroutine: Apply Ghost / Fly physics")
 		Else;
 			Enable Movement Collision With Environment(Event Player);
 		End;
-		Event Player.FlyRampStartTime = -1;
 		Stop Transforming Throttle(Event Player);
 		If(Event Player.FlyModeActive == True);
 			If(Or(Event Player.LuckEffect != 2, Event Player.LuckEffectEndTime <= Total Time Elapsed));
@@ -1801,12 +1813,12 @@ rule("99o - Subroutine: Apply Ghost / Fly physics")
 			Set Gravity(Event Player, 0);
 		Else;
 			If(Or(Event Player.LuckEffect != 2, Event Player.LuckEffectEndTime <= Total Time Elapsed));
-				Set Move Speed(Event Player, 100);
-				If(Magnitude Of(Velocity Of(Event Player)) > 0.010);
+				Set Move Speed(Event Player, Event Player.MovementSpeed);
+				If(And(Event Player.GhostFlyPhysicsApplied == False, Magnitude Of(Velocity Of(Event Player)) > 0.010));
 					Apply Impulse(Event Player, Velocity Of(Event Player) * -1, Magnitude Of(Velocity Of(Event Player)), To World, Incorporate Contrary Motion);
 				End;
 			End;
-			Set Gravity(Event Player, 100);
+			Set Gravity(Event Player, Event Player.MovementGravity);
 		End;
 		Event Player.GhostFlyPhysicsApplied = True;
 	}
@@ -1926,7 +1938,6 @@ rule("12e - Jump revive: Store the death position")
 		Set Gravity(Event Player, 100);
 		Enable Movement Collision With Environment(Event Player);
 		Event Player.GhostFlyPhysicsApplied = False;
-		Event Player.FlyRampStartTime = -1;
 		Event Player.MenuCommand = 0;
 		Event Player.TravelCommand = 0;
 		Small Message(Event Player, Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))));
@@ -2915,29 +2926,18 @@ rule("89a2 - Subroutine: Process 3D flight per player at 20 Hz")
 	{
 		"Try Your Luck acceleration keeps control of movement; the Fly controller does not overwrite its velocity."
 		"Native movement is disabled; 3D impulses control world velocity, including ascent and descent."
-		"Preserve the speed ramp while directional input remains active; changing direction does not restart at 100%."
+		"Use the player's fixed movement speed immediately, without time-based acceleration."
 		"Forward input on the Z axis follows aim pitch; backward and sideways movement remain horizontal."
 		"100% Fly is 5.5 m/s and 1000% is 55 m/s; diagonal movement is capped while preserving analog input strength."
 		If(And(Global.ActivePlayer.IsHuman == True, And(Global.ActivePlayer.IsAutomaticBot == False, And(Is Dummy Bot(Global.ActivePlayer) == False, And(Has Spawned(Global.ActivePlayer) == True, And(Is Alive(Global.ActivePlayer) == True, And(Global.ActivePlayer.FlyModeActive == True, Global.ActivePlayer.GhostFlyPhysicsApplied == True)))))));
 			If(And(Global.ActivePlayer.LuckEffect == 2, Global.ActivePlayer.LuckEffectEndTime > Total Time Elapsed));
-				Global.ActivePlayer.FlyRampStartTime = -1;
-				Global.ActivePlayer.FlyPercent = 100;
 				Global.ActivePlayer.FlyDirection = Vector(0, 0, 0);
 				Global.ActivePlayer.FlyVelocityDelta = Vector(0, 0, 0);
 			Else;
 				Set Move Speed(Global.ActivePlayer, 0);
-				If(Magnitude Of(Vector(X Component Of(Throttle Of(Global.ActivePlayer)), 0, Z Component Of(Throttle Of(Global.ActivePlayer)))) > 0.050);
-					If(Global.ActivePlayer.FlyRampStartTime < 0);
-						Global.ActivePlayer.FlyRampStartTime = Total Time Elapsed;
-					End;
-					Global.ActivePlayer.FlyPercent = Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45);
-				Else;
-					Global.ActivePlayer.FlyRampStartTime = -1;
-					Global.ActivePlayer.FlyPercent = 100;
-				End;
 				Global.ActivePlayer.FlyDirection = Facing Direction Of(Global.ActivePlayer) * Max(0, Z Component Of(Throttle Of(Global.ActivePlayer))) + Direction From Angles(Horizontal Facing Angle Of(Global.ActivePlayer), 0) * Min(0, Z Component Of(Throttle Of(Global.ActivePlayer))) + Cross Product(Vector(0, 1, 0), Direction From Angles(Horizontal Facing Angle Of(Global.ActivePlayer), 0)) * X Component Of(Throttle Of(Global.ActivePlayer));
 				If(Magnitude Of(Global.ActivePlayer.FlyDirection) > 0.050);
-					Global.ActivePlayer.FlyVelocityDelta = Normalize(Global.ActivePlayer.FlyDirection) * 5.500 * Global.ActivePlayer.FlyPercent / 100 * Min(1, Magnitude Of(Throttle Of(Global.ActivePlayer))) - Velocity Of(Global.ActivePlayer);
+					Global.ActivePlayer.FlyVelocityDelta = Normalize(Global.ActivePlayer.FlyDirection) * 5.500 * Global.ActivePlayer.MovementSpeed / 100 * Min(1, Magnitude Of(Throttle Of(Global.ActivePlayer))) - Velocity Of(Global.ActivePlayer);
 				Else;
 					Global.ActivePlayer.FlyVelocityDelta = Velocity Of(Global.ActivePlayer) * -1;
 				End;
@@ -2964,7 +2964,6 @@ rule("89b - Subroutine: Process the player cycle at 10 Hz")
 		"Release human registration after the HUD is stable."
 		"The global scheduler handles human hero changes without adding a new per-player rule."
 		If(And(Global.ActivePlayer.IsHuman == True, And(Global.ActivePlayer.IsAutomaticBot == False, And(Is Dummy Bot(Global.ActivePlayer) == False, Or(Has Spawned(Global.ActivePlayer) == False, Is Alive(Global.ActivePlayer) == False)))));
-			Global.ActivePlayer.FlyRampStartTime = -1;
 			If(Or(Global.ActivePlayer.LuckEffect != 2, Global.ActivePlayer.LuckEffectEndTime <= Total Time Elapsed));
 				Set Move Speed(Global.ActivePlayer, 100);
 			End;
@@ -2977,12 +2976,11 @@ rule("89b - Subroutine: Process the player cycle at 10 Hz")
 		End;
 		If(And(Global.ActivePlayer.IsHuman == True, And(Global.ActivePlayer.IsAutomaticBot == False, And(Is Dummy Bot(Global.ActivePlayer) == False, And(Has Spawned(Global.ActivePlayer) == True, Is Alive(Global.ActivePlayer) == True)))));
 			If(Global.ActivePlayer.GhostFlyPhysicsApplied == False);
-				Global.ActivePlayer.FlyRampStartTime = -1;
 				If(Or(Global.ActivePlayer.LuckEffect != 2, Global.ActivePlayer.LuckEffectEndTime <= Total Time Elapsed));
-					Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : 100);
+					Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);
 				End;
 				Stop Transforming Throttle(Global.ActivePlayer);
-				Set Gravity(Global.ActivePlayer, 100);
+				Set Gravity(Global.ActivePlayer, Global.ActivePlayer.MovementGravity);
 				Enable Movement Collision With Environment(Global.ActivePlayer);
 				If(Global.ActivePlayer.GhostModeActive == True);
 					Disable Movement Collision With Environment(Global.ActivePlayer, False);
@@ -3026,9 +3024,8 @@ rule("89b - Subroutine: Process the player cycle at 10 Hz")
 		If(And(Global.ActivePlayer.IsHuman == True, And(Has Spawned(Global.ActivePlayer) == True, Hero Of(Global.ActivePlayer) != Global.ActivePlayer.LastHero)));
 			Global.ActivePlayer.LastHero = Hero Of(Global.ActivePlayer);
 			Global.ActivePlayer.GhostFlyPhysicsApplied = False;
-			Global.ActivePlayer.FlyRampStartTime = -1;
 			If(Or(Global.ActivePlayer.LuckEffect != 2, Global.ActivePlayer.LuckEffectEndTime <= Total Time Elapsed));
-				Set Move Speed(Global.ActivePlayer, 100);
+				Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);
 			End;
 			If(Or(Global.ActivePlayer.LuckActive == True, Or(Global.ActivePlayer.LuckSpinCount > 0, Global.ActivePlayer.LuckEffect != 0)));
 				Call Subroutine(RestoreActivePlayerLuck);
@@ -3271,7 +3268,7 @@ rule("89d - Subroutine: Process the Try Your Luck state machine")
 							Clear Status(Global.ActivePlayer, Hacked);
 							If(Global.ActivePlayer.LuckEffect == 2);
 								Stop Accelerating(Global.ActivePlayer);
-								Set Move Speed(Global.ActivePlayer, 100);
+								Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);
 							End;
 							If(Global.ActivePlayer.LuckEffectHud != Null);
 								If(Index Of Array Value(Global.TemporaryTextOwners, Global.ActivePlayer) >= 0);
@@ -3394,7 +3391,7 @@ rule("91a - Subroutine: Draw the main menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Event Player.MainMenuCursor == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Event Player.MainMenuCursor == 0 ? Custom String("") : Custom String("{0}\n{1}", Event Player.MainMenuCursor == 1 ? Custom String("1 - NAME COLOR") : Event Player.MainMenuCursor == 2 ? Custom String("2 - 3P CAMERA") : Event Player.MainMenuCursor == 3 ? Custom String("3 - SOUNDTRACK") : Event Player.MainMenuCursor == 4 ? Custom String("4 - REVENGE") : Event Player.MainMenuCursor == 5 ? Custom String("5 - UNKILLABLE") : Event Player.MainMenuCursor == 6 ? Custom String("6 - HERO VOICE") : Event Player.MainMenuCursor == 7 ? Custom String("7 - ICON") : Event Player.MainMenuCursor == 8 ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : Event Player.MainMenuCursor == 9 ? Custom String("9 - CROUCH PRIVACY") : Event Player.MainMenuCursor == 10 ? Custom String("10 - TRY YOUR LUCK") : Event Player.MainMenuCursor == 11 ? Custom String("11 - VOTE PLAYER") : Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW") : Event Player.MainMenuCursor == 15 ? Custom String("15 - SUPERMAN PUNCH") : Event Player.MainMenuCursor == 14 ? Custom String("14 - MULTIJUMP") : Custom String("13 - GHOST MODE / FLY"), Event Player.MainMenuCursor == 1 ? Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex]) : Event Player.MainMenuCursor == 2 ? Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("off") : Event Player.CameraMode == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.CameraTarget)) : Event Player.MainMenuCursor == 3 ? Custom String("NOW: {0}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("no soundtrack yet")) : Event Player.MainMenuCursor == 4 ? Custom String("") : Event Player.MainMenuCursor == 5 ? Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")) : Event Player.MainMenuCursor == 6 ? Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")) : Event Player.MainMenuCursor == 7 ? Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex]) : Event Player.MainMenuCursor == 8 ? Custom String("NOW: {0}", Event Player.CrouchTravelEnabled ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 9 ? Custom String("NOW: {0}", Event Player.InspectionPrivacyActive ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 10 ? Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY")) : Event Player.MainMenuCursor == 11 ? Custom String("YOUR VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE")) : Event Player.MainMenuCursor == 12 ? Custom String("LET ENEMY DUMMY FOLLOW YOU: {0}", Event Player.AllowDummyBotFollow ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 15 ? Custom String("NOW: {0}", Array Contains(Global.SuperPunchPlayers, Event Player) ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 14 ? Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Top, 3, Color(White), Event Player.MainMenuCursor == 0 ? Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255) : Custom Color(210, 230, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.MainMenuCursor == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Event Player.MainMenuCursor == 0 ? Custom String("") : Custom String("{0}\n{1}", Event Player.MainMenuCursor == 1 ? Custom String("1 - NAME COLOR") : Event Player.MainMenuCursor == 2 ? Custom String("2 - 3P CAMERA") : Event Player.MainMenuCursor == 3 ? Custom String("3 - SOUNDTRACK") : Event Player.MainMenuCursor == 4 ? Custom String("4 - REVENGE") : Event Player.MainMenuCursor == 5 ? Custom String("5 - UNKILLABLE") : Event Player.MainMenuCursor == 6 ? Custom String("6 - HERO VOICE") : Event Player.MainMenuCursor == 7 ? Custom String("7 - ICON") : Event Player.MainMenuCursor == 8 ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : Event Player.MainMenuCursor == 9 ? Custom String("9 - CROUCH PRIVACY") : Event Player.MainMenuCursor == 10 ? Custom String("10 - TRY YOUR LUCK") : Event Player.MainMenuCursor == 11 ? Custom String("11 - VOTE PLAYER") : Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW") : Event Player.MainMenuCursor == 15 ? Custom String("15 - SUPERMAN PUNCH") : Event Player.MainMenuCursor == 14 ? Custom String("14 - MULTIJUMP") : Event Player.MainMenuCursor == 16 ? Custom String("16 - MOVEMENT / GRAVITY") : Custom String("13 - GHOST MODE / FLY"), Event Player.MainMenuCursor == 1 ? Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex]) : Event Player.MainMenuCursor == 2 ? Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("off") : Event Player.CameraMode == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.CameraTarget)) : Event Player.MainMenuCursor == 3 ? Custom String("NOW: {0}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("no soundtrack yet")) : Event Player.MainMenuCursor == 4 ? Custom String("") : Event Player.MainMenuCursor == 5 ? Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")) : Event Player.MainMenuCursor == 6 ? Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")) : Event Player.MainMenuCursor == 7 ? Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex]) : Event Player.MainMenuCursor == 8 ? Custom String("NOW: {0}", Event Player.CrouchTravelEnabled ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 9 ? Custom String("NOW: {0}", Event Player.InspectionPrivacyActive ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 10 ? Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY")) : Event Player.MainMenuCursor == 11 ? Custom String("YOUR VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE")) : Event Player.MainMenuCursor == 12 ? Custom String("LET ENEMY DUMMY FOLLOW YOU: {0}", Event Player.AllowDummyBotFollow ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 15 ? Custom String("NOW: {0}", Array Contains(Global.SuperPunchPlayers, Event Player) ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 14 ? Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100) : Event Player.MainMenuCursor == 16 ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Event Player.MovementSpeed, Event Player.MovementGravity) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Top, 3, Color(White), Event Player.MainMenuCursor == 0 ? Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255) : Custom Color(210, 230, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3601,6 +3598,8 @@ rule("91p - Subroutine: Draw the active page")
 			Call Subroutine(DrawGhostFlyMenu);
 		Else If(Event Player.MenuPage == 14);
 			Call Subroutine(DrawMultijumpMenu);
+		Else If(Event Player.MenuPage == 16);
+			Call Subroutine(DrawMovementMenu);
 		End;
 	}
 }
@@ -3619,7 +3618,7 @@ rule("91k - Subroutine: Transition the menu color smoothly")
 		If(Event Player.CrouchTravelActive == True);
 			Chase Player Variable Over Time(Event Player, MenuColor, Event Player.TravelCursor == 0 ? Vector(80, 255, 160) : Event Player.TravelCursor == 1 ? Vector(65, 225, 255) : Event Player.TravelCursor == 2 ? Vector(95, 150, 255) : Event Player.TravelCursor == 3 ? Vector(195, 100, 255) : Vector(255, 85, 135), 0.180, Destination and Duration);
 		Else;
-			Chase Player Variable Over Time(Event Player, MenuColor, (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 0 ? Vector(160, 195, 235) : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 1 ? Global.NameColorRGBValues[Event Player.ColorCursor] : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 2 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(190, 210, 230) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 3 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(100, 110, 120) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 4 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 245, 215) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 5 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 200, 70) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 6 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(236, 153, 0) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 7 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 120, 105) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 8 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 75, 75) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 9 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 50, 145) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 10 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(205, 160, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 11 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(100, 50, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 12 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(70, 145, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 13 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(0, 234, 234) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 14 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(70, 220, 110) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 15 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(65, 155, 110) * 0.320 : Global.NameColorRGBValues[Event Player.ColorIndex], 0.180, Destination and Duration);
+			Chase Player Variable Over Time(Event Player, MenuColor, (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 0 ? Vector(160, 195, 235) : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 1 ? Global.NameColorRGBValues[Event Player.ColorCursor] : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 2 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(190, 210, 230) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 3 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(100, 110, 120) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 4 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 245, 215) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 5 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 200, 70) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 6 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(236, 153, 0) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 7 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 120, 105) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 8 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 75, 75) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 9 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(255, 50, 145) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 10 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(205, 160, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 11 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(100, 50, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 12 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(70, 145, 255) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 13 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(0, 234, 234) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 14 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(70, 220, 110) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 15 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(65, 155, 110) * 0.320 : (Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 16 ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + Vector(100, 190, 255) * 0.320 : Global.NameColorRGBValues[Event Player.ColorIndex], 0.180, Destination and Duration);
 		End;
 	}
 }
@@ -3692,7 +3691,7 @@ rule("91s - Subroutine: Draw the Ghost / Fly menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST MODE / FLY {0}/2", Event Player.GhostFlyCursor + 1), Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("WALL PHASING - {0}", Event Player.GhostModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")) : Custom String("FLY MODE - {0}", Event Player.FlyModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("") : Custom String("KEEP MOVING: 100% > 1000% / 20s"))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST MODE / FLY {0}/2", Event Player.GhostFlyCursor + 1), Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("WALL PHASING - {0}", Event Player.GhostModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")) : Custom String("FLY MODE - {0}", Event Player.FlyModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("") : Custom String("FLY SPEED: {0}% | CHANGE IN MENU 16", Event Player.MovementSpeed))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3827,8 +3826,6 @@ rule("93b2 - Subroutine: Quiesce the trigger player before cleanup")
 		Event Player.ObjectiveIconPosition = Vector(0, 0.500, 0);
 		Event Player.GhostFlyPhysicsApplied = False;
 		Event Player.NextSuicideTime = 0;
-		Event Player.FlyRampStartTime = -1;
-		Event Player.FlyPercent = 100;
 		Event Player.FlyDirection = Vector(0, 0, 0);
 		Event Player.FlyVelocityDelta = Vector(0, 0, 0);
 		Event Player.AttachmentChain = Null;
@@ -4161,6 +4158,7 @@ rule("94 - Subroutine: Prepare the player and initialize variables")
 		Event Player.IconIndex = 0;
 		Event Player.IconCursor = 0;
 		Event Player.MenuColor = Vector(255, 255, 255);
+		Event Player.MovementCursor = 0;
 		Event Player.CrouchTravelEnabled = False;
 		Event Player.InspectionPrivacyActive = False;
 		Event Player.UnkillableMode = 0;
@@ -4205,8 +4203,8 @@ rule("94 - Subroutine: Prepare the player and initialize variables")
 		Event Player.ObjectiveIconPosition = Vector(0, 0.500, 0);
 		Event Player.GhostFlyPhysicsApplied = False;
 		Event Player.NextSuicideTime = 0;
-		Event Player.FlyRampStartTime = -1;
-		Event Player.FlyPercent = 100;
+		Event Player.MovementGravity = 100;
+		Event Player.MovementSpeed = 100;
 		Event Player.FlyDirection = Vector(0, 0, 0);
 		Event Player.FlyVelocityDelta = Vector(0, 0, 0);
 		Event Player.AttachmentChain = Null;
@@ -4356,7 +4354,7 @@ rule("98a - Subroutine: Restore Luck state for the trigger player")
 		Clear Status(Event Player, Unkillable);
 		If(Event Player.LuckEffect == 2);
 			Stop Accelerating(Event Player);
-			Set Move Speed(Event Player, 100);
+			Set Move Speed(Event Player, Event Player.FlyModeActive == True ? 0 : Event Player.MovementSpeed);
 		End;
 		Set Damage Received(Event Player, 100);
 		Set Knockback Received(Event Player, 100);
@@ -4434,7 +4432,7 @@ rule("98b - Subroutine: Restore Luck state for the globally active player")
 		End;
 		If(Global.ActivePlayer.LuckEffect == 2);
 			Stop Accelerating(Global.ActivePlayer);
-			Set Move Speed(Global.ActivePlayer, 100);
+			Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);
 		End;
 		Set Jump Vertical Speed(Global.ActivePlayer, 100);
 		Set Projectile Speed(Global.ActivePlayer, 100);
@@ -4766,6 +4764,35 @@ rule("99p - Subroutine: Apply the Multijump choice")
 		Event Player.MultijumpConsumed = Is Button Held(Event Player, Button(Jump));
 		Event Player.JumpWasGrounded = Is On Ground(Event Player);
 		Event Player.NextMultijumpTime = Total Time Elapsed + 0.300;
+	}
+}
+
+rule("99r - Subroutine: Select Speed or Gravity")
+{
+	event
+	{
+		Subroutine;
+		ApplyMovementPage;
+	}
+
+	actions
+	{
+		Event Player.MovementCursor = (Event Player.MovementCursor + 1) % 2;
+	}
+}
+
+rule("91u - Subroutine: Draw Movement and Gravity controls")
+{
+	event
+	{
+		Subroutine;
+		DrawMovementMenu;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}: +50% / {2}: -50%", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (50-1000%)", Event Player.MovementCursor == 0 ? Custom String("> ") : Custom String("  "), Event Player.MovementSpeed), Custom String("{0}Gravity: {1}% (0-500%)", Event Player.MovementCursor == 1 ? Custom String("> ") : Custom String("  "), Event Player.MovementGravity))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Event Player.MenuHud = Last Text ID;
 	}
 }
 

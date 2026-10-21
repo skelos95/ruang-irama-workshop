@@ -52,8 +52,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             "102: FlyModeActive",
             "103: GhostFlyCursor",
             "104: GhostFlyPhysicsApplied",
-            "106: FlyRampStartTime",
-            "107: FlyPercent",
+            "106: MovementGravity",
+            "107: MovementSpeed",
             "108: FlyDirection",
             "109: FlyVelocityDelta",
         )
@@ -68,14 +68,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 indices.append(int(matches[0]))
             self.assertEqual(indices, list(range(indices[0], indices[0] + 4)))
 
-    def test_main_menu_has_sixteen_pages_and_routes_page_thirteen(self) -> None:
+    def test_main_menu_has_seventeen_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = ("13 - GHOST MODE / FLY",)
         localized_tails = (("12 - DUMMY FOLLOW", "13 - GHOST MODE / FLY"),)
         for source, _ in self.sources:
             navigation = rule_with(source, "MainMenuCursor = (Event Player.MainMenuCursor", "MenuCommand == 3")
             self.assertIn(
                 "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + "
-                "(Event Player.MenuCommand == 3 ? 1 : 15)) % 16;",
+                "(Event Player.MenuCommand == 3 ? 1 : 16)) % 17;",
                 navigation,
             )
             router = subroutine(source, "DrawActiveMenuPage")
@@ -117,7 +117,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertEqual(renderer.count("Create HUD Text("), 1)
             self.assertNotIn("Event Player.MenuPage == -1", renderer)
             for token in ("GhostFlyCursor", "GhostModeActive", "FlyModeActive", "/2",
-                          "GHOST MODE", "FLY", "KEEP MOVING: 100% > 1000% / 20s"):
+                          "GHOST MODE", "FLY", "FLY SPEED: {0}% | CHANGE IN MENU 16"):
                 self.assertIn(token, renderer)
             self.assertIn("Input Binding String(Button(Crouch))", renderer)
 
@@ -183,70 +183,35 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertRegex(
                 packed,
                 r"Else;If\(Or\(EventPlayer\.LuckEffect!=2,EventPlayer\.LuckEffectEndTime<=TotalTimeElapsed\)\);"
-                r"SetMoveSpeed\(EventPlayer,100\);If\(MagnitudeOf\(VelocityOf\(EventPlayer\)\)>0.010\);"
+                r"SetMoveSpeed\(EventPlayer,EventPlayer.MovementSpeed\);If\(And\(EventPlayer.GhostFlyPhysicsApplied==False,MagnitudeOf\(VelocityOf\(EventPlayer\)\)>0.010\)\);"
                 r"ApplyImpulse\(EventPlayer,VelocityOf\(EventPlayer\)\*-1,MagnitudeOf\(VelocityOf\(EventPlayer\)\),"
-                r"ToWorld,IncorporateContraryMotion\);End;End;SetGravity\(EventPlayer,100\);",
+                r"ToWorld,IncorporateContraryMotion\);End;End;SetGravity\(EventPlayer,EventPlayer.MovementGravity\);",
             )
             self.assertIn("EventPlayer.GhostFlyPhysicsApplied=True;", packed)
             self.assertNotIn("Start Accelerating(", physics)
             self.assertNotIn("Stop Accelerating(", physics)
             self.assertNotIn("Movement Collision With Players", physics)
             self.assertNotIn("Start Transforming Throttle(", source)
-            self.assertIn("EventPlayer.FlyRampStartTime=-1;", packed)
 
-    def test_any_horizontal_direction_builds_the_per_player_speed_ramp(self) -> None:
+    def test_fly_uses_the_selected_fixed_speed_without_time_ramp(self) -> None:
         for source, global_name in self.sources:
             packed = compact(subroutine(source, "ProcessPlayerFlight"))
             owner = f"{global_name}.ActivePlayer"
-            luck = (
-                f"If(And({owner}.LuckEffect==2,{owner}.LuckEffectEndTime>TotalTimeElapsed));"
-            )
-            direction_guard = (
-                f"If(MagnitudeOf(Vector(XComponentOf(ThrottleOf({owner})),0,"
-                f"ZComponentOf(ThrottleOf({owner}))))>0.050);"
-            )
-            timestamp_start = (
-                f"If({owner}.FlyRampStartTime<0);"
-                f"{owner}.FlyRampStartTime=TotalTimeElapsed;End;"
-            )
-            speed_formula = (
-                f"{owner}.FlyPercent=Min(1000,100+Max(0,TotalTimeElapsed-"
-                f"{owner}.FlyRampStartTime)*45);"
-            )
-            reset = (
-                "Else;"
-                f"{owner}.FlyRampStartTime=-1;"
-                f"{owner}.FlyPercent=100;End;"
-            )
+            self.assertIn(f"If(And({owner}.LuckEffect==2,{owner}.LuckEffectEndTime>TotalTimeElapsed));", packed)
+            self.assertIn(f"Normalize({owner}.FlyDirection)*5.500*{owner}.MovementSpeed/100", packed)
+            self.assertNotIn("FlyRampStartTime", source)
+            self.assertNotIn("FlyPercent", source)
+            self.assertNotIn(f"{owner}.MovementSpeed=", packed)
+            self.assertNotIn(f"{owner}.MovementGravity=", packed)
 
-            for token in (luck, direction_guard, timestamp_start, speed_formula, reset):
-                self.assertIn(token, packed)
-            self.assertLess(packed.index(luck), packed.index(direction_guard))
-            self.assertLess(packed.index(direction_guard), packed.index(reset))
-            self.assertNotIn("DotProduct(ThrottleOf(", packed)
+    def test_fly_deadzone_stops_motion_without_changing_preferences(self) -> None:
+        for source, global_name in self.sources:
+            packed = compact(subroutine(source, "ProcessPlayerFlight"))
+            owner = f"{global_name}.ActivePlayer"
+            self.assertIn(f"If(MagnitudeOf({owner}.FlyDirection)>0.050);", packed)
+            self.assertIn(f"Else;{owner}.FlyVelocityDelta=VelocityOf({owner})*-1;End;", packed)
             self.assertNotIn("StartAccelerating(", packed)
             self.assertNotIn("StopAccelerating(", packed)
-            self.assertNotIn(f"{global_name}.FlyRampStartTime", source)
-            cycle = subroutine(source, "ProcessPlayerCycle")
-            self.assertNotIn("Min(1000, 100 +", cycle)
-
-    def test_only_directional_deadzone_takes_the_reset_branch(self) -> None:
-        """The reset belongs to the input deadzone, rather than any direction change."""
-        for source, global_name in self.sources:
-            packed = compact(subroutine(source, "ProcessPlayerFlight"))
-            owner = f"{global_name}.ActivePlayer"
-            direction = packed.index(
-                f"If(MagnitudeOf(Vector(XComponentOf(ThrottleOf({owner})),0,"
-                f"ZComponentOf(ThrottleOf({owner}))))>0.050);"
-            )
-            reset = packed.index(
-                f"Else;{owner}.FlyRampStartTime=-1;",
-                direction,
-            )
-            self.assertLess(direction, reset)
-            reset_branch = packed[reset : packed.index("End;", reset) + len("End;")]
-            self.assertEqual(reset_branch.count(f"{owner}.FlyRampStartTime=-1;"), 1)
-            self.assertEqual(reset_branch.count(f"{owner}.FlyPercent=100;"), 1)
 
     def test_fly_3d_controller_applies_only_the_velocity_difference(self) -> None:
         for source, global_name in self.sources:
@@ -265,7 +230,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"+CrossProduct(Vector(0,1,0),DirectionFromAngles(HorizontalFacingAngleOf({owner}),0))*"
                 f"XComponentOf(ThrottleOf({owner}));",
                 f"MagnitudeOf({owner}.FlyDirection)>0.050",
-                f"{owner}.FlyVelocityDelta=Normalize({owner}.FlyDirection)*5.500*{owner}.FlyPercent/100"
+                f"{owner}.FlyVelocityDelta=Normalize({owner}.FlyDirection)*5.500*{owner}.MovementSpeed/100"
                 f"*Min(1,MagnitudeOf(ThrottleOf({owner})))-VelocityOf({owner});",
                 f"Else;{owner}.FlyVelocityDelta=VelocityOf({owner})*-1;End;",
                 f"If(MagnitudeOf({owner}.FlyVelocityDelta)>0.010);",
@@ -311,7 +276,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertIn(
                 f"If({global_name}.ActivePlayer.LuckEffect==2);"
                 f"StopAccelerating({global_name}.ActivePlayer);"
-                f"SetMoveSpeed({global_name}.ActivePlayer,100);End;",
+                f"SetMoveSpeed({global_name}.ActivePlayer,{global_name}.ActivePlayer.FlyModeActive==True?0:{global_name}.ActivePlayer.MovementSpeed);End;",
                 packed_luck,
             )
 
@@ -324,7 +289,6 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "Set Gravity(Event Player, 100);",
                 "Enable Movement Collision With Environment(Event Player);",
                 "Event Player.GhostFlyPhysicsApplied = False;",
-                "Event Player.FlyRampStartTime = -1;",
             )
             positions = [death.index(token) for token in normalization]
             self.assertEqual(positions, sorted(positions))
@@ -355,10 +319,10 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "Event Player.FlyModeActive = False;",
                 "Event Player.GhostFlyCursor = 0;",
                 "Event Player.GhostFlyPhysicsApplied = False;",
-                "Event Player.FlyRampStartTime = -1;",
-                "Event Player.FlyPercent = 100;",
+                "Event Player.MovementSpeed = 100;",
                 "Event Player.FlyDirection = Vector(0, 0, 0);",
                 "Event Player.FlyVelocityDelta = Vector(0, 0, 0);",
+                "Event Player.MovementGravity = 100;",
             ):
                 self.assertIn(token, setup)
 
@@ -369,8 +333,6 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 "Enable Movement Collision With Environment(Event Player);",
                 "Set Gravity(Event Player, 100);",
                 "Set Move Speed(Event Player, 100);",
-                "Event Player.FlyRampStartTime = -1;",
-                "Event Player.FlyPercent = 100;",
                 "Event Player.FlyDirection = Vector(0, 0, 0);",
                 "Event Player.FlyVelocityDelta = Vector(0, 0, 0);",
             ):
@@ -386,7 +348,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 f"Has Spawned({global_name}.ActivePlayer) == True",
                 f"Is Alive({global_name}.ActivePlayer) == True",
                 f"{global_name}.ActivePlayer.GhostFlyPhysicsApplied == False",
-                f"Set Move Speed({global_name}.ActivePlayer, {global_name}.ActivePlayer.FlyModeActive == True ? 0 : 100);",
+                f"Set Move Speed({global_name}.ActivePlayer, {global_name}.ActivePlayer.FlyModeActive == True ? 0 : {global_name}.ActivePlayer.MovementSpeed);",
             ):
                 self.assertIn(token, reapply)
 
@@ -417,8 +379,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             hero_branch = reapply[hero_change:]
             self.assertIn(f"{global_name}.ActivePlayer.GhostFlyPhysicsApplied = False;", hero_branch)
-            self.assertIn(f"{global_name}.ActivePlayer.FlyRampStartTime = -1;", hero_branch)
-            self.assertIn(f"Set Move Speed({global_name}.ActivePlayer, 100);", hero_branch)
+            self.assertIn(f"Set Move Speed({global_name}.ActivePlayer, {global_name}.ActivePlayer.FlyModeActive == True ? 0 : {global_name}.ActivePlayer.MovementSpeed);", hero_branch)
 
     def test_try_your_luck_never_owns_gravity_or_fly_throttle(self) -> None:
         for source, _ in self.sources:

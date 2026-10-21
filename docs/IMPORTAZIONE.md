@@ -11,7 +11,7 @@
 
 L'unico codice da importare usa la grammatica nativa inglese. Anche identificatori, nomi delle regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese. Non tradurre manualmente le keyword. Al primo spawn il principale si apre sulla voce 0, Info / Controls; Crouch + Interact mostra la guida completa ai comandi.
 
-Le 127 regole sono numerate da 0 a 126 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
+Le 129 regole sono numerate da 0 a 128 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
 
 Con Info 0 selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola, e il corpo (`Text`) è vuoto. L'anteprima mostra i binding per Camera, Arcade, ispezione eroe/HP, navigazione e apertura della guida completa. Il sottomenu Info mantiene titolo e tutti i dodici comandi nel `Subheader`, con i binding reali del giocatore e senza duplicazioni. Le altre voci e pagine mostrano i comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed. L'utente ha verificato e confermato questa distanza nel gioco il 9 ottobre, dopo la PR #105.
 

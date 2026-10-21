@@ -183,13 +183,13 @@ class DirectMenuToggleTests(unittest.TestCase):
                             model.input(owner, button, ticks=10)
                             self.assertEqual(model.enabled(owner, field), enabled)
                             self.assertEqual(state["MenuPage"], -1)
-                            self.assertEqual(state["MainMenuCursor"], (page + 1) % 16 if button == "Primary Fire" else page)
+                            self.assertEqual(state["MainMenuCursor"], (page + 1) % 17 if button == "Primary Fire" else page)
                             model.input(owner, ticks=2)
                         self.assertEqual(model.created_huds, [])
 
     def test_other_main_entries_still_open_their_function_screen_once(self):
         for source, model in self.models():
-            for page in sorted(set(range(16)) - {page for page, _ in PAGES}):
+            for page in sorted(set(range(17)) - {page for page, _ in PAGES}):
                 with self.subTest(source=source, page=page):
                     owner = f"owner-{page}"
                     state = model.add(owner, MainMenuCursor=page, team=2)

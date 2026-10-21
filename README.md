@@ -6,7 +6,7 @@ Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori conte
 
 Imposta la lingua testo del client su **English** per importare il codice. **Grammatica Workshop, identificatori, regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese**. Le mappe si configurano nella lobby: tutte quelle standard disponibili in Schermaglia, escluse le mappe Workshop come Isola.
 
-Le 127 regole del file da importare sono numerate consecutivamente da **0 a 126**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
+Le 129 regole del file da importare sono numerate consecutivamente da **0 a 128**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
 
 ## Stato attuale
 
@@ -14,7 +14,7 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.417 unità (−17,4%)**. Il testo da importare passa da 348.732 a 290.655 byte UTF-8 (−16,7%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.680 unità (−16,5%)**. Il testo da importare passa da 348.732 a 293.273 byte UTF-8 (−15,9%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -27,7 +27,7 @@ La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` 
 3. Nelle impostazioni Workshop scegli durata **10–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel sottotitolo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
-Il file contiene le regole, non il preset delle mappe. L'HUD centrale mostra **[cozywatch.org](https://cozywatch.org)** in viola neon (`#825AFF`), il sito della modalità. Il precedente sistema Server Location è rimosso.
+Il file contiene le regole, non il preset delle mappe. Il titolo centrale mostra **cozywatch.org** insieme al countdown; il sottotitolo separato del sito è rimosso. Il precedente sistema Server Location è rimosso.
 
 Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
 
@@ -75,6 +75,7 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
+| 16 | Movement / Gravity | Velocità 50–1000% e gravità 0–500%, passi del 50% |
 
 Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni. Input, navigazione e applicazione richiedono un giocatore vivo e spawnato; alla morte o alla perdita dello spawn la chiusura e la pulizia restano attive.
 
@@ -82,7 +83,9 @@ Un teletrasporto Travel riuscito chiude anche lo stato Attach del proprietario: 
 
 Nel menu 2 ogni applicazione di Your Hero o di un bersaglio valido ferma e ricrea la Camera, anche se la stessa scelta era già attiva. Camera OFF ferma sempre la camera nativa. La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
 
-Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. Con input direzionale continuo accelera dal **100% al 1000% in 20 secondi**: cambiare direzione conserva la rampa, rilasciare del tutto il movimento la azzera.
+Il menu 16 modifica due valori personali, inizialmente al **100%**. Tieni Crouch e premi Interact per scegliere Speed o Gravity; Primary / Secondary aumentano o diminuiscono subito il valore di **50%**. La velocità va da **50% a 1000%**, la gravità da **0% a 500%**. Reload torna al principale. Le scelte restano dopo morte e cambio eroe e tornano al 100% dopo cambio squadra o uscita/rientro.
+
+Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. La velocità è fissa sul valore scelto nel menu 16: **100% equivale a 5,5 m/s**, senza accelerazione automatica. Con Fly attiva la gravità è sempre **0**; disattivandola torna al valore scelto nel menu 16. Luck Acceleration mantiene il suo effetto temporaneo e, alla fine, vengono ripristinate le impostazioni personali.
 
 Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi.
 
