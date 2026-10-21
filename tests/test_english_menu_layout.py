@@ -115,7 +115,8 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         for name in ("ColorNames", "GenreNames", "PlayerIcons", "IconNames"):
                             context.globals[name] = [f"{name}:{index}" for index in range(200)]
                         context.player.update(GenreIndex=-1, CustomSoundtrack=None,
-                                              VotedPlayer=None, CameraTarget="camera target")
+                                              VotedPlayer=None, CameraTarget="camera target",
+                                              MovementSpeed=250, MovementGravity=70)
                         context.player["MainMenuCursor"] = 0
                         text_tree = context.parse(compiler.actor_text(content))
                         subtitle_tree = context.parse(compiler.actor_text(subtitle))
@@ -123,7 +124,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         expected_lines = rendered_control_lines(MAIN_INFO_CONTROLS)
                         self.assertEqual(rendered.splitlines(), expected_lines)
                         self.assertEqual(text_tree.evaluate(context), "")
-                        for cursor in range(1, 16):
+                        for cursor in range(1, 17):
                             with self.subTest(cursor=cursor):
                                 normal_content = compiler._emit(main_menu_branch(content, cursor))
                                 self.assertEqual(list(validator.iter_calls(normal_content, "Input Binding String")), [])

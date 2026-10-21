@@ -2,7 +2,7 @@
 
 Codice corrente di `main`, versione **0.8.2**: **[ruang_irama.en-US.workshop](ruang_irama.en-US.workshop)** è l'unico file da copiare nel Workshop, con la lingua testo del client impostata su **English**. Apri **Raw** e copia tutto. Comprende la correzione del margine inferiore di HOST successiva alla release 0.8.2; il tag pubblicato conserva il proprio contenuto.
 
-Le 127 regole seguono una numerazione unica da **0 a 126**, nell'ordine del file, senza numeri ripetuti o suffissi alfabetici.
+Le 129 regole seguono una numerazione unica da **0 a 128**, nell'ordine del file, senza numeri ripetuti o suffissi alfabetici.
 
 Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre il menu principale sulla voce **0 — Info / Controls**: Crouch + Interact apre la guida completa. Il sito **[cozywatch.org](https://cozywatch.org)** compare nell'HUD centrale.
 

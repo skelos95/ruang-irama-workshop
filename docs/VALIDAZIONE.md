@@ -19,10 +19,10 @@ git diff --check
 | Parità | Specifica comportamentale inglese equivalente al riferimento dei test; clipboard generato equivalente al riferimento runtime, distinto dalla specifica |
 | Generazione | Ricompilazione deterministica della specifica; rifiuto di output importabile obsoleto o modificato senza rigenerazione |
 | Runtime globale | Nessun Each Player, callback solo di registrazione, nessuna attesa nelle subroutine, cattura del proprietario delle espressioni persistenti |
-| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–126, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
+| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–128, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
-| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly, Revenge, Unkillable, Luck e dummy |
+| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly a velocità fissa, menu 16 Speed/Gravity, Revenge, Unkillable, Luck e dummy |
 | Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e colore MenuColor dinamico; altre voci/pagine con comandi in Subheader e opzioni in Text; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
@@ -36,17 +36,17 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.417 unità strutturali invece di 31.966 (−17,4%)**, con 2.566 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 290.655 byte UTF-8 (−16,7%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.680 unità strutturali invece di 31.966 (−16,5%)**, con 2.549 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 293.273 byte UTF-8 (−15,9%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
-| Regole | 116 | 127 |
+| Regole | 118 | 129 |
 | Variabili globali | 71 | 89 |
-| Variabili player | 124 | 126 |
-| Subroutine | 66 | 113 |
-| Byte di testo UTF-8 | 271.146 | 290.655 |
+| Variabili player | 125 | 127 |
+| Subroutine | 68 | 115 |
+| Byte di testo UTF-8 | 273.170 | 293.273 |
 
-La regola più grande per testo usa 22.472 byte UTF-8; la regola con più unità strutturali ne usa 2.566. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
+La regola più grande per testo usa 22.472 byte UTF-8; la regola con più unità strutturali ne usa 2.549. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 
 ## GitHub Actions
 

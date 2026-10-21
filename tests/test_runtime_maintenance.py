@@ -237,7 +237,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn('Custom String("{0}{1}{2}"', roster)
             self.assertNotIn("CHILL STAR:", roster)
             self.assertIn(
-                f"6 + Count Of(Filtered Array({global_name}.PlayerListHudIds, Current Array Element != 0))",
+                f"5 + Count Of(Filtered Array({global_name}.PlayerListHudIds, Current Array Element != 0))",
                 roster,
             )
 

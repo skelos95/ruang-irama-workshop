@@ -214,7 +214,7 @@ class GlobalCompactionTests(unittest.TestCase):
         context = self.context()
         context.globals["NameColorRGBValues"] = [Vector(i * 6, 255 - i * 6, i * 3) for i in range(40)]
         left, right = context.parse(before.args[2]), context.parse(after.args[2])
-        pages = [(-1, cursor) for cursor in range(16)] + [(page, 7) for page in range(16)] + [(-2, 7), (16, 7)]
+        pages = [(-1, cursor) for cursor in range(17)] + [(page, 7) for page in range(17)] + [(-2, 7), (17, 7)]
         for (page, cursor), index in itertools.product(pages, range(40)):
             context.player.update(MenuPage=page, MainMenuCursor=cursor, ColorIndex=index, ColorCursor=(index * 7) % 40)
             with self.subTest(page=page, cursor=cursor, colour=index):
@@ -229,9 +229,9 @@ class GlobalCompactionTests(unittest.TestCase):
             context.globals[name] = [f"{name}:{index}" for index in range(200)]
         context.player.update(ColorIndex=3, ColorCursor=3, GenreIndex=17, CustomSoundtrack=None,
                               VotedPlayer="vote target", CameraTarget="camera target", IconIndex=23,
-                              MultijumpLevel=10)
+                              MultijumpLevel=10, MovementSpeed=250, MovementGravity=70)
         parsed = [(context.parse(before.args[index]), context.parse(after.args[index])) for index in (2, 3)]
-        for cursor, state in itertools.product(range(16), range(4)):
+        for cursor, state in itertools.product(range(17), range(4)):
             context.player.update(MainMenuCursor=cursor, CameraMode=state % 3,
                                   UnkillableMode=state % 3, VoiceIndex=state, LuckSpinCount=state,
                                   CrouchTravelEnabled=bool(state % 2), InspectionPrivacyActive=bool(state % 2),

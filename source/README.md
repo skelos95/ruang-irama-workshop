@@ -14,8 +14,8 @@ timer e registrazioni di eventi eseguiti dallo scheduler globale. Non copiare
 questa specifica nel gioco: usa [il clipboard generato](../workshop/ruang_irama.en-US.workshop).
 
 La specifica conserva identificatori di regola stabili per compilatore e test.
-Nel clipboard generato i titoli delle 127 regole vengono numerati consecutivamente
-da 0 a 126 nell'ordine del file, senza duplicati o suffissi alfabetici. La
+Nel clipboard generato i titoli delle 129 regole vengono numerati consecutivamente
+da 0 a 128 nell'ordine del file, senza duplicati o suffissi alfabetici. La
 numerazione dei titoli non modifica il comportamento o i nomi delle subroutine.
 
 ```text

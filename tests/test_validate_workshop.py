@@ -550,7 +550,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         _, players, _, _ = validator.declaration_entries(self.source)
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
         # Removed language state and binary cursors leave a compact namespace.
-        self.assertEqual([entry.index for entry in players], list(range(124)))
+        self.assertEqual([entry.index for entry in players], list(range(125)))
         self.assertFalse(any("non inizializzata in PreparePlayer" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
@@ -870,7 +870,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_chill_grid_rejects_a_seventh_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
-            and "COZYWATCH" in rule.body
+            and "cozywatch.org" in rule.body
             and "Global.IsReady = True;" in rule.body
         )
         extra = (
@@ -890,15 +890,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
         )
         mutated = self.inject_action(scheduler, extra)
-        self.assert_rejected(mutated, "numero HUD globali: sei fissi e un roster")
+        self.assert_rejected(mutated, "numero HUD globali: cinque fissi e un roster")
 
     def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
-        token = "6 + Count Of(Filtered Array(Global.PlayerListHudIds"
+        token = "5 + Count Of(Filtered Array(Global.PlayerListHudIds"
         mutated = self.replace_once(token, "7 + Count Of(Filtered Array(Global.PlayerListHudIds")
         comment_anchor = '"This order deliberately runs from calm to chaotic. Keep the musical progression intact."'
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
-        self.assert_rejected(mutated, "diagnostica HUD non include gli sei handle fissi")
+        self.assert_rejected(mutated, "diagnostica HUD non include i cinque handle fissi")
         call = self.left_roster_call()
         for handle in ("PlayerListHudIds", "MenuHudIds", "TemporaryEffectHudIds", "InspectionTextIds",
                        "TemporaryTravelTextIds", "TemporaryVisionTextIds"):
@@ -1038,28 +1038,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(info, old, new)
         self.assert_rejected(mutated, "Info")
 
-    def test_website_hud_keeps_its_distinct_cyber_violet_color(self) -> None:
-        calls = list(validator.iter_calls(self.source, "Create HUD Text"))
-        server_location = next(
-            call for call in calls
-            if len(call.args) >= 9
-            and call.args[4].strip() == "Top"
-            and call.args[5].strip() == "1"
-        )
-        lobby_time = next(
-            call for call in calls
-            if len(call.args) >= 9
-            and call.args[4].strip() == "Left"
-            and call.args[5].strip() == "0"
-        )
-        mutated = self.replace_call_argument(
-            server_location,
-            7,
-            "Custom Color(129, 90, 255, 255)",
-        )
-        self.assert_rejected(mutated, 'WEBSITE: colore subheader cyber violet esatto')
-        mutated = self.replace_call_argument(server_location, 7, lobby_time.args[8])
-        self.assert_rejected(mutated, "colore distinto da PLAYER VIBES")
+    def test_website_title_keeps_rgb_and_separate_site_hud_cannot_return(self) -> None:
+        title = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
+                     if call.args[4].strip() == "Top" and call.args[5].strip() == "0")
+        mutated = self.replace_call_argument(title, 8, "Color(White)")
+        self.assert_rejected(mutated, "HUD titolo Cozywatch: colore RGB invariato")
+        init = self.rule(lambda rule: rule.name.startswith("00 -"))
+        extra = 'Create HUD Text(Global.HumanPlayers, Null, Custom String("cozywatch.org"), Null, Top, 1, Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
+        self.assert_rejected(self.inject_action(init, extra), "WEBSITE: HUD separato Top 1 rimosso")
 
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -1082,9 +1068,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_all_twelve_option_submenus_are_routed_and_main_toggles_have_no_submenu(self) -> None:
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawActiveMenuPage")
-        for page in (0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 13, 14):
+        for page in (0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 13, 14, 16):
             with self.subTest(page=page):
-                mutated = self.replace_in_rule(router, f"MenuPage == {page}", "MenuPage == 16")
+                mutated = self.replace_in_rule(router, f"MenuPage == {page}", "MenuPage == 17")
                 self.assert_rejected(mutated, f"pagina {page}")
         for page in (8, 9, 12, 15):
             with self.subTest(main_toggle=page):
@@ -1094,7 +1080,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_page_thirteen_keeps_the_progressive_fly_copy_in_english(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawGhostFlyMenu")
         mutated = self.replace_in_rule(renderer,
-            "KEEP MOVING: 100% > 1000% / 20s",
+            "FLY SPEED: {0}% | CHANGE IN MENU 16",
             "LOOK TO STEER | HOLD FORWARD TO ACCELERATE")
         self.assert_rejected(mutated, "pagina 13 Ghost/Fly")
 
@@ -1104,10 +1090,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         mutated = self.replace_in_rule(
             navigation,
-            "(Event Player.MenuCommand == 3 ? 1 : 15)) % 16;",
+            "(Event Player.MenuCommand == 3 ? 1 : 16)) % 17;",
             "(Event Player.MenuCommand == 3 ? 1 : 14)) % 15;",
         )
-        self.assert_rejected(mutated, "ciclo esatto 0..15")
+        self.assert_rejected(mutated, "ciclo esatto 0..16")
 
     def test_main_menu_preview_keeps_pages_twelve_and_thirteen_distinct(self) -> None:
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -1289,7 +1275,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("ApplyPlayerIconPage", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "dispatcher Interact must cover the fifteen pages with actions")
+        self.assert_rejected(mutated, "dispatcher Interact must cover the sixteen pages with actions")
 
     def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplySuperPunchPage")
@@ -1757,74 +1743,35 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "input devono restare locali")
 
-    def test_fly_ramp_requires_the_exact_progressive_percentage_formula(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        mutations = (
-            (
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45)",
-                "Min(500, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45)",
-                "cap 1000%",
-            ),
-            (
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45)",
-                "Min(1000, 120 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45)",
-                "base 100%",
-            ),
-            (
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45)",
-                "Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 36)",
-                "pendenza 45 punti/s",
-            ),
-        )
-        for old, new, contract in mutations:
-            with self.subTest(contract=contract):
-                mutated = self.replace_in_rule(cycle, old, new)
-                self.assert_rejected(mutated, "rampa Fly lineare 100%-1000% in 20 secondi")
+    def test_fly_speed_uses_the_selected_percentage_without_elapsed_ramp(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        for value in ("100", "1000", "Global.ActivePlayer.MovementSpeed + Total Time Elapsed"):
+            with self.subTest(value=value):
+                mutated = self.replace_in_rule(motor, "Global.ActivePlayer.MovementSpeed / 100", value + " / 100")
+                self.assert_rejected(mutated, "velocità target 3D")
 
-    def test_fly_ramp_requires_local_directional_input(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        mutated = self.replace_in_rule(
-            cycle,
+    def test_fly_requires_local_directional_input(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        mutated = self.replace_in_rule(motor,
             "Z Component Of(Throttle Of(Global.ActivePlayer))",
-            "Dot Product(Throttle Of(Global.ActivePlayer), Facing Direction Of(Global.ActivePlayer))",
-        )
-        self.assert_rejected(mutated, "qualsiasi input direzionale locale")
+            "Dot Product(Throttle Of(Global.ActivePlayer), Facing Direction Of(Global.ActivePlayer))")
+        self.assert_rejected(mutated, "solo l'input avanti usa il pitch")
 
-    def test_fly_ramp_rejects_direction_filters_or_changed_deadzone(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        guard = (
-            "Magnitude Of(Vector(X Component Of(Throttle Of(Global.ActivePlayer)), 0, "
-            "Z Component Of(Throttle Of(Global.ActivePlayer)))) > 0.050"
-        )
-        mutations = (
-            (
-                guard,
-                "Z Component Of(Throttle Of(Global.ActivePlayer)) > 0.050",
-            ),
-            (
-                guard,
-                "Magnitude Of(Vector(X Component Of(Throttle Of(Global.ActivePlayer)), 0, 0)) > 0.050",
-            ),
-            (
-                guard,
-                guard.replace("> 0.050", "> 0.100"),
-            ),
-        )
-        for old, new in mutations:
-            with self.subTest(gate=new):
-                mutated = self.replace_in_rule(cycle, old, new)
-                self.assert_rejected(mutated, "qualsiasi input direzionale locale")
+    def test_fly_rejects_direction_filters_or_changed_deadzone(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        for replacement in ("0.100", "1", "Global.ActivePlayer.MovementSpeed"):
+            with self.subTest(value=replacement):
+                mutated = self.replace_in_rule(motor,
+                    "Magnitude Of(Global.ActivePlayer.FlyDirection) > 0.050",
+                    "Magnitude Of(Global.ActivePlayer.FlyDirection) > " + replacement)
+                self.assert_rejected(mutated, "velocità target 3D")
 
-    def test_fly_idle_input_rearms_speed_and_timestamp(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        mutated = self.replace_in_rule(
-            cycle,
-            "Global.ActivePlayer.FlyRampStartTime = -1;\n"
-            "\t\t\t\t\tGlobal.ActivePlayer.FlyPercent = 100;",
-            "Global.ActivePlayer.FlyRampStartTime = -1;\n"
-            "\t\t\t\t\tGlobal.ActivePlayer.FlyPercent = 150;",
-        )
-        self.assert_rejected(mutated, "solo assenza di input direzionale")
+    def test_fly_idle_does_not_reset_the_selected_movement_preferences(self) -> None:
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        for field in ("MovementSpeed", "MovementGravity"):
+            with self.subTest(field=field):
+                mutated = self.inject_action(motor, f"Global.ActivePlayer.{field} = 100;")
+                self.assert_rejected(mutated, "il motore non deve modificare le preferenze")
 
     def test_fly_luck_acceleration_has_priority_over_directional_ramp(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
@@ -1869,25 +1816,13 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "impulso esattamente opposto alla deriva")
 
     def test_fly_actions_cannot_escape_their_per_player_input_guards(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        for action, fragment in (
-            (
-                "Global.ActivePlayer.FlyPercent = Min(1000, 100 + Max(0, Total Time Elapsed - Global.ActivePlayer.FlyRampStartTime) * 45);",
-                "guardia di qualsiasi input direzionale",
-            ),
-            (
-                "Apply Impulse(Global.ActivePlayer, Global.ActivePlayer.FlyVelocityDelta, Magnitude Of(Global.ActivePlayer.FlyVelocityDelta), To World, Incorporate Contrary Motion);",
-                "guardia per-player umano vivo",
-            ),
-        ):
-            with self.subTest(action=action):
-                self.assertIn(action, cycle.body)
-                changed = cycle.body.replace(action, "", 1)
-                closing = changed.rfind("\n\t}")
-                self.assertGreater(closing, 0)
-                changed = changed[:closing] + f"\n\t\t{action}" + changed[closing:]
-                mutated = self.source[:cycle.start] + changed + self.source[cycle.end:]
-                self.assert_rejected(mutated, fragment)
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        action = "Apply Impulse(Global.ActivePlayer, Global.ActivePlayer.FlyVelocityDelta, Magnitude Of(Global.ActivePlayer.FlyVelocityDelta), To World, Incorporate Contrary Motion);"
+        changed = motor.body.replace(action, "", 1)
+        closing = changed.rfind("\n\t}")
+        changed = changed[:closing] + f"\n\t\t{action}" + changed[closing:]
+        mutated = self.source[:motor.start] + changed + self.source[motor.end:]
+        self.assert_rejected(mutated, "guardia per-player umano vivo")
 
     def test_fly_motor_requires_every_per_player_lifecycle_guard(self) -> None:
         motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
@@ -1966,14 +1901,14 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_fly_state_cannot_be_written_from_another_controller(self) -> None:
         cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerCycle")
-        for variable in ("FlyPercent", "FlyDirection", "FlyVelocityDelta"):
+        for variable in ("FlyDirection", "FlyVelocityDelta"):
             with self.subTest(variable=variable):
                 mutated = self.inject_action(cycle, f"Global.ActivePlayer.{variable} = 0;")
                 self.assert_rejected(mutated, f"owner per-player esclusivi di {variable}")
 
     def test_fly_state_cannot_be_written_to_another_player(self) -> None:
         motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        for variable in ("FlyPercent", "FlyDirection", "FlyVelocityDelta"):
+        for variable in ("FlyDirection", "FlyVelocityDelta"):
             with self.subTest(variable=variable):
                 mutated = self.inject_action(motor, f"Set Player Variable(Host Player, {variable}, 0);")
                 self.assert_rejected(mutated, f"scritture {variable} fuori dai target per-player")
@@ -1996,6 +1931,39 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             with self.subTest(action=action):
                 mutated = self.inject_action(cleanup, action)
                 self.assert_rejected(mutated, f"Try Your Luck non deve modificare {expected}")
+
+    def test_movement_ranges_steps_and_immediate_apply_are_enforced(self) -> None:
+        navigation = self.rule(lambda rule: rule.name.startswith("06 -"))
+        for old, new in (
+            ("Min(1000, Max(50,", "Min(500, Max(50,"),
+            ("Min(1000, Max(50,", "Min(1000, Max(10,"),
+            ("Min(500, Max(0,", "Min(200, Max(0,"),
+            ("Event Player.MenuCommand == 3 ? 50 : -50", "Event Player.MenuCommand == 3 ? 10 : -10"),
+            ("Call Subroutine(ApplyGhostFlyPhysics);", ""),
+        ):
+            with self.subTest(change=old):
+                self.assert_rejected(self.replace_in_rule(navigation, old, new), "Movement: pagina 16 richiede passi 50")
+
+    def test_movement_defaults_and_lifecycle_preservation_are_enforced(self) -> None:
+        setup = self.rule(lambda rule: validator.subroutine_target(rule) == "PreparePlayer")
+        for field in ("MovementSpeed", "MovementGravity"):
+            with self.subTest(default=field):
+                changed = self.replace_in_rule(setup, f"Event Player.{field} = 100;", f"Event Player.{field} = 50;")
+                self.assert_rejected(changed, f"Movement: default {field}")
+            for owner in ("QuiescePlayer", "ProcessPlayerCycle", "ProcessPlayerLuck"):
+                rule = self.rule(lambda rule: validator.subroutine_target(rule) == owner)
+                target = "Event Player" if owner == "QuiescePlayer" else "Global.ActivePlayer"
+                changed = self.inject_action(rule, f"{target}.{field} = 100;")
+                self.assert_rejected(changed, f"Movement: owner esclusivi di {field}")
+
+    def test_movement_interact_toggles_only_the_cursor_and_renderer_has_both_ranges(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyMovementPage")
+        changed = self.replace_in_rule(apply, "+ 1) % 2", "+ 1) % 3")
+        self.assert_rejected(changed, "Movement: Interact alterna soltanto Speed/Gravity")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMovementMenu")
+        for old in ("Speed: {1}% (50-1000%)", "Gravity: {1}% (0-500%)", "+50% / {2}: -50%"):
+            with self.subTest(text=old):
+                self.assert_rejected(self.replace_in_rule(renderer, old, "stale value"), "Movement: renderer incompleto")
 
     def test_full_hp_application_requires_damage_knockback_and_player_phasing(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyUnkillablePage")
@@ -2566,13 +2534,11 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "restare automatica anche in Fly")
 
     def test_fly_idle_brake_must_skip_active_luck_acceleration(self) -> None:
-        cycle = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
-        mutated = self.replace_in_rule(
-            cycle,
-            "Global.ActivePlayer.FlyRampStartTime = -1;",
-            "Global.ActivePlayer.FlyRampStartTime = -1;\n"
-            "\t\t\t\tApply Impulse(Global.ActivePlayer, Global.ActivePlayer.FlyVelocityDelta, Magnitude Of(Global.ActivePlayer.FlyVelocityDelta), To World, Incorporate Contrary Motion);",
-        )
+        motor = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerFlight")
+        action = "Apply Impulse(Global.ActivePlayer, Global.ActivePlayer.FlyVelocityDelta, Magnitude Of(Global.ActivePlayer.FlyVelocityDelta), To World, Incorporate Contrary Motion);"
+        mutated = self.replace_in_rule(motor,
+            "Global.ActivePlayer.FlyDirection = Vector(0, 0, 0);",
+            "Global.ActivePlayer.FlyDirection = Vector(0, 0, 0);\n\t\t\t\t" + action)
         self.assert_rejected(mutated, "esito Acceleration ancora attivo")
 
     def test_luck_acceleration_call_cannot_be_shadowed_by_a_comment(self) -> None:
@@ -2608,8 +2574,8 @@ rule("999x - Nasib: Renderer pemain tambahan")
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerLuck")
         mutated = self.replace_in_rule(machine, "Stop Accelerating(Global.ActivePlayer);", "")
         self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: Stop Accelerating")
-        mutated = self.replace_in_rule(machine, "Set Move Speed(Global.ActivePlayer, 100);", "")
-        self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: ripristino Move Speed 100")
+        mutated = self.replace_in_rule(machine, "Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);", "")
+        self.assert_rejected(mutated, "cleanup scadenza accelerazione incompleto: ripristino Move Speed personale")
 
     def test_luck_acceleration_stop_cannot_be_shadowed_by_a_comment(self) -> None:
         machine = self.rule(lambda rule: validator.subroutine_target(rule) == "ProcessPlayerLuck")

@@ -148,6 +148,7 @@ PAGE_APPLY_SUBROUTINES = {
     "ApplyGhostFlyPage",
     "ApplyMultijumpPage",
     "ApplySuperPunchPage",
+    "ApplyMovementPage",
 }
 MENU_OWNER_STATE_VARIABLES = {
     "MenuOpen",
@@ -184,6 +185,9 @@ MENU_OWNER_STATE_VARIABLES = {
     "GhostModeActive",
     "FlyModeActive",
     "GhostFlyPhysicsApplied",
+    "MovementSpeed",
+    "MovementGravity",
+    "MovementCursor",
 }
 LIFECYCLE_SUBROUTINES = {"PreparePlayer", "QuiescePlayer", "CleanupPlayer"}
 LUCK_TIMESTAMP_VARIABLES = {
@@ -1126,7 +1130,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             call for call in hud_calls
             if len(call.args) >= 4
-            and "COZYWATCH" in call.args[3]
+            and "cozywatch.org" in call.args[3]
             and "Global.ServerTimeText" in call.args[3]
         ),
         None,
@@ -1136,8 +1140,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(server_title.args[2].strip(), "Null", "HUD titolo Cozywatch: Subheader")
         checks.equal(server_title.args[4].strip(), "Top", "HUD titolo Cozywatch: posizione")
         checks.equal(server_title.args[5].strip(), "0", "HUD titolo Cozywatch: ordinamento")
-        checks.require('Custom String("COZYWATCH [{0}]"' in server_title.args[3],
+        checks.require('Custom String("cozywatch.org [{0}]"' in server_title.args[3],
                        "HUD titolo Cozywatch deve mostrare il timer tra parentesi quadre")
+        checks.equal(server_title.args[8].strip(), "Global.RGB", "HUD titolo Cozywatch: colore RGB invariato")
         checks.require("\\n" not in server_title.args[3],
                        "HUD titolo Cozywatch non deve contenere spaziatura incorporata")
 
@@ -1145,7 +1150,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Global"
-            and "COZYWATCH" in rule.body
+            and "cozywatch.org" in rule.body
             and "Global.IsReady = True;" in rule.body
         ),
         None,
@@ -1153,13 +1158,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 6, "numero HUD fissi nella regola iniziale")
+        checks.equal(len(init_hud_calls), 5, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
         if call.args and call.args[0].strip() == "Global.HumanPlayers"
     ]
-    checks.equal(len(global_hud_calls), 7, "numero HUD globali: sei fissi e un roster")
+    checks.equal(len(global_hud_calls), 6, "numero HUD globali: cinque fissi e un roster")
 
     slot_assignments = re.findall(
         r"Global\.AvailableHudSlots\s*=\s*Array\(([^;]*)\);",
@@ -1178,7 +1183,6 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "13"),
         ("Right", "0"),
         ("Top", "0"),
-        ("Top", "1"),
         ("Top", "2"),
     }
     fixed_hud: dict[tuple[str, str], Call] = {}
@@ -1193,14 +1197,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
         if matches:
             fixed_hud[slot] = matches[0]
-    checks.equal(len(fixed_hud), 6, "griglia HUD fissa Top/Left/Right")
+    checks.equal(len(fixed_hud), 5, "griglia HUD fissa Top/Left/Right")
 
     field_contract = {
         ("Left", "0"): ("text", "PLAYER VIBES"),
         ("Left", "13"): ("subheader", "Global.VoteLeaderName"),
         ("Right", "0"): ("text", "Host:"),
-        ("Top", "0"): ("text", "COZYWATCH"),
-        ("Top", "1"): ("subheader", 'Custom String("cozywatch.org")'),
+        ("Top", "0"): ("text", "cozywatch.org"),
         ("Top", "2"): ("text", 'Custom String("  ")'),
     }
     for slot, (field, token) in field_contract.items():
@@ -1230,20 +1233,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.require(label in localized_field,
                            f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
 
-    server_location = fixed_hud.get(("Top", "1"))
-    player_vibes = fixed_hud.get(("Left", "0"))
-    if server_location:
-        checks.equal(
-            re.sub(r"\s+", "", server_location.args[7]),
-            "CustomColor(130,90,255,255)",
-            'WEBSITE: colore subheader cyber violet esatto',
-        )
-    if server_location and player_vibes:
-        checks.require(
-            re.sub(r"\s+", "", server_location.args[7])
-            != re.sub(r"\s+", "", player_vibes.args[8]),
-            'WEBSITE deve avere un colore distinto da PLAYER VIBES',
-        )
+    checks.require(not any(len(call.args) >= 6 and call.args[0].strip() == "Global.HumanPlayers"
+                           and call.args[4].strip() == "Top" and call.args[5].strip() == "1"
+                           for call in hud_calls), "WEBSITE: HUD separato Top 1 rimosso")
 
     host = fixed_hud.get(("Right", "0"))
     if host:
@@ -1309,8 +1301,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                        {("Left", "-2"), ("Left", "-1"), ("Right", "-16")},
                        "help HUD statici rimossi: usare Info / Controls")
 
-    checks.require("6 + Count Of(Filtered Array(Global.PlayerListHudIds" in mask_strings(source),
-                   "diagnostica HUD non include gli sei handle fissi")
+    checks.require("5 + Count Of(Filtered Array(Global.PlayerListHudIds" in mask_strings(source),
+                   "diagnostica HUD non include i cinque handle fissi")
 
     roster_rule = next(
         (
@@ -1399,10 +1391,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     if counts and len(counts.args) == 3:
                         checks.equal(
                             re.sub(r"\s+", "", counts.args[1]),
-                            "6+CountOf(FilteredArray(Global.PlayerListHudIds,CurrentArrayElement!=0))"
+                            "5+CountOf(FilteredArray(Global.PlayerListHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.MenuHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.TemporaryEffectHudIds,CurrentArrayElement!=0))",
-                            "renderer HUD roster Left: conteggio HUD diagnostica deve includere sei fissi e tutti gli handle",
+                            "renderer HUD roster Left: conteggio HUD diagnostica deve includere cinque fissi e tutti gli handle",
                         )
                         checks.equal(
                             re.sub(r"\s+", "", counts.args[2]),
@@ -1434,7 +1426,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.MenuHud = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "DrawTravelMenu"]
-    checks.equal(len(arcade_renderers), 13, "renderer menu principale + dodici pagine con opzioni")
+    checks.equal(len(arcade_renderers), 14, "renderer menu principale + tredici pagine con opzioni")
     direct_pages = {8, 9, 12, 15}
     for retired in ("GambarSakelarTeleportasi", "GambarPrivasiInspeksi",
                     "GambarIkutiBotBuatan", "GambarPukulanSuper"):
@@ -1727,7 +1719,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             1,
             "router menu: DrawGhostFlyMenu deve essere chiamato soltanto dalla pagina 13 aperta",
         )
-        for page in range(16):
+        for page in range(17):
             route = re.search(rf"MenuPage\s*==\s*{page}\b", router.body)
             if page in direct_pages:
                 checks.require(route is None, f"toggle principale: pagina {page} non deve avere un sottomenu")
@@ -1753,7 +1745,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                       "3 - SOUNDTRACK", "4 - REVENGE", "5 - UNKILLABLE", "6 - HERO VOICE",
                       "7 - ICON", "8 - CROUCH: TELEPORT / ATTACH / SELF KILL", "9 - CROUCH PRIVACY",
                       "10 - TRY YOUR LUCK", "11 - VOTE", "12 - DUMMY FOLLOW",
-                      "13 - GHOST MODE / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH"):
+                      "13 - GHOST MODE / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH",
+                      "16 - MOVEMENT"):
             checks.require(token in main_renderer.body, f"Main menu page missing: {token}")
         for state in ("GhostModeActive", "FlyModeActive", "CrouchTravelEnabled",
                       "InspectionPrivacyActive", "AllowDummyBotFollow"):
@@ -1798,7 +1791,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             "13 - GHOST MODE / FLY",
             "WALL PHASING",
             "FLY MODE",
-            "KEEP MOVING: 100% > 1000% / 20s",
+            "FLY SPEED: {0}% | CHANGE IN MENU 16",
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -1816,9 +1809,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
-            "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 15)) % 16;"
+            "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 16)) % 17;"
             in navigation_rule.body,
-            "navigazione menu principale non usa ciclo esatto 0..15",
+            "navigazione menu principale non usa ciclo esatto 0..16",
         )
         checks.require(
             re.search(r"MenuPage\s*==\s*1.*?ColorCursor\s*=", navigation_rule.body, re.DOTALL) is not None,
@@ -1940,7 +1933,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
-                   "dispatcher Interact must cover the fifteen pages with actions")
+                   "dispatcher Interact must cover the sixteen pages with actions")
     for name in sorted(PAGE_APPLY_SUBROUTINES):
         rule = rule_by_subroutine(rules, name)
         if rule:
@@ -2513,8 +2506,8 @@ def validate_ghost_fly(
         "FlyModeActive": 102,
         "GhostFlyCursor": 103,
         "GhostFlyPhysicsApplied": 104,
-        "FlyRampStartTime": 106,
-        "FlyPercent": 107,
+        "MovementGravity": 106,
+        "MovementSpeed": 107,
         "FlyDirection": 108,
         "FlyVelocityDelta": 109,
     }
@@ -2575,19 +2568,18 @@ def validate_ghost_fly(
             ),
             (
                 "Else;If(Or(EventPlayer.LuckEffect!=2,EventPlayer.LuckEffectEndTime<=TotalTimeElapsed));"
-                "SetMoveSpeed(EventPlayer,100);",
+                "SetMoveSpeed(EventPlayer,EventPlayer.MovementSpeed);",
                 "ripristino motore Fly senza interrompere Acceleration di Try Your Luck",
             ),
             (
-                "If(MagnitudeOf(VelocityOf(EventPlayer))>0.010);"
+                "If(And(EventPlayer.GhostFlyPhysicsApplied==False,MagnitudeOf(VelocityOf(EventPlayer))>0.010));"
                 "ApplyImpulse(EventPlayer,VelocityOf(EventPlayer)*-1,MagnitudeOf(VelocityOf(EventPlayer)),"
                 "ToWorld,IncorporateContraryMotion);End;",
                 "arresto deriva locale a Fly disattivato",
             ),
             ("EventPlayer.GhostFlyPhysicsApplied=True;", "latch applicato"),
             ("StopTransformingThrottle(EventPlayer);", "input locali non trasformati"),
-            ("EventPlayer.FlyRampStartTime=-1;", "riarmo rampa"),
-            ("SetGravity(EventPlayer,100);", "ripristino gravità a Fly OFF"),
+            ("SetGravity(EventPlayer,EventPlayer.MovementGravity);", "ripristino gravità personale a Fly OFF"),
         ):
             checks.require(token in physics_packed, f"Ghost/Fly fisica locale incompleta: {label}")
         checks.require(
@@ -2616,8 +2608,9 @@ def validate_ghost_fly(
             ("Global.ActivePlayer.GhostFlyPhysicsApplied==False", "riapplicazione a latch"),
             ("DisableMovementCollisionWithEnvironment(Global.ActivePlayer,False);", "riapplicazione pareti"),
             ("SetGravity(Global.ActivePlayer,0);", "riapplicazione gravità zero"),
-            ("SetMoveSpeed(Global.ActivePlayer,Global.ActivePlayer.FlyModeActive==True?0:100);",
+            ("SetMoveSpeed(Global.ActivePlayer,Global.ActivePlayer.FlyModeActive==True?0:Global.ActivePlayer.MovementSpeed);",
              "riapplicazione motore 3D senza locomozione nativa"),
+            ("SetGravity(Global.ActivePlayer,Global.ActivePlayer.MovementGravity);", "riapplicazione gravità personale"),
         ):
             checks.require(token in cycle_packed, f"Ghost/Fly controller 10 Hz incompleto: {label}")
         checks.require("StartForcingPlayerPosition(" not in cycle_packed,
@@ -2648,23 +2641,7 @@ def validate_ghost_fly(
             "Global.ActivePlayer.FlyModeActive==True",
             "Global.ActivePlayer.GhostFlyPhysicsApplied==True",
         )
-        direction_guard = (
-            "If(MagnitudeOf(Vector(XComponentOf(ThrottleOf(Global.ActivePlayer)),0,"
-            "ZComponentOf(ThrottleOf(Global.ActivePlayer))))>0.050);"
-        )
-        ramp = (
-            "Global.ActivePlayer.FlyPercent=Min(1000,100+Max(0,TotalTimeElapsed-"
-            "Global.ActivePlayer.FlyRampStartTime)*45);"
-        )
         for token, label in (
-            (direction_guard, "rampa con qualsiasi input direzionale locale oltre la zona morta"),
-            ("If(Global.ActivePlayer.FlyRampStartTime<0);"
-             "Global.ActivePlayer.FlyRampStartTime=TotalTimeElapsed;End;",
-             "timestamp per-player avviato al primo input direzionale"),
-            (ramp, "rampa Fly lineare 100%-1000% in 20 secondi"),
-            ("Else;Global.ActivePlayer.FlyRampStartTime=-1;"
-             "Global.ActivePlayer.FlyPercent=100;End;",
-             "solo assenza di input direzionale deve riarmare timestamp e velocità 100%"),
             ("Global.ActivePlayer.FlyDirection=FacingDirectionOf(Global.ActivePlayer)*"
              "Max(0,ZComponentOf(ThrottleOf(Global.ActivePlayer)))+DirectionFromAngles("
              "HorizontalFacingAngleOf(Global.ActivePlayer),0)*Min(0,ZComponentOf(ThrottleOf("
@@ -2673,7 +2650,7 @@ def validate_ghost_fly(
              "direzione Fly: solo l'input avanti usa il pitch, mentre indietro/strafe restano orizzontali"),
             ("If(MagnitudeOf(Global.ActivePlayer.FlyDirection)>0.050);"
              "Global.ActivePlayer.FlyVelocityDelta=Normalize(Global.ActivePlayer.FlyDirection)*5.500*"
-             "Global.ActivePlayer.FlyPercent/100*Min(1,MagnitudeOf(ThrottleOf(Global.ActivePlayer)))-"
+             "Global.ActivePlayer.MovementSpeed/100*Min(1,MagnitudeOf(ThrottleOf(Global.ActivePlayer)))-"
              "VelocityOf(Global.ActivePlayer);",
              "velocità target 3D con baseline 5.5 m/s, limite diagonale e sottrazione velocità attuale"),
             ("Else;Global.ActivePlayer.FlyVelocityDelta=VelocityOf(Global.ActivePlayer)*-1;End;",
@@ -2688,8 +2665,6 @@ def validate_ghost_fly(
         luck_prefix = (
             "If(And(Global.ActivePlayer.LuckEffect==2,"
             "Global.ActivePlayer.LuckEffectEndTime>TotalTimeElapsed));"
-            "Global.ActivePlayer.FlyRampStartTime=-1;"
-            "Global.ActivePlayer.FlyPercent=100;"
             "Global.ActivePlayer.FlyDirection=Vector(0,0,0);"
             "Global.ActivePlayer.FlyVelocityDelta=Vector(0,0,0);"
             "Else;SetMoveSpeed(Global.ActivePlayer,0);"
@@ -2709,13 +2684,10 @@ def validate_ghost_fly(
             checks.require(any(packed(branch).startswith("Else;SetMoveSpeed(Global.ActivePlayer,0);")
                                for branch in branches),
                            "motore e freno Fly devono saltare l'esito Acceleration ancora attivo")
-        ramp_matches = list(re.finditer(r"Global\.ActivePlayer\.FlyPercent\s*=\s*Min\(", mask_strings(motor.body)))
-        checks.equal(len(ramp_matches), 1, "Fly deve avere una sola rampa percentuale progressiva")
-        if ramp_matches:
-            headers = [packed(branch.splitlines()[0]) for branch in
-                       conditional_branches_containing(motor.body, ramp_matches[0].start())]
-            checks.require(direction_guard in headers,
-                           "rampa percentuale deve restare nella guardia di qualsiasi input direzionale")
+        checks.require("FlyRampStartTime" not in mask_strings(source) and "FlyPercent" not in mask_strings(source),
+                       "Fly: vecchia rampa temporale rimossa")
+        checks.require(not re.search(r"\bMovement(?:Speed|Gravity)\s*=(?!=)", mask_strings(motor.body)),
+                       "Fly: il motore non deve modificare le preferenze di movimento")
         for forbidden, label in (
             ("StartAccelerating(", "Start/Stop Accelerating"),
             ("StopAccelerating(", "Start/Stop Accelerating"),
@@ -2737,8 +2709,6 @@ def validate_ghost_fly(
                 "EventPlayer.FlyModeActive=False;",
                 "EventPlayer.GhostFlyCursor=0;",
                 "EventPlayer.GhostFlyPhysicsApplied=False;",
-                "EventPlayer.FlyRampStartTime=-1;",
-                "EventPlayer.FlyPercent=100;",
                 "EventPlayer.FlyDirection=Vector(0,0,0);",
                 "EventPlayer.FlyVelocityDelta=Vector(0,0,0);",
                 "SetMoveSpeed(EventPlayer,100);",
@@ -2771,31 +2741,7 @@ def validate_ghost_fly(
             checks.require("Call Subroutine(CleanupPlayer);" in masked_setup,
                            "Ghost/Fly: cleanup team-switch deve avvenire nel worker serializzato")
 
-    timestamp_writers: list[tuple[str, str]] = []
-    for rule in rules:
-        owner = subroutine_target(rule) or rule.name
-        for target in ("Event Player", "Global.ActivePlayer"):
-            for match in re.finditer(
-                rf"{re.escape(target)}\.FlyRampStartTime\s*=(?!=)\s*([^;\r\n]+);",
-                mask_strings(rule.body),
-            ):
-                timestamp_writers.append((owner, re.sub(r"\s+", "", match.group(1))))
-    checks.equal(len(timestamp_writers), 10, "Fly: numero writer timestamp setup/lifecycle/runtime")
-    checks.equal(
-        sum(value == "-1" for _, value in timestamp_writers),
-        9,
-        "Fly: reset timestamp a -1",
-    )
-    checks.equal(
-        sum(value == "TotalTimeElapsed" for _, value in timestamp_writers),
-        1,
-        "Fly: unico avvio timestamp da Total Time Elapsed",
-    )
-    checks.require(
-        ("ProcessPlayerFlight", "TotalTimeElapsed") in timestamp_writers,
-        "Fly: timestamp Forward deve essere avviato dal motore per-player 20 Hz",
-    )
-    for variable, count in (("FlyPercent", 5), ("FlyDirection", 4), ("FlyVelocityDelta", 5)):
+    for variable, count in (("FlyDirection", 4), ("FlyVelocityDelta", 5)):
         writers = []
         all_writes = 0
         for rule in rules:
@@ -2883,6 +2829,78 @@ def validate_ghost_fly(
                     re.search(rf"{variable}=(?!=)", luck_packed) is None,
                     f"Try Your Luck non deve modificare {label}: {luck_owner}",
                 )
+
+def validate_movement(checks: Checks, source: str, rules: list[Rule],
+                      player_entries: list[Declaration]) -> None:
+    """The last menu edits independent, persistent movement preferences."""
+    def packed(text: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(text))
+
+    cursor = [entry for entry in player_entries if entry.name == "MovementCursor"]
+    checks.equal([(entry.name, entry.index) for entry in cursor], [("MovementCursor", 124)],
+                 "Movement: dichiarazione cursore compatta")
+    setup = rule_by_subroutine(rules, "PreparePlayer")
+    if setup:
+        for field in ("MovementSpeed", "MovementGravity"):
+            checks.require(f"EventPlayer.{field}=100;" in packed(setup.body),
+                           f"Movement: default {field} deve essere 100")
+        checks.require("EventPlayer.MovementCursor=0;" in packed(setup.body),
+                       "Movement: default cursore Speed")
+    navigation = next((rule for rule in rules if prefix_for_movement(rule) == "06"), None)
+    checks.require(navigation is not None, "Movement: navigazione pagina 16 assente")
+    if navigation:
+        expected = (
+            "ElseIf(EventPlayer.MenuPage==16);If(EventPlayer.MovementCursor==0);"
+            "EventPlayer.MovementSpeed=Min(1000,Max(50,EventPlayer.MovementSpeed+"
+            "(EventPlayer.MenuCommand==3?50:-50)));Else;"
+            "EventPlayer.MovementGravity=Min(500,Max(0,EventPlayer.MovementGravity+"
+            "(EventPlayer.MenuCommand==3?50:-50)));End;CallSubroutine(ApplyGhostFlyPhysics);"
+        )
+        checks.require(expected in packed(navigation.body),
+                       "Movement: pagina 16 richiede passi 50, limiti Speed 50..1000 e Gravity 0..500, applicati subito")
+    for field in ("MovementSpeed", "MovementGravity"):
+        writers = []
+        for rule in rules:
+            for match in re.finditer(rf"([A-Za-z][A-Za-z0-9_. ]*)\.{field}\s*[+\-*/%]?=(?!=)", mask_strings(rule.body)):
+                writers.append((rule, match[1].strip()))
+            for action in ("Set Player Variable", "Modify Player Variable", "Set Player Variable At Index",
+                           "Modify Player Variable At Index"):
+                checks.require(not any(len(call.args) >= 2 and call.args[1].strip() == field
+                                       for call in iter_calls(rule.body, action)),
+                               f"Movement: scrittura {field} fuori dal proprietario autorizzato")
+        checks.equal([(subroutine_target(rule) or prefix_for_movement(rule), owner) for rule, owner in writers],
+                     [("06", "Event Player"), ("PreparePlayer", "Event Player")],
+                     f"Movement: owner esclusivi di {field}; morte, hero e Luck conservano la scelta")
+    apply = rule_by_subroutine(rules, "ApplyMovementPage")
+    checks.require(apply is not None, "Movement: ApplyMovementPage assente")
+    if apply:
+        checks.equal(packed(rule_block(apply, "actions") or ""),
+                     "EventPlayer.MovementCursor=(EventPlayer.MovementCursor+1)%2;",
+                     "Movement: Interact alterna soltanto Speed/Gravity")
+    renderer = rule_by_subroutine(rules, "DrawMovementMenu")
+    checks.require(renderer is not None, "Movement: DrawMovementMenu assente")
+    if renderer:
+        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (50-1000%)", "Gravity: {1}% (0-500%)",
+                     "Event Player.MovementSpeed", "Event Player.MovementGravity",
+                     "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1",
+                     "+50% / {2}: -50%"):
+            checks.require(text in renderer.body, f"Movement: renderer incompleto: {text}")
+        for button in ("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Melee"):
+            checks.require(f"Input Binding String(Button({button}))" in renderer.body,
+                           f"Movement: binding {button} assente")
+    router = rule_by_subroutine(rules, "DrawActiveMenuPage")
+    checks.require(router is not None and re.search(
+        r"MenuPage\s*==\s*16\).*?Call Subroutine\(DrawMovementMenu\);", router.body, re.S) is not None,
+        "Movement: router pagina 16")
+    dispatcher = next((rule for rule in rules if prefix_for_movement(rule) == "10"), None)
+    checks.require(dispatcher is not None and re.search(
+        r"MenuPage\s*==\s*16\).*?Call Subroutine\(ApplyMovementPage\);", dispatcher.body, re.S) is not None,
+        "Movement: dispatcher Interact pagina 16")
+
+
+def prefix_for_movement(rule: Rule) -> str:
+    return rule.name.partition(" - ")[0]
+
 
 def validate_special_player_profile(
     checks: Checks,
@@ -3453,6 +3471,7 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             7: (255, 120, 105), 8: (255, 75, 75), 9: (255, 50, 145),
             10: (205, 160, 255), 11: (100, 50, 255), 12: (70, 145, 255),
             13: (0, 234, 234), 14: (70, 220, 110), 15: (65, 155, 110),
+            16: (100, 190, 255),
         }
         for page, anchor in anchors.items():
             expected = (
@@ -3462,8 +3481,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             checks.require(re.sub(r"\s+", "", expected) in transition_code,
                            f"Menu color: blended accent for page {page}")
         selector_pattern = re.escape(re.sub(r"\s+", "", selector)) + r"==(\d+)\?"
-        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(16)),
-                     "feedback visuale: sedici tinte menu in ordine senza duplicati")
+        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(17)),
+                     "feedback visuale: diciassette tinte menu in ordine senza duplicati")
         checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 2,
                      "feedback visuale: due transizioni fluide senza override duplicato")
         checks.equal(mask_strings(transition.body).count("Event Player.MenuColor ="), 0,
@@ -3745,7 +3764,6 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                 "Set Gravity(Event Player, 100);",
                 "Enable Movement Collision With Environment(Event Player);",
                 "Event Player.GhostFlyPhysicsApplied = False;",
-                "Event Player.FlyRampStartTime = -1;",
             )
             death_positions = [death_masked.find(token) for token in death_normalization]
             checks.require(
@@ -4602,7 +4620,7 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             expiry_cleanup_masked = mask_strings(expiry_cleanup)
             for token, label in (
                 ("Stop Accelerating(Global.ActivePlayer);", "Stop Accelerating"),
-                ("Set Move Speed(Global.ActivePlayer, 100);", "ripristino Move Speed 100"),
+                ("Set Move Speed(Global.ActivePlayer, Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed);", "ripristino Move Speed personale o zero in Fly"),
                 ("Global.ActivePlayer.LuckEffect = 0;", "reset effetto"),
                 ("Global.ActivePlayer.LuckEffectEndTime = 0;", "reset timestamp"),
             ):
@@ -4611,15 +4629,15 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
             expiry_stop_calls = list(iter_calls(expiry_cleanup, "Stop Accelerating"))
             expiry_speed_calls = [
                 call for call in iter_calls(expiry_cleanup, "Set Move Speed")
-                if len(call.args) == 2 and call.args[1].strip() == "100"
+                if len(call.args) == 2 and call.args[1].strip() == "Global.ActivePlayer.FlyModeActive == True ? 0 : Global.ActivePlayer.MovementSpeed"
             ]
             checks.equal(len(expiry_stop_calls), 1,
                          "cleanup scadenza: unico Stop Accelerating per l'esito 2")
             checks.equal(len(expiry_speed_calls), 1,
-                         "cleanup scadenza: unico Move Speed 100 per l'esito 2")
+                         "cleanup scadenza: unico ripristino Move Speed personale per l'esito 2")
             for call, label in (
                 *((call, "Stop Accelerating") for call in expiry_stop_calls),
-                *((call, "Move Speed 100") for call in expiry_speed_calls),
+                *((call, "Move Speed personale") for call in expiry_speed_calls),
             ):
                 branches = conditional_branches_containing(expiry_cleanup, call.start)
                 checks.require(
@@ -4665,13 +4683,13 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                 call for call in iter_calls(reset_rule.body, "Set Move Speed")
                 if len(call.args) == 2
                 and call.args[0].strip() == player_expression
-                and call.args[1].strip() == "100"
+                and call.args[1].strip() == f"{player_expression}.FlyModeActive == True ? 0 : {player_expression}.MovementSpeed"
             ]
             checks.equal(len(stop_calls), 1, f"{reset_name}: unico Stop Accelerating")
-            checks.equal(len(speed_calls), 1, f"{reset_name}: unico Move Speed 100")
+            checks.equal(len(speed_calls), 1, f"{reset_name}: unico ripristino Move Speed personale")
             for call, label in (
                 *((call, "Stop Accelerating") for call in stop_calls),
-                *((call, "Move Speed 100") for call in speed_calls),
+                *((call, "Move Speed personale") for call in speed_calls),
             ):
                 branches = conditional_branches_containing(reset_rule.body, call.start)
                 checks.require(
@@ -4701,9 +4719,9 @@ def validate_try_your_luck(checks: Checks, source: str, rules: list[Rule], playe
                     f"cleanup accelerazione {label}: Stop Accelerating assente",
                 )
                 checks.require(
-                    "Set Move Speed(Event Player, 100);" in cleanup_masked
-                    or (uses_shared_reset and "Set Move Speed(Event Player, 100);" in player_luck_reset_masked),
-                    f"cleanup accelerazione {label}: Move Speed 100 assente",
+                    "Set Move Speed(Event Player, Event Player.FlyModeActive == True ? 0 : Event Player.MovementSpeed);" in cleanup_masked
+                    or (uses_shared_reset and "Set Move Speed(Event Player, Event Player.FlyModeActive == True ? 0 : Event Player.MovementSpeed);" in player_luck_reset_masked),
+                    f"cleanup accelerazione {label}: ripristino Move Speed personale assente",
                 )
                 destroy_icon = "Destroy Icon(Event Player.LuckIcon);"
                 null_icon = "Event Player.LuckIcon = Null;"
@@ -7448,6 +7466,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_localization(checks, source, globals_)
     validate_hud_and_menu(checks, source, rules, players, subroutines)
     validate_ghost_fly(checks, source, rules, player_entries, subroutines)
+    validate_movement(checks, source, rules, player_entries)
     validate_multijump(checks, source, rules, player_entries, subroutines)
     validate_super_punch(checks, source, rules, globals_entries, subroutines)
     validate_social_beacon(checks, source, rules, globals_entries)
