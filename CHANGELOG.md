@@ -1,5 +1,11 @@
 # Changelog
 
+## Passi progressivi del menu 16 — 2026-10-22
+
+- Speed ora parte da un minimo del 10% (massimo 1000%); Gravity conserva l’intervallo 0–500%. Entrambi cambiano di 10 punti percentuali sotto il 100% e di 50 sopra, con passaggio simmetrico 80↔90↔100↔150↔200. Al 100% Primary aumenta a 150 e Secondary diminuisce a 90.
+- I binding mostrano il passo effettivo del parametro selezionato, aggiornandosi senza ricreare l’HUD. Fly continua a usare la velocità personale fissa, con gravità sempre 0 e ripristino della selezione quando viene disattivata.
+- Aggiunte regressioni sui valori raggiungibili, sui due estremi e sui binding; rigenerati clipboard e riferimenti. Runtime: 26.778 unità strutturali stimate, massimo per regola 2.549, 293.880 byte UTF-8. Specifica: 273.617 byte. Nessuna nuova variabile, regola, subroutine o attesa; VERSION resta 0.8.2.
+
 ## Titolo e menu Movement / Gravity — 2026-10-21
 
 - Il titolo centrale diventa `cozywatch.org` con il countdown esistente; rimosso il sottotitolo separato del sito e aggiornato il conteggio a cinque HUD globali.

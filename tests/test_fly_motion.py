@@ -335,7 +335,7 @@ class FlyMotionExpressionTests(unittest.TestCase):
 
     def test_selected_speed_is_constant_from_first_tick_and_after_a_minute(self) -> None:
         for name, program in self.programs:
-            for selected in (50, 100, 250, 500, 1000):
+            for selected in (10, 20, 50, 90, 100, 150, 250, 500, 1000):
                 player = player_state(throttle=Vector(0, 0, 1), MovementSpeed=selected)
                 evaluator = FlySourceEvaluator(program, {"one": player})
                 for now in (100, 100.05, 105, 120, 160):
