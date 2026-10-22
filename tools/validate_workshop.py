@@ -2851,13 +2851,15 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
     if navigation:
         expected = (
             "ElseIf(EventPlayer.MenuPage==16);If(EventPlayer.MovementCursor==0);"
-            "EventPlayer.MovementSpeed=Min(1000,Max(50,EventPlayer.MovementSpeed+"
-            "(EventPlayer.MenuCommand==3?50:-50)));Else;"
+            "EventPlayer.MovementSpeed=Min(1000,Max(10,EventPlayer.MovementSpeed+"
+            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementSpeed<100?10:50):"
+            "(EventPlayer.MovementSpeed<=100?-10:-50))));Else;"
             "EventPlayer.MovementGravity=Min(500,Max(0,EventPlayer.MovementGravity+"
-            "(EventPlayer.MenuCommand==3?50:-50)));End;CallSubroutine(ApplyGhostFlyPhysics);"
+            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementGravity<100?10:50):"
+            "(EventPlayer.MovementGravity<=100?-10:-50))));End;CallSubroutine(ApplyGhostFlyPhysics);"
         )
         checks.require(expected in packed(navigation.body),
-                       "Movement: pagina 16 richiede passi 50, limiti Speed 50..1000 e Gravity 0..500, applicati subito")
+                       "Movement: pagina 16 richiede passi adattivi 10/50, incremento <100 e decremento <=100, limiti Speed 10..1000 e Gravity 0..500, applicati subito")
     for field in ("MovementSpeed", "MovementGravity"):
         writers = []
         for rule in rules:
@@ -2880,11 +2882,32 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
     renderer = rule_by_subroutine(rules, "DrawMovementMenu")
     checks.require(renderer is not None, "Movement: DrawMovementMenu assente")
     if renderer:
-        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (50-1000%)", "Gravity: {1}% (0-500%)",
+        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (10-1000%)", "Gravity: {1}% (0-500%)",
                      "Event Player.MovementSpeed", "Event Player.MovementGravity",
-                     "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1",
-                     "+50% / {2}: -50%"):
+                     "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1"):
             checks.require(text in renderer.body, f"Movement: renderer incompleto: {text}")
+        hud = next(iter_calls(renderer.body, "Create HUD Text"), None)
+        steps = [call for call in iter_calls(hud.args[2] if hud and len(hud.args) > 2 else "", "Custom String")
+                 if call.args and parse_literal(call.args[0]) == "{0}: +{1}% / {2}"]
+        checks.equal(len(steps), 1, "Movement: HUD incrementi adattivi unici nel sottotitolo")
+        if len(steps) == 1:
+            plus = steps[0]
+            checks.equal(len(plus.args), 4, "Movement: HUD formato incremento e binding")
+            if len(plus.args) == 4:
+                selector = "(EventPlayer.MovementCursor==0?EventPlayer.MovementSpeed:EventPlayer.MovementGravity)"
+                checks.equal(packed(plus.args[1]), "InputBindingString(Button(PrimaryFire))",
+                             "Movement: HUD incremento binding Primary")
+                checks.equal(packed(plus.args[2]), selector + "<100?10:50",
+                             "Movement: HUD incremento segue il valore selezionato e la soglia <100")
+                minus = next(iter_calls(plus.args[3], "Custom String"), None)
+                checks.require(minus is not None and minus.raw.strip() == plus.args[3].strip()
+                               and len(minus.args) == 3 and parse_literal(minus.args[0]) == "{0}: -{1}%",
+                               "Movement: HUD decremento adattivo annidato")
+                if minus and len(minus.args) == 3:
+                    checks.equal(packed(minus.args[1]), "InputBindingString(Button(SecondaryFire))",
+                                 "Movement: HUD decremento binding Secondary")
+                    checks.equal(packed(minus.args[2]), selector + "<=100?10:50",
+                                 "Movement: HUD decremento segue il valore selezionato e la soglia <=100")
         for button in ("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Melee"):
             checks.require(f"Input Binding String(Button({button}))" in renderer.body,
                            f"Movement: binding {button} assente")

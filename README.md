@@ -14,7 +14,7 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.680 unità (−16,5%)**. Il testo da importare passa da 348.732 a 293.273 byte UTF-8 (−15,9%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Questa revisione riduce il peso strutturale stimato da 31.966 a **26.778 unità (−16,2%)**. Il testo da importare passa da 348.732 a 293.880 byte UTF-8 (−15,7%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -75,7 +75,7 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
-| 16 | Movement / Gravity | Velocità 50–1000% e gravità 0–500%, passi del 50% |
+| 16 | Movement / Gravity | Velocità 10–1000% e gravità 0–500%, passi di 10 sotto 100 e di 50 sopra |
 
 Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni. Input, navigazione e applicazione richiedono un giocatore vivo e spawnato; alla morte o alla perdita dello spawn la chiusura e la pulizia restano attive.
 
@@ -83,7 +83,7 @@ Un teletrasporto Travel riuscito chiude anche lo stato Attach del proprietario: 
 
 Nel menu 2 ogni applicazione di Your Hero o di un bersaglio valido ferma e ricrea la Camera, anche se la stessa scelta era già attiva. Camera OFF ferma sempre la camera nativa. La Camera attiva viene riavviata dopo un teletrasporto Travel riuscito e al cambio del proprio eroe, conservando modalità e bersaglio valido. Un bersaglio morto, uscito, privato o in transizione viene invece revocato; le Camera degli altri giocatori restano indipendenti.
 
-Il menu 16 modifica due valori personali, inizialmente al **100%**. Tieni Crouch e premi Interact per scegliere Speed o Gravity; Primary / Secondary aumentano o diminuiscono subito il valore di **50%**. La velocità va da **50% a 1000%**, la gravità da **0% a 500%**. Reload torna al principale. Le scelte restano dopo morte e cambio eroe e tornano al 100% dopo cambio squadra o uscita/rientro.
+Il menu 16 modifica due valori personali, inizialmente al **100%**. Tieni Crouch e premi Interact per scegliere Speed o Gravity; Primary / Secondary aumentano o diminuiscono subito il valore: passi di **10 punti percentuali sotto il 100%**, di **50 sopra il 100%**. Il passaggio tra le fasce è `80 ↔ 90 ↔ 100 ↔ 150 ↔ 200`; i pulsanti mostrano il passo effettivo del parametro selezionato. La velocità va da **10% a 1000%**, la gravità da **0% a 500%**. Reload torna al principale. Le scelte restano dopo morte e cambio eroe e tornano al 100% dopo cambio squadra o uscita/rientro.
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. La velocità è fissa sul valore scelto nel menu 16: **100% equivale a 5,5 m/s**, senza accelerazione automatica. Con Fly attiva la gravità è sempre **0**; disattivandola torna al valore scelto nel menu 16. Luck Acceleration mantiene il suo effetto temporaneo e, alla fine, vengono ripristinate le impostazioni personali.
 

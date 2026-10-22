@@ -1310,9 +1310,9 @@ rule("06 - Menu: Navigate forward and backward")
 			Event Player.MultijumpCursor = (Event Player.MultijumpCursor + (Event Player.MenuCommand == 3 ? 1 : 10)) % 11;
 		Else If(Event Player.MenuPage == 16);
 			If(Event Player.MovementCursor == 0);
-				Event Player.MovementSpeed = Min(1000, Max(50, Event Player.MovementSpeed + (Event Player.MenuCommand == 3 ? 50 : -50)));
+				Event Player.MovementSpeed = Min(1000, Max(10, Event Player.MovementSpeed + (Event Player.MenuCommand == 3 ? (Event Player.MovementSpeed < 100 ? 10 : 50) : (Event Player.MovementSpeed <= 100 ? -10 : -50))));
 			Else;
-				Event Player.MovementGravity = Min(500, Max(0, Event Player.MovementGravity + (Event Player.MenuCommand == 3 ? 50 : -50)));
+				Event Player.MovementGravity = Min(500, Max(0, Event Player.MovementGravity + (Event Player.MenuCommand == 3 ? (Event Player.MovementGravity < 100 ? 10 : 50) : (Event Player.MovementGravity <= 100 ? -10 : -50))));
 			End;
 			Call Subroutine(ApplyGhostFlyPhysics);
 		End;
@@ -4791,7 +4791,7 @@ rule("91u - Subroutine: Draw Movement and Gravity controls")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}: +50% / {2}: -50%", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (50-1000%)", Event Player.MovementCursor == 0 ? Custom String("> ") : Custom String("  "), Event Player.MovementSpeed), Custom String("{0}Gravity: {1}% (0-500%)", Event Player.MovementCursor == 1 ? Custom String("> ") : Custom String("  "), Event Player.MovementGravity))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}", Input Binding String(Button(Crouch)), Custom String("{0}: +{1}% / {2}", Input Binding String(Button(Primary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) < 100 ? 10 : 50, Custom String("{0}: -{1}%", Input Binding String(Button(Secondary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) <= 100 ? 10 : 50))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (10-1000%)", Event Player.MovementCursor == 0 ? Custom String("> ") : Custom String("  "), Event Player.MovementSpeed), Custom String("{0}Gravity: {1}% (0-500%)", Event Player.MovementCursor == 1 ? Custom String("> ") : Custom String("  "), Event Player.MovementGravity))), Top, 3, Color(White), Custom Color(215, 235, 255, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }

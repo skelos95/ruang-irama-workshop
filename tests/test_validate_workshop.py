@@ -1935,14 +1935,23 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_movement_ranges_steps_and_immediate_apply_are_enforced(self) -> None:
         navigation = self.rule(lambda rule: rule.name.startswith("06 -"))
         for old, new in (
-            ("Min(1000, Max(50,", "Min(500, Max(50,"),
-            ("Min(1000, Max(50,", "Min(1000, Max(10,"),
+            ("Min(1000, Max(10,", "Min(500, Max(10,"),
+            ("Min(1000, Max(10,", "Min(1000, Max(50,"),
             ("Min(500, Max(0,", "Min(200, Max(0,"),
-            ("Event Player.MenuCommand == 3 ? 50 : -50", "Event Player.MenuCommand == 3 ? 10 : -10"),
             ("Call Subroutine(ApplyGhostFlyPhysics);", ""),
         ):
             with self.subTest(change=old):
-                self.assert_rejected(self.replace_in_rule(navigation, old, new), "Movement: pagina 16 richiede passi 50")
+                self.assert_rejected(self.replace_in_rule(navigation, old, new), "Movement: pagina 16 richiede passi adattivi")
+        for field in ("MovementSpeed", "MovementGravity"):
+            for old, new in (
+                (f"{field} < 100 ? 10 : 50", f"{field} <= 100 ? 10 : 50"),
+                (f"{field} <= 100 ? -10 : -50", f"{field} < 100 ? -10 : -50"),
+                (f"{field} < 100 ? 10 : 50", f"{field} < 100 ? 50 : 50"),
+                (f"{field} <= 100 ? -10 : -50", f"{field} <= 100 ? -10 : -10"),
+            ):
+                with self.subTest(field=field, boundary=old):
+                    self.assert_rejected(self.replace_in_rule(navigation, old, new),
+                                         "Movement: pagina 16 richiede passi adattivi")
 
     def test_movement_defaults_and_lifecycle_preservation_are_enforced(self) -> None:
         setup = self.rule(lambda rule: validator.subroutine_target(rule) == "PreparePlayer")
@@ -1961,9 +1970,21 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed = self.replace_in_rule(apply, "+ 1) % 2", "+ 1) % 3")
         self.assert_rejected(changed, "Movement: Interact alterna soltanto Speed/Gravity")
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMovementMenu")
-        for old in ("Speed: {1}% (50-1000%)", "Gravity: {1}% (0-500%)", "+50% / {2}: -50%"):
+        for old in ("Speed: {1}% (10-1000%)", "Gravity: {1}% (0-500%)"):
             with self.subTest(text=old):
                 self.assert_rejected(self.replace_in_rule(renderer, old, "stale value"), "Movement: renderer incompleto")
+        selected = "(Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity)"
+        for old, new, reason in (
+            (selected + " < 100 ? 10 : 50", selected + " <= 100 ? 10 : 50", "HUD incremento segue"),
+            (selected + " <= 100 ? 10 : 50", selected + " < 100 ? 10 : 50", "HUD decremento segue"),
+            (selected + " < 100 ? 10 : 50", "10", "HUD incremento segue"),
+            (selected + " <= 100 ? 10 : 50", "50", "HUD decremento segue"),
+            (selected + " < 100 ? 10 : 50", selected.replace("== 0", "== 1") + " < 100 ? 10 : 50", "HUD incremento segue"),
+            ('"{0}: +{1}% / {2}"', '"{0}: +50% / {2}"', "HUD incrementi adattivi unici"),
+            ('"{0}: -{1}%"', '"{0}: -50%"', "HUD decremento adattivo annidato"),
+        ):
+            with self.subTest(step=old):
+                self.assert_rejected(self.replace_in_rule(renderer, old, new), "Movement: " + reason)
 
     def test_full_hp_application_requires_damage_knockback_and_player_phasing(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyUnkillablePage")

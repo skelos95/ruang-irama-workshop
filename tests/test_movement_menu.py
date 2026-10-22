@@ -52,12 +52,14 @@ class MovementMenuTests(unittest.TestCase):
                 model.run("06", "viewer")
                 self.assertEqual(state["MainMenuCursor"], 16)
 
-    def test_primary_and_secondary_apply_fifty_percent_steps_immediately(self):
+    def test_primary_and_secondary_apply_the_step_for_the_selected_value_immediately(self):
         for source, model in self.models():
             for cursor, field in ((0, "MovementSpeed"), (1, "MovementGravity")):
-                for command, expected in ((3, 150), (4, 50)):
-                    with self.subTest(source=source, field=field, command=command):
-                        state = model.viewer(MovementCursor=cursor, MenuCommand=command)
+                for start, command, expected in ((100, 3, 150), (100, 4, 90),
+                                                 (90, 3, 100), (90, 4, 80),
+                                                 (150, 3, 200), (150, 4, 100)):
+                    with self.subTest(source=source, field=field, start=start, command=command):
+                        state = model.viewer(MovementCursor=cursor, MenuCommand=command, **{field: start})
                         model.run("06", "viewer")
                         self.assertEqual(state[field], expected)
                         self.assertEqual(state["MovementGravity" if cursor == 0 else "MovementSpeed"], 100)
@@ -65,7 +67,7 @@ class MovementMenuTests(unittest.TestCase):
                                          ("viewer", state["MovementSpeed"], state["MovementGravity"]))
 
     def test_speed_and_gravity_clamp_instead_of_wrapping(self):
-        cases = ((0, "MovementSpeed", 50, 4, 50),
+        cases = ((0, "MovementSpeed", 10, 4, 10),
                  (0, "MovementSpeed", 1000, 3, 1000),
                  (1, "MovementGravity", 0, 4, 0),
                  (1, "MovementGravity", 500, 3, 500))
@@ -75,6 +77,28 @@ class MovementMenuTests(unittest.TestCase):
                     state = model.viewer(MovementCursor=cursor, MenuCommand=command, **{field: start})
                     model.run("06", "viewer")
                     self.assertEqual(state[field], expected)
+
+    def test_every_selectable_value_is_reachable_forward_and_backward(self):
+        ranges = ((0, "MovementSpeed", list(range(10, 101, 10)) + list(range(150, 1001, 50))),
+                  (1, "MovementGravity", list(range(0, 101, 10)) + list(range(150, 501, 50))))
+        for source, model in self.models():
+            for cursor, field, expected in ranges:
+                with self.subTest(source=source, field=field):
+                    state = model.viewer(MovementCursor=cursor, **{field: expected[0]})
+                    forward = [state[field]]
+                    for _ in expected[1:]:
+                        model.run("06", "viewer")
+                        forward.append(state[field])
+                        self.assertEqual(model.physics_updates[-1],
+                                         ("viewer", state["MovementSpeed"], state["MovementGravity"]))
+                    self.assertEqual(forward, expected)
+                    state["MenuCommand"] = 4
+                    backward = [state[field]]
+                    for _ in expected[1:]:
+                        model.run("06", "viewer")
+                        backward.append(state[field])
+                    self.assertEqual(backward, list(reversed(expected)))
+                    self.assertEqual(state["MovementGravity" if cursor == 0 else "MovementSpeed"], 100)
 
     def test_interact_selects_parameter_and_reload_keeps_values(self):
         for source, model in self.models():
@@ -114,6 +138,14 @@ class MovementMenuTests(unittest.TestCase):
                 model.input("viewer", "Primary Fire", ticks=20)
                 self.assertEqual((state["MovementSpeed"], state["MovementGravity"]), (150, 100))
                 self.assertEqual(model.physics_updates, [("viewer", 150, 100)])
+                model.input("viewer")
+                model.input("viewer", "Secondary Fire", ticks=20)
+                self.assertEqual(state["MovementSpeed"], 100)
+                model.input("viewer")
+                model.input("viewer", "Secondary Fire", ticks=20)
+                self.assertEqual(state["MovementSpeed"], 90)
+                self.assertEqual(model.physics_updates,
+                                 [("viewer", 150, 100), ("viewer", 100, 100), ("viewer", 90, 100)])
 
     def test_one_live_hud_updates_values_and_selection_without_recreation(self):
         for source, model in self.models():
@@ -122,15 +154,15 @@ class MovementMenuTests(unittest.TestCase):
                 model.run("91u", "viewer")
                 handle = state["MenuHud"]
                 expression = model.hud_bodies[handle]
-                self.assertIn("> Speed: 100% (50-1000%)", model.evaluate(expression))
+                self.assertIn("> Speed: 100% (10-1000%)", model.evaluate(expression))
                 model.run("06", "viewer")
-                self.assertIn("> Speed: 150% (50-1000%)", model.evaluate(expression))
+                self.assertIn("> Speed: 150% (10-1000%)", model.evaluate(expression))
                 state["MenuCommand"] = 1
                 model.run("10", "viewer")
                 self.assertIn("> Gravity: 100% (0-500%)", model.evaluate(expression))
                 state["MenuCommand"] = 4
                 model.run("06", "viewer")
-                self.assertIn("> Gravity: 50% (0-500%)", model.evaluate(expression))
+                self.assertIn("> Gravity: 90% (0-500%)", model.evaluate(expression))
                 self.assertEqual(state["MenuHud"], handle)
                 self.assertEqual(model.created_huds, [("viewer", handle)])
                 self.assertEqual(model.destroyed_huds, [])
@@ -150,6 +182,26 @@ class MovementMenuTests(unittest.TestCase):
                 for label in ("Crouch", "Primary Fire: +50%", "Secondary Fire: -50%",
                               "Interact: select Speed / Gravity", "Reload: back", "Melee"):
                     self.assertIn(label, controls)
+
+    def test_live_bindings_follow_the_selected_parameter_and_the_hundred_boundary(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.viewer(MovementSpeed=100, MovementGravity=90)
+                model.event_player = "viewer"
+                rule = validator.rule_by_subroutine(model.rules, "DrawMovementMenu")
+                hud = next(validator.iter_calls(rule.body, "Create HUD Text"))
+                for cursor, speed, gravity, up, down in (
+                    (0, 100, 90, 50, 10),
+                    (0, 90, 450, 10, 10),
+                    (0, 150, 90, 50, 50),
+                    (1, 450, 90, 10, 10),
+                    (1, 90, 100, 50, 10),
+                    (1, 90, 150, 50, 50),
+                ):
+                    state.update(MovementCursor=cursor, MovementSpeed=speed, MovementGravity=gravity)
+                    controls = model.evaluate(hud.args[2])
+                    self.assertIn(f"Primary Fire: +{up}%", controls)
+                    self.assertIn(f"Secondary Fire: -{down}%", controls)
 
     def test_bootstrap_has_one_domain_title_with_timer_and_no_site_subtitle(self):
         for source, model in self.models():
@@ -178,11 +230,22 @@ class MovementMenuTests(unittest.TestCase):
                 content = context.parse(huds[0].args[3])
                 context.globals["TriggerPlayer"] = None
                 context.player.update(MovementCursor=0, MovementSpeed=350, MovementGravity=500)
-                self.assertIn("> Speed: 350% (50-1000%)", content.evaluate(context))
-                context.player.update(MovementCursor=1, MovementSpeed=50, MovementGravity=0)
+                controls = context.parse(huds[0].args[2])
+                self.assertIn("> Speed: 350% (10-1000%)", content.evaluate(context))
+                context.player.update(MovementCursor=1, MovementSpeed=10, MovementGravity=0)
                 rendered = content.evaluate(context)
-                self.assertIn("  Speed: 50% (50-1000%)", rendered)
+                self.assertIn("  Speed: 10% (10-1000%)", rendered)
                 self.assertIn("> Gravity: 0% (0-500%)", rendered)
+                for cursor, speed, gravity, up, down in (
+                    (0, 100, 90, 50, 10),
+                    (0, 90, 450, 10, 10),
+                    (1, 450, 100, 50, 10),
+                    (1, 100, 90, 10, 10),
+                ):
+                    context.player.update(MovementCursor=cursor, MovementSpeed=speed, MovementGravity=gravity)
+                    rendered = controls.evaluate(context)
+                    self.assertRegex(rendered, rf"<PrimaryFire>: \+{up}(?:\.0)?%")
+                    self.assertRegex(rendered, rf"<SecondaryFire>: -{down}(?:\.0)?%")
 
 
 if __name__ == "__main__":
