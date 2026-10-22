@@ -2887,7 +2887,7 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
                      "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1"):
             checks.require(text in renderer.body, f"Movement: renderer incompleto: {text}")
         hud = next(iter_calls(renderer.body, "Create HUD Text"), None)
-        steps = [call for call in iter_calls(hud.args[2] if hud else "", "Custom String")
+        steps = [call for call in iter_calls(hud.args[2] if hud and len(hud.args) > 2 else "", "Custom String")
                  if call.args and parse_literal(call.args[0]) == "{0}: +{1}% / {2}"]
         checks.equal(len(steps), 1, "Movement: HUD incrementi adattivi unici nel sottotitolo")
         if len(steps) == 1:
