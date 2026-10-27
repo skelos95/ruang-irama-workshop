@@ -1,5 +1,14 @@
 # Changelog
 
+## Titolo e RGB originali, Info bianca — 2026-10-27
+
+- Ripristinato il titolo centrale `cozywatch.org [countdown]`, senza il suffisso NOCTURNE, conservando il countdown e lo stesso HUD.
+- Ripristinato dal commit `0085e8da` il ciclo RGB arcobaleno condiviso da titolo, HOST, effetti Luck e anello Multijump. Il ciclo completo resta di 51 secondi, come la precedente pulsazione malva/rosa: cambia l’escursione cromatica, non la durata.
+- Info / Controls 0 usa `Color(White)` direttamente per anteprima e guida completa, anche subito dopo Interact. Il target Info è Vector (255, 255, 255); il testo resta indipendente da Name Color, `MenuColor`, ciclo RGB e attesa del Chase.
+- Restano il tema dei menu, i testi del roster e del benvenuto, la palette dei 40 Name Color e la durata server 30–60 minuti con default 30. Nessuna nuova regola, variabile, subroutine, attesa o risorsa persistente.
+- Specifica e clipboard rigenerati: 273.593 e 293.767 byte UTF-8 (−42/−118 rispetto alla prima revisione Nocturne). Runtime: 129 regole, 89 variabili globali, 127 player, 115 subroutine; 26.808 unità strutturali stimate (+43), massimo per regola 2.605 invariato. Sono misure offline, con budget locali invariati.
+- VERSION resta 0.8.2; tag e allegato della release storica conservano il contenuto pubblicato. La resa del titolo, del ciclo RGB e di Info bianca richiede verifica nel client.
+
 ## Nocturne: romanticismo oscuro — 2026-10-27
 
 - Tema visivo e testi ispirati al romanticismo oscuro e al melodic death metal: titolo `cozywatch.org | NOCTURNE [countdown]`, roster `SOULS & ECHOES`, leader dei voti `CROWN OF ASH` e benvenuto `Enter the Nocturne. Where sorrow becomes melody.`.

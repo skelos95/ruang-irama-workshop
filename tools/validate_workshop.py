@@ -1144,7 +1144,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(server_title.args[2].strip(), "Null", "HUD titolo Cozywatch: Subheader")
         checks.equal(server_title.args[4].strip(), "Top", "HUD titolo Cozywatch: posizione")
         checks.equal(server_title.args[5].strip(), "0", "HUD titolo Cozywatch: ordinamento")
-        checks.require('Custom String("cozywatch.org | NOCTURNE [{0}]"' in server_title.args[3],
+        checks.require('Custom String("cozywatch.org [{0}]"' in server_title.args[3],
                        "HUD titolo Cozywatch deve mostrare il timer tra parentesi quadre")
         checks.equal(server_title.args[8].strip(), "Global.RGB", "HUD titolo Cozywatch: colore RGB invariato")
         checks.require("\\n" not in server_title.args[3],
@@ -1569,8 +1569,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             if subroutine_target(rule) == "DrawInfoMenu":
                 checks.require(calls[0].args[2].strip() != "Null", "Info: content must use Subheader")
                 checks.equal(calls[0].args[3].strip(), "Null", "Info: keep Text empty")
-                checks.require("Event Player.MenuColor" in calls[0].args[7],
-                               "Info: Subheader must retain the menu color")
+                checks.equal(calls[0].args[7].strip(), "Color(White)",
+                             "Info: Subheader must be fixed white")
                 checks.require(not paired_rows, "Info: do not duplicate commands in a side column")
                 info_controls = (
                     ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
@@ -1614,8 +1614,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     subtitle_colors = parse_top_level_ternary(calls[0].args[7])
                     checks.require(bool(subtitle_colors)
                                    and subtitle_colors[0] == "Event Player.MainMenuCursor == 0"
-                                   and "Event Player.MenuColor" in subtitle_colors[1],
-                                   "Main Info preview: Subheader must retain the menu color")
+                                   and subtitle_colors[1].strip() == "Color(White)",
+                                   "Main Info preview: Subheader must be fixed white")
                     subtitle = subtitle_branches[2] if info_subtitle else "Null"
                     text_branches = parse_top_level_ternary(function_text)
                     checks.require(bool(text_branches)
@@ -3490,8 +3490,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             in transition_code,
             "feedback visuale: Name Color deve mostrare il colore esatto della preview",
         )
-        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(198, 185, 210) :")
-                       in transition_code, "Info: moonlit silver menu accent")
+        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(255, 255, 255) :")
+                       in transition_code, "Info: fixed white menu accent")
         anchors = {
             2: (168, 180, 206), 3: (178, 132, 162),
             4: (202, 108, 130), 5: (210, 194, 162), 6: (178, 142, 192),
