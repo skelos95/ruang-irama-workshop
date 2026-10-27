@@ -1050,6 +1050,10 @@ def validate_localization(checks: Checks, source: str, globals_: set[str]) -> No
                 label_call = next(iter(iter_calls(call.args[1], "Custom String")), None)
                 label = parse_literal(label_call.args[0]) if label_call and label_call.args else None
                 checks.equal(label, english, f"label {action} deve essere inglese")
+            if action == "Workshop Setting Integer":
+                checks.equal(tuple(argument.strip() for argument in call.args[2:5]),
+                             ("30", "30", "60"),
+                             "durata server: default 30 e intervallo 30-60 minuti")
     checks.equal(len(list(iter_calls(source, "Workshop Setting Combo"))), 0,
                  "impostazione località rimossa")
     for action, positions in (("Small Message", (1,)), ("Create HUD Text", (1, 2, 3)),

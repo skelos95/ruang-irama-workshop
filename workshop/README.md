@@ -4,7 +4,7 @@ Codice corrente, versione **0.8.2** e tema **Nocturne**: **[ruang_irama.en-US.wo
 
 Le 129 regole seguono una numerazione unica da **0 a 128**, nell'ordine del file, senza numeri ripetuti o suffissi alfabetici.
 
-Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre il menu principale sulla voce **0 — Info / Controls**: Crouch + Interact apre la guida completa. Il titolo centrale è **cozywatch.org | NOCTURNE [countdown]**, il roster **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. I testi e le tinte malva, argento lunare e osso seguono il romanticismo oscuro; menu, comandi, funzioni e 40 Name Color personali restano invariati.
+Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre il menu principale sulla voce **0 — Info / Controls**: Crouch + Interact apre la guida completa. Il titolo centrale è **cozywatch.org | NOCTURNE [countdown]**, il roster **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. I testi e le tinte malva, argento lunare e osso seguono il romanticismo oscuro; menu, comandi e funzioni restano invariati. La [palette dei 40 Name Color](../docs/NAME_COLORS.md) usa nomi a tema e 34 RGB rivisti; preview, nome e icona applicano il valore esatto selezionato.
 
 Info 0 selezionata nel principale mostra titolo e binding interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. Anche il sottomenu Info usa il `Subheader` per titolo e guida completa, mantenendo tutti i dodici comandi e i binding dinamici senza duplicazioni. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed.
 

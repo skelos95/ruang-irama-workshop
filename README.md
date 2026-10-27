@@ -2,7 +2,7 @@
 
 Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori contemporanei**, con menu personali, Souls & Echoes, Camera, Travel, Ghost/Fly e Try Your Luck. I 12 slot vengono riutilizzati quando qualcuno esce: non c'è un limite di 12 registrazioni nell'intera lobby.
 
-Il tema **Nocturne** si ispira al romanticismo oscuro e al melodic death metal: argento lunare, malva, rosa cenere e toni osso accompagnano testi di cappelle silenziose, elegie ed echi. Menu, comandi e funzioni restano quelli esistenti; i 40 Name Color personali mantengono i loro valori esatti.
+Il tema **Nocturne** si ispira al romanticismo oscuro e al melodic death metal: argento lunare, malva, rosa cenere e toni osso accompagnano testi di cappelle silenziose, elegie ed echi. Menu, comandi e funzioni restano quelli esistenti. La [palette dei 40 Name Color](docs/NAME_COLORS.md) usa nomi a tema e 34 valori RGB rivisti verso tinte più attenuate; nome, preview e icona mantengono sempre il colore esatto selezionato.
 
 **[Apri il codice da importare](workshop/ruang_irama.en-US.workshop)** · [Istruzioni di importazione](docs/IMPORTAZIONE.md)
 
@@ -16,7 +16,7 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Il tema Nocturne usa **26.709 unità strutturali stimate**, 69 in meno rispetto alle 26.778 della revisione del 22 ottobre; il massimo per regola resta 2.549. Il testo da importare usa 293.713 byte UTF-8, 167 in meno rispetto a 293.880. Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. La resa del nuovo tema richiede una prova nel client.
+Il tema Nocturne e la nuova palette usano **26.765 unità strutturali stimate**, 13 in meno rispetto alle 26.778 della revisione del 22 ottobre; il massimo per regola passa da 2.549 a 2.605. Il testo da importare usa 293.885 byte UTF-8, 5 in più rispetto a 293.880. Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. La resa del nuovo tema richiede una prova nel client.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -26,7 +26,7 @@ La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente comprende 
 
 1. Salva il preset della lobby, imposta la lingua testo del client su English e scegli Schermaglia e le mappe desiderate.
 2. Apri il codice qui sopra, scegli **Raw** e copia tutto nelle regole Workshop.
-3. Nelle impostazioni Workshop scegli durata **10–60 minuti** (default **30**) e diagnostica host, se necessaria.
+3. Nelle impostazioni Workshop scegli durata **30–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel sottotitolo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
 Il file contiene le regole, non il preset delle mappe. Il titolo centrale mostra **cozywatch.org | NOCTURNE [countdown]**. Il roster si intitola **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne. Where sorrow becomes melody.». Il sottotitolo separato del sito e il precedente sistema Server Location sono rimossi.
@@ -95,7 +95,7 @@ Superman Punch è inizialmente OFF e funziona anche con il menu principale, un s
 
 La diagnostica server rimane bianca ed è visibile solo all'host. Tutti i testi dell'interfaccia sono in inglese; il nome personale `งูแรร์` conserva i suoi caratteri originali.
 
-Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. La pagina 1 mostra esattamente il colore selezionato, inizialmente bianco; Black usa nero puro sia per il nome sia per la preview. Info / Controls 0 usa argento lunare fisso RGB (198, 185, 210). Le altre pagine mescolano il 32% del Name Color scelto al 68% del proprio accento Nocturne, con transizioni fluide di 0,180 s; i sottotitoli usano un tono osso RGB (210, 200, 192) e Travel cinque tinte attenuate. Titolo, HOST, effetti Luck e anello Multijump condividono una lenta pulsazione malva/rosa cenere di 51 secondi.
+Name Color ordina i [40 colori Nocturne](docs/NAME_COLORS.md) per sfumatura: bianco, grigi, nero, ori antichi, terre autunnali, rose appassite, viola crepuscolari, blu lunari e verdi muschio. Le scelte e gli indici restano 40; 34 valori RGB cambiano, mentre quelli degli indici interni 0–4 e 29 sono conservati. La pagina 1, il nome e l’icona mostrano esattamente il colore selezionato, inizialmente Moon White; Black usa nero puro anche nella preview. Charcoal resta all’indice 2 per il profilo speciale. Info / Controls 0 usa argento lunare fisso RGB (198, 185, 210). Le altre pagine mescolano il 32% del Name Color scelto al 68% del proprio accento Nocturne, con transizioni fluide di 0,180 s; i sottotitoli usano un tono osso RGB (210, 200, 192) e Travel cinque tinte attenuate. Titolo, HOST, effetti Luck e anello Multijump condividono una lenta pulsazione malva/rosa cenere di 51 secondi.
 
 Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Souls & Echoes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
@@ -116,4 +116,5 @@ Il nome visibile esatto `งูแรร์` riceve i default modificabili Charc
 | [Controlli automatici](docs/VALIDAZIONE.md) | Eseguire e comprendere la validazione |
 | [Test nel gioco](docs/TEST.md) | Regressioni, carico e rapporto di prova |
 | [Generi](docs/GENERI.md) | Catalogo musicale e gruppi in inglese |
+| [Name Color](docs/NAME_COLORS.md) | I 40 nomi e valori RGB/HEX della palette Nocturne |
 | [Changelog](CHANGELOG.md) | Evoluzione e correzioni storiche |

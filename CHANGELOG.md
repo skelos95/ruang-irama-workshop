@@ -3,10 +3,11 @@
 ## Nocturne: romanticismo oscuro — 2026-10-27
 
 - Tema visivo e testi ispirati al romanticismo oscuro e al melodic death metal: titolo `cozywatch.org | NOCTURNE [countdown]`, roster `SOULS & ECHOES`, leader dei voti `CROWN OF ASH` e benvenuto `Enter the Nocturne. Where sorrow becomes melody.`.
-- Info usa argento lunare RGB (198, 185, 210), i sottotitoli un tono osso RGB (210, 200, 192); gli altri menu mescolano il 32% del Name Color al 68% dell'accento Nocturne. Travel usa cinque tinte attenuate. Restano esatti i 40 Name Color e la preview della pagina 1.
+- Info usa argento lunare RGB (198, 185, 210), i sottotitoli un tono osso RGB (210, 200, 192); gli altri menu mescolano il 32% del Name Color al 68% dell'accento Nocturne. Travel usa cinque tinte attenuate. La palette mantiene 40 scelte negli stessi indici, con nomi a tema e 34 RGB rivisti; soltanto gli RGB degli indici 0–4 e 29 restano quelli precedenti. Preview della pagina 1, nome e icona nativa applicano sempre lo stesso valore esatto selezionato. Moon White resta il default all’indice 0 e il profilo speciale conserva Charcoal all’indice 2; [tabella completa](docs/NAME_COLORS.md).
 - Titolo, HOST, effetti Luck e anello Multijump condividono una pulsazione triangolare malva/rosa cenere di 51 secondi, tramite le variabili RGB e fase già esistenti. Nessuna nuova regola, variabile, subroutine, attesa o risorsa persistente; menu, comandi e funzioni restano invariati.
 - Dieci intestazioni gotiche nel menu Soundtrack e in GENERI; i 200 generi e il loro ordine restano invariati. Il fallback senza selezione diventa `silence before the storm`. Soundtrack continua a mostrare una preferenza testuale, senza riproduzione audio.
-- Specifica e clipboard rigenerati: 273.463 e 293.713 byte UTF-8. Runtime: 129 regole, 89 variabili globali, 127 player, 115 subroutine; 26.709 unità strutturali stimate, 69 in meno rispetto alle 26.778 della revisione del 22 ottobre, massimo per regola 2.549 invariato. Budget locali invariati; sono misure offline.
+- Specifica e clipboard rigenerati: 273.635 e 293.885 byte UTF-8 (+18/+5 rispetto alla revisione del 22 ottobre). Runtime: 129 regole, 89 variabili globali, 127 player, 115 subroutine; 26.765 unità strutturali stimate, 13 in meno rispetto alle 26.778 della revisione del 22 ottobre; massimo per regola 2.605, 56 in più rispetto a 2.549. Budget locali invariati; sono misure offline.
+- La durata server è personalizzabile nelle impostazioni Workshop da 30 a 60 minuti; il default resta 30 minuti.
 - VERSION resta 0.8.2; tag e allegato della release storica conservano il contenuto pubblicato. La resa del nuovo tema e la leggibilità sulle mappe richiedono verifica nel client.
 
 ## Passi progressivi del menu 16 — 2026-10-22
