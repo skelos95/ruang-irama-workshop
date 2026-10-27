@@ -67,7 +67,7 @@ rule("local") {{ event {{ Subroutine; Local; }} actions {{ Stop Camera(Event Pla
 
 class WorkshopSettingMetadataTests(unittest.TestCase):
     SETTING_TAILS = {
-        "Workshop Setting Integer": "30, 10, 60, 0",
+        "Workshop Setting Integer": "30, 30, 60, 0",
         "Workshop Setting Combo": '0, Array(Custom String("Option: one")), 1',
         "Workshop Setting Toggle": "False, 2",
     }
@@ -85,6 +85,28 @@ class WorkshopSettingMetadataTests(unittest.TestCase):
                     self.assertEqual(len(calls), 0 if action == "Workshop Setting Combo" else 1)
                     for call in calls:
                         self.assertEqual(validator.workshop_setting_text_errors(call), [])
+
+    def test_duration_range_and_default_are_enforced(self) -> None:
+        expected_error = "durata server: default 30 e intervallo 30-60 minuti"
+        for path in (validator.SOURCE, validator.BEHAVIORAL_SOURCE):
+            source = path.read_text(encoding="utf-8")
+            call = next(validator.iter_calls(source, "Workshop Setting Integer"))
+            self.assertEqual(call.args[2:5], ("30", "30", "60"))
+            checks = validator.Checks()
+            validator.validate_localization(checks, source, set(validator.LOCALIZED_ARRAY_SIZES))
+            self.assertEqual(checks.errors, [])
+            # Guard each input independently: raising the minimum must not
+            # change the default or weaken the upper limit.
+            for index, replacement in ((2, "45"), (3, "10"), (4, "90")):
+                with self.subTest(path=path.name, argument=index):
+                    arguments = list(call.args)
+                    arguments[index] = replacement
+                    mutated_call = "Workshop Setting Integer(" + ", ".join(arguments) + ")"
+                    mutated = source[:call.start] + mutated_call + source[call.end:]
+                    checks = validator.Checks()
+                    validator.validate_localization(checks, mutated, set(validator.LOCALIZED_ARRAY_SIZES))
+                    self.assertEqual(len(checks.errors), 1)
+                    self.assertIn(expected_error, checks.errors[0])
 
     def test_empty_whitespace_and_forbidden_characters_are_rejected_in_both_keys(self) -> None:
         for action in self.SETTING_TAILS:
@@ -798,11 +820,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransitionMenuColor")
         for token in (
             "Event Player.CrouchTravelActive == True",
-            "Vector(80, 255, 160)",
-            "Vector(65, 225, 255)",
-            "Vector(95, 150, 255)",
-            "Vector(195, 100, 255)",
-            "Vector(255, 85, 135)",
+            "Vector(170, 186, 164)",
+            "Vector(168, 180, 206)",
+            "Vector(180, 156, 198)",
+            "Vector(202, 152, 178)",
+            "Vector(206, 112, 134)",
             "Chase Player Variable Over Time(Event Player, MenuColor, Event Player.TravelCursor",
             "0.180, Destination and Duration",
         ):
@@ -987,8 +1009,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             and call.args[5].strip() == "13"
         )
         changed_text = call.args[2].replace(
-            "Custom String(\"\\nCHILL STAR: {0}\", Global.VoteLeaderName)",
-            "Custom String(\"\\nCHILL STAR: {0}\", Player Variable(Global.VoteLeader, DisplayName))",
+            "Custom String(\"\\nCROWN OF ASH: {0}\", Global.VoteLeaderName)",
+            "Custom String(\"\\nCROWN OF ASH: {0}\", Player Variable(Global.VoteLeader, DisplayName))",
             1,
         )
         self.assertNotEqual(changed_text, call.args[2])

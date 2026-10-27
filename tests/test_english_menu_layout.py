@@ -241,7 +241,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 for cursor in (0, 1, 15, 0):
                     context.player["MainMenuCursor"] = cursor
                     self.assertEqual(color.evaluate(context), (190, 210, 230, 255) if cursor == 0
-                                     else (210, 230, 255, 255))
+                                     else (210, 200, 192, 255))
                 info = validator.rule_by_subroutine(rules, "DrawInfoMenu")
                 info_hud = next(validator.iter_calls(info.body, "Create HUD Text"))
                 self.assertEqual(context.parse(compiler.actor_text(info_hud.args[7])).evaluate(context),

@@ -100,7 +100,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
             player = model.players[model.event_player]
             row = model.evaluate(model.hud.args[2])
             diagnostic = model.evaluate(model.hud.args[3])
-            self.assertEqual(row, "icon hero-icon player-11 - no soundtrack yet")
+            self.assertEqual(row, "icon hero-icon player-11 - silence before the storm")
             self.assertIn("LOAD 12%", diagnostic)
             for name_color, title_rgb in (
                 ((0, 0, 0, 255), (255, 0, 0, 255)),

@@ -110,8 +110,8 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
 
     def test_all_five_travel_colors_work_for_twelve_owners_across_dispatch(self):
         model = self.model()
-        colors = [Vector(80, 255, 160), Vector(65, 225, 255), Vector(95, 150, 255),
-                  Vector(195, 100, 255), Vector(255, 85, 135)]
+        colors = [Vector(170, 186, 164), Vector(168, 180, 206), Vector(180, 156, 198),
+                  Vector(202, 152, 178), Vector(206, 112, 134)]
         for page in range(5):
             expected = {}
             for index, owner in enumerate(model.players):
@@ -149,7 +149,7 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
                 model.globals['TriggerPlayer'] = owner
                 model.command(self.menu)
             model.globals['TriggerPlayer'] = None
-            self.assertEqual(model.frame_destination('owner0'), Vector(160, 195, 235))
+            self.assertEqual(model.frame_destination('owner0'), Vector(198, 185, 210))
             self.assertEqual(model.frame_destination('owner1'), self.colors[0])
             self.assertNotEqual(model.frame_destination('owner0'), model.frame_destination('owner1'))
 
@@ -164,8 +164,8 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
         model.players['owner1']['TravelCursor'] = 4
         model.command(self.travel, mode='Destination and Duration')
         model.globals['TriggerPlayer'] = None
-        self.assertEqual(model.frame_destination('owner0'), Vector(160, 195, 235))
-        self.assertEqual(model.frame_destination('owner1'), Vector(80, 255, 160))
+        self.assertEqual(model.frame_destination('owner0'), Vector(198, 185, 210))
+        self.assertEqual(model.frame_destination('owner1'), Vector(170, 186, 164))
         self.assertNotEqual(model.frame_destination('owner0'), intended_menu)
         self.assertNotEqual(model.frame_destination('owner1'), intended_travel)
 

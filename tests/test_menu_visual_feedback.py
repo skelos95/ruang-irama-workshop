@@ -6,6 +6,7 @@ import unittest
 
 from tools import check_clipboard_import as clipboard
 from tools import validate_workshop as validator
+from tests.test_global_compaction import CompactionContext
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,13 +56,13 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             for rule, old, new, error in (
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
-                (transition, "Vector(160, 195, 235)", "Vector(255, 255, 255)", "Info: light blue menu accent"),
+                (transition, "Vector(198, 185, 210)", "Vector(255, 255, 255)", "Info: moonlit silver menu accent"),
                 (transition, "MenuPage) == 14 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
                 (transition, "MenuPage) == 13 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
                 (transition, "MenuPage) == 15 ? Global.NameColorRGBValues", "MenuPage) == 16 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
                 (transition, "MenuPage) == 16 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
-                (transition, "* 0.680 + Vector(190, 210, 230) * 0.320", "* 0.700 + Vector(190, 210, 230) * 0.300", "blended accent for page 2"),
-                (transition, "Vector(236, 153, 0)", "Vector(0, 153, 236)", "blended accent for page 6"),
+                (transition, "* 0.320 + Vector(168, 180, 206) * 0.680", "* 0.300 + Vector(168, 180, 206) * 0.700", "blended accent for page 2"),
+                (transition, "Vector(178, 142, 192)", "Vector(192, 142, 178)", "blended accent for page 6"),
                 (transition, "MenuPage) == 8 ?", "MenuPage) == 7 ?", "diciassette tinte menu in ordine"),
                 (transition, "Global.NameColorRGBValues[Event Player.ColorCursor]", "Global.NameColorRGBValues[Event Player.ColorIndex]", "colore esatto della preview"),
                 (transition, "If(Event Player.CrouchTravelActive == True);", "Chase Player Variable Over Time(Event Player, MenuColor, Vector(1, 2, 3), 0.180, Destination and Duration);\n\t\tIf(Event Player.CrouchTravelActive == True);", "due transizioni fluide senza override"),
@@ -97,6 +98,56 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             _, players, _, _ = validator.declaration_entries(mutated)
             validator.validate_special_player_profile(checks, mutated, validator.extract_rules(mutated), players)
             self.assertTrue(any("Locked Soundtrack" in issue for issue in checks.errors))
+
+
+class PulseContext(CompactionContext):
+    def call(self, name, args):
+        if name == "CustomColor":
+            return tuple(args)
+        return super().call(name, args)
+
+
+class NocturnePulseTests(unittest.TestCase):
+    def test_pulse_is_bounded_continuous_and_preserved_by_global_compilation(self):
+        artifacts = (
+            "source/ruang_irama.en-US.source",
+            "tests/fixtures/semantic_reference.txt",
+            "workshop/ruang_irama.en-US.workshop",
+            "tests/fixtures/global_runtime_reference.txt",
+        )
+        reference = None
+        for artifact in artifacts:
+            with self.subTest(artifact=artifact):
+                source = (ROOT / artifact).read_text(encoding="utf-8")
+                colors = re.findall(r"^\s*Global\.RGB\s*=\s*([^;]+);", source, re.M)
+                phases = re.findall(r"^\s*Global\.RGBPhase\s*=\s*([^;]+);", source, re.M)
+                self.assertEqual((len(colors), len(phases)), (2, 2))
+                context = PulseContext(())
+                initial_color, pulse = (context.parse(expression) for expression in colors)
+                initial_phase, advance = (context.parse(expression) for expression in phases)
+                context.globals["RGBPhase"] = initial_phase.evaluate(context)
+                initial = initial_color.evaluate(context)
+                samples, visited = [], set()
+                # One update per 0.1 s: a 51-second cycle must not jump at its seam.
+                for _ in range(510):
+                    visited.add(context.globals["RGBPhase"])
+                    color = pulse.evaluate(context)
+                    self.assertEqual(color[3], 255)
+                    self.assertTrue(all(100 <= component <= 220 for component in color[:3]))
+                    samples.append(color)
+                    context.globals["RGBPhase"] = advance.evaluate(context)
+                self.assertEqual(len(visited), 510)
+                self.assertEqual(context.globals["RGBPhase"], initial_phase.evaluate(context))
+                self.assertEqual(samples[0], initial)
+                for previous, current in zip(samples, samples[1:] + samples[:1]):
+                    self.assertTrue(all(abs(a - b) <= 0.251 for a, b in zip(previous, current)))
+                for channel in range(3):
+                    values = [color[channel] for color in samples]
+                    self.assertGreater(max(values) - min(values), 20)
+                if reference is None:
+                    reference = samples
+                else:
+                    self.assertEqual(samples, reference)
 
 
 if __name__ == "__main__":

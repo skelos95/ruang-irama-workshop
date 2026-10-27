@@ -20,19 +20,19 @@ PALETTE_ARRAY_NAMES = (
     "ColorNames", "NameColors", "NameColorRGBValues",
 )
 EXPECTED_PALETTE_ORDER = (
-    "Snow White", "Silver Mist", "Charcoal", "Black", "Ivory", "Lemon Pop", "Sunny Gold",
-    "Peach Glow", "Apricot Neon", "Warm Orange", "Bronze", "Coral Glow", "Crimson Red",
-    "Wine Red", "Cherry Blossom", "Neon Pink", "Rose Pink", "Hot Magenta", "Soft Lavender",
-    "Fuchsia Dream", "Electric Purple", "Neon Violet", "Plum", "Ice Blue", "Sky Blue",
-    "Soft Periwinkle", "Ocean Blue", "Royal Blue", "Electric Indigo", "Midnight Blue",
-    "Cyan Neon", "Cool Aqua", "Seafoam", "Fresh Mint", "Jade Glow", "Chill Turquoise",
-    "Neon Chartreuse", "Lime Green", "Emerald Green", "Forest Green",
+    "Moon White", "Silver Mist", "Charcoal", "Black", "Ivory",
+    "Candlelight", "Antique Gold", "Faded Parchment", "Autumn Ember", "Burnished Copper",
+    "Sepia", "Ashen Coral", "Garnet", "Wine Red", "Withered Rose",
+    "Mourning Rose", "Blood Rose", "Mulberry", "Moon Lavender", "Dusk Orchid",
+    "Amethyst", "Twilight Violet", "Plum", "Frost Blue", "Moonlit Blue",
+    "Ghost Periwinkle", "Storm Blue", "Funeral Blue", "Dusk Indigo", "Midnight Blue",
+    "Pale Mist", "Drowned Teal", "Sea Glass", "Grave Mint", "Ashen Jade",
+    "Haunted Teal", "Lichen Gold", "Moss Green", "Deep Emerald", "Forest Green",
 )
-# Hash all forty records, sorted by English label, preserving each label's actual
-# color and preview RGB. Captured from main
-# 23f892b70027c90cb0fc217e4f4e7da0d31c4d62 with Black's preview corrected to (0, 0, 0).
-# The expected hash is available without Git in the workflow's shallow checkout.
-PALETTE_RECORDS_DIGEST = "0c54447de3177255855ab1fc4490f21ea2d4c9fb1d3caf1ddbca29baf5eaf2b1"
+# Snapshot all forty approved Nocturne records, sorted by English label,
+# including each actual color and its exact menu preview RGB.
+# The expected hash is available without Git in shallow CI checkouts.
+PALETTE_RECORDS_DIGEST = "b31a3598c702e4b8624235032b16a49295290f5b7de603309a51f19dd25d3a30"
 OLD_GENRE_GROUPS = (
     "375e0d302f43aa81daf5343b19ed175097d024ea554ecb228754c0327e39fe1a",
     "4d19059cb1cf07e58a4eed4666c8efa8bb685c884052bc821f7602616c1d0251",
@@ -238,7 +238,7 @@ class CatalogNavigationTests(unittest.TestCase):
                         expression = Expression(re.sub(r"\s+", "", selector.raw))
                         self.assertEqual(expression.evaluate(model), group)
 
-    def test_palette_reordering_preserves_all_forty_color_records(self):
+    def test_nocturne_palette_preserves_all_forty_approved_color_records(self):
         for source, model in self.models():
             for name in PALETTE_ARRAY_NAMES:
                 with self.subTest(source=source, array=name):
@@ -249,6 +249,22 @@ class CatalogNavigationTests(unittest.TestCase):
                                  key=lambda record: record[0])
                 self.assertEqual(prefix_digest(["Array(" + ",".join(record) + ")" for record in records]),
                                  PALETTE_RECORDS_DIGEST)
+
+    def test_nocturne_colors_are_distinct_muted_and_keep_exact_menu_previews(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                names = model.globals["ColorNames"]
+                colors = model.globals["NameColors"]
+                previews = model.globals["NameColorRGBValues"]
+                self.assertEqual(len(set(names)), 40)
+                self.assertEqual(len(set(colors)), 40)
+                self.assertEqual([color[:3] for color in colors], previews)
+                # Neutral white/black/ivory remain available; chromatic choices
+                # use restrained highlights and saturation instead of neon RGB.
+                for name, rgba in zip(names[5:], colors[5:]):
+                    with self.subTest(color=name):
+                        self.assertLessEqual(max(rgba[:3]), 220)
+                        self.assertLessEqual(max(rgba[:3]) - min(rgba[:3]), 140)
 
     def test_black_name_color_uses_pure_black_for_actual_color_and_menu_preview(self):
         for source, model in self.models():

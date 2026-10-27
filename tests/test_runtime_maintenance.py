@@ -229,13 +229,13 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertIn("Left, 13", init)
             self.assertIn(f"{global_name}.VoteLeaderColor", init)
-            self.assertIn("\\nCHILL STAR: {0}", init)
+            self.assertIn("\\nCROWN OF ASH: {0}", init)
 
             roster = source.split(f'{rule_kw}("02 - ', 1)[1].split(
                 f'{rule_kw}("03c - Bot/Dummy', 1
             )[0]
             self.assertNotIn('Custom String("{0}{1}{2}"', roster)
-            self.assertNotIn("CHILL STAR:", roster)
+            self.assertNotIn("CROWN OF ASH:", roster)
             self.assertIn(
                 f"5 + Count Of(Filtered Array({global_name}.PlayerListHudIds, Current Array Element != 0))",
                 roster,
@@ -288,11 +288,11 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertIn("Visible To String and Color", teleport_render)
             transition = source.split(f'{rule_kw}("91k - ', 1)[1].split(f'{rule_kw}("91l - ', 1)[0]
             for color in (
-                "Vector(80, 255, 160)",
-                "Vector(65, 225, 255)",
-                "Vector(95, 150, 255)",
-                "Vector(195, 100, 255)",
-                "Vector(255, 85, 135)",
+                "Vector(170, 186, 164)",
+                "Vector(168, 180, 206)",
+                "Vector(180, 156, 198)",
+                "Vector(202, 152, 178)",
+                "Vector(206, 112, 134)",
             ):
                 self.assertIn(color, transition)
             self.assertIn("Event Player.CrouchTravelActive == True", transition)
@@ -520,7 +520,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertLess(
                 roster_hud.index("Event Player.PlayerHudCreated = True;"),
-                roster_hud.index('Welcome to Cozywatch! Pick a vibe & color. Stay weird.'),
+                roster_hud.index('Enter the Nocturne. Where sorrow becomes melody.'),
             )
             self.assertEqual(
                 source.count("Player Variable(Current Array Element, PlayerListUpdatePending) == False"),
