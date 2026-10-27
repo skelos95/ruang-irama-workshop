@@ -1,6 +1,6 @@
 # Controlli automatici
 
-I controlli del codice corrente di `main`, con versione **0.8.2**, richiedono **Python 3.12**, senza pacchetti esterni. La correzione del margine inferiore di HOST è successiva alla release pubblicata; i controlli vanno associati al commit verificato. Eseguire dalla radice del repository:
+I controlli del codice corrente, con versione **0.8.2** e tema **Nocturne**, richiedono **Python 3.12**, senza pacchetti esterni. Il tema e la correzione del margine inferiore di HOST sono successivi alla release pubblicata; i controlli vanno associati al commit verificato. Eseguire dalla radice del repository:
 
 ```text
 python tools/validate_workshop.py
@@ -23,7 +23,7 @@ git diff --check
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
 | Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly a velocità fissa, menu 16 Speed/Gravity, Revenge, Unkillable, Luck e dummy |
-| Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e colore MenuColor dinamico; altre voci/pagine con comandi in Subheader e opzioni in Text; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
+| Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e colore MenuColor dinamico; altre voci/pagine con comandi in Subheader e opzioni in Text; testi e palette Nocturne, 40 Name Color esatti; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
 I test comportamentali esistenti eseguono porzioni della specifica inglese con risposte native controllate. Il codice importabile usa la stessa grammatica inglese della specifica. Verificano le funzioni d'ingresso al compilatore e non certificano da soli il runtime globale. Test separati leggono l'output effettivamente importabile e verificano controller, timer, eventi accodati e proprietari catturati. I test di compattazione confrontano gli stessi valori prima/dopo: Booleani tipizzati, palette, testi dei menu e inizializzazione dei registri. Rifiutano coercizioni di numeri in Booleani e verificano che cataloghi, colori e stringhe restino identici. I gate ricompilano la specifica e confrontano entrambi gli output, quindi controllano direttamente contesti, dichiarazioni, attese e peso del runtime. I test di mutazione devono rifiutare ciascuna violazione per la propria causa. Nessuno di questi controlli è un server Overwatch.
@@ -36,7 +36,7 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.778 unità strutturali invece di 31.966 (−16,2%)**, con 2.549 unità nella regola maggiore invece di 4.270. Il clipboard passa da 348.732 a 293.880 byte UTF-8 (−15,7%). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Il tema Nocturne usa **26.709 unità strutturali**, 69 in meno rispetto alle 26.778 della revisione del 22 ottobre. Il massimo per regola resta 2.549. Il clipboard passa da 293.880 a 293.713 byte UTF-8 (−167); la specifica da 273.617 a 273.463 (−154). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
@@ -44,7 +44,7 @@ Rispetto al precedente `main` (`fcf7dfd`), il runtime inglese usa **26.778 unit�
 | Variabili globali | 71 | 89 |
 | Variabili player | 125 | 127 |
 | Subroutine | 68 | 115 |
-| Byte di testo UTF-8 | 273.617 | 293.880 |
+| Byte di testo UTF-8 | 273.463 | 293.713 |
 
 La regola più grande per testo usa 22.472 byte UTF-8; la regola con più unità strutturali ne usa 2.549. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 

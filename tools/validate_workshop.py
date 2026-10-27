@@ -1140,7 +1140,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(server_title.args[2].strip(), "Null", "HUD titolo Cozywatch: Subheader")
         checks.equal(server_title.args[4].strip(), "Top", "HUD titolo Cozywatch: posizione")
         checks.equal(server_title.args[5].strip(), "0", "HUD titolo Cozywatch: ordinamento")
-        checks.require('Custom String("cozywatch.org [{0}]"' in server_title.args[3],
+        checks.require('Custom String("cozywatch.org | NOCTURNE [{0}]"' in server_title.args[3],
                        "HUD titolo Cozywatch deve mostrare il timer tra parentesi quadre")
         checks.equal(server_title.args[8].strip(), "Global.RGB", "HUD titolo Cozywatch: colore RGB invariato")
         checks.require("\\n" not in server_title.args[3],
@@ -1200,7 +1200,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.equal(len(fixed_hud), 5, "griglia HUD fissa Top/Left/Right")
 
     field_contract = {
-        ("Left", "0"): ("text", "PLAYER VIBES"),
+        ("Left", "0"): ("text", "SOULS & ECHOES"),
         ("Left", "13"): ("subheader", "Global.VoteLeaderName"),
         ("Right", "0"): ("text", "Host:"),
         ("Top", "0"): ("text", "cozywatch.org"),
@@ -1222,8 +1222,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                      f"HUD fisso {slot[0]} sort {slot[1]}: campo non usato")
 
     for slot, (field, expected_labels) in {
-        ("Left", "0"): ("text", ("PLAYER VIBES",)),
-        ("Left", "13"): ("subheader", ("CHILL STAR: {0}",)),
+        ("Left", "0"): ("text", ("SOULS & ECHOES",)),
+        ("Left", "13"): ("subheader", ("CROWN OF ASH: {0}",)),
     }.items():
         call = fixed_hud.get(slot)
         if not call:
@@ -1255,36 +1255,36 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(host.args[9].strip(), "Visible To String and Color", "HUD Host: rivalutazione testo e colore")
 
     chill_star = fixed_hud.get(("Left", "13"))
-    checks.require(chill_star is not None, "HUD CHILL STAR dedicato assente")
+    checks.require(chill_star is not None, "HUD CROWN OF ASH dedicato assente")
     if chill_star:
         checks.require(chill_star.args[2].strip().startswith("Global.VoteLeaderName != Custom String(\"\")"),
-                       "HUD CHILL STAR: guardia nome cache assente")
+                       "HUD CROWN OF ASH: guardia nome cache assente")
         checks.require("Global.VoteLeaderName" in chill_star.args[2],
-                       "HUD CHILL STAR: Subheader deve usare la cache nome leader")
-        checks.equal(chill_star.args[3].strip(), "Null", "HUD CHILL STAR: Text deve restare vuoto")
+                       "HUD CROWN OF ASH: Subheader deve usare la cache nome leader")
+        checks.equal(chill_star.args[3].strip(), "Null", "HUD CROWN OF ASH: Text deve restare vuoto")
         checks.equal(chill_star.args[7].strip(), "Global.VoteLeaderColor",
-                     "HUD CHILL STAR: colore Subheader deve usare la cache leader")
+                     "HUD CROWN OF ASH: colore Subheader deve usare la cache leader")
         checks.equal(chill_star.args[9].strip(), "Visible To String and Color",
-                     "HUD CHILL STAR: deve rivalutare testo e colore")
+                     "HUD CROWN OF ASH: deve rivalutare testo e colore")
         checks.require("Player Variable(Global.VoteLeader, DisplayName)" not in chill_star.args[2],
-                       "HUD CHILL STAR non deve dereferenziare direttamente VoteLeader per il nome")
+                       "HUD CROWN OF ASH non deve dereferenziare direttamente VoteLeader per il nome")
         checks.require("Player Variable(Global.VoteLeader, NameColor)" not in chill_star.args[2],
-                       "HUD CHILL STAR non deve dereferenziare direttamente VoteLeader per il colore")
+                       "HUD CROWN OF ASH non deve dereferenziare direttamente VoteLeader per il colore")
     checks.require("Global.VoteLeaderName = Custom String(\"\");" in source,
-                   "cache nome CHILL STAR deve essere sempre inizializzata/resettata")
+                   "cache nome CROWN OF ASH deve essere sempre inizializzata/resettata")
     checks.require("Global.VoteLeaderColor = Color(White);" in source,
-                   "cache colore CHILL STAR deve essere sempre inizializzata/resettata")
+                   "cache colore CROWN OF ASH deve essere sempre inizializzata/resettata")
     checks.require("Global.VoteLeaderName = Player Variable(Global.VoteLeader, DisplayName);" in source,
-                   "RecountVotes deve aggiornare la cache nome CHILL STAR")
+                   "RecountVotes deve aggiornare la cache nome CROWN OF ASH")
     checks.require("Global.VoteLeaderColor = Player Variable(Global.VoteLeader, NameColor);" in source,
-                   "RecountVotes deve aggiornare la cache colore CHILL STAR")
+                   "RecountVotes deve aggiornare la cache colore CROWN OF ASH")
     color_page = rule_by_subroutine(rules, "ApplyNameColorPage")
     checks.require(color_page is not None, "subroutine ApplyNameColorPage assente")
     if color_page:
         checks.require("If(Global.VoteLeader == Event Player);" in color_page.body,
-                       "pagina colore deve verificare se sta modificando il CHILL STAR corrente")
+                       "pagina colore deve verificare se sta modificando il CROWN OF ASH corrente")
         checks.require("Global.VoteLeaderColor = Event Player.NameColor;" in color_page.body,
-                       "pagina colore deve sincronizzare il colore CHILL STAR quando cambia il leader")
+                       "pagina colore deve sincronizzare il colore CROWN OF ASH quando cambia il leader")
 
     def full_custom_string(expression: str) -> Call | None:
         expression = expression.strip()
@@ -1339,9 +1339,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.require(not any(literal is not None and literal.endswith("\n ") for literal in row_literals),
                            f"renderer HUD roster {side}: riga fantasma incorporata")
             if side == "Left":
-                for legacy_token in ("CHILL STAR:", "BINTANG CHILL:", "ดาวสายชิล:"):
+                for legacy_token in ("CROWN OF ASH:", "CHILL STAR:", "BINTANG CHILL:", "ดาวสายชิล:"):
                     checks.require(legacy_token not in call.args[2],
-                                   "renderer HUD roster Left non deve incorporare la riga CHILL STAR")
+                                   "renderer HUD roster Left non deve incorporare la riga CROWN OF ASH")
                 player_row = full_custom_string(call.args[2])
                 checks.require(player_row is not None and len(player_row.args) == 4
                                and parse_literal(player_row.args[0]) == "{0} {1} {2}",
@@ -1485,11 +1485,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if travel_transition:
         for token in (
             "Event Player.CrouchTravelActive == True",
-            "Vector(80, 255, 160)",
-            "Vector(65, 225, 255)",
-            "Vector(95, 150, 255)",
-            "Vector(195, 100, 255)",
-            "Vector(255, 85, 135)",
+            "Vector(170, 186, 164)",
+            "Vector(168, 180, 206)",
+            "Vector(180, 156, 198)",
+            "Vector(202, 152, 178)",
+            "Vector(206, 112, 134)",
             "Chase Player Variable Over Time(Event Player, MenuColor, Event Player.TravelCursor",
             "0.180, Destination and Duration",
         ):
@@ -3265,7 +3265,7 @@ End;
             fallback = soundtrack_choice(vibe_calls[0].args[2], "profilo speciale roster")
             custom = full_custom_string(fallback) if fallback is not None else None
             checks.equal(parse_literal(custom.args[0]) if custom and custom.args else None,
-                         "no soundtrack yet", "Special profile roster: ordinary English fallback")
+                         "silence before the storm", "Special profile roster: ordinary English fallback")
 
     main_menu = rule_by_subroutine(rules, "DrawMainMenu")
     checks.require(main_menu is not None, "profilo speciale: DrawMainMenu assente")
@@ -3282,7 +3282,7 @@ End;
             fallback = soundtrack_choice(soundtrack_values[0].args[1], "Special profile main menu")
             custom = full_custom_string(fallback) if fallback is not None else None
             checks.equal(parse_literal(custom.args[0]) if custom and custom.args else None,
-                         "no soundtrack yet", "Special profile main menu: ordinary English fallback")
+                         "silence before the storm", "Special profile main menu: ordinary English fallback")
 
     music_page = rule_by_subroutine(rules, "DrawSoundtrackMenu")
     checks.require(music_page is not None, "Special profile: Soundtrack renderer missing")
@@ -3486,20 +3486,20 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             in transition_code,
             "feedback visuale: Name Color deve mostrare il colore esatto della preview",
         )
-        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(160, 195, 235) :")
-                       in transition_code, "Info: light blue menu accent")
+        checks.require(re.sub(r"\s+", "", f"{selector} == 0 ? Vector(198, 185, 210) :")
+                       in transition_code, "Info: moonlit silver menu accent")
         anchors = {
-            2: (190, 210, 230), 3: (100, 110, 120),
-            4: (255, 245, 215), 5: (255, 200, 70), 6: (236, 153, 0),
-            7: (255, 120, 105), 8: (255, 75, 75), 9: (255, 50, 145),
-            10: (205, 160, 255), 11: (100, 50, 255), 12: (70, 145, 255),
-            13: (0, 234, 234), 14: (70, 220, 110), 15: (65, 155, 110),
-            16: (100, 190, 255),
+            2: (168, 180, 206), 3: (178, 132, 162),
+            4: (202, 108, 130), 5: (210, 194, 162), 6: (178, 142, 192),
+            7: (198, 174, 206), 8: (170, 142, 174), 9: (156, 152, 194),
+            10: (202, 164, 180), 11: (208, 184, 144), 12: (154, 174, 162),
+            13: (164, 176, 202), 14: (180, 164, 202), 15: (198, 112, 132),
+            16: (160, 176, 190),
         }
         for page, anchor in anchors.items():
             expected = (
-                f"{selector} == {page} ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.680 + "
-                f"Vector({', '.join(str(component) for component in anchor)}) * 0.320 :"
+                f"{selector} == {page} ? Global.NameColorRGBValues[Event Player.ColorIndex] * 0.320 + "
+                f"Vector({', '.join(str(component) for component in anchor)}) * 0.680 :"
             )
             checks.require(re.sub(r"\s+", "", expected) in transition_code,
                            f"Menu color: blended accent for page {page}")

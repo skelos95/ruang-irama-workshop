@@ -1,5 +1,14 @@
 # Changelog
 
+## Nocturne: romanticismo oscuro — 2026-10-27
+
+- Tema visivo e testi ispirati al romanticismo oscuro e al melodic death metal: titolo `cozywatch.org | NOCTURNE [countdown]`, roster `SOULS & ECHOES`, leader dei voti `CROWN OF ASH` e benvenuto `Enter the Nocturne. Where sorrow becomes melody.`.
+- Info usa argento lunare RGB (198, 185, 210), i sottotitoli un tono osso RGB (210, 200, 192); gli altri menu mescolano il 32% del Name Color al 68% dell'accento Nocturne. Travel usa cinque tinte attenuate. Restano esatti i 40 Name Color e la preview della pagina 1.
+- Titolo, HOST, effetti Luck e anello Multijump condividono una pulsazione triangolare malva/rosa cenere di 51 secondi, tramite le variabili RGB e fase già esistenti. Nessuna nuova regola, variabile, subroutine, attesa o risorsa persistente; menu, comandi e funzioni restano invariati.
+- Dieci intestazioni gotiche nel menu Soundtrack e in GENERI; i 200 generi e il loro ordine restano invariati. Il fallback senza selezione diventa `silence before the storm`. Soundtrack continua a mostrare una preferenza testuale, senza riproduzione audio.
+- Specifica e clipboard rigenerati: 273.463 e 293.713 byte UTF-8. Runtime: 129 regole, 89 variabili globali, 127 player, 115 subroutine; 26.709 unità strutturali stimate, 69 in meno rispetto alle 26.778 della revisione del 22 ottobre, massimo per regola 2.549 invariato. Budget locali invariati; sono misure offline.
+- VERSION resta 0.8.2; tag e allegato della release storica conservano il contenuto pubblicato. La resa del nuovo tema e la leggibilità sulle mappe richiedono verifica nel client.
+
 ## Passi progressivi del menu 16 — 2026-10-22
 
 - Speed ora parte da un minimo del 10% (massimo 1000%); Gravity conserva l’intervallo 0–500%. Entrambi cambiano di 10 punti percentuali sotto il 100% e di 50 sopra, con passaggio simmetrico 80↔90↔100↔150↔200. Al 100% Primary aumenta a 150 e Secondary diminuisce a 90.

@@ -107,7 +107,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             )
             transition = subroutine(source, "TransitionMenuColor")
             self.assertIn("EventPlayer.MenuPage)==13?", compact(transition))
-            self.assertIn("Vector(0,234,234)*0.320", compact(transition))
+            self.assertIn("Vector(164,176,202)*0.680", compact(transition))
             for token in localized_titles:
                 self.assertIn(token, source)
 

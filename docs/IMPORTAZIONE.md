@@ -3,7 +3,7 @@
 ## Procedura
 
 1. Salva il preset con le tue mappe e imposta la lingua testo di Overwatch su **English**.
-2. Apri il codice corrente di `main`, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione resta **0.8.2**; il margine inferiore di HOST è una correzione successiva alla release pubblicata.
+2. Apri il codice della revisione desiderata, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione resta **0.8.2**; il tema Nocturne e il margine inferiore di HOST sono modifiche successive alla release pubblicata. Il tag e l'allegato della release conservano il tema precedente.
 3. Copia tutto, da `variables` alla graffa finale, senza numeri di riga o testo della pagina GitHub.
 4. In **Custom Game → Settings → Workshop**, usa **Paste Rules**.
 5. Apri **Script Diagnostics** e annota Element Count e Largest Rule, insieme al commit importato.
@@ -12,6 +12,8 @@
 L'unico codice da importare usa la grammatica nativa inglese. Anche identificatori, nomi delle regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese. Non tradurre manualmente le keyword. Al primo spawn il principale si apre sulla voce 0, Info / Controls; Crouch + Interact mostra la guida completa ai comandi.
 
 Le 129 regole sono numerate da 0 a 128 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
+
+Il tema Nocturne mostra `cozywatch.org | NOCTURNE [countdown]`, il roster `SOULS & ECHOES` e il leader `CROWN OF ASH`. Argento lunare, toni osso e una lenta pulsazione malva/rosa cenere accompagnano testi ispirati al romanticismo oscuro. Menu, comandi, funzioni e 40 Name Color personali restano invariati. Verifica nel client leggibilità e testi della revisione importata.
 
 Con Info 0 selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola, e il corpo (`Text`) è vuoto. L'anteprima mostra i binding per Camera, Arcade, ispezione eroe/HP, navigazione e apertura della guida completa. Il sottomenu Info mantiene titolo e tutti i dodici comandi nel `Subheader`, con i binding reali del giocatore e senza duplicazioni. Le altre voci e pagine mostrano i comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed. L'utente ha verificato e confermato questa distanza nel gioco il 9 ottobre, dopo la PR #105.
 

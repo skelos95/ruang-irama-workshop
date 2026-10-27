@@ -1,6 +1,8 @@
-# Cozywatch
+# Cozywatch — Nocturne
 
-Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori contemporanei**, con menu personali, Player Vibes, Camera, Travel, Ghost/Fly e Try Your Luck. I 12 slot vengono riutilizzati quando qualcuno esce: non c'è un limite di 12 registrazioni nell'intera lobby.
+Modalità sociale per Overwatch 2: **Schermaglia, 6v6, fino a 12 giocatori contemporanei**, con menu personali, Souls & Echoes, Camera, Travel, Ghost/Fly e Try Your Luck. I 12 slot vengono riutilizzati quando qualcuno esce: non c'è un limite di 12 registrazioni nell'intera lobby.
+
+Il tema **Nocturne** si ispira al romanticismo oscuro e al melodic death metal: argento lunare, malva, rosa cenere e toni osso accompagnano testi di cappelle silenziose, elegie ed echi. Menu, comandi e funzioni restano quelli esistenti; i 40 Name Color personali mantengono i loro valori esatti.
 
 **[Apri il codice da importare](workshop/ruang_irama.en-US.workshop)** · [Istruzioni di importazione](docs/IMPORTAZIONE.md)
 
@@ -14,11 +16,11 @@ Il 9 ottobre l'utente ha confermato che il server è stabile, la modalità funzi
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Questa revisione riduce il peso strutturale stimato da 31.966 a **26.778 unità (−16,2%)**. Il testo da importare passa da 348.732 a 293.880 byte UTF-8 (−15,7%). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco.
+Il tema Nocturne usa **26.709 unità strutturali stimate**, 69 in meno rispetto alle 26.778 della revisione del 22 ottobre; il massimo per regola resta 2.549. Il testo da importare usa 293.713 byte UTF-8, 167 in meno rispetto a 293.880. Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. La resa del nuovo tema richiede una prova nel client.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, ora entro un raggio fisso di 10 m sull'obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
-La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` comprende le successive correzioni di HOST, dei comandi Travel e del rientro dagli spettatori, la pulizia delle espressioni Icon e i sottotitoli corretti di Multijump e Luck; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
+La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente comprende il tema Nocturne e le successive correzioni di HOST, dei comandi Travel e del rientro dagli spettatori, la pulizia delle espressioni Icon e i sottotitoli corretti di Multijump e Luck; la [release 0.8.2](https://github.com/skelos95/ruang-irama-workshop/releases/tag/v0.8.2) e il relativo tag conservano il contenuto pubblicato. Per confrontare due prove usa il commit del codice importato. [Storia delle modifiche](CHANGELOG.md) · [Procedura di test](docs/TEST.md)
 
 ## Avvio rapido
 
@@ -27,7 +29,7 @@ La versione in [VERSION](VERSION) resta **0.8.2**. Il codice corrente di `main` 
 3. Nelle impostazioni Workshop scegli durata **10–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel sottotitolo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
-Il file contiene le regole, non il preset delle mappe. Il titolo centrale mostra **cozywatch.org** insieme al countdown; il sottotitolo separato del sito è rimosso. Il precedente sistema Server Location è rimosso.
+Il file contiene le regole, non il preset delle mappe. Il titolo centrale mostra **cozywatch.org | NOCTURNE [countdown]**. Il roster si intitola **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne. Where sorrow becomes melody.». Il sottotitolo separato del sito e il precedente sistema Server Location sono rimossi.
 
 Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
 
@@ -87,15 +89,15 @@ Il menu 16 modifica due valori personali, inizialmente al **100%**. Tieni Crouch
 
 Ghost attraversa pareti e soffitti mantenendo il pavimento. Fly segue lo sguardo con avanti; indietro e laterali restano orizzontali. La velocità è fissa sul valore scelto nel menu 16: **100% equivale a 5,5 m/s**, senza accelerazione automatica. Con Fly attiva la gravità è sempre **0**; disattivandola torna al valore scelto nel menu 16. Luck Acceleration mantiene il suo effetto temporaneo e, alla fine, vengono ripristinate le impostazioni personali.
 
-Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello RGB sotto i piedi; i comandi dei menu non generano effetti visivi.
+Multijump aggiunge salti in aria premendo Jump o tenendolo premuto: la ripetizione avviene ogni 0,3 s e il valore scelto resta fisso. Funziona anche con un menu aperto; si sospende con Attach, Fly o Luck Acceleration. La percentuale indica la spinta verticale del salto aggiuntivo, non l'altezza in metri. Ogni salto valido mostra un breve anello malva/rosa cenere sotto i piedi; i comandi dei menu non generano effetti visivi.
 
 Superman Punch è inizialmente OFF e funziona anche con il menu principale, un sottomenu o Travel aperto, usando Melee. Durante un attacco melee cerca subito un bersaglio vicino davanti, anche della propria squadra, senza attraversare muri. Un impatto melee nativo sui nemici viene riconosciuto anche fra due aggiornamenti dell'animazione. Un solo contatto per attacco, rispettando Unkillable. Revenge registra anche queste uccisioni fra umani alleati. La preferenza si conserva dopo morte o cambio eroe e torna OFF al cambio squadra o all'uscita.
 
 La diagnostica server rimane bianca ed è visibile solo all'host. Tutti i testi dell'interfaccia sono in inglese; il nome personale `งูแรร์` conserva i suoi caratteri originali.
 
-Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. La pagina 1 mostra esattamente il colore selezionato, inizialmente bianco; Black usa nero puro sia per il nome sia per la preview. Info / Controls 0 usa un azzurro fisso. Le altre pagine mescolano il proprio accento al Name Color scelto, con transizioni fluide di 0,180 s.
+Name Color ordina i 40 colori per sfumatura: bianco, grigi, nero, colori caldi, rosa, viola, blu e verdi. La pagina 1 mostra esattamente il colore selezionato, inizialmente bianco; Black usa nero puro sia per il nome sia per la preview. Info / Controls 0 usa argento lunare fisso RGB (198, 185, 210). Le altre pagine mescolano il 32% del Name Color scelto al 68% del proprio accento Nocturne, con transizioni fluide di 0,180 s; i sottotitoli usano un tono osso RGB (210, 200, 192) e Travel cinque tinte attenuate. Titolo, HOST, effetti Luck e anello Multijump condividono una lenta pulsazione malva/rosa cenere di 51 secondi.
 
-Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Player Vibes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
+Sull'obiettivo fluttuano solo le icone native scelte dagli umani, **entro un raggio fisso di 10 m**, senza fascio luminoso né nomi. Ciascuna segue il proprio Name Color esatto, con traiettorie casuali fino a **8 m sopra l'obiettivo**. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Souls & Echoes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
 Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze, pagina e cursore persistono tra morte e cambio eroe. **Cambio squadra e uscita/rientro ripartono dai default**, aprendo nuovamente il principale su Info / Controls al completamento della registrazione.
 

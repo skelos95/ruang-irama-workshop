@@ -14,14 +14,14 @@ class DummyBotFeatureTests(unittest.TestCase):
 
     def test_static_hud_uses_recyclable_roster_slots_without_embedded_label_spacing(self):
         for source, global_name in ((self.it, "Global"), (self.en, "Global")):
-            self.assertIn('Custom String("cozywatch.org [{0}]"', source)
+            self.assertIn('Custom String("cozywatch.org | NOCTURNE [{0}]"', source)
             self.assertIn('"HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach"', source)
             self.assertIn('"ARCADE: hold Melee ({0}) 0.5s: open / close"', source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)
             self.assertNotIn('"LOBBY & CHILL TIME"', source)
-            self.assertIn('"PLAYER VIBES"', source)
+            self.assertIn('"SOULS & ECHOES"', source)
             self.assertIn("5 + Count Of(Filtered Array(", source)
             self.assertIn("1 + Event Player.HudSlot", source)
             self.assertNotIn("-13 + Event Player.HudSlot", source)
@@ -30,7 +30,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertNotIn('Custom String("{0}{1}{2}"', source)
             self.assertNotIn(f"-99 + Evaluate Once({global_name}.VoterIndex)", source)
             self.assertNotIn("\\nLOBBY & CHILL TIME", source)
-            self.assertNotIn("\\nPLAYER VIBES", source)
+            self.assertNotIn("\\nSOULS & ECHOES", source)
             self.assertNotIn(", Top, 100,", source)
             self.assertNotIn(", Top, -99,", source)
 

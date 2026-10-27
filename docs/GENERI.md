@@ -1,8 +1,8 @@
 # I 200 generi
 
-Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi precedenti e ne aggiunge altri 10. L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita, densità, distorsione, velocità e imprevedibilità. I nomi dei generi restano nelle forme internazionali più riconoscibili; nell’HUD le intestazioni dei gruppi sono soltanto in inglese. Le intestazioni riportate qui corrispondono a quelle del menu Soundtrack.
+Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi precedenti e ne aggiunge altri 10. L'ordine è editoriale, non una graduatoria assoluta: combina energia percepita, densità, distorsione, velocità e imprevedibilità. I nomi dei generi restano nelle forme internazionali più riconoscibili; nell’HUD le intestazioni dei gruppi sono soltanto in inglese. Le intestazioni riportate qui corrispondono a quelle del menu Soundtrack e seguono il tema Nocturne, ispirato al romanticismo oscuro. Il tema descrive l’atmosfera visiva: i 200 generi e il loro ordine restano gli stessi, compreso Melodic Death Metal alla voce 193. Soundtrack mostra una preferenza testuale e non riproduce audio.
 
-## Gruppo 1/10 — TOTAL STILLNESS
+## Gruppo 1/10 — THE SILENT CHAPEL
 
 1. Lowercase
 2. Nature Ambient
@@ -25,7 +25,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 19. Gagaku
 20. Holy Minimalism
 
-## Gruppo 2/10 — FULL CHILL
+## Gruppo 2/10 — ELEGIES BY CANDLELIGHT
 
 21. Solo Piano
 22. Classical Guitar
@@ -48,7 +48,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 39. Baroque Music
 40. Renaissance Music
 
-## Gruppo 3/10 — FLOATING EASY
+## Gruppo 3/10 — VEILS OF REVERIE
 
 41. Lounge
 42. Downtempo
@@ -71,7 +71,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 59. Illbient
 60. Dreampunk
 
-## Gruppo 4/10 — WARM GROOVES
+## Gruppo 4/10 — EMBERS OF LONGING
 
 61. Vaporwave
 62. Lovers Rock
@@ -94,7 +94,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 79. Ska
 80. Rocksteady
 
-## Gruppo 5/10 — FEET START MOVING
+## Gruppo 5/10 — THE WAKING PULSE
 
 81. Jazz-Funk
 82. Funk
@@ -117,7 +117,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 99. Electro Swing
 100. Latin Pop
 
-## Gruppo 6/10 — THE FLOOR WAKES UP
+## Gruppo 6/10 — RITES AFTER DUSK
 
 101. French House
 102. Progressive House
@@ -140,7 +140,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 119. Gqom
 120. Goa Trance
 
-## Gruppo 7/10 — GUITARS GROW TEETH
+## Gruppo 7/10 — THORNS AND STRINGS
 
 121. Indie Rock
 122. Britpop
@@ -163,7 +163,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 139. Surf Rock
 140. Rap Rock
 
-## Gruppo 8/10 — MOSH TIME
+## Gruppo 8/10 — CATHEDRALS OF IRON
 
 141. Hardcore Punk
 142. Heavy Metal
@@ -186,7 +186,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 159. Djent
 160. Alternative Metal
 
-## Gruppo 9/10 — SERVER GETS NERVOUS
+## Gruppo 9/10 — TEMPEST OF SHADOWS
 
 161. Drum & Bass
 162. Jungle
@@ -209,7 +209,7 @@ Il catalogo ha 10 gruppi da 20 generi: ogni gruppo conserva i 10 generi preceden
 179. Hard Trance
 180. Happy Hardcore
 
-## Gruppo 10/10 — MAXIMUM CHAOS
+## Gruppo 10/10 — WHERE MELODY MEETS DEATH
 
 181. Deathcore
 182. Death Metal

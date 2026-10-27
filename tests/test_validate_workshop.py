@@ -798,11 +798,11 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         transition = self.rule(lambda rule: validator.subroutine_target(rule) == "TransitionMenuColor")
         for token in (
             "Event Player.CrouchTravelActive == True",
-            "Vector(80, 255, 160)",
-            "Vector(65, 225, 255)",
-            "Vector(95, 150, 255)",
-            "Vector(195, 100, 255)",
-            "Vector(255, 85, 135)",
+            "Vector(170, 186, 164)",
+            "Vector(168, 180, 206)",
+            "Vector(180, 156, 198)",
+            "Vector(202, 152, 178)",
+            "Vector(206, 112, 134)",
             "Chase Player Variable Over Time(Event Player, MenuColor, Event Player.TravelCursor",
             "0.180, Destination and Duration",
         ):
@@ -987,8 +987,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             and call.args[5].strip() == "13"
         )
         changed_text = call.args[2].replace(
-            "Custom String(\"\\nCHILL STAR: {0}\", Global.VoteLeaderName)",
-            "Custom String(\"\\nCHILL STAR: {0}\", Player Variable(Global.VoteLeader, DisplayName))",
+            "Custom String(\"\\nCROWN OF ASH: {0}\", Global.VoteLeaderName)",
+            "Custom String(\"\\nCROWN OF ASH: {0}\", Player Variable(Global.VoteLeader, DisplayName))",
             1,
         )
         self.assertNotEqual(changed_text, call.args[2])
