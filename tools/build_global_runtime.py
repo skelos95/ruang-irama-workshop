@@ -629,8 +629,8 @@ def build_english(source: str) -> tuple[str, dict]:
     assert leaves.count('Call Subroutine(CleanupPlayer);') == 2
     leaves = leaves.replace('Call Subroutine(CleanupPlayer);', invalidate)
     lowered.append(subrule("04j - Subroutine: Reconcile departed players from global context", "ProcessGlobalLeaves", leaves))
-    icon_cache = '\t\tFor Global Variable(ObjectiveIconIndex, 0, 12, 1);\n\t\t\tGlobal.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];\n\t\t\tGlobal.VisibleIconChoices[Global.ObjectiveIconIndex] = And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), And(Global.ObjectiveIconPlayer.IsHuman == True, Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100))) ? Global.ObjectiveIconPlayer.IconIndex : 0;\n\t\tEnd;\n\t\tGlobal.ObjectiveIconPlayer = Null;\n'
-    lowered.append(subrule('04k - Subroutine: Cache visible objective icon choices', 'ProcessVisibleIcons', icon_cache))
+    icon_cache = '\t\tFor Global Variable(ObjectiveIconIndex, 0, 12, 1);\n\t\t\tGlobal.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];\n\t\t\tGlobal.VisibleIconChoices[Global.ObjectiveIconIndex] = And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), Global.ObjectiveIconPlayer.IsHuman == True)) ? Global.ObjectiveIconPlayer.IconIndex : 0;\n\t\tEnd;\n\t\tGlobal.ObjectiveIconPlayer = Null;\n'
+    lowered.append(subrule('04k - Subroutine: Cache visible player icon choices', 'ProcessVisibleIcons', icon_cache))
     output = compact_booleans(compact_unused_constants(compact_fixed_pools(compact_icon_visibility(compact_palette(header + "\n\n".join(lowered) + "\n")))))
     output = number_runtime_rules(output)
     return output, {"controllers": {prefix(r): {"target": controller_name(r), "index": indices[prefix(r)]} for r in each}, "callbacks": {p: i for i, p in enumerate(EVENT_PREFIXES)}, "capacity": CAPACITY, "latches": sorted(LATCH_PREFIXES)}

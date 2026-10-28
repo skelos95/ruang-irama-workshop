@@ -242,5 +242,6 @@ Il menu mostra il genere evidenziato, il gruppo e la scelta attiva. Quando il Me
 - `Crouch + Ability 2`: salto indietro di dieci generi (`−10`).
 - `Crouch + Interact`: applica il genere evidenziato.
 - `Crouch + Reload`: torna al menu principale.
+- `Crouch + Ultimate`: ripristina nessuna selezione e il cursore al primo genere; non disponibile per il Soundtrack Draconian bloccato.
 
 Melee e Jump restano azioni normali dell'eroe. Tutti gli spostamenti usano il wrap circolare, quindi ogni scelta resta raggiungibile con un solo HUD menu attivo e senza creare un elemento per ciascun genere.

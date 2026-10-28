@@ -19,14 +19,16 @@ git diff --check
 | Parità | Specifica comportamentale inglese equivalente al riferimento dei test; clipboard generato equivalente al riferimento runtime, distinto dalla specifica |
 | Generazione | Ricompilazione deterministica della specifica; rifiuto di output importabile obsoleto o modificato senza rigenerazione |
 | Runtime globale | Nessun Each Player, callback solo di registrazione, nessuna attesa nelle subroutine, cattura del proprietario delle espressioni persistenti |
-| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–128, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
+| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–129, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
-| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly a velocità fissa, menu 16 Speed/Gravity, Revenge, Unkillable, Luck e dummy |
+| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly a velocità fissa, menu 16 Speed/Gravity con passi 20/100, reset della pagina tramite Crouch + Ultimate, icone personali entro 5 m, Revenge, Unkillable, Luck e Dummy Target fermo |
 | Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e `Color(White)` diretto nella preview e nella guida Info, indipendente da MenuColor; altre voci/pagine con comandi in Subheader e opzioni in Text; testi e palette Nocturne, 40 nomi e vettori RGB allineati con resa esatta della scelta; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
 I test comportamentali esistenti eseguono porzioni della specifica inglese con risposte native controllate. Il codice importabile usa la stessa grammatica inglese della specifica. Verificano le funzioni d'ingresso al compilatore e non certificano da soli il runtime globale. Test separati leggono l'output effettivamente importabile e verificano controller, timer, eventi accodati e proprietari catturati. I test di compattazione confrontano gli stessi valori prima/dopo: Booleani tipizzati, palette, testi dei menu e inizializzazione dei registri. Rifiutano coercizioni di numeri in Booleani e verificano che cataloghi, colori e stringhe restino identici. I gate ricompilano la specifica e confrontano entrambi gli output, quindi controllano direttamente contesti, dichiarazioni, attese e peso del runtime. I test di mutazione devono rifiutare ciascuna violazione per la propria causa. Nessuno di questi controlli è un server Overwatch.
+
+I test delle icone eseguono posizioni live del proprietario, teletrasporti, traiettorie interpolate e il limite tridimensionale di 5 m; controllano anche le 36 espressioni Create Icon e la cache di visibilità del clipboard e del riferimento runtime. Le mutazioni devono respingere il ritorno al centro obiettivo e gli offset fuori limite. Le prove del reset verificano isolamento della pagina, default, latch e pagine escluse; il targeting dummy conserva selezione e consenso senza inseguimento.
 
 Le regressioni di ownership includono 240 identità successive sui 12 slot, variabili del leaver perse, eventi tardivi e ID riciclati. Il caso del roster controlla la distruzione di 480 icone senza doppie distruzioni; il registro dei testi temporanei ha prove separate di cleanup e riuso.
 
@@ -36,17 +38,17 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Il codice con titolo e ciclo RGB originali e Info bianca usa **26.808 unità strutturali**, 43 in più rispetto alle 26.765 della prima revisione Nocturne. Il massimo per regola resta 2.605. Il clipboard passa da 293.885 a 293.767 byte UTF-8 (−118); la specifica da 273.635 a 273.593 (−42). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+La revisione con passi Movement aggiornati, reset personali, icone del proprietario e dummy fermi usa **27.470 unità strutturali**, 662 in più rispetto alle 26.808 della revisione precedente. Il massimo per regola resta 2.605. Il clipboard passa da 293.767 a 299.516 byte UTF-8 (+5.749); la specifica da 273.593 a 276.042 (+2.449). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
-| Regole | 118 | 129 |
+| Regole | 119 | 130 |
 | Variabili globali | 71 | 89 |
 | Variabili player | 125 | 127 |
-| Subroutine | 68 | 115 |
-| Byte di testo UTF-8 | 273.593 | 293.767 |
+| Subroutine | 69 | 116 |
+| Byte di testo UTF-8 | 276.042 | 299.516 |
 
-La regola più grande per testo usa 22.472 byte UTF-8; la regola con più unità strutturali ne usa 2.605. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
+La regola più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.605. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 
 ## GitHub Actions
 

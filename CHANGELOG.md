@@ -1,5 +1,14 @@
 # Changelog
 
+## Movement, reset personali, icone e Dummy Target — 2026-10-28
+
+- Speed passa a 20–1000%, Gravity resta 0–500%, entrambi con default 100. I passi sono 20 punti sotto il 100% e 100 sopra: 60↔80↔100↔200↔300. Al 100% Primary aumenta a 200 e Secondary diminuisce a 80; i binding mostrano il passo effettivo.
+- Aggiunto Crouch + Ultimate per ripristinare la sola voce selezionata nel principale o nel relativo sottomenu. `ResetMenuPage` riusa gli applicatori delle pagine 1/2/3/5/6/7/11/13/14/16: Camera OFF, Unkillable OFF, Voice NORMAL, Ghost/Fly OFF, Multijump OFF e livello 1, annullamento del proprio voto, Speed/Gravity 100 con cursore Speed. Name Color e Icon conservano i default del profilo speciale; Soundtrack torna senza selezione, escluso Draconian bloccato. Info, Revenge, Luck e toggle 8/9/12/15 restano esclusi. L’aiuto mostra il binding Ultimate dove disponibile.
+- Le 36 icone native seguono la posizione live del proprietario e il suo colore esatto, senza dipendenze dall’obiettivo. Offset orizzontale 0–4 m e altezza 0,5–3 m garantiscono al massimo 5 m tridimensionali anche durante l’interpolazione. Identità catturata, 12 slot, Chase 4,5 s, rinnovo dopo 3 s e manutenzione 1 Hz conservati.
+- I dummy restano fermi, con velocità nativa 0% e senza throttle di inseguimento, dopo il teletrasporto iniziale sicuro. Scelgono ancora a 5 Hz il nemico umano vivo più vicino con consenso ON e lo guardano. Etichetta `12 - DUMMY TARGET`, stato `ENEMY DUMMY TARGETING: ON/OFF`; disponibilità, opt-in e Privacy conservati. Gli AI normali mantengono velocità 20% e navigazione nativa.
+- Specifica e clipboard rigenerati: 276.042 e 299.516 byte UTF-8 (+2.449/+5.749 rispetto alla revisione precedente). Runtime: 130 regole numerate 0–129, 89 variabili globali, 127 player, 116 subroutine; specifica con 119 regole e 69 subroutine. Stima strutturale 27.470 unità (+662), massimo per regola 2.605 invariato; regola testualmente più grande 23.063 byte. Nessuna nuova variabile player; budget offline invariati.
+- VERSION resta 0.8.2 e la release storica conserva tag e allegato. I test automatici non sostituiscono le prove del commit importato nel client per input simultanei, movimento, icone, reset e dummy.
+
 ## Titolo e RGB originali, Info bianca — 2026-10-27
 
 - Ripristinato il titolo centrale `cozywatch.org [countdown]`, senza il suffisso NOCTURNE, conservando il countdown e lo stesso HUD.

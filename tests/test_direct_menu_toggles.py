@@ -19,7 +19,7 @@ PAGES = ((8, "CrouchTravelEnabled"),
 class DirectToggleEvaluator(MenuLoadEvaluator):
     BUTTONS = {value.replace(" ", ""): value for value in
                ("Crouch", "Interact", "Reload", "Primary Fire", "Secondary Fire",
-                "Ability 1", "Ability 2", "Melee")}
+                "Ability 1", "Ability 2", "Melee", "Ultimate")}
 
     def __init__(self, source):
         super().__init__(source)
@@ -47,6 +47,8 @@ class DirectToggleEvaluator(MenuLoadEvaluator):
         return super().resolve(name)
 
     def call(self, name, args):
+        if name == "Array":
+            return list(args)
         if name == "InputBindingString":
             return args[0]
         if name in ("Min", "Max"):

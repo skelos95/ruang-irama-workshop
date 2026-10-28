@@ -70,7 +70,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
 
     def test_main_menu_has_seventeen_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = ("13 - GHOST MODE / FLY",)
-        localized_tails = (("12 - DUMMY FOLLOW", "13 - GHOST MODE / FLY"),)
+        localized_tails = (("12 - DUMMY TARGET", "13 - GHOST MODE / FLY"),)
         for source, _ in self.sources:
             navigation = rule_with(source, "MainMenuCursor = (Event Player.MainMenuCursor", "MenuCommand == 3")
             self.assertIn(
@@ -100,7 +100,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                     self.assertEqual(main.count(page_thirteen), 1)
             self.assertEqual(main.count("Event Player.GhostModeActive"), 1)
             self.assertEqual(main.count("Event Player.FlyModeActive"), 1)
-            dispatcher = rule_with(source, "Event Player.MenuCommand == 1;", "ApplyDummyBotFollowPage")
+            dispatcher = rule_with(source, "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;", "ApplyDummyBotFollowPage")
             self.assertRegex(
                 compact(dispatcher),
                 r"MenuPage==13\);CallSubroutine\(ApplyGhostFlyPage\);",

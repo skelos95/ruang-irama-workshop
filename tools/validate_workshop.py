@@ -1748,7 +1748,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for token in ("0 - INFO / CONTROLS", "1 - NAME COLOR", "2 - 3P CAMERA",
                       "3 - SOUNDTRACK", "4 - REVENGE", "5 - UNKILLABLE", "6 - HERO VOICE",
                       "7 - ICON", "8 - CROUCH: TELEPORT / ATTACH / SELF KILL", "9 - CROUCH PRIVACY",
-                      "10 - TRY YOUR LUCK", "11 - VOTE", "12 - DUMMY FOLLOW",
+                      "10 - TRY YOUR LUCK", "11 - VOTE", "12 - DUMMY TARGET",
                       "13 - GHOST MODE / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH",
                       "16 - MOVEMENT"):
             checks.require(token in main_renderer.body, f"Main menu page missing: {token}")
@@ -1756,9 +1756,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                       "InspectionPrivacyActive", "AllowDummyBotFollow"):
             checks.equal(main_renderer.body.count(f"Event Player.{state}"), 1,
                          f"Main menu: one English preview of applied {state}")
-        checks.require("LET ENEMY DUMMY FOLLOW YOU" in main_renderer.body,
+        checks.require("ENEMY DUMMY TARGETING" in main_renderer.body,
                        "Main menu: Dummy Follow description missing")
-        checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW' in main_renderer.body,
+        checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY TARGET' in main_renderer.body,
                        "pagina 12 e pagina 13 non sono distinte")
         main_hud = next(iter_calls(main_renderer.body, "Create HUD Text"), None)
         subtitle_branches = parse_top_level_ternary(main_hud.args[2]) if main_hud else None
@@ -1850,6 +1850,12 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     )
     checks.require(input_router is not None, "router input menu assente")
     if input_router:
+        packed_router = re.sub(r"\s+", "", mask_strings(input_router.body))
+        checks.require("ElseIf(IsButtonHeld(EventPlayer,Button(Ultimate)));EventPlayer.MenuCommand=7;"
+                       in packed_router,
+                       "reset menu: Ultimate deve armare il comando 7 con priorita finale")
+        checks.require(packed_router.find("MenuCommand=6;") < packed_router.find("MenuCommand=7;"),
+                       "reset menu: Ultimate deve seguire i comandi esistenti")
         checks.require(
             re.search(
                 r"MenuPage\s*==\s*3\s*,\s*Or\(\s*"
@@ -1870,6 +1876,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 ) is not None,
                 f"router input: {button} non produce il comando {command} sulla pagina 3 Soundtrack",
             )
+
+    release_router = next((rule for rule in rules if rule.name.startswith("05d - ")), None)
+    checks.require(release_router is not None and
+                   "Is Button Held(Event Player, Button(Ultimate)) == False" in (rule_block(release_router, "conditions") or ""),
+                   "reset menu: rilascio controller deve attendere Ultimate")
 
     soundtrack_jump = next(
         (
@@ -1892,7 +1903,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             rule for rule in rules
             if event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.MenuCommand == 1;" in rule.body
+            and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
             and "Event Player.MenuOpen == True;" in rule.body
             and "Call Subroutine(Apply" in rule.body
         ),
@@ -1900,6 +1911,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     )
     checks.require(apply_dispatcher is not None, "dispatcher apply menu assente")
     if apply_dispatcher:
+        checks.require(
+            "If(EventPlayer.MenuCommand==7);EventPlayer.MenuCommand=8;CallSubroutine(ResetMenuPage);"
+            in re.sub(r"\s+", "", mask_strings(apply_dispatcher.body)),
+            "reset menu: consumare il comando prima di ResetMenuPage",
+        )
         checks.require(
             re.search(r"MenuPage\s*==\s*1.*?Call Subroutine\(ApplyNameColorPage\);", apply_dispatcher.body, re.DOTALL) is not None,
             "apply menu: pagina 1 deve usare ApplyNameColorPage",
@@ -2247,7 +2263,7 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
 
 
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
-    """Guard at most twelve RGB icons floating within ten metres of the objective."""
+    """Guard at most twelve owner-bound RGB icons within five metres in 3D."""
     def code(expression: str) -> str:
         return re.sub(r"\s+", "", mask_strings(expression))
 
@@ -2293,21 +2309,22 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
                 checks.equal(code(call.args[4]), f"PlayerVariable({owner},NameColor)", "Pilar: RGB icona segue owner")
                 checks.equal(call.args[3].strip(), "Visible To Position and Color", "Pilar: rivalutazione RGB icona completa")
                 checks.equal(call.args[5].strip(), "False", "Pilar: nessun indicatore icona fuori schermo")
-                checks.equal(code(call.args[1]), f"ObjectivePosition(ObjectiveIndex)+PlayerVariable({owner},ObjectiveIconPosition)",
+                checks.equal(code(call.args[1]), f"PositionOf({owner})+PlayerVariable({owner},ObjectiveIconPosition)",
                              "Pilar: posizione fluida condivisa senza duplicare interpolazione per tipo")
                 checks.require(f"PlayerVariable({owner},IconIndex)=={index}" in code(call.args[0]),
                                "Pilar: tipo obsoleto nascosto subito prima della ricreazione")
                 for required in (f"EntityExists({owner})", f"PlayerVariable({owner},IsHuman)==True"):
                     checks.require(required in code(call.args[0]), "Pilar: owner in uscita o cambio squadra nascosto subito")
-                checks.require(f"ArrayContains(Global.HumanPlayers,{owner})" in code(call.args[0])
-                               and "DistanceBetween(ObjectivePosition(ObjectiveIndex),Vector(0,0,0))>0.100" in code(call.args[0]),
-                               "Pilar: visibilita richiede owner nel roster e obiettivo valido")
+                checks.require(f"ArrayContains(Global.HumanPlayers,{owner})" in code(call.args[0]),
+                               "Pilar: visibilita richiede owner nel roster")
                 branches = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(manager.body, call.start)]
                 checks.require("If(Global.ObjectiveIconIds[Global.ObjectiveIconIndex]==0);" in branches,
                                 "Pilar: creazione soltanto per slot senza handle")
                 expected = f"{'If' if index == 1 else 'ElseIf'}(Global.ObjectiveIconChoices[Global.ObjectiveIconIndex]=={index});"
                 checks.require(expected in branches, "Pilar: un solo tipo creato per scelta selezionata")
         packed = code(manager.body)
+        checks.require("ObjectivePosition(" not in packed and "ObjectiveIndex" not in packed,
+                       "Pilar: icone personali indipendenti dall'obiettivo")
         for token in (
             "If(Global.ObjectiveIconChoices[Global.ObjectiveIconIndex]!=PlayerVariable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex],IconIndex));",
             "DestroyIcon(Global.ObjectiveIconIds[Global.ObjectiveIconIndex]);",
@@ -2315,7 +2332,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
             "Global.ObjectiveIconIds[Global.ObjectiveIconIndex]=LastCreatedEntity;",
             "Global.ObjectiveIconPlayer=Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];",
             "Global.ObjectiveIconPlayer=Null;",
-            "RandomReal(0,10)", "RandomReal(0.500,8)",
+            "RandomReal(0,4)", "RandomReal(0.500,3)",
         ):
             checks.require(token in packed, f"Pilar: gestione entità e traiettoria mancanti {token}")
         for field in ("PlayerListUpdatePending", "TeamChangeProcessed"):
@@ -2327,7 +2344,7 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
         for chase in chases:
             checks.equal(tuple(code(arg) for arg in chase.args), (
                 "Global.ObjectiveIconOwners[Global.ObjectiveIconIndex]", "ObjectiveIconPosition",
-                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,10)+Vector(0,RandomReal(0.500,8),0)", "4.500", "None"),
+                "DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,4)+Vector(0,RandomReal(0.500,3),0)", "4.500", "None"),
                 "Pilar: chase Vector nativo congela destinazione e durata 4,5 secondi")
         renewal = "If(TotalTimeElapsed>=Global.ObjectiveIconTimes[Global.ObjectiveIconIndex]+3);"
         checks.require(renewal in packed, "Pilar: rinnovo anticipato dopo tre secondi mantiene il controllo a un Hz")
@@ -2336,8 +2353,8 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
                            if code(branch.splitlines()[0]) == renewal), None)
             checks.require(branch is not None and "SetPlayerVariable(" not in code(branch),
                            "Pilar: rinnovo parte dalla posizione corrente senza reset o teletrasporto")
-        checks.require("SetPlayerVariable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex],ObjectiveIconPosition,DirectionFromAngles(" in packed,
-                       "Pilar: inizializzazione Vector prima della chase")
+        checks.require("SetPlayerVariable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex],ObjectiveIconPosition,DirectionFromAngles(RandomReal(0,360),0)*RandomReal(0,4)+Vector(0,RandomReal(0.500,3),0));" in packed,
+                       "Pilar: inizializzazione Vector entro cinque metri prima della chase")
         checks.require("StopChasingPlayerVariable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex],ObjectiveIconPosition);" in packed,
                        "Pilar: manutenzione ferma la chase del vecchio owner")
     _, player_entries, _, _ = declaration_entries(source)
@@ -2474,8 +2491,12 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
     for owner in rules:
         writers = re.findall(r"\.(MultijumpLevel)\s*=(?!=)", mask_strings(owner.body))
         checks.require(not writers or subroutine_target(owner) in
-                       {"PreparePlayer", "QuiescePlayer", "ApplyMultijumpPage"},
+                       {"PreparePlayer", "QuiescePlayer", "ApplyMultijumpPage", "ResetMenuPage"},
                        "Multijump: spinta fissa, il salto non deve cambiare il livello scelto")
+        if subroutine_target(owner) == "ResetMenuPage":
+            reset_levels = re.findall(r"\.MultijumpLevel\s*=(?!=)\s*([^;]+);", mask_strings(owner.body))
+            checks.equal([value.strip() for value in reset_levels], ["1"],
+                         "Multijump: reset pagina deve ripristinare il livello 1")
         cooldown_writes = re.findall(r"\.NextMultijumpTime\s*=(?!=)", mask_strings(owner.body))
         checks.require(not cooldown_writes or subroutine_target(owner) in
                        {"PreparePlayer", "QuiescePlayer", "ApplyMultijumpPage", "ProcessMultijump"},
@@ -2779,6 +2800,7 @@ def validate_ghost_fly(
             ("PreparePlayer", "False"),
             ("QuiescePlayer", "False"),
             ("ApplyGhostFlyPage", f"EventPlayer.{variable}==False"),
+            ("ResetMenuPage", "False"),
         }
         checks.equal(set(writers), expected, f"Ghost/Fly: owner writer {variable}")
         checks.equal(len(writers), len(expected), f"Ghost/Fly: numero writer {variable}")
@@ -2855,15 +2877,15 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
     if navigation:
         expected = (
             "ElseIf(EventPlayer.MenuPage==16);If(EventPlayer.MovementCursor==0);"
-            "EventPlayer.MovementSpeed=Min(1000,Max(10,EventPlayer.MovementSpeed+"
-            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementSpeed<100?10:50):"
-            "(EventPlayer.MovementSpeed<=100?-10:-50))));Else;"
+            "EventPlayer.MovementSpeed=Min(1000,Max(20,EventPlayer.MovementSpeed+"
+            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementSpeed<100?20:100):"
+            "(EventPlayer.MovementSpeed<=100?-20:-100))));Else;"
             "EventPlayer.MovementGravity=Min(500,Max(0,EventPlayer.MovementGravity+"
-            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementGravity<100?10:50):"
-            "(EventPlayer.MovementGravity<=100?-10:-50))));End;CallSubroutine(ApplyGhostFlyPhysics);"
+            "(EventPlayer.MenuCommand==3?(EventPlayer.MovementGravity<100?20:100):"
+            "(EventPlayer.MovementGravity<=100?-20:-100))));End;CallSubroutine(ApplyGhostFlyPhysics);"
         )
         checks.require(expected in packed(navigation.body),
-                       "Movement: pagina 16 richiede passi adattivi 10/50, incremento <100 e decremento <=100, limiti Speed 10..1000 e Gravity 0..500, applicati subito")
+                       "Movement: pagina 16 richiede passi adattivi 20/100, incremento <100 e decremento <=100, limiti Speed 20..1000 e Gravity 0..500, applicati subito")
     for field in ("MovementSpeed", "MovementGravity"):
         writers = []
         for rule in rules:
@@ -2874,8 +2896,8 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
                 checks.require(not any(len(call.args) >= 2 and call.args[1].strip() == field
                                        for call in iter_calls(rule.body, action)),
                                f"Movement: scrittura {field} fuori dal proprietario autorizzato")
-        checks.equal([(subroutine_target(rule) or prefix_for_movement(rule), owner) for rule, owner in writers],
-                     [("06", "Event Player"), ("PreparePlayer", "Event Player")],
+        checks.equal(sorted((subroutine_target(rule) or prefix_for_movement(rule), owner) for rule, owner in writers),
+                     [("06", "Event Player"), ("PreparePlayer", "Event Player"), ("ResetMenuPage", "Event Player")],
                      f"Movement: owner esclusivi di {field}; morte, hero e Luck conservano la scelta")
     apply = rule_by_subroutine(rules, "ApplyMovementPage")
     checks.require(apply is not None, "Movement: ApplyMovementPage assente")
@@ -2883,10 +2905,20 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
         checks.equal(packed(rule_block(apply, "actions") or ""),
                      "EventPlayer.MovementCursor=(EventPlayer.MovementCursor+1)%2;",
                      "Movement: Interact alterna soltanto Speed/Gravity")
+    reset = rule_by_subroutine(rules, "ResetMenuPage")
+    checks.require(reset is not None, "Movement: ResetMenuPage assente")
+    if reset:
+        checks.require(
+            "EventPlayer.MovementCursor=0;EventPlayer.MovementSpeed=100;"
+            "EventPlayer.MovementGravity=100;EventPlayer.GhostFlyPhysicsApplied=False;"
+            "CallSubroutine(ApplyGhostFlyPhysics);" in packed(reset.body),
+            "Movement: reset contestuale richiede Speed/Gravity 100, cursore Speed e fisica immediata",
+        )
     renderer = rule_by_subroutine(rules, "DrawMovementMenu")
     checks.require(renderer is not None, "Movement: DrawMovementMenu assente")
     if renderer:
-        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (10-1000%)", "Gravity: {1}% (0-500%)",
+        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (20-1000%)", "Gravity: {1}% (0-500%)",
+                     "{0}: reset both to 100%",
                      "Event Player.MovementSpeed", "Event Player.MovementGravity",
                      "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1"):
             checks.require(text in renderer.body, f"Movement: renderer incompleto: {text}")
@@ -2901,7 +2933,7 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
                 selector = "(EventPlayer.MovementCursor==0?EventPlayer.MovementSpeed:EventPlayer.MovementGravity)"
                 checks.equal(packed(plus.args[1]), "InputBindingString(Button(PrimaryFire))",
                              "Movement: HUD incremento binding Primary")
-                checks.equal(packed(plus.args[2]), selector + "<100?10:50",
+                checks.equal(packed(plus.args[2]), selector + "<100?20:100",
                              "Movement: HUD incremento segue il valore selezionato e la soglia <100")
                 minus = next(iter_calls(plus.args[3], "Custom String"), None)
                 checks.require(minus is not None and minus.raw.strip() == plus.args[3].strip()
@@ -2910,9 +2942,9 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
                 if minus and len(minus.args) == 3:
                     checks.equal(packed(minus.args[1]), "InputBindingString(Button(SecondaryFire))",
                                  "Movement: HUD decremento binding Secondary")
-                    checks.equal(packed(minus.args[2]), selector + "<=100?10:50",
+                    checks.equal(packed(minus.args[2]), selector + "<=100?20:100",
                                  "Movement: HUD decremento segue il valore selezionato e la soglia <=100")
-        for button in ("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Melee"):
+        for button in ("Crouch", "Primary Fire", "Secondary Fire", "Interact", "Reload", "Melee", "Ultimate"):
             checks.require(f"Input Binding String(Button({button}))" in renderer.body,
                            f"Movement: binding {button} assente")
     router = rule_by_subroutine(rules, "DrawActiveMenuPage")
@@ -3313,7 +3345,7 @@ End;
             else:
                 locked_subtitle = ordinary_subtitle = subtitle
             checks.equal(len(content_parts(locked_subtitle)), 3, "Locked Soundtrack: three compact command groups")
-            checks.equal(len(content_parts(ordinary_subtitle)), 5, "Soundtrack: five command groups in Subheader")
+            checks.equal(len(content_parts(ordinary_subtitle)), 6, "Soundtrack: six command groups including reset in Subheader")
             checks.equal(len(functions), 4, "Soundtrack: four function rows in Text")
             locked_bindings = [call.args[0].strip() for call in iter_calls(locked_subtitle, "Input Binding String")
                                if call.args]
@@ -6807,8 +6839,9 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         if move_speed_calls:
             checks.equal(move_speed_calls[0].args[0].strip(), "Event Player",
                          "LockBot: destinatario velocità")
-            checks.equal(move_speed_calls[0].args[1].strip(), "20",
-                         "LockBot: velocità bot/dummy")
+            checks.equal(compact(move_speed_calls[0].args[1]),
+                         compact("Is Dummy Bot(Event Player) ? 0 : 20"),
+                         "LockBot: dummy fermo e AI normale al 20%")
 
     validate_dummy_slot_management(checks, rules, compact)
 
@@ -6844,7 +6877,7 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             rule for rule in rules
             if event_type(rule) == "Ongoing - Each Player"
             and "Start Facing(Event Player," in rule.body
-            and "Start Throttle In Direction(Event Player," in rule.body
+            and "DummyBotFollowTarget" in rule.body
         ),
         None,
     )
@@ -6858,7 +6891,10 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             "Is Alive(Event Player) == True;",
             "Event Player.DummyBotFollowTarget != Null;",
             "Entity Exists(Event Player.DummyBotFollowTarget) == True;",
+            "Player Variable(Event Player.DummyBotFollowTarget, IsHuman) == True;",
             "Player Variable(Event Player.DummyBotFollowTarget, AllowDummyBotFollow) == True;",
+            "Has Spawned(Event Player.DummyBotFollowTarget) == True;",
+            "Is Alive(Event Player.DummyBotFollowTarget) == True;",
             "Team Of(Event Player.DummyBotFollowTarget) == Opposite Team Of(Team Of(Event Player));",
         ):
             checks.require(token in dummy_movement.body, f"movimento automatico dummy incompleto: {token}")
@@ -6886,33 +6922,19 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
                              "movimento dummy: facing deve usare il target cache")
 
         throttle_calls = list(iter_calls(dummy_movement.body, "Start Throttle In Direction"))
-        checks.equal(len(throttle_calls), 1, "movimento dummy: numero throttle automatici")
-        if throttle_calls:
-            throttle = throttle_calls[0]
-            checks.equal(len(throttle.args), 6, "movimento dummy: argomenti throttle")
-            if len(throttle.args) == 6:
-                for index, expected in (
-                    (0, "Event Player"),
-                    (1, "Forward"),
-                    (3, "To Player"),
-                    (4, "Replace Existing Throttle"),
-                    (5, "Direction and Magnitude"),
-                ):
-                    checks.equal(throttle.args[index].strip(), expected,
-                                 f"movimento dummy: throttle argomento {index}")
-            magnitude = parse_top_level_ternary(throttle.args[2]) if len(throttle.args) >= 3 else None
-            checks.require(magnitude is not None, "movimento dummy: ternario arresto assente")
-            if magnitude:
-                stop_condition, stopped, moving = magnitude
-                checks.equal(stopped, "0", "movimento dummy: magnitudine entro quattro metri")
-                checks.equal(moving, "1", "movimento dummy: magnitudine oltre quattro metri")
-                checks.equal(compact(stop_condition),
-                             compact("Or(Is In Spawn Room(Event Player), Distance Between(Event Player, Event Player.DummyBotFollowTarget) <= 4)"),
-                             "movimento dummy: arresto deve usare il target cache")
+        checks.equal(len(throttle_calls), 0, "dummy target: throttle attivo rimosso")
+        stop_calls = list(iter_calls(dummy_movement.body, "Stop Throttle In Direction"))
+        checks.equal([tuple(argument.strip() for argument in call.args) for call in stop_calls],
+                     [("Event Player",)], "dummy target: arresto throttle personale")
         checks.require("Abort;" not in dummy_movement.body
-                       and "Stop Facing(Event Player);" not in dummy_movement.body
-                       and "Stop Throttle In Direction(Event Player);" not in dummy_movement.body,
+                       and "Stop Facing(Event Player);" not in dummy_movement.body,
                        "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
+        expected_actions = """
+            Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Event Player.DummyBotFollowTarget)), 1000, To World, Direction and Turn Rate);
+            Stop Throttle In Direction(Event Player);
+        """
+        checks.equal(compact(rule_block(dummy_movement, "actions") or ""), compact(expected_actions),
+                     "dummy target: solo facing e arresto throttle")
         checks.require(not wait_calls(dummy_movement.body) and action_loop_count(dummy_movement.body) == 0,
                        "movimento automatico dummy non deve usare Wait/Loop")
 
