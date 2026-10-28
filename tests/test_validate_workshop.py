@@ -1218,7 +1218,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_main_toggle_cannot_reopen_a_dedicated_submenu(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                               and "Event Player.MenuCommand == 1;" in rule.body
+                               and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
                                and "ApplyDummyBotFollowPage" in rule.body)
         for name in ("ApplyCrouchTravel", "ApplyInspectionPrivacyPage",
                      "ApplyDummyBotFollowPage", "ApplySuperPunchPage"):
@@ -1231,7 +1231,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_main_toggle_must_dispatch_by_main_cursor_not_submenu_page(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                               and "Event Player.MenuCommand == 1;" in rule.body
+                               and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
                                and "ApplyDummyBotFollowPage" in rule.body)
         for page in (8, 9, 12, 15):
             with self.subTest(page=page):
@@ -1242,7 +1242,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_direct_toggle_cannot_restore_retired_on_off_cursor(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.MenuCommand == 1;" in rule.body
+            and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
             and "ApplyDummyBotFollowPage" in rule.body
         )
         mutated = self.inject_action(dispatcher, "Event Player.KursorIkutiBotBuatan = 0;")
@@ -1251,7 +1251,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_page_twelve_apply_dispatcher_is_required(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.MenuCommand == 1;" in rule.body
+            and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
             and "ApplyDummyBotFollowPage" in rule.body
         )
         mutated = self.replace_in_rule(
