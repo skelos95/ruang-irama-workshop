@@ -38,7 +38,7 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-La revisione con passi Movement aggiornati, reset personali, icone del proprietario e dummy fermi usa **27.470 unità strutturali**, 662 in più rispetto alle 26.808 della revisione precedente. Il massimo per regola resta 2.605. Il clipboard passa da 293.767 a 299.516 byte UTF-8 (+5.749); la specifica da 273.593 a 276.042 (+2.449). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+La revisione con passi Movement aggiornati, reset personali, icone del proprietario e dummy fermi usa **27.486 unità strutturali**, 678 in più rispetto alle 26.808 della revisione precedente. Il massimo per regola resta 2.605. Il clipboard passa da 293.767 a 299.635 byte UTF-8 (+5.868); la specifica da 273.593 a 276.148 (+2.555). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
@@ -46,7 +46,7 @@ La revisione con passi Movement aggiornati, reset personali, icone del proprieta
 | Variabili globali | 71 | 89 |
 | Variabili player | 125 | 127 |
 | Subroutine | 69 | 116 |
-| Byte di testo UTF-8 | 276.042 | 299.516 |
+| Byte di testo UTF-8 | 276.148 | 299.635 |
 
 La regola più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.605. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 

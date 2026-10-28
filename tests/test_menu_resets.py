@@ -53,6 +53,8 @@ class MenuResetEvaluator(DirectToggleEvaluator):
         return super().resolve(name)
 
     def call(self, name, args):
+        if name == "PositionOf":
+            return (0, 0, 0)
         if name == "MaxHealth":
             return self.players[args[0]]["max_health"]
         if name == "IsOnGround":
@@ -69,6 +71,7 @@ class MenuResetEvaluator(DirectToggleEvaluator):
             "Set Damage Received", "Set Knockback Received", "Enable Movement Collision With Players",
             "Set Player Health", "Destroy Icon", "Enable Movement Collision With Environment",
             "Stop Transforming Throttle", "Set Move Speed", "Set Gravity", "Allow Button", "Disallow Button",
+            "Stop Accelerating",
         }
         if name in boundary:
             args = [self.evaluate(arg) for arg in expressions]
@@ -206,6 +209,37 @@ class MenuResetTests(unittest.TestCase):
                 self.assertEqual(state["MenuCommand"], 0)
                 model.input("owner", "Ultimate", ticks=20)
                 self.assertEqual(len(model.messages), 2)
+
+    def test_death_and_respawn_preserve_a_held_reset_until_physical_release(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.add("owner", MainMenuCursor=3)
+                model.input("owner", "Ultimate", ticks=3)
+                self.assertEqual(state["MenuCommand"], 8)
+                marker = len(model.native_calls)
+
+                state["alive"] = False
+                self.assertTrue(model.conditions("12e", "owner"))
+                model.run("12e", "owner")
+                self.assertEqual(state["MenuCommand"], 8)
+                state["held"] = {"Ultimate"}
+                for _ in range(3): model.tick("owner")
+                self.assertEqual(state["MenuCommand"], 8)
+                self.assertFalse(state["MenuInputLocked"])
+
+                state["alive"] = True
+                model.input("owner", "Ultimate", ticks=3)
+                self.assertEqual(state["MenuCommand"], 8)
+                resets = lambda: model.messages.count(("owner", "Page reset to defaults."))
+                self.assertEqual(resets(), 1)
+                self.assertNotIn(("Allow Button", ("owner", "Ultimate")), model.native_calls[marker:])
+
+                state["held"] = set()
+                for _ in range(3): model.tick("owner")
+                self.assertEqual(state["MenuCommand"], 0)
+                self.assertIn(("Allow Button", ("owner", "Ultimate")), model.native_calls[marker:])
+                model.input("owner", "Ultimate", ticks=3)
+                self.assertEqual(resets(), 2)
 
     def test_unsupported_actions_toggles_and_locked_soundtrack_are_unchanged(self):
         for source, model in self.models():

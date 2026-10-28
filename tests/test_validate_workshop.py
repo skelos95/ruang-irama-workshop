@@ -3255,6 +3255,13 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.replace_in_rule(dispatcher, "Event Player.MenuCommand = 8;", "Event Player.MenuCommand = 0;")
         self.assert_rejected(mutated, "reset menu: consumare il comando prima di ResetMenuPage")
 
+    def test_page_reset_consumption_survives_death_until_ultimate_release(self) -> None:
+        death = self.rule(lambda rule: rule.name.startswith("12e -"))
+        mutated = self.replace_in_rule(death,
+            "Event Player.MenuCommand != 8", "Event Player.MenuCommand != 7")
+        self.assert_rejected(mutated,
+            "reset menu: morte deve conservare Ultimate consumato fino al rilascio")
+
     def test_page_reset_ultimate_keeps_the_last_input_priority(self) -> None:
         router = self.rule(lambda rule: rule.name.startswith("05c - "))
         mutated = self.replace_in_rule(router, "Event Player.MenuCommand = 7;", "Event Player.MenuCommand = 6;")

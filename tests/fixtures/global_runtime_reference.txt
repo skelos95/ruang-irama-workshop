@@ -1940,7 +1940,9 @@ rule("46 - Jump revive: Store the death position global")
 		Set Gravity(Global.TriggerPlayer, 100);
 		Enable Movement Collision With Environment(Global.TriggerPlayer);
 		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
+		If(Or((Global.TriggerPlayer.MenuCommand != 8), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))));
 		Global.TriggerPlayer.MenuCommand = 0;
+		End;
 		Global.TriggerPlayer.TravelCommand = 0;
 		Small Message(Global.TriggerPlayer, Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))));
 	}

@@ -1950,7 +1950,9 @@ rule("12e - Jump revive: Store the death position")
 		Set Gravity(Event Player, 100);
 		Enable Movement Collision With Environment(Event Player);
 		Event Player.GhostFlyPhysicsApplied = False;
-		Event Player.MenuCommand = 0;
+		If(Or(Event Player.MenuCommand != 8, Is Button Held(Event Player, Button(Ultimate)) == False));
+			Event Player.MenuCommand = 0;
+		End;
 		Event Player.TravelCommand = 0;
 		Small Message(Event Player, Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))));
 	}

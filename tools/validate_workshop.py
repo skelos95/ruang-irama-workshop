@@ -1910,6 +1910,14 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         None,
     )
     checks.require(apply_dispatcher is not None, "dispatcher apply menu assente")
+    reset_death = next((rule for rule in rules if rule.name.startswith("12e -")), None)
+    checks.require(reset_death is not None, "reset menu: gestione morte assente")
+    if reset_death:
+        checks.require(
+            "If(Or(EventPlayer.MenuCommand!=8,IsButtonHeld(EventPlayer,Button(Ultimate))==False));"
+            "EventPlayer.MenuCommand=0;End;" in re.sub(r"\s+", "", mask_strings(reset_death.body)),
+            "reset menu: morte deve conservare Ultimate consumato fino al rilascio",
+        )
     if apply_dispatcher:
         checks.require(
             "If(EventPlayer.MenuCommand==7);EventPlayer.MenuCommand=8;CallSubroutine(ResetMenuPage);"
