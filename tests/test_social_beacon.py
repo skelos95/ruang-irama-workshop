@@ -1,6 +1,6 @@
-"""Execute the objective icons' ownership, captured paths and expressions.
+"""Execute personal icons' ownership, captured paths and live owner positions.
 
-Native icon creation and objective queries are controlled inputs. These tests
+Native icon creation and player positions are controlled inputs. These tests
 cover script bookkeeping and geometry, not the client's icon dimensions or art.
 """
 
@@ -8,6 +8,7 @@ import math
 import operator
 import re
 import unittest
+from pathlib import Path
 
 from tools import validate_workshop as validator
 from tests.test_audit_lifecycle import AuditExpression, AuditLifecycleEvaluator
@@ -59,6 +60,7 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
     def __init__(self, source):
         super().__init__(source)
         self.objective = Vector(10, 0, 20)
+        self.objective_queries = 0
         self.sample = 0
         self.random_calls = 0
         self.icons = {}
@@ -79,7 +81,8 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
         self.join(identity)
         defaults = dict(IsHuman=True, IconIndex=1, ColorIndex=0,
                         PlayerListUpdatePending=False, TeamChangeProcessed=False,
-                        NameColor=(255, 255, 255, 255), ObjectiveIconPosition=Vector(0, 0.5, 0), exists=True)
+                        NameColor=(255, 255, 255, 255), Position=Vector(10, 0, 20),
+                        ObjectiveIconPosition=Vector(0, 0.5, 0), exists=True)
         defaults.update(changes)
         self.players[identity].update(defaults)
         return self.players[identity]
@@ -100,7 +103,10 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
             self.players[args[0]][args[1]] = start + (target - start) * fraction
         if name == "Vector": return Vector(*args)
         if name == "FirstOf": return args[0][0] if args[0] else None
-        if name == "ObjectivePosition": return self.objective
+        if name == "ObjectivePosition":
+            self.objective_queries += 1
+            return self.objective
+        if name == "PositionOf": return self.players[args[0]]["Position"]
         if name == "DistanceBetween": return (args[0] - args[1]).magnitude()
         if name == "MagnitudeOf": return args[0].magnitude()
         if name == "XComponentOf": return args[0].x
@@ -173,7 +179,9 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                 owner = self.globals["ObjectiveIconPlayer"]
                 self.globals[f"CapturedOwner{self.next_entity}"] = owner
                 captured = f"Global.CapturedOwner{self.next_entity}"
-                args = tuple(arg.replace("Evaluate Once(Global.ObjectiveIconPlayer)", captured) for arg in call.args)
+                args = tuple(arg.replace("Evaluate Once(Global.ObjectiveIconPlayer)", captured)
+                             .replace("Evaluate Once(Global.ObjectiveIconIndex)",
+                                      str(self.globals["ObjectiveIconIndex"])) for arg in call.args)
                 handle = self.next_entity
                 self.next_entity += 1
                 self.created.append(handle)
@@ -236,26 +244,96 @@ class SocialBeaconTests(unittest.TestCase):
         for path, _, _ in SOURCES:
             yield path.name, SocialBeaconEvaluator(path.read_text(encoding="utf-8"))
 
-    def test_only_native_icons_reevaluate_objective_position_and_hide_without_objective(self):
+    def test_compiled_icon_expressions_capture_owner_but_follow_live_position_and_color(self):
+        root = Path(__file__).resolve().parents[1]
+        for path in (root / "workshop/ruang_irama.en-US.workshop",
+                     root / "tests/fixtures/global_runtime_reference.txt"):
+            with self.subTest(source=path.name):
+                source = path.read_text(encoding="utf-8")
+                manager = validator.rule_by_subroutine(validator.extract_rules(source), "UpdateSocialObjectiveIcons")
+                model = SocialBeaconEvaluator(SOURCES[0][0].read_text(encoding="utf-8"))
+                state = model.add("owner", ObjectiveIconPosition=Vector(2, 1, 3))
+                model.add("other", Position=Vector(-900, -80, -700))
+                model.globals["VisibleIconChoices"] = [0] * 12
+                calls = list(validator.iter_calls(manager.body, "Create Icon"))
+                self.assertEqual(len(calls), 36)
+                for selected, call in enumerate(calls, 1):
+                    model.globals.update(ObjectiveIconPlayer="owner", ObjectiveIconIndex=3)
+                    model.globals["VisibleIconChoices"][3] = selected
+                    model.execute([(call.raw, None, None)])
+                    visual = model.icons[model.created[-1]]
+                    model.globals.update(ObjectiveIconPlayer="other", ObjectiveIconIndex=11)
+                    state.update(Position=Vector(selected * 20, selected * -5, selected * 7),
+                                 NameColor=(selected, 90, 180, 255))
+                    self.assertEqual(model.evaluate(visual[1]), state["Position"] + Vector(2, 1, 3))
+                    self.assertEqual(model.evaluate(visual[4]), (selected, 90, 180, 255))
+                    self.assertEqual(model.evaluate(visual[0]), ["owner", "other"])
+                    model.globals["VisibleIconChoices"][3] = 0
+                    self.assertEqual(model.evaluate(visual[0]), [])
+
+    def test_compiled_visibility_cache_needs_owner_but_never_an_objective(self):
+        root = Path(__file__).resolve().parents[1]
+        for path in (root / "workshop/ruang_irama.en-US.workshop",
+                     root / "tests/fixtures/global_runtime_reference.txt"):
+            with self.subTest(source=path.name):
+                source = path.read_text(encoding="utf-8")
+                expression = re.search(r"Global\.VisibleIconChoices\[Global\.ObjectiveIconIndex\] = ([^;]+);", source)[1]
+                self.assertNotIn("Objective Position", expression)
+                model = SocialBeaconEvaluator(SOURCES[0][0].read_text(encoding="utf-8"))
+                state = model.add("owner", IconIndex=36)
+                model.objective = Vector(0, 0, 0)
+                model.globals["ObjectiveIconPlayer"] = "owner"
+                self.assertEqual(model.evaluate(expression), 36)
+                state["exists"] = False
+                self.assertEqual(model.evaluate(expression), 0)
+                self.assertEqual(model.objective_queries, 0)
+
+    def test_only_native_icons_follow_live_owner_position_without_an_objective(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 self.assertFalse([call for rule in model.rules
                                   for call in validator.iter_calls(rule.body, "Create Effect")])
-                model.add("human")
+                state = model.add("human")
+                model.objective = Vector(0, 0, 0)
                 model.run(now=100)
                 self.assertEqual(len(model.icons), 1)
                 visual = model.visual("human")
-                offset = model.evaluate(visual[1]) - model.objective
+                offset = model.evaluate(visual[1]) - state["Position"]
+                state["Position"] = Vector(35, 7, 60)
+                self.assertEqual(model.evaluate(visual[1]), state["Position"] + offset)
                 model.objective = Vector(35, 7, 60)
-                self.assertEqual(model.evaluate(visual[1]), model.objective + offset)
+                self.assertEqual(model.evaluate(visual[1]), state["Position"] + offset)
                 self.assertEqual(model.evaluate(visual[0]), ["human"])
                 model.objective = Vector(0, 0, 0)
-                self.assertEqual(model.evaluate(visual[0]), [])
+                self.assertEqual(model.evaluate(visual[0]), ["human"])
+                self.assertEqual(model.objective_queries, 0)
 
-    def test_ten_metre_radius_does_not_depend_on_roster_size(self):
+    def test_outermost_source_waypoints_stay_within_five_metres_after_owner_teleports(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                model.add("human-0")
+                native = model.call
+
+                def upper_bound(name, args):
+                    return args[1] if name == "RandomReal" else native(name, args)
+
+                model.call = upper_bound
+                state = model.add("human")
+                model.run(now=100)
+                visual = model.visual("human")
+                for now, owner_position in ((100, Vector(0, 0, 0)),
+                                            (101.5, Vector(400, -70, 280)),
+                                            (103, Vector(-700, 90, -340))):
+                    state["Position"] = owner_position
+                    model.run(now=now)
+                    offset = model.evaluate(visual[1]) - owner_position
+                    self.assertAlmostEqual(offset.magnitude(), 5, places=8)
+                    self.assertAlmostEqual(offset.y, 3, places=8)
+                    self.assertEqual(len(model.created), 1)
+
+    def test_five_metre_3d_radius_does_not_depend_on_roster_size(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.add("human-0")
                 model.run(now=100)
                 visual = model.visual("human-0")
                 captured = model.chases["human-0"]
@@ -269,14 +347,14 @@ class SocialBeaconTests(unittest.TestCase):
                     model.remove(f"human-{slot}")
                     self.assertEqual(model.evaluate(visual[1]), position)
                     self.assertEqual(model.chases["human-0"], captured)
-                self.assertLessEqual(math.hypot(position.x - model.objective.x,
-                                               position.z - model.objective.z), 10)
+                self.assertLessEqual((position - state["Position"]).magnitude(), 5)
 
     def test_twelve_native_icons_bind_distinct_owners_and_reevaluate_rgb_without_recreation(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 for slot in range(12):
-                    model.add(f"human-{slot}", IconIndex=slot + 1, NameColor=(slot, 90, 180, 255))
+                    model.add(f"human-{slot}", IconIndex=slot + 1, NameColor=(slot, 90, 180, 255),
+                              Position=Vector(slot * 15, slot, -slot * 9))
                 model.run(now=100)
                 self.assertEqual(len(model.created), 12)
                 self.assertEqual(len(model.icons), 12)
@@ -293,6 +371,13 @@ class SocialBeaconTests(unittest.TestCase):
                 state.update(NameColor=(1, 2, 3, 255))
                 visual = model.visual("human-0")
                 self.assertEqual(model.evaluate(visual[4]), (1, 2, 3, 255))
+                before = {f"human-{slot}": model.evaluate(model.visual(f"human-{slot}")[1])
+                          for slot in range(12)}
+                displacement = Vector(150, -8, -230)
+                state["Position"] = state["Position"] + displacement
+                self.assertEqual(model.evaluate(visual[1]), before["human-0"] + displacement)
+                for slot in range(1, 12):
+                    self.assertEqual(model.evaluate(model.visual(f"human-{slot}")[1]), before[f"human-{slot}"])
                 model.run(now=101)
                 self.assertEqual(len(model.created), 12)
 
@@ -331,7 +416,8 @@ class SocialBeaconTests(unittest.TestCase):
             model.add("human")
             model.objective = Vector(0, 0, 0)
             model.run(now=100)
-            self.assertEqual(model.created, [])
+            self.assertEqual(len(model.created), 1)
+            self.assertEqual(model.evaluate(model.visual("human")[0]), ["human"])
             # The roster remains populated briefly during a native team-change
             # quarantine; its owned icon must hide before serial cleanup runs.
             for changes in visible_changes:
@@ -402,22 +488,24 @@ class SocialBeaconTests(unittest.TestCase):
                 for slot in range(12): model.add(f"human-{slot}")
                 model.run(now=100)
                 self.assertEqual(model.random_calls, 72)
-                # Samples must use the expanded area, not merely fit inside it.
+                # Horizontal reach 4 m and height at most 3 m bound the full
+                # 3D distance by 5 m; interpolation stays in this convex set.
                 sampled_radius = max(math.hypot(point.x, point.z)
                                      for start, target, _, _ in model.chases.values()
                                      for point in (start, target))
-                self.assertAlmostEqual(sampled_radius, 10, places=8)
+                self.assertAlmostEqual(sampled_radius, 4, places=8)
                 visual = model.visual("human-0")
                 start, target, _, duration = model.chases["human-0"]
                 for fraction in (0, 0.2, 0.5, 0.8, 1):
                     model.now = 100 + duration * fraction
-                    actual = model.evaluate(visual[1]) - model.objective
+                    actual = model.evaluate(visual[1]) - model.players["human-0"]["Position"]
                     expected = start + (target - start) * fraction
                     self.assertAlmostEqual((actual - expected).magnitude(), 0, places=8)
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 10 + 1e-8)
-                    self.assertTrue(0.5 <= actual.y <= 8)
+                    self.assertLessEqual(actual.magnitude(), 5 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 4 + 1e-8)
+                    self.assertTrue(0.5 <= actual.y <= 3)
                 vertical_moves = [abs(start.y - target.y) for start, target, _, _ in model.chases.values()]
-                self.assertGreater(max(vertical_moves), 6)
+                self.assertGreater(max(vertical_moves), 2)
                 for now in (100, 101, 102): model.run(now=now)
                 self.assertEqual(model.random_calls, 72)
                 self.assertEqual(len(model.chase_started), 12)
@@ -427,9 +515,10 @@ class SocialBeaconTests(unittest.TestCase):
                 for identity in list(model.globals["HumanPlayers"])[1:]: model.remove(identity)
                 for now in (103, 103.5, 104, 104.5, 106):
                     model.now = now
-                    actual = model.evaluate(visual[1]) - model.objective
-                    self.assertLessEqual(math.hypot(actual.x, actual.z), 10 + 1e-8)
-                    self.assertTrue(0.5 <= actual.y <= 8)
+                    actual = model.evaluate(visual[1]) - model.players["human-0"]["Position"]
+                    self.assertLessEqual(actual.magnitude(), 5 + 1e-8)
+                    self.assertLessEqual(math.hypot(actual.x, actual.z), 4 + 1e-8)
+                    self.assertTrue(0.5 <= actual.y <= 3)
                 self.assertEqual(model.random_calls, 108)
 
     def test_cleanup_stops_only_the_exact_owner_native_chase(self):

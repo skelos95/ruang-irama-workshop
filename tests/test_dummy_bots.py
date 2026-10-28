@@ -3,6 +3,10 @@
 from pathlib import Path
 import unittest
 
+from tests.test_global_compaction import CompactionContext
+from tools import build_global_runtime as compiler
+from tools import validate_workshop as validator
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -130,10 +134,9 @@ class DummyBotFeatureTests(unittest.TestCase):
         self.assertIn("Set Knockback Received(Event Player, 100);", en_lock)
         self.assertNotIn("Disable Movement Collision With Players", it_lock)
         self.assertNotIn("Disable Movement Collision With Players", en_lock)
-        self.assertEqual(it_lock.count("Set Move Speed(Event Player, 20);"), 1)
-        self.assertEqual(en_lock.count("Set Move Speed(Event Player, 20);"), 1)
-        self.assertNotIn("Set Move Speed(Event Player, 0);", it_lock)
-        self.assertNotIn("Set Move Speed(Event Player, 0);", en_lock)
+        for lock in (it_lock, en_lock):
+            self.assertEqual(lock.count("Set Move Speed(Event Player, Is Dummy Bot(Event Player) ? 0 : 20);"), 1)
+            self.assertNotIn("Set Move Speed(Event Player, 20);", lock)
 
     def test_dummy_faces_nearest_living_enemy_human_without_extra_loop(self):
         for source, global_name, rule_kw in ((self.it, "Global", "rule"), (self.en, "Global", "rule")):
@@ -144,7 +147,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertNotIn("Sorted Array(Filtered Array", movement)
             self.assertNotIn(f"Filtered Array({global_name}.HumanPlayers", movement)
             self.assertIn("Direction and Turn Rate", movement)
-            self.assertIn("Direction and Magnitude", movement)
+            self.assertNotIn("Start Throttle", movement)
 
             scheduler = source.split(f'{rule_kw}("89b2 - ', 1)[1].split(
                 f'{rule_kw}("89c - Subroutine: Process player maintenance at 1 Hz")', 1
@@ -156,6 +159,25 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn(f"{global_name}.SchedulerStep % 4 == Slot Of({global_name}.ActivePlayer) % 4", scheduler)
         self.assertEqual(self.it.count("Loop If Condition Is True;"), 1)
 
+    def test_stationary_dummy_speed_preserves_normal_ai_movement_in_all_artifacts(self):
+        for path in (
+            "source/ruang_irama.en-US.source", "tests/fixtures/semantic_reference.txt",
+            "workshop/ruang_irama.en-US.workshop", "tests/fixtures/global_runtime_reference.txt",
+        ):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            rules = validator.extract_rules(text)
+            lock = validator.rule_by_subroutine(rules, "LockBot")
+            speed = next(validator.iter_calls(lock.body, "Set Move Speed"))
+            _, fields, _, _ = validator.declaration_entries(text)
+            model = CompactionContext([field.name for field in fields])
+            owner = model.parse(compiler.actor_text(speed.args[0]))
+            value = model.parse(compiler.actor_text(speed.args[1]))
+            for dummy, expected in ((True, 0), (False, 20)):
+                with self.subTest(artifact=path, dummy=dummy):
+                    model.native["IsDummyBot"] = dummy
+                    self.assertEqual(owner.evaluate(model), "owner")
+                    self.assertEqual(value.evaluate(model), expected)
+
     def test_dummy_follow_page_defaults_off_and_is_per_player(self):
         for source in (self.it, self.en):
             self.assertIn("Event Player.AllowDummyBotFollow = False;", source)
@@ -163,13 +185,13 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Call Subroutine(ApplyDummyBotFollowPage);", source)
             self.assertNotIn("GambarIkutiBotBuatan", source)
             self.assertIn("Event Player.MainMenuCursor == 12", source)
-            self.assertIn("12 - DUMMY FOLLOW", source)
+            self.assertIn("12 - DUMMY TARGET", source)
 
-    def test_native_dummy_walks_forward_automatically_and_stops_cleanly(self):
+    def test_native_dummy_stays_stationary_while_facing_and_stops_cleanly(self):
         for source, rule_kw in ((self.it, "rule"), (self.en, "rule")):
-            self.assertEqual(source.count("Start Throttle In Direction(Event Player, Forward,"), 1)
-            self.assertIn("Distance Between(Event Player, Event Player.DummyBotFollowTarget) <= 4", source)
-            self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 2)
+            self.assertNotIn("Start Throttle In Direction(Event Player, Forward,", source)
+            self.assertNotIn("Distance Between(Event Player, Event Player.DummyBotFollowTarget) <= 4", source)
+            self.assertEqual(source.count("Stop Throttle In Direction(Event Player);"), 3)
             self.assertEqual(source.count("Stop Throttle In Direction(First Of(Filtered Array("), 1)
 
             movement = source.split(f'{rule_kw}("03g - ', 1)[1].split(
@@ -177,6 +199,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             )[0]
             self.assertIn("Is Dummy Bot(Event Player) == True;", movement)
             self.assertIn("DummyBotFollowTarget", movement)
+            self.assertIn("Stop Throttle In Direction(Event Player);", movement)
             self.assertNotIn("Wait(", movement)
 
             cleanup = source.split(f'{rule_kw}("03h - ', 1)[1].split(

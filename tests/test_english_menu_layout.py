@@ -41,6 +41,7 @@ INFO_CONTROLS = (
     ("Dead: press {0} to resurrect on safe ground", ("Jump",)),
     ("Multijump ON: tap / hold {0} in air to boost", ("Jump",)),
     ("Superman Punch ON: use {0} to punch", ("Melee",)),
+    ("OTHER PAGES: hold {0} + {1}: reset defaults where shown", ("Crouch", "Ultimate")),
 )
 
 
@@ -161,7 +162,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                          ["Crouch", "Reload", "Melee"])
                         self.assertEqual(soundtrack_branch_bindings(tree, False),
                                          ["Crouch", "Primary Fire", "Secondary Fire",
-                                          "Ability 1", "Ability 2", "Interact", "Reload", "Melee"])
+                                          "Ability 1", "Ability 2", "Interact", "Reload", "Melee", "Ultimate"])
 
     def test_luck_subheader_hides_locked_commands_until_luck_finishes(self):
         for path in ARTIFACTS:
@@ -217,7 +218,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
 
     def test_info_has_all_controls_in_one_subheader_with_empty_header_and_text(self):
         expected = {"Crouch", "Primary Fire", "Secondary Fire", "Interact",
-                    "Reload", "Melee", "Ability 1", "Ability 2", "Jump"}
+                    "Reload", "Melee", "Ability 1", "Ability 2", "Jump", "Ultimate"}
         for path in ARTIFACTS:
             with self.subTest(artifact=path.name):
                 rules = validator.extract_rules(path.read_text(encoding="utf-8"))

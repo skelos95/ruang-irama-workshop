@@ -289,53 +289,54 @@ subroutines
 	65: CleanupObjectiveIcon
 	66: ApplyMovementPage
 	67: DrawMovementMenu
-	68: Controller01a
-	69: Controller01b
-	70: Controller02
-	71: Controller03c
-	72: Controller03f
-	73: Controller03g
-	74: Controller03h
-	75: Controller05
-	76: Controller05b
-	77: Controller05c
-	78: Controller05d
-	79: Controller05e
-	80: Controller05f
-	81: Controller06
-	82: Controller08
-	83: Controller10
-	84: Controller11
-	85: Controller12c
-	86: Controller12d
-	87: Controller12f
-	88: Controller12g
-	89: Controller13
-	90: Controller18c
-	91: Controller18g
-	92: Controller18i
-	93: Controller18j
-	94: Controller18k
-	95: Controller19
-	96: Controller19a
-	97: Controller19b
-	98: Controller19c
-	99: Controller19d
-	100: Controller19e
-	101: Controller19f
-	102: Controller19h
-	103: Controller19g
-	104: NativeEvent03i
-	105: NativeEvent04
-	106: NativeEvent12e
-	107: NativeEvent16a
-	108: NativeEvent17
-	109: NativeEvent18f
-	110: NativeEvent89i1
-	111: ProcessGlobalController
-	112: ProcessGlobalEventQueue
-	113: ProcessGlobalLeaves
-	114: ProcessVisibleIcons
+	68: ResetMenuPage
+	69: Controller01a
+	70: Controller01b
+	71: Controller02
+	72: Controller03c
+	73: Controller03f
+	74: Controller03g
+	75: Controller03h
+	76: Controller05
+	77: Controller05b
+	78: Controller05c
+	79: Controller05d
+	80: Controller05e
+	81: Controller05f
+	82: Controller06
+	83: Controller08
+	84: Controller10
+	85: Controller11
+	86: Controller12c
+	87: Controller12d
+	88: Controller12f
+	89: Controller12g
+	90: Controller13
+	91: Controller18c
+	92: Controller18g
+	93: Controller18i
+	94: Controller18j
+	95: Controller18k
+	96: Controller19
+	97: Controller19a
+	98: Controller19b
+	99: Controller19c
+	100: Controller19d
+	101: Controller19e
+	102: Controller19f
+	103: Controller19h
+	104: Controller19g
+	105: NativeEvent03i
+	106: NativeEvent04
+	107: NativeEvent12e
+	108: NativeEvent16a
+	109: NativeEvent17
+	110: NativeEvent18f
+	111: NativeEvent89i1
+	112: ProcessGlobalController
+	113: ProcessGlobalEventQueue
+	114: ProcessGlobalLeaves
+	115: ProcessVisibleIcons
 }
 
 rule("0 - Global: Initialize 200 genres, from calm to chaos")
@@ -872,7 +873,7 @@ rule("11 - Bot: Travel from spawn to the objective")
 	}
 }
 
-rule("12 - Bot: Face and approach the nearest living enemy human")
+rule("12 - Bot: Stand still and face the nearest eligible enemy human")
 {
 	event
 	{
@@ -889,7 +890,7 @@ rule("12 - Bot: Face and approach the nearest living enemy human")
 		Abort If((Global.TriggerPlayer.ControllerState[5] == 1));
 		Global.TriggerPlayer.ControllerState[5] = 1;
 		Start Facing(Evaluate Once(Global.TriggerPlayer), Direction Towards(Eye Position(Evaluate Once(Global.TriggerPlayer)), Eye Position(Player Variable(Evaluate Once(Global.TriggerPlayer), DummyBotFollowTarget))), 1000, To World, Direction and Turn Rate);
-		Start Throttle In Direction(Evaluate Once(Global.TriggerPlayer), Forward, (Or(Is In Spawn Room(Evaluate Once(Global.TriggerPlayer)), (Distance Between(Evaluate Once(Global.TriggerPlayer), Player Variable(Evaluate Once(Global.TriggerPlayer), DummyBotFollowTarget)) <= 4)) ? 0 : 1), To Player, Replace Existing Throttle, Direction and Magnitude);
+		Stop Throttle In Direction(Global.TriggerPlayer);
 	}
 }
 
@@ -1186,7 +1187,7 @@ rule("21 - Menu: Input controller with fixed priority")
 
 	actions
 	{
-		Abort If(Not(And(Is Alive(Global.TriggerPlayer), And(Global.TriggerPlayer.MenuOpen, And(Is Button Held(Global.TriggerPlayer, Button(Crouch)), And((Global.TriggerPlayer.MenuCommand == 0), And(Not(Global.TriggerPlayer.CameraInteractConsumed), And(Not(Global.TriggerPlayer.LuckActive), Or(Or(Is Button Held(Global.TriggerPlayer, Button(Interact)), And(Is Button Held(Global.TriggerPlayer, Button(Reload)), (Global.TriggerPlayer.MenuPage != -1))), Or(Or(Is Button Held(Global.TriggerPlayer, Button(Primary Fire)), Is Button Held(Global.TriggerPlayer, Button(Secondary Fire))), And((Global.TriggerPlayer.MenuPage == 3), Or(Is Button Held(Global.TriggerPlayer, Button(Ability 1)), Is Button Held(Global.TriggerPlayer, Button(Ability 2))))))))))))));
+		Abort If(Not(And(Is Alive(Global.TriggerPlayer), And(Global.TriggerPlayer.MenuOpen, And(Is Button Held(Global.TriggerPlayer, Button(Crouch)), And((Global.TriggerPlayer.MenuCommand == 0), And(Not(Global.TriggerPlayer.CameraInteractConsumed), And(Not(Global.TriggerPlayer.LuckActive), Or(Or(Or(Is Button Held(Global.TriggerPlayer, Button(Interact)), And(Is Button Held(Global.TriggerPlayer, Button(Reload)), (Global.TriggerPlayer.MenuPage != -1))), Or(Or(Is Button Held(Global.TriggerPlayer, Button(Primary Fire)), Is Button Held(Global.TriggerPlayer, Button(Secondary Fire))), And((Global.TriggerPlayer.MenuPage == 3), Or(Is Button Held(Global.TriggerPlayer, Button(Ability 1)), Is Button Held(Global.TriggerPlayer, Button(Ability 2)))))), Is Button Held(Global.TriggerPlayer, Button(Ultimate)))))))))));
 		If(Is Button Held(Global.TriggerPlayer, Button(Interact)));
 		Global.TriggerPlayer.CameraInteractConsumed = True;
 		Global.TriggerPlayer.MenuCommand = 1;
@@ -1200,6 +1201,8 @@ rule("21 - Menu: Input controller with fixed priority")
 		Global.TriggerPlayer.MenuCommand = 5;
 		Else If(And(Is Button Held(Global.TriggerPlayer, Button(Ability 2)), (Global.TriggerPlayer.MenuPage == 3)));
 		Global.TriggerPlayer.MenuCommand = 6;
+		Else If(Is Button Held(Global.TriggerPlayer, Button(Ultimate)));
+		Global.TriggerPlayer.MenuCommand = 7;
 		End;
 	}
 }
@@ -1214,7 +1217,10 @@ rule("22 - Menu: Release the controller after all inputs are released")
 
 	actions
 	{
-		Abort If(Not(And((Global.TriggerPlayer.MenuCommand != 0), And(And(Not(Is Button Held(Global.TriggerPlayer, Button(Interact))), Not(Is Button Held(Global.TriggerPlayer, Button(Reload)))), And(And(Not(Is Button Held(Global.TriggerPlayer, Button(Primary Fire))), Not(Is Button Held(Global.TriggerPlayer, Button(Secondary Fire)))), And(Not(Is Button Held(Global.TriggerPlayer, Button(Ability 1))), Not(Is Button Held(Global.TriggerPlayer, Button(Ability 2)))))))));
+		Abort If(Not(And((Global.TriggerPlayer.MenuCommand != 0), And(And(And(Not(Is Button Held(Global.TriggerPlayer, Button(Interact))), Not(Is Button Held(Global.TriggerPlayer, Button(Reload)))), And(And(Not(Is Button Held(Global.TriggerPlayer, Button(Primary Fire))), Not(Is Button Held(Global.TriggerPlayer, Button(Secondary Fire)))), And(Not(Is Button Held(Global.TriggerPlayer, Button(Ability 1))), Not(Is Button Held(Global.TriggerPlayer, Button(Ability 2)))))), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))))));
+		If(And((Global.TriggerPlayer.MenuCommand == 8), Not(Global.TriggerPlayer.MenuInputLocked)));
+		Allow Button(Global.TriggerPlayer, Button(Ultimate));
+		End;
 		Global.TriggerPlayer.MenuCommand = 0;
 	}
 }
@@ -1258,9 +1264,11 @@ rule("24 - Menu: Release Crouch and immediately restore hero inputs")
 		Allow Button(Global.TriggerPlayer, Button(Reload));
 		Allow Button(Global.TriggerPlayer, Button(Ability 1));
 		Allow Button(Global.TriggerPlayer, Button(Ability 2));
+		If(Or((Global.TriggerPlayer.MenuCommand != 8), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))));
 		Allow Button(Global.TriggerPlayer, Button(Ultimate));
-		Global.TriggerPlayer.MenuInputLocked = False;
 		Global.TriggerPlayer.MenuCommand = 0;
+		End;
+		Global.TriggerPlayer.MenuInputLocked = False;
 	}
 }
 
@@ -1310,9 +1318,9 @@ rule("25 - Menu: Navigate forward and backward")
 		Global.TriggerPlayer.MultijumpCursor = ((Global.TriggerPlayer.MultijumpCursor + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 10)) % 11);
 		Else If((Global.TriggerPlayer.MenuPage == 16));
 		If((Global.TriggerPlayer.MovementCursor == 0));
-		Global.TriggerPlayer.MovementSpeed = Min(1000, Max(10, (Global.TriggerPlayer.MovementSpeed + ((Global.TriggerPlayer.MenuCommand == 3) ? ((Global.TriggerPlayer.MovementSpeed < 100) ? 10 : 50) : ((Global.TriggerPlayer.MovementSpeed <= 100) ? -10 : -50)))));
+		Global.TriggerPlayer.MovementSpeed = Min(1000, Max(20, (Global.TriggerPlayer.MovementSpeed + ((Global.TriggerPlayer.MenuCommand == 3) ? ((Global.TriggerPlayer.MovementSpeed < 100) ? 20 : 100) : ((Global.TriggerPlayer.MovementSpeed <= 100) ? -20 : -100)))));
 		Else;
-		Global.TriggerPlayer.MovementGravity = Min(500, Max(0, (Global.TriggerPlayer.MovementGravity + ((Global.TriggerPlayer.MenuCommand == 3) ? ((Global.TriggerPlayer.MovementGravity < 100) ? 10 : 50) : ((Global.TriggerPlayer.MovementGravity <= 100) ? -10 : -50)))));
+		Global.TriggerPlayer.MovementGravity = Min(500, Max(0, (Global.TriggerPlayer.MovementGravity + ((Global.TriggerPlayer.MenuCommand == 3) ? ((Global.TriggerPlayer.MovementGravity < 100) ? 20 : 100) : ((Global.TriggerPlayer.MovementGravity <= 100) ? -20 : -100)))));
 		End;
 		Call Subroutine(ApplyGhostFlyPhysics);
 		End;
@@ -1350,13 +1358,16 @@ rule("27 - Menu: Apply the active page")
 
 	actions
 	{
-		If(Not(And(Is Alive(Global.TriggerPlayer), And(Global.TriggerPlayer.MenuOpen, (Global.TriggerPlayer.MenuCommand == 1)))));
+		If(Not(And(Is Alive(Global.TriggerPlayer), And(Global.TriggerPlayer.MenuOpen, Or((Global.TriggerPlayer.MenuCommand == 1), (Global.TriggerPlayer.MenuCommand == 7))))));
 		Global.TriggerPlayer.ControllerState[15] = 0;
 		Abort;
 		End;
 		Abort If((Global.TriggerPlayer.ControllerState[15] == 1));
 		Global.TriggerPlayer.ControllerState[15] = 1;
-		If((Global.TriggerPlayer.MenuPage == -1));
+		If((Global.TriggerPlayer.MenuCommand == 7));
+		Global.TriggerPlayer.MenuCommand = 8;
+		Call Subroutine(ResetMenuPage);
+		Else If((Global.TriggerPlayer.MenuPage == -1));
 		If((Global.TriggerPlayer.MainMenuCursor == 8));
 		Call Subroutine(ApplyCrouchTravel);
 		Else If((Global.TriggerPlayer.MainMenuCursor == 9));
@@ -1929,7 +1940,9 @@ rule("46 - Jump revive: Store the death position global")
 		Set Gravity(Global.TriggerPlayer, 100);
 		Enable Movement Collision With Environment(Global.TriggerPlayer);
 		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
+		If(Or((Global.TriggerPlayer.MenuCommand != 8), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))));
 		Global.TriggerPlayer.MenuCommand = 0;
+		End;
 		Global.TriggerPlayer.TravelCommand = 0;
 		Small Message(Global.TriggerPlayer, Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))));
 	}
@@ -3213,7 +3226,9 @@ rule("76 - Subroutine: Close the menu and restore buttons")
 		End;
 		Global.TriggerPlayer.MenuHud = Null;
 		Global.TriggerPlayer.MenuOpen = False;
+		If(Or((Global.TriggerPlayer.MenuCommand != 8), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))));
 		Global.TriggerPlayer.MenuCommand = 0;
+		End;
 		Global.TriggerPlayer.MenuPage = -1;
 		If(Is Button Held(Global.TriggerPlayer, Button(Melee)));
 		Global.TriggerPlayer.MeleeConsumed = True;
@@ -3229,7 +3244,9 @@ rule("76 - Subroutine: Close the menu and restore buttons")
 		Allow Button(Global.TriggerPlayer, Button(Reload));
 		Allow Button(Global.TriggerPlayer, Button(Ability 1));
 		Allow Button(Global.TriggerPlayer, Button(Ability 2));
+		If(Or((Global.TriggerPlayer.MenuCommand != 8), Not(Is Button Held(Global.TriggerPlayer, Button(Ultimate)))));
 		Allow Button(Global.TriggerPlayer, Button(Ultimate));
+		End;
 	}
 }
 
@@ -3267,7 +3284,7 @@ rule("78 - Subroutine: Draw the main menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("") : Custom String("{0}\n{1}", ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("1 - NAME COLOR") : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("2 - 3P CAMERA") : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("3 - SOUNDTRACK") : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("4 - REVENGE") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("5 - UNKILLABLE") : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("6 - HERO VOICE") : ((Player Variable(Local Player, MainMenuCursor) == 7) ? Custom String("7 - ICON") : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("9 - CROUCH PRIVACY") : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("10 - TRY YOUR LUCK") : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("11 - VOTE PLAYER") : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("12 - DUMMY FOLLOW") : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("15 - SUPERMAN PUNCH") : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("14 - MULTIJUMP") : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("16 - MOVEMENT / GRAVITY") : Custom String("13 - GHOST MODE / FLY")))))))))))))))), ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)]) : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("off") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("your hero") : Custom String("watching {0}", Player Variable(Local Player, CameraTarget))))) : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Player Variable(Local Player, CustomSoundtrack) : ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm")))) : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")))) : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")))))) : ((Player Variable(Local Player, MainMenuCursor) == 7) ? ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)])) : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("NOW: {0}", (Player Variable(Local Player, CrouchTravelEnabled) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("NOW: {0}", (Player Variable(Local Player, InspectionPrivacyActive) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY"))) : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE"))) : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("LET ENEMY DUMMY FOLLOW YOU: {0}", (Player Variable(Local Player, AllowDummyBotFollow) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("NOW: {0}", (Array Contains(Global.SuperPunchPlayers, Local Player) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100)) : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Player Variable(Local Player, MovementSpeed), Player Variable(Local Player, MovementGravity)) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))))))))))))))))))), Top, 3, Color(White), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Color(White) : Custom Color(210, 200, 192, 255)), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), (And(Array Contains(Array(1, 2, 3, 5, 6, 7, 11, 13, 14, 16), Player Variable(Local Player, MainMenuCursor)), Or((Player Variable(Local Player, MainMenuCursor) != 3), (Player Variable(Local Player, CustomSoundtrack) == Null))) ? Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate))) : Custom String("")))), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("") : Custom String("{0}\n{1}", ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("1 - NAME COLOR") : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("2 - 3P CAMERA") : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("3 - SOUNDTRACK") : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("4 - REVENGE") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("5 - UNKILLABLE") : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("6 - HERO VOICE") : ((Player Variable(Local Player, MainMenuCursor) == 7) ? Custom String("7 - ICON") : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("9 - CROUCH PRIVACY") : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("10 - TRY YOUR LUCK") : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("11 - VOTE PLAYER") : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("12 - DUMMY TARGET") : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("15 - SUPERMAN PUNCH") : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("14 - MULTIJUMP") : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("16 - MOVEMENT / GRAVITY") : Custom String("13 - GHOST MODE / FLY")))))))))))))))), ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)]) : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("off") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("your hero") : Custom String("watching {0}", Player Variable(Local Player, CameraTarget))))) : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Player Variable(Local Player, CustomSoundtrack) : ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm")))) : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")))) : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")))))) : ((Player Variable(Local Player, MainMenuCursor) == 7) ? ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)])) : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("NOW: {0}", (Player Variable(Local Player, CrouchTravelEnabled) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("NOW: {0}", (Player Variable(Local Player, InspectionPrivacyActive) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY"))) : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE"))) : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("ENEMY DUMMY TARGETING: {0}", (Player Variable(Local Player, AllowDummyBotFollow) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("NOW: {0}", (Array Contains(Global.SuperPunchPlayers, Local Player) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100)) : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Player Variable(Local Player, MovementSpeed), Player Variable(Local Player, MovementGravity)) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))))))))))))))))))), Top, 3, Color(White), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Color(White) : Custom Color(210, 200, 192, 255)), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3282,7 +3299,7 @@ rule("79 - Subroutine: Draw the Soundtrack menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: back", Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: +10 / {1}: -10", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("SOUNDTRACK LOCKED") : Custom String("3 - SOUNDTRACK {0}/{1}", (Player Variable(Local Player, GenreCursor) + 1), Count Of(Global.GenreNames))), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("NOW: {0}", Player Variable(Local Player, CustomSoundtrack)) : Custom String("NOW: {0}", ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm"))))), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("") : Global.MenuPageNames[Round To Integer((Player Variable(Local Player, GenreCursor) / 20), Down)])), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("") : Custom String("> {0}", Global.GenreNames[Player Variable(Local Player, GenreCursor)]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: back", Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: +10 / {1}: -10", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}: reset page", Input Binding String(Button(Ultimate))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("SOUNDTRACK LOCKED") : Custom String("3 - SOUNDTRACK {0}/{1}", (Player Variable(Local Player, GenreCursor) + 1), Count Of(Global.GenreNames))), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("NOW: {0}", Player Variable(Local Player, CustomSoundtrack)) : Custom String("NOW: {0}", ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm"))))), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("") : Global.MenuPageNames[Round To Integer((Player Variable(Local Player, GenreCursor) / 20), Down)])), ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Custom String("") : Custom String("> {0}", Global.GenreNames[Player Variable(Local Player, GenreCursor)]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3297,7 +3314,7 @@ rule("80 - Subroutine: Draw the Camera menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("2 - 3P CAMERA {0}/{1}", (Player Variable(Local Player, CameraCursor) + 1), (Count Of(Player Variable(Local Player, CameraTargets)) + 2)), Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("CAMERA OFF") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("YOUR HERO") : Custom String("WATCH {0}", Player Variable(Local Player, CameraTarget)))))), Custom String("> {0}", ((Player Variable(Local Player, CameraCursor) == 0) ? Custom String("CAMERA OFF") : ((Player Variable(Local Player, CameraCursor) == 1) ? Custom String("YOUR HERO") : Custom String("WATCH {0} {1}", Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)], Hero Icon String((Is Duplicating(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)]) ? Hero Being Duplicated(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)]) : Hero Of(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)])))))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("2 - 3P CAMERA {0}/{1}", (Player Variable(Local Player, CameraCursor) + 1), (Count Of(Player Variable(Local Player, CameraTargets)) + 2)), Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("CAMERA OFF") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("YOUR HERO") : Custom String("WATCH {0}", Player Variable(Local Player, CameraTarget)))))), Custom String("> {0}", ((Player Variable(Local Player, CameraCursor) == 0) ? Custom String("CAMERA OFF") : ((Player Variable(Local Player, CameraCursor) == 1) ? Custom String("YOUR HERO") : Custom String("WATCH {0} {1}", Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)], Hero Icon String((Is Duplicating(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)]) ? Hero Being Duplicated(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)]) : Hero Of(Player Variable(Local Player, CameraTargets)[(Player Variable(Local Player, CameraCursor) - 2)])))))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3312,7 +3329,7 @@ rule("81 - Subroutine: Draw the Name Color menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("1 - NAME COLOR {0}/{1}", (Player Variable(Local Player, ColorCursor) + 1), Count Of(Global.NameColors)), Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)])), Custom String("> {0}", Global.ColorNames[Player Variable(Local Player, ColorCursor)])), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("1 - NAME COLOR {0}/{1}", (Player Variable(Local Player, ColorCursor) + 1), Count Of(Global.NameColors)), Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)])), Custom String("> {0}", Global.ColorNames[Player Variable(Local Player, ColorCursor)])), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3327,7 +3344,7 @@ rule("82 - Subroutine: Draw information and controls")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("Hold {0} + {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}\n{1}", Custom String("Hold {0} + {1}: select / apply | + {2}: back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Hold {0} 0.5s with {1} released: toggle camera", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", Input Binding String(Button(Crouch)))), Custom String("Soundtrack: hold {0} + {1} / {2}: +10 / -10", Input Binding String(Button(Crouch)), Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Travel: {0}: use | release {1}: close", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))), Custom String("Attached, menu closed: hold {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Dead: press {0} to resurrect on safe ground", Input Binding String(Button(Jump))), Custom String("Multijump ON: tap / hold {0} in air to boost", Input Binding String(Button(Jump)))), Custom String("Superman Punch ON: use {0} to punch", Input Binding String(Button(Melee)))))), Null, Top, 3, Color(White), Color(White), Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("Hold {0} + {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}\n{1}", Custom String("Hold {0} + {1}: select / apply | + {2}: back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Hold {0} 0.5s with {1} released: toggle camera", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", Input Binding String(Button(Crouch)))), Custom String("Soundtrack: hold {0} + {1} / {2}: +10 / -10", Input Binding String(Button(Crouch)), Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Travel: {0}: use | release {1}: close", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))), Custom String("Attached, menu closed: hold {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Dead: press {0} to resurrect on safe ground", Input Binding String(Button(Jump))), Custom String("Multijump ON: tap / hold {0} in air to boost", Input Binding String(Button(Jump)))), Custom String("Superman Punch ON: use {0} to punch", Input Binding String(Button(Melee)))))), Custom String("OTHER PAGES: hold {0} + {1}: reset defaults where shown", Input Binding String(Button(Crouch)), Input Binding String(Button(Ultimate)))), Null, Top, 3, Color(White), Color(White), Color(White), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3388,7 +3405,7 @@ rule("85 - Subroutine: Draw the Unkillable menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("5 - UNKILLABLE {0}/3", (Player Variable(Local Player, UnkillableCursor) + 1)), Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))))), Custom String("> {0}", ((Player Variable(Local Player, UnkillableCursor) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableCursor) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("5 - UNKILLABLE {0}/3", (Player Variable(Local Player, UnkillableCursor) + 1)), Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))))), Custom String("> {0}", ((Player Variable(Local Player, UnkillableCursor) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableCursor) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3403,7 +3420,7 @@ rule("86 - Subroutine: Draw the Hero Voice menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("6 - HERO VOICE {0}/5", (Player Variable(Local Player, VoiceCursor) + 1)), Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))))))), Custom String("> {0}", ((Player Variable(Local Player, VoiceCursor) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceCursor) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceCursor) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceCursor) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("6 - HERO VOICE {0}/5", (Player Variable(Local Player, VoiceCursor) + 1)), Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))))))), Custom String("> {0}", ((Player Variable(Local Player, VoiceCursor) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceCursor) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceCursor) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceCursor) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3418,7 +3435,7 @@ rule("87 - Subroutine: Draw the Player Icon menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("7 - ICON {0}/37", (Player Variable(Local Player, IconCursor) + 1)), ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)]))), Custom String("> {0}", ((Player Variable(Local Player, IconCursor) == 0) ? Custom String("NONE") : Custom String("{0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconCursor)], Global.IconNames[Player Variable(Local Player, IconCursor)])))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("7 - ICON {0}/37", (Player Variable(Local Player, IconCursor) + 1)), ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)]))), Custom String("> {0}", ((Player Variable(Local Player, IconCursor) == 0) ? Custom String("NONE") : Custom String("{0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconCursor)], Global.IconNames[Player Variable(Local Player, IconCursor)])))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3498,7 +3515,7 @@ rule("90 - Subroutine: Transition the menu color smoothly")
 	}
 }
 
-rule("91 - Subroutine: Lock the bot while allowing movement")
+rule("91 - Subroutine: Keep dummy targets stationary and normal AI at reduced speed")
 {
 	event
 	{
@@ -3533,7 +3550,7 @@ rule("91 - Subroutine: Lock the bot while allowing movement")
 		Set Knockback Dealt(Global.TriggerPlayer, 0);
 		Set Damage Received(Global.TriggerPlayer, 100);
 		Set Knockback Received(Global.TriggerPlayer, 100);
-		Set Move Speed(Global.TriggerPlayer, 20);
+		Set Move Speed(Global.TriggerPlayer, (Is Dummy Bot(Global.TriggerPlayer) ? 0 : 20));
 		Global.TriggerPlayer.LastHero = Hero Of(Global.TriggerPlayer);
 		Global.TriggerPlayer.DummyBotFollowTarget = Null;
 		Global.TriggerPlayer.BotLocked = True;
@@ -3551,7 +3568,7 @@ rule("92 - Subroutine: Draw the Vote menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: vote / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("11 - VOTE PLAYER {0}/{1}", (Player Variable(Local Player, VoteCursor) + 1), Count Of(Global.HumanPlayers)), Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE")))), Custom String("> {0}", ((Count Of(Global.HumanPlayers) > 0) ? Custom String("{0} - {1} VOTES", Global.HumanPlayers[Player Variable(Local Player, VoteCursor)], Global.HumanPlayers[Player Variable(Local Player, VoteCursor)].VoteCount) : Custom String("NO PLAYERS")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: vote / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("11 - VOTE PLAYER {0}/{1}", (Player Variable(Local Player, VoteCursor) + 1), Count Of(Global.HumanPlayers)), Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE")))), Custom String("> {0}", ((Count Of(Global.HumanPlayers) > 0) ? Custom String("{0} - {1} VOTES", Global.HumanPlayers[Player Variable(Local Player, VoteCursor)], Global.HumanPlayers[Player Variable(Local Player, VoteCursor)].VoteCount) : Custom String("NO PLAYERS")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3566,7 +3583,7 @@ rule("93 - Subroutine: Draw the Ghost / Fly menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST MODE / FLY {0}/2", (Player Variable(Local Player, GhostFlyCursor) + 1)), Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))), Custom String("> {0}", ((Player Variable(Local Player, GhostFlyCursor) == 0) ? Custom String("WALL PHASING - {0}", (Player Variable(Local Player, GhostModeActive) ? Custom String("TURN OFF") : Custom String("TURN ON"))) : Custom String("FLY MODE - {0}", (Player Variable(Local Player, FlyModeActive) ? Custom String("TURN OFF") : Custom String("TURN ON")))))), Custom String("> {0}", ((Player Variable(Local Player, GhostFlyCursor) == 0) ? Custom String("") : Custom String("FLY SPEED: {0}% | CHANGE IN MENU 16", Player Variable(Local Player, MovementSpeed))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST MODE / FLY {0}/2", (Player Variable(Local Player, GhostFlyCursor) + 1)), Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))), Custom String("> {0}", ((Player Variable(Local Player, GhostFlyCursor) == 0) ? Custom String("WALL PHASING - {0}", (Player Variable(Local Player, GhostModeActive) ? Custom String("TURN OFF") : Custom String("TURN ON"))) : Custom String("FLY MODE - {0}", (Player Variable(Local Player, FlyModeActive) ? Custom String("TURN OFF") : Custom String("TURN ON")))))), Custom String("> {0}", ((Player Variable(Local Player, GhostFlyCursor) == 0) ? Custom String("") : Custom String("FLY SPEED: {0}% | CHANGE IN MENU 16", Player Variable(Local Player, MovementSpeed))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -4655,7 +4672,7 @@ rule("116 - Subroutine: Draw Movement and Gravity controls")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}", Input Binding String(Button(Crouch)), Custom String("{0}: +{1}% / {2}", Input Binding String(Button(Primary Fire)), ((((Player Variable(Local Player, MovementCursor) == 0) ? Player Variable(Local Player, MovementSpeed) : Player Variable(Local Player, MovementGravity)) < 100) ? 10 : 50), Custom String("{0}: -{1}%", Input Binding String(Button(Secondary Fire)), ((((Player Variable(Local Player, MovementCursor) == 0) ? Player Variable(Local Player, MovementSpeed) : Player Variable(Local Player, MovementGravity)) <= 100) ? 10 : 50)))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (10-1000%)", ((Player Variable(Local Player, MovementCursor) == 0) ? Custom String("> ") : Custom String("  ")), Player Variable(Local Player, MovementSpeed)), Custom String("{0}Gravity: {1}% (0-500%)", ((Player Variable(Local Player, MovementCursor) == 1) ? Custom String("> ") : Custom String("  ")), Player Variable(Local Player, MovementGravity)))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}", Input Binding String(Button(Crouch)), Custom String("{0}: +{1}% / {2}", Input Binding String(Button(Primary Fire)), ((((Player Variable(Local Player, MovementCursor) == 0) ? Player Variable(Local Player, MovementSpeed) : Player Variable(Local Player, MovementGravity)) < 100) ? 20 : 100), Custom String("{0}: -{1}%", Input Binding String(Button(Secondary Fire)), ((((Player Variable(Local Player, MovementCursor) == 0) ? Player Variable(Local Player, MovementSpeed) : Player Variable(Local Player, MovementGravity)) <= 100) ? 20 : 100)))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset both to 100%", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (20-1000%)", ((Player Variable(Local Player, MovementCursor) == 0) ? Custom String("> ") : Custom String("  ")), Player Variable(Local Player, MovementSpeed)), Custom String("{0}Gravity: {1}% (0-500%)", ((Player Variable(Local Player, MovementCursor) == 1) ? Custom String("> ") : Custom String("  ")), Player Variable(Local Player, MovementGravity)))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -4670,7 +4687,7 @@ rule("117 - Subroutine: Draw Multijump choices")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", (Player Variable(Local Player, MultijumpCursor) + 1)), Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", (Player Variable(Local Player, MultijumpCursor) * 100))))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", (Player Variable(Local Player, MultijumpCursor) + 1)), Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", (Player Variable(Local Player, MultijumpCursor) * 100))))), Custom String("> {0}", ((Player Variable(Local Player, MultijumpCursor) == 0) ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -4829,7 +4846,7 @@ rule("122 - Super Punch: Handle native melee impact global")
 	}
 }
 
-rule("123 - Subroutine: Maintain floating objective icons once per second")
+rule("123 - Subroutine: Maintain floating player icons once per second")
 {
 	event
 	{
@@ -4853,18 +4870,18 @@ rule("123 - Subroutine: Maintain floating objective icons once per second")
 		Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] = Null;
 		Global.ObjectiveIconTimes[Global.ObjectiveIconIndex] = 0;
 		End;
-		If(And((Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] == Null), (Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100)));
+		If((Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] == Null));
 		Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] = First Of(Filtered Array(Global.HumanPlayers, And((Player Variable(Current Array Element, HudSlot) == Global.ObjectiveIconIndex), And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, IsHuman), And(Not(Player Variable(Current Array Element, PlayerListUpdatePending)), And(Not(Player Variable(Current Array Element, TeamChangeProcessed)), (Player Variable(Current Array Element, IconIndex) > 0))))))));
 		If((Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] != Null));
-		Set Player Variable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10)) + Vector(0, Random Real(0.500, 8), 0)));
+		Set Player Variable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 4)) + Vector(0, Random Real(0.500, 3), 0)));
 		Global.ObjectiveIconTimes[Global.ObjectiveIconIndex] = Total Time Elapsed;
-		Chase Player Variable Over Time(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10)) + Vector(0, Random Real(0.500, 8), 0)), 4.500, None);
+		Chase Player Variable Over Time(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 4)) + Vector(0, Random Real(0.500, 3), 0)), 4.500, None);
 		End;
 		End;
 		If((Global.ObjectiveIconOwners[Global.ObjectiveIconIndex] != Null));
 		If((Total Time Elapsed >= (Global.ObjectiveIconTimes[Global.ObjectiveIconIndex] + 3)));
 		Global.ObjectiveIconTimes[Global.ObjectiveIconIndex] = Total Time Elapsed;
-		Chase Player Variable Over Time(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 10)) + Vector(0, Random Real(0.500, 8), 0)), 4.500, None);
+		Chase Player Variable Over Time(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition, ((Direction From Angles(Random Real(0, 360), 0) * Random Real(0, 4)) + Vector(0, Random Real(0.500, 3), 0)), 4.500, None);
 		End;
 		If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] != Player Variable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], IconIndex)));
 		If((Global.ObjectiveIconIds[Global.ObjectiveIconIndex] != 0));
@@ -4876,77 +4893,77 @@ rule("123 - Subroutine: Maintain floating objective icons once per second")
 		Global.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];
 		If((Global.ObjectiveIconIds[Global.ObjectiveIconIndex] == 0));
 		If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 1));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 1)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Down, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 1)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Down, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 2));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 2)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Left, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 2)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Left, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 3));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 3)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Right, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 3)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Right, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 4));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 4)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Up, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 4)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Arrow: Up, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 5));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 5)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Asterisk, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 5)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Asterisk, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 6));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 6)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Bolt, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 6)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Bolt, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 7));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 7)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Checkmark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 7)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Checkmark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 8));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 8)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Circle, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 8)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Circle, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 9));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 9)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Club, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 9)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Club, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 10));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 10)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Diamond, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 10)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Diamond, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 11));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 11)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Dizzy, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 11)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Dizzy, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 12));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 12)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Exclamation Mark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 12)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Exclamation Mark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 13));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 13)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Eye, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 13)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Eye, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 14));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 14)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Fire, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 14)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Fire, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 15));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 15)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Flag, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 15)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Flag, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 16));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 16)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Halo, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 16)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Halo, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 17));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 17)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Happy, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 17)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Happy, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 18));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 18)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Heart, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 18)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Heart, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 19));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 19)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Moon, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 19)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Moon, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 20));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 20)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), No, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 20)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), No, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 21));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 21)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Plus, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 21)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Plus, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 22));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 22)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Poison, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 22)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Poison, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 23));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 23)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Poison 2, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 23)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Poison 2, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 24));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 24)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Question Mark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 24)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Question Mark, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 25));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 25)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Radioactive, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 25)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Radioactive, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 26));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 26)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Recycle, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 26)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Recycle, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 27));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 27)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Ring Thick, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 27)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Ring Thick, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 28));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 28)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Ring Thin, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 28)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Ring Thin, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 29));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 29)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Sad, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 29)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Sad, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 30));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 30)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Skull, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 30)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Skull, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 31));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 31)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Spade, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 31)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Spade, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 32));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 32)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Spiral, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 32)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Spiral, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 33));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 33)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Stop, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 33)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Stop, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 34));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 34)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Trashcan, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 34)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Trashcan, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 35));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 35)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Warning, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 35)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), Warning, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		Else If((Global.ObjectiveIconChoices[Global.ObjectiveIconIndex] == 36));
-		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 36)) ? All Players(All Teams) : Empty Array), (Objective Position(Objective Index) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), X, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
+		Create Icon((And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), (Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == 36)) ? All Players(All Teams) : Empty Array), (Position Of(Evaluate Once(Global.ObjectiveIconPlayer)) + Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), ObjectiveIconPosition)), X, Visible To Position and Color, Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NameColor), False);
 		End;
 		Global.ObjectiveIconIds[Global.ObjectiveIconIndex] = Last Created Entity;
 		End;
@@ -4984,7 +5001,64 @@ rule("124 - Subroutine: Remove the objective icon on departure or team change")
 	}
 }
 
-rule("125 - Subroutine: Control players from global context")
+rule("125 - Subroutine: Reset the selected personal menu page")
+{
+	event
+	{
+		Subroutine;
+		ResetMenuPage;
+	}
+
+	actions
+	{
+		If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 1));
+		Global.TriggerPlayer.ColorCursor = ((Global.TriggerPlayer.DisplayName == Custom String("งูแรร์")) ? 2 : 0);
+		Call Subroutine(ApplyNameColorPage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 2));
+		Global.TriggerPlayer.CameraCursor = 0;
+		Call Subroutine(ApplyCameraPage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 3));
+		Abort If((Global.TriggerPlayer.CustomSoundtrack != Null));
+		Global.TriggerPlayer.GenreIndex = -1;
+		Global.TriggerPlayer.GenreCursor = 0;
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 5));
+		Global.TriggerPlayer.UnkillableCursor = 0;
+		Call Subroutine(ApplyUnkillablePage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 6));
+		Global.TriggerPlayer.VoiceCursor = 0;
+		Call Subroutine(ApplyHeroVoicePage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 7));
+		Global.TriggerPlayer.IconCursor = ((Global.TriggerPlayer.DisplayName == Custom String("งูแรร์")) ? 23 : 0);
+		Call Subroutine(ApplyPlayerIconPage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 11));
+		Global.TriggerPlayer.VotedPlayer = Null;
+		Global.TriggerPlayer.VoteCursor = 0;
+		Global.VoteRecountNeeded = True;
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 13));
+		Global.TriggerPlayer.GhostModeActive = False;
+		Global.TriggerPlayer.FlyModeActive = False;
+		Global.TriggerPlayer.GhostFlyCursor = 0;
+		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
+		Call Subroutine(ApplyGhostFlyPhysics);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 14));
+		Global.TriggerPlayer.MultijumpCursor = 0;
+		Global.TriggerPlayer.MultijumpLevel = 1;
+		Call Subroutine(ApplyMultijumpPage);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 16));
+		Global.TriggerPlayer.MovementCursor = 0;
+		Global.TriggerPlayer.MovementSpeed = 100;
+		Global.TriggerPlayer.MovementGravity = 100;
+		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
+		Call Subroutine(ApplyGhostFlyPhysics);
+		Else;
+		Abort;
+		End;
+		Call Subroutine(TransitionMenuColor);
+		Small Message(Global.TriggerPlayer, Custom String("Page reset to defaults."));
+	}
+}
+
+rule("126 - Subroutine: Control players from global context")
 {
 	event
 	{
@@ -5066,7 +5140,7 @@ rule("125 - Subroutine: Control players from global context")
 	}
 }
 
-rule("126 - Subroutine: Drain the native event queue")
+rule("127 - Subroutine: Drain the native event queue")
 {
 	event
 	{
@@ -5104,7 +5178,7 @@ rule("126 - Subroutine: Drain the native event queue")
 	}
 }
 
-rule("127 - Subroutine: Reconcile departed players from global context")
+rule("128 - Subroutine: Reconcile departed players from global context")
 {
 	event
 	{
@@ -5155,7 +5229,7 @@ rule("127 - Subroutine: Reconcile departed players from global context")
 	}
 }
 
-rule("128 - Subroutine: Cache visible objective icon choices")
+rule("129 - Subroutine: Cache visible player icon choices")
 {
 	event
 	{
@@ -5167,7 +5241,7 @@ rule("128 - Subroutine: Cache visible objective icon choices")
 	{
 		For Global Variable(ObjectiveIconIndex, 0, 12, 1);
 		Global.ObjectiveIconPlayer = Global.ObjectiveIconOwners[Global.ObjectiveIconIndex];
-		Global.VisibleIconChoices[Global.ObjectiveIconIndex] = (And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), And(Global.ObjectiveIconPlayer.IsHuman, (Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100)))) ? Global.ObjectiveIconPlayer.IconIndex : 0);
+		Global.VisibleIconChoices[Global.ObjectiveIconIndex] = (And(Entity Exists(Global.ObjectiveIconPlayer), And(Array Contains(Global.HumanPlayers, Global.ObjectiveIconPlayer), Global.ObjectiveIconPlayer.IsHuman)) ? Global.ObjectiveIconPlayer.IconIndex : 0);
 		End;
 		Global.ObjectiveIconPlayer = Null;
 	}

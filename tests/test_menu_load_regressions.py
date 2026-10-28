@@ -155,6 +155,10 @@ class MenuLoadEvaluator:
         if name == "IsButtonHeld": return False
         raise AssertionError(f"unsupported menu call {name}")
 
+    def native_boundary(self, name, arguments):
+        """Feature harnesses may record native effects without replacing helpers."""
+        return False
+
     def assign(self, target, value):
         indexed = re.fullmatch(r"Global\.(\w+)\[(.+)\]", target)
         if indexed:
@@ -193,6 +197,8 @@ class MenuLoadEvaluator:
                     continue
                 call = next(validator.iter_calls(statement + ";", statement.split("(", 1)[0]))
                 name, args = statement.split("(", 1)[0], call.args
+                if self.native_boundary(name, args):
+                    continue
                 if name == "Call Subroutine":
                     if args[0] == "TransitionMenuColor": continue  # Color animation is native.
                     if args[0] == "RefreshTravelTarget" and self.stub_aim: continue

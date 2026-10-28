@@ -222,7 +222,7 @@ class GeneratedControllerEvaluator:
                 self.assign(match[1], value)
             elif statement.startswith("CallSubroutine("):
                 self.native_calls.append((self.globals["TriggerPlayer"], statement, self.now))
-            elif statement.startswith(("AllowButton(", "StopCamera(", "StopChasingPlayerVariable(")):
+            elif statement.startswith(("AllowButton(", "DisallowButton(", "StopCamera(", "StopChasingPlayerVariable(")):
                 self.native_calls.append((self.globals["TriggerPlayer"], statement, self.now))
             else:
                 raise AssertionError(f"unsupported emitted action {raw.strip()}")

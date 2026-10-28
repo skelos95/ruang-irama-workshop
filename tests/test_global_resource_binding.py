@@ -247,16 +247,18 @@ class GlobalResourceBindingTests(unittest.TestCase):
         for index in range(12):
             owner = f"owner{index}"
             model.actor(owner)
-            model.players[owner]["ObjectiveIconPosition"] = Vector(index, 1, -index)
+            model.players[owner].update(position=Vector(index * 2, 1, index * 3),
+                                        ObjectiveIconPosition=Vector(index / 5, 1, -index / 5))
             installed[owner] = (model.install(icon.args[1]), model.install(icon.args[4]))
         model.actor(None)
         model.objective = Vector(200, 10, -30)
         for index in range(12):
             owner = f"owner{index}"
-            offset = Vector(-index, index / 2 + 0.5, index)
+            offset = Vector(-index / 6, index / 12 + 0.5, index / 6)
+            center = Vector(200 + index * 2, 10, -30 + index * 3)
             color = (index, index * 2, 255 - index, 255)
-            model.players[owner].update(ObjectiveIconPosition=offset, NameColor=color)
-            self.assertEqual(model.evaluate(installed[owner][0]), model.objective + offset)
+            model.players[owner].update(position=center, ObjectiveIconPosition=offset, NameColor=color)
+            self.assertEqual(model.evaluate(installed[owner][0]), center + offset)
             self.assertEqual(model.evaluate(installed[owner][1]), color)
 
     def test_missing_owner_capture_is_observable_when_actor_advances(self):

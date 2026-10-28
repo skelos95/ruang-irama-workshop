@@ -49,6 +49,8 @@ Preview della pagina Name Color, nome del giocatore e icona nativa applicano il 
 | 38 | Deep Emerald | `#54946C` | 84, 148, 108 |
 | 39 | Forest Green | `#416E4C` | 65, 110, 76 |
 
+Crouch + Ultimate sulla voce Name Color selezionata o nel suo sottomenu ripristina Moon White; il profilo speciale conserva Charcoal. Il reset riguarda soltanto il colore personale.
+
 La tabella descrive i valori del codice; la leggibilità sulle mappe chiare e scure e la resa nel client richiedono una prova della revisione importata.
 
 [Guida](../README.md) · [Test nel gioco](TEST.md) · [Generi](GENERI.md)

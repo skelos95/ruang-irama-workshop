@@ -50,7 +50,7 @@ class CompactionContext:
             if len(parts) == 3:
                 return self.player[parts[2]]
             return self.globals[parts[1]]
-        if name in ("PrimaryFire", "SecondaryFire", "Interact", "Melee", "Reload", "Jump", "Crouch", "Ability1", "Ability2", "Unkillable"):
+        if name in ("PrimaryFire", "SecondaryFire", "Interact", "Melee", "Reload", "Jump", "Crouch", "Ability1", "Ability2", "Ultimate", "Unkillable"):
             return name
         raise AssertionError(f"unsupported compaction value: {name}")
 

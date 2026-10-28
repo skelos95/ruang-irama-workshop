@@ -14,8 +14,8 @@ timer e registrazioni di eventi eseguiti dallo scheduler globale. Non copiare
 questa specifica nel gioco: usa [il clipboard generato](../workshop/ruang_irama.en-US.workshop).
 
 La specifica conserva identificatori di regola stabili per compilatore e test.
-Nel clipboard generato i titoli delle 129 regole vengono numerati consecutivamente
-da 0 a 128 nell'ordine del file, senza duplicati o suffissi alfabetici. La
+Nel clipboard generato i titoli delle 130 regole vengono numerati consecutivamente
+da 0 a 129 nell'ordine del file, senza duplicati o suffissi alfabetici. La
 numerazione dei titoli non modifica il comportamento o i nomi delle subroutine.
 
 ```text
@@ -23,6 +23,8 @@ python tools/build_global_runtime.py
 python tools/build_global_runtime.py --check
 python tools/validate_workshop.py
 ```
+
+`ResetMenuPage` ripristina la sola pagina personale tramite Crouch + Ultimate sulle voci abilitate. Le icone native seguono la posizione live del proprietario entro 5 m tridimensionali, conservando l’identità catturata; i nomi interni `ObjectiveIconPosition` e `UpdateSocialObjectiveIcons` restano stabili per compilatore e test.
 
 La generazione e i gate del runtime non provano l'assenza di crash nel motore
 Overwatch. [Architettura](../docs/PROGETTO.md) · [Validazione](../docs/VALIDAZIONE.md)

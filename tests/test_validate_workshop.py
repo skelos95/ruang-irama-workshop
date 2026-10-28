@@ -1126,8 +1126,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         mutated = self.replace_in_rule(
             main,
-            'Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY FOLLOW',
-            'Event Player.MainMenuCursor == 13 ? Custom String("12 - DUMMY FOLLOW',
+            'Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY TARGET',
+            'Event Player.MainMenuCursor == 13 ? Custom String("12 - DUMMY TARGET',
         )
         self.assert_rejected(mutated, "pagina 12 e pagina 13 non sono distinte")
 
@@ -1218,7 +1218,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_main_toggle_cannot_reopen_a_dedicated_submenu(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                               and "Event Player.MenuCommand == 1;" in rule.body
+                               and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
                                and "ApplyDummyBotFollowPage" in rule.body)
         for name in ("ApplyCrouchTravel", "ApplyInspectionPrivacyPage",
                      "ApplyDummyBotFollowPage", "ApplySuperPunchPage"):
@@ -1231,7 +1231,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_main_toggle_must_dispatch_by_main_cursor_not_submenu_page(self) -> None:
         dispatcher = self.rule(lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-                               and "Event Player.MenuCommand == 1;" in rule.body
+                               and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
                                and "ApplyDummyBotFollowPage" in rule.body)
         for page in (8, 9, 12, 15):
             with self.subTest(page=page):
@@ -1242,7 +1242,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_direct_toggle_cannot_restore_retired_on_off_cursor(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.MenuCommand == 1;" in rule.body
+            and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
             and "ApplyDummyBotFollowPage" in rule.body
         )
         mutated = self.inject_action(dispatcher, "Event Player.KursorIkutiBotBuatan = 0;")
@@ -1251,7 +1251,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_page_twelve_apply_dispatcher_is_required(self) -> None:
         dispatcher = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Each Player"
-            and "Event Player.MenuCommand == 1;" in rule.body
+            and "Or(Event Player.MenuCommand == 1, Event Player.MenuCommand == 7) == True;" in rule.body
             and "ApplyDummyBotFollowPage" in rule.body
         )
         mutated = self.replace_in_rule(
@@ -1263,7 +1263,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_dummy_follow_renderer_is_english_and_explicitly_enemy_scoped(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, 'LET ENEMY DUMMY FOLLOW YOU', "LET DUMMY FOLLOW YOU")
+        mutated = self.replace_in_rule(renderer, 'ENEMY DUMMY TARGETING', "DUMMY TARGETING")
         self.assert_rejected(mutated, 'Main menu: Dummy Follow description missing')
 
     def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
@@ -1374,11 +1374,20 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(mutated, "Pilar: rinnovo parte dalla posizione corrente")
         mutated = self.replace_in_rule(manager, "Stop Chasing Player Variable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex], ObjectiveIconPosition);", "")
         self.assert_rejected(mutated, "Pilar: manutenzione ferma la chase")
-        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 10)", "Random Real(0, 11)"))
+        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0, 4)", "Random Real(0, 5)"))
         self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_call_argument(absolute_chase, 2, chase.args[2].replace("Random Real(0.500, 3)", "Random Real(0.500, 4)"))
+        self.assert_rejected(mutated, "Pilar: chase Vector nativo congela destinazione")
+        mutated = self.replace_call_argument(absolute, 1, call.args[1].replace(
+            "Position Of(Evaluate Once(Global.ObjectiveIconPlayer))", "Objective Position(Objective Index)"))
+        self.assert_rejected(mutated, "Pilar: posizione fluida condivisa")
+        mutated = self.replace_call_argument(absolute, 0,
+            "And(Distance Between(Objective Position(Objective Index), Vector(0, 0, 0)) > 0.100, "
+            + call.args[0].split(" ? ", 1)[0] + ") ? All Players(All Teams) : Empty Array")
+        self.assert_rejected(mutated, "Pilar: icone personali indipendenti dall'obiettivo")
         mutated = self.replace_call_argument(absolute, 0, call.args[0].replace(
             "Array Contains(Global.HumanPlayers, Evaluate Once(Global.ObjectiveIconPlayer))", "True"))
-        self.assert_rejected(mutated, "Pilar: visibilita richiede owner nel roster e obiettivo valido")
+        self.assert_rejected(mutated, "Pilar: visibilita richiede owner nel roster")
         init = self.rule(lambda rule: "Global.ObjectiveIconOwners = Array(" in rule.body)
         mutated = self.inject_action(init, "Create Effect(All Players(All Teams), Light Shaft, Color(White), Objective Position(Objective Index), 5, Visible To Position Radius and Color);")
         self.assert_rejected(mutated, "Pilar: nessun Light Shaft o Create Effect persistente")
@@ -1962,8 +1971,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_movement_ranges_steps_and_immediate_apply_are_enforced(self) -> None:
         navigation = self.rule(lambda rule: rule.name.startswith("06 -"))
         for old, new in (
-            ("Min(1000, Max(10,", "Min(500, Max(10,"),
-            ("Min(1000, Max(10,", "Min(1000, Max(50,"),
+            ("Min(1000, Max(20,", "Min(500, Max(20,"),
+            ("Min(1000, Max(20,", "Min(1000, Max(10,"),
             ("Min(500, Max(0,", "Min(200, Max(0,"),
             ("Call Subroutine(ApplyGhostFlyPhysics);", ""),
         ):
@@ -1971,10 +1980,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 self.assert_rejected(self.replace_in_rule(navigation, old, new), "Movement: pagina 16 richiede passi adattivi")
         for field in ("MovementSpeed", "MovementGravity"):
             for old, new in (
-                (f"{field} < 100 ? 10 : 50", f"{field} <= 100 ? 10 : 50"),
-                (f"{field} <= 100 ? -10 : -50", f"{field} < 100 ? -10 : -50"),
-                (f"{field} < 100 ? 10 : 50", f"{field} < 100 ? 50 : 50"),
-                (f"{field} <= 100 ? -10 : -50", f"{field} <= 100 ? -10 : -10"),
+                (f"{field} < 100 ? 20 : 100", f"{field} <= 100 ? 20 : 100"),
+                (f"{field} <= 100 ? -20 : -100", f"{field} < 100 ? -20 : -100"),
+                (f"{field} < 100 ? 20 : 100", f"{field} < 100 ? 100 : 100"),
+                (f"{field} <= 100 ? -20 : -100", f"{field} <= 100 ? -20 : -20"),
             ):
                 with self.subTest(field=field, boundary=old):
                     self.assert_rejected(self.replace_in_rule(navigation, old, new),
@@ -1997,21 +2006,39 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         changed = self.replace_in_rule(apply, "+ 1) % 2", "+ 1) % 3")
         self.assert_rejected(changed, "Movement: Interact alterna soltanto Speed/Gravity")
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMovementMenu")
-        for old in ("Speed: {1}% (10-1000%)", "Gravity: {1}% (0-500%)"):
+        for old in ("Speed: {1}% (20-1000%)", "Gravity: {1}% (0-500%)"):
             with self.subTest(text=old):
                 self.assert_rejected(self.replace_in_rule(renderer, old, "stale value"), "Movement: renderer incompleto")
         selected = "(Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity)"
         for old, new, reason in (
-            (selected + " < 100 ? 10 : 50", selected + " <= 100 ? 10 : 50", "HUD incremento segue"),
-            (selected + " <= 100 ? 10 : 50", selected + " < 100 ? 10 : 50", "HUD decremento segue"),
-            (selected + " < 100 ? 10 : 50", "10", "HUD incremento segue"),
-            (selected + " <= 100 ? 10 : 50", "50", "HUD decremento segue"),
-            (selected + " < 100 ? 10 : 50", selected.replace("== 0", "== 1") + " < 100 ? 10 : 50", "HUD incremento segue"),
-            ('"{0}: +{1}% / {2}"', '"{0}: +50% / {2}"', "HUD incrementi adattivi unici"),
-            ('"{0}: -{1}%"', '"{0}: -50%"', "HUD decremento adattivo annidato"),
+            (selected + " < 100 ? 20 : 100", selected + " <= 100 ? 20 : 100", "HUD incremento segue"),
+            (selected + " <= 100 ? 20 : 100", selected + " < 100 ? 20 : 100", "HUD decremento segue"),
+            (selected + " < 100 ? 20 : 100", "20", "HUD incremento segue"),
+            (selected + " <= 100 ? 20 : 100", "100", "HUD decremento segue"),
+            (selected + " < 100 ? 20 : 100", selected.replace("== 0", "== 1") + " < 100 ? 20 : 100", "HUD incremento segue"),
+            ('"{0}: +{1}% / {2}"', '"{0}: +100% / {2}"', "HUD incrementi adattivi unici"),
+            ('"{0}: -{1}%"', '"{0}: -100%"', "HUD decremento adattivo annidato"),
         ):
             with self.subTest(step=old):
                 self.assert_rejected(self.replace_in_rule(renderer, old, new), "Movement: " + reason)
+
+    def test_movement_reset_requires_local_defaults_and_immediate_physics(self) -> None:
+        reset = self.rule(lambda rule: validator.subroutine_target(rule) == "ResetMenuPage")
+        start = reset.body.index("Event Player.MovementCursor = 0;")
+        end = reset.body.index("Call Subroutine(ApplyGhostFlyPhysics);", start) + len("Call Subroutine(ApplyGhostFlyPhysics);")
+        movement = reset.body[start:end]
+        for old, new in (
+            ("Event Player.MovementCursor = 0;", "Event Player.MovementCursor = 1;"),
+            ("Event Player.MovementSpeed = 100;", "Event Player.MovementSpeed = 200;"),
+            ("Event Player.MovementGravity = 100;", "Event Player.MovementGravity = 200;"),
+            ("Event Player.GhostFlyPhysicsApplied = False;", "Event Player.GhostFlyPhysicsApplied = True;"),
+            ("Call Subroutine(ApplyGhostFlyPhysics);", ""),
+        ):
+            with self.subTest(reset=old):
+                self.assertIn(old, movement)
+                changed = reset.body[:start] + movement.replace(old, new, 1) + reset.body[end:]
+                mutated = self.source[:reset.start] + changed + self.source[reset.end:]
+                self.assert_rejected(mutated, "Movement: reset contestuale richiede")
 
     def test_full_hp_application_requires_damage_knockback_and_player_phasing(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyUnkillablePage")
@@ -3223,6 +3250,42 @@ rule("999x - Nasib: Renderer pemain tambahan")
         mutated = self.inject_condition(bot_rule, "False == True;")
         self.assert_rejected(mutated, "bot/dummy: condizioni esatte e raggiungibili")
 
+    def test_page_reset_is_consumed_before_running_the_helper(self) -> None:
+        dispatcher = self.rule(lambda rule: rule.name.startswith("10 - "))
+        mutated = self.replace_in_rule(dispatcher, "Event Player.MenuCommand = 8;", "Event Player.MenuCommand = 0;")
+        self.assert_rejected(mutated, "reset menu: consumare il comando prima di ResetMenuPage")
+
+    def test_page_reset_consumption_survives_death_until_ultimate_release(self) -> None:
+        death = self.rule(lambda rule: rule.name.startswith("12e -"))
+        mutated = self.replace_in_rule(death,
+            "Event Player.MenuCommand != 8", "Event Player.MenuCommand != 7")
+        self.assert_rejected(mutated,
+            "reset menu: morte deve conservare Ultimate consumato fino al rilascio")
+
+    def test_page_reset_ultimate_keeps_the_last_input_priority(self) -> None:
+        router = self.rule(lambda rule: rule.name.startswith("05c - "))
+        mutated = self.replace_in_rule(router, "Event Player.MenuCommand = 7;", "Event Player.MenuCommand = 6;")
+        self.assert_rejected(mutated, "reset menu: Ultimate deve armare il comando 7 con priorita finale")
+
+    def test_page_reset_latch_cannot_release_while_ultimate_is_held(self) -> None:
+        release = self.rule(lambda rule: rule.name.startswith("05d - "))
+        mutated = self.replace_in_rule(release,
+            "Is Button Held(Event Player, Button(Ultimate)) == False",
+            "Is Button Held(Event Player, Button(Ultimate)) == True")
+        self.assert_rejected(mutated, "reset menu: rilascio controller deve attendere Ultimate")
+
+    def test_page_reset_multijump_must_restore_level_one(self) -> None:
+        reset = self.rule(lambda rule: validator.subroutine_target(rule) == "ResetMenuPage")
+        mutated = self.replace_in_rule(reset, "Event Player.MultijumpLevel = 1;", "Event Player.MultijumpLevel = 2;")
+        self.assert_rejected(mutated, "Multijump: reset pagina deve ripristinare il livello 1")
+
+    def test_page_reset_cannot_activate_ghost_or_fly(self) -> None:
+        reset = self.rule(lambda rule: validator.subroutine_target(rule) == "ResetMenuPage")
+        for field in ("GhostModeActive", "FlyModeActive"):
+            with self.subTest(field=field):
+                mutated = self.replace_in_rule(reset, f"Event Player.{field} = False;", f"Event Player.{field} = True;")
+                self.assert_rejected(mutated, f"Ghost/Fly: owner writer {field}")
+
     def test_bot_lock_neutralizes_player_interference(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "LockBot")
         mutated = self.replace_in_rule(bot_lock, "Set Damage Dealt(Event Player, 0);", "")
@@ -3255,18 +3318,23 @@ rule("999x - Nasib: Renderer pemain tambahan")
                 self.assert_rejected(self.inject_action(bot_lock, action),
                                      "LockBot: conservare le collisioni native senza riapplicarle")
 
-    def test_bot_lock_requires_exactly_twenty_percent_move_speed(self) -> None:
+    def test_bot_lock_keeps_dummies_stationary_and_normal_ai_at_twenty_percent(self) -> None:
         bot_lock = self.rule(lambda rule: validator.subroutine_target(rule) == "LockBot")
-        mutated = self.replace_in_rule(bot_lock, "Set Move Speed(Event Player, 20);", "Set Move Speed(Event Player, 0);")
-        self.assert_rejected(mutated, "LockBot: velocità bot/dummy")
+        for replacement in ("0", "20", "Is Dummy Bot(Event Player) ? 20 : 0"):
+            with self.subTest(speed=replacement):
+                mutated = self.replace_in_rule(bot_lock,
+                    "Set Move Speed(Event Player, Is Dummy Bot(Event Player) ? 0 : 20);",
+                    f"Set Move Speed(Event Player, {replacement});")
+                self.assert_rejected(mutated, "LockBot: dummy fermo e AI normale al 20%")
 
-    def test_native_dummy_requires_automatic_forward_throttle(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        mutated = self.replace_in_rule(movement, "Start Throttle In Direction(Event Player,", "Start Throttle Towards Player(Event Player,")
-        self.assert_rejected(mutated, "movimento automatico dummy assente")
+    def test_native_dummy_rejects_automatic_forward_throttle(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.inject_action(movement,
+            "Start Throttle In Direction(Event Player, Forward, 1, To Player, Replace Existing Throttle, Direction and Magnitude);")
+        self.assert_rejected(mutated, "dummy target: throttle attivo rimosso")
 
     def test_native_dummy_movement_requires_a_valid_cached_target(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
         mutated = self.replace_in_rule(
             movement,
             "Event Player.DummyBotFollowTarget != Null;",
@@ -3274,7 +3342,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "movimento automatico dummy incompleto")
     def test_native_dummy_movement_cannot_abort_before_facing(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
         mutated = self.replace_in_rule(
             movement,
             "\n\t\tStart Facing(Event Player,",
@@ -3282,21 +3350,24 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         self.assert_rejected(mutated, "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
 
-    def test_native_dummy_movement_cannot_be_stopped_after_throttle(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        throttle = next(validator.iter_calls(movement.body, "Start Throttle In Direction"))
-        absolute = validator.Call(
-            throttle.name,
-            throttle.raw,
-            throttle.args,
-            movement.start + throttle.start,
-            movement.start + throttle.end,
-        )
-        mutated = self.source[:absolute.end] + ";\n\t\tStop Throttle In Direction(Event Player)" + self.source[absolute.end:]
+    def test_native_dummy_facing_requires_spawned_living_human_target(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        for guard in (
+            "Player Variable(Event Player.DummyBotFollowTarget, IsHuman) == True;",
+            "Has Spawned(Event Player.DummyBotFollowTarget) == True;",
+            "Is Alive(Event Player.DummyBotFollowTarget) == True;",
+        ):
+            with self.subTest(guard=guard):
+                mutated = self.replace_in_rule(movement, guard, guard.replace("== True", "== False"))
+                self.assert_rejected(mutated, "movimento automatico dummy incompleto")
+
+    def test_native_dummy_target_cannot_stop_facing_after_start(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.inject_action(movement, "Stop Facing(Event Player);")
         self.assert_rejected(mutated, "movimento dummy: azioni esatte senza abort o arresti aggiuntivi")
 
     def test_native_dummy_facing_requires_a_nonzero_turn_rate(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
         facing = next(validator.iter_calls(movement.body, "Start Facing"))
         absolute = validator.Call(
             facing.name,
@@ -3309,7 +3380,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         self.assert_rejected(mutated, "movimento dummy: facing argomento 2")
 
     def test_native_dummy_facing_reevaluates_direction_and_turn_rate(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
         facing = next(validator.iter_calls(movement.body, "Start Facing"))
         absolute = validator.Call(
             facing.name,
@@ -3368,28 +3439,26 @@ rule("999x - Nasib: Renderer pemain tambahan")
             "Player Variable(Event Player.DummyBotFollowTarget, AllowDummyBotFollow) == True",
         )
         self.assert_rejected(mutated, "cleanup movimento dummy cache incompleto")
-    def test_native_dummy_stops_at_exactly_four_metres(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 0) ? 0 : 1")
-        self.assert_rejected(mutated, "arresto deve usare il target cache")
-    def test_native_dummy_stop_condition_cannot_be_negated(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        call = next(validator.iter_calls(movement.body, "Start Throttle In Direction"))
-        magnitude = validator.parse_top_level_ternary(call.args[2])
-        self.assertIsNotNone(magnitude)
-        stop_condition, stopped, moving = magnitude  # type: ignore[misc]
-        absolute = validator.Call(call.name, call.raw, call.args, movement.start + call.start, movement.start + call.end)
-        mutated = self.replace_call_argument(absolute, 2, f"Not({stop_condition}) ? {stopped} : {moving}")
-        self.assert_rejected(mutated, "arresto deve usare il target cache")
-    def test_native_dummy_stopped_magnitude_is_zero(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        mutated = self.replace_in_rule(movement, "<= 4) ? 0 : 1", "<= 4) ? 1 : 1")
-        self.assert_rejected(mutated, "magnitudine entro quattro metri")
+    def test_native_dummy_facing_does_not_restore_walking_speed(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.inject_action(movement, "Set Move Speed(Event Player, 20);")
+        self.assert_rejected(mutated, "dummy target: solo facing e arresto throttle")
 
-    def test_native_dummy_throttle_reevaluates_direction_and_magnitude(self) -> None:
-        movement = self.rule(lambda rule: "Start Throttle In Direction(Event Player," in rule.body)
-        mutated = self.replace_in_rule(movement, "Direction and Magnitude);", "None);")
-        self.assert_rejected(mutated, "movimento dummy: throttle argomento 5")
+    def test_native_dummy_facing_cannot_add_teleport_movement(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.inject_action(movement, "Teleport(Event Player, Vector(0, 0, 0));")
+        self.assert_rejected(mutated, "dummy target: solo facing e arresto throttle")
+
+    def test_native_dummy_facing_requires_a_dummy_owner(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement,
+            "Is Dummy Bot(Event Player) == True;", "Is Dummy Bot(Event Player) == False;")
+        self.assert_rejected(mutated, "movimento automatico dummy incompleto")
+
+    def test_native_dummy_target_always_stops_existing_throttle(self) -> None:
+        movement = self.rule(lambda rule: "Start Facing(Event Player," in rule.body)
+        mutated = self.replace_in_rule(movement, "Stop Throttle In Direction(Event Player);", "")
+        self.assert_rejected(mutated, "dummy target: arresto throttle personale")
 
     def test_native_dummy_stops_throttle_when_cached_target_is_invalid(self) -> None:
         cleanup = self.rule(
