@@ -69,8 +69,12 @@ class DummyBotFeatureTests(unittest.TestCase):
 
     def test_native_dummy_collision_overrides_are_removed(self):
         for source, rule_kw in ((self.it, "rule"), (self.en, "rule")):
-            # Only the local human Ghost helper uses this Event Player action.
-            self.assertEqual(source.count("Disable Movement Collision With Environment(Event Player, False);"), 1)
+            # Only the human Ghost page and physics helper own local wall collision.
+            action = "Disable Movement Collision With Environment(Event Player, False);"
+            self.assertEqual(source.count(action), 2)
+            owners = sorted(validator.subroutine_target(rule)
+                            for rule in validator.extract_rules(source) if action in rule.body)
+            self.assertEqual(owners, ["ApplyGhostFlyPage", "ApplyGhostFlyPhysics"])
             bot_rule = source.split(
                 f'{rule_kw}("03c - Bot: Lock on respawn or hero change")', 1
             )[1].split(f'{rule_kw}("', 1)[0]
