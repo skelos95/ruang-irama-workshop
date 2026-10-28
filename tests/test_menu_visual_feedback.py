@@ -56,7 +56,7 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             for rule, old, new, error in (
                 (transition, "0.180, Destination and Duration", "0.000, Destination and Duration", "transizione colore di 0.180"),
                 (transition, "Chase Player Variable Over Time", "Chase Player Variable At Rate", "proprietario consentito"),
-                (transition, "Vector(198, 185, 210)", "Vector(255, 255, 255)", "Info: moonlit silver menu accent"),
+                (transition, "Vector(255, 255, 255)", "Vector(198, 185, 210)", "Info: fixed white menu accent"),
                 (transition, "MenuPage) == 14 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
                 (transition, "MenuPage) == 13 ? Global.NameColorRGBValues", "MenuPage) == 15 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
                 (transition, "MenuPage) == 15 ? Global.NameColorRGBValues", "MenuPage) == 16 ? Global.NameColorRGBValues", "diciassette tinte menu in ordine"),
@@ -100,15 +100,15 @@ class MenuVisualFeedbackTests(unittest.TestCase):
             self.assertTrue(any("Locked Soundtrack" in issue for issue in checks.errors))
 
 
-class PulseContext(CompactionContext):
+class RGBContext(CompactionContext):
     def call(self, name, args):
         if name == "CustomColor":
             return tuple(args)
         return super().call(name, args)
 
 
-class NocturnePulseTests(unittest.TestCase):
-    def test_pulse_is_bounded_continuous_and_preserved_by_global_compilation(self):
+class FullRGBTests(unittest.TestCase):
+    def test_full_rgb_cycle_is_continuous_and_preserved_by_global_compilation(self):
         artifacts = (
             "source/ruang_irama.en-US.source",
             "tests/fixtures/semantic_reference.txt",
@@ -122,8 +122,8 @@ class NocturnePulseTests(unittest.TestCase):
                 colors = re.findall(r"^\s*Global\.RGB\s*=\s*([^;]+);", source, re.M)
                 phases = re.findall(r"^\s*Global\.RGBPhase\s*=\s*([^;]+);", source, re.M)
                 self.assertEqual((len(colors), len(phases)), (2, 2))
-                context = PulseContext(())
-                initial_color, pulse = (context.parse(expression) for expression in colors)
+                context = RGBContext(())
+                initial_color, rainbow = (context.parse(expression) for expression in colors)
                 initial_phase, advance = (context.parse(expression) for expression in phases)
                 context.globals["RGBPhase"] = initial_phase.evaluate(context)
                 initial = initial_color.evaluate(context)
@@ -131,19 +131,22 @@ class NocturnePulseTests(unittest.TestCase):
                 # One update per 0.1 s: a 51-second cycle must not jump at its seam.
                 for _ in range(510):
                     visited.add(context.globals["RGBPhase"])
-                    color = pulse.evaluate(context)
+                    color = rainbow.evaluate(context)
                     self.assertEqual(color[3], 255)
-                    self.assertTrue(all(100 <= component <= 220 for component in color[:3]))
+                    self.assertTrue(all(80 <= component <= 255 for component in color[:3]))
+                    self.assertGreater(max(color[:3]) - min(color[:3]), 170)
                     samples.append(color)
                     context.globals["RGBPhase"] = advance.evaluate(context)
-                self.assertEqual(len(visited), 510)
+                self.assertEqual(visited, set(range(0, 1530, 3)))
                 self.assertEqual(context.globals["RGBPhase"], initial_phase.evaluate(context))
-                self.assertEqual(samples[0], initial)
+                # The original initializer rounds the first red peak to 255.
+                self.assertTrue(all(abs(a - b) < 1 for a, b in zip(samples[0], initial)))
                 for previous, current in zip(samples, samples[1:] + samples[:1]):
-                    self.assertTrue(all(abs(a - b) <= 0.251 for a, b in zip(previous, current)))
+                    self.assertTrue(all(abs(a - b) <= 2.059 for a, b in zip(previous, current)))
                 for channel in range(3):
                     values = [color[channel] for color in samples]
-                    self.assertGreater(max(values) - min(values), 20)
+                    self.assertEqual(min(values), 80)
+                    self.assertAlmostEqual(max(values), 255, delta=1)
                 if reference is None:
                     reference = samples
                 else:

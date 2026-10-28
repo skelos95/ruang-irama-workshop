@@ -4,7 +4,7 @@ La pagina 1 offre 40 colori ispirati al romanticismo oscuro: argenti lunari, ter
 
 Rispetto alla palette precedente cambiano 34 valori RGB. Gli indici 0–4 e 29 conservano i loro valori; tutte le scelte mantengono posizione e corrispondenza tra nome e RGB. Il default ordinario è Moon White (indice 0); il profilo speciale `งูแรร์` conserva Charcoal (indice 2).
 
-Preview della pagina Name Color, nome del giocatore e icona nativa applicano il valore RGB esatto della scelta. Black rimane nero puro. Le tinte degli altri menu mescolano invece il 32% del Name Color al 68% del proprio accento Nocturne; Info usa il proprio argento lunare fisso.
+Preview della pagina Name Color, nome del giocatore e icona nativa applicano il valore RGB esatto della scelta. Black rimane nero puro. Le tinte degli altri menu mescolano invece il 32% del Name Color al 68% del proprio accento Nocturne; Info usa bianco fisso direttamente, sia nella preview sia nella guida dopo Interact, indipendente da Name Color e transizioni.
 
 | Indice interno | Nome | HEX | RGB |
 |---:|---|---|---|

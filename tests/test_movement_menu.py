@@ -210,7 +210,7 @@ class MovementMenuTests(unittest.TestCase):
                 huds = list(validator.iter_calls(bootstrap.body, "Create HUD Text"))
                 self.assertEqual(len(huds), 5)
                 title = next(call for call in huds if call.args[4:6] == ("Top", "0"))
-                self.assertEqual(title.args[3], 'Custom String("cozywatch.org | NOCTURNE [{0}]", Global.ServerTimeText)')
+                self.assertEqual(title.args[3], 'Custom String("cozywatch.org [{0}]", Global.ServerTimeText)')
                 self.assertFalse(any('Custom String("cozywatch.org")' in call.args[2] for call in huds))
                 self.assertTrue(any(call.args[4:6] == ("Top", "2") for call in huds))
 

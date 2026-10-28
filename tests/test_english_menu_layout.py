@@ -12,6 +12,7 @@ from tools import validate_workshop as validator
 from tests.test_roster_rejoin_regressions import LifecycleSourceEvaluator, SOURCES
 from tests.runtime_selection import rule_for_logical_id
 from tests.test_global_compaction import CompactionContext
+from tests.test_direct_menu_toggles import DirectToggleEvaluator
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (*[path for path, _, _ in SOURCES],
@@ -87,7 +88,14 @@ class RegistrationMenuEvaluator(LifecycleSourceEvaluator):
 
 
 class MenuColorContext(CompactionContext):
+    def resolve(self, name):
+        if name == "White":
+            return name
+        return super().resolve(name)
+
     def call(self, name, args):
+        if name == "Color" and args == ["White"]:
+            return (255, 255, 255, 255)
         if name == "CustomColor":
             return tuple(args)
         if name in ("XComponentOf", "YComponentOf", "ZComponentOf"):
@@ -226,26 +234,67 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 rendered = context.parse(compiler.actor_text(call.args[2])).evaluate(context)
                 self.assertEqual(rendered.splitlines(), rendered_control_lines(INFO_CONTROLS))
 
-    def test_info_subheader_keeps_menu_color_and_other_main_commands_keep_their_color(self):
-        for path in ARTIFACTS:
+    def test_info_is_immediately_white_independent_of_live_menu_name_and_rgb_colors(self):
+        artifacts = (*ARTIFACTS, ROOT / "tests/fixtures/global_runtime_reference.txt")
+        for path in artifacts:
             with self.subTest(artifact=path.name):
                 text = path.read_text(encoding="utf-8")
                 rules = validator.extract_rules(text)
                 _, fields, _, _ = validator.declaration_entries(text)
                 context = MenuColorContext([field.name for field in fields])
                 context.globals.update(TriggerPlayer=None, ActivePlayer=None)
-                context.player["MenuColor"] = (190, 210, 230)
                 main = validator.rule_by_subroutine(rules, "DrawMainMenu")
                 main_hud = next(validator.iter_calls(main.body, "Create HUD Text"))
-                color = context.parse(compiler.actor_text(main_hud.args[7]))
-                for cursor in (0, 1, 15, 0):
-                    context.player["MainMenuCursor"] = cursor
-                    self.assertEqual(color.evaluate(context), (190, 210, 230, 255) if cursor == 0
-                                     else (210, 200, 192, 255))
                 info = validator.rule_by_subroutine(rules, "DrawInfoMenu")
                 info_hud = next(validator.iter_calls(info.body, "Create HUD Text"))
-                self.assertEqual(context.parse(compiler.actor_text(info_hud.args[7])).evaluate(context),
-                                 (190, 210, 230, 255))
+                preview_color = context.parse(compiler.actor_text(main_hud.args[7]))
+                info_color = context.parse(compiler.actor_text(info_hud.args[7]))
+                for menu_color, rgb, name_color in (
+                    ((0, 0, 0), (255, 80, 80, 255), (0, 0, 0, 255)),
+                    ((214, 15, 70), (80, 255, 80, 255), (190, 210, 230, 255)),
+                    ((15, 215, 75), (80, 80, 255, 255), (146, 58, 82, 255)),
+                    ((35, 55, 245), (255, 80, 255, 255), (255, 255, 255, 255)),
+                ):
+                    context.player.update(MenuColor=menu_color, NameColor=name_color)
+                    context.globals["RGB"] = rgb
+                    # Read the HUD immediately, before any native Chase can finish.
+                    for cursor in (0, 1, 0, 15, 0):
+                        context.player["MainMenuCursor"] = cursor
+                        self.assertEqual(preview_color.evaluate(context),
+                                         (255, 255, 255, 255) if cursor == 0 else (210, 200, 192, 255))
+                        context.player["MenuPage"] = 0
+                        self.assertEqual(info_color.evaluate(context), (255, 255, 255, 255))
+
+    def test_navigation_and_interact_open_info_white_without_waiting_for_native_chase(self):
+        for path, _, _ in SOURCES:
+            with self.subTest(artifact=path.name):
+                source = path.read_text(encoding="utf-8")
+                model = DirectToggleEvaluator(source)
+                stale_color = (45, 25, 95)
+                state = model.add("owner", MainMenuCursor=0, MenuColor=stale_color,
+                                  NameColor=(146, 58, 82, 255))
+                model.globals["RGB"] = (80, 255, 80, 255)
+                model.render_main("owner")
+                model.input("owner", "Primary Fire")
+                model.input("owner")
+                model.input("owner", "Secondary Fire")
+                model.input("owner")
+                self.assertEqual(state["MainMenuCursor"], 0)
+                model.input("owner", "Interact")
+                self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (0, 0))
+                self.assertIn(("owner", "DrawInfoMenu"), model.subroutine_calls)
+                # The evaluator deliberately skips native Chase: stale animation
+                # and selected name colors must not affect the displayed white.
+                self.assertEqual(state["MenuColor"], stale_color)
+                _, fields, _, _ = validator.declaration_entries(source)
+                context = MenuColorContext([field.name for field in fields])
+                context.player.update(state)
+                context.globals["RGB"] = model.globals["RGB"]
+                for target in ("DrawMainMenu", "DrawInfoMenu"):
+                    renderer = validator.rule_by_subroutine(model.rules, target)
+                    hud = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+                    color = context.parse(compiler.actor_text(hud.args[7]))
+                    self.assertEqual(color.evaluate(context), (255, 255, 255, 255))
 
     def test_host_row_has_only_one_bottom_blank_row(self):
         for path in ARTIFACTS:

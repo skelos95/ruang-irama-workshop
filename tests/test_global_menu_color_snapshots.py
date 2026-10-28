@@ -140,20 +140,20 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
                 self.assertEqual(model.frame_destination('owner0'), expected)
                 self.assertEqual(model.frame_destination('owner1'), untouched)
 
-    def test_info_and_default_name_color_remain_distinct_after_dispatch(self):
+    def test_info_white_and_selected_name_color_remain_independent_after_dispatch(self):
         model = self.model(2)
         for main in (True, False):
             for owner, page in (("owner0", 0), ("owner1", 1)):
                 model.players[owner].update(MenuPage=-1 if main else page,
-                                           MainMenuCursor=page, ColorCursor=0, ColorIndex=0)
+                                           MainMenuCursor=page, ColorCursor=12, ColorIndex=12)
                 model.globals['TriggerPlayer'] = owner
                 model.command(self.menu)
             model.globals['TriggerPlayer'] = None
-            self.assertEqual(model.frame_destination('owner0'), Vector(198, 185, 210))
-            self.assertEqual(model.frame_destination('owner1'), self.colors[0])
+            self.assertEqual(model.frame_destination('owner0'), Vector(255, 255, 255))
+            self.assertEqual(model.frame_destination('owner1'), self.colors[12])
             self.assertNotEqual(model.frame_destination('owner0'), model.frame_destination('owner1'))
 
-    def test_deferred_mode_mutation_reproduces_info_accent_and_green_with_zero_cursor(self):
+    def test_deferred_mode_mutation_reproduces_white_info_and_first_travel_color_with_zero_cursor(self):
         model = self.model(2)
         model.globals['TriggerPlayer'] = 'owner0'
         model.players['owner0'].update(ColorCursor=12, TravelCursor=4)
@@ -164,7 +164,7 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
         model.players['owner1']['TravelCursor'] = 4
         model.command(self.travel, mode='Destination and Duration')
         model.globals['TriggerPlayer'] = None
-        self.assertEqual(model.frame_destination('owner0'), Vector(198, 185, 210))
+        self.assertEqual(model.frame_destination('owner0'), Vector(255, 255, 255))
         self.assertEqual(model.frame_destination('owner1'), Vector(170, 186, 164))
         self.assertNotEqual(model.frame_destination('owner0'), intended_menu)
         self.assertNotEqual(model.frame_destination('owner1'), intended_travel)

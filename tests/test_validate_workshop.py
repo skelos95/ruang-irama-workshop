@@ -725,17 +725,22 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 mutated = self.replace_call_argument(absolute, 3, f"{condition} ? {text} : {functions}")
                 self.assert_rejected(mutated, "Main Info preview: Text must be an empty string")
 
-    def test_info_subheader_retains_menu_color(self) -> None:
+    def test_info_subheader_requires_fixed_white_before_and_after_opening(self) -> None:
         for target, fragment in (
-            ("DrawMainMenu", "Main Info preview: Subheader must retain the menu color"),
-            ("DrawInfoMenu", "Info: Subheader must retain the menu color"),
+            ("DrawMainMenu", "Main Info preview: Subheader must be fixed white"),
+            ("DrawInfoMenu", "Info: Subheader must be fixed white"),
         ):
-            with self.subTest(renderer=target):
-                renderer = self.rule(lambda rule: validator.subroutine_target(rule) == target)
-                call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
-                absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
-                mutated = self.replace_call_argument(absolute, 7, "Color(White)")
-                self.assert_rejected(mutated, fragment)
+            renderer = self.rule(lambda rule: validator.subroutine_target(rule) == target)
+            call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+            absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+            for color in ("Global.RGB", "Custom Color(198, 185, 210, 255)",
+                          "Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255)"):
+                with self.subTest(renderer=target, color=color):
+                    if target == "DrawMainMenu":
+                        condition, _, other = validator.parse_top_level_ternary(call.args[7])
+                        color = f"{condition} ? {color} : {other}"
+                    mutated = self.replace_call_argument(absolute, 7, color)
+                    self.assert_rejected(mutated, fragment)
 
     def test_main_menu_function_text_cannot_duplicate_input_hints(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
