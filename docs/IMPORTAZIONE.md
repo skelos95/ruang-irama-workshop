@@ -3,7 +3,7 @@
 ## Procedura
 
 1. Salva il preset con le tue mappe e imposta la lingua testo di Overwatch su **English**.
-2. Apri il codice della revisione desiderata, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione resta **0.8.2**; il tema Nocturne e il margine inferiore di HOST sono modifiche successive alla release pubblicata. Il tag e l'allegato della release conservano il tema precedente.
+2. Apri il codice della revisione desiderata, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione corrente è **0.8.3**; il tag v0.8.3 identifica il commit del pacchetto. Il tag e l'allegato della release storica 0.8.2 conservano il contenuto pubblicato.
 3. Copia tutto, da `variables` alla graffa finale, senza numeri di riga o testo della pagina GitHub.
 4. In **Custom Game → Settings → Workshop**, usa **Paste Rules**.
 5. Apri **Script Diagnostics** e annota Element Count e Largest Rule, insieme al commit importato.
@@ -20,6 +20,8 @@ Con Info 0 selezionata nel principale, titolo e anteprima sono interamente nel s
 I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni dei test. Importa soltanto il file `.workshop` pubblico: contiene il runtime globale generato.
 
 La revisione aggiunge Crouch + Ultimate per ripristinare la sola pagina dove il comando è mostrato; Speed e Gravity usano passi 20/100, con Speed 20–1000%. Le icone seguono il proprietario entro 5 m tridimensionali; i dummy restano fermi dopo il teletrasporto iniziale sicuro e si orientano verso il nemico vivo più vicino con Dummy Target ON. Il reset non è disponibile in Info, Revenge, Luck e toggle 8/9/12/15, né sul Soundtrack Draconian bloccato. [Default e pagine abilitate](../README.md#menu-personali).
+
+Applicare o alternare Ghost modifica soltanto la collisione con l'ambiente e conserva l'inerzia; Fly continua a gestire la propria fisica. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114; SHA importato, build client, numero di player, durata e metriche native non sono stati forniti. La successiva correzione Ghost richiede una nuova prova sul commit importato: [matrice Ghost e Fly](TEST.md#jump-ghost-e-fly).
 
 ## Se l'importazione fallisce
 

@@ -1,6 +1,6 @@
 # Controlli automatici
 
-I controlli del codice corrente, con versione **0.8.2** e tema **Nocturne**, richiedono **Python 3.12**, senza pacchetti esterni. Il tema e la correzione del margine inferiore di HOST sono successivi alla release pubblicata; i controlli vanno associati al commit verificato. Eseguire dalla radice del repository:
+I controlli del codice corrente, con versione **0.8.3** e tema **Nocturne**, richiedono **Python 3.12**, senza pacchetti esterni. I controlli vanno associati al commit verificato; il tag v0.8.3 identifica il commit del pacchetto. Il tag e l'allegato della release storica 0.8.2 conservano il contenuto pubblicato. Eseguire dalla radice del repository:
 
 ```text
 python tools/validate_workshop.py
@@ -22,13 +22,15 @@ git diff --check
 | Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–129, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
-| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost/Fly a velocità fissa, menu 16 Speed/Gravity con passi 20/100, reset della pagina tramite Crouch + Ultimate, icone personali entro 5 m, Revenge, Unkillable, Luck e Dummy Target fermo |
+| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost con inerzia conservata, Fly a velocità fissa, menu 16 Speed/Gravity con passi 20/100, reset della pagina tramite Crouch + Ultimate, icone personali entro 5 m, Revenge, Unkillable, Luck e Dummy Target fermo |
 | Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e `Color(White)` diretto nella preview e nella guida Info, indipendente da MenuColor; altre voci/pagine con comandi in Subheader e opzioni in Text; testi e palette Nocturne, 40 nomi e vettori RGB allineati con resa esatta della scelta; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
 I test comportamentali esistenti eseguono porzioni della specifica inglese con risposte native controllate. Il codice importabile usa la stessa grammatica inglese della specifica. Verificano le funzioni d'ingresso al compilatore e non certificano da soli il runtime globale. Test separati leggono l'output effettivamente importabile e verificano controller, timer, eventi accodati e proprietari catturati. I test di compattazione confrontano gli stessi valori prima/dopo: Booleani tipizzati, palette, testi dei menu e inizializzazione dei registri. Rifiutano coercizioni di numeri in Booleani e verificano che cataloghi, colori e stringhe restino identici. I gate ricompilano la specifica e confrontano entrambi gli output, quindi controllano direttamente contesti, dichiarazioni, attese e peso del runtime. I test di mutazione devono rifiutare ciascuna violazione per la propria causa. Nessuno di questi controlli è un server Overwatch.
 
 I test delle icone eseguono posizioni live del proprietario, teletrasporti, traiettorie interpolate e il limite tridimensionale di 5 m; controllano anche le 36 espressioni Create Icon e la cache di visibilità del clipboard e del riferimento runtime. Le mutazioni devono respingere il ritorno al centro obiettivo e gli offset fuori limite. Le prove del reset verificano isolamento della pagina, default, latch e pagine escluse; il targeting dummy conserva selezione e consenso senza inseguimento.
+
+Le regressioni Ghost verificano che applicare o alternare la sola collisione non richiami il motore Fly né introduca un freno o alteri velocità e gravità. Le transizioni Fly conservano il proprio applicatore fisico. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114, senza SHA importato, build client, numero di player, durata o metriche native; questo riscontro precede la correzione Ghost e non ne verifica la resa nel client.
 
 Le regressioni di ownership includono 240 identità successive sui 12 slot, variabili del leaver perse, eventi tardivi e ID riciclati. Il caso del roster controlla la distruzione di 480 icone senza doppie distruzioni; il registro dei testi temporanei ha prove separate di cleanup e riuso.
 
@@ -38,7 +40,7 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-La revisione con passi Movement aggiornati, reset personali, icone del proprietario e dummy fermi usa **27.486 unità strutturali**, 678 in più rispetto alle 26.808 della revisione precedente. Il massimo per regola resta 2.605. Il clipboard passa da 293.767 a 299.635 byte UTF-8 (+5.868); la specifica da 273.593 a 276.148 (+2.555). Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+La revisione 0.8.3 usa **27.496 unità strutturali**, 10 in più rispetto alle 27.486 della PR #114. Il massimo per regola resta 2.605. Il clipboard passa da 299.635 a 299.838 byte UTF-8 (+203); la specifica da 276.148 a 276.439 (+291). I byte del testo sono misurati in UTF-8 con terminatori LF. Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
@@ -46,7 +48,7 @@ La revisione con passi Movement aggiornati, reset personali, icone del proprieta
 | Variabili globali | 71 | 89 |
 | Variabili player | 125 | 127 |
 | Subroutine | 69 | 116 |
-| Byte di testo UTF-8 | 276.148 | 299.635 |
+| Byte di testo UTF-8 (LF) | 276.439 | 299.838 |
 
 La regola più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.605. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
 

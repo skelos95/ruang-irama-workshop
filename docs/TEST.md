@@ -1,13 +1,15 @@
 # Test nel gioco
 
-Questa è la matrice operativa per il codice corrente, con versione **0.8.2** e tema **Nocturne**. Il tema e il margine inferiore di HOST sono modifiche successive alla release pubblicata, che conserva il proprio tag e allegato. Eseguire prima i [controlli automatici](VALIDAZIONE.md), poi associare ogni prova al commit importato.
+Questa è la matrice operativa per il codice corrente, con versione **0.8.3** e tema **Nocturne**. Il tag v0.8.3 identifica il commit del pacchetto; la release storica 0.8.2 conserva il proprio tag e allegato. Eseguire prima i [controlli automatici](VALIDAZIONE.md), poi associare ogni prova al commit importato.
 
 ## Riscontri disponibili
 
 | Data / revisione | Riscontro | Limite |
 |---|---|---|
-| 28 ottobre, Movement, reset, icone personali e Dummy Target | Implementati passi 20/100, reset della sola pagina, icone entro 5 m dal proprietario e targeting dei dummy fermi. | Nessun nuovo riscontro nel client: eseguire le prove specifiche sotto sul commit importato. |
-| 27 ottobre, tema Nocturne | Aggiornati testi, tinte e palette dei 40 Name Color: nomi a tema e 34 valori RGB rivisti, con indici e profilo speciale conservati. Menu, comandi e funzioni restano invariati. | Nessun nuovo riscontro nel client: verificare il tema con i controlli visivi riportati sotto. |
+| 28 ottobre, correzione dell'inerzia Ghost / 0.8.3 | Applicare o alternare Ghost aggiorna soltanto la collisione con l'ambiente, senza richiamare la fisica Fly o frenare il movimento. | Correzione successiva al riscontro dopo la PR #114; ancora da verificare nel client con le prove Ghost sotto. |
+| 28 ottobre, riscontro utente dopo PR #114 | L'utente conferma: «funziona tutto». | Conferma qualitativa generale; SHA importato, build client, numero di player, durata e metriche native non forniti. Non comprende la successiva correzione Ghost né certifica singolarmente ogni caso della matrice. |
+| 28 ottobre, Movement, reset, icone personali e Dummy Target | Implementati passi 20/100, reset della sola pagina, icone entro 5 m dal proprietario e targeting dei dummy fermi. | Il successivo riscontro generale dopo la PR #114 non registra separatamente questi casi: usare la matrice per le regressioni sul commit importato. |
+| 27 ottobre, tema Nocturne | Aggiornati testi, tinte e palette dei 40 Name Color: nomi a tema e 34 valori RGB rivisti, con indici e profilo speciale conservati. Menu, comandi e funzioni restano invariati. | Il successivo riscontro generale dopo la PR #114 non registra le singole prove visive: usare i controlli riportati sotto per le regressioni. |
 | 11 ottobre, controllo mirato di `main` | Riprodotti nei test automatici il comando Travel elaborato dopo la morte e il rientro dagli spettatori nella stessa squadra senza reset; aggiunte correzioni e regressioni. Corrette le istruzioni di Multijump e Luck. | Prove con risposte native controllate; nessun nuovo riscontro nel client fornito per queste correzioni. |
 | Release storica 0.8.1 | La documentazione precedente riporta la regressione client completata nell'agosto 2026. | Non valida automaticamente i successivi commit di `main`; metriche mancanti non vengono ricostruite. |
 | 25 settembre, ripristino PR #77 | L'utente conferma la scomparsa del crash al cambio squadra introdotto dalla PR #76. | Singola istruzione responsabile non isolata. |
@@ -32,7 +34,7 @@ Questa è la matrice operativa per il codice corrente, con versione **0.8.2** e 
 
 Il sorgente corrente compatta il blocco delle icone e aggiunge un budget strutturale preventivo. La modalità si chiama Cozywatch e usa il tema Nocturne; il Light Shaft è rimosso e le icone personali restano entro 5 m tridimensionali dal proprietario. Prima di una nuova prova di carico, reimportarlo in una lobby nuova e registrare **Element Count e Largest Rule**: la stima offline e i byte del testo non sono queste due misure native.
 
-L'utente conferma stabilità del server, funzionamento della modalità e superamento dei test nel gioco su tutto il codice provato. Dopo la PR #105 ha verificato e confermato anche la distanza tra HOST e killfeed, con il margine soltanto sotto il testo. La matrice seguente resta il riferimento per le future regressioni e per registrare separatamente i casi Camera dopo Travel/cambio eroe, durata e carico.
+Il riscontro più recente è «funziona tutto», ricevuto il 28 ottobre dopo la PR #114. Precede la correzione Ghost e resta qualitativo, senza SHA importato, build client, durata, numero di player o metriche native. Nei riscontri storici l'utente aveva confermato anche la distanza tra HOST e killfeed dopo la PR #105. La matrice seguente resta il riferimento per verificare Ghost e registrare separatamente i singoli casi, durata e carico.
 
 ## Preparazione
 
@@ -99,6 +101,7 @@ Con 12 umani, menu chiusi e nessun overlay temporaneo, il baseline previsto è 1
 - Morire su terreno normale, vicino a bordi e nel vuoto profondo: conservare il punto sicuro, recuperare sul punto camminabile nei casi insicuri. Includere Self Elimination con Travel aperto.
 - Tenere Jump durante una nuova morte immediata: nessun ciclo di tentativi. Rilasciare da vivo o morto e ripremere deve riarmarlo. Provare due player insieme, Ghost/Fly ON/OFF e cambio eroe.
 - Ghost deve attraversare pareti/soffitti mantenendo pavimenti e collisioni player. Fly: avanti segue la mira fino a pitch ±90°; indietro/laterali rimangono orizzontali, anche con yaw cardinali e analogico.
+- Con Fly OFF, alternare e riapplicare Ghost durante salto, caduta e movimento: nessun arresto, impulso o cambio di gravità; l'inerzia deve continuare mentre cambia soltanto la collisione ambientale. Ripetere con Fly ON e in movimento, mantenendo direzione e velocità richieste, e con Luck Acceleration attiva. Provare due giocatori indipendenti. Attivare/disattivare Fly deve conservare il ripristino fisico previsto; il reset della pagina deve spegnere entrambi i toggle. Queste prove riguardano la correzione successiva alla PR #114, ancora da confermare nel client.
 - Velocità Fly fissa dal menu 16: provare 20%, 40%, 80%, 100%, 200%, 500% e 1000% in ogni direzione, mantenendo il movimento per almeno 20 s senza accelerazione automatica. Cambiare il valore in volo deve aggiornare la velocità; avanti→laterale→indietro→diagonale conserva la selezione. Nessun input produce hover senza deriva. Includere diagonali analogiche e due player indipendenti.
 - Verificare morte/rinascita, cambio eroe, OFF e due player indipendenti. Preferenze conservate a morte/cambio eroe, azzerate a cambio squadra/leave-rejoin.
 - Con Luck Acceleration, nessun impulso o freno Fly deve interferire per i 10 s; alla scadenza Fly riparte alla velocità scelta nel menu 16, con gravità sempre 0.
