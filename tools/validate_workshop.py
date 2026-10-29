@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Semantic static gate for Cozywatch Workshop 0.8.2.
+"""Semantic static gate for Cozywatch Workshop 0.8.3.
 
 The behavioral contracts validate the explicit logical input, while main also
 checks its English source parity and the real generated global runtime. No compiled
@@ -31,7 +31,7 @@ SOURCE = BEHAVIORAL_REFERENCE
 VERSION = ROOT / "VERSION"
 WORKFLOWS = ROOT / ".github" / "workflows"
 
-CURRENT_VERSION = "0.8.2"
+CURRENT_VERSION = "0.8.3"
 ALLOWED_WORKFLOWS = {"validate-workshop.yml"}
 MAX_DECLARATION_NAME_BYTES = 32
 CORE_DOCS = (
@@ -2571,15 +2571,19 @@ def validate_ghost_fly(
 
     checks.require(apply is not None, "Ghost/Fly: handler applicazione assente")
     if apply:
-        apply_packed = packed(apply.body)
-        for token, label in (
-            ("If(EventPlayer.GhostFlyCursor==0);", "selezione riga"),
-            ("EventPlayer.GhostModeActive=EventPlayer.GhostModeActive==False;", "toggle pareti"),
-            ("EventPlayer.FlyModeActive=EventPlayer.FlyModeActive==False;", "toggle volo"),
-            ("EventPlayer.GhostFlyPhysicsApplied=False;", "riarmo fisica"),
-            ("CallSubroutine(ApplyGhostFlyPhysics);", "applicazione fisica immediata"),
-        ):
-            checks.require(token in apply_packed, f"Ghost/Fly applicazione incompleta: {label}")
+        expected_apply = (
+            "If(EventPlayer.GhostFlyCursor==0);"
+            "EventPlayer.GhostModeActive=EventPlayer.GhostModeActive==False;"
+            "If(EventPlayer.GhostModeActive==True);"
+            "DisableMovementCollisionWithEnvironment(EventPlayer,False);"
+            "Else;EnableMovementCollisionWithEnvironment(EventPlayer);End;"
+            "Else;EventPlayer.FlyModeActive=EventPlayer.FlyModeActive==False;"
+            "EventPlayer.GhostFlyPhysicsApplied=False;"
+            "CallSubroutine(ApplyGhostFlyPhysics);End;"
+        )
+        checks.equal(packed(rule_block(apply, "actions") or ""), expected_apply,
+                     "Ghost/Fly: Ghost applica solo collisione e conserva inerzia/latch; "
+                     "Fly riarma e applica fisica nel proprio ramo")
         checks.require(not wait_calls(apply.body) and action_loop_count(apply.body) == 0,
                        "Ghost/Fly: handler applicazione deve essere atomico")
 
@@ -6768,8 +6772,8 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
         for rule in rules
         for call in iter_calls(rule.body, "Disable Movement Collision With Environment")
     ]
-    checks.equal(len(environment_collision_calls), 2,
-                 "numero disattivazioni collisione ambiente: solo Ghost locale/globale")
+    checks.equal(len(environment_collision_calls), 3,
+                 "numero disattivazioni collisione ambiente: solo toggle Ghost e controller locale/globale")
     collision_actions = (
         "Enable Movement Collision With Environment(",
         "Disable Movement Collision With Environment(",
@@ -6793,9 +6797,11 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
             checks.equal(compact(bot_actions), compact(expected_bot_actions),
                          "bot/dummy: sequenza raggiungibile e isolata")
 
+    ghost_apply = rule_by_subroutine(rules, "ApplyGhostFlyPage")
     ghost_physics = rule_by_subroutine(rules, "ApplyGhostFlyPhysics")
     cycle = rule_by_subroutine(rules, "ProcessPlayerCycle")
     for owner, target, label in (
+        (ghost_apply, "Event Player", "Ghost toggle immediato"),
         (ghost_physics, "Event Player", "Ghost locale"),
         (cycle, "Global.ActivePlayer", "Ghost globale 10 Hz"),
     ):

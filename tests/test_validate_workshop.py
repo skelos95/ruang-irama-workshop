@@ -1763,13 +1763,55 @@ class SemanticWorkshop081Tests(unittest.TestCase):
                 self.assert_rejected(mutated, "rilascio latch Resurrect deve funzionare da vivo e da morto")
 
     def test_ghost_wall_phasing_must_keep_floors_solid(self) -> None:
-        physics = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyGhostFlyPhysics")
-        mutated = self.replace_in_rule(
-            physics,
-            "Disable Movement Collision With Environment(Event Player, False);",
-            "Disable Movement Collision With Environment(Event Player, True);",
-        )
-        self.assert_rejected(mutated, "pavimenti solidi")
+        for owner in ("ApplyGhostFlyPage", "ApplyGhostFlyPhysics"):
+            with self.subTest(owner=owner):
+                physics = self.rule(lambda rule: validator.subroutine_target(rule) == owner)
+                mutated = self.replace_in_rule(
+                    physics,
+                    "Disable Movement Collision With Environment(Event Player, False);",
+                    "Disable Movement Collision With Environment(Event Player, True);",
+                )
+                self.assert_rejected(mutated, "pavimenti" if owner == "ApplyGhostFlyPhysics" else "Ghost applica solo collisione")
+
+    def test_ghost_toggle_cannot_reset_momentum_physics_or_preferences(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyGhostFlyPage")
+        toggle = "Event Player.GhostModeActive = Event Player.GhostModeActive == False;"
+        for action in (
+            "Event Player.GhostFlyPhysicsApplied = False;",
+            "Call Subroutine(ApplyGhostFlyPhysics);",
+            "Apply Impulse(Event Player, Velocity Of(Event Player) * -1, Magnitude Of(Velocity Of(Event Player)), To World, Incorporate Contrary Motion);",
+            "Set Move Speed(Event Player, 100);",
+            "Set Gravity(Event Player, 100);",
+            "Stop Accelerating(Event Player);",
+            "Stop Transforming Throttle(Event Player);",
+            "Event Player.FlyModeActive = False;",
+            "Event Player.MovementSpeed = 100;",
+            "Event Player.MovementGravity = 100;",
+        ):
+            with self.subTest(action=action):
+                mutated = self.replace_in_rule(apply, toggle, toggle + "\n\t\t\t" + action)
+                self.assert_rejected(mutated, "Ghost applica solo collisione e conserva inerzia/latch")
+
+    def test_ghost_toggle_must_apply_the_selected_collision_immediately(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyGhostFlyPage")
+        for old, new in (
+            ("Disable Movement Collision With Environment(Event Player, False);", ""),
+            ("Enable Movement Collision With Environment(Event Player);", ""),
+            ("If(Event Player.GhostModeActive == True);", "If(Event Player.GhostModeActive == False);"),
+        ):
+            with self.subTest(change=old):
+                self.assert_rejected(self.replace_in_rule(apply, old, new), "Ghost applica solo collisione")
+
+    def test_fly_toggle_keeps_its_rearm_and_immediate_physics_in_the_fly_branch(self) -> None:
+        apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyGhostFlyPage")
+        for action in ("Event Player.GhostFlyPhysicsApplied = False;", "Call Subroutine(ApplyGhostFlyPhysics);"):
+            with self.subTest(action=action):
+                self.assert_rejected(self.replace_in_rule(apply, action, ""),
+                                     "Fly riarma e applica fisica nel proprio ramo")
+        rearm = "\t\t\tEvent Player.GhostFlyPhysicsApplied = False;\n\t\t\tCall Subroutine(ApplyGhostFlyPhysics);\n\t\tEnd;"
+        shared_rearm = "\t\tEnd;\n\t\tEvent Player.GhostFlyPhysicsApplied = False;\n\t\tCall Subroutine(ApplyGhostFlyPhysics);"
+        self.assert_rejected(self.replace_in_rule(apply, rearm, shared_rearm),
+                             "Ghost applica solo collisione e conserva inerzia/latch")
 
     def test_fly_uses_raw_input_without_transforming_throttle(self) -> None:
         physics = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplyGhostFlyPhysics")

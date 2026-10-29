@@ -1794,11 +1794,17 @@ rule("99n - Subroutine: Apply the Ghost / Fly page")
 	{
 		If(Event Player.GhostFlyCursor == 0);
 			Event Player.GhostModeActive = Event Player.GhostModeActive == False;
+			"Ghost changes environment collision only; preserve motion and the existing physics latch."
+			If(Event Player.GhostModeActive == True);
+				Disable Movement Collision With Environment(Event Player, False);
+			Else;
+				Enable Movement Collision With Environment(Event Player);
+			End;
 		Else;
 			Event Player.FlyModeActive = Event Player.FlyModeActive == False;
+			Event Player.GhostFlyPhysicsApplied = False;
+			Call Subroutine(ApplyGhostFlyPhysics);
 		End;
-		Event Player.GhostFlyPhysicsApplied = False;
-		Call Subroutine(ApplyGhostFlyPhysics);
 	}
 }
 

@@ -1,6 +1,6 @@
 # Codice da importare
 
-Codice corrente, versione **0.8.2** e tema **Nocturne**: **[ruang_irama.en-US.workshop](ruang_irama.en-US.workshop)** è l'unico file da copiare nel Workshop, con la lingua testo del client impostata su **English**. Apri **Raw** e copia tutto. Comprende il nuovo tema e la correzione del margine inferiore di HOST successivi alla release 0.8.2; il tag e l'allegato pubblicati conservano il proprio contenuto.
+Codice corrente, versione **0.8.3** e tema **Nocturne**: **[ruang_irama.en-US.workshop](ruang_irama.en-US.workshop)** è l'unico file da copiare nel Workshop, con la lingua testo del client impostata su **English**. Apri **Raw** e copia tutto. Il tag v0.8.3 identifica il commit del pacchetto; il tag e l'allegato della release storica 0.8.2 conservano il contenuto pubblicato.
 
 Le 130 regole seguono una numerazione unica da **0 a 129**, nell'ordine del file, senza numeri ripetuti o suffissi alfabetici.
 
@@ -8,8 +8,10 @@ Il codice e l'interfaccia personalizzata sono in inglese. Al primo spawn si apre
 
 Info 0 selezionata nel principale mostra titolo e binding interamente nel sottotitolo (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. Anche il sottomenu Info usa il `Subheader` per titolo e guida completa, mantenendo la guida completa e i binding dinamici senza duplicazioni. Il testo di anteprima e guida resta bianco fisso anche subito dopo Interact, indipendente dal Name Color e dal ciclo RGB. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. HOST usa una sola riga, senza spazio sopra e con una riga vuota sotto per il killfeed.
 
-Il 9 ottobre l'utente ha confermato che il server era stabile, la modalità funzionava e tutto il codice provato superava i test nel gioco. Anche la distanza tra HOST e killfeed è stata verificata e confermata dopo il ripristino del margine inferiore nella PR #105. Questo riscontro storico non verifica il tema Nocturne: la nuova resa visiva richiede una prova nel client.
+Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114. È un riscontro qualitativo generale, senza SHA importato, build client, numero di player, durata o metriche native. Precede la correzione Ghost, ancora da verificare nel client. La distanza tra HOST e killfeed era stata verificata e confermata dopo la PR #105.
 
 La revisione aggiunge Crouch + Ultimate per ripristinare la sola pagina dove il comando è mostrato; Speed e Gravity usano passi 20/100, con Speed 20–1000%. Le icone seguono il proprietario entro 5 m tridimensionali; i dummy restano fermi dopo il teletrasporto iniziale sicuro e si orientano verso il nemico vivo più vicino con Dummy Target ON. Il reset non è disponibile in Info, Revenge, Luck e toggle 8/9/12/15, né sul Soundtrack Draconian bloccato. [Default e pagine abilitate](../README.md#menu-personali).
+
+Applicare o alternare Ghost aggiorna soltanto la collisione con l'ambiente, conservando l'inerzia e senza richiamare la fisica Fly. Le transizioni Fly continuano a usare il proprio applicatore fisico.
 
 [Guida di importazione](../docs/IMPORTAZIONE.md) · [Funzioni e comandi](../README.md) · [Controlli della revisione corrente](../docs/VALIDAZIONE.md)

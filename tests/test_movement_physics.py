@@ -21,15 +21,22 @@ class MovementPhysicsEvaluator(SpectatorRuntimeEvaluator):
         return super().call(name, args)
 
     def native(self, name, arguments):
-        if name in ("SetMoveSpeed", "SetGravity", "ApplyImpulse"):
+        if name in ("SetMoveSpeed", "SetGravity", "ApplyImpulse",
+                    "EnableMovementCollisionWithEnvironment", "DisableMovementCollisionWithEnvironment"):
             args = [self.expression(arg) for arg in semantic.split_top_level(arguments, ",")]
             owner = self.players[args[0]]
             if name == "SetMoveSpeed":
                 owner["native_speed"] = args[1]
             elif name == "SetGravity":
                 owner["native_gravity"] = args[1]
-            else:
+            elif name == "ApplyImpulse":
                 owner["native_velocity"] = owner.get("native_velocity", ZERO) + args[1].normalized() * args[2]
+            elif name == "EnableMovementCollisionWithEnvironment":
+                owner.update(native_wall_collision=True, native_floor_collision=True)
+            else:
+                owner["native_wall_collision"] = False
+                if args[1]:
+                    owner["native_floor_collision"] = False
         super().native(name, arguments)
 
     def route(self, player, target):
@@ -78,6 +85,69 @@ class MovementPhysicsTests(unittest.TestCase):
         state["GhostFlyPhysicsApplied"] = False
         model.route("viewer", "ApplyGhostFlyPhysics")
         self.assertEqual(state["native_velocity"], ZERO)
+
+    def test_ghost_on_and_off_preserve_fall_and_knockback_with_every_fly_latch_state(self):
+        for velocity in (Vector(0, -12, 0), Vector(4, 8, 2)):
+            for fly in (False, True):
+                for applied in (False, True):
+                    for luck in (False, True):
+                        with self.subTest(velocity=velocity, fly=fly, applied=applied, luck=luck):
+                            speed = 1000 if luck else (0 if fly else 350)
+                            gravity = 0 if fly else 450
+                            model, state = self.model(
+                                GhostFlyCursor=0, GhostModeActive=False, FlyModeActive=fly,
+                                GhostFlyPhysicsApplied=applied, MovementSpeed=350, MovementGravity=450,
+                                native_velocity=velocity, native_speed=speed, native_gravity=gravity,
+                                native_wall_collision=True, native_floor_collision=True,
+                                LuckEffect=2 if luck else 0, LuckEffectEndTime=20,
+                            )
+                            model.now = 10
+                            for ghost in (True, False):
+                                before_native = len(model.native_log)
+                                before_calls = len(model.calls)
+                                model.route("viewer", "ApplyGhostFlyPage")
+                                self.assertEqual(state["GhostModeActive"], ghost)
+                                self.assertEqual(state["native_wall_collision"], not ghost)
+                                self.assertTrue(state["native_floor_collision"])
+                                self.assertEqual(state["native_velocity"], velocity)
+                                self.assertEqual((state["native_speed"], state["native_gravity"]), (speed, gravity))
+                                self.assertEqual((state["MovementSpeed"], state["MovementGravity"]), (350, 450))
+                                self.assertEqual(state["FlyModeActive"], fly)
+                                self.assertEqual(state["GhostFlyPhysicsApplied"], applied)
+                                self.assertEqual((state["LuckEffect"], state["LuckEffectEndTime"]), (2 if luck else 0, 20))
+                                collision = ("DisableMovementCollisionWithEnvironment" if ghost
+                                             else "EnableMovementCollisionWithEnvironment")
+                                self.assertEqual(model.native_log[before_native:], [(10, collision, "viewer")])
+                                self.assertEqual([call[2] for call in model.calls[before_calls:]], ["ApplyGhostFlyPage"])
+
+    def test_fly_page_still_applies_physics_and_brakes_off_unless_luck_owns_motion(self):
+        velocity = Vector(4, 8, 2)
+        for ghost in (False, True):
+            for fly in (False, True):
+                for applied in (False, True):
+                    for luck in (False, True):
+                        with self.subTest(ghost=ghost, fly=fly, applied=applied, luck=luck):
+                            model, state = self.model(
+                                GhostFlyCursor=1, GhostModeActive=ghost, FlyModeActive=fly,
+                                GhostFlyPhysicsApplied=applied, MovementSpeed=350, MovementGravity=450,
+                                native_velocity=velocity, native_speed=1000 if luck else (0 if fly else 350),
+                                native_gravity=0 if fly else 450,
+                                LuckEffect=2 if luck else 0, LuckEffectEndTime=20,
+                            )
+                            model.now = 10
+                            before_calls = len(model.calls)
+                            model.route("viewer", "ApplyGhostFlyPage")
+                            self.assertEqual(state["FlyModeActive"], not fly)
+                            self.assertEqual(state["GhostModeActive"], ghost)
+                            self.assertTrue(state["GhostFlyPhysicsApplied"])
+                            self.assertEqual((state["MovementSpeed"], state["MovementGravity"]), (350, 450))
+                            self.assertEqual(state["native_wall_collision"], not ghost)
+                            self.assertTrue(state["native_floor_collision"])
+                            self.assertEqual(state["native_gravity"], 450 if fly else 0)
+                            self.assertEqual(state["native_speed"], 1000 if luck else (350 if fly else 0))
+                            self.assertEqual(state["native_velocity"], ZERO if fly and not luck else velocity)
+                            self.assertEqual([call[2] for call in model.calls[before_calls:]],
+                                             ["ApplyGhostFlyPage", "ApplyGhostFlyPhysics"])
 
     def test_death_respawn_and_hero_change_preserve_preferences(self):
         for fly in (False, True):

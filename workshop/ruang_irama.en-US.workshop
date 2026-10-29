@@ -1776,11 +1776,16 @@ rule("40 - Subroutine: Apply the Ghost / Fly page")
 	{
 		If((Global.TriggerPlayer.GhostFlyCursor == 0));
 		Global.TriggerPlayer.GhostModeActive = Not(Global.TriggerPlayer.GhostModeActive);
+		If(Global.TriggerPlayer.GhostModeActive);
+		Disable Movement Collision With Environment(Global.TriggerPlayer, False);
+		Else;
+		Enable Movement Collision With Environment(Global.TriggerPlayer);
+		End;
 		Else;
 		Global.TriggerPlayer.FlyModeActive = Not(Global.TriggerPlayer.FlyModeActive);
-		End;
 		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
 		Call Subroutine(ApplyGhostFlyPhysics);
+		End;
 	}
 }
 

@@ -130,7 +130,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 r"\(EventPlayer.GhostFlyCursor\+1\)%2;",
             )
 
-    def test_apply_toggles_only_the_selected_feature_and_rearms_physics(self) -> None:
+    def test_apply_ghost_changes_only_collision_and_fly_rearms_its_physics(self) -> None:
         toggle_patterns = {
             "GhostModeActive": re.compile(
                 r"EventPlayer\.GhostModeActive="
@@ -153,21 +153,37 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertNotRegex(wall_branch, r"FlyModeActive=(?!=)")
             self.assertRegex(fly_branch, toggle_patterns["FlyModeActive"])
             self.assertNotRegex(fly_branch, r"GhostModeActive=(?!=)")
-            self.assertIn("EventPlayer.GhostFlyPhysicsApplied=False;", packed)
-            self.assertIn("CallSubroutine(ApplyGhostFlyPhysics);", packed)
+            self.assertIn(
+                "If(EventPlayer.GhostModeActive==True);"
+                "DisableMovementCollisionWithEnvironment(EventPlayer,False);"
+                "Else;EnableMovementCollisionWithEnvironment(EventPlayer);End;Else;",
+                wall_branch,
+            )
+            for forbidden in ("GhostFlyPhysicsApplied=", "CallSubroutine(", "ApplyImpulse(",
+                              "SetMoveSpeed(", "SetGravity(", "Accelerating(",
+                              "TransformingThrottle(", "MovementSpeed=", "MovementGravity="):
+                self.assertNotIn(forbidden, wall_branch)
+            self.assertEqual(packed.count("EventPlayer.GhostFlyPhysicsApplied=False;"), 1)
+            self.assertEqual(packed.count("CallSubroutine(ApplyGhostFlyPhysics);"), 1)
+            self.assertIn(
+                "EventPlayer.FlyModeActive=EventPlayer.FlyModeActive==False;"
+                "EventPlayer.GhostFlyPhysicsApplied=False;CallSubroutine(ApplyGhostFlyPhysics);End;",
+                packed,
+            )
 
     def test_wall_ghost_disables_only_walls_and_never_player_collision(self) -> None:
         for source, _ in self.sources:
-            physics = subroutine(source, "ApplyGhostFlyPhysics")
-            packed = compact(physics)
-            self.assertRegex(
-                packed,
-                r"If\(EventPlayer.GhostModeActive==True\);"
-                r"DisableMovementCollisionWithEnvironment\(EventPlayer,False\);"
-                r"Else;EnableMovementCollisionWithEnvironment\(EventPlayer\);",
-            )
+            for owner in ("ApplyGhostFlyPage", "ApplyGhostFlyPhysics"):
+                physics = subroutine(source, owner)
+                packed = compact(physics)
+                self.assertRegex(
+                    packed,
+                    r"If\(EventPlayer.GhostModeActive==True\);"
+                    r"DisableMovementCollisionWithEnvironment\(EventPlayer,False\);"
+                    r"Else;EnableMovementCollisionWithEnvironment\(EventPlayer\);",
+                )
+                self.assertNotIn("Movement Collision With Players", physics)
             self.assertNotIn("Disable Movement Collision With Environment(Event Player, True);", source)
-            self.assertNotIn("Movement Collision With Players", physics)
 
     def test_fly_disables_native_locomotion_and_uses_zero_gravity(self) -> None:
         for source, _ in self.sources:

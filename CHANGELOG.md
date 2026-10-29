@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.3 — 2026-10-28
+
+- La versione 0.8.3 riunisce gli aggiornamenti successivi alla 0.8.2 e la correzione dell'inerzia Ghost. Il tag v0.8.2 e il relativo allegato conservano il contenuto storico pubblicato.
+- Applicare o alternare Ghost aggiorna soltanto la collisione con l'ambiente, senza richiamare la fisica Fly, frenare o modificare velocità e gravità. L'inerzia si conserva durante salti, cadute e movimento; le transizioni Fly continuano a usare il proprio applicatore fisico e il reset della pagina spegne entrambi i toggle.
+- Tema Nocturne e palette di 40 Name Color con nomi a tema, 34 RGB rivisti, stessi indici e colore esatto condiviso da nome, preview e icona. Restano il roster `SOULS & ECHOES`, il leader `CROWN OF ASH`, il benvenuto e le intestazioni Soundtrack. Titolo `cozywatch.org [countdown]` e ciclo RGB arcobaleno originale di 51 secondi; Info / Controls 0 bianca fissa, indipendente dai colori personali.
+- Menu 16: Speed 20–1000% e Gravity 0–500%, default 100/100 e passi di 20 sotto il 100% e di 100 sopra. Crouch + Ultimate ripristina la sola pagina abilitata, con binding contestuale, applicazione una volta per pressione e isolamento personale.
+- Le 36 icone seguono il proprietario entro 5 m tridimensionali, con colore esatto e rinnovo anticipato del Chase. Dummy Target orienta il dummy nemico fermo verso l'umano vivo più vicino con consenso ON, senza inseguimento; gli AI normali conservano la navigazione nativa.
+- Include anche le correzioni successive alla 0.8.2 per margine inferiore HOST, Travel dopo morte, ripristino Attach dopo teletrasporto, rientro dagli spettatori, testi Multijump/Luck e pulizia delle espressioni Icon.
+- Il 28 ottobre, dopo la PR #114, l'utente ha confermato «funziona tutto». È un riscontro qualitativo generale, senza SHA importato, build client, numero di player, durata o metriche native. Precede questa correzione Ghost e non ne verifica il comportamento nel client; la matrice dedicata resta da eseguire sul commit importato.
+- Specifica: 276.439 byte UTF-8 normalizzati LF; clipboard: 299.838 byte (+291/+203 rispetto alla PR #114). Runtime: 130 regole numerate 0–129, 89 variabili globali, 127 player e 116 subroutine; specifica con 119 regole, 71 globali, 125 player e 69 subroutine. Stima strutturale offline: 27.496 unità (+10), massimo per regola 2.605 invariato; regola testualmente più grande 23.063 byte. Budget locali invariati 32.000/5.000; Element Count, Largest Rule e carico compilati richiedono misure nel client.
+
 ## Movement, reset personali, icone e Dummy Target — 2026-10-28
 
 - Speed passa a 20–1000%, Gravity resta 0–500%, entrambi con default 100. I passi sono 20 punti sotto il 100% e 100 sopra: 60↔80↔100↔200↔300. Al 100% Primary aumenta a 200 e Secondary diminuisce a 80; i binding mostrano il passo effettivo.
