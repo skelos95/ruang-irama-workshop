@@ -149,6 +149,7 @@ PAGE_APPLY_SUBROUTINES = {
     "ApplyMultijumpPage",
     "ApplySuperPunchPage",
     "ApplyMovementPage",
+    "ApplyNocturnePage",
 }
 MENU_OWNER_STATE_VARIABLES = {
     "MenuOpen",
@@ -188,6 +189,7 @@ MENU_OWNER_STATE_VARIABLES = {
     "MovementSpeed",
     "MovementGravity",
     "MovementCursor",
+    "NocturneState",
 }
 LIFECYCLE_SUBROUTINES = {"PreparePlayer", "QuiescePlayer", "CleanupPlayer"}
 LUCK_TIMESTAMP_VARIABLES = {
@@ -1116,7 +1118,12 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     ):
         checks.require(legacy not in source, f"messaggio apertura menu obsoleto: {legacy}")
 
-    checks.require("Big Message(" not in mask_strings(source), "Big Message/titolo vietato")
+    fate_messages = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Big Message")]
+    checks.require(len(fate_messages) == 1
+                   and len(list(iter_calls(source, "Big Message"))) == 1
+                   and subroutine_target(fate_messages[0][0]) == "ApplyNocturnePage"
+                   and fate_messages[0][1].args == ("Event Player", "Event Player.NocturneState[10]"),
+                   "Big Message/titolo vietato salvo il risultato personale di Fates")
     lowered_source = source.lower()
     for clause in GLOBAL_MODIFIER_CLAUSES:
         checks.require(
@@ -1430,7 +1437,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         if subroutine_target(rule) and "Create HUD Text(" in rule.body and "Event Player.MenuHud = Last Text ID;" in rule.body
     ]
     arcade_renderers = [rule for rule in menu_renderers if subroutine_target(rule) != "DrawTravelMenu"]
-    checks.equal(len(arcade_renderers), 14, "renderer menu principale + tredici pagine con opzioni")
+    checks.equal(len(arcade_renderers), 15, "renderer menu principale, tredici pagine e renderer Nocturne condiviso")
     direct_pages = {8, 9, 12, 15}
     for retired in ("GambarSakelarTeleportasi", "GambarPrivasiInspeksi",
                     "GambarIkutiBotBuatan", "GambarPukulanSuper"):
@@ -1750,7 +1757,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                       "7 - ICON", "8 - CROUCH: TELEPORT / ATTACH / SELF KILL", "9 - CROUCH PRIVACY",
                       "10 - TRY YOUR LUCK", "11 - VOTE", "12 - DUMMY TARGET",
                       "13 - GHOST MODE / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH",
-                      "16 - MOVEMENT"):
+                      "16 - MOVEMENT", "17 - PRESENCE", "18 - FATES",
+                      "19 - WHISPERS", "20 - MOONLIT AURA"):
             checks.require(token in main_renderer.body, f"Main menu page missing: {token}")
         for state in ("GhostModeActive", "FlyModeActive", "CrouchTravelEnabled",
                       "InspectionPrivacyActive", "AllowDummyBotFollow"):
@@ -1813,9 +1821,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(navigation_rule is not None, "navigazione menu principale assente")
     if navigation_rule:
         checks.require(
-            "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 16)) % 17;"
+            "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + (Event Player.MenuCommand == 3 ? 1 : 20)) % 21;"
             in navigation_rule.body,
-            "navigazione menu principale non usa ciclo esatto 0..16",
+            "navigazione menu principale non usa ciclo esatto 0..20",
         )
         checks.require(
             re.search(r"MenuPage\s*==\s*1.*?ColorCursor\s*=", navigation_rule.body, re.DOTALL) is not None,
@@ -1961,7 +1969,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         )
 
     checks.require(PAGE_APPLY_SUBROUTINES <= subroutines,
-                   "dispatcher Interact must cover the sixteen pages with actions")
+                   "dispatcher Interact must cover the existing pages and shared Nocturne actions")
     for name in sorted(PAGE_APPLY_SUBROUTINES):
         rule = rule_by_subroutine(rules, name)
         if rule:
@@ -2022,11 +2030,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         for action in owner_engine_actions:
             for call in iter_calls(rule.body, action):
                 if call.args:
-                    checks.equal(
-                        call.args[0].strip(),
-                        "Event Player",
-                        f"isolamento menu per-player: {name}/{action} owner",
-                    )
+                    allowed_recipient = (name == "ApplyNocturnePage" and action == "Small Message"
+                                         and call.args[0].strip() == "Event Player.InspectionTarget")
+                    checks.require(call.args[0].strip() == "Event Player" or allowed_recipient,
+                                   f"isolamento menu per-player: {name}/{action} owner")
         for action in ("Set Player Variable", "Modify Player Variable"):
             for call in iter_calls(rule.body, action):
                 if len(call.args) >= 2 and call.args[1].strip() in MENU_OWNER_STATE_VARIABLES:
@@ -2270,6 +2277,123 @@ def validate_super_punch(checks: Checks, source: str, rules: list[Rule], global_
                        f"Super Punch: cleanup identità in {name}")
 
 
+def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration]) -> None:
+    """Keep the four social pages personal, bounded and free of physics changes."""
+    def packed(expression: str) -> str:
+        return re.sub(r"\s+", "", mask_strings(expression))
+
+    state = [(entry.name, entry.index) for entry in player_entries if entry.name == "NocturneState"]
+    checks.equal(state, [("NocturneState", 125)], "Nocturne: unico stato player compatto nello slot 125")
+    setup = rule_by_subroutine(rules, "PreparePlayer")
+    initial = ('Event Player.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, '
+               'Custom String("The pages await your hand."));')
+    checks.require(setup is not None and initial in setup.body,
+                   "Nocturne: undici default, ricezione ON e Aura OFF in PreparePlayer")
+    for name, size in (("PresenceNames", 5), ("FateNames", 5), ("WhisperNames", 6),
+                       ("AuraNames", 5), ("OmenLines", 6)):
+        values = array_assignment_items(source, name)
+        checks.equal(len(values) if values is not None else None, size,
+                     f"Nocturne: catalogo {name} di {size} scelte")
+
+    route = "Else If(And(Event Player.MenuPage >= 17, Event Player.MenuPage <= 20));"
+    for name, target in (("DrawActiveMenuPage", "DrawNocturneMenu"), (None, "ApplyNocturnePage")):
+        rule = rule_by_subroutine(rules, name) if name else next((rule for rule in rules if rule.name.startswith("10 -")), None)
+        checks.require(rule is not None and packed(route + f"Call Subroutine({target});") in packed(rule.body),
+                       f"Nocturne: quattro pagine 17..20 instradate in {target}")
+        if rule and name is None:
+            calls = [call for call in iter_calls(rule.body, "Call Subroutine") if call.args == (target,)]
+            checks.equal(len(calls), 1, "Nocturne: aprire il sottomenu non deve applicare la scelta")
+            if calls:
+                branches = conditional_branches_containing(rule.body, calls[0].start)
+                checks.require(not any("MainMenuCursor" in branch.splitlines()[0] or "MenuPage == -1" in branch.splitlines()[0]
+                                       for branch in branches),
+                               "Nocturne: apertura dal principale senza side effect")
+
+    apply = rule_by_subroutine(rules, "ApplyNocturnePage")
+    checks.require(apply is not None, "Nocturne: handler condiviso assente")
+    if apply:
+        code = packed(apply.body)
+        for guard in (
+            "Abort If(Event Player.IsHuman == False);",
+            "Abort If(Event Player.IsPrepared == False);",
+            "Abort If(Array Contains(Global.HumanPlayers, Event Player) == False);",
+            "Abort If(Or(Has Spawned(Event Player) == False, Is Alive(Event Player) == False));",
+        ):
+            checks.require(packed(guard) in code, "Nocturne: handler riservato a umani registrati e vivi")
+        for field, seconds in ((3, 5), (6, 15)):
+            checks.require(packed(f"Total Time Elapsed < Event Player.NocturneState[{field}]") in code
+                           and packed(f"Event Player.NocturneState[{field}] = Total Time Elapsed + {seconds};") in code,
+                           f"Nocturne: cooldown {seconds}s nel campo {field}")
+        target_guards = (
+            "Abort If(Event Player.InspectionTarget == Null);",
+            "Abort If(Event Player.InspectionTarget == Event Player);",
+            "Abort If(Entity Exists(Event Player.InspectionTarget) == False);",
+            "Abort If(Array Contains(Global.HumanPlayers, Event Player.InspectionTarget) == False);",
+            "Abort If(Player Variable(Event Player.InspectionTarget, IsHuman) == False);",
+            "Abort If(Player Variable(Event Player.InspectionTarget, IsPrepared) == False);",
+            "Abort If(Player Variable(Event Player.InspectionTarget, PlayerCycleActive) == True);",
+            "Abort If(Player Variable(Event Player.InspectionTarget, LastTeam) != Team Of(Event Player.InspectionTarget));",
+            "Abort If(Or(Has Spawned(Event Player.InspectionTarget) == False, Is Alive(Event Player.InspectionTarget) == False));",
+            "Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);",
+            "Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);",
+            "Abort If(Distance Between(Event Player, Event Player.InspectionTarget) > 25);",
+            "Abort If(Is In View Angle(Event Player, Eye Position(Event Player.InspectionTarget), 12) == False);",
+            "Abort If(Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.InspectionTarget), Barriers Do Not Block LOS) == False);",
+        )
+        recipient_calls = [call for call in iter_calls(apply.body, "Small Message")
+                           if call.args[0] == "Event Player.InspectionTarget"]
+        checks.equal(len(recipient_calls), 1, "Nocturne: un solo messaggio privato al destinatario")
+        for guard in target_guards:
+            checks.require(packed(guard) in code, f"Nocturne: Whispers richiede consenso e target valido: {guard}")
+            if recipient_calls:
+                checks.require(packed(guard) in packed(apply.body[:recipient_calls[0].start]),
+                               "Nocturne: tutte le guardie Whispers precedono il messaggio")
+        for forbidden in ("Set Status", "Set Move Speed", "Set Gravity", "Apply Impulse", "Damage", "Kill", "Teleport", "Create Effect"):
+            checks.require(not list(iter_calls(apply.body, forbidden)),
+                           f"Nocturne: menu sociali non cambiano fisica, danni o effetti direttamente: {forbidden}")
+    reset = rule_by_subroutine(rules, "ResetMenuPage")
+    if reset:
+        checks.require(re.search(r"NocturneState\[(?:3|6)\]\s*=(?!=)", mask_strings(reset.body)) is None,
+                       "Nocturne: reset non deve azzerare cooldown Fates o Whispers")
+    manager = rule_by_subroutine(rules, "UpdateMoonlitAuras")
+    cleanup = rule_by_subroutine(rules, "CleanupMoonlitAura")
+    checks.require(manager is not None and cleanup is not None, "Nocturne: manager e cleanup Aura obbligatori")
+    if manager:
+        calls = list(iter_calls(manager.body, "Create Effect"))
+        checks.equal(len(calls), 2, "Nocturne: soltanto due siti Aura, Ring e Cloud")
+        checks.equal([call.args[1] for call in calls if len(call.args) == 6], ["Ring", "Cloud"],
+                     "Nocturne: soltanto Ring e Cloud per Moonlit Aura")
+        for call in calls:
+            if len(call.args) != 6:
+                continue
+            audience = packed(call.args[0])
+            checks.require(audience.startswith("FilteredArray(Global.HumanPlayers,")
+                           and "PlayerVariable(CurrentArrayElement,NocturneState)[9]==False" in audience
+                           and "CurrentArrayElement==EvaluateOnce(Global.MoonlitAuraPlayer)" in audience,
+                           "Nocturne: Aura rispetta il filtro del viewer e resta visibile al proprietario")
+            checks.equal(call.args[5], "Visible To Position and Radius", "Nocturne: Aura rivaluta visibilità e posizione")
+            for argument in call.args:
+                unfrozen = mask_strings(argument)
+                for capture in reversed(list(iter_calls(unfrozen, "Evaluate Once"))):
+                    unfrozen = unfrozen[:capture.start] + " " * (capture.end - capture.start) + unfrozen[capture.end:]
+                checks.require(not re.search(r"Global\.MoonlitAura(?:Player|Index)\b", unfrozen),
+                               "Nocturne: Aura congela proprietario e slot nei parametri persistenti")
+    for name, rule in (("UpdateMoonlitAuras", manager), ("CleanupMoonlitAura", cleanup)):
+        if rule:
+            checks.require("ForGlobalVariable(MoonlitAuraIndex,0,12,1);" in packed(rule.body)
+                           and not wait_calls(rule.body) and action_loop_count(rule.body) == 0,
+                           f"Nocturne: {name} atomico e limitato a dodici slot")
+    if cleanup:
+        checks.require("If(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] == Global.MoonlitAuraPlayer);" in cleanup.body,
+                       "Nocturne: cleanup Aura agisce soltanto sull'owner esatto")
+        checks.require("Player Variable(" not in cleanup.body and "NocturneState" not in cleanup.body,
+                       "Nocturne: cleanup Aura sopravvive alla perdita dello stato player")
+    for name in ("QuiescePlayer", "CleanupPlayer"):
+        lifecycle = rule_by_subroutine(rules, name)
+        checks.require(lifecycle is not None and packed("Global.MoonlitAuraPlayer = Event Player;Call Subroutine(CleanupMoonlitAura);Global.MoonlitAuraPlayer = Null;") in packed(lifecycle.body),
+                       f"Nocturne: {name} rimuove l'Aura del proprio soggetto")
+
+
 def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], global_entries: list[Declaration]) -> None:
     """Guard at most twelve owner-bound RGB icons within five metres in 3D."""
     def code(expression: str) -> str:
@@ -2289,7 +2413,8 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
     for removed in ("DaftarWarnaPilar", "SkalaIkonPilar", "TujuanIkonPilar"):
         checks.require(removed not in code(source), f"Pilar: stato Light Shaft e destinazioni duplicate rimosso {removed}")
     effects = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Create Effect")]
-    checks.equal(len(effects), 0, "Pilar: nessun Light Shaft o Create Effect persistente")
+    checks.require(all(subroutine_target(rule) == "UpdateMoonlitAuras" for rule, _ in effects),
+                   "Pilar: nessun Light Shaft o Create Effect persistente fuori da Moonlit Aura")
 
     manager = rule_by_subroutine(rules, "UpdateSocialObjectiveIcons")
     cleanup = rule_by_subroutine(rules, "CleanupObjectiveIcon")
@@ -3007,6 +3132,19 @@ def validate_special_player_profile(
         return values
 
     def soundtrack_choice(expression: str, label: str) -> str | None:
+        presence = parse_top_level_ternary(expression)
+        if presence and code(presence[0]) == "EventPlayer.NocturneState[0]==0":
+            decorated = full_custom_string(presence[2])
+            checks.require(decorated is not None and len(decorated.args) == 3
+                           and parse_literal(decorated.args[0]) == "{0} | {1}",
+                           f"{label}: Presence deve aggiungere soltanto lo stato sociale")
+            if decorated and len(decorated.args) == 3:
+                checks.equal(code(trim_outer_parentheses(decorated.args[1])),
+                             code(trim_outer_parentheses(presence[1])),
+                             f"{label}: Presence conserva il soundtrack e il profilo speciale")
+                checks.equal(code(decorated.args[2]), "Global.PresenceNames[EventPlayer.NocturneState[0]]",
+                             f"{label}: Presence lookup per il proprietario")
+            expression = presence[1]
         special = parse_top_level_ternary(expression)
         checks.require(special is not None, f"{label}: ternario CustomSoundtrack assente")
         if special is None:
@@ -3504,10 +3642,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
                            "catalogo musicale: passo indietro dinamico")
         effects = list(iter_calls(rule.body, "Play Effect"))
         persistent = list(iter_calls(rule.body, "Create Effect"))
-        beacon = (len(persistent) == 1 and event_type(rule) == "Ongoing - Global"
-                  and "Global.IsReady = True;" in rule.body and len(persistent[0].args) == 6
-                  and persistent[0].args[1].strip() == "Light Shaft")
-        checks.require(not persistent or beacon, f"feedback visuale: nessun effetto persistente fuori dal pilar iniziale in {rule.name}")
+        aura = subroutine_target(rule) == "UpdateMoonlitAuras"
+        checks.require(not persistent or aura, f"feedback visuale: nessun effetto persistente fuori da Moonlit Aura in {rule.name}")
         checks.require(not effects or subroutine_target(rule) == "ProcessMultijump",
                        f"feedback visuale: effetti consentiti soltanto per Multijump, trovato {rule.name}")
         checks.require("EfekTerapkan" not in masked,
@@ -3543,6 +3679,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             10: (202, 164, 180), 11: (208, 184, 144), 12: (154, 174, 162),
             13: (164, 176, 202), 14: (180, 164, 202), 15: (198, 112, 132),
             16: (160, 176, 190),
+            17: (174, 188, 186), 18: (198, 174, 142),
+            19: (198, 152, 174), 20: (172, 168, 206),
         }
         for page, anchor in anchors.items():
             expected = (
@@ -3552,8 +3690,8 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
             checks.require(re.sub(r"\s+", "", expected) in transition_code,
                            f"Menu color: blended accent for page {page}")
         selector_pattern = re.escape(re.sub(r"\s+", "", selector)) + r"==(\d+)\?"
-        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(17)),
-                     "feedback visuale: diciassette tinte menu in ordine senza duplicati")
+        checks.equal([int(page) for page in re.findall(selector_pattern, transition_code)], list(range(21)),
+                     "feedback visuale: ventuno tinte menu in ordine senza duplicati")
         checks.equal(len(list(iter_calls(transition.body, "Chase Player Variable Over Time"))), 2,
                      "feedback visuale: due transizioni fluide senza override duplicato")
         checks.equal(mask_strings(transition.body).count("Event Player.MenuColor ="), 0,
@@ -4329,7 +4467,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             ("If(And(Global.ActivePlayer.IsHuman == True, Global.ActivePlayer.FlyModeActive == True));Call Subroutine(ProcessPlayerFlight);End;", "Fly solo umano attivo"),
             ("If(And(Global.ActivePlayer.IsHuman == True, Or(Global.ActivePlayer.AllowDummyBotFollow == True, And(Global.ActivePlayer.MenuOpen == True, Or(Global.ActivePlayer.MenuPage == 2, Global.ActivePlayer.MenuPage == 4)))));Call Subroutine(ProcessPlayerMaintenance);End;", "cache solo menu Camera/Revenge o consenso Dummy Follow ON"),
             ("Else;If(Global.SchedulerStep % 2 == Slot Of(Global.ActivePlayer) % 2);Call Subroutine(ProcessPlayerBot);End;End;", "manutenzione bot isolata 10 Hz"),
-            ("If(Global.SchedulerStep % 20 == 0);Call Subroutine(MaintainDummyBots);Call Subroutine(UpdateSocialObjectiveIcons);Global.TextCleanupPlayer = Null;Call Subroutine(CleanupOrphanedText);End;", "slot dummy, pulizia e pilar 1 Hz"),
+            ("If(Global.SchedulerStep % 20 == 0);Call Subroutine(MaintainDummyBots);Call Subroutine(UpdateSocialObjectiveIcons);Call Subroutine(UpdateMoonlitAuras);Global.TextCleanupPlayer = Null;Call Subroutine(CleanupOrphanedText);End;", "slot dummy, pulizia, pilar e aura 1 Hz"),
         ):
             checks.require(re.sub(r"\s+", "", gate) in scheduler_packed,
                            f"scheduler a stati: {label}")
@@ -7532,6 +7670,7 @@ def validate(source: str, root: Path = ROOT, *, include_metadata: bool = True) -
     validate_movement(checks, source, rules, player_entries)
     validate_multijump(checks, source, rules, player_entries, subroutines)
     validate_super_punch(checks, source, rules, globals_entries, subroutines)
+    validate_nocturne_social(checks, source, rules, player_entries)
     validate_social_beacon(checks, source, rules, globals_entries)
     validate_special_player_profile(checks, source, rules, player_entries)
     validate_catalog_feedback(checks, source, rules)

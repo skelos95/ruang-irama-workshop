@@ -72,24 +72,35 @@ variables
 		68: ObjectiveIconChoices
 		69: ObjectiveIconPlayer
 		70: CameraPlayer
-		71: TriggerPlayer
-		72: ControllerGeneration
-		73: TeamCyclePhase
-		74: TeamCyclePhaseTime
-		75: TeamCyclePhaseOwner
-		76: EventQueue
-		77: EventQueueHead
-		78: EventQueueTail
-		79: EventCount
-		80: InitialEventCount
-		81: EventCursor
-		82: ActiveEvent
-		83: DroppedEventCount
-		84: PendingLeaves
-		85: PendingLeaveCursor
-		86: MissingHudDeadlines
-		87: MissingPlayerCursor
-		88: VisibleIconChoices
+		71: PresenceNames
+		72: FateNames
+		73: WhisperNames
+		74: AuraNames
+		75: OmenLines
+		76: MoonlitAuraOwners
+		77: MoonlitAuraIds
+		78: MoonlitAuraChoices
+		79: MoonlitAuraColors
+		80: MoonlitAuraIndex
+		81: MoonlitAuraPlayer
+		82: TriggerPlayer
+		83: ControllerGeneration
+		84: TeamCyclePhase
+		85: TeamCyclePhaseTime
+		86: TeamCyclePhaseOwner
+		87: EventQueue
+		88: EventQueueHead
+		89: EventQueueTail
+		90: EventCount
+		91: InitialEventCount
+		92: EventCursor
+		93: ActiveEvent
+		94: DroppedEventCount
+		95: PendingLeaves
+		96: PendingLeaveCursor
+		97: MissingHudDeadlines
+		98: MissingPlayerCursor
+		99: VisibleIconChoices
 	player:
 		0: IsClassified
 		1: IsAutomaticBot
@@ -216,8 +227,9 @@ variables
 		122: JumpWasGrounded
 		123: NextMultijumpTime
 		124: MovementCursor
-		125: ControllerState
-		126: ControllerTimes
+		125: NocturneState
+		126: ControllerState
+		127: ControllerTimes
 }
 subroutines
 {
@@ -290,53 +302,57 @@ subroutines
 	66: ApplyMovementPage
 	67: DrawMovementMenu
 	68: ResetMenuPage
-	69: Controller01a
-	70: Controller01b
-	71: Controller02
-	72: Controller03c
-	73: Controller03f
-	74: Controller03g
-	75: Controller03h
-	76: Controller05
-	77: Controller05b
-	78: Controller05c
-	79: Controller05d
-	80: Controller05e
-	81: Controller05f
-	82: Controller06
-	83: Controller08
-	84: Controller10
-	85: Controller11
-	86: Controller12c
-	87: Controller12d
-	88: Controller12f
-	89: Controller12g
-	90: Controller13
-	91: Controller18c
-	92: Controller18g
-	93: Controller18i
-	94: Controller18j
-	95: Controller18k
-	96: Controller19
-	97: Controller19a
-	98: Controller19b
-	99: Controller19c
-	100: Controller19d
-	101: Controller19e
-	102: Controller19f
-	103: Controller19h
-	104: Controller19g
-	105: NativeEvent03i
-	106: NativeEvent04
-	107: NativeEvent12e
-	108: NativeEvent16a
-	109: NativeEvent17
-	110: NativeEvent18f
-	111: NativeEvent89i1
-	112: ProcessGlobalController
-	113: ProcessGlobalEventQueue
-	114: ProcessGlobalLeaves
-	115: ProcessVisibleIcons
+	69: DrawNocturneMenu
+	70: ApplyNocturnePage
+	71: UpdateMoonlitAuras
+	72: CleanupMoonlitAura
+	73: Controller01a
+	74: Controller01b
+	75: Controller02
+	76: Controller03c
+	77: Controller03f
+	78: Controller03g
+	79: Controller03h
+	80: Controller05
+	81: Controller05b
+	82: Controller05c
+	83: Controller05d
+	84: Controller05e
+	85: Controller05f
+	86: Controller06
+	87: Controller08
+	88: Controller10
+	89: Controller11
+	90: Controller12c
+	91: Controller12d
+	92: Controller12f
+	93: Controller12g
+	94: Controller13
+	95: Controller18c
+	96: Controller18g
+	97: Controller18i
+	98: Controller18j
+	99: Controller18k
+	100: Controller19
+	101: Controller19a
+	102: Controller19b
+	103: Controller19c
+	104: Controller19d
+	105: Controller19e
+	106: Controller19f
+	107: Controller19h
+	108: Controller19g
+	109: NativeEvent03i
+	110: NativeEvent04
+	111: NativeEvent12e
+	112: NativeEvent16a
+	113: NativeEvent17
+	114: NativeEvent18f
+	115: NativeEvent89i1
+	116: ProcessGlobalController
+	117: ProcessGlobalEventQueue
+	118: ProcessGlobalLeaves
+	119: ProcessVisibleIcons
 }
 
 rule("0 - Global: Initialize 200 genres, from calm to chaos")
@@ -389,6 +405,17 @@ rule("0 - Global: Initialize 200 genres, from calm to chaos")
 		Global.TextCleanupIndex = -1;
 		Global.TextCleanupPlayer = Null;
 		Global.TextCleanupCursor = 0;
+		Global.PresenceNames = Array(Custom String("Unspoken"), Custom String("Seeking company"), Custom String("Listening in silence"), Custom String("Lost in thought"), Custom String("Away beyond the veil"));
+		Global.FateNames = Array(Custom String("MOON / ASH"), Custom String("SIX-SIDED DIE"), Custom String("TWENTY-SIDED DIE"), Custom String("PERCENTILE"), Custom String("DARK OMEN"));
+		Global.WhisperNames = Array(Custom String("RECEIVE WHISPERS"), Custom String("GREETING"), Custom String("RESPECT"), Custom String("WITHERED ROSE"), Custom String("GENTLE EMBRACE"), Custom String("RESONANCE"));
+		Global.AuraNames = Array(Custom String("NONE"), Custom String("MOONLIT RING"), Custom String("WITHERED HALO"), Custom String("VEIL OF ASH"), Custom String("HIDE OTHER AURAS"));
+		Global.OmenLines = Array(Custom String("The raven remembers."), Custom String("Beneath the ash, an ember waits."), Custom String("The moon guards your silence."), Custom String("A lost melody returns."), Custom String("Thorns yield to patient hands."), Custom String("Even winter carries a song."));
+		Global.MoonlitAuraOwners = Mapped Array(Global.AvailableHudSlots, Null);
+		Global.MoonlitAuraIds = Mapped Array(Global.AvailableHudSlots, 0);
+		Global.MoonlitAuraChoices = Mapped Array(Global.AvailableHudSlots, 0);
+		Global.MoonlitAuraColors = Mapped Array(Global.AvailableHudSlots, 0);
+		Global.MoonlitAuraIndex = 0;
+		Global.MoonlitAuraPlayer = Null;
 		Global.CameraPlayer = Null;
 		Global.CameraDistance = 2.000;
 		Global.CameraOffset = 0.550;
@@ -759,7 +786,7 @@ rule("8 - Player: Classify humans and automatic bots")
 		Global.TriggerPlayer.IsHuman = True;
 		Global.TriggerPlayer.LastHero = Hero Of(Global.TriggerPlayer);
 		Global.VoteRecountNeeded = True;
-		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Player Variable(Evaluate Once(Global.TriggerPlayer), IconIndex)], Hero Icon String((Is Duplicating(Evaluate Once(Global.TriggerPlayer)) ? Hero Being Duplicated(Evaluate Once(Global.TriggerPlayer)) : Hero Of(Evaluate Once(Global.TriggerPlayer)))), Custom String("{0} - {1}", Evaluate Once(Global.TriggerPlayer.DisplayName), ((Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) != Null) ? Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex)] : Custom String("silence before the storm"))))), (And((Global.PerformanceDiagnostics == True), And((Local Player == Host Player), (Player Variable(Evaluate Once(Global.TriggerPlayer), HudSlot) == Global.LastHudSlot))) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", (((5 + Count Of(Filtered Array(Global.PlayerListHudIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.MenuHudIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, (Current Array Element != 0)))), ((Count Of(Filtered Array(Global.InspectionTextIds, (Current Array Element != 0))) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, (Current Array Element != 0)))))) : Custom String("")), Left, (1 + Player Variable(Evaluate Once(Global.TriggerPlayer), HudSlot)), Color(White), Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor), Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Player Variable(Evaluate Once(Global.TriggerPlayer), IconIndex)], Hero Icon String((Is Duplicating(Evaluate Once(Global.TriggerPlayer)) ? Hero Being Duplicated(Evaluate Once(Global.TriggerPlayer)) : Hero Of(Evaluate Once(Global.TriggerPlayer)))), Custom String("{0} - {1}", Evaluate Once(Global.TriggerPlayer.DisplayName), ((Player Variable(Evaluate Once(Global.TriggerPlayer), NocturneState)[0] == 0) ? ((Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) != Null) ? Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex)] : Custom String("silence before the storm"))) : Custom String("{0} | {1}", ((Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) != Null) ? Player Variable(Evaluate Once(Global.TriggerPlayer), CustomSoundtrack) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Evaluate Once(Global.TriggerPlayer), GenreIndex)] : Custom String("silence before the storm"))), Global.PresenceNames[Player Variable(Evaluate Once(Global.TriggerPlayer), NocturneState)[0]])))), (And((Global.PerformanceDiagnostics == True), And((Local Player == Host Player), (Player Variable(Evaluate Once(Global.TriggerPlayer), HudSlot) == Global.LastHudSlot))) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", (((5 + Count Of(Filtered Array(Global.PlayerListHudIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.MenuHudIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, (Current Array Element != 0)))), ((Count Of(Filtered Array(Global.InspectionTextIds, (Current Array Element != 0))) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, (Current Array Element != 0)))) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, (Current Array Element != 0)))))) : Custom String("")), Left, (1 + Player Variable(Evaluate Once(Global.TriggerPlayer), HudSlot)), Color(White), Player Variable(Evaluate Once(Global.TriggerPlayer), NameColor), Color(White), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.PlayerListHud = Last Text ID;
 		If(And((Index Of Array Value(Global.HumanPlayers, Global.TriggerPlayer) >= 0), (Index Of Array Value(Global.HumanPlayers, Global.TriggerPlayer) < Count Of(Global.PlayerListHudIds))));
 		Global.PlayerListHudIds[Index Of Array Value(Global.HumanPlayers, Global.TriggerPlayer)] = Global.TriggerPlayer.PlayerListHud;
@@ -1115,6 +1142,7 @@ rule("18 - Global main loop: Central scheduler at 20 Hz")
 		If(((Global.SchedulerStep % 20) == 0));
 		Call Subroutine(MaintainDummyBots);
 		Call Subroutine(UpdateSocialObjectiveIcons);
+		Call Subroutine(UpdateMoonlitAuras);
 		Global.TextCleanupPlayer = Null;
 		Call Subroutine(CleanupOrphanedText);
 		End;
@@ -1289,7 +1317,7 @@ rule("25 - Menu: Navigate forward and backward")
 		Abort If((Global.TriggerPlayer.ControllerState[13] == 1));
 		Global.TriggerPlayer.ControllerState[13] = 1;
 		If((Global.TriggerPlayer.MenuPage == -1));
-		Global.TriggerPlayer.MainMenuCursor = ((Global.TriggerPlayer.MainMenuCursor + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 16)) % 17);
+		Global.TriggerPlayer.MainMenuCursor = ((Global.TriggerPlayer.MainMenuCursor + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 20)) % 21);
 		Else If((Global.TriggerPlayer.MenuPage == 1));
 		Global.TriggerPlayer.ColorCursor = ((Global.TriggerPlayer.ColorCursor + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : (Count Of(Global.NameColors) - 1))) % Count Of(Global.NameColors));
 		Else If((Global.TriggerPlayer.MenuPage == 2));
@@ -1316,6 +1344,14 @@ rule("25 - Menu: Navigate forward and backward")
 		Global.TriggerPlayer.GhostFlyCursor = ((Global.TriggerPlayer.GhostFlyCursor + 1) % 2);
 		Else If((Global.TriggerPlayer.MenuPage == 14));
 		Global.TriggerPlayer.MultijumpCursor = ((Global.TriggerPlayer.MultijumpCursor + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 10)) % 11);
+		Else If((Global.TriggerPlayer.MenuPage == 17));
+		Global.TriggerPlayer.NocturneState[1] = ((Global.TriggerPlayer.NocturneState[1] + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 4)) % 5);
+		Else If((Global.TriggerPlayer.MenuPage == 18));
+		Global.TriggerPlayer.NocturneState[2] = ((Global.TriggerPlayer.NocturneState[2] + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 4)) % 5);
+		Else If((Global.TriggerPlayer.MenuPage == 19));
+		Global.TriggerPlayer.NocturneState[4] = ((Global.TriggerPlayer.NocturneState[4] + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 5)) % 6);
+		Else If((Global.TriggerPlayer.MenuPage == 20));
+		Global.TriggerPlayer.NocturneState[7] = ((Global.TriggerPlayer.NocturneState[7] + ((Global.TriggerPlayer.MenuCommand == 3) ? 1 : 4)) % 5);
 		Else If((Global.TriggerPlayer.MenuPage == 16));
 		If((Global.TriggerPlayer.MovementCursor == 0));
 		Global.TriggerPlayer.MovementSpeed = Min(1000, Max(20, (Global.TriggerPlayer.MovementSpeed + ((Global.TriggerPlayer.MenuCommand == 3) ? ((Global.TriggerPlayer.MovementSpeed < 100) ? 20 : 100) : ((Global.TriggerPlayer.MovementSpeed <= 100) ? -20 : -100)))));
@@ -1390,6 +1426,8 @@ rule("27 - Menu: Apply the active page")
 		Global.TriggerPlayer.GhostFlyCursor %= 2;
 		Else If((Global.TriggerPlayer.MenuPage == 14));
 		Global.TriggerPlayer.MultijumpCursor = (Global.TriggerPlayer.MultijumpEnabled ? Global.TriggerPlayer.MultijumpLevel : 0);
+		Else If((Global.TriggerPlayer.MenuPage == 17));
+		Global.TriggerPlayer.NocturneState[1] = Global.TriggerPlayer.NocturneState[0];
 		Else If((Global.TriggerPlayer.MenuPage == 16));
 		Global.TriggerPlayer.MovementCursor %= 2;
 		End;
@@ -1417,6 +1455,8 @@ rule("27 - Menu: Apply the active page")
 		Call Subroutine(ApplyGhostFlyPage);
 		Else If((Global.TriggerPlayer.MenuPage == 14));
 		Call Subroutine(ApplyMultijumpPage);
+		Else If(And((Global.TriggerPlayer.MenuPage >= 17), (Global.TriggerPlayer.MenuPage <= 20)));
+		Call Subroutine(ApplyNocturnePage);
 		Else If((Global.TriggerPlayer.MenuPage == 16));
 		Call Subroutine(ApplyMovementPage);
 		End;
@@ -3289,7 +3329,7 @@ rule("78 - Subroutine: Draw the main menu")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), (And(Array Contains(Array(1, 2, 3, 5, 6, 7, 11, 13, 14, 16), Player Variable(Local Player, MainMenuCursor)), Or((Player Variable(Local Player, MainMenuCursor) != 3), (Player Variable(Local Player, CustomSoundtrack) == Null))) ? Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate))) : Custom String("")))), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("") : Custom String("{0}\n{1}", ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("1 - NAME COLOR") : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("2 - 3P CAMERA") : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("3 - SOUNDTRACK") : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("4 - REVENGE") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("5 - UNKILLABLE") : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("6 - HERO VOICE") : ((Player Variable(Local Player, MainMenuCursor) == 7) ? Custom String("7 - ICON") : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("9 - CROUCH PRIVACY") : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("10 - TRY YOUR LUCK") : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("11 - VOTE PLAYER") : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("12 - DUMMY TARGET") : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("15 - SUPERMAN PUNCH") : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("14 - MULTIJUMP") : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("16 - MOVEMENT / GRAVITY") : Custom String("13 - GHOST MODE / FLY")))))))))))))))), ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)]) : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("off") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("your hero") : Custom String("watching {0}", Player Variable(Local Player, CameraTarget))))) : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Player Variable(Local Player, CustomSoundtrack) : ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm")))) : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")))) : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")))))) : ((Player Variable(Local Player, MainMenuCursor) == 7) ? ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)])) : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("NOW: {0}", (Player Variable(Local Player, CrouchTravelEnabled) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("NOW: {0}", (Player Variable(Local Player, InspectionPrivacyActive) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY"))) : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE"))) : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("ENEMY DUMMY TARGETING: {0}", (Player Variable(Local Player, AllowDummyBotFollow) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("NOW: {0}", (Array Contains(Global.SuperPunchPlayers, Local Player) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100)) : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Player Variable(Local Player, MovementSpeed), Player Variable(Local Player, MovementGravity)) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))))))))))))))))))), Top, 3, Color(White), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Color(White) : Custom Color(210, 200, 192, 255)), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), (And(Array Contains(Array(1, 2, 3, 5, 6, 7, 11, 13, 14, 16, 17, 18, 19, 20), Player Variable(Local Player, MainMenuCursor)), Or((Player Variable(Local Player, MainMenuCursor) != 3), (Player Variable(Local Player, CustomSoundtrack) == Null))) ? Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate))) : Custom String("")))), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Custom String("") : Custom String("{0}\n{1}", ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("1 - NAME COLOR") : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("2 - 3P CAMERA") : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("3 - SOUNDTRACK") : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("4 - REVENGE") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("5 - UNKILLABLE") : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("6 - HERO VOICE") : ((Player Variable(Local Player, MainMenuCursor) == 7) ? Custom String("7 - ICON") : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("9 - CROUCH PRIVACY") : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("10 - TRY YOUR LUCK") : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("11 - VOTE PLAYER") : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("12 - DUMMY TARGET") : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("15 - SUPERMAN PUNCH") : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("14 - MULTIJUMP") : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("16 - MOVEMENT / GRAVITY") : ((Player Variable(Local Player, MainMenuCursor) == 17) ? Custom String("17 - PRESENCE") : ((Player Variable(Local Player, MainMenuCursor) == 18) ? Custom String("18 - FATES") : ((Player Variable(Local Player, MainMenuCursor) == 19) ? Custom String("19 - WHISPERS") : ((Player Variable(Local Player, MainMenuCursor) == 20) ? Custom String("20 - MOONLIT AURA") : Custom String("13 - GHOST MODE / FLY")))))))))))))))))))), ((Player Variable(Local Player, MainMenuCursor) == 1) ? Custom String("NOW: {0}", Global.ColorNames[Player Variable(Local Player, ColorIndex)]) : ((Player Variable(Local Player, MainMenuCursor) == 2) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CameraMode) == 0) ? Custom String("off") : ((Player Variable(Local Player, CameraMode) == 1) ? Custom String("your hero") : Custom String("watching {0}", Player Variable(Local Player, CameraTarget))))) : ((Player Variable(Local Player, MainMenuCursor) == 3) ? Custom String("NOW: {0}", ((Player Variable(Local Player, CustomSoundtrack) != Null) ? Player Variable(Local Player, CustomSoundtrack) : ((Player Variable(Local Player, GenreIndex) >= 0) ? Global.GenreNames[Player Variable(Local Player, GenreIndex)] : Custom String("silence before the storm")))) : ((Player Variable(Local Player, MainMenuCursor) == 4) ? Custom String("") : ((Player Variable(Local Player, MainMenuCursor) == 5) ? Custom String("NOW: {0}", ((Player Variable(Local Player, UnkillableMode) == 0) ? Custom String("OFF") : ((Player Variable(Local Player, UnkillableMode) == 1) ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")))) : ((Player Variable(Local Player, MainMenuCursor) == 6) ? Custom String("NOW: {0}", ((Player Variable(Local Player, VoiceIndex) == 0) ? Custom String("NORMAL") : ((Player Variable(Local Player, VoiceIndex) == 1) ? Custom String("LOW 0.50x") : ((Player Variable(Local Player, VoiceIndex) == 2) ? Custom String("LOW 0.75x") : ((Player Variable(Local Player, VoiceIndex) == 3) ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")))))) : ((Player Variable(Local Player, MainMenuCursor) == 7) ? ((Player Variable(Local Player, IconIndex) == 0) ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Player Variable(Local Player, IconIndex)], Global.IconNames[Player Variable(Local Player, IconIndex)])) : ((Player Variable(Local Player, MainMenuCursor) == 8) ? Custom String("NOW: {0}", (Player Variable(Local Player, CrouchTravelEnabled) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 9) ? Custom String("NOW: {0}", (Player Variable(Local Player, InspectionPrivacyActive) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 10) ? Custom String("STATUS: {0}", (Player Variable(Local Player, LuckActive) ? ((Player Variable(Local Player, LuckSpinCount) > 0) ? Custom String("ROLLING") : Custom String("ACTIVE")) : Custom String("READY"))) : ((Player Variable(Local Player, MainMenuCursor) == 11) ? Custom String("YOUR VOTE: {0}", ((Player Variable(Local Player, VotedPlayer) != Null) ? Player Variable(Local Player, VotedPlayer) : Custom String("NONE"))) : ((Player Variable(Local Player, MainMenuCursor) == 12) ? Custom String("ENEMY DUMMY TARGETING: {0}", (Player Variable(Local Player, AllowDummyBotFollow) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 15) ? Custom String("NOW: {0}", (Array Contains(Global.SuperPunchPlayers, Local Player) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 14) ? Custom String("NOW: {0} | AIR BOOST: {1}%", (Player Variable(Local Player, MultijumpEnabled) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, MultijumpLevel) * 100)) : ((Player Variable(Local Player, MainMenuCursor) == 16) ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Player Variable(Local Player, MovementSpeed), Player Variable(Local Player, MovementGravity)) : ((Player Variable(Local Player, MainMenuCursor) == 17) ? Custom String("NOW: {0}", Global.PresenceNames[Player Variable(Local Player, NocturneState)[0]]) : ((Player Variable(Local Player, MainMenuCursor) == 18) ? Custom String("Turn a page of fate. Leave the living untouched.") : ((Player Variable(Local Player, MainMenuCursor) == 19) ? Custom String("RECEIVE: {0}", ((Player Variable(Local Player, NocturneState)[5] == True) ? Custom String("ON") : Custom String("OFF"))) : ((Player Variable(Local Player, MainMenuCursor) == 20) ? Custom String("NOW: {0}", Global.AuraNames[Player Variable(Local Player, NocturneState)[8]]) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", (Player Variable(Local Player, GhostModeActive) ? Custom String("ON") : Custom String("OFF")), (Player Variable(Local Player, FlyModeActive) ? Custom String("ON") : Custom String("OFF")))))))))))))))))))))))), Top, 3, Color(White), ((Player Variable(Local Player, MainMenuCursor) == 0) ? Color(White) : Custom Color(210, 200, 192, 255)), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
 		Global.TriggerPlayer.MenuHud = Last Text ID;
 	}
 }
@@ -3496,6 +3536,8 @@ rule("89 - Subroutine: Draw the active page")
 		Call Subroutine(DrawGhostFlyMenu);
 		Else If((Global.TriggerPlayer.MenuPage == 14));
 		Call Subroutine(DrawMultijumpMenu);
+		Else If(And((Global.TriggerPlayer.MenuPage >= 17), (Global.TriggerPlayer.MenuPage <= 20)));
+		Call Subroutine(DrawNocturneMenu);
 		Else If((Global.TriggerPlayer.MenuPage == 16));
 		Call Subroutine(DrawMovementMenu);
 		End;
@@ -3515,7 +3557,7 @@ rule("90 - Subroutine: Transition the menu color smoothly")
 		If(Global.TriggerPlayer.CrouchTravelActive);
 		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 0) ? Vector(170, 186, 164) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 1) ? Vector(168, 180, 206) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 2) ? Vector(180, 156, 198) : ((Player Variable(Evaluate Once(Global.TriggerPlayer), TravelCursor) == 3) ? Vector(202, 152, 178) : Vector(206, 112, 134))))), 0.180, None);
 		Else;
-		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 0) ? Vector(255, 255, 255) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 1) ? Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorCursor)] : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 2) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(168, 180, 206) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 3) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(178, 132, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 4) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(202, 108, 130) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 5) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(210, 194, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 6) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(178, 142, 192) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 7) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 174, 206) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 8) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(170, 142, 174) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 9) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(156, 152, 194) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 10) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(202, 164, 180) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 11) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(208, 184, 144) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 12) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(154, 174, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 13) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(164, 176, 202) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 14) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(180, 164, 202) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 15) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 112, 132) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 16) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(160, 176, 190) * 0.680)) : Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)]))))))))))))))))), 0.180, None);
+		Chase Player Variable Over Time(Evaluate Once(Global.TriggerPlayer), MenuColor, ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 0) ? Vector(255, 255, 255) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 1) ? Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorCursor)] : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 2) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(168, 180, 206) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 3) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(178, 132, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 4) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(202, 108, 130) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 5) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(210, 194, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 6) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(178, 142, 192) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 7) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 174, 206) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 8) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(170, 142, 174) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 9) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(156, 152, 194) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 10) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(202, 164, 180) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 11) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(208, 184, 144) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 12) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(154, 174, 162) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 13) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(164, 176, 202) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 14) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(180, 164, 202) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 15) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 112, 132) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 16) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(160, 176, 190) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 17) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(174, 188, 186) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 18) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 174, 142) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 19) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(198, 152, 174) * 0.680)) : ((((Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage) == -1) ? Player Variable(Evaluate Once(Global.TriggerPlayer), MainMenuCursor) : Player Variable(Evaluate Once(Global.TriggerPlayer), MenuPage)) == 20) ? ((Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)] * 0.320) + (Vector(172, 168, 206) * 0.680)) : Global.NameColorRGBValues[Player Variable(Evaluate Once(Global.TriggerPlayer), ColorIndex)]))))))))))))))))))))), 0.180, None);
 		End;
 	}
 }
@@ -3662,6 +3704,9 @@ rule("96 - Subroutine: Quiesce the trigger player before cleanup")
 		Global.SuperPunchPlayers = Remove From Array(Global.SuperPunchPlayers, Global.TriggerPlayer);
 		Call Subroutine(CloseMenu);
 		Call Subroutine(CleanupObjectiveIcon);
+		Global.MoonlitAuraPlayer = Global.TriggerPlayer;
+		Call Subroutine(CleanupMoonlitAura);
+		Global.MoonlitAuraPlayer = Null;
 		Allow Button(Global.TriggerPlayer, Button(Melee));
 		Stop Camera(Global.TriggerPlayer);
 		Stop Modifying Hero Voice Lines(Global.TriggerPlayer);
@@ -3745,6 +3790,9 @@ rule("97 - Subroutine: Clear references to players who actually left")
 		Global.SuperPunchPlayers = Remove From Array(Global.SuperPunchPlayers, Global.TriggerPlayer);
 		Global.CleanupSubject = Global.TriggerPlayer;
 		Call Subroutine(CleanupObjectiveIcon);
+		Global.MoonlitAuraPlayer = Global.TriggerPlayer;
+		Call Subroutine(CleanupMoonlitAura);
+		Global.MoonlitAuraPlayer = Null;
 		Global.LeavingPlayerIndex = Index Of Array Value(Global.HumanPlayers, Global.CleanupSubject);
 		If((Global.LeavingPlayerIndex > -1));
 		If(Or((Global.LeavingPlayerIndex >= Count Of(Global.PlayerHudSlots)), Or((Global.LeavingPlayerIndex >= Count Of(Global.PlayerListHudIds)), Or((Global.LeavingPlayerIndex >= Count Of(Global.MenuHudIds)), (Global.LeavingPlayerIndex >= Count Of(Global.InspectionTextIds))))));
@@ -4048,6 +4096,7 @@ rule("99 - Subroutine: Prepare the player and initialize variables")
 		Global.TriggerPlayer.IconCursor = 0;
 		Global.TriggerPlayer.MenuColor = Vector(255, 255, 255);
 		Global.TriggerPlayer.MovementCursor = 0;
+		Global.TriggerPlayer.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, Custom String("The pages await your hand."));
 		Global.TriggerPlayer.CrouchTravelEnabled = False;
 		Global.TriggerPlayer.InspectionPrivacyActive = False;
 		Global.TriggerPlayer.UnkillableMode = 0;
@@ -5055,6 +5104,22 @@ rule("125 - Subroutine: Reset the selected personal menu page")
 		Global.TriggerPlayer.MovementGravity = 100;
 		Global.TriggerPlayer.GhostFlyPhysicsApplied = False;
 		Call Subroutine(ApplyGhostFlyPhysics);
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 17));
+		Global.TriggerPlayer.NocturneState[0] = 0;
+		Global.TriggerPlayer.NocturneState[1] = 0;
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 18));
+		Global.TriggerPlayer.NocturneState[2] = 0;
+		Global.TriggerPlayer.NocturneState[10] = Custom String("The pages await your hand.");
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 19));
+		Global.TriggerPlayer.NocturneState[4] = 0;
+		Global.TriggerPlayer.NocturneState[5] = True;
+		Else If((((Global.TriggerPlayer.MenuPage == -1) ? Global.TriggerPlayer.MainMenuCursor : Global.TriggerPlayer.MenuPage) == 20));
+		Global.TriggerPlayer.NocturneState[7] = 0;
+		Global.TriggerPlayer.NocturneState[8] = 0;
+		Global.TriggerPlayer.NocturneState[9] = False;
+		Global.MoonlitAuraPlayer = Global.TriggerPlayer;
+		Call Subroutine(CleanupMoonlitAura);
+		Global.MoonlitAuraPlayer = Null;
 		Else;
 		Abort;
 		End;
@@ -5063,7 +5128,181 @@ rule("125 - Subroutine: Reset the selected personal menu page")
 	}
 }
 
-rule("126 - Subroutine: Control players from global context")
+rule("126 - Subroutine: Draw Presence, Fates, Whispers and Moonlit Aura")
+{
+	event
+	{
+		Subroutine;
+		DrawNocturneMenu;
+	}
+
+	actions
+	{
+		Create HUD Text(Evaluate Once(Global.TriggerPlayer), Null, Custom String("{0} | {1}", Custom String("Hold {0} | {1}: next / {2}: prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: apply / {1}: back / {2}: reset page", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", ((Player Variable(Local Player, MenuPage) == 17) ? Custom String("17 - PRESENCE") : ((Player Variable(Local Player, MenuPage) == 18) ? Custom String("18 - FATES") : ((Player Variable(Local Player, MenuPage) == 19) ? Custom String("19 - WHISPERS") : Custom String("20 - MOONLIT AURA")))), ((Player Variable(Local Player, MenuPage) == 17) ? Custom String("NOW: {0}", Global.PresenceNames[Player Variable(Local Player, NocturneState)[0]]) : ((Player Variable(Local Player, MenuPage) == 18) ? Player Variable(Local Player, NocturneState)[10] : ((Player Variable(Local Player, MenuPage) == 19) ? Custom String("RECEIVE: {0}", ((Player Variable(Local Player, NocturneState)[5] == True) ? Custom String("ON") : Custom String("OFF"))) : Custom String("NOW: {0} | HIDE OTHERS: {1}", Global.AuraNames[Player Variable(Local Player, NocturneState)[8]], ((Player Variable(Local Player, NocturneState)[9] == True) ? Custom String("ON") : Custom String("OFF"))))))), Custom String("> {0}", ((Player Variable(Local Player, MenuPage) == 17) ? Global.PresenceNames[Player Variable(Local Player, NocturneState)[1]] : ((Player Variable(Local Player, MenuPage) == 18) ? Global.FateNames[Player Variable(Local Player, NocturneState)[2]] : ((Player Variable(Local Player, MenuPage) == 19) ? Global.WhisperNames[Player Variable(Local Player, NocturneState)[4]] : Global.AuraNames[Player Variable(Local Player, NocturneState)[7]]))))), ((Player Variable(Local Player, MenuPage) == 17) ? Custom String("A quiet sign beside your name.") : ((Player Variable(Local Player, MenuPage) == 18) ? Custom String("Your fate alone. One turn every 5 seconds.") : ((Player Variable(Local Player, MenuPage) == 19) ? Custom String("Aim at a public soul within 25 m. Receive ON required. 15 s between whispers.") : Custom String("A single trace of moonlight follows your Name Color."))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Player Variable(Local Player, MenuColor)), Y Component Of(Player Variable(Local Player, MenuColor)), Z Component Of(Player Variable(Local Player, MenuColor)), 255), Visible To String and Color, Visible Never);
+		Global.TriggerPlayer.MenuHud = Last Text ID;
+	}
+}
+
+rule("127 - Subroutine: Apply the personal Nocturne social page")
+{
+	event
+	{
+		Subroutine;
+		ApplyNocturnePage;
+	}
+
+	actions
+	{
+		Abort If(Not(Global.TriggerPlayer.IsHuman));
+		Abort If(Not(Global.TriggerPlayer.IsPrepared));
+		Abort If(Not(Array Contains(Global.HumanPlayers, Global.TriggerPlayer)));
+		Abort If(Or(Not(Has Spawned(Global.TriggerPlayer)), Not(Is Alive(Global.TriggerPlayer))));
+		If((Global.TriggerPlayer.MenuPage == 17));
+		Global.TriggerPlayer.NocturneState[0] = Global.TriggerPlayer.NocturneState[1];
+		Else If((Global.TriggerPlayer.MenuPage == 18));
+		If((Total Time Elapsed < Global.TriggerPlayer.NocturneState[3]));
+		Small Message(Global.TriggerPlayer, Custom String("Let the raven rest: {0}s.", Round To Integer((Global.TriggerPlayer.NocturneState[3] - Total Time Elapsed), Up)));
+		Abort;
+		End;
+		Global.TriggerPlayer.NocturneState[3] = (Total Time Elapsed + 5);
+		If((Global.TriggerPlayer.NocturneState[2] == 0));
+		Global.TriggerPlayer.NocturneState[10] = Custom String("The coin falls: {0}", ((Random Integer(0, 1) == 0) ? Custom String("MOON") : Custom String("ASH")));
+		Else If((Global.TriggerPlayer.NocturneState[2] == 1));
+		Global.TriggerPlayer.NocturneState[10] = Custom String("The bone die speaks (D6): {0}", Random Integer(1, 6));
+		Else If((Global.TriggerPlayer.NocturneState[2] == 2));
+		Global.TriggerPlayer.NocturneState[10] = Custom String("The raven casts (D20): {0}", Random Integer(1, 20));
+		Else If((Global.TriggerPlayer.NocturneState[2] == 3));
+		Global.TriggerPlayer.NocturneState[10] = Custom String("A chance beneath the moon: {0}%", Random Integer(1, 100));
+		Else;
+		Global.TriggerPlayer.NocturneState[10] = Random Value In Array(Global.OmenLines);
+		End;
+		Big Message(Global.TriggerPlayer, Global.TriggerPlayer.NocturneState[10]);
+		Else If((Global.TriggerPlayer.MenuPage == 19));
+		If((Global.TriggerPlayer.NocturneState[4] == 0));
+		Global.TriggerPlayer.NocturneState[5] = (Global.TriggerPlayer.NocturneState[5] == False);
+		Else;
+		If((Total Time Elapsed < Global.TriggerPlayer.NocturneState[6]));
+		Small Message(Global.TriggerPlayer, Custom String("Let the echo fade: {0}s.", Round To Integer((Global.TriggerPlayer.NocturneState[6] - Total Time Elapsed), Up)));
+		Abort;
+		End;
+		Global.TriggerPlayer.InspectionTarget = Player Closest To Reticle(Global.TriggerPlayer, All Teams);
+		Abort If((Global.TriggerPlayer.InspectionTarget == Null));
+		Abort If((Global.TriggerPlayer.InspectionTarget == Global.TriggerPlayer));
+		Abort If(Not(Entity Exists(Global.TriggerPlayer.InspectionTarget)));
+		Abort If(Not(Array Contains(Global.HumanPlayers, Global.TriggerPlayer.InspectionTarget)));
+		Abort If(Not(Player Variable(Global.TriggerPlayer.InspectionTarget, IsHuman)));
+		Abort If(Not(Player Variable(Global.TriggerPlayer.InspectionTarget, IsPrepared)));
+		Abort If(Player Variable(Global.TriggerPlayer.InspectionTarget, PlayerCycleActive));
+		Abort If((Player Variable(Global.TriggerPlayer.InspectionTarget, LastTeam) != Team Of(Global.TriggerPlayer.InspectionTarget)));
+		Abort If(Or(Not(Has Spawned(Global.TriggerPlayer.InspectionTarget)), Not(Is Alive(Global.TriggerPlayer.InspectionTarget))));
+		Abort If(Player Variable(Global.TriggerPlayer.InspectionTarget, InspectionPrivacyActive));
+		Abort If((Player Variable(Global.TriggerPlayer.InspectionTarget, NocturneState)[5] == False));
+		Abort If((Distance Between(Global.TriggerPlayer, Global.TriggerPlayer.InspectionTarget) > 25));
+		Abort If((Is In View Angle(Global.TriggerPlayer, Eye Position(Global.TriggerPlayer.InspectionTarget), 12) == False));
+		Abort If((Is In Line Of Sight(Eye Position(Global.TriggerPlayer), Eye Position(Global.TriggerPlayer.InspectionTarget), Barriers Do Not Block LOS) == False));
+		Global.TriggerPlayer.NocturneState[6] = (Total Time Elapsed + 15);
+		Small Message(Global.TriggerPlayer.InspectionTarget, Custom String("{0}: {1}", Global.TriggerPlayer.DisplayName, ((Global.TriggerPlayer.NocturneState[4] == 1) ? Custom String("A quiet greeting reaches you through the dusk.") : ((Global.TriggerPlayer.NocturneState[4] == 2) ? Custom String("An offering of respect beneath the moon.") : ((Global.TriggerPlayer.NocturneState[4] == 3) ? Custom String("A withered rose, its memory still warm.") : ((Global.TriggerPlayer.NocturneState[4] == 4) ? Custom String("A gentle embrace across the silence.") : Custom String("Your soul resonates with mine.")))))));
+		Small Message(Global.TriggerPlayer, Custom String("Your whisper reaches {0}.", Player Variable(Global.TriggerPlayer.InspectionTarget, DisplayName)));
+		End;
+		Else If((Global.TriggerPlayer.MenuPage == 20));
+		If((Global.TriggerPlayer.NocturneState[7] == 4));
+		Global.TriggerPlayer.NocturneState[9] = (Global.TriggerPlayer.NocturneState[9] == False);
+		Else;
+		Global.TriggerPlayer.NocturneState[8] = Global.TriggerPlayer.NocturneState[7];
+		Global.MoonlitAuraPlayer = Global.MoonlitAuraOwners[Global.TriggerPlayer.HudSlot];
+		Call Subroutine(CleanupMoonlitAura);
+		Global.MoonlitAuraPlayer = Null;
+		Global.MoonlitAuraOwners[Global.TriggerPlayer.HudSlot] = Global.TriggerPlayer;
+		Call Subroutine(UpdateMoonlitAuras);
+		End;
+		End;
+	}
+}
+
+rule("128 - Subroutine: Maintain twelve owner-bound Moonlit Auras")
+{
+	event
+	{
+		Subroutine;
+		UpdateMoonlitAuras;
+	}
+
+	actions
+	{
+		For Global Variable(MoonlitAuraIndex, 0, 12, 1);
+		If(Or((Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] != Null), (Global.MoonlitAuraIds[Global.MoonlitAuraIndex] != 0)));
+		If(Or((Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] == Null), Or(Not(Entity Exists(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex])), Or(Not(Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], IsHuman)), Or(Not(Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], IsPrepared)), Or(Not(Array Contains(Global.HumanPlayers, Global.MoonlitAuraOwners[Global.MoonlitAuraIndex])), (Index Of Array Value(Global.MoonlitAuraOwners, Global.MoonlitAuraOwners[Global.MoonlitAuraIndex]) != Global.MoonlitAuraIndex)))))));
+		If((Global.MoonlitAuraIds[Global.MoonlitAuraIndex] != 0));
+		Destroy Effect(Global.MoonlitAuraIds[Global.MoonlitAuraIndex]);
+		End;
+		Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] = Null;
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraColors[Global.MoonlitAuraIndex] = -1;
+		Else;
+		If(Or(Not(Has Spawned(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex])), Or(Not(Is Alive(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex])), Or((Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], NocturneState)[8] < 1), (Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], NocturneState)[8] > 3)))));
+		If((Global.MoonlitAuraIds[Global.MoonlitAuraIndex] != 0));
+		Destroy Effect(Global.MoonlitAuraIds[Global.MoonlitAuraIndex]);
+		End;
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraColors[Global.MoonlitAuraIndex] = -1;
+		Else;
+		If(Or((Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] != Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], NocturneState)[8]), (Global.MoonlitAuraColors[Global.MoonlitAuraIndex] != Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], ColorIndex))));
+		If((Global.MoonlitAuraIds[Global.MoonlitAuraIndex] != 0));
+		Destroy Effect(Global.MoonlitAuraIds[Global.MoonlitAuraIndex]);
+		End;
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = 0;
+		End;
+		If((Global.MoonlitAuraIds[Global.MoonlitAuraIndex] == 0));
+		Global.MoonlitAuraPlayer = Global.MoonlitAuraOwners[Global.MoonlitAuraIndex];
+		Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] = Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], NocturneState)[8];
+		Global.MoonlitAuraColors[Global.MoonlitAuraIndex] = Player Variable(Global.MoonlitAuraOwners[Global.MoonlitAuraIndex], ColorIndex);
+		If(Or((Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] == 1), (Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] == 2)));
+		Create Effect(Filtered Array(Global.HumanPlayers, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, IsHuman), And(Player Variable(Current Array Element, IsPrepared), And(Or((Current Array Element == Evaluate Once(Global.MoonlitAuraPlayer)), (Player Variable(Current Array Element, NocturneState)[9] == False)), And(Entity Exists(Evaluate Once(Global.MoonlitAuraPlayer)), And(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), IsHuman), And(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), IsPrepared), And(Array Contains(Global.HumanPlayers, Evaluate Once(Global.MoonlitAuraPlayer)), And(Has Spawned(Evaluate Once(Global.MoonlitAuraPlayer)), And(Is Alive(Evaluate Once(Global.MoonlitAuraPlayer)), And((Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), NocturneState)[8] == Evaluate Once(Global.MoonlitAuraChoices[Global.MoonlitAuraIndex])), (Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), ColorIndex) == Evaluate Once(Global.MoonlitAuraColors[Global.MoonlitAuraIndex])))))))))))))), Ring, Evaluate Once(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), NameColor)), ((Evaluate Once(Global.MoonlitAuraChoices[Global.MoonlitAuraIndex]) == 1) ? (Position Of(Evaluate Once(Global.MoonlitAuraPlayer)) + Vector(0, 0.050, 0)) : (Eye Position(Evaluate Once(Global.MoonlitAuraPlayer)) + Vector(0, 0.350, 0))), Evaluate Once(((Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] == 1) ? 1 : 0.400)), Visible To Position and Radius);
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = Last Created Entity;
+		Else If((Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] == 3));
+		Create Effect(Filtered Array(Global.HumanPlayers, And(Entity Exists(Current Array Element), And(Player Variable(Current Array Element, IsHuman), And(Player Variable(Current Array Element, IsPrepared), And(Or((Current Array Element == Evaluate Once(Global.MoonlitAuraPlayer)), (Player Variable(Current Array Element, NocturneState)[9] == False)), And(Entity Exists(Evaluate Once(Global.MoonlitAuraPlayer)), And(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), IsHuman), And(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), IsPrepared), And(Array Contains(Global.HumanPlayers, Evaluate Once(Global.MoonlitAuraPlayer)), And(Has Spawned(Evaluate Once(Global.MoonlitAuraPlayer)), And(Is Alive(Evaluate Once(Global.MoonlitAuraPlayer)), And((Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), NocturneState)[8] == Evaluate Once(Global.MoonlitAuraChoices[Global.MoonlitAuraIndex])), (Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), ColorIndex) == Evaluate Once(Global.MoonlitAuraColors[Global.MoonlitAuraIndex])))))))))))))), Cloud, Evaluate Once(Player Variable(Evaluate Once(Global.MoonlitAuraPlayer), NameColor)), (Position Of(Evaluate Once(Global.MoonlitAuraPlayer)) + Vector(0, 0.800, 0)), 0.500, Visible To Position and Radius);
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = Last Created Entity;
+		End;
+		Global.MoonlitAuraPlayer = Null;
+		End;
+		End;
+		End;
+		End;
+		End;
+		Global.MoonlitAuraPlayer = Null;
+	}
+}
+
+rule("129 - Subroutine: Remove a Moonlit Aura without reading departed state")
+{
+	event
+	{
+		Subroutine;
+		CleanupMoonlitAura;
+	}
+
+	actions
+	{
+		If((Global.MoonlitAuraPlayer != Null));
+		For Global Variable(MoonlitAuraIndex, 0, 12, 1);
+		If((Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] == Global.MoonlitAuraPlayer));
+		If((Global.MoonlitAuraIds[Global.MoonlitAuraIndex] != 0));
+		Destroy Effect(Global.MoonlitAuraIds[Global.MoonlitAuraIndex]);
+		End;
+		Global.MoonlitAuraOwners[Global.MoonlitAuraIndex] = Null;
+		Global.MoonlitAuraIds[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraChoices[Global.MoonlitAuraIndex] = 0;
+		Global.MoonlitAuraColors[Global.MoonlitAuraIndex] = -1;
+		End;
+		End;
+		End;
+		Global.MoonlitAuraPlayer = Null;
+	}
+}
+
+rule("130 - Subroutine: Control players from global context")
 {
 	event
 	{
@@ -5145,7 +5384,7 @@ rule("126 - Subroutine: Control players from global context")
 	}
 }
 
-rule("127 - Subroutine: Drain the native event queue")
+rule("131 - Subroutine: Drain the native event queue")
 {
 	event
 	{
@@ -5183,7 +5422,7 @@ rule("127 - Subroutine: Drain the native event queue")
 	}
 }
 
-rule("128 - Subroutine: Reconcile departed players from global context")
+rule("132 - Subroutine: Reconcile departed players from global context")
 {
 	event
 	{
@@ -5234,7 +5473,7 @@ rule("128 - Subroutine: Reconcile departed players from global context")
 	}
 }
 
-rule("129 - Subroutine: Cache visible player icon choices")
+rule("133 - Subroutine: Cache visible player icon choices")
 {
 	event
 	{

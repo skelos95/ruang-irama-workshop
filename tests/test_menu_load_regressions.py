@@ -11,7 +11,7 @@ import unittest
 
 from tools import check_clipboard_import as clipboard
 from tools import validate_workshop as validator
-from tests.test_dummy_spawn_retry import SpawnExpression
+from tests.test_global_controller_execution import ControllerExpression
 from tests.test_roster_rejoin_regressions import SOURCES
 
 
@@ -59,6 +59,8 @@ class MenuLoadEvaluator:
                      InspectionTargetCandidate=None, NextTargetTextTime=0,
                      spawned=True, InspectionPrivacyActive=False,
                      PlayerListUpdatePending=False)
+        state["NocturneState"] = [0, 0, 0, 0, 0, True, 0, 0, 0, False,
+                                   "The pages await your hand."]
         state.update(changes)
         self.players[name] = state
         if state["IsHuman"]:
@@ -93,8 +95,7 @@ class MenuLoadEvaluator:
         if expression not in self.expressions:
             packed = re.sub(r'"(?:\\.|[^"\\])*"', literal, expression)
             packed = re.sub(r"\s+", "", packed)
-            packed = re.sub(r"((?:Global|EventPlayer)\.\w+)\[([^\]]+)\]", r"At(\1,\2)", packed)
-            self.expressions[expression] = SpawnExpression(packed).tree
+            self.expressions[expression] = ControllerExpression(packed).tree
         operations = {"+": operator.add, "-": operator.sub, "%": operator.mod,
                       "/": operator.truediv,
                       "==": operator.eq, "!=": operator.ne, ">": operator.gt,
@@ -106,6 +107,9 @@ class MenuLoadEvaluator:
             if kind == "name": return self.resolve(node[1])
             if kind == "negate": return -visit(node[1])
             if kind == "conditional": return visit(node[2] if visit(node[1]) else node[3])
+            if kind == "index":
+                values, index = visit(node[1]), int(visit(node[2]))
+                return values[index] if isinstance(values, (list, tuple)) and 0 <= index < len(values) else 0
             if kind != "call": return operations[kind](visit(node[1]), visit(node[2]))
             name, args = node[1:]
             if name in ("And", "Or"):
@@ -160,6 +164,10 @@ class MenuLoadEvaluator:
         return False
 
     def assign(self, target, value):
+        player_indexed = re.fullmatch(r"Event Player\.(\w+)\[(.+)\]", target)
+        if player_indexed:
+            self.players[self.event_player][player_indexed[1]][int(self.evaluate(player_indexed[2]))] = value
+            return
         indexed = re.fullmatch(r"Global\.(\w+)\[(.+)\]", target)
         if indexed:
             self.globals[indexed[1]][int(self.evaluate(indexed[2]))] = value

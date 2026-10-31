@@ -42,19 +42,19 @@ class MovementMenuTests(unittest.TestCase):
         for path, _, _ in SOURCES:
             yield path.name, MovementMenuEvaluator(path.read_text(encoding="utf-8"))
 
-    def test_main_menu_reaches_all_seventeen_entries_in_both_directions(self):
+    def test_main_menu_reaches_all_twenty_one_entries_in_both_directions(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.viewer(MenuPage=-1, MainMenuCursor=0)
                 visited = []
-                for _ in range(17):
+                for _ in range(21):
                     visited.append(state["MainMenuCursor"])
                     model.run("06", "viewer")
-                self.assertEqual(visited, list(range(17)))
+                self.assertEqual(visited, list(range(21)))
                 self.assertEqual(state["MainMenuCursor"], 0)
                 state["MenuCommand"] = 4
                 model.run("06", "viewer")
-                self.assertEqual(state["MainMenuCursor"], 16)
+                self.assertEqual(state["MainMenuCursor"], 20)
 
     def test_primary_and_secondary_apply_the_step_for_the_selected_value_immediately(self):
         for source, model in self.models():

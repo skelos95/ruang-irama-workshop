@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Quattro menu personali a tema Nocturne: Presence 17, Fates 18, Whispers 19 e Moonlit Aura 20. Le voci precedenti mantengono i propri indici; VERSION resta 0.8.3 e il tag e l'allegato della release pubblicata conservano il codice storico.
+- Presence aggiunge uno dei quattro stati sociali alla riga Souls & Echoes; Unspoken è il default senza testo aggiuntivo. La presenza è manuale, senza rilevamento automatico AFK o modifiche alla fisica.
+- Fates genera Moon/Ash, d6, d20, percentuali 1–100% e sei presagi locali. Conserva l'ultimo risultato e un cooldown di 5 secondi, che il reset non annulla.
+- Whispers invia Greeting, Respect, Rose, Embrace e Resonance al solo umano vivo mirato entro 25 m. Rispetta Privacy e ricezione personale ON/OFF, usa messaggi privati ai due partecipanti e applica 15 secondi di cooldown agli invii riusciti.
+- Moonlit Aura aggiunge Moonlit Ring, Withered Halo e Veil of Ash: un effetto per umano, massimo 12, con posizione e Name Color del proprietario. Il filtro personale Hide other auras conserva la propria aura e le scelte altrui.
+- Crouch + Ultimate ripristina la sola pagina 17–20 selezionata, senza azzerare i cooldown. Preferenze conservate tra morte e cambio eroe, default al cambio squadra e al nuovo ingresso. Resa visiva, ricezione dei messaggi e ciclo di vita delle aure richiedono una prova sul commit importato nel client.
+
 ## 0.8.3 — 2026-10-28
 
 - La versione 0.8.3 riunisce gli aggiornamenti successivi alla 0.8.2 e la correzione dell'inerzia Ghost. Il tag v0.8.2 e il relativo allegato conservano il contenuto storico pubblicato.
