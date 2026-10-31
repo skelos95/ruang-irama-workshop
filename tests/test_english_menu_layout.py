@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (*[path for path, _, _ in SOURCES],
              ROOT / "workshop/ruang_irama.en-US.workshop")
 MENU_PREFIXES = ("91a", "91b", "91c", "91d", "91f", "91g", "91h",
-                 "91i", "91j", "91n", "91o", "91s", "91t")
+                 "91i", "91j", "91n", "91o", "91s", "91t", "91v")
 MAIN_INFO_CONTROLS = (
     ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
     ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
@@ -133,7 +133,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                         expected_lines = rendered_control_lines(MAIN_INFO_CONTROLS)
                         self.assertEqual(rendered.splitlines(), expected_lines)
                         self.assertEqual(text_tree.evaluate(context), "")
-                        for cursor in range(1, 17):
+                        for cursor in range(1, 21):
                             with self.subTest(cursor=cursor):
                                 normal_content = compiler._emit(main_menu_branch(content, cursor))
                                 self.assertEqual(list(validator.iter_calls(normal_content, "Input Binding String")), [])

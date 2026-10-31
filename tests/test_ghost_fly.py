@@ -68,14 +68,14 @@ class GhostFlyRuntimeTests(unittest.TestCase):
                 indices.append(int(matches[0]))
             self.assertEqual(indices, list(range(indices[0], indices[0] + 4)))
 
-    def test_main_menu_has_seventeen_pages_and_routes_page_thirteen(self) -> None:
+    def test_main_menu_has_twenty_one_pages_and_routes_page_thirteen(self) -> None:
         localized_titles = ("13 - GHOST MODE / FLY",)
         localized_tails = (("12 - DUMMY TARGET", "13 - GHOST MODE / FLY"),)
         for source, _ in self.sources:
             navigation = rule_with(source, "MainMenuCursor = (Event Player.MainMenuCursor", "MenuCommand == 3")
             self.assertIn(
                 "Event Player.MainMenuCursor = (Event Player.MainMenuCursor + "
-                "(Event Player.MenuCommand == 3 ? 1 : 16)) % 17;",
+                "(Event Player.MenuCommand == 3 ? 1 : 20)) % 21;",
                 navigation,
             )
             router = subroutine(source, "DrawActiveMenuPage")

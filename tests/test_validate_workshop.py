@@ -572,7 +572,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         _, players, _, _ = validator.declaration_entries(self.source)
         self.assertNotIn("TeksDiri", {entry.name for entry in players})
         # Removed language state and binary cursors leave a compact namespace.
-        self.assertEqual([entry.index for entry in players], list(range(125)))
+        self.assertEqual([entry.index for entry in players], list(range(126)))
         self.assertFalse(any("non inizializzata in PreparePlayer" in error for error in self.errors(self.source)))
 
     def test_teks_diri_would_be_rejected_if_only_declared_and_initialized(self) -> None:
@@ -1097,7 +1097,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         router = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawActiveMenuPage")
         for page in (0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 13, 14, 16):
             with self.subTest(page=page):
-                mutated = self.replace_in_rule(router, f"MenuPage == {page}", "MenuPage == 17")
+                mutated = self.replace_in_rule(router, f"MenuPage == {page}", "MenuPage == 21")
                 self.assert_rejected(mutated, f"pagina {page}")
         for page in (8, 9, 12, 15):
             with self.subTest(main_toggle=page):
@@ -1117,10 +1117,10 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         mutated = self.replace_in_rule(
             navigation,
-            "(Event Player.MenuCommand == 3 ? 1 : 16)) % 17;",
+            "(Event Player.MenuCommand == 3 ? 1 : 20)) % 21;",
             "(Event Player.MenuCommand == 3 ? 1 : 14)) % 15;",
         )
-        self.assert_rejected(mutated, "ciclo esatto 0..16")
+        self.assert_rejected(mutated, "ciclo esatto 0..20")
 
     def test_main_menu_preview_keeps_pages_twelve_and_thirteen_distinct(self) -> None:
         main = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -1302,7 +1302,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("ApplyPlayerIconPage", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "dispatcher Interact must cover the sixteen pages with actions")
+        self.assert_rejected(mutated, "dispatcher Interact must cover the existing pages and shared Nocturne actions")
 
     def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplySuperPunchPage")

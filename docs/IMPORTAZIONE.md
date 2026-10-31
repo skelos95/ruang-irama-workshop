@@ -3,7 +3,7 @@
 ## Procedura
 
 1. Salva il preset con le tue mappe e imposta la lingua testo di Overwatch su **English**.
-2. Apri il codice della revisione desiderata, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione corrente è **0.8.3**; il tag v0.8.3 identifica il commit del pacchetto. Il tag e l'allegato della release storica 0.8.2 conservano il contenuto pubblicato.
+2. Apri il codice della revisione desiderata, [ruang_irama.en-US.workshop](../workshop/ruang_irama.en-US.workshop), e scegli **Raw**. La versione nominale resta **0.8.3**; il codice corrente include i menu sociali **Unreleased**. Il tag e l'allegato v0.8.3 conservano il pacchetto pubblicato, senza queste modifiche successive; anche la release storica 0.8.2 conserva il contenuto pubblicato.
 3. Copia tutto, da `variables` alla graffa finale, senza numeri di riga o testo della pagina GitHub.
 4. In **Custom Game → Settings → Workshop**, usa **Paste Rules**.
 5. Apri **Script Diagnostics** e annota Element Count e Largest Rule, insieme al commit importato.
@@ -11,7 +11,7 @@
 
 L'unico codice da importare usa la grammatica nativa inglese. Anche identificatori, nomi delle regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese. Non tradurre manualmente le keyword. Al primo spawn il principale si apre sulla voce 0, Info / Controls; Crouch + Interact mostra la guida completa ai comandi.
 
-Le 130 regole sono numerate da 0 a 129 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle voci del menu.
+Le 134 regole sono numerate da 0 a 133 nell'ordine del file, senza ripetizioni né suffissi alfabetici. Questa numerazione è distinta da quella delle 21 voci del menu, da 0 a 20.
 
 Il tema Nocturne mostra `cozywatch.org [countdown]`, il roster `SOULS & ECHOES` e il leader `CROWN OF ASH`. Argento lunare e toni osso accompagnano i testi ispirati al romanticismo oscuro; titolo, HOST, effetti Luck e anello Multijump usano il ciclo RGB arcobaleno originale di 51 secondi. Il tema dei menu è conservato; le [40 scelte Name Color](NAME_COLORS.md) conservano gli indici con nomi a tema e 34 valori RGB aggiornati. Verifica nel client leggibilità e testi della revisione importata.
 
@@ -21,7 +21,9 @@ I file in `source/` e `tests/fixtures/` sono specifiche e riferimenti interni de
 
 La revisione aggiunge Crouch + Ultimate per ripristinare la sola pagina dove il comando è mostrato; Speed e Gravity usano passi 20/100, con Speed 20–1000%. Le icone seguono il proprietario entro 5 m tridimensionali; i dummy restano fermi dopo il teletrasporto iniziale sicuro e si orientano verso il nemico vivo più vicino con Dummy Target ON. Il reset non è disponibile in Info, Revenge, Luck e toggle 8/9/12/15, né sul Soundtrack Draconian bloccato. [Default e pagine abilitate](../README.md#menu-personali).
 
-Applicare o alternare Ghost modifica soltanto la collisione con l'ambiente e conserva l'inerzia; Fly continua a gestire la propria fisica. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114; SHA importato, build client, numero di player, durata e metriche native non sono stati forniti. La successiva correzione Ghost richiede una nuova prova sul commit importato: [matrice Ghost e Fly](TEST.md#jump-ghost-e-fly).
+Le nuove pagine sono **Presence 17**, stato sociale manuale nel roster; **Fates 18**, moneta/dadi/presagi locali con cooldown di 5 secondi; **Whispers 19**, messaggi predefiniti a un umano pubblico mirato entro 25 m, con ricezione ON e cooldown di 15 secondi; **Moonlit Aura 20**, tre aure personali e filtro delle aure altrui. Crouch + Ultimate ripristina anche queste pagine senza cancellare i cooldown. Le aure hanno un limite di un effetto per umano, massimo 12, e richiedono una verifica visiva e di cleanup nel client. [Matrice delle nuove funzioni](TEST.md#presence-fates-whispers-e-moonlit-aura).
+
+Applicare o alternare Ghost modifica soltanto la collisione con l'ambiente e conserva l'inerzia; Fly continua a gestire la propria fisica. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114; SHA importato, build client, numero di player, durata e metriche native non sono stati forniti. La successiva correzione Ghost e i nuovi menu sociali richiedono una nuova prova sul commit importato: [matrice Ghost e Fly](TEST.md#jump-ghost-e-fly).
 
 ## Se l'importazione fallisce
 

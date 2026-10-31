@@ -28,6 +28,8 @@ class CompactionContext:
     def __init__(self, fields):
         self.fields = set(fields)
         self.player = {field: False for field in fields}
+        self.player["NocturneState"] = [0, 0, 0, 0, 0, True, 0, 0, 0, False,
+                                       "The pages await your hand."]
         self.globals = {"TriggerPlayer": "owner", "ActivePlayer": "owner",
                         "SuperPunchPlayers": [], "IsReady": True}
         self.values = {}
@@ -35,6 +37,12 @@ class CompactionContext:
             "EntityExists", "IsAlive", "IsDummyBot", "HasSpawned",
             "IsOnGround", "IsInSpawnRoom", "IsButtonHeld", "HasStatus")}
         self.native["Health"] = 0
+        source = (ROOT / "source/ruang_irama.en-US.source").read_text(encoding="utf-8")
+        for name in ("PresenceNames", "FateNames", "WhisperNames", "AuraNames", "OmenLines"):
+            values = semantic.array_assignment_items(source, name)
+            if values is not None:
+                self.globals[name] = [semantic.parse_literal(next(semantic.iter_calls(item, "Custom String")).args[0])
+                                      for item in values]
 
     def resolve(self, name):
         if name in self.values:
@@ -214,7 +222,7 @@ class GlobalCompactionTests(unittest.TestCase):
         context = self.context()
         context.globals["NameColorRGBValues"] = [Vector(i * 6, 255 - i * 6, i * 3) for i in range(40)]
         left, right = context.parse(before.args[2]), context.parse(after.args[2])
-        pages = [(-1, cursor) for cursor in range(17)] + [(page, 7) for page in range(17)] + [(-2, 7), (17, 7)]
+        pages = [(-1, cursor) for cursor in range(21)] + [(page, 7) for page in range(21)] + [(-2, 7), (21, 7)]
         for (page, cursor), index in itertools.product(pages, range(40)):
             context.player.update(MenuPage=page, MainMenuCursor=cursor, ColorIndex=index, ColorCursor=(index * 7) % 40)
             with self.subTest(page=page, cursor=cursor, colour=index):
@@ -231,7 +239,7 @@ class GlobalCompactionTests(unittest.TestCase):
                               VotedPlayer="vote target", CameraTarget="camera target", IconIndex=23,
                               MultijumpLevel=10, MovementSpeed=250, MovementGravity=70)
         parsed = [(context.parse(before.args[index]), context.parse(after.args[index])) for index in (2, 3)]
-        for cursor, state in itertools.product(range(17), range(4)):
+        for cursor, state in itertools.product(range(21), range(4)):
             context.player.update(MainMenuCursor=cursor, CameraMode=state % 3,
                                   UnkillableMode=state % 3, VoiceIndex=state, LuckSpinCount=state,
                                   CrouchTravelEnabled=bool(state % 2), InspectionPrivacyActive=bool(state % 2),

@@ -129,7 +129,7 @@ class GlobalMenuColorSnapshotTests(unittest.TestCase):
         model.globals['TriggerPlayer'] = 'owner1'
         model.command(self.menu)
         untouched = model.frame_destination('owner1')
-        for page in range(17):
+        for page in range(21):
             for main in (True, False):
                 player = model.players['owner0']
                 player.update(MenuPage=-1 if main else page, MainMenuCursor=page)

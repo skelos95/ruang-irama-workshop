@@ -1,6 +1,6 @@
 # Controlli automatici
 
-I controlli del codice corrente, con versione **0.8.3** e tema **Nocturne**, richiedono **Python 3.12**, senza pacchetti esterni. I controlli vanno associati al commit verificato; il tag v0.8.3 identifica il commit del pacchetto. Il tag e l'allegato della release storica 0.8.2 conservano il contenuto pubblicato. Eseguire dalla radice del repository:
+I controlli del codice corrente, con versione nominale **0.8.3**, tema **Nocturne** e menu sociali **Unreleased**, richiedono **Python 3.12**, senza pacchetti esterni. I controlli vanno associati al commit verificato; il tag e l'allegato v0.8.3 identificano il codice del pacchetto pubblicato, senza includere automaticamente le modifiche successive. Anche la release storica 0.8.2 conserva il contenuto pubblicato. Eseguire dalla radice del repository:
 
 ```text
 python tools/validate_workshop.py
@@ -19,16 +19,18 @@ git diff --check
 | Parità | Specifica comportamentale inglese equivalente al riferimento dei test; clipboard generato equivalente al riferimento runtime, distinto dalla specifica |
 | Generazione | Ricompilazione deterministica della specifica; rifiuto di output importabile obsoleto o modificato senza rigenerazione |
 | Runtime globale | Nessun Each Player, callback solo di registrazione, nessuna attesa nelle subroutine, cattura del proprietario delle espressioni persistenti |
-| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva 0–129, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
+| Struttura | Riferimenti risolti, numerazione delle regole importabili consecutiva a partire da 0, indici compatti, nomi entro 32 byte, regole/variabili/subroutine utilizzate |
 | Scheduler | Un solo Loop e un solo Wait centrale; scadenze per comandi/lifecycle, nessuna attesa nelle subroutine, frequenze e condizioni per tipo/stato |
 | Risorse | Proprietà degli handle, cleanup canonico, ID riciclati, slot riutilizzabili e isolamento fra player |
-| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost con inerzia conservata, Fly a velocità fissa, menu 16 Speed/Gravity con passi 20/100, reset della pagina tramite Crouch + Ultimate, icone personali entro 5 m, Revenge, Unkillable, Luck e Dummy Target fermo |
+| Funzioni | Input, menu Info e apertura iniziale, reset Camera dopo Travel/cambio eroe, Travel/Attach, Resurrect, Ghost con inerzia conservata, Fly a velocità fissa, menu 16 Speed/Gravity con passi 20/100, reset della pagina tramite Crouch + Ultimate, icone personali entro 5 m, Revenge, Unkillable, Luck, Dummy Target fermo e pagine 17–20 Presence/Fates/Whispers/Aura |
 | Testi | Codice e interfaccia inglesi, binding e placeholder; titolo e contenuto Info in Subheader, Text vuoto senza `0` e `Color(White)` diretto nella preview e nella guida Info, indipendente da MenuColor; altre voci/pagine con comandi in Subheader e opzioni in Text; testi e palette Nocturne, 40 nomi e vettori RGB allineati con resa esatta della scelta; HOST su una sola riga con il solo margine inferiore; cataloghi e nomenclatura interna, assenza del vecchio sistema lingue/località |
 | Repository | Versione nominale, documenti essenziali e unico workflow di sola validazione |
 
 I test comportamentali esistenti eseguono porzioni della specifica inglese con risposte native controllate. Il codice importabile usa la stessa grammatica inglese della specifica. Verificano le funzioni d'ingresso al compilatore e non certificano da soli il runtime globale. Test separati leggono l'output effettivamente importabile e verificano controller, timer, eventi accodati e proprietari catturati. I test di compattazione confrontano gli stessi valori prima/dopo: Booleani tipizzati, palette, testi dei menu e inizializzazione dei registri. Rifiutano coercizioni di numeri in Booleani e verificano che cataloghi, colori e stringhe restino identici. I gate ricompilano la specifica e confrontano entrambi gli output, quindi controllano direttamente contesti, dichiarazioni, attese e peso del runtime. I test di mutazione devono rifiutare ciascuna violazione per la propria causa. Nessuno di questi controlli è un server Overwatch.
 
 I test delle icone eseguono posizioni live del proprietario, teletrasporti, traiettorie interpolate e il limite tridimensionale di 5 m; controllano anche le 36 espressioni Create Icon e la cache di visibilità del clipboard e del riferimento runtime. Le mutazioni devono respingere il ritorno al centro obiettivo e gli offset fuori limite. Le prove del reset verificano isolamento della pagina, default, latch e pagine escluse; il targeting dummy conserva selezione e consenso senza inseguimento.
+
+I nuovi contratti sociali distinguono stato personale, cooldown e risorse persistenti. Presence aggiorna il roster esistente senza una nuova targhetta; Fates verifica intervalli dei risultati e feedback locale; Whispers valida il bersaglio umano, il raggio di 25 m, Privacy, ricezione e destinatari esatti; Aura controlla un solo effetto per proprietario, posizione/colore rivalutati, filtro personale e cleanup. Il reset delle pagine 18 e 19 deve conservare la scadenza dei rispettivi cooldown di 5 e 15 secondi. La conferma storica dopo PR #114 non comprende queste nuove funzioni.
 
 Le regressioni Ghost verificano che applicare o alternare la sola collisione non richiami il motore Fly né introduca un freno o alteri velocità e gravità. Le transizioni Fly conservano il proprio applicatore fisico. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114, senza SHA importato, build client, numero di player, durata o metriche native; questo riscontro precede la correzione Ghost e non ne verifica la resa nel client.
 
@@ -40,17 +42,19 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-La revisione 0.8.3 usa **27.496 unità strutturali**, 10 in più rispetto alle 27.486 della PR #114. Il massimo per regola resta 2.605. Il clipboard passa da 299.635 a 299.838 byte UTF-8 (+203); la specifica da 276.148 a 276.439 (+291). I byte del testo sono misurati in UTF-8 con terminatori LF. Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Il codice corrente Unreleased usa **29.966 unità strutturali** nel clipboard, massimo 2.772 per regola e 322.153 byte UTF-8; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. Il nuovo stato sociale occupa un solo array personale: il generato arriva a 128 variabili player, senza aggiungere un campo distinto per ogni scelta. I byte del testo sono misurati in UTF-8 con terminatori LF. Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
-| Regole | 119 | 130 |
-| Variabili globali | 71 | 89 |
-| Variabili player | 125 | 127 |
-| Subroutine | 69 | 116 |
-| Byte di testo UTF-8 (LF) | 276.439 | 299.838 |
+| Regole | 123 | 134 |
+| Variabili globali | 82 | 100 |
+| Variabili player | 126 | 128 |
+| Subroutine | 73 | 120 |
+| Byte di testo UTF-8 (LF) | 296.787 | 322.153 |
+| Unità strutturali stimate | 27.494 | 29.966 |
+| Massimo unità strutturali per regola | 3.068 | 2.772 |
 
-La regola più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.605. Sono regole diverse: dimensione del testo e peso delle espressioni vengono controllati separatamente.
+La regola del runtime più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.772. La specifica ha un massimo testuale di 29.490 byte e strutturale di 3.068 unità per regola. Dimensione del testo e peso delle espressioni vengono controllati separatamente.
 
 ## GitHub Actions
 

@@ -291,8 +291,11 @@ class SocialBeaconTests(unittest.TestCase):
     def test_only_native_icons_follow_live_owner_position_without_an_objective(self):
         for source, model in self.models():
             with self.subTest(source=source):
-                self.assertFalse([call for rule in model.rules
-                                  for call in validator.iter_calls(rule.body, "Create Effect")])
+                manager = validator.rule_by_subroutine(model.rules, "UpdateSocialObjectiveIcons")
+                self.assertFalse(list(validator.iter_calls(manager.body, "Create Effect")))
+                self.assertTrue(all(validator.subroutine_target(rule) == "UpdateMoonlitAuras"
+                                    for rule in model.rules
+                                    if list(validator.iter_calls(rule.body, "Create Effect"))))
                 state = model.add("human")
                 model.objective = Vector(0, 0, 0)
                 model.run(now=100)

@@ -18,7 +18,7 @@ from tools import validate_workshop as semantic
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTORS = ("Global.TriggerPlayer", "Global.ActivePlayer")
-PERSISTENT_ACTORS = (*ACTORS, "Global.ObjectiveIconPlayer", "Global.CameraPlayer")
+PERSISTENT_ACTORS = (*ACTORS, "Global.ObjectiveIconPlayer", "Global.CameraPlayer", "Global.MoonlitAuraPlayer")
 PERSISTENT_ACTIONS = (
     "Create HUD Text", "Create In-World Text", "Create Icon", "Create Effect",
     "Start Camera", "Start Facing", "Start Throttle In Direction",

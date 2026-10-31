@@ -8,15 +8,17 @@ Il tema **Nocturne** si ispira al romanticismo oscuro e al melodic death metal: 
 
 Imposta la lingua testo del client su **English** per importare il codice. **Grammatica Workshop, identificatori, regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese**. Le mappe si configurano nella lobby: tutte quelle standard disponibili in Schermaglia, escluse le mappe Workshop come Isola.
 
-Le 130 regole del file da importare sono numerate consecutivamente da **0 a 129**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
+Le 134 regole del file da importare sono numerate consecutivamente da **0 a 133**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
 
 ## Stato attuale
+
+Il codice corrente aggiunge quattro menu Nocturne: **Presence 17**, **Fates 18**, **Whispers 19** e **Moonlit Aura 20**. Sono modifiche successive al pacchetto pubblicato 0.8.3, elencate in **Unreleased** nel changelog e ancora da verificare nel client. Il tag e l'allegato v0.8.3 conservano il codice della release.
 
 Il 28 ottobre, dopo la PR #114, l'utente ha confermato: «funziona tutto». È un riscontro qualitativo generale sulla revisione provata: SHA importato, build client, durata, numero di player e metriche native non sono stati forniti. La successiva correzione dell'inerzia Ghost richiede una nuova prova nel client. Restano i riscontri storici sul menu 2 dopo la PR #103 e sulla distanza tra HOST e killfeed dopo la PR #105.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-La revisione 0.8.3 usa **27.496 unità strutturali stimate**, 10 in più rispetto alle 27.486 della PR #114; il massimo per regola resta 2.605. Il testo da importare usa 299.838 byte UTF-8, 203 in più rispetto a 299.635. Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema.
+Il codice corrente usa **29.966 unità strutturali stimate**, massimo per regola 2.772 e 322.153 byte UTF-8 di testo da importare; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. I dettagli sono nei [controlli automatici](docs/VALIDAZIONE.md). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema o i nuovi menu sociali.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, entro 5 m tridimensionali dal proprietario e indipendenti dall’obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -79,6 +81,10 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
 | 16 | Movement / Gravity | Velocità 20–1000% e gravità 0–500%, passi di 20 sotto 100 e di 100 sopra |
+| 17 | Presence | Unspoken, Seeking company, Listening in silence, Lost in thought, Away beyond the veil |
+| 18 | Fates | Moneta Moon/Ash, d6, d20, percentuale e sei presagi |
+| 19 | Whispers | Ricezione ON/OFF e cinque messaggi personali predefiniti |
+| 20 | Moonlit Aura | OFF, Moonlit Ring, Withered Halo, Veil of Ash; filtro personale delle aure altrui |
 
 Il ripristino con **Crouch + Ultimate** agisce sulla voce selezionata nel principale o sul relativo sottomenu e compare nell’aiuto soltanto dove disponibile. Richiede un giocatore vivo e applica una sola azione per pressione: Ultimate va rilasciato prima di un nuovo reset. Non modifica le preferenze degli altri.
 
@@ -94,8 +100,20 @@ Il ripristino con **Crouch + Ultimate** agisce sulla voce selezionata nel princi
 | 13 — Ghost / Fly | Entrambi OFF |
 | 14 — Multijump | OFF, livello 1 |
 | 16 — Movement / Gravity | Entrambi 100%, cursore Speed |
+| 17 — Presence | Unspoken |
+| 18 — Fates | Prima scelta e messaggio iniziale; cooldown conservato |
+| 19 — Whispers | Ricezione ON, cursore sulla ricezione; cooldown conservato |
+| 20 — Moonlit Aura | Aura OFF, filtro delle aure altrui OFF |
 
 Info, Revenge, Luck e i toggle 8, 9, 12 e 15 non offrono questo reset. Il reset non cambia pagina né chiude il menu.
+
+Presence aggiunge uno stato alla propria riga **Souls & Echoes**, senza creare una targhetta sopra al personaggio. `Unspoken` è il default e non aggiunge testo. Tutti gli stati, compreso `Away beyond the veil`, sono scelte manuali: non rilevano automaticamente l'inattività e non modificano movimento, protezioni o Privacy.
+
+Fates mostra risultati soltanto al proprietario: **Moon/Ash**, d6, d20, percentuale intera **1–100%** o uno dei sei presagi a tema. L'ultimo risultato resta nel menu. Ogni esecuzione richiede **5 secondi** prima della successiva; il reset pulisce scelta e risultato senza annullare l'attesa. Sono risposte cosmetiche, senza gli effetti fisici di Try Your Luck.
+
+Whispers offre **Greeting, Respect, Rose, Embrace e Resonance**, oltre alla ricezione inizialmente **ON**. Per inviare, mirare a un altro umano vivo e disponibile entro **25 m**, con linea di vista libera, poi applicare il messaggio. Crouch Privacy e ricezione OFF del destinatario bloccano l'invio. Il destinatario riceve il testo e il mittente una conferma; nessun altro riceve messaggi. Ogni invio riuscito avvia un cooldown personale di **15 secondi**, conservato dal reset. Non è chat libera e non modifica il microfono o le animazioni.
+
+Moonlit Aura offre **Moonlit Ring, Withered Halo e Veil of Ash**, inizialmente OFF. Ogni umano può avere un solo effetto personale, con il proprio Name Color esatto e la posizione legata al proprietario: al massimo **12 aure**. Il filtro **Hide other auras** nasconde soltanto le aure altrui sul proprio schermo, lasciando visibile la propria e conservando le preferenze degli altri. Morte e perdita dello spawn nascondono e rimuovono l'effetto conservando la scelta; alla rinascita l'aura torna al successivo controllo di un secondo. Un cambio colore nasconde subito la vecchia tinta e ricrea l'effetto entro lo stesso intervallo. Il reset spegne la propria aura e disattiva il filtro. Le preferenze dei quattro menu persistono tra morte e cambio eroe; cambio squadra e uscita/rientro ripristinano i default.
 
 Travel contiene cinque pagine: Teleport Spawn, Teleport Objective, Teleport Player/Bot, Attach e Self Elimination. Interact esegue una sola azione per pressione; Primary e Secondary scorrono le cinque pagine in entrambe le direzioni. Input, navigazione e applicazione richiedono un giocatore vivo e spawnato; alla morte o alla perdita dello spawn la chiusura e la pulizia restano attive.
 
@@ -117,7 +135,7 @@ Name Color ordina i [40 colori Nocturne](docs/NAME_COLORS.md) per sfumatura: bia
 
 Le icone native scelte dagli umani fluttuano attorno al **proprietario, sempre entro 5 m di distanza tridimensionale**, senza fascio luminoso né nomi. Seguono subito la sua posizione, anche dopo movimento o teletrasporto, e mantengono il suo Name Color esatto. L’offset casuale ha distanza orizzontale 0–4 m e altezza 0,5–3 m: anche la combinazione massima resta entro 5 m. Non richiedono un obiettivo disponibile. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Souls & Echoes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
 
-Privacy impedisce Camera, inspection, Teleport e Attach verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Preferenze, pagina e cursore persistono tra morte e cambio eroe. **Cambio squadra e uscita/rientro ripartono dai default**, aprendo nuovamente il principale su Info / Controls al completamento della registrazione.
+Privacy impedisce Camera, inspection, Teleport, Attach e Whispers verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Whispers ha inoltre un filtro di ricezione personale indipendente. Preferenze, pagina e cursore persistono tra morte e cambio eroe. **Cambio squadra e uscita/rientro ripartono dai default**, aprendo nuovamente il principale su Info / Controls al completamento della registrazione.
 
 Privacy riguarda le funzioni personalizzate del Workshop: non limita la visuale spettatore o gli strumenti amministrativi nativi.
 
