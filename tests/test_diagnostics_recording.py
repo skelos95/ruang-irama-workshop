@@ -38,6 +38,7 @@ class DiagnosticsHudEvaluator(MenuLoadEvaluator):
                             PlayerListHudIds=list(range(100, 112)),
                             MenuHudIds=[0, 200, 0, 201] + [0] * 8,
                             TemporaryEffectHudIds=[300, 301, 0, 302] + [0] * 20,
+                            FateResultHudIds=[800, 0, 801, 0, 802] + [0] * 7,
                             InspectionTextIds=[0, 400, 0, 401] + [0] * 8,
                             TemporaryTravelTextIds=[500] + [0] * 23,
                             TemporaryVisionTextIds=[600, 0, 601] + [0] * 21,
@@ -87,7 +88,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
                                 if show:
                                     visible.append(owner)
                                     self.assertEqual(text.strip(),
-                                        "LOAD 12% | AVG 23% | MAX 34%\nHUD 22 | IWT 5")
+                                        "LOAD 12% | AVG 23% | MAX 34%\nHUD 25 | IWT 5")
                                 else:
                                     self.assertEqual(text, "")
                                     self.assertEqual(model.filter_builds, previous_filters)

@@ -83,6 +83,11 @@ variables
 		79: MoonlitAuraColors
 		80: MoonlitAuraIndex
 		81: MoonlitAuraPlayer
+		82: FateResultOwners
+		83: FateResultHudIds
+		84: FateResultDeadlines
+		85: FateResultIndex
+		86: FateResultPlayer
 	player:
 		0: IsClassified
 		1: IsAutomaticBot
@@ -287,6 +292,8 @@ subroutines
 	70: ApplyNocturnePage
 	71: UpdateMoonlitAuras
 	72: CleanupMoonlitAura
+	73: ShowFateResult
+	74: CleanupFateResults
 }
 
 rule("00 - Global: Initialize 200 genres, from calm to chaos")
@@ -354,6 +361,11 @@ rule("00 - Global: Initialize 200 genres, from calm to chaos")
 		Global.MoonlitAuraIds = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Global.MoonlitAuraChoices = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Global.MoonlitAuraColors = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Global.FateResultOwners = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);
+		Global.FateResultHudIds = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Global.FateResultDeadlines = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Global.FateResultIndex = 0;
+		Global.FateResultPlayer = Null;
 		Global.MoonlitAuraIndex = 0;
 		Global.MoonlitAuraPlayer = Null;
 		Global.CameraPlayer = Null;
@@ -734,7 +746,7 @@ rule("02 - Player: Classify humans and automatic bots")
 		Event Player.IsHuman = True;
 		Event Player.LastHero = Hero Of(Event Player);
 		Global.VoteRecountNeeded = True;
-		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.NocturneState[0] == 0 ? (Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Custom String("{0} | {1}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"), Global.PresenceNames[Event Player.NocturneState[0]]))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 5 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.NocturneState[0] == 0 ? (Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Custom String("{0} | {1}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"), Global.PresenceNames[Event Player.NocturneState[0]]))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 5 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.FateResultHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
 		Event Player.PlayerListHud = Last Text ID;
 		If(And(Index Of Array Value(Global.HumanPlayers, Event Player) >= 0, Index Of Array Value(Global.HumanPlayers, Event Player) < Count Of(Global.PlayerListHudIds)));
 			Global.PlayerListHudIds[Index Of Array Value(Global.HumanPlayers, Event Player)] = Event Player.PlayerListHud;
@@ -1089,6 +1101,8 @@ rule("04g - Global main loop: Central scheduler at 20 Hz")
 			Call Subroutine(MaintainDummyBots);
 			Call Subroutine(UpdateSocialObjectiveIcons);
 			Call Subroutine(UpdateMoonlitAuras);
+			Global.FateResultPlayer = Null;
+			Call Subroutine(CleanupFateResults);
 			Global.TextCleanupPlayer = Null;
 			Call Subroutine(CleanupOrphanedText);
 		End;
@@ -3835,6 +3849,9 @@ rule("93b2 - Subroutine: Quiesce the trigger player before cleanup")
 		Global.SuperPunchPlayers = Remove From Array(Global.SuperPunchPlayers, Event Player);
 		Call Subroutine(CloseMenu);
 		Call Subroutine(CleanupObjectiveIcon);
+		Global.FateResultPlayer = Event Player;
+		Call Subroutine(CleanupFateResults);
+		Global.FateResultPlayer = Null;
 		Global.MoonlitAuraPlayer = Event Player;
 		Call Subroutine(CleanupMoonlitAura);
 		Global.MoonlitAuraPlayer = Null;
@@ -3925,6 +3942,9 @@ rule("93c - Subroutine: Clear references to players who actually left")
 		Global.SuperPunchPlayers = Remove From Array(Global.SuperPunchPlayers, Event Player);
 		Global.CleanupSubject = Event Player;
 		Call Subroutine(CleanupObjectiveIcon);
+		Global.FateResultPlayer = Event Player;
+		Call Subroutine(CleanupFateResults);
+		Global.FateResultPlayer = Null;
 		Global.MoonlitAuraPlayer = Event Player;
 		Call Subroutine(CleanupMoonlitAura);
 		Global.MoonlitAuraPlayer = Null;
@@ -5234,6 +5254,9 @@ rule("99s - Subroutine: Reset the selected personal menu page")
 			"Reset the page, never its anti-spam deadline."
 			Event Player.NocturneState[2] = 0;
 			Event Player.NocturneState[10] = Custom String("The pages await your hand.");
+			Global.FateResultPlayer = Event Player;
+			Call Subroutine(CleanupFateResults);
+			Global.FateResultPlayer = Null;
 		Else If((Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 19);
 			Event Player.NocturneState[4] = 0;
 			Event Player.NocturneState[5] = True;
@@ -5262,7 +5285,7 @@ rule("91v - Subroutine: Draw Presence, Fates, Whispers and Moonlit Aura")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("Hold {0} | {1}: next / {2}: prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: apply / {1}: back / {2}: reset page", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Event Player.MenuPage == 17 ? Custom String("17 - PRESENCE") : Event Player.MenuPage == 18 ? Custom String("18 - FATES") : Event Player.MenuPage == 19 ? Custom String("19 - WHISPERS") : Custom String("20 - MOONLIT AURA"), Event Player.MenuPage == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Event Player.MenuPage == 18 ? Event Player.NocturneState[10] : Event Player.MenuPage == 19 ? Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")) : Custom String("NOW: {0} | HIDE OTHERS: {1}", Global.AuraNames[Event Player.NocturneState[8]], Event Player.NocturneState[9] == True ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Event Player.MenuPage == 17 ? Global.PresenceNames[Event Player.NocturneState[1]] : Event Player.MenuPage == 18 ? Global.FateNames[Event Player.NocturneState[2]] : Event Player.MenuPage == 19 ? Global.WhisperNames[Event Player.NocturneState[4]] : Global.AuraNames[Event Player.NocturneState[7]])), Event Player.MenuPage == 17 ? Custom String("A quiet sign beside your name.") : Event Player.MenuPage == 18 ? Custom String("Your fate alone. One turn every 5 seconds.") : Event Player.MenuPage == 19 ? Custom String("Aim at a public soul within 25 m. Receive ON required. 15 s between whispers.") : Custom String("A single trace of moonlight follows your Name Color.")), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Event Player), Null, Custom String("{0} | {1}", Custom String("Hold {0} | {1}: next / {2}: prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: apply / {1}: back / {2}: reset page", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("17 - PRESENCE") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("18 - FATES") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("19 - WHISPERS") : Custom String("20 - MOONLIT AURA"), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("FATES: {0}", Total Time Elapsed < Event Player.NocturneState[3] ? Custom String("RESTING {0}s", Round To Integer(Event Player.NocturneState[3] - Total Time Elapsed, Up)) : Custom String("READY")) : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")) : Custom String("NOW: {0} | HIDE OTHERS: {1}", Global.AuraNames[Event Player.NocturneState[8]], Event Player.NocturneState[9] == True ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Evaluate Once(Event Player.MenuPage) == 17 ? Global.PresenceNames[Event Player.NocturneState[1]] : Evaluate Once(Event Player.MenuPage) == 18 ? Global.FateNames[Event Player.NocturneState[2]] : Evaluate Once(Event Player.MenuPage) == 19 ? Global.WhisperNames[Event Player.NocturneState[4]] : Global.AuraNames[Event Player.NocturneState[7]])), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("A quiet sign beside your name.") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("Your fate appears below. One turn every 5 seconds.") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("Aim at a public soul at any distance. Receive ON required. 15 s between whispers.") : Custom String("A single trace of moonlight follows your Name Color.")), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -5300,7 +5323,7 @@ rule("99t - Subroutine: Apply the personal Nocturne social page")
 			Else;
 				Event Player.NocturneState[10] = Random Value In Array(Global.OmenLines);
 			End;
-			Big Message(Event Player, Event Player.NocturneState[10]);
+			Call Subroutine(ShowFateResult);
 		Else If(Event Player.MenuPage == 19);
 			If(Event Player.NocturneState[4] == 0);
 				Event Player.NocturneState[5] = Event Player.NocturneState[5] == False;
@@ -5321,7 +5344,6 @@ rule("99t - Subroutine: Apply the personal Nocturne social page")
 				Abort If(Or(Has Spawned(Event Player.InspectionTarget) == False, Is Alive(Event Player.InspectionTarget) == False));
 				Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);
 				Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);
-				Abort If(Distance Between(Event Player, Event Player.InspectionTarget) > 25);
 				Abort If(Is In View Angle(Event Player, Eye Position(Event Player.InspectionTarget), 12) == False);
 				Abort If(Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.InspectionTarget), Barriers Do Not Block LOS) == False);
 				Event Player.NocturneState[6] = Total Time Elapsed + 15;
@@ -5425,5 +5447,52 @@ rule("99v - Subroutine: Remove a Moonlit Aura without reading departed state")
 			End;
 		End;
 		Global.MoonlitAuraPlayer = Null;
+	}
+}
+
+rule("99w - Subroutine: Show a private Fate below the Arcade menu")
+{
+	event
+	{
+		Subroutine;
+		ShowFateResult;
+	}
+
+	actions
+	{
+		Abort If(Or(Event Player.HudSlot < 0, Event Player.HudSlot >= 12));
+		If(Global.FateResultHudIds[Event Player.HudSlot] != 0);
+			Destroy HUD Text(Global.FateResultHudIds[Event Player.HudSlot]);
+		End;
+		Global.FateResultOwners[Event Player.HudSlot] = Event Player;
+		Global.FateResultDeadlines[Event Player.HudSlot] = Total Time Elapsed + 3;
+		"Keep a blank line below Arcade (sort 3); capture this roll before the global actor is cleared."
+		Create HUD Text(Evaluate Once(Event Player), Null, Null, Custom String("\n{0}", Evaluate Once(Event Player.NocturneState[10])), Top, 4, Color(White), Color(White), Custom Color(218, 198, 142, 255), Visible To, Visible Never);
+		Global.FateResultHudIds[Event Player.HudSlot] = Last Text ID;
+	}
+}
+
+rule("93f - Subroutine: Expire Fate results and clean the departing owner")
+{
+	event
+	{
+		Subroutine;
+		CleanupFateResults;
+	}
+
+	actions
+	{
+		"The registry survives lost player variables; only the exact owner or an expired result is removed."
+		For Global Variable(FateResultIndex, 0, 12, 1);
+			If(Global.FateResultHudIds[Global.FateResultIndex] != 0);
+				If(Or(And(Global.FateResultPlayer != Null, Global.FateResultOwners[Global.FateResultIndex] == Global.FateResultPlayer), Or(Global.FateResultDeadlines[Global.FateResultIndex] <= Total Time Elapsed, Or(Entity Exists(Global.FateResultOwners[Global.FateResultIndex]) == False, Or(Array Contains(Global.HumanPlayers, Global.FateResultOwners[Global.FateResultIndex]) == False, Or(Player Variable(Global.FateResultOwners[Global.FateResultIndex], IsHuman) == False, Player Variable(Global.FateResultOwners[Global.FateResultIndex], IsPrepared) == False))))));
+					Destroy HUD Text(Global.FateResultHudIds[Global.FateResultIndex]);
+					Global.FateResultHudIds[Global.FateResultIndex] = 0;
+					Global.FateResultOwners[Global.FateResultIndex] = Null;
+					Global.FateResultDeadlines[Global.FateResultIndex] = 0;
+				End;
+			End;
+		End;
+		Global.FateResultPlayer = Null;
 	}
 }

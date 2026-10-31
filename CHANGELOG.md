@@ -4,10 +4,14 @@
 
 - Quattro menu personali a tema Nocturne: Presence 17, Fates 18, Whispers 19 e Moonlit Aura 20. Le voci precedenti mantengono i propri indici; VERSION resta 0.8.3 e il tag e l'allegato della release pubblicata conservano il codice storico.
 - Presence aggiunge uno dei quattro stati sociali alla riga Souls & Echoes; Unspoken è il default senza testo aggiuntivo. La presenza è manuale, senza rilevamento automatico AFK o modifiche alla fisica.
-- Fates genera Moon/Ash, d6, d20, percentuali 1–100% e sei presagi locali. Conserva l'ultimo risultato e un cooldown di 5 secondi, che il reset non annulla.
-- Whispers invia Greeting, Respect, Rose, Embrace e Resonance al solo umano vivo mirato entro 25 m. Rispetta Privacy e ricezione personale ON/OFF, usa messaggi privati ai due partecipanti e applica 15 secondi di cooldown agli invii riusciti.
+- Fates genera Moon/Ash, d6, d20, percentuali 1–100% e sei presagi locali. Conserva un cooldown di 5 secondi, che il reset non annulla.
+- Whispers invia Greeting, Respect, Rose, Embrace e Resonance al solo umano vivo mirato. Rispetta Privacy e ricezione personale ON/OFF, usa messaggi privati ai due partecipanti e applica 15 secondi di cooldown agli invii riusciti.
 - Moonlit Aura aggiunge Moonlit Ring, Withered Halo e Veil of Ash: un effetto per umano, massimo 12, con posizione e Name Color del proprietario. Il filtro personale Hide other auras conserva la propria aura e le scelte altrui.
 - Crouch + Ultimate ripristina la sola pagina 17–20 selezionata, senza azzerare i cooldown. Preferenze conservate tra morte e cambio eroe, default al cambio squadra e al nuovo ingresso. Resa visiva, ricezione dei messaggi e ciclo di vita delle aure richiedono una prova sul commit importato nel client.
+- Corretto il ritorno con Crouch + Reload dalle pagine 17–20: il renderer cattura la sola pagina dell'HUD, evitando il passaggio visibile a Moonlit Aura 20 prima del principale. Cursori, scelte e preferenze restano rivalutati durante l'uso della pagina.
+- Il risultato Fates usa un HUD privato sotto Arcade al posto di Big Message, con una riga vuota prima del testo e risultato congelato al tiro. Scadenza a 3 secondi e rimozione a 1 Hz, entro 4 secondi; ownership e cleanup usano un registro canonico dedicato. Il menu mostra READY/RESTING senza duplicare il risultato; il reset rimuove il proprio HUD conservando il cooldown.
+- Whispers ora raggiunge un bersaglio valido a qualsiasi distanza: rimosso il limite di 25 m, mantenendo mira entro 12°, linea di vista, umano vivo pubblico, ricezione ON e cooldown personale di 15 secondi.
+- Specifica e clipboard rigenerati: 300.140 e 325.518 byte UTF-8 normalizzati LF. Runtime: 136 regole numerate 0–135, 105 variabili globali, 128 player e 122 subroutine; 30.262 unità strutturali stimate, massimo 2.789 per regola. Budget offline invariati 32.000/5.000; compilazione e carico richiedono le misure del client.
 
 ## 0.8.3 — 2026-10-28
 
