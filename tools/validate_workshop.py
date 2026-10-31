@@ -1118,12 +1118,7 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     ):
         checks.require(legacy not in source, f"messaggio apertura menu obsoleto: {legacy}")
 
-    fate_messages = [(rule, call) for rule in rules for call in iter_calls(rule.body, "Big Message")]
-    checks.require(len(fate_messages) == 1
-                   and len(list(iter_calls(source, "Big Message"))) == 1
-                   and subroutine_target(fate_messages[0][0]) == "ApplyNocturnePage"
-                   and fate_messages[0][1].args == ("Event Player", "Event Player.NocturneState[10]"),
-                   "Big Message/titolo vietato salvo il risultato personale di Fates")
+    checks.require(not list(iter_calls(source, "Big Message")), "Big Message/titolo vietato")
     lowered_source = source.lower()
     for clause in GLOBAL_MODIFIER_CLAUSES:
         checks.require(
@@ -1404,7 +1399,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                             re.sub(r"\s+", "", counts.args[1]),
                             "5+CountOf(FilteredArray(Global.PlayerListHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.MenuHudIds,CurrentArrayElement!=0))"
-                            "+CountOf(FilteredArray(Global.TemporaryEffectHudIds,CurrentArrayElement!=0))",
+                            "+CountOf(FilteredArray(Global.TemporaryEffectHudIds,CurrentArrayElement!=0))"
+                            "+CountOf(FilteredArray(Global.FateResultHudIds,CurrentArrayElement!=0))",
                             "renderer HUD roster Left: conteggio HUD diagnostica deve includere cinque fissi e tutti gli handle",
                         )
                         checks.equal(
@@ -1562,7 +1558,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         calls = list(iter_calls(rule.body, "Create HUD Text"))
         checks.equal(len(calls), 1, f"{subroutine_target(rule)}: un solo Create HUD")
         if calls:
-            checks.equal(calls[0].args[0].strip(), "Event Player",
+            expected_owner = "Evaluate Once(Event Player)" if subroutine_target(rule) == "DrawNocturneMenu" else "Event Player"
+            checks.equal(calls[0].args[0].strip(), expected_owner,
                          f"{subroutine_target(rule)}: HUD menu non deve essere nascosto/precaricato")
             checks.equal(calls[0].args[1].strip(), "Null",
                          f"{subroutine_target(rule)}: keep the Header empty")
@@ -2309,6 +2306,24 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
                                        for branch in branches),
                                "Nocturne: apertura dal principale senza side effect")
 
+    renderer = rule_by_subroutine(rules, "DrawNocturneMenu")
+    checks.require(renderer is not None, "Nocturne: renderer condiviso assente")
+    if renderer:
+        huds = list(iter_calls(renderer.body, "Create HUD Text"))
+        checks.equal(len(huds), 1, "Nocturne: un solo HUD per pagina")
+        if len(huds) == 1:
+            expression = huds[0].args[3]
+            captures = list(iter_calls(expression, "Evaluate Once"))
+            remaining = mask_strings(expression)
+            for call in reversed(captures):
+                remaining = remaining[:call.start] + " " * (call.end - call.start) + remaining[call.end:]
+            checks.require("Event Player.MenuPage" in expression and "Event Player.MenuPage" not in remaining,
+                           "Nocturne: identita pagina congelata fino alla distruzione HUD")
+            for argument in huds[0].args:
+                checks.require(not any(re.search(r"\b(?:NocturneState|MenuColor)\b", mask_strings(call.args[0]))
+                                       for call in iter_calls(argument, "Evaluate Once")),
+                               "Nocturne: cursori, preferenze e colore restano live")
+
     apply = rule_by_subroutine(rules, "ApplyNocturnePage")
     checks.require(apply is not None, "Nocturne: handler condiviso assente")
     if apply:
@@ -2336,7 +2351,6 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
             "Abort If(Or(Has Spawned(Event Player.InspectionTarget) == False, Is Alive(Event Player.InspectionTarget) == False));",
             "Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);",
             "Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);",
-            "Abort If(Distance Between(Event Player, Event Player.InspectionTarget) > 25);",
             "Abort If(Is In View Angle(Event Player, Eye Position(Event Player.InspectionTarget), 12) == False);",
             "Abort If(Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.InspectionTarget), Barriers Do Not Block LOS) == False);",
         )
@@ -2348,6 +2362,8 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
             if recipient_calls:
                 checks.require(packed(guard) in packed(apply.body[:recipient_calls[0].start]),
                                "Nocturne: tutte le guardie Whispers precedono il messaggio")
+        checks.require(not list(iter_calls(apply.body, "Distance Between")),
+                       "Nocturne: Whispers senza limite di distanza")
         for forbidden in ("Set Status", "Set Move Speed", "Set Gravity", "Apply Impulse", "Damage", "Kill", "Teleport", "Create Effect"):
             checks.require(not list(iter_calls(apply.body, forbidden)),
                            f"Nocturne: menu sociali non cambiano fisica, danni o effetti direttamente: {forbidden}")
@@ -2355,6 +2371,35 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
     if reset:
         checks.require(re.search(r"NocturneState\[(?:3|6)\]\s*=(?!=)", mask_strings(reset.body)) is None,
                        "Nocturne: reset non deve azzerare cooldown Fates o Whispers")
+    fate = rule_by_subroutine(rules, "ShowFateResult")
+    fate_cleanup = rule_by_subroutine(rules, "CleanupFateResults")
+    checks.require(fate is not None and fate_cleanup is not None,
+                   "Nocturne: risultato Fates con HUD e cleanup dedicati")
+    if fate:
+        calls = list(iter_calls(fate.body, "Create HUD Text"))
+        checks.equal(len(calls), 1, "Nocturne: un solo HUD risultato Fates")
+        if len(calls) == 1:
+            checks.equal(calls[0].args[:6], ("Evaluate Once(Event Player)", "Null", "Null",
+                         'Custom String("\\n{0}", Evaluate Once(Event Player.NocturneState[10]))', "Top", "4"),
+                         "Nocturne: Fates privato, snapshot del risultato e riga vuota sotto il menu")
+        for statement in ("Global.FateResultOwners[Event Player.HudSlot] = Event Player;",
+                          "Global.FateResultDeadlines[Event Player.HudSlot] = Total Time Elapsed + 3;",
+                          "Global.FateResultHudIds[Event Player.HudSlot] = Last Text ID;"):
+            checks.require(packed(statement) in packed(fate.body), "Nocturne: registro Fates per owner con scadenza 3s")
+    for name, initial in (("FateResultOwners", "Null"), ("FateResultHudIds", "0"), ("FateResultDeadlines", "0")):
+        values = array_assignment_items(source, name)
+        checks.equal(values, [initial] * 12, f"Nocturne: registro Fates {name} limitato a dodici slot")
+    if fate_cleanup:
+        for expression in ("For Global Variable(FateResultIndex, 0, 12, 1);",
+                           "Global.FateResultOwners[Global.FateResultIndex] == Global.FateResultPlayer",
+                           "Global.FateResultDeadlines[Global.FateResultIndex] <= Total Time Elapsed"):
+            checks.require(packed(expression) in packed(fate_cleanup.body), "Nocturne: cleanup Fates per owner o scadenza")
+        checks.require(not wait_calls(fate_cleanup.body) and action_loop_count(fate_cleanup.body) == 0,
+                       "Nocturne: cleanup Fates atomico")
+    for name in ("QuiescePlayer", "CleanupPlayer", "ResetMenuPage"):
+        lifecycle = rule_by_subroutine(rules, name)
+        checks.require(lifecycle is not None and packed("Global.FateResultPlayer = Event Player;Call Subroutine(CleanupFateResults);Global.FateResultPlayer = Null;") in packed(lifecycle.body),
+                       f"Nocturne: {name} rimuove il risultato Fates del proprio soggetto")
     manager = rule_by_subroutine(rules, "UpdateMoonlitAuras")
     cleanup = rule_by_subroutine(rules, "CleanupMoonlitAura")
     checks.require(manager is not None and cleanup is not None, "Nocturne: manager e cleanup Aura obbligatori")
@@ -4467,7 +4512,7 @@ def validate_scheduler(checks: Checks, source: str, rules: list[Rule], globals_:
             ("If(And(Global.ActivePlayer.IsHuman == True, Global.ActivePlayer.FlyModeActive == True));Call Subroutine(ProcessPlayerFlight);End;", "Fly solo umano attivo"),
             ("If(And(Global.ActivePlayer.IsHuman == True, Or(Global.ActivePlayer.AllowDummyBotFollow == True, And(Global.ActivePlayer.MenuOpen == True, Or(Global.ActivePlayer.MenuPage == 2, Global.ActivePlayer.MenuPage == 4)))));Call Subroutine(ProcessPlayerMaintenance);End;", "cache solo menu Camera/Revenge o consenso Dummy Follow ON"),
             ("Else;If(Global.SchedulerStep % 2 == Slot Of(Global.ActivePlayer) % 2);Call Subroutine(ProcessPlayerBot);End;End;", "manutenzione bot isolata 10 Hz"),
-            ("If(Global.SchedulerStep % 20 == 0);Call Subroutine(MaintainDummyBots);Call Subroutine(UpdateSocialObjectiveIcons);Call Subroutine(UpdateMoonlitAuras);Global.TextCleanupPlayer = Null;Call Subroutine(CleanupOrphanedText);End;", "slot dummy, pulizia, pilar e aura 1 Hz"),
+            ("If(Global.SchedulerStep % 20 == 0);Call Subroutine(MaintainDummyBots);Call Subroutine(UpdateSocialObjectiveIcons);Call Subroutine(UpdateMoonlitAuras);Global.FateResultPlayer = Null;Call Subroutine(CleanupFateResults);Global.TextCleanupPlayer = Null;Call Subroutine(CleanupOrphanedText);End;", "slot dummy, pulizia, pilar, aura e Fates 1 Hz"),
         ):
             checks.require(re.sub(r"\s+", "", gate) in scheduler_packed,
                            f"scheduler a stati: {label}")
@@ -6862,13 +6907,14 @@ def validate_bot_isolation(checks: Checks, rules: list[Rule]) -> None:
     for rule, label, triple in entrypoints:
         require_human_guards(rule, label, triple=triple)
 
-    player_hud_calls = list(iter_calls("\n".join(rule.body for rule in rules), "Create HUD Text"))
-    for call in player_hud_calls:
-        if call.args:
-            checks.require(
-                call.args[0].strip() in {"Global.HumanPlayers", "Event Player"},
-                f"Create HUD Text visibile a bot/dummy: {call.args[0].strip()}",
-            )
+    for rule in rules:
+        for call in iter_calls(rule.body, "Create HUD Text"):
+            if call.args:
+                allowed = {"Global.HumanPlayers", "Event Player"}
+                if subroutine_target(rule) in {"DrawNocturneMenu", "ShowFateResult"}:
+                    allowed.add("Evaluate Once(Event Player)")
+                checks.require(call.args[0].strip() in allowed,
+                               f"Create HUD Text visibile a bot/dummy: {call.args[0].strip()}")
 
     bot_rule = next(
         (

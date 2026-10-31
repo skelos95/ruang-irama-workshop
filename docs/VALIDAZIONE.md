@@ -30,7 +30,7 @@ I test comportamentali esistenti eseguono porzioni della specifica inglese con r
 
 I test delle icone eseguono posizioni live del proprietario, teletrasporti, traiettorie interpolate e il limite tridimensionale di 5 m; controllano anche le 36 espressioni Create Icon e la cache di visibilità del clipboard e del riferimento runtime. Le mutazioni devono respingere il ritorno al centro obiettivo e gli offset fuori limite. Le prove del reset verificano isolamento della pagina, default, latch e pagine escluse; il targeting dummy conserva selezione e consenso senza inseguimento.
 
-I nuovi contratti sociali distinguono stato personale, cooldown e risorse persistenti. Presence aggiorna il roster esistente senza una nuova targhetta; Fates verifica intervalli dei risultati e feedback locale; Whispers valida il bersaglio umano, il raggio di 25 m, Privacy, ricezione e destinatari esatti; Aura controlla un solo effetto per proprietario, posizione/colore rivalutati, filtro personale e cleanup. Il reset delle pagine 18 e 19 deve conservare la scadenza dei rispettivi cooldown di 5 e 15 secondi. La conferma storica dopo PR #114 non comprende queste nuove funzioni.
+I nuovi contratti sociali distinguono stato personale, cooldown e risorse persistenti. Il renderer delle pagine 17–20 cattura la sola pagina dell'HUD, evitando il passaggio a Moonlit Aura durante Reload senza congelare cursori o preferenze. Presence aggiorna il roster esistente senza una nuova targhetta. Fates verifica intervalli dei risultati, HUD privato Top 4 con una riga vuota prima del testo, identità e risultato catturati anche dopo lo svuotamento degli attori dello scheduler, TTL 3 secondi e cleanup a 1 Hz entro 4 secondi, reset e ownership canonica dopo perdita delle variabili del proprietario o riciclo degli ID. Il menu mostra READY/RESTING, senza duplicare il risultato. Whispers valida il bersaglio umano a qualsiasi distanza, mira entro 12°, linea di vista, Privacy, ricezione e destinatari esatti; Aura controlla un solo effetto per proprietario, posizione/colore rivalutati, filtro personale e cleanup. Il reset delle pagine 18 e 19 deve conservare la scadenza dei rispettivi cooldown di 5 e 15 secondi. La conferma storica dopo PR #114 non comprende queste nuove funzioni.
 
 Le regressioni Ghost verificano che applicare o alternare la sola collisione non richiami il motore Fly né introduca un freno o alteri velocità e gravità. Le transizioni Fly conservano il proprio applicatore fisico. Il 28 ottobre l'utente ha confermato «funziona tutto» dopo la PR #114, senza SHA importato, build client, numero di player, durata o metriche native; questo riscontro precede la correzione Ghost e non ne verifica la resa nel client.
 
@@ -42,19 +42,19 @@ Il preflight conta anche le espressioni con pesi ispirati al [compilatore OverPy
 
 Questa è una stima offline, non un compilatore Overwatch né un limite superiore garantito. Non modella tutti i default o l'overhead nativo. Il sorgente `2e1c4ff`, che il client ha mostrato a 36.381 elementi, produce 36.491 unità nella stima e viene rifiutato. Il preflight riporta i conteggi della revisione corrente e li confronta con i budget locali invariati. Il peso del testo UTF-8 viene riportato separatamente: non equivale alla dimensione compilata della regola. Element Count e Largest Rule del nuovo runtime vanno misurati nel client prima delle prove di carico.
 
-Il codice corrente Unreleased usa **29.966 unità strutturali** nel clipboard, massimo 2.772 per regola e 322.153 byte UTF-8; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. Il nuovo stato sociale occupa un solo array personale: il generato arriva a 128 variabili player, senza aggiungere un campo distinto per ogni scelta. I byte del testo sono misurati in UTF-8 con terminatori LF. Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
+Il codice corrente Unreleased usa **30.262 unità strutturali** nel clipboard, massimo 2.789 per regola e 325.518 byte UTF-8; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. Il nuovo stato sociale occupa un solo array personale: il generato arriva a 128 variabili player, senza aggiungere un campo distinto per ogni scelta. Il registro dedicato dei risultati Fates aggiunge cinque globali e due subroutine, senza nuovi campi player; gli HUD del registro sono inclusi nella diagnostica. I byte del testo sono misurati in UTF-8 con terminatori LF. Le soglie del progetto restano 32.000/5.000; queste misure non sono Element Count o Largest Rule del client.
 
 | Misura corrente | Specifica inglese | Runtime da importare |
 |---|---:|---:|
-| Regole | 123 | 134 |
-| Variabili globali | 82 | 100 |
+| Regole | 125 | 136 |
+| Variabili globali | 87 | 105 |
 | Variabili player | 126 | 128 |
-| Subroutine | 73 | 120 |
-| Byte di testo UTF-8 (LF) | 296.787 | 322.153 |
-| Unità strutturali stimate | 27.494 | 29.966 |
-| Massimo unità strutturali per regola | 3.068 | 2.772 |
+| Subroutine | 75 | 122 |
+| Byte di testo UTF-8 (LF) | 300.140 | 325.518 |
+| Unità strutturali stimate | 27.792 | 30.262 |
+| Massimo unità strutturali per regola | 3.137 | 2.789 |
 
-La regola del runtime più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.772. La specifica ha un massimo testuale di 29.490 byte e strutturale di 3.068 unità per regola. Dimensione del testo e peso delle espressioni vengono controllati separatamente.
+La regola del runtime più grande per testo usa 23.063 byte UTF-8; la regola con più unità strutturali ne usa 2.789. La specifica ha un massimo testuale di 29.490 byte e strutturale di 3.137 unità per regola. Dimensione del testo e peso delle espressioni vengono controllati separatamente.
 
 ## GitHub Actions
 

@@ -76,10 +76,14 @@ class NocturneEvaluator(DirectToggleEvaluator):
         self.destroyed_effects = []
         self.next_entity = 800
         self.capture_index = 0
+        self.hud_arguments = {}
+        self.destroyed_hud_text = {}
         self.trees = {}
         self.globals.update(MoonlitAuraOwners=[None] * 12, MoonlitAuraIds=[0] * 12,
                             MoonlitAuraChoices=[0] * 12, MoonlitAuraColors=[-1] * 12,
                             MoonlitAuraPlayer=None, MoonlitAuraIndex=0,
+                            FateResultOwners=[None] * 12, FateResultHudIds=[0] * 12,
+                            FateResultDeadlines=[0] * 12, FateResultPlayer=None, FateResultIndex=0,
                             PlayerHudSlots=[], PlayerIcons=[""] * 37,
                             GenreNames=[f"genre-{i}" for i in range(200)])
         for name in CATALOGUES:
@@ -97,6 +101,7 @@ class NocturneEvaluator(DirectToggleEvaluator):
                         eye=Vector(0, 1.7, 0), in_view=True, los=True,
                         DisplayName=name, CustomSoundtrack=None, GenreIndex=-1,
                         MenuPage=17, MainMenuCursor=17, IconIndex=0,
+                        MenuColor=Vector(10, 20, 30),
                         ControllerState=[0] * 128, ControllerTimes=[0] * 128)
         defaults.update(changes)
         state = super().add(name, **defaults)
@@ -118,6 +123,7 @@ class NocturneEvaluator(DirectToggleEvaluator):
             if kind == "name":
                 if node.value == "Global": return self.globals
                 if node.value == "Event Player": return self.event_player
+                if node.value == "Local Player": return self.event_player
                 if node.value == "Current Array Element": return self.element
                 if node.value == "Total Time Elapsed": return self.now
                 if node.value == "Last Created Entity": return self.created_effects[-1] if self.created_effects else 0
@@ -162,6 +168,9 @@ class NocturneEvaluator(DirectToggleEvaluator):
             self.draws.append((0, len(args[0]) - 1))
             return args[0][-1 if self.draw_high else 0]
         if name == "Vector": return Vector(*args)
+        if name == "CustomColor": return tuple(args)
+        if name in ("XComponentOf", "YComponentOf", "ZComponentOf"):
+            return getattr(args[0], {"XComponentOf": "x", "YComponentOf": "y", "ZComponentOf": "z"}[name])
         if name in ("PositionOf", "EyePosition"):
             if isinstance(args[0], Vector): return args[0]
             return self.players[args[0]]["position" if name == "PositionOf" else "eye"]
@@ -225,6 +234,16 @@ class NocturneEvaluator(DirectToggleEvaluator):
                 self.execute(validator.rule_block(rule, "actions"))
             elif name in ("Small Message", "Big Message"):
                 self.messages.append((name, self.evaluate(call.args[0]), self.evaluate(call.args[1])))
+            elif name == "Create HUD Text":
+                installed = tuple(self.capture(arg) for arg in call.args)
+                super().execute(token + ";")
+                self.hud_arguments[self.last_text] = installed
+                self.hud_bodies[self.last_text] = installed[3]
+            elif name == "Destroy HUD Text":
+                handle = self.evaluate(call.args[0])
+                if handle in self.hud_arguments:
+                    self.destroyed_hud_text[handle] = self.evaluate(self.hud_arguments[handle][3])
+                super().execute(token + ";")
             elif name == "Create Effect":
                 handle = self.next_entity
                 self.next_entity += 1
@@ -252,6 +271,16 @@ class NocturneEvaluator(DirectToggleEvaluator):
         state["MenuPage"] = page
         state["NocturneState"][{17: 1, 18: 2, 19: 4, 20: 7}[page]] = cursor
         self.routine("ApplyNocturnePage", owner)
+
+    def controller(self, prefix, owner):
+        if "Ongoing - Each Player" not in self.source:
+            self.routine("Controller" + prefix.capitalize(), owner)
+            return
+        self.event_player = owner
+        rule = self.rule(prefix)
+        conditions = validator.rule_block(rule, "conditions")
+        if all(self.evaluate(condition.strip()) for condition in validator.split_top_level(conditions, ";") if condition.strip()):
+            self.execute(validator.rule_block(rule, "actions"))
 
 
 class NocturneSocialTests(unittest.TestCase):
@@ -305,6 +334,107 @@ class NocturneSocialTests(unittest.TestCase):
                     self.assertEqual(model.messages, [])
                     self.assertEqual(model.created_effects, [])
 
+    def test_installed_social_hud_keeps_its_page_identity_until_destroyed(self):
+        titles = {17: "17 - PRESENCE", 18: "18 - FATES", 19: "19 - WHISPERS", 20: "20 - MOONLIT AURA"}
+        for artifact, model in self.models():
+            for page, title in titles.items():
+                owner = f"owner-{page}"
+                state = model.add(owner, MenuPage=page, MainMenuCursor=page)
+                model.routine("DrawMenu", owner)
+                handle = state["MenuHud"]
+                expression = model.hud_bodies[handle]
+                initial = model.evaluate(expression)
+                with self.subTest(artifact=artifact, page=page):
+                    self.assertEqual(initial.splitlines()[0], title)
+                    for next_page in (-1, 20 if page != 20 else 17, page):
+                        state["MenuPage"] = next_page
+                        self.assertEqual(model.evaluate(expression), initial)
+                        self.assertNotIn(handle, model.destroyed_huds)
+                    model.routine("DrawMenu", owner)
+                    self.assertIn(handle, model.destroyed_huds)
+                    self.assertEqual(model.destroyed_hud_text[handle], initial)
+
+    def test_reload_controller_returns_to_the_selected_main_entry_once(self):
+        for artifact, model in self.models():
+            for page in range(17, 21):
+                owner = f"owner-{page}"
+                state = model.add(owner, MenuPage=page, MainMenuCursor=page,
+                                  MenuCommand=2, held={"Reload"})
+                model.routine("DrawMenu", owner)
+                old_handle = state["MenuHud"]
+                initial = model.evaluate(model.hud_bodies[old_handle])
+                start = len(model.created_huds)
+                model.controller("11", owner)
+                with self.subTest(artifact=artifact, page=page):
+                    self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
+                    self.assertEqual(model.destroyed_hud_text[old_handle], initial)
+                    self.assertEqual(model.destroyed_huds.count(old_handle), 1)
+                    self.assertEqual(model.evaluate(model.hud_bodies[state["MenuHud"]]).splitlines()[0],
+                                     initial.splitlines()[0])
+                    self.assertEqual(len(model.created_huds), start + 1)
+                    model.controller("11", owner)
+                    self.assertEqual(len(model.created_huds), start + 1)
+                    state["held"].clear()
+                    model.controller("05d", owner)
+                    self.assertEqual(state["MenuCommand"], 0)
+
+    def test_social_page_cursors_preferences_and_color_stay_live_after_installation(self):
+        for artifact, model in self.models():
+            for page, field, catalogue in ((17, 1, "PresenceNames"), (18, 2, "FateNames"),
+                                            (19, 4, "WhisperNames"), (20, 7, "AuraNames")):
+                owner = f"owner-{page}"
+                state = model.add(owner, MenuPage=page, MainMenuCursor=page)
+                model.routine("DrawMenu", owner)
+                installed = model.hud_arguments[state["MenuHud"]]
+                state["MenuPage"] = -1
+                model.globals.update(TriggerPlayer=None, ActivePlayer=None)
+                with self.subTest(artifact=artifact, page=page):
+                    for cursor, label in enumerate(model.globals[catalogue]):
+                        state["NocturneState"][field] = cursor
+                        self.assertIn("> " + label, model.evaluate(installed[3]))
+                    if page == 17:
+                        for choice, label in enumerate(model.globals["PresenceNames"]):
+                            state["NocturneState"][0] = choice
+                            self.assertIn("NOW: " + label, model.evaluate(installed[3]))
+                    elif page == 18:
+                        self.assertIn("FATES: READY", model.evaluate(installed[3]))
+                        state["NocturneState"][3] = model.now + 2
+                        self.assertIn("FATES: RESTING 2s", model.evaluate(installed[3]))
+                        model.now += 2
+                        self.assertIn("FATES: READY", model.evaluate(installed[3]))
+                    elif page == 19:
+                        for receive in (False, True):
+                            state["NocturneState"][5] = receive
+                            self.assertIn("RECEIVE: " + ("ON" if receive else "OFF"), model.evaluate(installed[3]))
+                    else:
+                        for choice, label in enumerate(model.globals["AuraNames"][:4]):
+                            state["NocturneState"][8] = choice
+                            self.assertIn("NOW: " + label, model.evaluate(installed[3]))
+                        for hidden in (True, False):
+                            state["NocturneState"][9] = hidden
+                            self.assertIn("HIDE OTHERS: " + ("ON" if hidden else "OFF"), model.evaluate(installed[3]))
+                    state["MenuColor"] = Vector(70, 140, 210)
+                    self.assertEqual(model.evaluate(installed[8]), (70, 140, 210, 255))
+
+    def test_unfrozen_page_mutation_reproduces_the_aura_flash_on_reload(self):
+        for path in ARTIFACTS:
+            source = path.read_text(encoding="utf-8")
+            rules = validator.extract_rules(source)
+            renderer = validator.rule_by_subroutine(rules, "DrawNocturneMenu")
+            body = renderer.body
+            # Removing only the page snapshots restores the pre-fix renderer.
+            for call in reversed(list(validator.iter_calls(body, "Evaluate Once"))):
+                if "MenuPage" in call.args[0]:
+                    body = body[:call.start] + call.args[0] + body[call.end:]
+            model = NocturneEvaluator(source[:renderer.start] + body + source[renderer.end:])
+            state = model.add("owner", MenuPage=17)
+            model.routine("DrawMenu", "owner")
+            expression = model.hud_bodies[state["MenuHud"]]
+            self.assertEqual(model.evaluate(expression).splitlines()[0], "17 - PRESENCE")
+            state["MenuPage"] = -1
+            with self.subTest(artifact=path.name):
+                self.assertEqual(model.evaluate(expression).splitlines()[0], "20 - MOONLIT AURA")
+
     def test_fates_uses_native_draw_bounds_and_respects_cooldown_after_reset(self):
         for artifact, model in self.models():
             owner = model.add("owner")
@@ -323,6 +453,81 @@ class NocturneSocialTests(unittest.TestCase):
                         self.assertEqual(owner["NocturneState"][3], model.now + 5)
                         model.apply("owner", 18, cursor)
                         self.assertEqual(len(model.draws), count)
+
+    def test_fates_hud_is_a_private_snapshot_below_arcade_and_expires_after_three_seconds(self):
+        for artifact, model in self.models():
+            first = model.add("first")
+            second = model.add("second")
+            model.apply("first", 18, 1)
+            first_id = model.globals["FateResultHudIds"][first["HudSlot"]]
+            first_hud = model.hud_arguments[first_id]
+            first_result = first["NocturneState"][10]
+            model.apply("second", 18, 2)
+            second_id = model.globals["FateResultHudIds"][second["HudSlot"]]
+            second_hud = model.hud_arguments[second_id]
+            second_result = second["NocturneState"][10]
+            model.globals.update(TriggerPlayer=None, ActivePlayer=None)
+            with self.subTest(artifact=artifact):
+                for owner, hud, result in (("first", first_hud, first_result), ("second", second_hud, second_result)):
+                    self.assertEqual(model.evaluate(hud[0]), owner)
+                    self.assertEqual(hud[1:3], ("Null", "Null"))
+                    self.assertEqual(hud[4:6], ("Top", "4"))
+                    self.assertEqual(model.evaluate(hud[3]), "\n" + result)
+                second["NocturneState"][10] = "The pages await your hand."
+                model.routine("ResetMenuPage", "first")
+                self.assertEqual(model.globals["FateResultHudIds"][first["HudSlot"]], 0)
+                self.assertEqual(model.globals["FateResultHudIds"][second["HudSlot"]], second_id)
+                self.assertEqual(model.evaluate(second_hud[3]), "\n" + second_result)
+                model.now += 2.999
+                model.routine("CleanupFateResults")
+                self.assertNotIn(second_id, model.destroyed_huds)
+                model.now += 0.001
+                model.routine("CleanupFateResults")
+                self.assertEqual(model.destroyed_huds.count(first_id), 1)
+                self.assertEqual(model.destroyed_huds.count(second_id), 1)
+                self.assertEqual(model.globals["FateResultHudIds"], [0] * 12)
+
+    def test_repeated_fates_keep_at_most_one_result_per_owner_and_twelve_total(self):
+        for artifact, model in self.models():
+            owners = [f"owner-{index}" for index in range(12)]
+            for owner in owners:
+                model.add(owner)
+            for turn in range(3):
+                model.now += 6
+                for owner in owners:
+                    model.apply(owner, 18, turn)
+                with self.subTest(artifact=artifact, turn=turn):
+                    active = [handle for handle in model.globals["FateResultHudIds"] if handle]
+                    self.assertEqual(len(active), 12)
+                    self.assertEqual(len(set(active)), 12)
+                    self.assertEqual(set(model.globals["FateResultOwners"]), set(owners))
+                    self.assertEqual(len(model.created_huds) - len(model.destroyed_huds), 12)
+            model.now += 3
+            model.routine("CleanupFateResults")
+            self.assertEqual(len(model.created_huds), len(model.destroyed_huds))
+
+    def test_departed_fates_cleanup_uses_registry_when_player_state_is_lost(self):
+        for artifact, model in self.models():
+            first = model.add("first")
+            second = model.add("second")
+            model.apply("first", 18, 0)
+            model.apply("second", 18, 1)
+            first_id = model.globals["FateResultHudIds"][first["HudSlot"]]
+            second_id = model.globals["FateResultHudIds"][second["HudSlot"]]
+            model.players["first"] = {"exists": False}
+            model.globals["HumanPlayers"].remove("first")
+            model.globals["FateResultPlayer"] = "first"
+            model.routine("CleanupFateResults")
+            with self.subTest(artifact=artifact):
+                self.assertIn(first_id, model.destroyed_huds)
+                self.assertNotIn(second_id, model.destroyed_huds)
+                model.add("replacement", HudSlot=0)
+                model.apply("replacement", 18, 2)
+                replacement = model.globals["FateResultHudIds"][0]
+                model.globals["FateResultPlayer"] = "first"
+                model.routine("CleanupFateResults")
+                self.assertNotIn(replacement, model.destroyed_huds)
+                self.assertNotIn(second_id, model.destroyed_huds)
 
     def test_whispers_are_private_and_require_reception_on_the_target(self):
         for artifact, model in self.models():
@@ -355,7 +560,7 @@ class NocturneSocialTests(unittest.TestCase):
         blocked = ({"alive": False}, {"spawned": False}, {"exists": False},
                    {"IsHuman": False}, {"IsPrepared": False}, {"PlayerCycleActive": True},
                    {"InspectionPrivacyActive": True}, {"LastTeam": 2},
-                   {"position": Vector(26, 0, 0)}, {"in_view": False}, {"los": False})
+                   {"in_view": False}, {"los": False})
         for artifact, model in self.models():
             owner = model.add("owner")
             for changes in blocked:
@@ -372,6 +577,18 @@ class NocturneSocialTests(unittest.TestCase):
                 model.messages.clear()
                 model.apply("owner", 19, 1)
                 self.assertEqual(owner["NocturneState"][6], 0)
+
+    def test_whispers_reach_a_consented_visible_target_at_any_distance(self):
+        for artifact, model in self.models():
+            model.add("owner")
+            target = model.add("target", position=Vector(500, 40, -800),
+                               eye=Vector(500, 41.7, -800))
+            model.aim = "target"
+            before = deepcopy(target)
+            model.apply("owner", 19, 1)
+            with self.subTest(artifact=artifact):
+                self.assertTrue(any(item[1] == "target" for item in model.messages))
+                self.assertEqual(target, before)
 
     def test_whisper_reset_restores_reception_without_clearing_the_cooldown(self):
         for artifact, model in self.models():
@@ -495,7 +712,6 @@ class NocturneMutationTests(unittest.TestCase):
             ("Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);", "", "consenso e target valido"),
             ("Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);", "", "consenso e target valido"),
             ("Abort If(Player Variable(Event Player.InspectionTarget, PlayerCycleActive) == True);", "", "consenso e target valido"),
-            ("Distance Between(Event Player, Event Player.InspectionTarget) > 25", "Distance Between(Event Player, Event Player.InspectionTarget) > 250", "consenso e target valido"),
             ("Event Player.NocturneState[3] = Total Time Elapsed + 5;", "Event Player.NocturneState[3] = Total Time Elapsed;", "cooldown 5s"),
             ("Event Player.NocturneState[6] = Total Time Elapsed + 15;", "Event Player.NocturneState[6] = Total Time Elapsed;", "cooldown 15s"),
         )
@@ -504,6 +720,43 @@ class NocturneMutationTests(unittest.TestCase):
             with self.subTest(mutation=old):
                 self.assertIn(old, self.source)
                 self.assertTrue(any(expected in error for error in self.errors(self.source.replace(old, new, 1))))
+
+    def test_social_gate_requires_fixed_page_identity_and_live_cursor_preferences_and_color(self):
+        renderer = validator.rule_by_subroutine(validator.extract_rules(self.source), "DrawNocturneMenu")
+        cases = (
+            ("Evaluate Once(Event Player.MenuPage)", "Event Player.MenuPage", "identita pagina congelata"),
+            ("Event Player.NocturneState[1]", "Evaluate Once(Event Player.NocturneState[1])", "restano live"),
+            ("Event Player.NocturneState[5]", "Evaluate Once(Event Player.NocturneState[5])", "restano live"),
+            ("X Component Of(Event Player.MenuColor)", "Evaluate Once(X Component Of(Event Player.MenuColor))", "restano live"),
+        )
+        for old, new, expected in cases:
+            with self.subTest(mutation=old):
+                self.assertIn(old, renderer.body)
+                body = renderer.body.replace(old, new, 1)
+                mutated = self.source[:renderer.start] + body + self.source[renderer.end:]
+                self.assertTrue(any(expected in error for error in self.errors(mutated)))
+
+    def test_whispers_gate_rejects_restoring_a_distance_limit(self):
+        consent = "Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);"
+        mutated = self.source.replace(consent, consent + "\nAbort If(Distance Between(Event Player, Event Player.InspectionTarget) > 25);", 1)
+        self.assertTrue(any("Whispers senza limite di distanza" in error for error in self.errors(mutated)))
+
+    def test_fates_gate_requires_private_result_snapshot_spacing_and_expiration(self):
+        fate = validator.rule_by_subroutine(validator.extract_rules(self.source), "ShowFateResult")
+        cases = (
+            ("Create HUD Text(Evaluate Once(Event Player)", "Create HUD Text(Global.HumanPlayers", "Fates privato"),
+            ('Custom String("\\n{0}", Evaluate Once(Event Player.NocturneState[10]))',
+             'Custom String("{0}", Evaluate Once(Event Player.NocturneState[10]))', "riga vuota"),
+            ("Evaluate Once(Event Player.NocturneState[10])", "Event Player.NocturneState[10]", "snapshot del risultato"),
+            ("Top, 4,", "Top, 3,", "sotto il menu"),
+            ("Total Time Elapsed + 3;", "Total Time Elapsed + 30;", "scadenza 3s"),
+        )
+        for old, new, expected in cases:
+            with self.subTest(mutation=old):
+                self.assertIn(old, fate.body)
+                body = fate.body.replace(old, new, 1)
+                mutated = self.source[:fate.start] + body + self.source[fate.end:]
+                self.assertTrue(any(expected in error for error in self.errors(mutated)))
 
     def test_aura_gate_rejects_global_reset_foreign_effects_and_unfrozen_ownership(self):
         cases = (

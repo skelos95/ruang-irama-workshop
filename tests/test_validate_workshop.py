@@ -679,6 +679,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute_call, 0, "Empty Array")
         self.assert_rejected(mutated, "nascosto/precaricato")
 
+    def test_frozen_hud_recipient_is_allowed_only_for_nocturne_and_fates(self) -> None:
+        for routine in ("DrawNocturneMenu", "ShowFateResult"):
+            renderer = self.rule(lambda rule: validator.subroutine_target(rule) == routine)
+            call, = validator.iter_calls(renderer.body, "Create HUD Text")
+            self.assertEqual(call.args[0], "Evaluate Once(Event Player)")
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        mutated = self.replace_in_rule(renderer, "Create HUD Text(Event Player,", "Create HUD Text(Evaluate Once(Event Player),")
+        self.assert_rejected(mutated, "Create HUD Text visibile a bot/dummy")
+
     def test_info_requires_all_content_in_subheader_with_empty_text(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
         call = next(validator.iter_calls(renderer.body, "Create HUD Text"))

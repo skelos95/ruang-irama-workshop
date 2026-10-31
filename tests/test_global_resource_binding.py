@@ -7,12 +7,13 @@ whether the Overwatch team-change crash is resolved.
 from __future__ import annotations
 
 import operator
+import json
 import re
 import unittest
 from pathlib import Path
 
-from tests.test_dummy_spawn_retry import SpawnExpression
 from tests.test_fly_motion import Vector
+from tests.test_global_controller_execution import ControllerExpression
 from tests.runtime_selection import rule_for_logical_id
 from tools import validate_global_runtime as runtime
 from tools import validate_workshop as semantic
@@ -30,6 +31,7 @@ class ResourceExpressions:
         self.players = {}
         self.globals = {"TriggerPlayer": None, "ActivePlayer": None,
                         "ObjectiveIconPlayer": None, "CameraPlayer": None, "HumanPlayers": [],
+                        "FateResultPlayer": None,
                         "AimDistance": 25}
         self.values = {}
         self.trees = {}
@@ -41,6 +43,7 @@ class ResourceExpressions:
         self.globals["ActivePlayer"] = identity
         self.globals["ObjectiveIconPlayer"] = identity
         self.globals["CameraPlayer"] = identity
+        self.globals["FateResultPlayer"] = identity
 
     def resolve(self, name):
         if name in self.values:
@@ -54,7 +57,7 @@ class ResourceExpressions:
         if name.startswith("Global."):
             parts = name.split(".")
             value = self.globals[parts[1]]
-            return self.players[value].get(parts[2], 0) if len(parts) == 3 else value
+            return self.players.get(value, {}).get(parts[2], 0) if len(parts) == 3 else value
         constants = {"True": True, "False": False, "Null": None,
                      "EmptyArray": [], "White": "White", "Orange": "Orange"}
         if name in constants:
@@ -76,6 +79,8 @@ class ResourceExpressions:
             return self.objective
         if name == "Color":
             return args[0]
+        if name == "CustomString":
+            return args[0].format(*args[1:])
         if name in ("EyePosition", "FacingDirectionOf", "PositionOf", "Health"):
             key = {"EyePosition": "eye", "FacingDirectionOf": "facing",
                    "PositionOf": "position", "Health": "health"}[name]
@@ -91,13 +96,13 @@ class ResourceExpressions:
     def evaluate(self, expression):
         def literal(match):
             key = f"_literal{len(self.values)}"
-            self.values[key] = match[0][1:-1]
+            self.values[key] = json.loads(match[0])
             return key
         if expression not in self.trees:
             packed = re.sub(r'"(?:\\.|[^"\\])*"', literal, expression)
             packed = re.sub(r"\s+", "", packed)
             packed = re.sub(r"(Global\.\w+)\[([^\]]+)\]", r"At(\1,\2)", packed)
-            self.trees[expression] = SpawnExpression(packed).tree
+            self.trees[expression] = ControllerExpression(packed).tree
         operations = {"+": operator.add, "-": operator.sub,
                       "*": operator.mul, "/": operator.truediv,
                       "%": operator.mod, "==": operator.eq, "!=": operator.ne,
@@ -114,6 +119,9 @@ class ResourceExpressions:
                 return -visit(node[1])
             if kind == "conditional":
                 return visit(node[2] if visit(node[1]) else node[3])
+            if kind == "index":
+                values, index = visit(node[1]), int(visit(node[2]))
+                return values[index] if isinstance(values, (list, tuple)) and 0 <= index < len(values) else 0
             if kind == "call":
                 if node[1] in ("And", "Or"):
                     return (all if node[1] == "And" else any)(bool(visit(arg)) for arg in node[2])
@@ -271,6 +279,53 @@ class GlobalResourceBindingTests(unittest.TestCase):
         installed = model.install(mutated)
         model.actor("owner1")
         self.assertNotEqual(model.evaluate(installed), model.players["owner0"]["NameColor"])
+
+    def test_fates_hud_keeps_recipient_and_result_after_dispatch_reset_and_another_owner(self):
+        model = self.model(2)
+        rule = semantic.rule_by_subroutine(model.rules, "ShowFateResult")
+        hud, = semantic.iter_calls(rule.body, "Create HUD Text")
+        self.assertEqual(hud.args[1:3], ("Null", "Null"))
+        self.assertEqual(hud.args[4:6], ("Top", "4"))
+        installed = {}
+        results = {"owner0": "The bone die speaks (D6): 6",
+                   "owner1": "The raven casts (D20): 1"}
+        for owner, result in results.items():
+            model.players[owner]["NocturneState"] = [0] * 10 + [result]
+            model.actor(owner)
+            # Installation runs on the server, before a local viewer exists.
+            self.assertIsNone(model.viewer)
+            installed[owner] = tuple(model.install(hud.args[index]) for index in (0, 3))
+            model.actor(None)
+            self.assertEqual(tuple(model.evaluate(arg) for arg in installed[owner]), (owner, "\n" + result))
+            model.players[owner]["NocturneState"][10] = "The pages await your hand."
+        for scratch in (None, "owner1", "owner0"):
+            model.actor(scratch)
+            for owner, result in results.items():
+                self.assertEqual(tuple(model.evaluate(arg) for arg in installed[owner]), (owner, "\n" + result))
+
+    def test_unfrozen_fates_text_reproduces_zero_after_actor_is_cleared(self):
+        model = self.model(2)
+        rule = semantic.rule_by_subroutine(model.rules, "ShowFateResult")
+        hud, = semantic.iter_calls(rule.body, "Create HUD Text")
+        expression = hud.args[3]
+        while captures := list(semantic.iter_calls(expression, "Evaluate Once")):
+            call = captures[0]
+            expression = expression[:call.start] + call.args[0] + expression[call.end:]
+        model.players["owner0"]["NocturneState"] = [0] * 10 + ["The coin falls: MOON"]
+        model.actor("owner0")
+        installed = model.install(expression)
+        self.assertEqual(model.evaluate(installed), "\nThe coin falls: MOON")
+        model.actor(None)
+        self.assertEqual(model.evaluate(installed), "\n0")
+
+    def test_runtime_gate_rejects_fates_recipient_without_owner_capture(self):
+        rule = semantic.rule_by_subroutine(semantic.extract_rules(self.normalized), "ShowFateResult")
+        hud, = semantic.iter_calls(rule.body, "Create HUD Text")
+        changed = hud.raw.replace(hud.args[0], "Global.TriggerPlayer", 1)
+        body = rule.body[:hud.start] + changed + rule.body[hud.end:]
+        mutated = self.normalized[:rule.start] + body + self.normalized[rule.end:]
+        self.assertTrue(any("proprietario non congelato in Create HUD Text" in error
+                            for error in runtime.validate_runtime(mutated)))
 
     def test_freezing_name_color_data_is_observable_after_owner_changes_color(self):
         model = self.model(2)
