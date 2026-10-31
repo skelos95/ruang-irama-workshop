@@ -1302,7 +1302,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_interact_dispatch_is_split_into_page_handlers(self) -> None:
         mutated = self.source.replace("ApplyPlayerIconPage", "TerapkanIkonLegacy")
-        self.assert_rejected(mutated, "dispatcher Interact must cover the sixteen pages with actions")
+        self.assert_rejected(mutated, "dispatcher Interact must cover the existing pages and shared Nocturne actions")
 
     def test_super_punch_contract_preserves_local_toggle_and_native_hit_guards(self) -> None:
         apply = self.rule(lambda rule: validator.subroutine_target(rule) == "ApplySuperPunchPage")
