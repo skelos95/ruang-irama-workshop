@@ -8,17 +8,17 @@ Il tema **Nocturne** si ispira al romanticismo oscuro e al melodic death metal: 
 
 Imposta la lingua testo del client su **English** per importare il codice. **Grammatica Workshop, identificatori, regole, commenti, menu, HUD, messaggi e impostazioni personalizzate sono in inglese**. Le mappe si configurano nella lobby: tutte quelle standard disponibili in Schermaglia, escluse le mappe Workshop come Isola.
 
-Le 136 regole del file da importare sono numerate consecutivamente da **0 a 135**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
+Le 137 regole del file da importare sono numerate consecutivamente da **0 a 136**, nell'ordine in cui compaiono, senza numeri ripetuti o suffissi alfabetici.
 
 ## Stato attuale
 
-Il codice corrente aggiunge quattro menu Nocturne: **Presence 17**, **Fates 18**, **Whispers 19** e **Moonlit Aura 20**. Include la correzione del passaggio visibile a Moonlit Aura tornando al principale con Reload, il risultato Fates in un HUD privato sotto Arcade e Whispers senza limite di distanza. Sono modifiche successive al pacchetto pubblicato 0.8.3, elencate in **Unreleased** nel changelog e ancora da verificare nel client. Il tag e l'allegato v0.8.3 conservano il codice della release.
+Il codice corrente aggiunge quattro menu Nocturne: **Presence 17**, **Fates 18**, **Whispers 19** e **Moonlit Aura 20**. Include la correzione del passaggio visibile a Moonlit Aura tornando al principale con Reload, il risultato Fates in un HUD privato sotto Arcade e Whispers senza limite di distanza, con anteprima del destinatario e conferma nel menu. Titolo e timer occupano ora il sottotitolo in alto a destra, sopra HOST, lasciando più spazio ai menu centrali. Sono modifiche successive al pacchetto pubblicato 0.8.3, elencate in **Unreleased** nel changelog e ancora da verificare nel client. Il tag e l'allegato v0.8.3 conservano il codice della release.
 
 Il 28 ottobre, dopo la PR #114, l'utente ha confermato: «funziona tutto». È un riscontro qualitativo generale sulla revisione provata: SHA importato, build client, durata, numero di player e metriche native non sono stati forniti. La successiva correzione dell'inerzia Ghost richiede una nuova prova nel client. Restano i riscontri storici sul menu 2 dopo la PR #103 e sulla distanza tra HOST e killfeed dopo la PR #105.
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Il codice corrente usa **30.262 unità strutturali stimate**, massimo per regola 2.789 e 325.518 byte UTF-8 di testo da importare; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. I dettagli sono nei [controlli automatici](docs/VALIDAZIONE.md). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema o i nuovi menu sociali.
+Il codice corrente usa **30.626 unità strutturali stimate**, massimo per regola 2.775 e 328.011 byte UTF-8 di testo da importare; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. I dettagli sono nei [controlli automatici](docs/VALIDAZIONE.md). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema o i nuovi menu sociali.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, entro 5 m tridimensionali dal proprietario e indipendenti dall’obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -31,7 +31,7 @@ La versione in [VERSION](VERSION) è **0.8.3**; la [release 0.8.3](https://githu
 3. Nelle impostazioni Workshop scegli durata **30–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel sottotitolo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
-Il file contiene le regole, non il preset delle mappe. Il titolo centrale mostra **cozywatch.org [countdown]**. Il roster si intitola **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne. Where sorrow becomes melody.». Il sottotitolo separato del sito e il precedente sistema Server Location sono rimossi.
+Il file contiene le regole, non il preset delle mappe. Il titolo in alto a destra mostra **cozywatch.org [countdown]** nel sottotitolo dell'HUD, sopra HOST e separato da una riga vuota. Il roster si intitola **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne.». Non ci sono HUD separati per il sito o le località; il precedente sistema Server Location è rimosso.
 
 Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
 
@@ -56,9 +56,9 @@ Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al s
 
 Ogni pressione dei comandi menu viene consumata una volta; Interact va rilasciato prima di passare da menu a Camera. Da morto il menu resta visibile ma non accetta comandi. Melee resta nativo; con Multijump OFF anche Jump resta nativo da vivi.
 
-Quando Info / Controls 0 è selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo dell'HUD (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. I binding del giocatore mostrano Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch con Arcade chiuso e Travel OFF, oppure nelle pagine Teleport Player/Bot e Attach per vedere eroe e HP. Sono inclusi Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Anche il sottomenu Info mantiene titolo e guida completa nel `Subheader`, con la guida completa e i binding dinamici, senza duplicazioni. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. Ogni pagina usa un solo HUD Arcade; i due promemoria fissi agli angoli dello schermo sono rimossi.
+Quando Info / Controls 0 è selezionata nel principale, titolo e anteprima sono interamente nel sottotitolo dell'HUD (`Subheader`), per una visualizzazione più piccola; il corpo (`Text`) è vuoto. I binding del giocatore mostrano Interact tenuto 0,5 s con Crouch rilasciato per Camera, Melee tenuto 0,5 s per Arcade, Crouch con Arcade chiuso e Travel OFF, oppure nelle pagine Teleport Player/Bot e Attach per vedere eroe e HP. Sono inclusi Crouch + Primary / Secondary per navigare, Crouch + Interact per aprire tutti i comandi e Crouch + Reload per tornare dal sottomenu. Anche il sottomenu Info mantiene titolo e guida completa nel `Subheader`, con la guida completa e i binding dinamici, senza duplicazioni. Le altre voci e pagine conservano comandi contestuali nel sottotitolo e funzioni/opzioni nel corpo. Le etichette e gli aiuti sono più brevi; una riga vuota separa i comandi dal contenuto. In Info 0 separa il titolo dalla guida nel sottotitolo. Ogni pagina usa un solo HUD Arcade; i due promemoria fissi agli angoli dello schermo sono rimossi.
 
-HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota sotto per distanziarlo dal killfeed. Icona e nome seguono l'host corrente; la riga si svuota quando l'host è assente.
+Titolo e timer sono in alto a destra nel campo `Subheader`; HOST compare sotto su una sola riga, con una riga vuota tra i due. Una riga vuota sotto HOST mantiene il distacco dal killfeed. Titolo e HOST condividono un solo HUD; la rimozione del vecchio titolo centrale e dello spazio fisso lascia libera l'area sopra i menu. Icona e nome seguono l'host corrente; la riga si svuota quando l'host è assente.
 
 ## Menu personali
 
@@ -72,18 +72,18 @@ HOST compare in una sola riga a destra, senza spazio sopra e con una riga vuota 
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
 | 6 | Hero Voice | 5 preset |
 | 7 | Player Icon | Nessuna + 36 icone |
-| 8 | Crouch: Teleport / Attach / Self Kill | ON/OFF dal menu principale; 5 pagine Travel |
-| 9 | Crouch Privacy | ON/OFF dal menu principale |
+| 8 | Travel / Self Kill | ON/OFF dal principale; 5 pagine per teletrasporto, Attach e Self Kill |
+| 9 | Privacy | ON/OFF dal menu principale |
 | 10 | Try Your Luck | Vision, Acceleration, Skull, Team Heal, Burning, Hacked |
-| 11 | Vote Player | Umani, incluso sé stesso |
+| 11 | Vote | Umani, incluso sé stesso |
 | 12 | Dummy Target | ON/OFF dal principale: consente al dummy nemico fermo di guardarti |
-| 13 | Ghost Mode / Fly | Due interruttori indipendenti, inizialmente OFF |
+| 13 | Ghost / Fly | Due interruttori indipendenti, inizialmente OFF |
 | 14 | Multijump | OFF oppure forza fissa 100–1000%, passi del 100% |
 | 15 | Superman Punch | ON/OFF dal menu principale |
-| 16 | Movement / Gravity | Velocità 20–1000% e gravità 0–500%, passi di 20 sotto 100 e di 100 sopra |
+| 16 | Speed / Gravity | Velocità 20–1000% e gravità 0–500%, passi di 20 sotto 100 e di 100 sopra |
 | 17 | Presence | Unspoken, Seeking company, Listening in silence, Lost in thought, Away beyond the veil |
 | 18 | Fates | Moneta Moon/Ash, d6, d20, percentuale e sei presagi |
-| 19 | Whispers | Ricezione ON/OFF e cinque messaggi personali predefiniti |
+| 19 | Whispers | Ricezione ON/OFF, cinque messaggi predefiniti e anteprima del destinatario |
 | 20 | Moonlit Aura | OFF, Moonlit Ring, Withered Halo, Veil of Ash; filtro personale delle aure altrui |
 
 Il ripristino con **Crouch + Ultimate** agisce sulla voce selezionata nel principale o sul relativo sottomenu e compare nell’aiuto soltanto dove disponibile. Richiede un giocatore vivo e applica una sola azione per pressione: Ultimate va rilasciato prima di un nuovo reset. Non modifica le preferenze degli altri.
@@ -99,10 +99,10 @@ Il ripristino con **Crouch + Ultimate** agisce sulla voce selezionata nel princi
 | 11 — Vote Player | Annulla soltanto il proprio voto |
 | 13 — Ghost / Fly | Entrambi OFF |
 | 14 — Multijump | OFF, livello 1 |
-| 16 — Movement / Gravity | Entrambi 100%, cursore Speed |
+| 16 — Speed / Gravity | Entrambi 100%, cursore Speed |
 | 17 — Presence | Unspoken |
 | 18 — Fates | Prima scelta e risultato temporaneo rimosso; cooldown conservato |
-| 19 — Whispers | Ricezione ON, cursore sulla ricezione; cooldown conservato |
+| 19 — Whispers | Ricezione ON, cursore sulla ricezione, anteprima e conferma rimosse; cooldown conservato |
 | 20 — Moonlit Aura | Aura OFF, filtro delle aure altrui OFF |
 
 Info, Revenge, Luck e i toggle 8, 9, 12 e 15 non offrono questo reset. Il reset non cambia pagina né chiude il menu.
@@ -111,7 +111,9 @@ Presence aggiunge uno stato alla propria riga **Souls & Echoes**, senza creare u
 
 Fates mostra risultati soltanto al proprietario: **Moon/Ash**, d6, d20, percentuale intera **1–100%** o uno dei sei presagi a tema. Un HUD privato sotto Arcade mostra il risultato acquisito al tiro, con una riga vuota prima del testo: dura **3 secondi**, con rimozione al controllo successivo di un secondo, quindi entro **4 secondi**. Il menu mostra soltanto lo stato **READY** o **RESTING Xs**, senza ripetere il risultato. Ogni esecuzione richiede **5 secondi** prima della successiva; il reset pulisce scelta e risultato temporaneo senza annullare l'attesa. Sono risposte cosmetiche, senza gli effetti fisici di Try Your Luck.
 
-Whispers offre **Greeting, Respect, Rose, Embrace e Resonance**, oltre alla ricezione inizialmente **ON**. Per inviare, mirare a un altro umano vivo e disponibile, entro un angolo di **12°** e con linea di vista libera, poi applicare il messaggio. **La distanza non limita l'invio.** Crouch Privacy e ricezione OFF del destinatario bloccano l'invio. Il destinatario riceve il testo e il mittente una conferma; nessun altro riceve messaggi. Ogni invio riuscito avvia un cooldown personale di **15 secondi**, conservato dal reset. Non è chat libera e non modifica il microfono o le animazioni.
+Whispers offre **Greeting, Respect, Rose, Embrace e Resonance**, oltre alla ricezione inizialmente **ON**. Nella pagina 19, tenendo Crouch da vivi, il menu mostra il nome del destinatario valido sotto mira, aggiornato **10 volte al secondo**. L'anteprima si svuota rilasciando Crouch, lasciando la pagina o morendo. Per inviare, mirare a un altro umano vivo, spawnato e disponibile, entro un angolo di **12°** e con linea di vista libera, poi applicare il messaggio. **La distanza non limita l'invio.** Crouch Privacy e ricezione OFF del destinatario bloccano sia l'anteprima sia l'invio; dummy, AI e destinatari non disponibili non vengono mostrati. Ogni invio ricalcola la mira al momento del comando: l'anteprima non blocca il bersaglio precedente.
+
+Il destinatario riceve il testo e il mittente una conferma privata; nel menu del mittente compare per **3 secondi** anche `SENT: <messaggio> -> <nome>`. Messaggio e nome della conferma restano quelli dell'invio riuscito, anche spostando la mira o il cursore. Nessun altro riceve messaggi. Soltanto un invio riuscito avvia il cooldown personale di **15 secondi**; un bersaglio rifiutato non consuma l'attesa e non produce una conferma SENT. Crouch + Ultimate ripristina ricezione ON e cursore sulla ricezione, pulendo anteprima e conferma senza cancellare il cooldown. Non è chat libera e non modifica il microfono o le animazioni.
 
 Moonlit Aura offre **Moonlit Ring, Withered Halo e Veil of Ash**, inizialmente OFF. Ogni umano può avere un solo effetto personale, con il proprio Name Color esatto e la posizione legata al proprietario: al massimo **12 aure**. Il filtro **Hide other auras** nasconde soltanto le aure altrui sul proprio schermo, lasciando visibile la propria e conservando le preferenze degli altri. Morte e perdita dello spawn nascondono e rimuovono l'effetto conservando la scelta; alla rinascita l'aura torna al successivo controllo di un secondo. Un cambio colore nasconde subito la vecchia tinta e ricrea l'effetto entro lo stesso intervallo. Il reset spegne la propria aura e disattiva il filtro. Le preferenze dei quattro menu persistono tra morte e cambio eroe; cambio squadra e uscita/rientro ripristinano i default.
 

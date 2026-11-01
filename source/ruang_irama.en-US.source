@@ -88,6 +88,8 @@ variables
 		84: FateResultDeadlines
 		85: FateResultIndex
 		86: FateResultPlayer
+		87: WhisperPlayer
+		88: WhisperTarget
 	player:
 		0: IsClassified
 		1: IsAutomaticBot
@@ -294,6 +296,7 @@ subroutines
 	72: CleanupMoonlitAura
 	73: ShowFateResult
 	74: CleanupFateResults
+	75: RefreshWhisperTarget
 }
 
 rule("00 - Global: Initialize 200 genres, from calm to chaos")
@@ -364,6 +367,8 @@ rule("00 - Global: Initialize 200 genres, from calm to chaos")
 		Global.FateResultOwners = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);
 		Global.FateResultHudIds = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Global.FateResultDeadlines = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		Global.WhisperPlayer = Null;
+		Global.WhisperTarget = Null;
 		Global.FateResultIndex = 0;
 		Global.FateResultPlayer = Null;
 		Global.MoonlitAuraIndex = 0;
@@ -395,11 +400,9 @@ rule("00 - Global: Initialize 200 genres, from calm to chaos")
 		Disable Built-In Game Mode Announcer;
 		Disable Built-In Game Mode Music;
 		Disable Inspector Recording;
-		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("cozywatch.org [{0}]", Global.ServerTimeText), Top, 0, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
-		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("  "), Top, 2, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Create HUD Text(Global.HumanPlayers, Null, Global.VoteLeaderName != Custom String("") ? Custom String("\nCROWN OF ASH: {0}", Global.VoteLeaderName) : Custom String(""), Null, Left, 13, Color(White), Global.VoteLeaderColor, Color(White), Visible To String and Color, Visible Never);
 		Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("SOULS & ECHOES"), Left, 0, Color(White), Custom Color(198, 185, 210, 255), Custom Color(202, 164, 180, 255), Visible To and String, Visible Never);
-		Create HUD Text(Global.HumanPlayers, Null, Null, Entity Exists(Host Player) ? Custom String("{0} {1} {2}\n ", Custom String("Host:"), Hero Icon String(Hero Of(Host Player)), And(Player Variable(Host Player, DisplayName) != Null, Player Variable(Host Player, DisplayName) != Custom String("")) ? Player Variable(Host Player, DisplayName) : Custom String("{0}", Host Player)) : Custom String(""), Right, 0, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Custom String("cozywatch.org [{0}]", Global.ServerTimeText), Entity Exists(Host Player) ? Custom String("\n{0} {1} {2}\n ", Custom String("Host:"), Hero Icon String(Hero Of(Host Player)), And(Player Variable(Host Player, DisplayName) != Null, Player Variable(Host Player, DisplayName) != Custom String("")) ? Player Variable(Host Player, DisplayName) : Custom String("{0}", Host Player)) : Custom String(""), Right, 0, Color(White), Global.RGB, Global.RGB, Visible To String and Color, Visible Never);
 		Global.ObjectiveIconOwners = Array(Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null, Null);
 		Global.ObjectiveIconIds = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		Global.ObjectiveIconChoices = Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -746,7 +749,7 @@ rule("02 - Player: Classify humans and automatic bots")
 		Event Player.IsHuman = True;
 		Event Player.LastHero = Hero Of(Event Player);
 		Global.VoteRecountNeeded = True;
-		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.NocturneState[0] == 0 ? (Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Custom String("{0} | {1}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"), Global.PresenceNames[Event Player.NocturneState[0]]))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 5 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.FateResultHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Global.HumanPlayers, Null, Custom String("{0} {1} {2}", Global.PlayerIcons[Event Player.IconIndex], Hero Icon String(Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(Event Player)), Custom String("{0} - {1}", Evaluate Once(Event Player.DisplayName), Event Player.NocturneState[0] == 0 ? (Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Custom String("{0} | {1}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"), Global.PresenceNames[Event Player.NocturneState[0]]))), And(Global.PerformanceDiagnostics == True, And(Local Player == Host Player, Event Player.HudSlot == Global.LastHudSlot)) ? Custom String("{0}\n{1}", Custom String("\n \nLOAD {0}% | AVG {1}% | MAX {2}%", Server Load, Server Load Average, Server Load Peak), Custom String("HUD {0} | IWT {1}", 3 + Count Of(Filtered Array(Global.PlayerListHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.MenuHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryEffectHudIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.FateResultHudIds, Current Array Element != 0)), Count Of(Filtered Array(Global.InspectionTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryTravelTextIds, Current Array Element != 0)) + Count Of(Filtered Array(Global.TemporaryVisionTextIds, Current Array Element != 0)))) : Custom String(""), Left, 1 + Event Player.HudSlot, Color(White), Event Player.NameColor, Color(White), Visible To String and Color, Visible Never);
 		Event Player.PlayerListHud = Last Text ID;
 		If(And(Index Of Array Value(Global.HumanPlayers, Event Player) >= 0, Index Of Array Value(Global.HumanPlayers, Event Player) < Count Of(Global.PlayerListHudIds)));
 			Global.PlayerListHudIds[Index Of Array Value(Global.HumanPlayers, Event Player)] = Event Player.PlayerListHud;
@@ -756,7 +759,7 @@ rule("02 - Player: Classify humans and automatic bots")
 		Event Player.MenuPage = -1;
 		Event Player.MenuOpen = True;
 		Call Subroutine(DrawMenu);
-		Small Message(Event Player, Custom String("Enter the Nocturne. Where sorrow becomes melody."));
+		Small Message(Event Player, Custom String("Enter the Nocturne."));
 	}
 }
 
@@ -1545,7 +1548,7 @@ rule("99b - Subroutine: Apply the Camera page")
 				Call Subroutine(StartCamera);
 				Global.CameraPlayer = Null;
 			Else;
-				Small Message(Event Player, Custom String("Camera target unavailable. Poof!"));
+				Small Message(Event Player, Custom String("Camera target unavailable."));
 			End;
 		End;
 	}
@@ -1583,37 +1586,37 @@ rule("99e - Subroutine: Apply the Revenge page")
 	actions
 	{
 		If(And(Event Player.LockedRevengeTarget != Null, And(Entity Exists(Event Player.LockedRevengeTarget), Player Variable(Event Player.LockedRevengeTarget, RevengeClaimant) == Event Player)));
-			Small Message(Event Player, Custom String("Revenge pending. Debt drops when the target dies."));
+			Small Message(Event Player, Custom String("Revenge pending. Target death repays 1."));
 		Else;
 			Event Player.LockedRevengeTarget = Null;
 			Call Subroutine(RefreshRevengeTargets);
 			If(Count Of(Event Player.RevengeTargets) == 0);
-				Small Message(Event Player, Custom String("No revenge targets. Peace wins!"));
+				Small Message(Event Player, Custom String("No revenge targets."));
 			Else;
 				Event Player.RevengeCursor %= Count Of(Event Player.RevengeTargets);
 				Event Player.LockedRevengeTarget = Event Player.RevengeTargets[Event Player.RevengeCursor];
 				Event Player.RevengeIndex = Index Of Array Value(Event Player.RevengeKillers, Event Player.LockedRevengeTarget);
 				If(Event Player.RevengeIndex < 0);
-					Small Message(Event Player, Custom String("No revenge debt on that player."));
+					Small Message(Event Player, Custom String("No debt on this soul."));
 					Event Player.LockedRevengeTarget = Null;
 				Else If(Event Player.RevengeDebts[Event Player.RevengeIndex] <= 0);
-					Small Message(Event Player, Custom String("Revenge debt cleared. Case closed!"));
+					Small Message(Event Player, Custom String("Revenge debt cleared."));
 					Event Player.LockedRevengeTarget = Null;
 				Else If(Or(Entity Exists(Event Player.LockedRevengeTarget) == False, Is Alive(Event Player.LockedRevengeTarget) == False));
-					Small Message(Event Player, Custom String("Revenge target already down."));
+					Small Message(Event Player, Custom String("Target already fallen."));
 					Event Player.LockedRevengeTarget = Null;
 				Else If(Player Variable(Event Player.LockedRevengeTarget, RevengeDeathPending) == True);
-					Small Message(Event Player, Custom String("Revenge pending on that target."));
+					Small Message(Event Player, Custom String("Revenge already pending."));
 					Event Player.LockedRevengeTarget = Null;
 				Else If(Player Variable(Event Player.LockedRevengeTarget, LuckActive) == True);
-					Small Message(Event Player, Custom String("Target busy with Try Your Luck."));
+					Small Message(Event Player, Custom String("Target busy: Luck."));
 					Event Player.LockedRevengeTarget = Null;
 				Else;
 					Set Player Variable(Event Player.LockedRevengeTarget, RevengeDeathPending, True);
 					Set Player Variable(Event Player.LockedRevengeTarget, RevengeClaimant, Event Player);
 					Set Player Variable(Event Player.LockedRevengeTarget, NextForcedRevengeTime, Total Time Elapsed);
 					Set Player Variable(Event Player.LockedRevengeTarget, ForcedRevengeEndTime, Total Time Elapsed + 5);
-					Small Message(Event Player, Custom String("Revenge on {0}. Confirming the kill.", Event Player.LockedRevengeTarget));
+					Small Message(Event Player, Custom String("Revenge: {0}.", Event Player.LockedRevengeTarget));
 				End;
 			End;
 		End;
@@ -1632,7 +1635,7 @@ rule("99f - Subroutine: Apply the Unkillable page")
 	{
 		If(Event Player.UnkillableMode != Event Player.UnkillableCursor);
 			If(And(Event Player.UnkillableCursor == 1, Is In Spawn Room(Event Player) == True));
-				Small Message(Event Player, Custom String("1 HP is disabled in spawn. FULL HP works."));
+				Small Message(Event Player, Custom String("No 1 HP in spawn. FULL HP allowed."));
 			Else;
 				Event Player.UnkillableMode = Event Player.UnkillableCursor;
 				Event Player.UnkillableActive = Event Player.UnkillableMode != 0;
@@ -1774,9 +1777,9 @@ rule("99k - Subroutine: Apply the Try Your Luck page")
 	{
 		"Try Your Luck preserves the Unkillable preference; only the Skull's full death suspends protection until revival."
 		If(Event Player.LuckActive == True);
-			Small Message(Event Player, Custom String("Try Your Luck already active."));
+			Small Message(Event Player, Custom String("Luck already active."));
 		Else If(Event Player.RevengeDeathPending == True);
-			Small Message(Event Player, Custom String("Under Revenge. Try Your Luck is locked."));
+			Small Message(Event Player, Custom String("Revenge active: Luck locked."));
 		Else;
 			Event Player.LuckActive = True;
 			Event Player.LuckEffect = Random Integer(1, 6);
@@ -2014,7 +2017,7 @@ rule("12e - Jump revive: Store the death position")
 			Event Player.MenuCommand = 0;
 		End;
 		Event Player.TravelCommand = 0;
-		Small Message(Event Player, Custom String("Press {0}: revive here. Void death? Back to walkable ground.", Input Binding String(Button(Jump))));
+		Small Message(Event Player, Custom String("{0}: revive here (void: safe ground).", Input Binding String(Button(Jump))));
 	}
 }
 
@@ -2181,7 +2184,7 @@ rule("17 - Revenge: Record only the direct killer")
 					Set Player Variable(Event Player.RevengeClaimant, RevengeIndex, Index Of Array Value(Player Variable(Event Player.RevengeClaimant, RevengeKillers), Event Player));
 					If(And(Player Variable(Event Player.RevengeClaimant, RevengeIndex) >= 0, Player Variable(Event Player.RevengeClaimant, RevengeDebts)[Player Variable(Event Player.RevengeClaimant, RevengeIndex)] > 0));
 						Modify Player Variable At Index(Event Player.RevengeClaimant, RevengeDebts, Player Variable(Event Player.RevengeClaimant, RevengeIndex), Subtract, 1);
-						Small Message(Event Player.RevengeClaimant, Custom String("Revenge on {0}: paid! Still owed: {1}.", Event Player, Player Variable(Event Player.RevengeClaimant, RevengeDebts)[Player Variable(Event Player.RevengeClaimant, RevengeIndex)]));
+						Small Message(Event Player.RevengeClaimant, Custom String("Revenge: {0} | debt left: {1}.", Event Player, Player Variable(Event Player.RevengeClaimant, RevengeDebts)[Player Variable(Event Player.RevengeClaimant, RevengeIndex)]));
 					End;
 					Set Player Variable(Event Player.RevengeClaimant, LockedRevengeTarget, Null);
 					Event Player.RevengeDeathPending = False;
@@ -2249,7 +2252,7 @@ rule("18c - Unkillable: Disable only the 1 HP mode in spawn")
 				Global.UnkillableIconIds[Global.PlayerHudSlots[Index Of Array Value(Global.HumanPlayers, Event Player)]] = 0;
 			End;
 		End;
-		Small Message(Event Player, Custom String("Unkillable: 1 HP (HEALABLE) off in Spawn Room."));
+		Small Message(Event Player, Custom String("1 HP disabled in spawn."));
 	}
 }
 
@@ -2417,7 +2420,7 @@ rule("18k - Luck: Show effect and duration HUD while the menu is closed")
 			Abort If(Global.TextCleanupIndex < 0);
 			Global.TemporaryTextOwners[Global.TextCleanupIndex] = Event Player;
 		End;
-		Create HUD Text(Event Player, Null, Null, Custom String("{0}\n{1}", Event Player.LuckEffect == 1 ? Custom String("VISION: ALL PLAYER/BOT NAMES") : Event Player.LuckEffect == 2 ? Custom String("AIM-STEERED ACCELERATION") : Event Player.LuckEffect == 5 ? Custom String("BURNING: 5% MAX HP/s") : Custom String("HACKED"), Custom String("{0}s LEFT", Max(0, Round To Integer(Event Player.LuckEffectEndTime - Total Time Elapsed, Up)))), Top, 3, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Null, Custom String("{0}\n{1}", Event Player.LuckEffect == 1 ? Custom String("VISION: PLAYER/BOT NAMES") : Event Player.LuckEffect == 2 ? Custom String("AIM ACCELERATION") : Event Player.LuckEffect == 5 ? Custom String("BURN: 5% MAX HP/s") : Custom String("HACKED"), Custom String("{0}s LEFT", Max(0, Round To Integer(Event Player.LuckEffectEndTime - Total Time Elapsed, Up)))), Top, 3, Color(White), Color(White), Global.RGB, Visible To String and Color, Visible Never);
 		Event Player.LuckEffectHud = Last Text ID;
 		Global.TemporaryEffectHudIds[Index Of Array Value(Global.TemporaryTextOwners, Event Player)] = Event Player.LuckEffectHud;
 	}
@@ -2716,7 +2719,7 @@ rule("19e - Crouch Travel: Interact applies the active page")
 			If(Or(Or(Event Player.LockedTravelTarget == Null, Entity Exists(Event Player.LockedTravelTarget) == False), Or(Has Spawned(Event Player.LockedTravelTarget) == False, Is Alive(Event Player.LockedTravelTarget) == False)));
 				Small Message(Event Player, Custom String("Attach target unavailable."));
 			Else If(Event Player.AttachmentCycleDetected == True);
-				Small Message(Event Player, Custom String("Attach blocked: no loops allowed!"));
+				Small Message(Event Player, Custom String("Attach blocked: loop."));
 			Else;
 				If(Event Player.TravelAttachmentActive == True);
 					Detach Players(Event Player);
@@ -2726,7 +2729,7 @@ rule("19e - Crouch Travel: Interact applies the active page")
 				Event Player.AttachmentTargetHero = Hero Of(Event Player.TravelAttachmentTarget);
 				Event Player.TravelAttachmentActive = True;
 				Attach Players(Event Player, Event Player.TravelAttachmentTarget, Vector(0, Y Component Of(Eye Position(Event Player.TravelAttachmentTarget)) - Y Component Of(Position Of(Event Player.TravelAttachmentTarget)) + 0.750, 0));
-				Small Message(Event Player, Custom String("Attached to {0}. CROUCH + RELOAD: detach.", Event Player.TravelAttachmentTarget));
+				Small Message(Event Player, Custom String("Attached: {0} | {1}", Event Player.TravelAttachmentTarget, Custom String("{0}+{1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))));
 			End;
 		Else;
 			If(Total Time Elapsed >= Event Player.NextSuicideTime);
@@ -2735,7 +2738,7 @@ rule("19e - Crouch Travel: Interact applies the active page")
 				Set Damage Received(Event Player, 100);
 				Kill(Event Player, Null);
 			Else;
-				Small Message(Event Player, Custom String("Self Elimination: ready in {0}s.", Round To Integer(Event Player.NextSuicideTime - Total Time Elapsed, Up)));
+				Small Message(Event Player, Custom String("Self kill: wait {0}s.", Round To Integer(Event Player.NextSuicideTime - Total Time Elapsed, Up)));
 			End;
 		End;
 		Event Player.LockedTravelType = -1;
@@ -3033,6 +3036,19 @@ rule("89b - Subroutine: Process the player cycle at 10 Hz")
 
 	actions
 	{
+		"Whispers selection follows Crouch aim at 10 Hz without entering the Inspection pipeline."
+		If(Global.ActivePlayer.IsHuman == True);
+			If(And(And(Global.ActivePlayer.MenuOpen == True, Global.ActivePlayer.MenuPage == 19), And(Is Button Held(Global.ActivePlayer, Button(Crouch)) == True, And(Has Spawned(Global.ActivePlayer) == True, Is Alive(Global.ActivePlayer) == True))));
+				Global.WhisperPlayer = Global.ActivePlayer;
+				Call Subroutine(RefreshWhisperTarget);
+				Global.WhisperPlayer = Null;
+				Global.WhisperTarget = Null;
+			Else;
+				Global.ActivePlayer.NocturneState[11] = Null;
+			End;
+		Else If(Count Of(Global.ActivePlayer.NocturneState) >= 14);
+			Global.ActivePlayer.NocturneState[11] = Null;
+		End;
 		"Check player aim and recovery at 10 Hz, including during team transitions."
 		"Death or a spawn transition restores native physics while preserving both toggles for the next spawn."
 		"Release human registration after the HUD is stable."
@@ -3469,7 +3485,7 @@ rule("91a - Subroutine: Draw the main menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Event Player.MainMenuCursor == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("{0}\n{1}", Custom String("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("ARCADE: hold Melee ({0}) 0.5s: open / close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", Input Binding String(Button(Crouch))), Custom String("{0}\n{1}", Custom String("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))))) : Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: select / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), And(Array Contains(Array(1, 2, 3, 5, 6, 7, 11, 13, 14, 16, 17, 18, 19, 20), Event Player.MainMenuCursor), Or(Event Player.MainMenuCursor != 3, Event Player.CustomSoundtrack == Null)) ? Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate))) : Custom String("")), Event Player.MainMenuCursor == 0 ? Custom String("") : Custom String("{0}\n{1}", Event Player.MainMenuCursor == 1 ? Custom String("1 - NAME COLOR") : Event Player.MainMenuCursor == 2 ? Custom String("2 - 3P CAMERA") : Event Player.MainMenuCursor == 3 ? Custom String("3 - SOUNDTRACK") : Event Player.MainMenuCursor == 4 ? Custom String("4 - REVENGE") : Event Player.MainMenuCursor == 5 ? Custom String("5 - UNKILLABLE") : Event Player.MainMenuCursor == 6 ? Custom String("6 - HERO VOICE") : Event Player.MainMenuCursor == 7 ? Custom String("7 - ICON") : Event Player.MainMenuCursor == 8 ? Custom String("8 - CROUCH: TELEPORT / ATTACH / SELF KILL") : Event Player.MainMenuCursor == 9 ? Custom String("9 - CROUCH PRIVACY") : Event Player.MainMenuCursor == 10 ? Custom String("10 - TRY YOUR LUCK") : Event Player.MainMenuCursor == 11 ? Custom String("11 - VOTE PLAYER") : Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY TARGET") : Event Player.MainMenuCursor == 15 ? Custom String("15 - SUPERMAN PUNCH") : Event Player.MainMenuCursor == 14 ? Custom String("14 - MULTIJUMP") : Event Player.MainMenuCursor == 16 ? Custom String("16 - MOVEMENT / GRAVITY") : Event Player.MainMenuCursor == 17 ? Custom String("17 - PRESENCE") : Event Player.MainMenuCursor == 18 ? Custom String("18 - FATES") : Event Player.MainMenuCursor == 19 ? Custom String("19 - WHISPERS") : Event Player.MainMenuCursor == 20 ? Custom String("20 - MOONLIT AURA") : Custom String("13 - GHOST MODE / FLY"), Event Player.MainMenuCursor == 1 ? Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex]) : Event Player.MainMenuCursor == 2 ? Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("off") : Event Player.CameraMode == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.CameraTarget)) : Event Player.MainMenuCursor == 3 ? Custom String("NOW: {0}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Event Player.MainMenuCursor == 4 ? Custom String("") : Event Player.MainMenuCursor == 5 ? Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")) : Event Player.MainMenuCursor == 6 ? Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")) : Event Player.MainMenuCursor == 7 ? Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex]) : Event Player.MainMenuCursor == 8 ? Custom String("NOW: {0}", Event Player.CrouchTravelEnabled ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 9 ? Custom String("NOW: {0}", Event Player.InspectionPrivacyActive ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 10 ? Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY")) : Event Player.MainMenuCursor == 11 ? Custom String("YOUR VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE")) : Event Player.MainMenuCursor == 12 ? Custom String("ENEMY DUMMY TARGETING: {0}", Event Player.AllowDummyBotFollow ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 15 ? Custom String("NOW: {0}", Array Contains(Global.SuperPunchPlayers, Event Player) ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 14 ? Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100) : Event Player.MainMenuCursor == 16 ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Event Player.MovementSpeed, Event Player.MovementGravity) : Event Player.MainMenuCursor == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Event Player.MainMenuCursor == 18 ? Custom String("Turn a page of fate. Leave the living untouched.") : Event Player.MainMenuCursor == 19 ? Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 20 ? Custom String("NOW: {0}", Global.AuraNames[Event Player.NocturneState[8]]) : Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Top, 3, Color(White), Event Player.MainMenuCursor == 0 ? Color(White) : Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.MainMenuCursor == 0 ? Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS\n"), Custom String("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", Input Binding String(Button(Melee)), Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))), Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("+ {0}: all controls | + {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Arcade closed: hold {0} to inspect hero/HP", Input Binding String(Button(Crouch)))), Custom String("Travel off or player/bot/attach mode")) : Custom String("{0}\n{1}", Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} select / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), And(Array Contains(Array(1, 2, 3, 5, 6, 7, 11, 13, 14, 16, 17, 18, 19, 20), Event Player.MainMenuCursor), Or(Event Player.MainMenuCursor != 3, Event Player.CustomSoundtrack == Null)) ? Custom String(" | {0} reset", Input Binding String(Button(Ultimate))) : Custom String("")), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Event Player.MainMenuCursor == 0 ? Custom String("") : Custom String("\n{0}", Custom String("{0}\n{1}", Event Player.MainMenuCursor == 1 ? Custom String("1 - NAME COLOR") : Event Player.MainMenuCursor == 2 ? Custom String("2 - 3P CAMERA") : Event Player.MainMenuCursor == 3 ? Custom String("3 - SOUNDTRACK") : Event Player.MainMenuCursor == 4 ? Custom String("4 - REVENGE") : Event Player.MainMenuCursor == 5 ? Custom String("5 - UNKILLABLE") : Event Player.MainMenuCursor == 6 ? Custom String("6 - HERO VOICE") : Event Player.MainMenuCursor == 7 ? Custom String("7 - ICON") : Event Player.MainMenuCursor == 8 ? Custom String("8 - TRAVEL / SELF KILL") : Event Player.MainMenuCursor == 9 ? Custom String("9 - PRIVACY") : Event Player.MainMenuCursor == 10 ? Custom String("10 - TRY YOUR LUCK") : Event Player.MainMenuCursor == 11 ? Custom String("11 - VOTE") : Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY TARGET") : Event Player.MainMenuCursor == 15 ? Custom String("15 - SUPERMAN PUNCH") : Event Player.MainMenuCursor == 14 ? Custom String("14 - MULTIJUMP") : Event Player.MainMenuCursor == 16 ? Custom String("16 - SPEED / GRAVITY") : Event Player.MainMenuCursor == 17 ? Custom String("17 - PRESENCE") : Event Player.MainMenuCursor == 18 ? Custom String("18 - FATES") : Event Player.MainMenuCursor == 19 ? Custom String("19 - WHISPERS") : Event Player.MainMenuCursor == 20 ? Custom String("20 - MOONLIT AURA") : Custom String("13 - GHOST / FLY"), Event Player.MainMenuCursor == 1 ? Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex]) : Event Player.MainMenuCursor == 2 ? Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("off") : Event Player.CameraMode == 1 ? Custom String("your hero") : Custom String("watching {0}", Event Player.CameraTarget)) : Event Player.MainMenuCursor == 3 ? Custom String("NOW: {0}", Event Player.CustomSoundtrack != Null ? Event Player.CustomSoundtrack : Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm")) : Event Player.MainMenuCursor == 4 ? Custom String("") : Event Player.MainMenuCursor == 5 ? Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")) : Event Player.MainMenuCursor == 6 ? Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")) : Event Player.MainMenuCursor == 7 ? Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex]) : Event Player.MainMenuCursor == 8 ? Custom String("NOW: {0}", Event Player.CrouchTravelEnabled ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 9 ? Custom String("NOW: {0}", Event Player.InspectionPrivacyActive ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 10 ? Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY")) : Event Player.MainMenuCursor == 11 ? Custom String("VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE")) : Event Player.MainMenuCursor == 12 ? Custom String("DUMMY GAZE: {0}", Event Player.AllowDummyBotFollow ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 15 ? Custom String("NOW: {0}", Array Contains(Global.SuperPunchPlayers, Event Player) ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 14 ? Custom String("{0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100) : Event Player.MainMenuCursor == 16 ? Custom String("SPEED: {0}% | GRAVITY: {1}%", Event Player.MovementSpeed, Event Player.MovementGravity) : Event Player.MainMenuCursor == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Event Player.MainMenuCursor == 18 ? Custom String("Turn a page of fate.") : Event Player.MainMenuCursor == 19 ? Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")) : Event Player.MainMenuCursor == 20 ? Custom String("NOW: {0}", Global.AuraNames[Event Player.NocturneState[8]]) : Custom String("GHOST: {0} | FLY: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF")))), Top, 3, Color(White), Event Player.MainMenuCursor == 0 ? Color(White) : Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3484,7 +3500,7 @@ rule("91b - Subroutine: Draw the Soundtrack menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Event Player.CustomSoundtrack != Null ? Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: back", Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))) : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: +10 / {1}: -10", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Event Player.CustomSoundtrack != Null ? Custom String("SOUNDTRACK LOCKED") : Custom String("3 - SOUNDTRACK {0}/{1}", Event Player.GenreCursor + 1, Count Of(Global.GenreNames)), Event Player.CustomSoundtrack != Null ? Custom String("NOW: {0}", Event Player.CustomSoundtrack) : Custom String("NOW: {0}", Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"))), Event Player.CustomSoundtrack != Null ? Custom String("") : Global.MenuPageNames[Round To Integer(Event Player.GenreCursor / 20, Down)]), Event Player.CustomSoundtrack != Null ? Custom String("") : Custom String("> {0}", Global.GenreNames[Event Player.GenreCursor])), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.CustomSoundtrack != Null ? Custom String("{0}\n{1}", Custom String("Hold {0}: {1} back", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))) : Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} +10 / {1} -10", Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Event Player.CustomSoundtrack != Null ? Custom String("SOUNDTRACK LOCKED") : Custom String("3 - SOUNDTRACK {0}/{1}", Event Player.GenreCursor + 1, Count Of(Global.GenreNames)), Event Player.CustomSoundtrack != Null ? Custom String("NOW: {0}", Event Player.CustomSoundtrack) : Custom String("NOW: {0}", Event Player.GenreIndex >= 0 ? Global.GenreNames[Event Player.GenreIndex] : Custom String("silence before the storm"))), Event Player.CustomSoundtrack != Null ? Custom String("") : Global.MenuPageNames[Round To Integer(Event Player.GenreCursor / 20, Down)]), Event Player.CustomSoundtrack != Null ? Custom String("") : Custom String("> {0}", Global.GenreNames[Event Player.GenreCursor]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3499,7 +3515,7 @@ rule("91c - Subroutine: Draw the Camera menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("2 - 3P CAMERA {0}/{1}", Event Player.CameraCursor + 1, Count Of(Event Player.CameraTargets) + 2), Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("CAMERA OFF") : Event Player.CameraMode == 1 ? Custom String("YOUR HERO") : Custom String("WATCH {0}", Event Player.CameraTarget))), Custom String("> {0}", Event Player.CameraCursor == 0 ? Custom String("CAMERA OFF") : Event Player.CameraCursor == 1 ? Custom String("YOUR HERO") : Custom String("WATCH {0} {1}", Event Player.CameraTargets[Event Player.CameraCursor - 2], Hero Icon String(Is Duplicating(Event Player.CameraTargets[Event Player.CameraCursor - 2]) ? Hero Being Duplicated(Event Player.CameraTargets[Event Player.CameraCursor - 2]) : Hero Of(Event Player.CameraTargets[Event Player.CameraCursor - 2]))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("2 - 3P CAMERA {0}/{1}", Event Player.CameraCursor + 1, Count Of(Event Player.CameraTargets) + 2), Custom String("NOW: {0}", Event Player.CameraMode == 0 ? Custom String("CAMERA OFF") : Event Player.CameraMode == 1 ? Custom String("YOUR HERO") : Custom String("WATCH {0}", Event Player.CameraTarget))), Custom String("> {0}", Event Player.CameraCursor == 0 ? Custom String("CAMERA OFF") : Event Player.CameraCursor == 1 ? Custom String("YOUR HERO") : Custom String("WATCH {0} {1}", Event Player.CameraTargets[Event Player.CameraCursor - 2], Hero Icon String(Is Duplicating(Event Player.CameraTargets[Event Player.CameraCursor - 2]) ? Hero Being Duplicated(Event Player.CameraTargets[Event Player.CameraCursor - 2]) : Hero Of(Event Player.CameraTargets[Event Player.CameraCursor - 2])))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3514,7 +3530,7 @@ rule("91d - Subroutine: Draw the Name Color menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("1 - NAME COLOR {0}/{1}", Event Player.ColorCursor + 1, Count Of(Global.NameColors)), Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex])), Custom String("> {0}", Global.ColorNames[Event Player.ColorCursor])), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("1 - NAME COLOR {0}/{1}", Event Player.ColorCursor + 1, Count Of(Global.NameColors)), Custom String("NOW: {0}", Global.ColorNames[Event Player.ColorIndex])), Custom String("> {0}", Global.ColorNames[Event Player.ColorCursor]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3529,7 +3545,7 @@ rule("91e - Subroutine: Draw information and controls")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS"), Custom String("Hold {0} + {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}\n{1}", Custom String("Hold {0} + {1}: select / apply | + {2}: back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Hold {0} 0.5s with {1} released: toggle camera", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Custom String("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", Input Binding String(Button(Crouch)))), Custom String("Soundtrack: hold {0} + {1} / {2}: +10 / -10", Input Binding String(Button(Crouch)), Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("Travel: {0}: use | release {1}: close", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))), Custom String("Attached, menu closed: hold {0} + {1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("Dead: press {0} to resurrect on safe ground", Input Binding String(Button(Jump))), Custom String("Multijump ON: tap / hold {0} in air to boost", Input Binding String(Button(Jump)))), Custom String("Superman Punch ON: use {0} to punch", Input Binding String(Button(Melee)))))), Custom String("OTHER PAGES: hold {0} + {1}: reset defaults where shown", Input Binding String(Button(Crouch)), Input Binding String(Button(Ultimate)))), Null, Top, 3, Color(White), Color(White), Color(White), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("0 - INFO / CONTROLS\n"), Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("+ {0} apply / {1} back / {2} reset*", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate)))), Custom String("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", Input Binding String(Button(Melee)), Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))), Custom String("Inspect: hold {0}; Arcade closed; Travel off or player/bot/attach", Input Binding String(Button(Crouch)))), Custom String("Soundtrack: {0} + {1} / {2}: +10 / -10", Input Binding String(Button(Crouch)), Input Binding String(Button(Ability 1)), Input Binding String(Button(Ability 2)))), Custom String("Travel ON, Arcade closed: hold {0}; {1} / {2}: next / prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("Travel: {0} use / {1} detach | release {2}: close", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Crouch)))), Custom String("Dead: {0} revive | Multijump ON: tap/hold {0} in air", Input Binding String(Button(Jump)))), Custom String("Punch ON: {0} punch | *reset where shown", Input Binding String(Button(Melee)))), Null, Top, 3, Color(White), Color(White), Color(White), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3545,7 +3561,7 @@ rule("91f - Subroutine: Draw the Revenge menu")
 	actions
 	{
 		Call Subroutine(RefreshRevengeTargets);
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: revenge / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Count Of(Event Player.RevengeTargets) == 0 ? Custom String("4 - REVENGE") : Custom String("4 - REVENGE {0}/{1}", Event Player.RevengeCursor + 1, Count Of(Event Player.RevengeTargets)), Count Of(Event Player.RevengeTargets) == 0 ? Custom String("") : Custom String("> {0}", Event Player.RevengeTargets[Event Player.RevengeCursor])), Count Of(Event Player.RevengeTargets) == 0 ? Custom String("") : Custom String("OWED: {0}", Index Of Array Value(Event Player.RevengeKillers, Event Player.RevengeTargets[Event Player.RevengeCursor]) < 0 ? 0 : Event Player.RevengeDebts[Index Of Array Value(Event Player.RevengeKillers, Event Player.RevengeTargets[Event Player.RevengeCursor])])), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} revenge / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Count Of(Event Player.RevengeTargets) == 0 ? Custom String("4 - REVENGE") : Custom String("4 - REVENGE {0}/{1}", Event Player.RevengeCursor + 1, Count Of(Event Player.RevengeTargets)), Count Of(Event Player.RevengeTargets) == 0 ? Custom String("") : Custom String("> {0}", Event Player.RevengeTargets[Event Player.RevengeCursor])), Count Of(Event Player.RevengeTargets) == 0 ? Custom String("") : Custom String("OWED: {0}", Index Of Array Value(Event Player.RevengeKillers, Event Player.RevengeTargets[Event Player.RevengeCursor]) < 0 ? 0 : Event Player.RevengeDebts[Index Of Array Value(Event Player.RevengeKillers, Event Player.RevengeTargets[Event Player.RevengeCursor])]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3570,7 +3586,7 @@ rule("91g - Subroutine: Draw the Travel menu")
 			End;
 		End;
 		Event Player.TravelCursor %= 5;
-		Create HUD Text(Event Player, Null, Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} / release: close", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: use / {1}+{2}: detach", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))), Custom String("{0}\n{1}", Event Player.TravelCursor == 0 ? Custom String("1/5 | TELEPORT: SPAWN ROOM") : Event Player.TravelCursor == 1 ? Custom String("2/5 | TELEPORT: OBJECTIVE") : Event Player.TravelCursor == 2 ? Custom String("3/5 | TELEPORT TO PLAYER/BOT") : Event Player.TravelCursor == 3 ? Custom String("4/5 | ATTACH TO PLAYER/BOT") : Custom String("5/5 | SELF ELIMINATION"), Event Player.TravelCursor == 0 ? Custom String("TEAM SPAWN") : Event Player.TravelCursor == 1 ? Custom String("") : Event Player.TravelCursor == 2 ? Custom String("BESIDE: {0}", Event Player.TravelTargetCandidate != Null ? Event Player.TravelTargetCandidate : Custom String("NO PUBLIC TARGET AVAILABLE")) : Event Player.TravelCursor == 3 ? Custom String("ABOVE: {0}", Event Player.TravelTargetCandidate != Null ? Event Player.TravelTargetCandidate : Custom String("NO PUBLIC TARGET AVAILABLE")) : Custom String("CURRENT HERO FORM | COOLDOWN: 3s")), Top, 3, Color(White), Custom Color(190 + X Component Of(Event Player.MenuColor) * 0.250, 190 + Y Component Of(Event Player.MenuColor) * 0.250, 190 + Z Component Of(Event Player.MenuColor) * 0.250, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} use / {1} detach | release {2}: close", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Crouch)))), Custom String("\n{0}", Custom String("{0}\n{1}", Event Player.TravelCursor == 0 ? Custom String("1/5 | SPAWN") : Event Player.TravelCursor == 1 ? Custom String("2/5 | OBJECTIVE") : Event Player.TravelCursor == 2 ? Custom String("3/5 | PLAYER/BOT TELEPORT") : Event Player.TravelCursor == 3 ? Custom String("4/5 | PLAYER/BOT ATTACH") : Custom String("5/5 | SELF KILL"), Event Player.TravelCursor == 0 ? Custom String("TEAM SPAWN") : Event Player.TravelCursor == 1 ? Custom String("") : Event Player.TravelCursor == 2 ? Custom String("BESIDE: {0}", Event Player.TravelTargetCandidate != Null ? Event Player.TravelTargetCandidate : Custom String("NO PUBLIC TARGET")) : Event Player.TravelCursor == 3 ? Custom String("ABOVE: {0}", Event Player.TravelTargetCandidate != Null ? Event Player.TravelTargetCandidate : Custom String("NO PUBLIC TARGET")) : Custom String("CURRENT FORM | 3s COOLDOWN"))), Top, 3, Color(White), Custom Color(190 + X Component Of(Event Player.MenuColor) * 0.250, 190 + Y Component Of(Event Player.MenuColor) * 0.250, 190 + Z Component Of(Event Player.MenuColor) * 0.250, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 		If(Index Of Array Value(Global.HumanPlayers, Event Player) >= 0);
 			If(Index Of Array Value(Global.HumanPlayers, Event Player) < Count Of(Global.MenuHudIds));
@@ -3590,7 +3606,7 @@ rule("91h - Subroutine: Draw the Unkillable menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("5 - UNKILLABLE {0}/3", Event Player.UnkillableCursor + 1), Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))), Custom String("> {0}", Event Player.UnkillableCursor == 0 ? Custom String("OFF") : Event Player.UnkillableCursor == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("5 - UNKILLABLE {0}/3", Event Player.UnkillableCursor + 1), Custom String("NOW: {0}", Event Player.UnkillableMode == 0 ? Custom String("OFF") : Event Player.UnkillableMode == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP"))), Custom String("> {0}", Event Player.UnkillableCursor == 0 ? Custom String("OFF") : Event Player.UnkillableCursor == 1 ? Custom String("1 HP (HEALABLE)") : Custom String("FULL HP")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3605,7 +3621,7 @@ rule("91i - Subroutine: Draw the Hero Voice menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("6 - HERO VOICE {0}/5", Event Player.VoiceCursor + 1), Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))), Custom String("> {0}", Event Player.VoiceCursor == 0 ? Custom String("NORMAL") : Event Player.VoiceCursor == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceCursor == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceCursor == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("6 - HERO VOICE {0}/5", Event Player.VoiceCursor + 1), Custom String("NOW: {0}", Event Player.VoiceIndex == 0 ? Custom String("NORMAL") : Event Player.VoiceIndex == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceIndex == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceIndex == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x"))), Custom String("> {0}", Event Player.VoiceCursor == 0 ? Custom String("NORMAL") : Event Player.VoiceCursor == 1 ? Custom String("LOW 0.50x") : Event Player.VoiceCursor == 2 ? Custom String("LOW 0.75x") : Event Player.VoiceCursor == 3 ? Custom String("HIGH 1.25x") : Custom String("HIGH 1.50x")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3620,7 +3636,7 @@ rule("91j - Subroutine: Draw the Player Icon menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("7 - ICON {0}/37", Event Player.IconCursor + 1), Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex])), Custom String("> {0}", Event Player.IconCursor == 0 ? Custom String("NONE") : Custom String("{0} {1}", Global.PlayerIcons[Event Player.IconCursor], Global.IconNames[Event Player.IconCursor]))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("7 - ICON {0}/37", Event Player.IconCursor + 1), Event Player.IconIndex == 0 ? Custom String("NOW: NONE") : Custom String("NOW: {0} {1}", Global.PlayerIcons[Event Player.IconIndex], Global.IconNames[Event Player.IconIndex])), Custom String("> {0}", Event Player.IconCursor == 0 ? Custom String("NONE") : Custom String("{0} {1}", Global.PlayerIcons[Event Player.IconCursor], Global.IconNames[Event Player.IconCursor])))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3635,7 +3651,7 @@ rule("91n - Subroutine: Draw the Luck card")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Event Player.LuckActive ? Custom String("LUCK IN PROGRESS: PLEASE WAIT") : Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: spin / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY"))), Custom String("> {0}", Event Player.LuckActive ? Custom String("WATCH IT SPIN") : Custom String("GIVE IT A SPIN"))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Event Player.LuckActive ? Custom String("Fate is turning...") : Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0} spin / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("10 - TRY YOUR LUCK"), Custom String("STATUS: {0}", Event Player.LuckActive ? Event Player.LuckSpinCount > 0 ? Custom String("ROLLING") : Custom String("ACTIVE") : Custom String("READY"))), Custom String("> {0}", Event Player.LuckActive ? Custom String("FATE TURNS...") : Custom String("CAST YOUR FATE")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3756,7 +3772,7 @@ rule("91o - Subroutine: Draw the Vote menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: vote / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("11 - VOTE PLAYER {0}/{1}", Event Player.VoteCursor + 1, Count Of(Global.HumanPlayers)), Custom String("YOUR VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE"))), Custom String("> {0}", Count Of(Global.HumanPlayers) > 0 ? Custom String("{0} - {1} VOTES", Global.HumanPlayers[Event Player.VoteCursor], Global.HumanPlayers[Event Player.VoteCursor].VoteCount) : Custom String("NO PLAYERS"))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} vote / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("11 - VOTE {0}/{1}", Event Player.VoteCursor + 1, Count Of(Global.HumanPlayers)), Custom String("VOTE: {0}", Event Player.VotedPlayer != Null ? Event Player.VotedPlayer : Custom String("NONE"))), Custom String("> {0}", Count Of(Global.HumanPlayers) > 0 ? Custom String("{0} - {1} VOTES", Global.HumanPlayers[Event Player.VoteCursor], Global.HumanPlayers[Event Player.VoteCursor].VoteCount) : Custom String("NO PLAYERS")))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3771,7 +3787,7 @@ rule("91s - Subroutine: Draw the Ghost / Fly menu")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: toggle / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST MODE / FLY {0}/2", Event Player.GhostFlyCursor + 1), Custom String("WALL PHASING: {0} | FLY MODE: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("WALL PHASING - {0}", Event Player.GhostModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")) : Custom String("FLY MODE - {0}", Event Player.FlyModeActive ? Custom String("TURN OFF") : Custom String("TURN ON")))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("") : Custom String("FLY SPEED: {0}% | CHANGE IN MENU 16", Event Player.MovementSpeed))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} toggle / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("13 - GHOST / FLY {0}/2", Event Player.GhostFlyCursor + 1), Custom String("GHOST: {0} | FLY: {1}", Event Player.GhostModeActive ? Custom String("ON") : Custom String("OFF"), Event Player.FlyModeActive ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("GHOST: {0}", Event Player.GhostModeActive ? Custom String("OFF") : Custom String("ON")) : Custom String("FLY: {0}", Event Player.FlyModeActive ? Custom String("OFF") : Custom String("ON")))), Custom String("> {0}", Event Player.GhostFlyCursor == 0 ? Custom String("") : Custom String("FLY: {0}% | speed in menu 16", Event Player.MovementSpeed)))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -3848,6 +3864,11 @@ rule("93b2 - Subroutine: Quiesce the trigger player before cleanup")
 		"Disable all triggers before leave or join events finish cleanup and new registration."
 		Global.SuperPunchPlayers = Remove From Array(Global.SuperPunchPlayers, Event Player);
 		Call Subroutine(CloseMenu);
+		If(Event Player.IsHuman == True);
+			Event Player.NocturneState[11] = Null;
+			Event Player.NocturneState[12] = Custom String("");
+			Event Player.NocturneState[13] = 0;
+		End;
 		Call Subroutine(CleanupObjectiveIcon);
 		Global.FateResultPlayer = Event Player;
 		Call Subroutine(CleanupFateResults);
@@ -4252,7 +4273,7 @@ rule("94 - Subroutine: Prepare the player and initialize variables")
 		Event Player.MenuColor = Vector(255, 255, 255);
 		Event Player.MovementCursor = 0;
 		"Packed social preferences preserve the final available player-variable slot."
-		Event Player.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, Custom String("The pages await your hand."));
+		Event Player.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, Custom String("The pages await your hand."), Null, Custom String(""), 0);
 		Event Player.CrouchTravelEnabled = False;
 		Event Player.InspectionPrivacyActive = False;
 		Event Player.UnkillableMode = 0;
@@ -4634,9 +4655,9 @@ rule("98g - Subroutine: Travel to spawn")
 	actions
 	{
 		If(Is In Spawn Room(Event Player) == True);
-			Small Message(Event Player, Custom String("Already in Spawn Room. Home sweet home!"));
+			Small Message(Event Player, Custom String("Already in spawn."));
 		Else If(Count Of(Spawn Points(Team Of(Event Player))) == 0);
-			Small Message(Event Player, Custom String("Spawn Room unavailable."));
+			Small Message(Event Player, Custom String("Spawn unavailable."));
 		Else;
 			If(Event Player.CameraMode != 0);
 				Stop Camera(Event Player);
@@ -4672,7 +4693,7 @@ rule("98h - Subroutine: Travel to the objective")
 		End;
 		Call Subroutine(FindSafeTravelPosition);
 		If(Distance Between(Event Player.SafeRevivePosition, Vector(0, 0, 0)) <= 0.100);
-			Small Message(Event Player, Custom String("No safe walkable spot near the objective."));
+			Small Message(Event Player, Custom String("No safe ground near objective."));
 			Abort;
 		End;
 		If(Event Player.CameraMode != 0);
@@ -4702,7 +4723,7 @@ rule("98i - Subroutine: Travel to the target player")
 	actions
 	{
 		If(Or(Or(Event Player.LockedTravelTarget == Null, Entity Exists(Event Player.LockedTravelTarget) == False), Or(Is Alive(Event Player.LockedTravelTarget) == False, Array Contains(Event Player.TravelTargets, Event Player.LockedTravelTarget) == False)));
-			Small Message(Event Player, Custom String("Target unavailable. Teleport has standards."));
+			Small Message(Event Player, Custom String("Teleport target unavailable."));
 			Abort;
 		End;
 		Event Player.TravelDestination = Position Of(Event Player.LockedTravelTarget) - Facing Direction Of(Event Player.LockedTravelTarget) * 2.250;
@@ -4728,7 +4749,7 @@ rule("98i - Subroutine: Travel to the target player")
 			Call Subroutine(FindSafeTravelPosition);
 		End;
 		If(Distance Between(Event Player.SafeRevivePosition, Vector(0, 0, 0)) <= 0.100);
-			Small Message(Event Player, Custom String("No safe walkable spot near that target."));
+			Small Message(Event Player, Custom String("No safe ground near target."));
 			Abort;
 		End;
 		If(Event Player.CameraMode != 0);
@@ -4885,7 +4906,7 @@ rule("91u - Subroutine: Draw Movement and Gravity controls")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0} | {1}", Input Binding String(Button(Crouch)), Custom String("{0}: +{1}% / {2}", Input Binding String(Button(Primary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) < 100 ? 20 : 100, Custom String("{0}: -{1}%", Input Binding String(Button(Secondary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) <= 100 ? 20 : 100))), Custom String("{0}: select Speed / Gravity | {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset both to 100%", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("16 - MOVEMENT / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (20-1000%)", Event Player.MovementCursor == 0 ? Custom String("> ") : Custom String("  "), Event Player.MovementSpeed), Custom String("{0}Gravity: {1}% (0-500%)", Event Player.MovementCursor == 1 ? Custom String("> ") : Custom String("  "), Event Player.MovementGravity))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} +{2}%", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) < 100 ? 20 : 100), Custom String("{0} -{1}%", Input Binding String(Button(Secondary Fire)), (Event Player.MovementCursor == 0 ? Event Player.MovementSpeed : Event Player.MovementGravity) <= 100 ? 20 : 100)), Custom String("{0} Speed/Gravity | {1} back | {2} 100% both", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("16 - SPEED / GRAVITY"), Custom String("{0}\n{1}", Custom String("{0}Speed: {1}% (20-1000%)", Event Player.MovementCursor == 0 ? Custom String("> ") : Custom String("  "), Event Player.MovementSpeed), Custom String("{0}Gravity: {1}% (0-500%)", Event Player.MovementCursor == 1 ? Custom String("> ") : Custom String("  "), Event Player.MovementGravity)))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -4900,7 +4921,7 @@ rule("91t - Subroutine: Draw Multijump choices")
 
 	actions
 	{
-		Create HUD Text(Event Player, Null, Custom String("{0}{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}", Input Binding String(Button(Crouch))), Custom String("{0}: next / {1}: prev", Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire)))), Custom String("{0}: apply / {1}: back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String(" | {0}: reset page", Input Binding String(Button(Ultimate)))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", Event Player.MultijumpCursor + 1), Custom String("NOW: {0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100)), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", Event Player.MultijumpCursor * 100))), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("") : Custom String("IN AIR: TAP / HOLD JUMP"))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Event Player, Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("14 - MULTIJUMP {0}/11", Event Player.MultijumpCursor + 1), Custom String("{0} | AIR BOOST: {1}%", Event Player.MultijumpEnabled ? Custom String("ON") : Custom String("OFF"), Event Player.MultijumpLevel * 100)), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("OFF") : Custom String("AIR BOOST: {0}%", Event Player.MultijumpCursor * 100))), Custom String("> {0}", Event Player.MultijumpCursor == 0 ? Custom String("") : Custom String("AIR: TAP/HOLD {0}", Input Binding String(Button(Jump)))))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -5260,6 +5281,9 @@ rule("99s - Subroutine: Reset the selected personal menu page")
 		Else If((Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 19);
 			Event Player.NocturneState[4] = 0;
 			Event Player.NocturneState[5] = True;
+			Event Player.NocturneState[11] = Null;
+			Event Player.NocturneState[12] = Custom String("");
+			Event Player.NocturneState[13] = 0;
 		Else If((Event Player.MenuPage == -1 ? Event Player.MainMenuCursor : Event Player.MenuPage) == 20);
 			Event Player.NocturneState[7] = 0;
 			Event Player.NocturneState[8] = 0;
@@ -5271,7 +5295,7 @@ rule("99s - Subroutine: Reset the selected personal menu page")
 			Abort;
 		End;
 		Call Subroutine(TransitionMenuColor);
-		Small Message(Event Player, Custom String("Page reset to defaults."));
+		Small Message(Event Player, Custom String("Defaults restored."));
 	}
 }
 
@@ -5285,7 +5309,7 @@ rule("91v - Subroutine: Draw Presence, Fates, Whispers and Moonlit Aura")
 
 	actions
 	{
-		Create HUD Text(Evaluate Once(Event Player), Null, Custom String("{0} | {1}", Custom String("Hold {0} | {1}: next / {2}: prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} | {1}", Custom String("{0}: apply / {1}: back / {2}: reset page", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)), Input Binding String(Button(Ultimate))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee))))), Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("17 - PRESENCE") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("18 - FATES") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("19 - WHISPERS") : Custom String("20 - MOONLIT AURA"), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("FATES: {0}", Total Time Elapsed < Event Player.NocturneState[3] ? Custom String("RESTING {0}s", Round To Integer(Event Player.NocturneState[3] - Total Time Elapsed, Up)) : Custom String("READY")) : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")) : Custom String("NOW: {0} | HIDE OTHERS: {1}", Global.AuraNames[Event Player.NocturneState[8]], Event Player.NocturneState[9] == True ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Evaluate Once(Event Player.MenuPage) == 17 ? Global.PresenceNames[Event Player.NocturneState[1]] : Evaluate Once(Event Player.MenuPage) == 18 ? Global.FateNames[Event Player.NocturneState[2]] : Evaluate Once(Event Player.MenuPage) == 19 ? Global.WhisperNames[Event Player.NocturneState[4]] : Global.AuraNames[Event Player.NocturneState[7]])), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("A quiet sign beside your name.") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("Your fate appears below. One turn every 5 seconds.") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("Aim at a public soul at any distance. Receive ON required. 15 s between whispers.") : Custom String("A single trace of moonlight follows your Name Color.")), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
+		Create HUD Text(Evaluate Once(Event Player), Null, Custom String("{0}\n{1}", Custom String("{0} | {1}", Custom String("{0} | {1}", Custom String("Hold {0}: {1} next / {2} prev", Input Binding String(Button(Crouch)), Input Binding String(Button(Primary Fire)), Input Binding String(Button(Secondary Fire))), Custom String("{0} apply / {1} back", Input Binding String(Button(Interact)), Input Binding String(Button(Reload)))), Custom String("{0} reset", Input Binding String(Button(Ultimate)))), Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))), Custom String("\n{0}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Custom String("{0}\n{1}", Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("17 - PRESENCE") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("18 - FATES") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("19 - WHISPERS") : Custom String("20 - MOONLIT AURA"), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("NOW: {0}", Global.PresenceNames[Event Player.NocturneState[0]]) : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("FATES: {0}", Total Time Elapsed < Event Player.NocturneState[3] ? Custom String("RESTING {0}s", Round To Integer(Event Player.NocturneState[3] - Total Time Elapsed, Up)) : Custom String("READY")) : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("{0}\n{1}", Custom String("RECEIVE: {0}", Event Player.NocturneState[5] == True ? Custom String("ON") : Custom String("OFF")), Custom String("TARGET: {0}", Is Button Held(Event Player, Button(Crouch)) == False ? Custom String("HOLD CROUCH TO AIM") : And(Event Player.NocturneState[11] != Null, And(Entity Exists(Event Player.NocturneState[11]) == True, And(Array Contains(Global.HumanPlayers, Event Player.NocturneState[11]) == True, And(Player Variable(Event Player.NocturneState[11], IsHuman) == True, And(Player Variable(Event Player.NocturneState[11], IsPrepared) == True, And(Player Variable(Event Player.NocturneState[11], PlayerCycleActive) == False, And(Player Variable(Event Player.NocturneState[11], LastTeam) == Team Of(Event Player.NocturneState[11]), And(Has Spawned(Event Player.NocturneState[11]) == True, And(Is Alive(Event Player.NocturneState[11]) == True, And(Player Variable(Event Player.NocturneState[11], InspectionPrivacyActive) == False, And(Player Variable(Event Player.NocturneState[11], NocturneState)[5] == True, And(Is In View Angle(Event Player, Eye Position(Event Player.NocturneState[11]), 12) == True, Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.NocturneState[11]), Barriers Do Not Block LOS) == True)))))))))))) ? Player Variable(Event Player.NocturneState[11], DisplayName) : Custom String("NO WILLING SOUL"))) : Custom String("NOW: {0} | HIDE OTHERS: {1}", Global.AuraNames[Event Player.NocturneState[8]], Event Player.NocturneState[9] == True ? Custom String("ON") : Custom String("OFF"))), Custom String("> {0}", Evaluate Once(Event Player.MenuPage) == 17 ? Global.PresenceNames[Event Player.NocturneState[1]] : Evaluate Once(Event Player.MenuPage) == 18 ? Global.FateNames[Event Player.NocturneState[2]] : Evaluate Once(Event Player.MenuPage) == 19 ? Global.WhisperNames[Event Player.NocturneState[4]] : Global.AuraNames[Event Player.NocturneState[7]])), Evaluate Once(Event Player.MenuPage) == 17 ? Custom String("A sign beside your name.") : Evaluate Once(Event Player.MenuPage) == 18 ? Custom String("Result below | 5s cooldown.") : Evaluate Once(Event Player.MenuPage) == 19 ? Custom String("{0}{1}", Custom String("Aim at a willing soul. Any range | 15s cooldown."), Total Time Elapsed < Event Player.NocturneState[13] ? Custom String("\n{0}", Event Player.NocturneState[12]) : Custom String("")) : Custom String("Moonlight in your Name Color."))), Top, 3, Color(White), Custom Color(210, 200, 192, 255), Custom Color(X Component Of(Event Player.MenuColor), Y Component Of(Event Player.MenuColor), Z Component Of(Event Player.MenuColor), 255), Visible To String and Color, Visible Never);
 		Event Player.MenuHud = Last Text ID;
 	}
 }
@@ -5329,26 +5353,23 @@ rule("99t - Subroutine: Apply the personal Nocturne social page")
 				Event Player.NocturneState[5] = Event Player.NocturneState[5] == False;
 			Else;
 				If(Total Time Elapsed < Event Player.NocturneState[6]);
-					Small Message(Event Player, Custom String("Let the echo fade: {0}s.", Round To Integer(Event Player.NocturneState[6] - Total Time Elapsed, Up)));
+					Small Message(Evaluate Once(Event Player), Custom String("{0}", Evaluate Once(Custom String("Let the echo fade: {0}s.", Round To Integer(Event Player.NocturneState[6] - Total Time Elapsed, Up)))));
 					Abort;
 				End;
-				Event Player.InspectionTarget = Player Closest To Reticle(Event Player, All Teams);
-				Abort If(Event Player.InspectionTarget == Null);
-				Abort If(Event Player.InspectionTarget == Event Player);
-				Abort If(Entity Exists(Event Player.InspectionTarget) == False);
-				Abort If(Array Contains(Global.HumanPlayers, Event Player.InspectionTarget) == False);
-				Abort If(Player Variable(Event Player.InspectionTarget, IsHuman) == False);
-				Abort If(Player Variable(Event Player.InspectionTarget, IsPrepared) == False);
-				Abort If(Player Variable(Event Player.InspectionTarget, PlayerCycleActive) == True);
-				Abort If(Player Variable(Event Player.InspectionTarget, LastTeam) != Team Of(Event Player.InspectionTarget));
-				Abort If(Or(Has Spawned(Event Player.InspectionTarget) == False, Is Alive(Event Player.InspectionTarget) == False));
-				Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);
-				Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);
-				Abort If(Is In View Angle(Event Player, Eye Position(Event Player.InspectionTarget), 12) == False);
-				Abort If(Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.InspectionTarget), Barriers Do Not Block LOS) == False);
+				Global.WhisperPlayer = Event Player;
+				Call Subroutine(RefreshWhisperTarget);
+				Global.WhisperPlayer = Null;
+				Global.WhisperTarget = Null;
+				Event Player.InspectionTarget = Event Player.NocturneState[11];
+				If(Event Player.InspectionTarget == Null);
+					Small Message(Evaluate Once(Event Player), Custom String("Not sent. Aim at a willing soul."));
+					Abort;
+				End;
 				Event Player.NocturneState[6] = Total Time Elapsed + 15;
-				Small Message(Event Player.InspectionTarget, Custom String("{0}: {1}", Event Player.DisplayName, Event Player.NocturneState[4] == 1 ? Custom String("A quiet greeting reaches you through the dusk.") : Event Player.NocturneState[4] == 2 ? Custom String("An offering of respect beneath the moon.") : Event Player.NocturneState[4] == 3 ? Custom String("A withered rose, its memory still warm.") : Event Player.NocturneState[4] == 4 ? Custom String("A gentle embrace across the silence.") : Custom String("Your soul resonates with mine.")));
-				Small Message(Event Player, Custom String("Your whisper reaches {0}.", Player Variable(Event Player.InspectionTarget, DisplayName)));
+				Small Message(Evaluate Once(Event Player.InspectionTarget), Custom String("{0}", Evaluate Once(Custom String("{0}: {1}", Event Player.DisplayName, Event Player.NocturneState[4] == 1 ? Custom String("A quiet greeting reaches you through the dusk.") : Event Player.NocturneState[4] == 2 ? Custom String("An offering of respect beneath the moon.") : Event Player.NocturneState[4] == 3 ? Custom String("A withered rose, its memory still warm.") : Event Player.NocturneState[4] == 4 ? Custom String("A gentle embrace across the silence.") : Custom String("Your soul resonates with mine.")))));
+				Event Player.NocturneState[12] = Custom String("SENT: {0} -> {1}", Evaluate Once(Global.WhisperNames[Event Player.NocturneState[4]]), Evaluate Once(Player Variable(Event Player.InspectionTarget, DisplayName)));
+				Event Player.NocturneState[13] = Total Time Elapsed + 3;
+				Small Message(Evaluate Once(Event Player), Custom String("{0}", Evaluate Once(Event Player.NocturneState[12])));
 			End;
 		Else If(Event Player.MenuPage == 20);
 			If(Event Player.NocturneState[7] == 4);
@@ -5494,5 +5515,42 @@ rule("93f - Subroutine: Expire Fate results and clean the departing owner")
 			End;
 		End;
 		Global.FateResultPlayer = Null;
+	}
+}
+
+rule("99x - Subroutine: Select a willing Whisper recipient without changing consent")
+{
+	event
+	{
+		Subroutine;
+		RefreshWhisperTarget;
+	}
+
+	actions
+	{
+		Global.WhisperTarget = Null;
+		Abort If(Global.WhisperPlayer == Null);
+		Abort If(Entity Exists(Global.WhisperPlayer) == False);
+		Global.WhisperPlayer.NocturneState[11] = Null;
+		Abort If(Global.WhisperPlayer.IsHuman == False);
+		Abort If(Global.WhisperPlayer.IsPrepared == False);
+		Abort If(Array Contains(Global.HumanPlayers, Global.WhisperPlayer) == False);
+		Abort If(Or(Has Spawned(Global.WhisperPlayer) == False, Is Alive(Global.WhisperPlayer) == False));
+		Global.WhisperTarget = Player Closest To Reticle(Global.WhisperPlayer, All Teams);
+		Abort If(Global.WhisperTarget == Null);
+		Abort If(Global.WhisperTarget == Global.WhisperPlayer);
+		Abort If(Entity Exists(Global.WhisperTarget) == False);
+		Abort If(Array Contains(Global.HumanPlayers, Global.WhisperTarget) == False);
+		Abort If(Player Variable(Global.WhisperTarget, IsHuman) == False);
+		Abort If(Player Variable(Global.WhisperTarget, IsPrepared) == False);
+		Abort If(Player Variable(Global.WhisperTarget, PlayerCycleActive) == True);
+		Abort If(Player Variable(Global.WhisperTarget, LastTeam) != Team Of(Global.WhisperTarget));
+		Abort If(Or(Has Spawned(Global.WhisperTarget) == False, Is Alive(Global.WhisperTarget) == False));
+		Abort If(Player Variable(Global.WhisperTarget, InspectionPrivacyActive) == True);
+		Abort If(Player Variable(Global.WhisperTarget, NocturneState)[5] == False);
+		Abort If(Is In View Angle(Global.WhisperPlayer, Eye Position(Global.WhisperTarget), 12) == False);
+		Abort If(Is In Line Of Sight(Eye Position(Global.WhisperPlayer), Eye Position(Global.WhisperTarget), Barriers Do Not Block LOS) == False);
+		Global.WhisperPlayer.NocturneState[11] = Global.WhisperTarget;
+		Global.WhisperTarget = Null;
 	}
 }

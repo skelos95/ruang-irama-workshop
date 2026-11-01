@@ -69,8 +69,8 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertEqual(indices, list(range(indices[0], indices[0] + 4)))
 
     def test_main_menu_has_twenty_one_pages_and_routes_page_thirteen(self) -> None:
-        localized_titles = ("13 - GHOST MODE / FLY",)
-        localized_tails = (("12 - DUMMY TARGET", "13 - GHOST MODE / FLY"),)
+        localized_titles = ("13 - GHOST / FLY",)
+        localized_tails = (("12 - DUMMY TARGET", "13 - GHOST / FLY"),)
         for source, _ in self.sources:
             navigation = rule_with(source, "MainMenuCursor = (Event Player.MainMenuCursor", "MenuCommand == 3")
             self.assertIn(
@@ -117,7 +117,7 @@ class GhostFlyRuntimeTests(unittest.TestCase):
             self.assertEqual(renderer.count("Create HUD Text("), 1)
             self.assertNotIn("Event Player.MenuPage == -1", renderer)
             for token in ("GhostFlyCursor", "GhostModeActive", "FlyModeActive", "/2",
-                          "GHOST MODE", "FLY", "FLY SPEED: {0}% | CHANGE IN MENU 16"):
+                          "GHOST:", "FLY:", "FLY: {0}% | speed in menu 16"):
                 self.assertIn(token, renderer)
             self.assertIn("Input Binding String(Button(Crouch))", renderer)
 

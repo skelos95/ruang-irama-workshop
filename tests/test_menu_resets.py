@@ -158,7 +158,7 @@ class MenuResetTests(unittest.TestCase):
                         self.assertEqual(other, before)
                         self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (page if submenu else -1, page))
                         self.assertEqual(model.created_huds, [])
-                        self.assertEqual(model.messages[-1], (owner, "Page reset to defaults."))
+                        self.assertEqual(model.messages[-1], (owner, "Defaults restored."))
 
     def test_held_reset_consumes_one_command_and_release_repress_arms_it_again(self):
         for source, model in self.models():
@@ -230,7 +230,7 @@ class MenuResetTests(unittest.TestCase):
                 state["alive"] = True
                 model.input("owner", "Ultimate", ticks=3)
                 self.assertEqual(state["MenuCommand"], 8)
-                resets = lambda: model.messages.count(("owner", "Page reset to defaults."))
+                resets = lambda: model.messages.count(("owner", "Defaults restored."))
                 self.assertEqual(resets(), 1)
                 self.assertNotIn(("Allow Button", ("owner", "Ultimate")), model.native_calls[marker:])
 

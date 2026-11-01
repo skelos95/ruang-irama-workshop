@@ -237,7 +237,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn('Custom String("{0}{1}{2}"', roster)
             self.assertNotIn("CROWN OF ASH:", roster)
             self.assertIn(
-                f"5 + Count Of(Filtered Array({global_name}.PlayerListHudIds, Current Array Element != 0))",
+                f"3 + Count Of(Filtered Array({global_name}.PlayerListHudIds, Current Array Element != 0))",
                 roster,
             )
 
@@ -273,14 +273,14 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             teleport_render = source.split(f'{rule_kw}("91g - ', 1)[1].split(f'{rule_kw}("', 1)[0]
             self.assertNotIn("\\\\", teleport_render)
             self.assertNotIn('Custom String("{0}n{1}"', teleport_render)
-            self.assertIn('Custom String("{0} | {1}", Custom String("Hold {0} / release: close"', teleport_render)
+            self.assertIn('Custom String("{0}\\n{1}", Custom String("Hold {0}: {1} next / {2} prev"', teleport_render)
             for token in (
-                "1/5 | TELEPORT: SPAWN ROOM",
-                "2/5 | TELEPORT: OBJECTIVE",
-                "3/5 | TELEPORT TO PLAYER/BOT",
-                '4/5 | ATTACH TO PLAYER/BOT',
-                "5/5 | SELF ELIMINATION",
-                'NO PUBLIC TARGET AVAILABLE',
+                "1/5 | SPAWN",
+                "2/5 | OBJECTIVE",
+                "3/5 | PLAYER/BOT TELEPORT",
+                '4/5 | PLAYER/BOT ATTACH',
+                "5/5 | SELF KILL",
+                'NO PUBLIC TARGET',
             ):
                 self.assertIn(token, teleport_render)
             self.assertIn("Custom Color(190 + X Component Of(Event Player.MenuColor) * 0.250", teleport_render)
@@ -382,7 +382,8 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             self.assertNotIn("Event Player.CrouchTravelActive == False;", manual_detach)
             self.assertNotIn("Disallow Button(Event Player, Button(Reload));", attach_rule)
             self.assertNotIn("Allow Button(Event Player, Button(Reload));", detach_rules)
-            self.assertIn("{0}: use / {1}+{2}: detach", source)
+            self.assertIn("{0} use / {1} detach | release {2}: close", source)
+            self.assertIn('Custom String("{0}+{1}: detach", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))', source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Reload))", source)
             self.assertNotIn("CROUCH + RELOAD: DETACH", source)
@@ -520,7 +521,7 @@ class RuntimeMaintenanceTests(unittest.TestCase):
             )
             self.assertLess(
                 roster_hud.index("Event Player.PlayerHudCreated = True;"),
-                roster_hud.index('Enter the Nocturne. Where sorrow becomes melody.'),
+                roster_hud.index('Enter the Nocturne.'),
             )
             self.assertEqual(
                 source.count("Player Variable(Current Array Element, PlayerListUpdatePending) == False"),

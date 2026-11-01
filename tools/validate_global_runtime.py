@@ -18,7 +18,8 @@ from tools import validate_workshop as semantic
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTORS = ("Global.TriggerPlayer", "Global.ActivePlayer")
-PERSISTENT_ACTORS = (*ACTORS, "Global.ObjectiveIconPlayer", "Global.CameraPlayer", "Global.MoonlitAuraPlayer")
+PERSISTENT_ACTORS = (*ACTORS, "Global.ObjectiveIconPlayer", "Global.CameraPlayer", "Global.MoonlitAuraPlayer",
+                     "Global.WhisperPlayer", "Global.WhisperTarget")
 PERSISTENT_ACTIONS = (
     "Create HUD Text", "Create In-World Text", "Create Icon", "Create Effect",
     "Start Camera", "Start Facing", "Start Throttle In Direction",
@@ -169,6 +170,14 @@ def validate_runtime(text: str) -> list[str]:
                         if unfrozen_actors(argument):
                             errors.append(f"runtime globale {rule.name}: proprietario non congelato in {action}")
                             break
+            if semantic.subroutine_target(rule) == "ApplyNocturnePage":
+                for call in semantic.iter_calls(actions, "Small Message"):
+                    headers = "\n".join(branch.splitlines()[0] for branch in
+                                        semantic.conditional_branches_containing(actions, call.start))
+                    if not re.search(r"Global\.TriggerPlayer\.MenuPage\s*==\s*19\b", headers):
+                        continue
+                    if any(unfrozen_actors(argument) for argument in call.args):
+                        errors.append(f"runtime globale {rule.name}: destinatario o testo Whispers non congelato in Small Message")
     if scheduler:
         tail = semantic.mask_strings(semantic.rule_block(scheduler, "actions") or "")
         wait = next(semantic.iter_calls(tail, "Wait"), None)

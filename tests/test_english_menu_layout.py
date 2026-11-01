@@ -20,33 +20,27 @@ ARTIFACTS = (*[path for path, _, _ in SOURCES],
 MENU_PREFIXES = ("91a", "91b", "91c", "91d", "91f", "91g", "91h",
                  "91i", "91j", "91n", "91o", "91s", "91t", "91v")
 MAIN_INFO_CONTROLS = (
-    ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
-    ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
-    ("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", ("Crouch",)),
-    ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
-     ("Crouch", "Primary Fire", "Secondary Fire")),
-    ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
-     ("Crouch", "Interact", "Reload")),
+    ("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", ("Melee", "Interact", "Crouch")),
+    ("Hold {0}: {1} next / {2} prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("+ {0}: all controls | + {1}: back", ("Interact", "Reload")),
+    ("Arcade closed: hold {0} to inspect hero/HP", ("Crouch",)),
+    ("Travel off or player/bot/attach mode", ()),
 )
 INFO_CONTROLS = (
-    ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
-    ("Hold {0} + {1}: select / apply | + {2}: back", ("Crouch", "Interact", "Reload")),
-    ("Hold {0} 0.5s: open / close Arcade", ("Melee",)),
-    ("Hold {0} 0.5s with {1} released: toggle camera", ("Interact", "Crouch")),
-    ("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", ("Crouch",)),
-    ("Soundtrack: hold {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
-    ("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
-    ("Travel: {0}: use | release {1}: close", ("Interact", "Crouch")),
-    ("Attached, menu closed: hold {0} + {1}: detach", ("Crouch", "Reload")),
-    ("Dead: press {0} to resurrect on safe ground", ("Jump",)),
-    ("Multijump ON: tap / hold {0} in air to boost", ("Jump",)),
-    ("Superman Punch ON: use {0} to punch", ("Melee",)),
-    ("OTHER PAGES: hold {0} + {1}: reset defaults where shown", ("Crouch", "Ultimate")),
+    ("Hold {0}: {1} next / {2} prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("+ {0} apply / {1} back / {2} reset*", ("Interact", "Reload", "Ultimate")),
+    ("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", ("Melee", "Interact", "Crouch")),
+    ("Inspect: hold {0}; Arcade closed; Travel off or player/bot/attach", ("Crouch",)),
+    ("Soundtrack: {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
+    ("Travel ON, Arcade closed: hold {0}; {1} / {2}: next / prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+    ("Travel: {0} use / {1} detach | release {2}: close", ("Interact", "Reload", "Crouch")),
+    ("Dead: {0} revive | Multijump ON: tap/hold {0} in air", ("Jump",)),
+    ("Punch ON: {0} punch | *reset where shown", ("Melee",)),
 )
 
 
 def rendered_control_lines(controls):
-    return ["0 - INFO / CONTROLS", *(
+    return ["0 - INFO / CONTROLS", "", *(
         literal.format(*(f"<{button.replace(' ', '')}>" for button in buttons))
         for literal, buttons in controls)]
 
@@ -139,18 +133,22 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                 self.assertEqual(list(validator.iter_calls(normal_content, "Input Binding String")), [])
                                 context.player["MainMenuCursor"] = cursor
                                 rendered = text_tree.evaluate(context)
-                                self.assertIn(len(rendered.splitlines()), (1, 2))
+                                self.assertIn(len(rendered.splitlines()), (2, 3))
                                 self.assertNotIn("\n\n", rendered)
-                                self.assertTrue(rendered.startswith(f"{cursor} - "))
+                                self.assertTrue(rendered.startswith(f"\n{cursor} - "))
                                 self.assertIn("<Interact>", subtitle_tree.evaluate(context))
                         context.player["MainMenuCursor"] = 0
                         self.assertEqual(subtitle_tree.evaluate(context).splitlines(), expected_lines)
                         self.assertEqual(text_tree.evaluate(context), "")
                         subtitle = compiler._emit(main_menu_branch(subtitle, 1))
                         content = compiler._emit(main_menu_branch(content, 1))
-                    self.assertEqual(list(validator.iter_calls(content, "Input Binding String")), [])
+                    content_bindings = [call.args[0] for call in validator.iter_calls(content, "Input Binding String")]
+                    self.assertEqual(content_bindings, ["Button(Jump)"] if prefix == "91t" else [])
+                    self.assertTrue(content.startswith('Custom String("\\n{0}",'))
                     for text in validator.iter_calls(subtitle, "Custom String"):
-                        self.assertNotIn("\n", validator.parse_literal(text.args[0]))
+                        literal = validator.parse_literal(text.args[0])
+                        self.assertLessEqual(literal.count("\n"), 1)
+                        self.assertFalse(literal.startswith("\n"))
                     all_buttons = [call.args[0] for call in validator.iter_calls(subtitle, "Button")]
                     self.assertIn("Crouch", all_buttons)
                     self.assertIn("Interact", all_buttons)
@@ -162,7 +160,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                                          ["Crouch", "Reload", "Melee"])
                         self.assertEqual(soundtrack_branch_bindings(tree, False),
                                          ["Crouch", "Primary Fire", "Secondary Fire",
-                                          "Ability 1", "Ability 2", "Interact", "Reload", "Melee", "Ultimate"])
+                                          "Ability 1", "Ability 2", "Interact", "Reload", "Ultimate", "Melee"])
 
     def test_luck_subheader_hides_locked_commands_until_luck_finishes(self):
         for path in ARTIFACTS:
@@ -176,13 +174,13 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 subtitle = context.parse(compiler.actor_text(hud.args[2]))
                 context.player.update(LuckActive=False, LuckSpinCount=0)
                 normal = subtitle.evaluate(context)
-                self.assertIn("<Interact>: spin", normal)
-                self.assertIn("<Reload>: back", normal)
+                self.assertIn("<Interact> spin", normal)
+                self.assertIn("<Reload> back", normal)
                 self.assertIn("<Melee>", normal)
                 for spins in (20, 1, 0):
                     context.player.update(LuckActive=True, LuckSpinCount=spins)
                     waiting = subtitle.evaluate(context)
-                    self.assertIn("WAIT", waiting)
+                    self.assertIn("Fate is turning...", waiting)
                     self.assertNotIn("<", waiting)
                     self.assertNotIn("spin /", waiting)
                 context.player["LuckActive"] = False
@@ -212,7 +210,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     else:
                         self.assertIn("<Interact>", rendered_subtitle)
                         self.assertIn("<Melee>", rendered_subtitle)
-                        self.assertTrue(rendered_body.startswith("1 - NAME COLOR\n"))
+                        self.assertTrue(rendered_body.startswith("\n1 - NAME COLOR\n"))
                         self.assertIn("White", rendered_body)
                         self.assertNotIn("<Interact>", rendered_body)
 
@@ -297,7 +295,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                     color = context.parse(compiler.actor_text(hud.args[7]))
                     self.assertEqual(color.evaluate(context), (255, 255, 255, 255))
 
-    def test_host_row_has_only_one_bottom_blank_row(self):
+    def test_host_row_has_one_blank_line_after_title_and_one_below_host(self):
         for path in ARTIFACTS:
             with self.subTest(artifact=path.name):
                 rules = validator.extract_rules(path.read_text(encoding="utf-8"))
@@ -308,7 +306,7 @@ class EnglishMenuLayoutTests(unittest.TestCase):
                 self.assertEqual(node.kind, "conditional")
                 row, absent = node.children[1:]
                 self.assertEqual((row.kind, row.value), ("call", "Custom String"))
-                self.assertEqual(validator.parse_literal(compiler._emit(row.children[0])), "{0} {1} {2}\n ")
+                self.assertEqual(validator.parse_literal(compiler._emit(row.children[0])), "\n{0} {1} {2}\n ")
                 self.assertEqual(len(row.children), 4)
                 self.assertEqual(compiler._emit(absent), 'Custom String("")')
 
