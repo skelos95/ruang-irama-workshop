@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (ROOT / "source/ruang_irama.en-US.source",
              ROOT / "tests/fixtures/semantic_reference.txt",
              ROOT / "workshop/ruang_irama.en-US.workshop")
-DEFAULT = [0, 0, 0, 0, 0, True, 0, 0, 0, False, "The pages await your hand.", None, "", 0]
+DEFAULT = [0, 0, 0, 0, 0, True, 0, 0, 0, False, "The pages await your hand.", None, "", 0, True]
 CATALOGUES = ("PresenceNames", "FateNames", "WhisperNames", "AuraNames", "OmenLines")
 
 
@@ -327,6 +327,63 @@ class NocturneSocialTests(unittest.TestCase):
                                  [("NocturneState", 125)])
                 self.assertLessEqual(len(players), 128)
                 self.assertLess(max(item.index for item in players), 128)
+                setup = validator.rule_by_subroutine(validator.extract_rules(source), "PreparePlayer")
+                initializer = re.search(r"Event Player\.NocturneState = (Array\([^;]+\));", setup.body)
+                if initializer is None:
+                    initializer = re.search(r"Global\.TriggerPlayer\.NocturneState = (Array\([^;]+\));", setup.body)
+                self.assertIsNotNone(initializer)
+                self.assertEqual(NocturneEvaluator(source).evaluate(initializer[1]), DEFAULT)
+
+    def test_icon_menu_has_independent_floating_toggle_and_all_thirty_eight_choices(self):
+        for artifact, model in self.models():
+            with self.subTest(artifact=artifact):
+                owner = model.add("owner", MenuPage=7, MainMenuCursor=7, IconIndex=23, IconCursor=37)
+                other = model.add("other")
+                before = deepcopy(other)
+                model.globals.update(PlayerIcons=[f"glyph-{i}" for i in range(37)],
+                                     IconNames=[f"icon-{i}" for i in range(37)])
+                model.routine("DrawPlayerIconMenu", "owner")
+                body = model.hud_bodies[owner["MenuHud"]]
+                self.assertIn("7 - ICON 38/38", model.evaluate(body))
+                self.assertIn("FLOATING: ON", model.evaluate(body))
+                self.assertIn("FLOATING - TURN OFF", model.evaluate(body))
+                for enabled in (False, True, False):
+                    model.routine("ApplyPlayerIconPage", "owner")
+                    self.assertEqual(owner["NocturneState"][14], enabled)
+                    self.assertEqual(owner["IconIndex"], 23)
+                    self.assertIn(f"NOW: glyph-23 icon-23", model.evaluate(body))
+                    self.assertIn("FLOATING: ON" if enabled else "FLOATING: OFF", model.evaluate(body))
+                    self.assertEqual(other, before)
+                owner["IconCursor"] = 12
+                model.routine("ApplyPlayerIconPage", "owner")
+                self.assertEqual(owner["IconIndex"], 12)
+                self.assertFalse(owner["NocturneState"][14])
+                for start, command, expected in ((36, 3, 37), (37, 3, 0), (0, 4, 37), (37, 4, 36)):
+                    owner["MenuCommand"] = 0
+                    model.controller("06", "owner")
+                    owner.update(IconCursor=start, MenuCommand=command)
+                    model.controller("06", "owner")
+                    self.assertEqual(owner["IconCursor"], expected)
+                model.routine("ResetMenuPage", "owner")
+                self.assertEqual((owner["IconIndex"], owner["IconCursor"], owner["NocturneState"][14]), (0, 0, True))
+
+    def test_roster_icon_remains_public_when_floating_is_hidden_and_heading_has_one_blank_line(self):
+        for artifact, model in self.models():
+            with self.subTest(artifact=artifact):
+                owner = model.add("owner", IconIndex=23, InspectionPrivacyActive=True)
+                owner["NocturneState"][14] = False
+                model.add("viewer")
+                model.globals["PlayerIcons"] = [f"glyph-{i}" for i in range(37)]
+                roster = next(rule for rule in model.rules if "Append To Array(Global.HumanPlayers," in rule.body)
+                row = next(validator.iter_calls(roster.body, "Create HUD Text"))
+                glyph = next(validator.iter_calls(row.args[2], "Custom String")).args[1]
+                model.event_player = "owner"
+                model.globals["TriggerPlayer"] = "owner"
+                self.assertEqual(model.evaluate(row.args[0]), ["owner", "viewer"])
+                self.assertEqual(model.evaluate(glyph), "glyph-23")
+                heading = next(call for rule in model.rules for call in validator.iter_calls(rule.body, "Create HUD Text")
+                               if call.args[4:6] == ("Left", "0") and "SOULS & ECHOES" in call.args[3])
+                self.assertEqual(model.evaluate(heading.args[3]), "SOULS & ECHOES\n ")
 
     def test_presence_applies_and_resets_only_its_owner(self):
         for artifact, model in self.models():
@@ -625,7 +682,7 @@ class NocturneSocialTests(unittest.TestCase):
                 with self.subTest(artifact=artifact, blocked=changes):
                     self.assertIsNone(owner["NocturneState"][11])
                     self.assertEqual(owner["NocturneState"][6], 0)
-                    self.assertEqual(owner["NocturneState"][12:], ["", 0])
+                    self.assertEqual(owner["NocturneState"][12:14], ["", 0])
                 model.globals["HumanPlayers"] = ["owner"]
 
     def test_whisper_preview_clears_on_crouch_release_page_exit_or_sender_unavailability(self):
@@ -674,7 +731,7 @@ class NocturneSocialTests(unittest.TestCase):
             with self.subTest(artifact=artifact, failure="private after preview"):
                 self.assertIsNone(owner["NocturneState"][11])
                 self.assertEqual(owner["NocturneState"][6], 0)
-                self.assertEqual(owner["NocturneState"][12:], ["", 0])
+                self.assertEqual(owner["NocturneState"][12:14], ["", 0])
                 self.assertFalse(any("SENT" in message[2] for message in model.messages))
             target["InspectionPrivacyActive"] = False
             model.apply("owner", 19, 1)
@@ -758,7 +815,7 @@ class NocturneSocialTests(unittest.TestCase):
             with self.subTest(artifact=artifact):
                 self.assertEqual([(kind, model.evaluate(recipient), model.evaluate(body))
                                   for kind, recipient, body in installed], expected)
-                self.assertEqual(owner["NocturneState"][11:], [None, "", 0])
+                self.assertEqual(owner["NocturneState"][11:14], [None, "", 0])
                 self.assertEqual(owner["NocturneState"][6], model.now + 15)
 
     def test_whispers_reject_invalid_private_dead_or_transitioning_targets(self):
@@ -801,11 +858,11 @@ class NocturneSocialTests(unittest.TestCase):
             model.apply("owner", 19, 0)
             self.assertFalse(owner["NocturneState"][5])
             owner["NocturneState"][6] = model.now + 15
-            owner["NocturneState"][11:] = ["target", "SENT: GREETING -> target", model.now + 3]
+            owner["NocturneState"][11:14] = ["target", "SENT: GREETING -> target", model.now + 3]
             model.routine("ResetMenuPage", "owner")
             with self.subTest(artifact=artifact):
                 self.assertEqual(owner["NocturneState"][4:7], [0, True, model.now + 15])
-                self.assertEqual(owner["NocturneState"][11:], [None, "", 0])
+                self.assertEqual(owner["NocturneState"][11:14], [None, "", 0])
 
     def test_aura_has_one_handle_per_owner_and_twelve_total_after_repeated_changes(self):
         for artifact, model in self.models():

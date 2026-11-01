@@ -29,7 +29,7 @@ class CompactionContext:
         self.fields = set(fields)
         self.player = {field: False for field in fields}
         self.player["NocturneState"] = [0, 0, 0, 0, 0, True, 0, 0, 0, False,
-                                       "The pages await your hand."]
+                                       "The pages await your hand.", None, "", 0, True]
         self.globals = {"TriggerPlayer": "owner", "ActivePlayer": "owner",
                         "SuperPunchPlayers": [], "IsReady": True}
         self.values = {}

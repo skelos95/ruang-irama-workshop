@@ -178,6 +178,14 @@ def validate_runtime(text: str) -> list[str]:
                         continue
                     if any(unfrozen_actors(argument) for argument in call.args):
                         errors.append(f"runtime globale {rule.name}: destinatario o testo Whispers non congelato in Small Message")
+            if semantic.subroutine_target(rule) == "UpdateSocialObjectiveIcons":
+                for call in semantic.iter_calls(actions, "Create Icon"):
+                    audience = semantic.mask_strings(call.args[0])
+                    if "InspectionPrivacyActive" not in audience or "NocturneState" not in audience:
+                        errors.append(f"runtime globale {rule.name}: icona fluttuante richiede Privacy e toggle personali")
+                    if any("InspectionPrivacyActive" in capture.args[0] or "NocturneState" in capture.args[0]
+                           for capture in semantic.iter_calls(audience, "Evaluate Once")):
+                        errors.append(f"runtime globale {rule.name}: Privacy e toggle icona fluttuante devono restare live")
     if scheduler:
         tail = semantic.mask_strings(semantic.rule_block(scheduler, "actions") or "")
         wait = next(semantic.iter_calls(tail, "Wait"), None)

@@ -21,7 +21,7 @@ class MenuResetEvaluator(DirectToggleEvaluator):
         self.source = text
         self.globals.update(NameColors=[f"color-{i}" for i in range(40)],
                             VoteLeader=None, VoteRecountNeeded=False,
-                            PlayerHudSlots=[], UnkillableIconIds=[0] * 12)
+                            PlayerHudSlots=[], PlayerIcons=[""] * 37, UnkillableIconIds=[0] * 12)
         self.native_calls = []
         self.messages = []
 
@@ -128,6 +128,7 @@ class MenuResetTests(unittest.TestCase):
             self.assertFalse(state["voice_modified"])
         elif page == 7:
             self.assertEqual((state["IconCursor"], state["IconIndex"]), (0, 0))
+            self.assertTrue(state["NocturneState"][14])
         elif page == 11:
             self.assertEqual((state["VoteCursor"], state["VotedPlayer"]), (0, None))
             self.assertTrue(model.globals["VoteRecountNeeded"])
