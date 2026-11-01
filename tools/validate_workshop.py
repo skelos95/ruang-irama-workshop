@@ -1219,6 +1219,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(call.args[other_index].strip(), "Null",
                      f"HUD fisso {slot[0]} sort {slot[1]}: campo non usato")
 
+    roster_title = fixed_hud.get(("Left", "0"))
+    if roster_title:
+        heading = next(iter_calls(roster_title.args[3], "Custom String"), None)
+        checks.require(heading is not None and heading.raw.strip() == roster_title.args[3].strip() and len(heading.args) == 1
+                       and parse_literal(heading.args[0]) == "SOULS & ECHOES\n ",
+                       "HUD SOULS & ECHOES: una riga vuota sotto il titolo")
+
     for slot, (field, expected_labels) in {
         ("Left", "0"): ("text", ("SOULS & ECHOES",)),
         ("Left", "13"): ("subheader", ("CROWN OF ASH: {0}",)),
@@ -1347,6 +1354,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                 if player_row and len(player_row.args) == 4:
                     checks.equal(player_row.args[1].strip(), "Global.PlayerIcons[Event Player.IconIndex]",
                                  "renderer HUD roster Left: icona player invariata")
+                    checks.require("InspectionPrivacyActive" not in mask_strings(call.args[0] + player_row.args[1])
+                                   and not re.search(r"NocturneState\s*\[\s*14\s*\]", mask_strings(call.args[0] + player_row.args[1])),
+                                   "renderer HUD roster Left: icona scelta pubblica indipendente da Privacy e icona fluttuante")
                     checks.equal(
                         re.sub(r"\s+", "", player_row.args[2]),
                         "HeroIconString(IsDuplicating(EventPlayer)?HeroBeingDuplicated(EventPlayer):HeroOf(EventPlayer))",
@@ -2277,9 +2287,9 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
     checks.equal(state, [("NocturneState", 125)], "Nocturne: unico stato player compatto nello slot 125")
     setup = rule_by_subroutine(rules, "PreparePlayer")
     initial = ('Event Player.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, '
-               'Custom String("The pages await your hand."), Null, Custom String(""), 0);')
+               'Custom String("The pages await your hand."), Null, Custom String(""), 0, True);')
     checks.require(setup is not None and initial in setup.body,
-                   "Nocturne: quattordici default, ricezione ON, Aura OFF, preview e ricevuta vuote in PreparePlayer")
+                   "Nocturne: quindici default, ricezione e icona fluttuante ON, Aura OFF, preview e ricevuta vuote in PreparePlayer")
     for name, size in (("PresenceNames", 5), ("FateNames", 5), ("WhisperNames", 6),
                        ("AuraNames", 5), ("OmenLines", 6)):
         values = array_assignment_items(source, name)
@@ -2571,6 +2581,18 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
                     checks.require(required in code(call.args[0]), "Pilar: owner in uscita o cambio squadra nascosto subito")
                 checks.require(f"ArrayContains(Global.HumanPlayers,{owner})" in code(call.args[0]),
                                "Pilar: visibilita richiede owner nel roster")
+                audience = parse_top_level_ternary(call.args[0])
+                checks.require(audience is not None and code(audience[2]) == "EmptyArray"
+                               and f"PlayerVariable({owner},NocturneState)[14]==True" in code(audience[0]),
+                               "Pilar: icona fluttuante OFF nascosta a tutti immediatamente")
+                privacy = parse_top_level_ternary(audience[1]) if audience else None
+                checks.require(privacy is not None
+                               and code(privacy[0]) == f"PlayerVariable({owner},InspectionPrivacyActive)==True"
+                               and code(privacy[1]) == f"Array({owner})" and code(privacy[2]) == "AllPlayers(AllTeams)",
+                               "Pilar: Privacy ON mostra icona soltanto al proprietario")
+                checks.require(all(capture.args == ("Global.ObjectiveIconPlayer",)
+                                   for capture in iter_calls(call.args[0], "Evaluate Once")),
+                               "Pilar: solo identita owner catturata, Privacy e toggle restano live")
                 branches = [code(branch.splitlines()[0]) for branch in conditional_branches_containing(manager.body, call.start)]
                 checks.require("If(Global.ObjectiveIconIds[Global.ObjectiveIconIndex]==0);" in branches,
                                 "Pilar: creazione soltanto per slot senza handle")
@@ -2636,6 +2658,26 @@ def validate_social_beacon(checks: Checks, source: str, rules: list[Rule], globa
                        "Pilar: cleanup distrugge l'entità nativa e azzera la selezione")
         checks.require("StopChasingPlayerVariable(Global.ObjectiveIconOwners[Global.ObjectiveIconIndex],ObjectiveIconPosition);" in code(cleanup.body),
                        "Pilar: cleanup ferma esclusivamente la chase dell'owner")
+
+    navigation = next((rule for rule in rules if "Event Player.IconCursor = (Event Player.IconCursor" in rule.body), None)
+    checks.require(navigation is not None and "CountOf(Global.PlayerIcons)+1" in code(navigation.body),
+                   "Pilar: navigazione include l'opzione extra dell'icona fluttuante")
+    apply = rule_by_subroutine(rules, "ApplyPlayerIconPage")
+    checks.require(apply is not None and "EventPlayer.IconCursor==CountOf(Global.PlayerIcons)" in code(apply.body)
+                   and "EventPlayer.NocturneState[14]=EventPlayer.NocturneState[14]==False;" in code(apply.body),
+                   "Pilar: l'ultima opzione alterna solo l'icona fluttuante")
+    reset = rule_by_subroutine(rules, "ResetMenuPage")
+    checks.require(reset is not None and "EventPlayer.NocturneState[14]=True;" in code(reset.body),
+                   "Pilar: reset Icon ripristina icona fluttuante ON")
+    renderer = rule_by_subroutine(rules, "DrawPlayerIconMenu")
+    if renderer is None:
+        renderer = next((rule for rule in rules if "7 - ICON" in rule.body and "IconCursor + 1" in rule.body
+                         and len(list(iter_calls(rule.body, "Create HUD Text"))) == 1
+                         and subroutine_target(rule) != "DrawMainMenu"), None)
+    checks.require(renderer is not None and "FLOATING" in renderer.body
+                   and "EventPlayer.NocturneState[14]" in code(renderer.body)
+                   and "CountOf(Global.PlayerIcons)+1" in code(renderer.body),
+                   "Pilar: menu Icon mostra stato e opzione fluttuante senza sostituire l'icona scelta")
 
 
 def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_entries: list[Declaration], subroutines: set[str]) -> None:

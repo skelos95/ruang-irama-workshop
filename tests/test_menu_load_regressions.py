@@ -60,7 +60,7 @@ class MenuLoadEvaluator:
                      spawned=True, InspectionPrivacyActive=False,
                      PlayerListUpdatePending=False)
         state["NocturneState"] = [0, 0, 0, 0, 0, True, 0, 0, 0, False,
-                                   "The pages await your hand."]
+                                   "The pages await your hand.", None, "", 0, True]
         state.update(changes)
         self.players[name] = state
         if state["IsHuman"]:

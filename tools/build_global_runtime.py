@@ -218,14 +218,17 @@ def compact_palette(text: str) -> str:
 
 
 def compact_icon_visibility(text: str) -> str:
-    """Keep per-frame entity validity; share the other visibility predicates."""
+    """Cache membership/choice; keep enabled, privacy and entity validity live."""
     rule = next(item for item in validator.extract_rules(text) if prefix(item) == '89e')
     body = rule.body
     for call in reversed(list(validator.iter_calls(body, 'Create Icon'))):
         args = list(call.args)
         selected = re.search(r'IconIndex\) == (\d+)', args[0])
         assert selected is not None
-        args[0] = f'And(Entity Exists(Evaluate Once(Global.ObjectiveIconPlayer)), Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == {selected[1]}) ? All Players(All Teams) : Empty Array'
+        owner = 'Evaluate Once(Global.ObjectiveIconPlayer)'
+        args[0] = (f'And(Entity Exists({owner}), And(Global.VisibleIconChoices[Evaluate Once(Global.ObjectiveIconIndex)] == {selected[1]}, '
+                   f'Player Variable({owner}, NocturneState)[14] == True)) ? '
+                   f'(Player Variable({owner}, InspectionPrivacyActive) == True ? Array({owner}) : All Players(All Teams)) : Empty Array')
         replacement = 'Create Icon(' + ', '.join(args) + ')'
         body = body[:call.start] + replacement + body[call.end:]
     return text[:rule.start] + body + text[rule.end:]

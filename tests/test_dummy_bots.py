@@ -25,7 +25,7 @@ class DummyBotFeatureTests(unittest.TestCase):
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)
             self.assertNotIn('"LOBBY & CHILL TIME"', source)
-            self.assertIn('"SOULS & ECHOES"', source)
+            self.assertIn('"SOULS & ECHOES\\n "', source)
             self.assertIn("3 + Count Of(Filtered Array(", source)
             self.assertIn("1 + Event Player.HudSlot", source)
             self.assertNotIn("-13 + Event Player.HudSlot", source)

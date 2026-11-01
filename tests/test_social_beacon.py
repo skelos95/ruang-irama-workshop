@@ -5,13 +5,15 @@ cover script bookkeeping and geometry, not the client's icon dimensions or art.
 """
 
 import math
+import json
 import operator
 import re
 import unittest
 from pathlib import Path
 
+from tools import build_global_runtime as compiler
 from tools import validate_workshop as validator
-from tests.test_audit_lifecycle import AuditExpression, AuditLifecycleEvaluator
+from tests.test_audit_lifecycle import AuditLifecycleEvaluator
 from tests.test_fly_motion import Vector
 from tests.test_roster_rejoin_regressions import SOURCES
 
@@ -68,6 +70,8 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
         self.chases = {}
         self.chase_started = []
         self.chase_stopped = []
+        _, fields, _, _ = validator.declaration_entries(source)
+        self.fields = {field.name for field in fields}
         self.icon_choices = re.findall(r'Icon String\(([^)]+)\)',
                                       source[source.index("PlayerIcons = Array("):source.index("IconNames = Array(")])
         self.globals.update(ObjectiveIconIndex=0, PlayerIcons=[""] + [f"glyph-{i}" for i in range(1, 21)])
@@ -80,6 +84,7 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
     def add(self, identity, **changes):
         self.join(identity)
         defaults = dict(IsHuman=True, IconIndex=1, ColorIndex=0,
+                        InspectionPrivacyActive=False, NocturneState=[0] * 14 + [True],
                         PlayerListUpdatePending=False, TeamChangeProcessed=False,
                         NameColor=(255, 255, 255, 255), Position=Vector(10, 0, 20),
                         ObjectiveIconPosition=Vector(0, 0.5, 0), exists=True)
@@ -126,13 +131,7 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
         return super().call(name, args)
 
     def evaluate(self, expression):
-        packed = re.sub(r"\s+", "", expression)
-        while "[" in packed:
-            converted = re.sub(r"([A-Za-z_][\w.]*)\[([^\[\]]+)\]", r"At(\1,\2)", packed)
-            if converted == packed:
-                raise AssertionError(f"unsupported array access: {expression}")
-            packed = converted
-        tree = AuditExpression(packed).tree
+        tree = compiler._Expression(expression).tree
         def multiply(left, right):
             if isinstance(left, Vector) and isinstance(right, Vector):
                 return Vector(left.x * right.x, left.y * right.y, left.z * right.z)
@@ -144,13 +143,24 @@ class SocialBeaconEvaluator(AuditLifecycleEvaluator):
                       "<=": operator.le, ">=": operator.ge}
 
         def visit(node):
-            kind = node[0]
-            if kind == "literal": return node[1]
-            if kind == "name": return self.resolve(node[1])
-            if kind == "negate": return -visit(node[1])
-            if kind == "conditional": return visit(node[2] if visit(node[1]) else node[3])
-            if kind != "call": return operations[kind](visit(node[1]), visit(node[2]))
-            name, args = node[1:]
+            kind = node.kind
+            if kind == "literal": return json.loads(node.value) if node.value.startswith('"') else float(node.value)
+            if kind == "name":
+                if node.value == "Global": return self.globals
+                if node.value == "Event Player": return self.event_player
+                if node.value == "Current Array Element": return self.current
+                if node.value in self.fields: return node.value
+                return self.resolve(node.value.replace(" ", ""))
+            if kind == "member":
+                owner = visit(node.children[0])
+                return owner.get(node.value, 0) if isinstance(owner, dict) else self.players.get(owner, {}).get(node.value, 0)
+            if kind == "index":
+                values, index = visit(node.children[0]), int(visit(node.children[1]))
+                return values[index] if isinstance(values, (list, tuple)) and 0 <= index < len(values) else 0
+            if kind == "unary": return -visit(node.children[0])
+            if kind == "conditional": return visit(node.children[1 if visit(node.children[0]) else 2])
+            if kind == "binary": return operations[node.value](visit(node.children[0]), visit(node.children[1]))
+            name, args = node.value.replace(" ", ""), node.children
             if name in ("And", "Or"):
                 return (all if name == "And" else any)(bool(visit(arg)) for arg in args)
             if name in ("FilteredArray", "SortedArray", "MappedArray"):
@@ -268,8 +278,39 @@ class SocialBeaconTests(unittest.TestCase):
                     self.assertEqual(model.evaluate(visual[1]), state["Position"] + Vector(2, 1, 3))
                     self.assertEqual(model.evaluate(visual[4]), (selected, 90, 180, 255))
                     self.assertEqual(model.evaluate(visual[0]), ["owner", "other"])
+                    state["InspectionPrivacyActive"] = True
+                    self.assertEqual(model.evaluate(visual[0]), ["owner"])
+                    state["NocturneState"][14] = False
+                    self.assertEqual(model.evaluate(visual[0]), [])
+                    state["NocturneState"][14] = True
+                    self.assertEqual(model.evaluate(visual[0]), ["owner"])
+                    state["InspectionPrivacyActive"] = False
+                    self.assertEqual(model.evaluate(visual[0]), ["owner", "other"])
+                    self.assertEqual(model.globals["VisibleIconChoices"][3], selected)
                     model.globals["VisibleIconChoices"][3] = 0
                     self.assertEqual(model.evaluate(visual[0]), [])
+
+    def test_privacy_and_floating_toggle_reevaluate_without_recreating_the_owned_icon(self):
+        for source, model in self.models():
+            with self.subTest(source=source):
+                state = model.add("owner")
+                model.add("viewer", IconIndex=0)
+                model.run(now=100)
+                visual = model.visual("owner")
+                handle = model.globals["ObjectiveIconIds"][0]
+                self.assertEqual(model.evaluate(visual[0]), ["owner", "viewer"])
+                model.globals.update(ObjectiveIconPlayer="viewer", ObjectiveIconIndex=11)
+                for private, enabled, expected in (
+                    (True, True, ["owner"]), (True, False, []),
+                    (False, False, []), (False, True, ["owner", "viewer"]),
+                    (True, True, ["owner"]),
+                ):
+                    state["InspectionPrivacyActive"] = private
+                    state["NocturneState"][14] = enabled
+                    self.assertEqual(model.evaluate(visual[0]), expected)
+                    self.assertEqual(state["IconIndex"], 1)
+                    self.assertEqual(model.created, [handle])
+                    self.assertEqual(model.destroyed, [])
 
     def test_compiled_visibility_cache_needs_owner_but_never_an_objective(self):
         root = Path(__file__).resolve().parents[1]
@@ -388,6 +429,7 @@ class SocialBeaconTests(unittest.TestCase):
         for source, model in self.models():
             with self.subTest(source=source):
                 state = model.add("human")
+                model.add("viewer", IconIndex=0)
                 for selected, expected in enumerate(model.icon_choices, 1):
                     if selected > 1:
                         old = model.visual("human")
@@ -396,6 +438,14 @@ class SocialBeaconTests(unittest.TestCase):
                     model.run(now=100 + selected)
                     self.assertEqual(len(model.icons), 1)
                     self.assertEqual(model.visual("human")[2], expected)
+                    visual = model.visual("human")
+                    state["InspectionPrivacyActive"] = True
+                    self.assertEqual(model.evaluate(visual[0]), ["human"])
+                    state["NocturneState"][14] = False
+                    self.assertEqual(model.evaluate(visual[0]), [])
+                    state["NocturneState"][14] = True
+                    state["InspectionPrivacyActive"] = False
+                    self.assertEqual(model.evaluate(visual[0]), ["human", "viewer"])
                     self.assertEqual(model.globals["ObjectiveIconChoices"][0], selected)
                     self.assertEqual(len(model.created), selected)
                     self.assertEqual(len(model.destroyed), selected - 1)

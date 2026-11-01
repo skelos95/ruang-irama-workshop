@@ -18,7 +18,7 @@ Il 28 ottobre, dopo la PR #114, l'utente ha confermato: «funziona tutto». È u
 
 Il file da importare esegue comandi, HUD, fisica e pulizia nel contesto globale, senza regole `Ongoing - Each Player`. Gli eventi nativi registrano soltanto il lavoro da elaborare; timer e stato individuali separano sospensione, pulizia e nuova registrazione. Le preferenze restano personali.
 
-Il codice corrente usa **30.626 unità strutturali stimate**, massimo per regola 2.775 e 328.011 byte UTF-8 di testo da importare; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. I dettagli sono nei [controlli automatici](docs/VALIDAZIONE.md). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema o i nuovi menu sociali.
+Il codice corrente usa **31.652 unità strutturali stimate**, massimo per regola 2.940 e 337.063 byte UTF-8 di testo da importare; il pacchetto pubblicato 0.8.3 usava 27.496 unità, massimo 2.605 e 299.838 byte. I dettagli sono nei [controlli automatici](docs/VALIDAZIONE.md). Sono misure offline; gli elementi compilati e il carico del server si misurano nel gioco. Il riscontro generale dopo la PR #114 non registra le singole prove visive del tema o i nuovi menu sociali.
 
 Il 3 ottobre 2026 l'utente ha riferito stabilità dopo vari test. Il 4 ottobre la diagnostica della revisione `2e1c4ff` ha mostrato **36.381 elementi e una regola da 130 KB**, oltre i limiti del gioco. Il sorgente corrente compatta le formule duplicate delle icone, rimuove il Light Shaft e aggiunge un budget strutturale offline al preflight. Le 36 scelte delle icone restano disponibili, entro 5 m tridimensionali dal proprietario e indipendenti dall’obiettivo. I controlli automatici verificano codice e flussi simulati; il nuovo conteggio compilato richiede un'importazione nel client.
 
@@ -31,7 +31,7 @@ La versione in [VERSION](VERSION) è **0.8.3**; la [release 0.8.3](https://githu
 3. Nelle impostazioni Workshop scegli durata **30–60 minuti** (default **30**) e diagnostica host, se necessaria.
 4. Avvia una nuova lobby. Al primo spawn si apre il menu principale sulla voce **Info / Controls**, con i comandi principali già nel sottotitolo; tieni Crouch e premi Interact per aprire la guida completa. Allo zero del countdown la partita si riavvia.
 
-Il file contiene le regole, non il preset delle mappe. Il titolo in alto a destra mostra **cozywatch.org [countdown]** nel sottotitolo dell'HUD, sopra HOST e separato da una riga vuota. Il roster si intitola **SOULS & ECHOES** e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne.». Non ci sono HUD separati per il sito o le località; il precedente sistema Server Location è rimosso.
+Il file contiene le regole, non il preset delle mappe. Il titolo in alto a destra mostra **cozywatch.org [countdown]** nel sottotitolo dell'HUD, sopra HOST e separato da una riga vuota. Il roster si intitola **SOULS & ECHOES**, con una riga vuota sotto il titolo, e il leader dei voti **CROWN OF ASH**. Il benvenuto è «Enter the Nocturne.». Non ci sono HUD separati per il sito o le località; il precedente sistema Server Location è rimosso.
 
 Chi resta senza eroe alla scelta iniziale riceve **Shion dopo 60 secondi**, al successivo controllo di un secondo. Poi può cambiare eroe liberamente; il timer non riparte dopo morti o cambi squadra.
 
@@ -71,7 +71,7 @@ Titolo e timer sono in alto a destra nel campo `Subheader`; HOST compare sotto s
 | 4 | Revenge | Debiti da uccisioni dirette |
 | 5 | Unkillable | OFF / 1 HP curabile / FULL HP |
 | 6 | Hero Voice | 5 preset |
-| 7 | Player Icon | Nessuna + 36 icone |
+| 7 | Player Icon | Nessuna + 36 icone; FLOATING ON/OFF |
 | 8 | Travel / Self Kill | ON/OFF dal principale; 5 pagine per teletrasporto, Attach e Self Kill |
 | 9 | Privacy | ON/OFF dal menu principale |
 | 10 | Try Your Luck | Vision, Acceleration, Skull, Team Heal, Burning, Hacked |
@@ -95,7 +95,7 @@ Il ripristino con **Crouch + Ultimate** agisce sulla voce selezionata nel princi
 | 3 — Soundtrack | Nessuna selezione, cursore al primo genere; Draconian bloccato escluso |
 | 5 — Unkillable | OFF |
 | 6 — Hero Voice | NORMAL |
-| 7 — Icon | NONE; Poison 2 per il profilo speciale |
+| 7 — Icon | NONE; Poison 2 per il profilo speciale; FLOATING ON |
 | 11 — Vote Player | Annulla soltanto il proprio voto |
 | 13 — Ghost / Fly | Entrambi OFF |
 | 14 — Multijump | OFF, livello 1 |
@@ -135,13 +135,13 @@ La diagnostica server rimane bianca ed è visibile solo all'host. Tutti i testi 
 
 Name Color ordina i [40 colori Nocturne](docs/NAME_COLORS.md) per sfumatura: bianco, grigi, nero, ori antichi, terre autunnali, rose appassite, viola crepuscolari, blu lunari e verdi muschio. Le scelte e gli indici restano 40; 34 valori RGB cambiano, mentre quelli degli indici interni 0–4 e 29 sono conservati. La pagina 1, il nome e l’icona mostrano esattamente il colore selezionato, inizialmente Moon White; Black usa nero puro anche nella preview. Charcoal resta all’indice 2 per il profilo speciale. Info / Controls 0 resta bianca sia nell’anteprima sia nella guida aperta con Interact: usa `Color(White)` direttamente, indipendente da Name Color, MenuColor e ciclo RGB, senza attendere la transizione del colore. Le altre pagine mescolano il 32% del Name Color scelto al 68% del proprio accento Nocturne, con transizioni fluide di 0,180 s; i sottotitoli usano un tono osso RGB (210, 200, 192) e Travel cinque tinte attenuate. Titolo, HOST, effetti Luck e anello Multijump condividono il ciclo RGB arcobaleno originale di 51 secondi.
 
-Le icone native scelte dagli umani fluttuano attorno al **proprietario, sempre entro 5 m di distanza tridimensionale**, senza fascio luminoso né nomi. Seguono subito la sua posizione, anche dopo movimento o teletrasporto, e mantengono il suo Name Color esatto. L’offset casuale ha distanza orizzontale 0–4 m e altezza 0,5–3 m: anche la combinazione massima resta entro 5 m. Non richiedono un obiettivo disponibile. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Nella lista Souls & Echoes le icone incorporate nel testo mantengono invece il bianco nativo; il Name Color si applica al testo della riga.
+Le icone native scelte dagli umani fluttuano attorno al **proprietario, sempre entro 5 m di distanza tridimensionale**, senza fascio luminoso né nomi. Seguono subito la sua posizione, anche dopo movimento o teletrasporto, e mantengono il suo Name Color esatto. L’offset casuale ha distanza orizzontale 0–4 m e altezza 0,5–3 m: anche la combinazione massima resta entro 5 m. Non richiedono un obiettivo disponibile. Il percorso successivo parte dalla posizione corrente prima che il precedente finisca, evitando pause fra gli aggiornamenti. Senza icona non compare alcun simbolo; ingressi, uscite e cambi squadra aggiornano e ripuliscono i 12 slot. Dummy e AI non creano icone. Il menu 7 conserva le 37 scelte esistenti (NONE + 36 icone) e aggiunge come ultima, 38ª voce **FLOATING ON/OFF**: selezionarla e premere Crouch + Interact alterna soltanto l’icona nel mondo, senza cambiare il simbolo scelto. Il default è ON e il reset della pagina 7 lo ripristina. Con FLOATING ON e Privacy OFF l’icona fluttuante è visibile a tutti; con Privacy ON la vede soltanto il proprietario. FLOATING OFF la nasconde a tutti, compreso il proprietario. Nella lista Souls & Echoes il simbolo scelto resta sempre pubblico, anche con Privacy ON o FLOATING OFF, e mantiene il bianco nativo; il Name Color si applica al testo della riga. NONE resta l’assenza di un simbolo scelto.
 
-Privacy impedisce Camera, inspection, Teleport, Attach e Whispers verso il giocatore; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Whispers ha inoltre un filtro di ricezione personale indipendente. Preferenze, pagina e cursore persistono tra morte e cambio eroe. **Cambio squadra e uscita/rientro ripartono dai default**, aprendo nuovamente il principale su Info / Controls al completamento della registrazione.
+Privacy impedisce Camera, inspection, Teleport, Attach e Whispers verso il giocatore e riserva al solo proprietario l’icona fluttuante attiva; l'effetto Vision di Try Your Luck mostra intenzionalmente anche i giocatori privati. Whispers ha inoltre un filtro di ricezione personale indipendente. Preferenze, pagina e cursore persistono tra morte e cambio eroe. **Cambio squadra e uscita/rientro ripartono dai default**, aprendo nuovamente il principale su Info / Controls al completamento della registrazione.
 
 Privacy riguarda le funzioni personalizzate del Workshop: non limita la visuale spettatore o gli strumenti amministrativi nativi.
 
-I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie. Dopo il teletrasporto iniziale verso un punto sicuro restano fermi, senza inseguire: guardano soltanto il nemico umano vivo più vicino con **Dummy Target ON**. La voce `12 - DUMMY TARGET` mostra `ENEMY DUMMY TARGETING: ON/OFF`; ON richiede un dummy avversario presente, OFF è sempre disponibile. Se il dummy avversario scompare, la preferenza torna OFF entro un secondo e richiede una nuova attivazione. Privacy conserva il proprio significato e non viene modificata da questo consenso. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
+I dummy compaiono solo in Schermaglia, al massimo uno per squadra con almeno due slot liberi. Lasciano spazio quando la squadra si riempie. Dopo il teletrasporto iniziale verso un punto sicuro restano fermi, senza inseguire: guardano soltanto il nemico umano vivo più vicino con **Dummy Target ON**. La voce `12 - DUMMY TARGET` mostra `DUMMY GAZE: ON/OFF`; ON richiede un dummy avversario presente, OFF è sempre disponibile. Se il dummy avversario scompare, la preferenza torna OFF entro un secondo e richiede una nuova attivazione. Privacy conserva il proprio significato e non viene modificata da questo consenso. [Dettagli tecnici dei dummy](docs/PROGETTO.md#dummy-e-bot-normali)
 
 Il nome visibile esatto `งูแรร์` riceve i default modificabili Charcoal / Poison 2 e il Vibes fisso `Draconian`. Il riconoscimento avviene per nome, quindi vale anche per un omonimo.
 

@@ -1416,6 +1416,17 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_call_argument(absolute, 0, call.args[0].replace(
             "Array Contains(Global.HumanPlayers, Evaluate Once(Global.ObjectiveIconPlayer))", "True"))
         self.assert_rejected(mutated, "Pilar: visibilita richiede owner nel roster")
+        audience = validator.parse_top_level_ternary(call.args[0])
+        self.assertIsNotNone(audience)
+        public_private_icon = audience[0] + " ? All Players(All Teams) : Empty Array"
+        self.assert_rejected(self.replace_call_argument(absolute, 0, public_private_icon),
+                             "Pilar: Privacy ON mostra icona soltanto al proprietario")
+        toggle = "Player Variable(Evaluate Once(Global.ObjectiveIconPlayer), NocturneState)[14] == True"
+        self.assertIn(toggle, call.args[0])
+        self.assert_rejected(self.replace_call_argument(absolute, 0, call.args[0].replace(toggle, "True")),
+                             "Pilar: icona fluttuante OFF nascosta a tutti immediatamente")
+        self.assert_rejected(self.replace_call_argument(absolute, 0, "Evaluate Once(" + call.args[0] + ")"),
+                             "Pilar: solo identita owner catturata, Privacy e toggle restano live")
         init = self.rule(lambda rule: "Global.ObjectiveIconOwners = Array(" in rule.body)
         mutated = self.inject_action(init, "Create Effect(All Players(All Teams), Light Shaft, Color(White), Objective Position(Objective Index), 5, Visible To Position Radius and Color);")
         self.assert_rejected(mutated, "Pilar: nessun Light Shaft o Create Effect persistente")
