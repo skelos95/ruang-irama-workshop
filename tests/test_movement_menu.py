@@ -198,15 +198,15 @@ class MovementMenuTests(unittest.TestCase):
                 state = model.viewer(MovementSpeed=400, MovementGravity=300)
                 model.run("91a", "viewer")
                 preview = model.evaluate(model.hud_bodies[state["MenuHud"]])
-                self.assertIn("16 - MOVEMENT / GRAVITY", preview)
+                self.assertIn("16 - SPEED / GRAVITY", preview)
                 self.assertIn("SPEED: 400% | GRAVITY: 300%", preview)
                 rule = validator.rule_by_subroutine(model.rules, "DrawMovementMenu")
                 hud = next(validator.iter_calls(rule.body, "Create HUD Text"))
                 model.event_player = "viewer"
                 controls = model.evaluate(hud.args[2])
-                for label in ("Crouch", "Primary Fire: +100%", "Secondary Fire: -100%",
-                              "Interact: select Speed / Gravity", "Reload: back", "Melee",
-                              "Ultimate: reset both to 100%"):
+                for label in ("Crouch", "Primary Fire +100%", "Secondary Fire -100%",
+                              "Interact Speed/Gravity", "Reload back", "Melee",
+                              "Ultimate 100% both"):
                     self.assertIn(label, controls)
 
     def test_live_bindings_follow_the_selected_parameter_and_the_hundred_boundary(self):
@@ -226,19 +226,21 @@ class MovementMenuTests(unittest.TestCase):
                 ):
                     state.update(MovementCursor=cursor, MovementSpeed=speed, MovementGravity=gravity)
                     controls = model.evaluate(hud.args[2])
-                    self.assertIn(f"Primary Fire: +{up}%", controls)
-                    self.assertIn(f"Secondary Fire: -{down}%", controls)
+                    self.assertIn(f"Primary Fire +{up}%", controls)
+                    self.assertIn(f"Secondary Fire -{down}%", controls)
 
-    def test_bootstrap_has_one_domain_title_with_timer_and_no_site_subtitle(self):
+    def test_bootstrap_has_domain_and_timer_in_right_subheader_above_host(self):
         for source, model in self.models():
             with self.subTest(source=source):
                 bootstrap = model.rule("00")
                 huds = list(validator.iter_calls(bootstrap.body, "Create HUD Text"))
-                self.assertEqual(len(huds), 5)
-                title = next(call for call in huds if call.args[4:6] == ("Top", "0"))
-                self.assertEqual(title.args[3], 'Custom String("cozywatch.org [{0}]", Global.ServerTimeText)')
-                self.assertFalse(any('Custom String("cozywatch.org")' in call.args[2] for call in huds))
-                self.assertTrue(any(call.args[4:6] == ("Top", "2") for call in huds))
+                self.assertEqual(len(huds), 3)
+                title = next(call for call in huds if call.args[4:6] == ("Right", "0"))
+                self.assertEqual(title.args[2], 'Custom String("cozywatch.org [{0}]", Global.ServerTimeText)')
+                self.assertIn(r'Custom String("\n{0} {1} {2}\n "', title.args[3])
+                self.assertIn('Custom String("Host:")', title.args[3])
+                self.assertEqual(title.args[7:9], ("Global.RGB", "Global.RGB"))
+                self.assertFalse(any(call.args[4] == "Top" for call in huds))
 
     def test_generated_hud_uses_live_viewer_values_after_global_dispatch_clears(self):
         root = SOURCES[0][0].parents[1]
@@ -270,8 +272,8 @@ class MovementMenuTests(unittest.TestCase):
                 ):
                     context.player.update(MovementCursor=cursor, MovementSpeed=speed, MovementGravity=gravity)
                     rendered = controls.evaluate(context)
-                    self.assertRegex(rendered, rf"<PrimaryFire>: \+{up}(?:\.0)?%")
-                    self.assertRegex(rendered, rf"<SecondaryFire>: -{down}(?:\.0)?%")
+                    self.assertRegex(rendered, rf"<PrimaryFire> \+{up}(?:\.0)?%")
+                    self.assertRegex(rendered, rf"<SecondaryFire> -{down}(?:\.0)?%")
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (ROOT / "source/ruang_irama.en-US.source",
              ROOT / "tests/fixtures/semantic_reference.txt",
              ROOT / "workshop/ruang_irama.en-US.workshop")
-DEFAULT = [0, 0, 0, 0, 0, True, 0, 0, 0, False, "The pages await your hand."]
+DEFAULT = [0, 0, 0, 0, 0, True, 0, 0, 0, False, "The pages await your hand.", None, "", 0]
 CATALOGUES = ("PresenceNames", "FateNames", "WhisperNames", "AuraNames", "OmenLines")
 
 
@@ -69,6 +69,8 @@ class NocturneEvaluator(DirectToggleEvaluator):
         self.now = 100
         self.aim = None
         self.messages = []
+        self.message_arguments = []
+        self.reticle_queries = []
         self.draws = []
         self.draw_high = False
         self.effects = {}
@@ -84,6 +86,7 @@ class NocturneEvaluator(DirectToggleEvaluator):
                             MoonlitAuraPlayer=None, MoonlitAuraIndex=0,
                             FateResultOwners=[None] * 12, FateResultHudIds=[0] * 12,
                             FateResultDeadlines=[0] * 12, FateResultPlayer=None, FateResultIndex=0,
+                            WhisperPlayer=None, WhisperTarget=None,
                             PlayerHudSlots=[], PlayerIcons=[""] * 37,
                             GenreNames=[f"genre-{i}" for i in range(200)])
         for name in CATALOGUES:
@@ -160,7 +163,9 @@ class NocturneEvaluator(DirectToggleEvaluator):
     def call(self, name, args):
         if name == "Not": return not args[0]
         if name in ("EvaluateOnce", "UpdateEveryFrame"): return args[0]
-        if name == "PlayerClosestToReticle": return self.aim
+        if name == "PlayerClosestToReticle":
+            self.reticle_queries.append(tuple(args))
+            return self.aim
         if name == "RandomInteger":
             self.draws.append(tuple(args))
             return int(args[1] if self.draw_high else args[0])
@@ -233,7 +238,9 @@ class NocturneEvaluator(DirectToggleEvaluator):
                 rule = validator.rule_by_subroutine(self.rules, call.args[0])
                 self.execute(validator.rule_block(rule, "actions"))
             elif name in ("Small Message", "Big Message"):
-                self.messages.append((name, self.evaluate(call.args[0]), self.evaluate(call.args[1])))
+                installed = tuple(self.capture(arg) for arg in call.args)
+                self.message_arguments.append((name, *installed))
+                self.messages.append((name, self.evaluate(installed[0]), self.evaluate(installed[1])))
             elif name == "Create HUD Text":
                 installed = tuple(self.capture(arg) for arg in call.args)
                 super().execute(token + ";")
@@ -281,6 +288,29 @@ class NocturneEvaluator(DirectToggleEvaluator):
         conditions = validator.rule_block(rule, "conditions")
         if all(self.evaluate(condition.strip()) for condition in validator.split_top_level(conditions, ";") if condition.strip()):
             self.execute(validator.rule_block(rule, "actions"))
+
+    def preview_cycle(self, owner):
+        """Run the maintained 10 Hz preview branch with no native player event."""
+        rule = validator.rule_by_subroutine(self.rules, "ProcessPlayerCycle")
+
+        def find(nodes):
+            for node in nodes:
+                _, body, otherwise = node
+                if body is None:
+                    continue
+                if any(token == "Call Subroutine(RefreshWhisperTarget)" for token, _, _ in body):
+                    return node
+                nested = find(body) or find(otherwise)
+                if nested:
+                    return node
+            return None
+
+        node = find(program(validator.rule_block(rule, "actions")))
+        if node is None:
+            raise AssertionError("missing maintained Whisper preview cycle")
+        self.event_player = None
+        self.globals.update(ActivePlayer=owner, TriggerPlayer=None)
+        self.execute([node])
 
 
 class NocturneSocialTests(unittest.TestCase):
@@ -345,7 +375,7 @@ class NocturneSocialTests(unittest.TestCase):
                 expression = model.hud_bodies[handle]
                 initial = model.evaluate(expression)
                 with self.subTest(artifact=artifact, page=page):
-                    self.assertEqual(initial.splitlines()[0], title)
+                    self.assertEqual(initial.splitlines()[1], title)
                     for next_page in (-1, 20 if page != 20 else 17, page):
                         state["MenuPage"] = next_page
                         self.assertEqual(model.evaluate(expression), initial)
@@ -369,8 +399,8 @@ class NocturneSocialTests(unittest.TestCase):
                     self.assertEqual((state["MenuPage"], state["MainMenuCursor"]), (-1, page))
                     self.assertEqual(model.destroyed_hud_text[old_handle], initial)
                     self.assertEqual(model.destroyed_huds.count(old_handle), 1)
-                    self.assertEqual(model.evaluate(model.hud_bodies[state["MenuHud"]]).splitlines()[0],
-                                     initial.splitlines()[0])
+                    self.assertEqual(model.evaluate(model.hud_bodies[state["MenuHud"]]).splitlines()[1],
+                                     initial.splitlines()[1])
                     self.assertEqual(len(model.created_huds), start + 1)
                     model.controller("11", owner)
                     self.assertEqual(len(model.created_huds), start + 1)
@@ -430,10 +460,10 @@ class NocturneSocialTests(unittest.TestCase):
             state = model.add("owner", MenuPage=17)
             model.routine("DrawMenu", "owner")
             expression = model.hud_bodies[state["MenuHud"]]
-            self.assertEqual(model.evaluate(expression).splitlines()[0], "17 - PRESENCE")
+            self.assertEqual(model.evaluate(expression).splitlines()[1], "17 - PRESENCE")
             state["MenuPage"] = -1
             with self.subTest(artifact=path.name):
-                self.assertEqual(model.evaluate(expression).splitlines()[0], "20 - MOONLIT AURA")
+                self.assertEqual(model.evaluate(expression).splitlines()[1], "20 - MOONLIT AURA")
 
     def test_fates_uses_native_draw_bounds_and_respects_cooldown_after_reset(self):
         for artifact, model in self.models():
@@ -556,6 +586,181 @@ class NocturneSocialTests(unittest.TestCase):
             self.assertFalse(any(item[1] != "owner" for item in model.messages))
             self.assertEqual(owner["NocturneState"][6], before)
 
+    def test_whisper_preview_tracks_fresh_aim_without_changing_ack_or_cooldown(self):
+        for artifact, model in self.models():
+            owner = model.add("owner", MenuPage=19, held={"Crouch"})
+            model.add("first", DisplayName="First soul")
+            model.add("second", DisplayName="Second soul")
+            owner["NocturneState"][6] = model.now + 15
+            owner["NocturneState"][12:14] = ["Prior receipt", model.now + 3]
+            before = deepcopy(owner["NocturneState"])
+            for target in ("first", "second", None, "first"):
+                model.aim = target
+                start = len(model.reticle_queries)
+                model.preview_cycle("owner")
+                with self.subTest(artifact=artifact, target=target):
+                    self.assertEqual(owner["NocturneState"][11], target)
+                    self.assertEqual(owner["NocturneState"][:11], before[:11])
+                    self.assertEqual(owner["NocturneState"][12:], before[12:])
+                    self.assertEqual(len(model.reticle_queries), start + 1)
+                    self.assertEqual(model.messages, [])
+
+    def test_whisper_preview_clears_when_target_becomes_unavailable_or_reception_changes(self):
+        blocked = ({"alive": False}, {"spawned": False}, {"exists": False},
+                   {"IsHuman": False}, {"IsPrepared": False}, {"PlayerCycleActive": True},
+                   {"InspectionPrivacyActive": True}, {"LastTeam": 2},
+                   {"in_view": False}, {"los": False}, {"receive": False}, {"registered": False})
+        for artifact, model in self.models():
+            owner = model.add("owner", MenuPage=19, held={"Crouch"})
+            for changes in blocked:
+                target = model.add("target")
+                model.aim = "target"
+                model.preview_cycle("owner")
+                self.assertEqual(owner["NocturneState"][11], "target")
+                for field, value in changes.items():
+                    if field == "receive": target["NocturneState"][5] = value
+                    elif field == "registered": model.globals["HumanPlayers"].remove("target")
+                    else: target[field] = value
+                model.preview_cycle("owner")
+                with self.subTest(artifact=artifact, blocked=changes):
+                    self.assertIsNone(owner["NocturneState"][11])
+                    self.assertEqual(owner["NocturneState"][6], 0)
+                    self.assertEqual(owner["NocturneState"][12:], ["", 0])
+                model.globals["HumanPlayers"] = ["owner"]
+
+    def test_whisper_preview_clears_on_crouch_release_page_exit_or_sender_unavailability(self):
+        changes = ({"held": set()}, {"MenuOpen": False}, {"MenuPage": -1},
+                   {"MenuPage": 18}, {"alive": False}, {"spawned": False}, {"IsHuman": False})
+        for artifact, model in self.models():
+            model.add("target")
+            for change in changes:
+                owner = model.add("owner", MenuPage=19, held={"Crouch"})
+                model.aim = "target"
+                model.preview_cycle("owner")
+                self.assertEqual(owner["NocturneState"][11], "target")
+                owner.update(change)
+                start = len(model.reticle_queries)
+                model.preview_cycle("owner")
+                with self.subTest(artifact=artifact, sender=change):
+                    self.assertIsNone(owner["NocturneState"][11])
+                    self.assertEqual(len(model.reticle_queries), start)
+
+    def test_whisper_send_uses_current_aim_instead_of_the_last_preview(self):
+        for artifact, model in self.models():
+            owner = model.add("owner", MenuPage=19, held={"Crouch"})
+            model.add("previewed", DisplayName="Previous soul")
+            model.add("current", DisplayName="Current soul")
+            model.aim = "previewed"
+            model.preview_cycle("owner")
+            model.aim = "current"
+            model.apply("owner", 19, 2)
+            with self.subTest(artifact=artifact):
+                self.assertEqual({message[1] for message in model.messages}, {"owner", "current"})
+                self.assertEqual(owner["NocturneState"][11], "current")
+                self.assertEqual(owner["NocturneState"][6], model.now + 15)
+                self.assertIn("RESPECT", owner["NocturneState"][12])
+                self.assertIn("Current soul", owner["NocturneState"][12])
+                self.assertNotIn("Previous soul", owner["NocturneState"][12])
+                self.assertEqual(owner["NocturneState"][13], model.now + 3)
+
+    def test_failed_whisper_send_does_not_create_or_extend_a_receipt_or_cooldown(self):
+        for artifact, model in self.models():
+            owner = model.add("owner", MenuPage=19, held={"Crouch"})
+            target = model.add("target")
+            model.aim = "target"
+            model.preview_cycle("owner")
+            target["InspectionPrivacyActive"] = True
+            model.apply("owner", 19, 1)
+            with self.subTest(artifact=artifact, failure="private after preview"):
+                self.assertIsNone(owner["NocturneState"][11])
+                self.assertEqual(owner["NocturneState"][6], 0)
+                self.assertEqual(owner["NocturneState"][12:], ["", 0])
+                self.assertFalse(any("SENT" in message[2] for message in model.messages))
+            target["InspectionPrivacyActive"] = False
+            model.apply("owner", 19, 1)
+            before = deepcopy(owner["NocturneState"])
+            model.now += 1
+            model.apply("owner", 19, 2)
+            with self.subTest(artifact=artifact, failure="cooldown"):
+                self.assertEqual(owner["NocturneState"][6], before[6])
+                self.assertEqual(owner["NocturneState"][12:], before[12:])
+
+    def test_whisper_hud_shows_valid_target_and_a_three_second_sent_snapshot(self):
+        for artifact, model in self.models():
+            owner = model.add("owner", MenuPage=19)
+            target = model.add("target", DisplayName="Distant soul")
+            model.add("other", DisplayName="Other soul")
+            model.aim = "target"
+            model.routine("DrawMenu", "owner")
+            expression = model.hud_bodies[owner["MenuHud"]]
+            with self.subTest(artifact=artifact, phase="released"):
+                self.assertIn("HOLD CROUCH", model.evaluate(expression))
+                self.assertNotIn("Distant soul", model.evaluate(expression))
+            owner["held"] = {"Crouch"}
+            model.preview_cycle("owner")
+            model.event_player = "owner"
+            self.assertIn("TARGET: Distant soul", model.evaluate(expression))
+            for field in ("in_view", "los"):
+                target[field] = False
+                with self.subTest(artifact=artifact, phase="geometry changed before next cycle", field=field):
+                    self.assertNotIn("Distant soul", model.evaluate(expression))
+                target[field] = True
+            target["InspectionPrivacyActive"] = True
+            self.assertNotIn("Distant soul", model.evaluate(expression))
+            model.preview_cycle("owner")
+            model.event_player = "owner"
+            with self.subTest(artifact=artifact, phase="private"):
+                self.assertIn("TARGET: NO WILLING SOUL", model.evaluate(expression))
+                self.assertNotIn("Distant soul", model.evaluate(expression))
+            target["InspectionPrivacyActive"] = False
+            model.apply("owner", 19, 3)
+            receipt = "SENT: WITHERED ROSE -> Distant soul"
+            self.assertEqual(owner["NocturneState"][12], receipt)
+            model.aim = "other"
+            model.preview_cycle("owner")
+            model.event_player = "owner"
+            owner["NocturneState"][4] = 5
+            target["DisplayName"] = "Renamed soul"
+            model.globals.update(ActivePlayer=None, TriggerPlayer=None,
+                                 WhisperPlayer=None, WhisperTarget=None)
+            with self.subTest(artifact=artifact, phase="sent snapshot"):
+                rendered = model.evaluate(expression)
+                self.assertIn("TARGET: Other soul", rendered)
+                self.assertIn(receipt, rendered)
+                self.assertNotIn("SENT: RESONANCE", rendered)
+                self.assertNotIn("SENT: WITHERED ROSE -> Renamed soul", rendered)
+                model.now += 2.999
+                self.assertIn(receipt, model.evaluate(expression))
+                model.now += 0.001
+                self.assertNotIn(receipt, model.evaluate(expression))
+
+    def test_whisper_messages_keep_exact_send_time_text_and_recipients_after_reset(self):
+        for artifact, model in self.models():
+            owner = model.add("owner", DisplayName="Sender soul", MenuPage=19, held={"Crouch"})
+            target = model.add("target", DisplayName="Recipient soul")
+            model.add("other", DisplayName="Other soul")
+            model.aim = "target"
+            model.apply("owner", 19, 4)
+            installed = model.message_arguments[:]
+            expected = [
+                ("Small Message", "target", "Sender soul: A gentle embrace across the silence."),
+                ("Small Message", "owner", "SENT: GENTLE EMBRACE -> Recipient soul"),
+            ]
+            self.assertEqual(model.messages, expected)
+            owner["NocturneState"][4] = 5
+            model.aim = "other"
+            target["DisplayName"] = "Changed recipient"
+            owner["DisplayName"] = "Changed sender"
+            model.routine("ResetMenuPage", "owner")
+            model.globals.update(ActivePlayer=None, TriggerPlayer=None,
+                                 WhisperPlayer=None, WhisperTarget=None)
+            model.event_player = None
+            with self.subTest(artifact=artifact):
+                self.assertEqual([(kind, model.evaluate(recipient), model.evaluate(body))
+                                  for kind, recipient, body in installed], expected)
+                self.assertEqual(owner["NocturneState"][11:], [None, "", 0])
+                self.assertEqual(owner["NocturneState"][6], model.now + 15)
+
     def test_whispers_reject_invalid_private_dead_or_transitioning_targets(self):
         blocked = ({"alive": False}, {"spawned": False}, {"exists": False},
                    {"IsHuman": False}, {"IsPrepared": False}, {"PlayerCycleActive": True},
@@ -596,9 +801,11 @@ class NocturneSocialTests(unittest.TestCase):
             model.apply("owner", 19, 0)
             self.assertFalse(owner["NocturneState"][5])
             owner["NocturneState"][6] = model.now + 15
+            owner["NocturneState"][11:] = ["target", "SENT: GREETING -> target", model.now + 3]
             model.routine("ResetMenuPage", "owner")
             with self.subTest(artifact=artifact):
                 self.assertEqual(owner["NocturneState"][4:7], [0, True, model.now + 15])
+                self.assertEqual(owner["NocturneState"][11:], [None, "", 0])
 
     def test_aura_has_one_handle_per_owner_and_twelve_total_after_repeated_changes(self):
         for artifact, model in self.models():
@@ -709,9 +916,9 @@ class NocturneMutationTests(unittest.TestCase):
 
     def test_social_gate_rejects_missing_consent_lifecycle_geometry_or_cooldown(self):
         cases = (
-            ("Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);", "", "consenso e target valido"),
-            ("Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);", "", "consenso e target valido"),
-            ("Abort If(Player Variable(Event Player.InspectionTarget, PlayerCycleActive) == True);", "", "consenso e target valido"),
+            ("Abort If(Player Variable(Global.WhisperTarget, NocturneState)[5] == False);", "", "consenso e target valido"),
+            ("Abort If(Player Variable(Global.WhisperTarget, InspectionPrivacyActive) == True);", "", "consenso e target valido"),
+            ("Abort If(Player Variable(Global.WhisperTarget, PlayerCycleActive) == True);", "", "consenso e target valido"),
             ("Event Player.NocturneState[3] = Total Time Elapsed + 5;", "Event Player.NocturneState[3] = Total Time Elapsed;", "cooldown 5s"),
             ("Event Player.NocturneState[6] = Total Time Elapsed + 15;", "Event Player.NocturneState[6] = Total Time Elapsed;", "cooldown 15s"),
         )
@@ -737,9 +944,50 @@ class NocturneMutationTests(unittest.TestCase):
                 self.assertTrue(any(expected in error for error in self.errors(mutated)))
 
     def test_whispers_gate_rejects_restoring_a_distance_limit(self):
-        consent = "Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);"
-        mutated = self.source.replace(consent, consent + "\nAbort If(Distance Between(Event Player, Event Player.InspectionTarget) > 25);", 1)
+        consent = "Abort If(Player Variable(Global.WhisperTarget, NocturneState)[5] == False);"
+        mutated = self.source.replace(consent, consent + "\nAbort If(Distance Between(Global.WhisperPlayer, Global.WhisperTarget) > 25);", 1)
         self.assertTrue(any("Whispers senza limite di distanza" in error for error in self.errors(mutated)))
+
+    def test_whisper_gate_requires_shared_refresh_live_preview_and_bounded_ack(self):
+        cases = (
+            ("Call Subroutine(RefreshWhisperTarget);", "", "preview Whispers nel ciclo 10 Hz"),
+            ("Global.ActivePlayer.MenuPage == 19", "Global.ActivePlayer.MenuPage >= 17", "preview solo per umano"),
+            ("Global.WhisperPlayer.NocturneState[11] = Null;", "", "helper azzera preview"),
+            ("Event Player.InspectionTarget = Event Player.NocturneState[11];", "", "rivalida la mira fresca"),
+            ("Event Player.NocturneState[13] = Total Time Elapsed + 3;", "Event Player.NocturneState[13] = Total Time Elapsed + 30;", "ricevuta SENT"),
+            ("Evaluate Once(Global.WhisperNames[Event Player.NocturneState[4]])", "Global.WhisperNames[Event Player.NocturneState[4]]", "ricevuta SENT"),
+            ("Evaluate Once(Player Variable(Event Player.InspectionTarget, DisplayName))", "Player Variable(Event Player.InspectionTarget, DisplayName)", "ricevuta SENT"),
+            ("Global.WhisperTarget = Null;\n\t\tAbort If(Global.WhisperPlayer == Null);", "Global.WhisperPlayer.NocturneState[12] = Custom String(\"SENT\");\n\t\tAbort If(Global.WhisperPlayer == Null);", "preview Whispers non cambia"),
+        )
+        for old, new, expected in cases:
+            with self.subTest(mutation=old):
+                self.assertIn(old, self.source)
+                self.assertTrue(any(expected in error for error in self.errors(self.source.replace(old, new, 1))))
+
+    def test_whisper_gate_rejects_mutable_message_recipient_or_receipt_text(self):
+        handler = validator.rule_by_subroutine(validator.extract_rules(self.source), "ApplyNocturnePage")
+        for old, new, expected in (
+            ("Evaluate Once(Event Player.InspectionTarget)", "Event Player.InspectionTarget", "messaggio privato al destinatario"),
+            ("Evaluate Once(Event Player.NocturneState[12])", "Event Player.NocturneState[12]", "congela tutto il testo"),
+        ):
+            with self.subTest(mutation=old):
+                self.assertIn(old, handler.body)
+                body = handler.body.replace(old, new, 1)
+                mutated = self.source[:handler.start] + body + self.source[handler.end:]
+                self.assertTrue(any(expected in error for error in self.errors(mutated)))
+
+    def test_whisper_gate_rejects_unguarded_private_name_in_live_hud(self):
+        renderer = validator.rule_by_subroutine(validator.extract_rules(self.source), "DrawNocturneMenu")
+        for guard in (
+            "Player Variable(Event Player.NocturneState[11], InspectionPrivacyActive) == False",
+            "Is In View Angle(Event Player, Eye Position(Event Player.NocturneState[11]), 12) == True",
+            "Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.NocturneState[11]), Barriers Do Not Block LOS) == True",
+        ):
+            with self.subTest(guard=guard):
+                body = renderer.body.replace(guard, "True", 1)
+                self.assertNotEqual(body, renderer.body)
+                mutated = self.source[:renderer.start] + body + self.source[renderer.end:]
+                self.assertTrue(any("nome preview Whispers solo" in error for error in self.errors(mutated)))
 
     def test_fates_gate_requires_private_result_snapshot_spacing_and_expiration(self):
         fate = validator.rule_by_subroutine(validator.extract_rules(self.source), "ShowFateResult")

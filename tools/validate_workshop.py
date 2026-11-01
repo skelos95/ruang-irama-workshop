@@ -1136,20 +1136,21 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         (
             call for call in hud_calls
             if len(call.args) >= 4
-            and "cozywatch.org" in call.args[3]
-            and "Global.ServerTimeText" in call.args[3]
+            and "cozywatch.org" in call.args[2]
+            and "Global.ServerTimeText" in call.args[2]
         ),
         None,
     )
     checks.require(server_title is not None, "HUD titolo Cozywatch e timer server assente")
     if server_title:
-        checks.equal(server_title.args[2].strip(), "Null", "HUD titolo Cozywatch: Subheader")
-        checks.equal(server_title.args[4].strip(), "Top", "HUD titolo Cozywatch: posizione")
+        checks.equal(server_title.args[2].strip(), 'Custom String("cozywatch.org [{0}]", Global.ServerTimeText)',
+                     "HUD titolo Cozywatch: Subheader con dominio e timer")
+        checks.equal(server_title.args[4].strip(), "Right", "HUD titolo Cozywatch: posizione")
         checks.equal(server_title.args[5].strip(), "0", "HUD titolo Cozywatch: ordinamento")
-        checks.require('Custom String("cozywatch.org [{0}]"' in server_title.args[3],
+        checks.require('Custom String("cozywatch.org [{0}]"' in server_title.args[2],
                        "HUD titolo Cozywatch deve mostrare il timer tra parentesi quadre")
-        checks.equal(server_title.args[8].strip(), "Global.RGB", "HUD titolo Cozywatch: colore RGB invariato")
-        checks.require("\\n" not in server_title.args[3],
+        checks.equal(server_title.args[7].strip(), "Global.RGB", "HUD titolo Cozywatch: colore RGB invariato")
+        checks.require("\\n" not in server_title.args[2],
                        "HUD titolo Cozywatch non deve contenere spaziatura incorporata")
 
     init_rule = next(
@@ -1164,13 +1165,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     checks.require(init_rule is not None, "regola inizializzazione griglia HUD assente")
     if init_rule:
         init_hud_calls = list(iter_calls(init_rule.body, "Create HUD Text"))
-        checks.equal(len(init_hud_calls), 5, "numero HUD fissi nella regola iniziale")
+        checks.equal(len(init_hud_calls), 3, "numero HUD fissi nella regola iniziale")
 
     global_hud_calls = [
         call for call in hud_calls
         if call.args and call.args[0].strip() == "Global.HumanPlayers"
     ]
-    checks.equal(len(global_hud_calls), 6, "numero HUD globali: cinque fissi e un roster")
+    checks.equal(len(global_hud_calls), 4, "numero HUD globali: tre fissi e un roster")
 
     slot_assignments = re.findall(
         r"Global\.AvailableHudSlots\s*=\s*Array\(([^;]*)\);",
@@ -1188,8 +1189,6 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         ("Left", "0"),
         ("Left", "13"),
         ("Right", "0"),
-        ("Top", "0"),
-        ("Top", "2"),
     }
     fixed_hud: dict[tuple[str, str], Call] = {}
     for slot in sorted(fixed_slots):
@@ -1203,14 +1202,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.equal(len(matches), 1, f"HUD fisso {slot[0]} sort {slot[1]}")
         if matches:
             fixed_hud[slot] = matches[0]
-    checks.equal(len(fixed_hud), 5, "griglia HUD fissa Top/Left/Right")
+    checks.equal(len(fixed_hud), 3, "griglia HUD fissa Left/Right")
 
     field_contract = {
         ("Left", "0"): ("text", "SOULS & ECHOES"),
         ("Left", "13"): ("subheader", "Global.VoteLeaderName"),
-        ("Right", "0"): ("text", "Host:"),
-        ("Top", "0"): ("text", "cozywatch.org"),
-        ("Top", "2"): ("text", 'Custom String("  ")'),
     }
     for slot, (field, token) in field_contract.items():
         call = fixed_hud.get(slot)
@@ -1218,12 +1214,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             continue
         field_index = 2 if field == "subheader" else 3
         other_index = 3 if field == "subheader" else 2
-        if slot in {("Left", "-1"), ("Top", "2")}:
-            checks.equal(call.args[field_index].strip(), token,
-                         f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
-        else:
-            checks.require(token in call.args[field_index],
-                           f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
+        checks.require(token in call.args[field_index],
+                       f"HUD fisso {slot[0]} sort {slot[1]}: contenuto {field} errato")
         checks.equal(call.args[other_index].strip(), "Null",
                      f"HUD fisso {slot[0]} sort {slot[1]}: campo non usato")
 
@@ -1240,8 +1232,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                            f"HUD fisso {slot[0]} sort {slot[1]}: testo localizzato assente: {label}")
 
     checks.require(not any(len(call.args) >= 6 and call.args[0].strip() == "Global.HumanPlayers"
-                           and call.args[4].strip() == "Top" and call.args[5].strip() == "1"
-                           for call in hud_calls), "WEBSITE: HUD separato Top 1 rimosso")
+                           and call.args[4].strip() == "Top" and call.args[5].strip() in ("0", "1", "2")
+                           for call in hud_calls), "HUD globali Top 0/1/2 rimossi: centro libero sopra i menu")
 
     host = fixed_hud.get(("Right", "0"))
     if host:
@@ -1252,8 +1244,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         host_formats = [parse_literal(custom.args[0])
                         for custom in iter_calls(host.args[3], "Custom String")
                         if len(custom.args) == 4]
-        checks.equal(host_formats, ["{0} {1} {2}\n "],
-                     "HUD Host: Text deve lasciare spazio solo sotto il testo")
+        checks.equal(host_formats, ["\n{0} {1} {2}\n "],
+                     "HUD Host: Text deve separarsi dal sottotitolo e lasciare spazio sotto")
         checks.require("Evaluate Once(" not in host.args[3], "HUD Host: nome e icona devono seguire l'host corrente")
         checks.require(host.args[3].strip().endswith(': Custom String("")'),
                        "HUD Host: fallback senza host deve essere stringa vuota")
@@ -1307,8 +1299,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                        {("Left", "-2"), ("Left", "-1"), ("Right", "-16")},
                        "help HUD statici rimossi: usare Info / Controls")
 
-    checks.require("5 + Count Of(Filtered Array(Global.PlayerListHudIds" in mask_strings(source),
-                   "diagnostica HUD non include i cinque handle fissi")
+    checks.require("3 + Count Of(Filtered Array(Global.PlayerListHudIds" in mask_strings(source),
+                   "diagnostica HUD non include i tre handle fissi")
 
     roster_rule = next(
         (
@@ -1397,11 +1389,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                     if counts and len(counts.args) == 3:
                         checks.equal(
                             re.sub(r"\s+", "", counts.args[1]),
-                            "5+CountOf(FilteredArray(Global.PlayerListHudIds,CurrentArrayElement!=0))"
+                            "3+CountOf(FilteredArray(Global.PlayerListHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.MenuHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.TemporaryEffectHudIds,CurrentArrayElement!=0))"
                             "+CountOf(FilteredArray(Global.FateResultHudIds,CurrentArrayElement!=0))",
-                            "renderer HUD roster Left: conteggio HUD diagnostica deve includere cinque fissi e tutti gli handle",
+                            "renderer HUD roster Left: conteggio HUD diagnostica deve includere tre fissi e tutti gli handle",
                         )
                         checks.equal(
                             re.sub(r"\s+", "", counts.args[2]),
@@ -1450,16 +1442,16 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             checks.equal(len(teleport_call.args), 11, "DrawTravelMenu: firma Create HUD Text")
             if len(teleport_call.args) >= 9:
                 page_tokens = (
-                    "1/5 | TELEPORT: SPAWN ROOM", "TEAM SPAWN",
-                    "2/5 | TELEPORT: OBJECTIVE", "3/5 | TELEPORT TO PLAYER/BOT",
-                    "BESIDE: {0}", "4/5 | ATTACH TO PLAYER/BOT", "ABOVE: {0}",
-                    "5/5 | SELF ELIMINATION", "CURRENT HERO FORM | COOLDOWN: 3s",
+                    "1/5 | SPAWN", "TEAM SPAWN",
+                    "2/5 | OBJECTIVE", "3/5 | PLAYER/BOT TELEPORT",
+                    "BESIDE: {0}", "4/5 | PLAYER/BOT ATTACH", "ABOVE: {0}",
+                    "5/5 | SELF KILL", "CURRENT FORM | 3s COOLDOWN",
                 )
                 for token in page_tokens:
                     checks.require(token in teleport_call.args[3],
                                    f"DrawTravelMenu: English page content missing: {token}")
-                for token in ("Hold {0} / release: close", "{0}: next / {1}: prev",
-                              "{0}: use / {1}+{2}: detach"):
+                for token in ("Hold {0}: {1} next / {2} prev",
+                              "{0} use / {1} detach | release {2}: close"):
                     checks.require(token in teleport_call.args[2],
                                    f"DrawTravelMenu: controls missing: {token}")
                 smooth_pastel = (
@@ -1577,18 +1569,15 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                              "Info: Subheader must be fixed white")
                 checks.require(not paired_rows, "Info: do not duplicate commands in a side column")
                 info_controls = (
-                    ("Hold {0} + {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
-                    ("Hold {0} + {1}: select / apply | + {2}: back", ("Crouch", "Interact", "Reload")),
-                    ("Hold {0} 0.5s: open / close Arcade", ("Melee",)),
-                    ("Hold {0} 0.5s with {1} released: toggle camera", ("Interact", "Crouch")),
-                    ("Arcade closed: hold {0}: inspect hero + HP (Travel OFF or Teleport Player/Bot / Attach)", ("Crouch",)),
-                    ("Soundtrack: hold {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
-                    ("Menu closed, Travel ON: hold {0}; {1} / {2}: next / previous", ("Crouch", "Primary Fire", "Secondary Fire")),
-                    ("Travel: {0}: use | release {1}: close", ("Interact", "Crouch")),
-                    ("Attached, menu closed: hold {0} + {1}: detach", ("Crouch", "Reload")),
-                    ("Dead: press {0} to resurrect on safe ground", ("Jump",)),
-                    ("Multijump ON: tap / hold {0} in air to boost", ("Jump",)),
-                    ("Superman Punch ON: use {0} to punch", ("Melee",)),
+                    ("Hold {0}: {1} next / {2} prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+                    ("+ {0} apply / {1} back / {2} reset*", ("Interact", "Reload", "Ultimate")),
+                    ("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", ("Melee", "Interact", "Crouch")),
+                    ("Inspect: hold {0}; Arcade closed; Travel off or player/bot/attach", ("Crouch",)),
+                    ("Soundtrack: {0} + {1} / {2}: +10 / -10", ("Crouch", "Ability 1", "Ability 2")),
+                    ("Travel ON, Arcade closed: hold {0}; {1} / {2}: next / prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+                    ("Travel: {0} use / {1} detach | release {2}: close", ("Interact", "Reload", "Crouch")),
+                    ("Dead: {0} revive | Multijump ON: tap/hold {0} in air", ("Jump",)),
+                    ("Punch ON: {0} punch | *reset where shown", ("Melee",)),
                 )
                 for description, buttons in info_controls:
                     lines = [custom for custom in iter_calls(calls[0].args[2], "Custom String")
@@ -1601,9 +1590,9 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                                          if binding.args)
                         checks.equal(bindings, tuple(f"Button({button})" for button in buttons),
                                      f"Info: input binding order for {description}")
-                for token in ("0 - INFO / CONTROLS", "0.5s", "with {1} released",
-                              "inspect hero + HP", "+10 / -10", "detach", "resurrect",
-                              "Multijump ON", "Superman Punch ON"):
+                for token in ("0 - INFO / CONTROLS", "0.5s", "camera ({2} released)",
+                              "Inspect: hold", "+10 / -10", "detach", "revive",
+                              "Multijump ON", "Punch ON"):
                     checks.require(token in calls[0].args[2], f"Info: description missing: {token}")
             else:
                 subtitle = calls[0].args[2]
@@ -1632,7 +1621,13 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                         function_text = text_branches[2]
                 checks.require(subtitle.strip() != "Null" and "Input Binding String(" in subtitle,
                                f"{subroutine_target(rule)}: commands must use Subheader")
-                checks.require("Input Binding String(" not in function_text,
+                spaced_content = full_custom_string(function_text)
+                checks.require(spaced_content is not None and len(spaced_content.args) == 2
+                               and parse_literal(spaced_content.args[0]) == "\n{0}",
+                               f"{subroutine_target(rule)}: one blank line between commands and content")
+                content_bindings = tuple(binding.args[0] for binding in iter_calls(function_text, "Input Binding String"))
+                checks.require(not content_bindings or
+                               (subroutine_target(rule) == "DrawMultijumpMenu" and content_bindings == ("Button(Jump)",)),
                                f"{subroutine_target(rule)}: function Text must not duplicate input hints")
                 literals = [parse_literal(custom.args[0]) for custom in iter_calls(subtitle, "Custom String")
                             if custom.args]
@@ -1751,17 +1746,17 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
     if main_renderer:
         for token in ("0 - INFO / CONTROLS", "1 - NAME COLOR", "2 - 3P CAMERA",
                       "3 - SOUNDTRACK", "4 - REVENGE", "5 - UNKILLABLE", "6 - HERO VOICE",
-                      "7 - ICON", "8 - CROUCH: TELEPORT / ATTACH / SELF KILL", "9 - CROUCH PRIVACY",
+                      "7 - ICON", "8 - TRAVEL / SELF KILL", "9 - PRIVACY",
                       "10 - TRY YOUR LUCK", "11 - VOTE", "12 - DUMMY TARGET",
-                      "13 - GHOST MODE / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH",
-                      "16 - MOVEMENT", "17 - PRESENCE", "18 - FATES",
+                      "13 - GHOST / FLY", "14 - MULTIJUMP", "15 - SUPERMAN PUNCH",
+                      "16 - SPEED / GRAVITY", "17 - PRESENCE", "18 - FATES",
                       "19 - WHISPERS", "20 - MOONLIT AURA"):
             checks.require(token in main_renderer.body, f"Main menu page missing: {token}")
         for state in ("GhostModeActive", "FlyModeActive", "CrouchTravelEnabled",
                       "InspectionPrivacyActive", "AllowDummyBotFollow"):
             checks.equal(main_renderer.body.count(f"Event Player.{state}"), 1,
                          f"Main menu: one English preview of applied {state}")
-        checks.require("ENEMY DUMMY TARGETING" in main_renderer.body,
+        checks.require("DUMMY GAZE" in main_renderer.body,
                        "Main menu: Dummy Follow description missing")
         checks.require('Event Player.MainMenuCursor == 12 ? Custom String("12 - DUMMY TARGET' in main_renderer.body,
                        "pagina 12 e pagina 13 non sono distinte")
@@ -1771,13 +1766,11 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
                    and subtitle_branches[0] == "Event Player.MainMenuCursor == 0" else "")
         checks.require("0 - INFO / CONTROLS" in preview, "Main Info preview: title missing")
         preview_controls = (
-            ("CAMERA: hold Interact ({0}) 0.5s with Crouch ({1}) released", ("Interact", "Crouch")),
-            ("ARCADE: hold Melee ({0}) 0.5s: open / close", ("Melee",)),
-            ("HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach", ("Crouch",)),
-            ("MENU: hold Crouch ({0}) + Primary Fire ({1}) / Secondary Fire ({2}): next / prev",
-             ("Crouch", "Primary Fire", "Secondary Fire")),
-            ("Hold Crouch ({0}) + Interact ({1}): all controls | in submenu: + Reload ({2}): back",
-             ("Crouch", "Interact", "Reload")),
+            ("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", ("Melee", "Interact", "Crouch")),
+            ("Hold {0}: {1} next / {2} prev", ("Crouch", "Primary Fire", "Secondary Fire")),
+            ("+ {0}: all controls | + {1}: back", ("Interact", "Reload")),
+            ("Arcade closed: hold {0} to inspect hero/HP", ("Crouch",)),
+            ("Travel off or player/bot/attach mode", ()),
         )
         for description, buttons in preview_controls:
             lines = [custom for custom in iter_calls(preview, "Custom String")
@@ -1797,10 +1790,10 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
         checks.require("Event Player.MenuPage == -1" not in mask_strings(ghost_fly_renderer.body),
                        "renderer pagina 13: rami del menu principale irraggiungibili")
         for token in (
-            "13 - GHOST MODE / FLY",
-            "WALL PHASING",
-            "FLY MODE",
-            "FLY SPEED: {0}% | CHANGE IN MENU 16",
+            "13 - GHOST / FLY",
+            "GHOST:",
+            "FLY:",
+            "FLY: {0}% | speed in menu 16",
         ):
             checks.require(token in ghost_fly_renderer.body,
                            f"pagina 13 Ghost/Fly non localizzata o incompleta: {token}")
@@ -2028,7 +2021,8 @@ def validate_hud_and_menu(checks: Checks, source: str, rules: list[Rule], player
             for call in iter_calls(rule.body, action):
                 if call.args:
                     allowed_recipient = (name == "ApplyNocturnePage" and action == "Small Message"
-                                         and call.args[0].strip() == "Event Player.InspectionTarget")
+                                         and call.args[0].strip() in
+                                         ("Evaluate Once(Event Player)", "Evaluate Once(Event Player.InspectionTarget)"))
                     checks.require(call.args[0].strip() == "Event Player" or allowed_recipient,
                                    f"isolamento menu per-player: {name}/{action} owner")
         for action in ("Set Player Variable", "Modify Player Variable"):
@@ -2283,9 +2277,9 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
     checks.equal(state, [("NocturneState", 125)], "Nocturne: unico stato player compatto nello slot 125")
     setup = rule_by_subroutine(rules, "PreparePlayer")
     initial = ('Event Player.NocturneState = Array(0, 0, 0, 0, 0, True, 0, 0, 0, False, '
-               'Custom String("The pages await your hand."));')
+               'Custom String("The pages await your hand."), Null, Custom String(""), 0);')
     checks.require(setup is not None and initial in setup.body,
-                   "Nocturne: undici default, ricezione ON e Aura OFF in PreparePlayer")
+                   "Nocturne: quattordici default, ricezione ON, Aura OFF, preview e ricevuta vuote in PreparePlayer")
     for name, size in (("PresenceNames", 5), ("FateNames", 5), ("WhisperNames", 6),
                        ("AuraNames", 5), ("OmenLines", 6)):
         values = array_assignment_items(source, name)
@@ -2323,6 +2317,28 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
                 checks.require(not any(re.search(r"\b(?:NocturneState|MenuColor)\b", mask_strings(call.args[0]))
                                        for call in iter_calls(argument, "Evaluate Once")),
                                "Nocturne: cursori, preferenze e colore restano live")
+            for expression_part in ('Custom String("TARGET: {0}"',
+                                    'Custom String("HOLD CROUCH TO AIM")',
+                                    'Custom String("NO WILLING SOUL")',
+                                    'Player Variable(Event Player.NocturneState[11], DisplayName)',
+                                    'Total Time Elapsed < Event Player.NocturneState[13]',
+                                    'Custom String("\\n{0}", Event Player.NocturneState[12])'):
+                checks.require(expression_part in expression,
+                               "Nocturne: Whispers HUD mostra preview live e ricevuta per tre secondi")
+            for guard in ("Entity Exists(Event Player.NocturneState[11]) == True",
+                          "Array Contains(Global.HumanPlayers, Event Player.NocturneState[11]) == True",
+                          "Player Variable(Event Player.NocturneState[11], IsHuman) == True",
+                          "Player Variable(Event Player.NocturneState[11], IsPrepared) == True",
+                          "Player Variable(Event Player.NocturneState[11], PlayerCycleActive) == False",
+                          "Player Variable(Event Player.NocturneState[11], LastTeam) == Team Of(Event Player.NocturneState[11])",
+                          "Has Spawned(Event Player.NocturneState[11]) == True",
+                          "Is Alive(Event Player.NocturneState[11]) == True",
+                          "Player Variable(Event Player.NocturneState[11], InspectionPrivacyActive) == False",
+                          "Player Variable(Event Player.NocturneState[11], NocturneState)[5] == True",
+                          "Is In View Angle(Event Player, Eye Position(Event Player.NocturneState[11]), 12) == True",
+                          "Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.NocturneState[11]), Barriers Do Not Block LOS) == True"):
+                checks.require(packed(guard) in packed(expression),
+                               "Nocturne: nome preview Whispers solo per destinatario pubblico e disponibile")
 
     apply = rule_by_subroutine(rules, "ApplyNocturnePage")
     checks.require(apply is not None, "Nocturne: handler condiviso assente")
@@ -2339,38 +2355,98 @@ def validate_nocturne_social(checks: Checks, source: str, rules: list[Rule], pla
             checks.require(packed(f"Total Time Elapsed < Event Player.NocturneState[{field}]") in code
                            and packed(f"Event Player.NocturneState[{field}] = Total Time Elapsed + {seconds};") in code,
                            f"Nocturne: cooldown {seconds}s nel campo {field}")
-        target_guards = (
-            "Abort If(Event Player.InspectionTarget == Null);",
-            "Abort If(Event Player.InspectionTarget == Event Player);",
-            "Abort If(Entity Exists(Event Player.InspectionTarget) == False);",
-            "Abort If(Array Contains(Global.HumanPlayers, Event Player.InspectionTarget) == False);",
-            "Abort If(Player Variable(Event Player.InspectionTarget, IsHuman) == False);",
-            "Abort If(Player Variable(Event Player.InspectionTarget, IsPrepared) == False);",
-            "Abort If(Player Variable(Event Player.InspectionTarget, PlayerCycleActive) == True);",
-            "Abort If(Player Variable(Event Player.InspectionTarget, LastTeam) != Team Of(Event Player.InspectionTarget));",
-            "Abort If(Or(Has Spawned(Event Player.InspectionTarget) == False, Is Alive(Event Player.InspectionTarget) == False));",
-            "Abort If(Player Variable(Event Player.InspectionTarget, InspectionPrivacyActive) == True);",
-            "Abort If(Player Variable(Event Player.InspectionTarget, NocturneState)[5] == False);",
-            "Abort If(Is In View Angle(Event Player, Eye Position(Event Player.InspectionTarget), 12) == False);",
-            "Abort If(Is In Line Of Sight(Eye Position(Event Player), Eye Position(Event Player.InspectionTarget), Barriers Do Not Block LOS) == False);",
-        )
         recipient_calls = [call for call in iter_calls(apply.body, "Small Message")
-                           if call.args[0] == "Event Player.InspectionTarget"]
+                           if call.args[0] == "Evaluate Once(Event Player.InspectionTarget)"]
         checks.equal(len(recipient_calls), 1, "Nocturne: un solo messaggio privato al destinatario")
-        for guard in target_guards:
-            checks.require(packed(guard) in code, f"Nocturne: Whispers richiede consenso e target valido: {guard}")
-            if recipient_calls:
-                checks.require(packed(guard) in packed(apply.body[:recipient_calls[0].start]),
-                               "Nocturne: tutte le guardie Whispers precedono il messaggio")
+        refresh = ("Global.WhisperPlayer = Event Player;Call Subroutine(RefreshWhisperTarget);"
+                   "Global.WhisperPlayer = Null;Global.WhisperTarget = Null;"
+                   "Event Player.InspectionTarget = Event Player.NocturneState[11];")
+        checks.require(packed(refresh) in code,
+                       "Nocturne: invio Whispers rivalida la mira fresca con lo stesso helper della preview")
+        checks.require("If(EventPlayer.InspectionTarget==Null);" in code
+                       and "Abort;End;EventPlayer.NocturneState[6]=TotalTimeElapsed+15;" in code,
+                       "Nocturne: invio Whispers fallito non consuma cooldown o ricevuta")
+        checks.require(not list(iter_calls(apply.body, "Player Closest To Reticle")),
+                       "Nocturne: Whispers seleziona il destinatario soltanto nel helper condiviso")
+        receipt = ('Event Player.NocturneState[12] = Custom String("SENT: {0} -> {1}", '
+                   'Evaluate Once(Global.WhisperNames[Event Player.NocturneState[4]]), '
+                   'Evaluate Once(Player Variable(Event Player.InspectionTarget, DisplayName)));')
+        checks.require(receipt in apply.body
+                       and packed("Event Player.NocturneState[13] = Total Time Elapsed + 3;") in code,
+                       "Nocturne: ricevuta SENT congela scelta e nome destinatario per tre secondi")
+        for call in iter_calls(apply.body, "Small Message"):
+            branches = conditional_branches_containing(apply.body, call.start)
+            if not any("Event Player.MenuPage == 19" in branch.splitlines()[0] for branch in branches):
+                continue
+            checks.require(call.args[0] in ("Evaluate Once(Event Player)", "Evaluate Once(Event Player.InspectionTarget)"),
+                           "Nocturne: Whispers congela destinatari dei Small Message")
+            unfrozen = mask_strings(call.args[1])
+            for capture in reversed(list(iter_calls(unfrozen, "Evaluate Once"))):
+                unfrozen = unfrozen[:capture.start] + " " * (capture.end - capture.start) + unfrozen[capture.end:]
+            checks.require("Event Player" not in unfrozen and "Global." not in unfrozen,
+                           "Nocturne: Whispers congela tutto il testo dei Small Message")
         checks.require(not list(iter_calls(apply.body, "Distance Between")),
                        "Nocturne: Whispers senza limite di distanza")
         for forbidden in ("Set Status", "Set Move Speed", "Set Gravity", "Apply Impulse", "Damage", "Kill", "Teleport", "Create Effect"):
             checks.require(not list(iter_calls(apply.body, forbidden)),
                            f"Nocturne: menu sociali non cambiano fisica, danni o effetti direttamente: {forbidden}")
+    whisper = rule_by_subroutine(rules, "RefreshWhisperTarget")
+    checks.require(whisper is not None, "Nocturne: helper preview e invio Whispers obbligatorio")
+    if whisper:
+        code = packed(whisper.body)
+        query = "Global.WhisperTarget = Player Closest To Reticle(Global.WhisperPlayer, All Teams);"
+        commit = "Global.WhisperPlayer.NocturneState[11] = Global.WhisperTarget;"
+        checks.require(packed(query) in code and len(list(iter_calls(whisper.body, "Player Closest To Reticle"))) == 1,
+                       "Nocturne: Whispers usa solo il closest-to-reticle originale")
+        checks.require(packed("Global.WhisperPlayer.NocturneState[11] = Null;") in code
+                       and packed(commit) in code,
+                       "Nocturne: helper azzera preview e pubblica solo un target valido")
+        for guard in (
+            "Abort If(Global.WhisperTarget == Null);",
+            "Abort If(Global.WhisperTarget == Global.WhisperPlayer);",
+            "Abort If(Entity Exists(Global.WhisperTarget) == False);",
+            "Abort If(Array Contains(Global.HumanPlayers, Global.WhisperTarget) == False);",
+            "Abort If(Player Variable(Global.WhisperTarget, IsHuman) == False);",
+            "Abort If(Player Variable(Global.WhisperTarget, IsPrepared) == False);",
+            "Abort If(Player Variable(Global.WhisperTarget, PlayerCycleActive) == True);",
+            "Abort If(Player Variable(Global.WhisperTarget, LastTeam) != Team Of(Global.WhisperTarget));",
+            "Abort If(Or(Has Spawned(Global.WhisperTarget) == False, Is Alive(Global.WhisperTarget) == False));",
+            "Abort If(Player Variable(Global.WhisperTarget, InspectionPrivacyActive) == True);",
+            "Abort If(Player Variable(Global.WhisperTarget, NocturneState)[5] == False);",
+            "Abort If(Is In View Angle(Global.WhisperPlayer, Eye Position(Global.WhisperTarget), 12) == False);",
+            "Abort If(Is In Line Of Sight(Eye Position(Global.WhisperPlayer), Eye Position(Global.WhisperTarget), Barriers Do Not Block LOS) == False);",
+        ):
+            checks.require(packed(guard) in code and code.find(packed(guard)) < code.find(packed(commit)),
+                           f"Nocturne: Whispers richiede consenso e target valido prima della preview: {guard}")
+        checks.require(not list(iter_calls(whisper.body, "Distance Between")),
+                       "Nocturne: Whispers senza limite di distanza")
+        checks.require("Event Player" not in mask_strings(whisper.body),
+                       "Nocturne: helper Whispers senza contesto Event Player")
+        checks.require(re.search(r"NocturneState\[(?:6|12|13)\]\s*=(?!=)", mask_strings(whisper.body)) is None,
+                       "Nocturne: preview Whispers non cambia cooldown o ricevuta")
+        checks.require(not wait_calls(whisper.body) and action_loop_count(whisper.body) == 0,
+                       "Nocturne: helper Whispers atomico senza polling autonomo")
+    cycle = rule_by_subroutine(rules, "ProcessPlayerCycle")
+    if cycle:
+        calls = [call for call in iter_calls(cycle.body, "Call Subroutine") if call.args == ("RefreshWhisperTarget",)]
+        checks.equal(len(calls), 1, "Nocturne: preview Whispers nel ciclo 10 Hz")
+        if calls:
+            headers = packed("\n".join(branch.splitlines()[0] for branch in conditional_branches_containing(cycle.body, calls[0].start)))
+            for guard in ("Global.ActivePlayer.IsHuman == True", "Global.ActivePlayer.MenuOpen == True",
+                          "Global.ActivePlayer.MenuPage == 19", "Is Button Held(Global.ActivePlayer, Button(Crouch)) == True",
+                          "Has Spawned(Global.ActivePlayer) == True", "Is Alive(Global.ActivePlayer) == True"):
+                checks.require(packed(guard) in headers, "Nocturne: preview solo per umano vivo nel menu Whispers con Crouch")
+        checks.require(packed("Global.WhisperPlayer = Global.ActivePlayer;Call Subroutine(RefreshWhisperTarget);Global.WhisperPlayer = Null;Global.WhisperTarget = Null;") in packed(cycle.body)
+                       and packed("Else;Global.ActivePlayer.NocturneState[11] = Null;") in packed(cycle.body),
+                       "Nocturne: preview aggiorna l'owner corrente e azzera target fuori selezione")
     reset = rule_by_subroutine(rules, "ResetMenuPage")
     if reset:
         checks.require(re.search(r"NocturneState\[(?:3|6)\]\s*=(?!=)", mask_strings(reset.body)) is None,
                        "Nocturne: reset non deve azzerare cooldown Fates o Whispers")
+        for statement in ("Event Player.NocturneState[11] = Null;",
+                          'Event Player.NocturneState[12] = Custom String("");',
+                          "Event Player.NocturneState[13] = 0;"):
+            checks.require(statement in reset.body, "Nocturne: reset Whispers rimuove preview e ricevuta")
     fate = rule_by_subroutine(rules, "ShowFateResult")
     fate_cleanup = rule_by_subroutine(rules, "CleanupFateResults")
     checks.require(fate is not None and fate_cleanup is not None,
@@ -2684,7 +2760,7 @@ def validate_multijump(checks: Checks, source: str, rules: list[Rule], player_en
     if renderer:
         calls = list(iter_calls(renderer.body, "Create HUD Text"))
         checks.equal(len(calls), 1, "Multijump: unico HUD menu")
-        for token in ("14 - MULTIJUMP", "AIR BOOST", "IN AIR: TAP / HOLD JUMP"):
+        for token in ("14 - MULTIJUMP", "AIR BOOST", 'Custom String("AIR: TAP/HOLD {0}", Input Binding String(Button(Jump)))'):
             checks.require(token in renderer.body, f"Multijump: menu inglese {token}")
         checks.equal(renderer.body.count("Event Player.MultijumpCursor * 100"), 1,
                      "Multijump: preview 100..1000% in passi100")
@@ -3099,28 +3175,31 @@ def validate_movement(checks: Checks, source: str, rules: list[Rule],
     renderer = rule_by_subroutine(rules, "DrawMovementMenu")
     checks.require(renderer is not None, "Movement: DrawMovementMenu assente")
     if renderer:
-        for text in ("16 - MOVEMENT / GRAVITY", "Speed: {1}% (20-1000%)", "Gravity: {1}% (0-500%)",
-                     "{0}: reset both to 100%",
+        for text in ("16 - SPEED / GRAVITY", "Speed: {1}% (20-1000%)", "Gravity: {1}% (0-500%)",
+                     "{0} Speed/Gravity | {1} back | {2} 100% both",
                      "Event Player.MovementSpeed", "Event Player.MovementGravity",
                      "Event Player.MovementCursor == 0", "Event Player.MovementCursor == 1"):
             checks.require(text in renderer.body, f"Movement: renderer incompleto: {text}")
         hud = next(iter_calls(renderer.body, "Create HUD Text"), None)
-        steps = [call for call in iter_calls(hud.args[2] if hud and len(hud.args) > 2 else "", "Custom String")
-                 if call.args and parse_literal(call.args[0]) == "{0}: +{1}% / {2}"]
+        controls = hud.args[2] if hud and len(hud.args) > 2 else ""
+        steps = [call for call in iter_calls(controls, "Custom String")
+                 if call.args and parse_literal(call.args[0]) == "Hold {0}: {1} +{2}%"]
         checks.equal(len(steps), 1, "Movement: HUD incrementi adattivi unici nel sottotitolo")
         if len(steps) == 1:
             plus = steps[0]
             checks.equal(len(plus.args), 4, "Movement: HUD formato incremento e binding")
             if len(plus.args) == 4:
                 selector = "(EventPlayer.MovementCursor==0?EventPlayer.MovementSpeed:EventPlayer.MovementGravity)"
-                checks.equal(packed(plus.args[1]), "InputBindingString(Button(PrimaryFire))",
+                checks.equal(packed(plus.args[1]), "InputBindingString(Button(Crouch))",
+                             "Movement: HUD incremento mantiene Crouch")
+                checks.equal(packed(plus.args[2]), "InputBindingString(Button(PrimaryFire))",
                              "Movement: HUD incremento binding Primary")
-                checks.equal(packed(plus.args[2]), selector + "<100?20:100",
+                checks.equal(packed(plus.args[3]), selector + "<100?20:100",
                              "Movement: HUD incremento segue il valore selezionato e la soglia <100")
-                minus = next(iter_calls(plus.args[3], "Custom String"), None)
-                checks.require(minus is not None and minus.raw.strip() == plus.args[3].strip()
-                               and len(minus.args) == 3 and parse_literal(minus.args[0]) == "{0}: -{1}%",
-                               "Movement: HUD decremento adattivo annidato")
+                decrements = [call for call in iter_calls(controls, "Custom String")
+                              if len(call.args) == 3 and parse_literal(call.args[0]) == "{0} -{1}%"]
+                checks.equal(len(decrements), 1, "Movement: HUD decremento adattivo unico")
+                minus = decrements[0] if len(decrements) == 1 else None
                 if minus and len(minus.args) == 3:
                     checks.equal(packed(minus.args[1]), "InputBindingString(Button(SecondaryFire))",
                                  "Movement: HUD decremento binding Secondary")
@@ -3523,6 +3602,8 @@ End;
         if page_calls and len(page_calls[0].args) >= 4:
             def content_parts(expression: str) -> list[str]:
                 custom = full_custom_string(expression)
+                if custom and len(custom.args) == 2 and parse_literal(custom.args[0]) == "\n{0}":
+                    return content_parts(custom.args[1])
                 if custom and len(custom.args) == 3 and parse_literal(custom.args[0]) in ("{0} | {1}", "{0}\n{1}"):
                     return content_parts(custom.args[1]) + content_parts(custom.args[2])
                 return [expression]
@@ -3539,8 +3620,8 @@ End;
                              "Soundtrack commands must branch on the owner's soundtrack lock")
             else:
                 locked_subtitle = ordinary_subtitle = subtitle
-            checks.equal(len(content_parts(locked_subtitle)), 3, "Locked Soundtrack: three compact command groups")
-            checks.equal(len(content_parts(ordinary_subtitle)), 6, "Soundtrack: six command groups including reset in Subheader")
+            checks.equal(len(content_parts(locked_subtitle)), 2, "Locked Soundtrack: two compact command groups")
+            checks.equal(len(content_parts(ordinary_subtitle)), 5, "Soundtrack: five command groups including reset in Subheader")
             checks.equal(len(functions), 4, "Soundtrack: four function rows in Text")
             locked_bindings = [call.args[0].strip() for call in iter_calls(locked_subtitle, "Input Binding String")
                                if call.args]
@@ -3749,10 +3830,11 @@ def validate_catalog_feedback(checks: Checks, source: str, rules: list[Rule]) ->
     music = rule_by_subroutine(rules, "DrawSoundtrackMenu")
     if music:
         back_controls = [call for call in iter_calls(music.body, "Custom String")
-                         if len(call.args) == 2 and parse_literal(call.args[0]) == "{0}: back"
-                         and re.sub(r"\s+", "", call.args[1]) == "InputBindingString(Button(Reload))"]
+                         if len(call.args) == 3 and parse_literal(call.args[0]) == "Hold {0}: {1} back"
+                         and re.sub(r"\s+", "", call.args[1]) == "InputBindingString(Button(Crouch))"
+                         and re.sub(r"\s+", "", call.args[2]) == "InputBindingString(Button(Reload))"]
         checks.equal(len(back_controls), 1, "Locked Soundtrack: one English Reload back command")
-        checks.require('Custom String("Hold {0}", Input Binding String(Button(Crouch)))' in music.body,
+        checks.require('Custom String("Hold {0}: {1} back", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))' in music.body,
                        "Locked Soundtrack: command subtitle must show the Crouch modifier")
 
 
@@ -4026,7 +4108,7 @@ def validate_input_contract(checks: Checks, rules: list[Rule]) -> None:
                 "morte deve normalizzare accelerazione, throttle, gravità e collisione prima di riarmare Ghost/Fly",
             )
             for prompt, language in (
-                ('Press {0}: revive here. Void death? Back to walkable ground.', "EN"),
+                ('{0}: revive here (void: safe ground).', "EN"),
             ):
                 checks.require(
                     prompt in death_rearm.body,
@@ -5091,7 +5173,7 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                     0 <= position < kill_position,
                     f"Self Kill cooldown incompleto: {label} deve precedere Kill",
                 )
-        checks.require('Self Elimination: ready in {0}s.' in self_kill.body,
+        checks.require('Self kill: wait {0}s.' in self_kill.body,
                        "Self Kill cooldown: messaggio inglese dei secondi residui assente")
         checks.require(
             "Round To Integer(Event Player.NextSuicideTime - Total Time Elapsed, Up)"
@@ -5279,7 +5361,8 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                        "Revenge non deve uccidere direttamente al click")
         checks.require("Modify Player Variable At Index(Event Player, RevengeDebts" not in apply_masked,
                        "Revenge non deve consumare il debito prima della morte completa")
-        checks.require('Revenge on {0}: paid!' not in revenge_apply.body,
+        checks.require('Revenge on {0}: paid!' not in revenge_apply.body
+                       and 'Revenge: {0} | debt left: {1}.' not in revenge_apply.body,
                        "Revenge non deve annunciare successo prima della morte completa")
         for token, label in (
             ("Set Player Variable(Event Player.LockedRevengeTarget, RevengeDeathPending, True);", "flag pending"),
@@ -5346,7 +5429,7 @@ def validate_forced_death(checks: Checks, source: str, rules: list[Rule], player
                 abort_position > decrement_position,
                 "commit Revenge deve eseguire Abort prima del recorder naturale",
             )
-        checks.require('Revenge on {0}: paid!' in death_recorder.body,
+        checks.require('Revenge: {0} | debt left: {1}.' in death_recorder.body,
                        "successo Revenge non viene annunciato alla morte completa")
 
     luck_death = next(
@@ -6563,7 +6646,7 @@ def validate_privacy(checks: Checks, rules: list[Rule]) -> None:
     )
     checks.require(vision_names is not None, "IWT nomi Vision assente")
     vision_contract_text = "\n".join(rule.body for rule in rules)
-    checks.require('VISION: ALL PLAYER/BOT NAMES' in vision_contract_text,
+    checks.require('VISION: PLAYER/BOT NAMES' in vision_contract_text,
                    "testo Vision inglese non dichiara tutti i nomi")
     if vision_names:
         checks.require(

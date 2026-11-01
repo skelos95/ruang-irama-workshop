@@ -90,8 +90,8 @@ class MenuVisualFeedbackTests(unittest.TestCase):
         for source in self.sources:
             rules = validator.extract_rules(source)
             rule = validator.rule_by_subroutine(rules, "DrawSoundtrackMenu")
-            changed = rule.body.replace("Custom String(\"{0}: back\", Input Binding String(Button(Reload)))",
-                                        "Custom String(\"{0}: back\", Input Binding String(Button(Interact)))", 1)
+            changed = rule.body.replace('Custom String("Hold {0}: {1} back", Input Binding String(Button(Crouch)), Input Binding String(Button(Reload)))',
+                                        'Custom String("Hold {0}: {1} back", Input Binding String(Button(Crouch)), Input Binding String(Button(Interact)))', 1)
             self.assertNotEqual(changed, rule.body)
             mutated = source[:rule.start] + changed + source[rule.end:]
             checks = validator.Checks()

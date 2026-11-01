@@ -765,10 +765,13 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_main_menu_subtitle_keeps_actual_bindings_and_the_close_hold(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        condition, info, commands = validator.parse_top_level_ternary(call.args[2])
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        changed = commands.replace("Button(Crouch)", "Button(Melee)")
+        self.assert_rejected(self.replace_call_argument(absolute, 2, f"{condition} ? {info} : {changed}"),
+                             "DrawMainMenu: subtitle binding missing: Crouch")
         for old, new, error in (
-            ('Custom String("Hold {0}", Input Binding String(Button(Crouch)))',
-             'Custom String("Hold {0}", Input Binding String(Button(Melee)))',
-             "DrawMainMenu: subtitle binding missing: Crouch"),
             ('Custom String("Hold {0} 0.5s: close", Input Binding String(Button(Melee)))',
              'Custom String("Hold {0} 0.1s: close", Input Binding String(Button(Melee)))',
              "DrawMainMenu: subtitle close command must bind Melee with a 0.5s hold"),
@@ -784,12 +787,26 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_menu_instruction_cannot_start_with_an_artificial_blank_line(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, 'Custom String("Hold {0}"', 'Custom String("\\nHold {0}"')
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        condition, info, commands = validator.parse_top_level_ternary(call.args[2])
+        changed = commands.replace('Custom String("Hold {0}:', 'Custom String("\\nHold {0}:', 1)
+        self.assertNotEqual(changed, commands)
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        mutated = self.replace_call_argument(absolute, 2, f"{condition} ? {info} : {changed}")
         self.assert_rejected(mutated, "subtitle cannot start with an artificial blank line")
+
+    def test_shared_nocturne_content_requires_one_blank_line_below_commands(self) -> None:
+        renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawNocturneMenu")
+        call = next(validator.iter_calls(renderer.body, "Create HUD Text"))
+        wrapper = next(validator.iter_calls(call.args[3], "Custom String"))
+        self.assertEqual(validator.parse_literal(wrapper.args[0]), "\n{0}")
+        absolute = validator.Call(call.name, call.raw, call.args, renderer.start + call.start, renderer.start + call.end)
+        self.assert_rejected(self.replace_call_argument(absolute, 3, wrapper.args[1]),
+                             "one blank line between commands and content")
 
     def test_travel_menu_requires_specific_english_copy(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawTravelMenu")
-        for old in ("CURRENT HERO FORM | COOLDOWN: 3s", "TEAM SPAWN", "2/5 | TELEPORT: OBJECTIVE"):
+        for old in ("CURRENT FORM | 3s COOLDOWN", "TEAM SPAWN", "2/5 | OBJECTIVE"):
             with self.subTest(copy=old):
                 mutated = self.replace_in_rule(renderer, old, "MISSING")
                 self.assert_rejected(mutated, "English page content missing")
@@ -851,15 +868,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.replace_in_rule(renderer, "Button(Crouch)", "Button(Melee)")
         self.assert_rejected(mutated, "DrawRevengeMenu: subtitle binding missing: Crouch")
 
-    def test_chill_grid_requires_a_dedicated_top_spacer(self) -> None:
-        call = next(
-            call for call in validator.iter_calls(self.source, "Create HUD Text")
-            if len(call.args) >= 4
-            and call.args[4].strip() == "Top"
-            and call.args[5].strip() == "2"
-        )
-        mutated = self.replace_call_argument(call, 3, "Null")
-        self.assert_rejected(mutated, "HUD fisso Top sort 2: contenuto text errato")
+    def test_center_above_menus_stays_free_of_global_spacers(self) -> None:
+        init = self.rule(lambda rule: rule.name.startswith("00 -"))
+        for order in (0, 1, 2):
+            with self.subTest(order=order):
+                extra = ('Create HUD Text(Global.HumanPlayers, Null, Null, Custom String("  "), '
+                         f'Top, {order}, Color(White), Color(White), Color(White), '
+                         'Visible To and String, Visible Never);')
+                self.assert_rejected(self.inject_action(init, extra),
+                                     "HUD globali Top 0/1/2 rimossi")
 
     def test_roster_hud_slots_are_exactly_zero_through_eleven(self) -> None:
         mutated = self.replace_once(
@@ -892,18 +909,18 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         self.assert_rejected(self.replace_call_argument(host, 3, changed),
                              "HUD Host: fallback senza host deve essere stringa vuota")
 
-    def test_host_row_rejects_top_padding_or_wrong_bottom_spacing(self) -> None:
+    def test_host_row_requires_one_blank_line_below_title_and_bottom_spacing(self) -> None:
         host = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
                     if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
-        for padded_format in (r" {0} {1} {2}\n ", r"\n{0} {1} {2}\n ", "{0} {1} {2}",
-                              r"{0} {1} {2}\n", r"{0} {1} {2}\n \n "):
+        for padded_format in (r" {0} {1} {2}\n ", r"{0} {1} {2}\n ", r"\n\n{0} {1} {2}\n ",
+                              r"\n{0} {1} {2}", r"\n{0} {1} {2}\n", r"\n{0} {1} {2}\n \n "):
             with self.subTest(format=padded_format):
-                changed = host.args[3].replace(r'"{0} {1} {2}\n "', f'"{padded_format}"', 1)
+                changed = host.args[3].replace(r'"\n{0} {1} {2}\n "', f'"{padded_format}"', 1)
                 self.assertNotEqual(changed, host.args[3])
                 self.assert_rejected(self.replace_call_argument(host, 3, changed),
-                                     "HUD Host: Text deve lasciare spazio solo sotto il testo")
+                                     "HUD Host: Text deve separarsi dal sottotitolo e lasciare spazio sotto")
 
-    def test_chill_grid_rejects_a_seventh_fixed_hud(self) -> None:
+    def test_chill_grid_rejects_a_fourth_fixed_hud(self) -> None:
         init = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
             and "cozywatch.org" in rule.body
@@ -916,7 +933,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         mutated = self.inject_action(init, extra)
         self.assert_rejected(mutated, "numero HUD fissi nella regola iniziale")
 
-    def test_chill_grid_rejects_an_eighth_global_hud_outside_initialization(self) -> None:
+    def test_chill_grid_rejects_a_fifth_global_hud_outside_initialization(self) -> None:
         scheduler = self.rule(
             lambda rule: validator.event_type(rule) == "Ongoing - Global"
             and "Global.SchedulerStep" in rule.body
@@ -926,15 +943,15 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             'Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
         )
         mutated = self.inject_action(scheduler, extra)
-        self.assert_rejected(mutated, "numero HUD globali: cinque fissi e un roster")
+        self.assert_rejected(mutated, "numero HUD globali: tre fissi e un roster")
 
     def test_diagnostic_fixed_hud_baseline_cannot_be_satisfied_by_a_comment(self) -> None:
-        token = "5 + Count Of(Filtered Array(Global.PlayerListHudIds"
+        token = "3 + Count Of(Filtered Array(Global.PlayerListHudIds"
         mutated = self.replace_once(token, "7 + Count Of(Filtered Array(Global.PlayerListHudIds")
         comment_anchor = '"This order deliberately runs from calm to chaotic. Keep the musical progression intact."'
         self.assertIn(comment_anchor, mutated)
         mutated = mutated.replace(comment_anchor, f'"{token}"\n\t\t{comment_anchor}', 1)
-        self.assert_rejected(mutated, "diagnostica HUD non include i cinque handle fissi")
+        self.assert_rejected(mutated, "diagnostica HUD non include i tre handle fissi")
         call = self.left_roster_call()
         for handle in ("PlayerListHudIds", "MenuHudIds", "TemporaryEffectHudIds", "InspectionTextIds",
                        "TemporaryTravelTextIds", "TemporaryVisionTextIds"):
@@ -1051,6 +1068,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_main_info_preview_keeps_action_binding_order(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
         for literal, buttons in MAIN_INFO_CONTROLS:
+            if not buttons:
+                continue
             with self.subTest(description=literal):
                 line = next(call for call in validator.iter_calls(renderer.body, "Custom String")
                             if validator.parse_literal(call.args[0]) == literal)
@@ -1069,19 +1088,19 @@ class SemanticWorkshop081Tests(unittest.TestCase):
 
     def test_info_controls_keep_the_menu_and_camera_bindings(self) -> None:
         info = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawInfoMenu")
-        old = 'Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Melee)))'
-        new = 'Custom String("Hold {0} 0.5s: open / close Arcade", Input Binding String(Button(Interact)))'
+        old = 'Custom String("{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)", Input Binding String(Button(Melee)), Input Binding String(Button(Interact)), Input Binding String(Button(Crouch)))'
+        new = old.replace("Button(Melee)", "Button(Interact)", 1)
         mutated = self.replace_in_rule(info, old, new)
         self.assert_rejected(mutated, "Info")
 
     def test_website_title_keeps_rgb_and_separate_site_hud_cannot_return(self) -> None:
         title = next(call for call in validator.iter_calls(self.source, "Create HUD Text")
-                     if call.args[4].strip() == "Top" and call.args[5].strip() == "0")
-        mutated = self.replace_call_argument(title, 8, "Color(White)")
+                     if call.args[4].strip() == "Right" and call.args[5].strip() == "0")
+        mutated = self.replace_call_argument(title, 7, "Color(White)")
         self.assert_rejected(mutated, "HUD titolo Cozywatch: colore RGB invariato")
         init = self.rule(lambda rule: rule.name.startswith("00 -"))
         extra = 'Create HUD Text(Global.HumanPlayers, Null, Custom String("cozywatch.org"), Null, Top, 1, Color(White), Color(White), Color(White), Visible To and String, Visible Never);'
-        self.assert_rejected(self.inject_action(init, extra), "WEBSITE: HUD separato Top 1 rimosso")
+        self.assert_rejected(self.inject_action(init, extra), "HUD globali Top 0/1/2 rimossi")
 
     def test_menu_renderers_use_the_top_three_slot(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
@@ -1116,7 +1135,7 @@ class SemanticWorkshop081Tests(unittest.TestCase):
     def test_page_thirteen_keeps_the_progressive_fly_copy_in_english(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawGhostFlyMenu")
         mutated = self.replace_in_rule(renderer,
-            "FLY SPEED: {0}% | CHANGE IN MENU 16",
+            "FLY: {0}% | speed in menu 16",
             "LOOK TO STEER | HOLD FORWARD TO ACCELERATE")
         self.assert_rejected(mutated, "pagina 13 Ghost/Fly")
 
@@ -1270,9 +1289,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "pagina 12 deve usare ApplyDummyBotFollowPage")
 
-    def test_dummy_follow_renderer_is_english_and_explicitly_enemy_scoped(self) -> None:
+    def test_dummy_target_preview_keeps_the_gaze_label(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, 'ENEMY DUMMY TARGETING', "DUMMY TARGETING")
+        mutated = self.replace_in_rule(renderer, 'DUMMY GAZE', "DUMMY TARGETING")
         self.assert_rejected(mutated, 'Main menu: Dummy Follow description missing')
 
     def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
@@ -2067,8 +2086,8 @@ class SemanticWorkshop081Tests(unittest.TestCase):
             (selected + " < 100 ? 20 : 100", "20", "HUD incremento segue"),
             (selected + " <= 100 ? 20 : 100", "100", "HUD decremento segue"),
             (selected + " < 100 ? 20 : 100", selected.replace("== 0", "== 1") + " < 100 ? 20 : 100", "HUD incremento segue"),
-            ('"{0}: +{1}% / {2}"', '"{0}: +100% / {2}"', "HUD incrementi adattivi unici"),
-            ('"{0}: -{1}%"', '"{0}: -100%"', "HUD decremento adattivo annidato"),
+            ('"Hold {0}: {1} +{2}%"', '"Hold {0}: {1} +100%"', "HUD incrementi adattivi unici"),
+            ('"{0} -{1}%"', '"{0} -100%"', "HUD decremento adattivo unico"),
         ):
             with self.subTest(step=old):
                 self.assert_rejected(self.replace_in_rule(renderer, old, new), "Movement: " + reason)
@@ -2738,7 +2757,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
         )
         mutated = self.replace_in_rule(
             death,
-            'Press {0}: revive here. Void death? Back to walkable ground.',
+            '{0}: revive here (void: safe ground).',
             "Press {0}: resurrect here, or move to walkable ground after a void death.",
         )
         self.assert_rejected(mutated, "prompt morte non descrive il recupero automatico dal vuoto: EN")
@@ -3899,7 +3918,7 @@ rule("999x - Nasib: Renderer pemain tambahan")
 
     def test_vision_hud_declares_that_all_player_names_are_visible(self) -> None:
         mutated = self.replace_once(
-            'VISION: ALL PLAYER/BOT NAMES',
+            'VISION: PLAYER/BOT NAMES',
             "VISION: PUBLIC PLAYER / BOT NAMES",
         )
         self.assert_rejected(mutated, "testo Vision inglese non dichiara tutti i nomi")

@@ -88,7 +88,7 @@ class DiagnosticsRecordingTests(unittest.TestCase):
                                 if show:
                                     visible.append(owner)
                                     self.assertEqual(text.strip(),
-                                        "LOAD 12% | AVG 23% | MAX 34%\nHUD 25 | IWT 5")
+                                        "LOAD 12% | AVG 23% | MAX 34%\nHUD 23 | IWT 5")
                                 else:
                                     self.assertEqual(text, "")
                                     self.assertEqual(model.filter_builds, previous_filters)

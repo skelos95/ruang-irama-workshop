@@ -243,7 +243,7 @@ class DummyFollowAvailabilityTests(unittest.TestCase):
                 )
                 self.assertEqual(page.body.count(condition), 0)
                 self.assertEqual(apply.body.count(condition), 1)
-                self.assertIn("ENEMY DUMMY TARGETING", page.body)
+                self.assertIn("DUMMY GAZE", page.body)
                 self.assertNotIn("IndeksBahasa", page.body)
                 self.assertNotIn("IZINKAN BOT MUSUH IKUTIMU", page.body)
                 self.assertNotIn("ให้ดัมมี่ศัตรูตามคุณ", page.body)

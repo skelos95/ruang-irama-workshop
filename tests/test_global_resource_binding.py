@@ -32,6 +32,7 @@ class ResourceExpressions:
         self.globals = {"TriggerPlayer": None, "ActivePlayer": None,
                         "ObjectiveIconPlayer": None, "CameraPlayer": None, "HumanPlayers": [],
                         "FateResultPlayer": None,
+                        "WhisperPlayer": None, "WhisperTarget": None,
                         "AimDistance": 25}
         self.values = {}
         self.trees = {}
@@ -44,6 +45,7 @@ class ResourceExpressions:
         self.globals["ObjectiveIconPlayer"] = identity
         self.globals["CameraPlayer"] = identity
         self.globals["FateResultPlayer"] = identity
+        self.globals["WhisperPlayer"] = identity
 
     def resolve(self, name):
         if name in self.values:
@@ -326,6 +328,69 @@ class GlobalResourceBindingTests(unittest.TestCase):
         mutated = self.normalized[:rule.start] + body + self.normalized[rule.end:]
         self.assertTrue(any("proprietario non congelato in Create HUD Text" in error
                             for error in runtime.validate_runtime(mutated)))
+
+    def test_whisper_messages_keep_recipient_and_exact_text_after_actor_and_state_change(self):
+        model = self.model(2)
+        rule = semantic.rule_by_subroutine(model.rules, "ApplyNocturnePage")
+        messages = [call for call in semantic.iter_calls(rule.body, "Small Message")
+                    if "InspectionTarget" in call.args[0] or "NocturneState[12]" in call.args[1]]
+        self.assertEqual(len(messages), 2)
+        snapshots = {}
+        for index in range(2):
+            owner, target = f"owner{index}", f"target{index}"
+            receipt = f"SENT: GENTLE EMBRACE -> Soul {index}"
+            model.players[target]["DisplayName"] = f"Soul {index}"
+            model.players[owner]["NocturneState"] = [0, 0, 0, 0, 4, True, 115, 0, 0, False,
+                                                     "", target, receipt, 103]
+            model.actor(owner)
+            snapshots[owner] = [tuple(model.install(argument) for argument in call.args) for call in messages]
+            model.players[owner]["NocturneState"][4] = 5
+            model.players[owner]["NocturneState"][11:] = [None, "", 0]
+            model.players[owner]["InspectionTarget"] = "target1" if index == 0 else "target0"
+            model.players[target]["DisplayName"] = "Changed recipient"
+        for scratch in (None, "owner1", "owner0", None):
+            model.actor(scratch)
+            model.globals["WhisperTarget"] = None
+            for index in range(2):
+                owner, target = f"owner{index}", f"target{index}"
+                self.assertEqual([tuple(model.evaluate(argument) for argument in installed)
+                                  for installed in snapshots[owner]], [
+                    (target, f"{owner}: A gentle embrace across the silence."),
+                    (owner, f"SENT: GENTLE EMBRACE -> Soul {index}"),
+                ])
+
+    def test_unfrozen_whisper_receipt_reproduces_zero_after_actor_is_cleared(self):
+        model = self.model(2)
+        rule = semantic.rule_by_subroutine(model.rules, "ApplyNocturnePage")
+        message = next(call for call in semantic.iter_calls(rule.body, "Small Message")
+                       if "NocturneState[12]" in call.args[1])
+        expression = message.args[1]
+        while captures := list(semantic.iter_calls(expression, "Evaluate Once")):
+            call = captures[0]
+            expression = expression[:call.start] + call.args[0] + expression[call.end:]
+        model.players["owner0"]["NocturneState"] = [0] * 12 + ["SENT: RESPECT -> Soul", 103]
+        model.actor("owner0")
+        installed = model.install(expression)
+        self.assertEqual(model.evaluate(installed), "SENT: RESPECT -> Soul")
+        model.actor(None)
+        self.assertEqual(model.evaluate(installed), "0")
+
+    def test_runtime_gate_rejects_mutable_whisper_message_recipient_and_text(self):
+        rule = semantic.rule_by_subroutine(semantic.extract_rules(self.normalized), "ApplyNocturnePage")
+        message = next(call for call in semantic.iter_calls(rule.body, "Small Message")
+                       if "NocturneState[12]" in call.args[1])
+        for index in (0, 1):
+            argument = message.args[index]
+            while captures := list(semantic.iter_calls(argument, "Evaluate Once")):
+                capture = captures[0]
+                argument = argument[:capture.start] + capture.args[0] + argument[capture.end:]
+            arguments = list(message.args)
+            arguments[index] = argument
+            body = rule.body[:message.start] + "Small Message(" + ", ".join(arguments) + ")" + rule.body[message.end:]
+            mutated = self.normalized[:rule.start] + body + self.normalized[rule.end:]
+            with self.subTest(argument=index):
+                self.assertTrue(any("Whispers non congelato in Small Message" in error
+                                    for error in runtime.validate_runtime(mutated)))
 
     def test_freezing_name_color_data_is_observable_after_owner_changes_color(self):
         model = self.model(2)

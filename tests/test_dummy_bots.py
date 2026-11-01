@@ -19,14 +19,14 @@ class DummyBotFeatureTests(unittest.TestCase):
     def test_static_hud_uses_recyclable_roster_slots_without_embedded_label_spacing(self):
         for source, global_name in ((self.it, "Global"), (self.en, "Global")):
             self.assertIn('Custom String("cozywatch.org [{0}]"', source)
-            self.assertIn('"HERO + HP INSPECTION: hold Crouch ({0}); Arcade closed, Travel OFF or Teleport Player/Bot / Attach"', source)
-            self.assertIn('"ARCADE: hold Melee ({0}) 0.5s: open / close"', source)
+            self.assertIn('"Arcade closed: hold {0} to inspect hero/HP"', source)
+            self.assertIn('"{0} 0.5s: Arcade | {1} 0.5s: camera ({2} released)"', source)
             self.assertIn("Input Binding String(Button(Crouch))", source)
             self.assertIn("Input Binding String(Button(Melee))", source)
             self.assertIn("Input Binding String(Button(Interact))", source)
             self.assertNotIn('"LOBBY & CHILL TIME"', source)
             self.assertIn('"SOULS & ECHOES"', source)
-            self.assertIn("5 + Count Of(Filtered Array(", source)
+            self.assertIn("3 + Count Of(Filtered Array(", source)
             self.assertIn("1 + Event Player.HudSlot", source)
             self.assertNotIn("-13 + Event Player.HudSlot", source)
             self.assertIn(f"{global_name}.AvailableHudSlots = Sorted Array(Append To Array(", source)
