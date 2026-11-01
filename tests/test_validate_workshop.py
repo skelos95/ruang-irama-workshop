@@ -1289,9 +1289,9 @@ class SemanticWorkshop081Tests(unittest.TestCase):
         )
         self.assert_rejected(mutated, "pagina 12 deve usare ApplyDummyBotFollowPage")
 
-    def test_dummy_follow_renderer_is_english_and_explicitly_enemy_scoped(self) -> None:
+    def test_dummy_target_preview_keeps_the_gaze_label(self) -> None:
         renderer = self.rule(lambda rule: validator.subroutine_target(rule) == "DrawMainMenu")
-        mutated = self.replace_in_rule(renderer, 'ENEMY DUMMY TARGETING', "DUMMY TARGETING")
+        mutated = self.replace_in_rule(renderer, 'DUMMY GAZE', "DUMMY TARGETING")
         self.assert_rejected(mutated, 'Main menu: Dummy Follow description missing')
 
     def test_page_twelve_has_a_dedicated_menu_tint(self) -> None:
